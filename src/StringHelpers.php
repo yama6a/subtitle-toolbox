@@ -38,12 +38,41 @@ class StringHelpers
      */
     public static function cleanString(string $str): string
     {
-        $str = static::normalizeEOLs($str); // fix line endings (UNIX vs WINDOWS vs OSX)
-        $str = preg_replace('/\t+/', ' ', $str); // replace tabs with spaces
-        $str = preg_replace('/ +/', ' ', $str); // strip multi-spaces
-        $str = preg_replace('/\n+/', "\n", $str); // strip empty lines
+        $str = static::normalizeEOLs($str);
+        $str = static::normalizeSpaces($str);
+        $str = static::removeEmptyLines($str);
 
         return trim($str);
+    }
+
+
+    public static function trimEachLine(string $str): string
+    {
+        $lines = explode(StringHelpers::UNIX_LINE_ENDING, $str);
+        $lines = array_map("trim", $lines);
+
+        return implode(StringHelpers::UNIX_LINE_ENDING, $lines);
+    }
+
+
+    public static function removeEmptyLines(string $str): string
+    {
+        return preg_replace('/\n+/', "\n", $str);
+    }
+
+
+    public static function removeDoubleEmptyLines(string $str): string
+    {
+        return preg_replace('/\n{3,}/', "\n", $str);
+    }
+
+
+    public static function normalizeSpaces(string $str): string
+    {
+        $str = preg_replace('/\t+/', ' ', $str); // replace tabs with spaces
+        $str = preg_replace('/ +/', ' ', $str); // strip multi-spaces
+
+        return $str;
     }
 
 

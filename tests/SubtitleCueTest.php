@@ -1,7 +1,9 @@
 <?php
 
+namespace SubtitleToolbox;
+
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\SubtitleCue;
 
 class SubtitleCueTest extends TestCase
 {
@@ -56,12 +58,12 @@ class SubtitleCueTest extends TestCase
         );
 
         $this->assertNotEquals($text, $cue->getText());
-        $this->assertSame(\SubtitleToolbox\StringHelpers::cleanString($text), $cue->getText());
+        $this->assertSame(StringHelpers::cleanString($text), $cue->getText());
         $this->assertSame(2, $cue->getLines()->count());
         $this->assertNotEquals($line1, $cue->getLines()->get(0));
         $this->assertNotEquals($line2, $cue->getLines()->get(1));
-        $this->assertSame(\SubtitleToolbox\StringHelpers::cleanString($line1), $cue->getLines()->get(0));
-        $this->assertSame(\SubtitleToolbox\StringHelpers::cleanString($line2), $cue->getLines()->get(1));
+        $this->assertSame(StringHelpers::cleanString($line1), $cue->getLines()->get(0));
+        $this->assertSame(StringHelpers::cleanString($line2), $cue->getLines()->get(1));
     }
 
 
@@ -139,6 +141,6 @@ class SubtitleCueTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("Can only set cue-text by string or array!");
         $this->expectExceptionMessage("by stdClass");
-        $cue->setLines(new stdClass());
+        $cue->setLines(new \stdClass());
     }
 }

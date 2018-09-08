@@ -2,6 +2,10 @@
 
 namespace SubtitleToolbox;
 
+use SubtitleToolbox\Exceptions\InvalidFormatterException;
+use SubtitleToolbox\Exceptions\InvalidParserException;
+use SubtitleToolbox\Formatters\SubtitleFormatter;
+use SubtitleToolbox\Parsers\SubtitleParser;
 use Tightenco\Collect\Support\Collection;
 
 class Subtitle
@@ -13,6 +17,32 @@ class Subtitle
     public function __construct()
     {
         $this->cues = new Collection();
+    }
+
+
+    public static function parse(string $content, string $parserClass): self
+    {
+        $parser = new $parserClass();
+
+        if (!($parser instanceof SubtitleParser)) {
+            throw new InvalidParserException("The supplied parser $parserClass " .
+                                             "is not of type " . SubtitleParser::class);
+        }
+
+        return $parser->parse($content);
+    }
+
+
+    public function format(string $formatterClass): string
+    {
+        $formatter = new $formatterClass();
+
+        if (!($formatter instanceof SubtitleFormatter)) {
+            throw new InvalidFormatterException("The supplied formatter $formatterClass " .
+                                                "is not of type " . SubtitleFormatter::class);
+        }
+
+        return $formatter->format($this);
     }
 
 
@@ -101,4 +131,5 @@ class Subtitle
 
         return $errors;
     }
+
 }

@@ -2,6 +2,10 @@
 
 namespace SubtitleToolbox;
 
+use SubtitleToolbox\Exceptions\InvalidFormatterException;
+use SubtitleToolbox\Exceptions\InvalidParserException;
+use SubtitleToolbox\Formatters\SubtitleFormatter;
+use SubtitleToolbox\Parsers\SubtitleParser;
 use Tightenco\Collect\Support\Collection;
 
 class SubtitleTest extends \PHPUnit\Framework\TestCase
@@ -79,5 +83,21 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
 
         $subtitle->removeCue(2);
         $this->assertTrue($subtitle->getErrors()->isEmpty());
+    }
+
+
+    public function testParsingWithInvalidParserThrowsException()
+    {
+        $this->expectException(InvalidParserException::class);
+        $this->expectExceptionMessage("parser stdClass is not of type " . SubtitleParser::class);
+        Subtitle::parse("", \stdClass::class);
+    }
+
+
+    public function testFormattingWithInvalidFormatterThrowsException()
+    {
+        $this->expectException(InvalidFormatterException::class);
+        $this->expectExceptionMessage("formatter stdClass is not of type " . SubtitleFormatter::class);
+        (new Subtitle())->format(\stdClass::class);
     }
 }
