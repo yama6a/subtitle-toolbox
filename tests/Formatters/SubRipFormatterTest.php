@@ -17,4 +17,15 @@ class SubRipFormatterTest extends TestCase
             $subtitle->format(SubRipFormatter::class)
         );
     }
+
+
+    public function testUnsupportedXmlTagsAreStrippedAway()
+    {
+        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/strip_xml.srt"), SubRipParser::class);
+
+        $this->assertSame(
+            file_get_contents(__DIR__ . "/../files/srt/valid.srt"),
+            $subtitle->format(SubRipFormatter::class)
+        );
+    }
 }

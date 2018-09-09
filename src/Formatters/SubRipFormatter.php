@@ -36,8 +36,10 @@ class SubRipFormatter extends SubtitleFormatter
         $endSecond = str_pad(floor($cue->getEnd()) % 60, 2, "0", STR_PAD_LEFT);
         $endMillis = str_pad(round(($cue->getEnd() - floor($cue->getEnd())) * 1000), 3, "0", STR_PAD_LEFT);
 
-        $time  = "$startHour:$startMinute:$startSecond,$startMillis --> $endHour:$endMinute:$endSecond,$endMillis";
-        $lines = $cue->getLines()->implode(StringHelpers::UNIX_LINE_ENDING);
+        $time = "$startHour:$startMinute:$startSecond,$startMillis --> $endHour:$endMinute:$endSecond,$endMillis";
+
+        // strip all xml markup except SRT-supported formatting tags
+        $lines = strip_tags($cue->getLines()->implode(StringHelpers::UNIX_LINE_ENDING), "<b><u><i><font>");
 
         return $time . StringHelpers::UNIX_LINE_ENDING . $lines;
     }
