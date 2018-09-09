@@ -20,21 +20,19 @@ class SubRipParser extends SubtitleParser
 
         $rawCues  = explode(StringHelpers::UNIX_LINE_ENDING . StringHelpers::UNIX_LINE_ENDING, $rawSubtitle);
         $subtitle = new Subtitle();
-        $i        = 0;
-        foreach ($rawCues as $rawCue) {
-            $i++;
+        foreach ($rawCues as $idx => $rawCue) {
             $rawLines = explode(StringHelpers::UNIX_LINE_ENDING, $rawCue);
 
             if (!is_numeric($rawLines[0])) {
-                throw new ParsingException("Block #$i doesn't seem to have a cue-number on its first line!");
+                throw new ParsingException("Block #$idx doesn't seem to have a cue-number on its first line!");
             }
 
             if (strpos($rawLines[1], ' --> ') === false) {
-                throw new ParsingException("Block #$i doesn't seem to have its timestamps on its second line!");
+                throw new ParsingException("Block #$idx doesn't seem to have its timestamps on its second line!");
             }
 
             if (count($rawLines) < 3) {
-                throw new ParsingException("Block #$i doesn't have any text lines!");
+                throw new ParsingException("Block #$idx doesn't have any text lines!");
             }
 
             $times = explode('-->', $rawLines[1]);
