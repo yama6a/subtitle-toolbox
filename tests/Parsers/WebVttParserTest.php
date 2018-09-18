@@ -22,8 +22,22 @@ class WebVttParserTest extends TestCase
 
     public function testStripsNotesAndStyles()
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ .
-                                                      "/../files/vtt/with_styles_and_notes.vtt"), WebVttParser::class);
+        $subtitle = Subtitle::parse(
+            file_get_contents(__DIR__ . "/../files/vtt/with_styles_and_notes.vtt"), WebVttParser::class
+        );
+
+        $this->assertSame(
+            file_get_contents(__DIR__ . "/../files/srt/valid.srt"),
+            $subtitle->format(SubRipFormatter::class)
+        );
+    }
+
+
+    public function testWorksWithMissingHours()
+    {
+        $subtitle = Subtitle::parse(
+            file_get_contents(__DIR__ . "/../files/vtt/missing_hours.vtt"), WebVttParser::class
+        );
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/srt/valid.srt"),

@@ -83,16 +83,10 @@ class WebVttParser extends SubtitleParser
             throw new ParsingException("The time-string of at least one cue could not be parsed: $timeString");
         }
 
-        // if hours are supplied (which are optional according to the WebVTT standard)
-        // then we need to ignore the first capture group.
-        if (substr($matches[1], -1) === ':') {
-            $matches = array_slice($matches, 1);
-        }
-
-        $hours   = intval($matches[1]);
-        $minutes = intval($matches[2]);
-        $seconds = intval($matches[3]);
-        $millis  = intval($matches[4]);
+        $hours   = intval($matches[2]);
+        $minutes = intval($matches[3]);
+        $seconds = intval($matches[4]);
+        $millis  = intval($matches[5]);
 
         return $hours * 3600 + $minutes * 60 + $seconds + $millis / 1000;
     }
