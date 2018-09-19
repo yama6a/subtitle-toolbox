@@ -28,9 +28,10 @@ class WebVttFormatter extends SubtitleFormatter
     {
         $timeStamps = $this->formatTimeToString($cue->getStart()) . " --> " . $this->formatTimeToString($cue->getEnd());
 
-        // strip all xml markup except SRT-supported formatting tags
-        //ToDo: add all allowed tags to the exceptions in strip_tags()
-        $lines = strip_tags($cue->getLines()->implode(StringHelpers::UNIX_LINE_ENDING), "<b><u><i><font>");
+        // strip all xml markup except VTT-supported formatting tags
+        // ToDo: make this more sophisticated to support e.g. <v.first.loud>Foo Bar</v> and <c.yellow>Yellow text</c>
+        $allowedTags = "<b><u><i><v><lang><c><ruby><rt>";
+        $lines       = strip_tags($cue->getLines()->implode(StringHelpers::UNIX_LINE_ENDING), $allowedTags);
 
         return $timeStamps . StringHelpers::UNIX_LINE_ENDING . $lines;
     }
@@ -43,6 +44,6 @@ class WebVttFormatter extends SubtitleFormatter
         $second = str_pad(floor($timeInSeconds) % 60, 2, "0", STR_PAD_LEFT);
         $millis = str_pad(round(($timeInSeconds - floor($timeInSeconds)) * 1000), 3, "0", STR_PAD_LEFT);
 
-        return "$hour:$minute:$second,$millis";
+        return $hour . ":" . $minute . ":" . $second . "." . $millis;
     }
 }
