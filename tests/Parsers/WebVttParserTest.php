@@ -14,8 +14,8 @@ class WebVttParserTest extends TestCase
         $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/vtt/valid.vtt"), WebVttParser::class);
 
         $this->assertSame(
-            file_get_contents(__DIR__ . "/../files/srt/valid.srt"),
-            $subtitle->format(SubRipFormatter::class)
+            file_get_contents(__DIR__ . "/../files/vtt/valid.vtt"),
+            $subtitle->format(WebVttFormatter::class)
         );
     }
 
@@ -27,8 +27,8 @@ class WebVttParserTest extends TestCase
         );
 
         $this->assertSame(
-            file_get_contents(__DIR__ . "/../files/srt/valid.srt"),
-            $subtitle->format(SubRipFormatter::class)
+            file_get_contents(__DIR__ . "/../files/vtt/valid.vtt"),
+            $subtitle->format(WebVttFormatter::class)
         );
     }
 
@@ -40,8 +40,8 @@ class WebVttParserTest extends TestCase
         );
 
         $this->assertSame(
-            file_get_contents(__DIR__ . "/../files/srt/valid.srt"),
-            $subtitle->format(SubRipFormatter::class)
+            file_get_contents(__DIR__ . "/../files/vtt/valid.vtt"),
+            $subtitle->format(WebVttFormatter::class)
         );
     }
 
@@ -102,8 +102,8 @@ class WebVttParserTest extends TestCase
             file_get_contents(__DIR__ . "/../files/vtt/missing_cue_number.vtt"), WebVttParser::class
         );
         $this->assertSame(
-            file_get_contents(__DIR__ . "/../files/srt/valid.srt"),
-            $subtitle->format(SubRipFormatter::class)
+            file_get_contents(__DIR__ . "/../files/vtt/valid.vtt"),
+            $subtitle->format(WebVttFormatter::class)
         );
     }
 
