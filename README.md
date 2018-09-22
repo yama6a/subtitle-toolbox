@@ -8,4 +8,5 @@ This project currently focuses on adding basic support for additional formats, r
 | Format | Reads | Outputs | Additional Info
 |:--- |:--- |:--- |:--- |
 | SubRip (.srt)  | Full Support | Full Support  | Formatter strips all xml tags except: \<b>\<i>\<u>\<font>
-| WebVTT (.vtt)  | No Support for comments, styling or positioning| No Support for comments, styling or positioning | Formatter strips all xml tags except: \<b>\<u>\<i>\<v>\<lang>\<c>\<ruby>\<rt>  
+| WebVTT (.vtt)  | No support for comments, styling or positioning | No Support for comments, styling or positioning | Formatter strips all xml tags except: \<b>\<u>\<i>\<v>\<lang>\<c>\<ruby>\<rt>  
+| LyRiCs (.lrc)  | No support for ID tags | No support for ID tags | Strips all xml tags, including word-timing of enhanced LRC files 
