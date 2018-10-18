@@ -7,5 +7,6 @@ This project currently focuses on adding basic support for additional formats, r
 ## Supported formats
 | Format | Reads | Outputs | Additional Info
 |:--- |:--- |:--- |:--- |
-| SubRip (.srt)  | Full Support | Full Support  | Formatter strips all xml tags except: \<b>\<i>\<u>\<font>
-| WebVTT (.vtt)  | No Support for comments, styling or positioning| No Support for comments, styling or positioning | Formatter strips all xml tags except: \<b>\<u>\<i>\<v>\<lang>\<c>\<ruby>\<rt>  
+| SubRip (.srt)   | Full Support | Full Support  | Formatter strips all xml tags except: \<b>\<i>\<u>\<font>
+| MpSub (.mpsub)  | No Support for comments, styling or positioning| No Support for comments, styling or positioning | Formatter strips all xml tags except: \<b>\<u>\<i>\<v>\<lang>\<c>\<ruby>\<rt>  
+| WebVTT (.vtt)   | n/a | Only supports FORMAT=TIME, No support for metadata | Formatter strips all xml tags
