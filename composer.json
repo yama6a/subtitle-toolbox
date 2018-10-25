@@ -1,5 +1,6 @@
 {
   "name": "ymakhloufi/subtitle-toolbox",
+  "description": "A toolbox for parsing, manipulating and exporting subtitles to various formats.",
   "autoload": {
     "psr-4": {
       "SubtitleToolbox\\": "src/"
