@@ -2,8 +2,8 @@
 
 namespace SubtitleToolbox;
 
+use Doctrine\Common\Collections\ArrayCollection as Collection;
 use InvalidArgumentException;
-use Tightenco\Collect\Support\Collection;
 
 class SubtitleCue
 {
@@ -71,10 +71,9 @@ class SubtitleCue
                 return $this->setLinesByString($lines);
             default:
                 $type = gettype($lines) === 'object' ? get_class($lines) : gettype($lines);
-                // ToDo: make custom exceptions
-                throw new InvalidArgumentException("Can only set cue-text by string or array! " .
-                                                   "Tried to set cue-text of cue [{$this->start} >>> {$this->end}] " .
-                                                   "by $type");
+                throw new InvalidArgumentException(
+                    "Can only set cue-text by string or array! " .
+                    "Tried to set cue-text of cue [{$this->start} >>> {$this->end}] by $type");
         }
     }
 
@@ -102,7 +101,7 @@ class SubtitleCue
     public function getText(): string
     {
         return ($this->lines and $this->lines->count() > 0)
-            ? $this->lines->implode(StringHelpers::UNIX_LINE_ENDING)
+            ? implode(StringHelpers::UNIX_LINE_ENDING, $this->lines->toArray())
             : "";
     }
 
@@ -111,7 +110,7 @@ class SubtitleCue
     {
         $line = StringHelpers::cleanString($line);
         if ($line !== '') {
-            $this->lines->push($line);
+            $this->lines->add($line);
         }
 
         return $this;

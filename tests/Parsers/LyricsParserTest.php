@@ -51,7 +51,7 @@ class LyricsParserTest extends TestCase
         );
 
         $this->assertSame("First Text", $subtitle->getCues()->first()->getLines()->first());
-        $this->assertSame("Third Text", $subtitle->getCues()->first()->getLines()->get(1));
+        $this->assertSame("Third Text", $subtitle->getCues()->get(1)->getLines()->first());
         $this->assertSame(2, $subtitle->getCues()->count());
     }
 

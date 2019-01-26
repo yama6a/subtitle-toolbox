@@ -9,7 +9,7 @@ class StringHelpers
     const WINDOWS_LINE_ENDING = "\r\n";
 
 
-    public static function hasUtf8Bom(string $str)
+    public static function hasUtf8Bom(string $str): bool
     {
         $bom = pack("CCC", 0xef, 0xbb, 0xbf);
 
@@ -17,13 +17,13 @@ class StringHelpers
     }
 
 
-    public static function removeUtf8Bom(string $str)
+    public static function removeUtf8Bom(string $str): string
     {
         return self::hasUtf8Bom($str) ? substr($str, 3) : $str;
     }
 
 
-    public static function addUtf8Bom(string $str)
+    public static function addUtf8Bom(string $str): string
     {
         return self::hasUtf8Bom($str) ? $str : chr(239) . chr(187) . chr(191) . $str;
     }

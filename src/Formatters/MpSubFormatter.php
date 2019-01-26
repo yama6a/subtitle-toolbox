@@ -23,7 +23,7 @@ class MpSubFormatter extends SubtitleFormatter
         foreach ($subtitle->getCues() as $cueIndex => $cue) {
             $output .= StringHelpers::UNIX_LINE_ENDING;
             $output .= $this->getTimestamp($cue, $previousEnd);
-            $output .= strip_tags($cue->getLines()->implode(StringHelpers::UNIX_LINE_ENDING));
+            $output .= strip_tags(implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines()->toArray()));
             $output .= StringHelpers::UNIX_LINE_ENDING;
 
             $previousEnd = $cue->getEnd();

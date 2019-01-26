@@ -2,11 +2,11 @@
 
 namespace SubtitleToolbox;
 
+use Doctrine\Common\Collections\ArrayCollection as Collection;
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Parsers\SubtitleParser;
-use Tightenco\Collect\Support\Collection;
 
 class SubtitleTest extends \PHPUnit\Framework\TestCase
 {
