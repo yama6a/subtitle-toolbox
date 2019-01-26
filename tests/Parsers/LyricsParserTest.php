@@ -39,7 +39,7 @@ class LyricsParserTest extends TestCase
         );
 
         $this->assertSame("First Text", $subtitle->getCues()->first()->getLines()->first());
-        $this->assertSame("Second Text", $subtitle->getCues()->first()->getLines()->get(1));
+        $this->assertSame("Second Text", $subtitle->getCues()->get(1)->getLines()->first());
         $this->assertSame(2, $subtitle->getCues()->count());
     }
 
@@ -63,7 +63,7 @@ class LyricsParserTest extends TestCase
         );
 
         $this->assertSame("First Text", $subtitle->getCues()->first()->getLines()->first());
-        $this->assertSame("Third Text", $subtitle->getCues()->first()->getLines()->get(1));
+        $this->assertSame("Third Text", $subtitle->getCues()->get(1)->getLines()->first());
         $this->assertSame(2, $subtitle->getCues()->count());
     }
 
@@ -73,7 +73,7 @@ class LyricsParserTest extends TestCase
         $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/lrc/missing_text.lrc"), LyricsParser::class);
 
         $this->assertSame("First Text", $subtitle->getCues()->first()->getLines()->first());
-        $this->assertSame("Third Text", $subtitle->getCues()->first()->getLines()->get(1));
+        $this->assertSame("Third Text", $subtitle->getCues()->get(1)->getLines()->first());
         $this->assertSame(2, $subtitle->getCues()->count());
     }
 
@@ -85,7 +85,7 @@ class LyricsParserTest extends TestCase
         );
 
         $this->assertSame("First Text", $subtitle->getCues()->first()->getLines()->first());
-        $this->assertSame("Third Text", $subtitle->getCues()->first()->getLines()->get(1));
+        $this->assertSame("Third Text", $subtitle->getCues()->get(1)->getLines()->first());
         $this->assertSame(2, $subtitle->getCues()->count());
     }
 }
