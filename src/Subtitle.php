@@ -2,7 +2,6 @@
 
 namespace SubtitleToolbox;
 
-use Doctrine\Common\Collections\ArrayCollection as Collection;
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
@@ -11,13 +10,13 @@ use SubtitleToolbox\Parsers\SubtitleParser;
 
 class Subtitle
 {
-    /** @var Collection|SubtitleCue[] */
+    /** @var array|SubtitleCue[] */
     protected $cues;
 
 
     public function __construct()
     {
-        $this->cues = new Collection();
+        $this->cues = [];
     }
 
 
@@ -48,9 +47,9 @@ class Subtitle
 
 
     /**
-     * @return Collection|SubtitleCue[]
+     * @return array|SubtitleCue[]
      */
-    public function getCues(): Collection
+    public function getCues(): array
     {
         return $this->cues;
     }
@@ -58,7 +57,7 @@ class Subtitle
 
     public function addCue(SubtitleCue $cue, bool $reIndexAfterAdding = true): self
     {
-        $this->cues->add($cue);
+        $this->cues[] = $cue;
 
         if ($reIndexAfterAdding) {
             $this->reIndexCues();
@@ -70,11 +69,11 @@ class Subtitle
 
     public function removeCue(int $cueIndex, bool $reIndexAfterRemoval = true): self
     {
-        if (!$this->cues->containsKey($cueIndex)) {
+        if (!array_key_exists($cueIndex, $this->cues)) {
             throw new \RuntimeException("Cannot remove cue $cueIndex - cue not found!");
         }
 
-        $this->cues->remove($cueIndex);
+        unset($this->cues[$cueIndex]);
 
         if ($reIndexAfterRemoval) {
             $this->reIndexCues();
@@ -86,43 +85,40 @@ class Subtitle
 
     public function reIndexCues(): self
     {
-        $cues = $this->cues->toArray();
-        usort($cues, function (SubtitleCue $cue1, SubtitleCue $cue2) {
+        usort($this->cues, function (SubtitleCue $cue1, SubtitleCue $cue2) {
             return $cue1->getStart() - $cue2->getStart();
         });
-
-        $this->cues = new Collection($cues);
 
         return $this;
     }
 
 
-    public function getErrors(): Collection
+    public function getErrors(): array
     {
-        $errors = new Collection();
+        $errors = [];
 
-        if ($this->cues->count() === 0) {
-            $errors->add("This subtitle contains no cues!");
+        if (count($this->cues) === 0) {
+            $errors[] = "This subtitle contains no cues!";
         }
 
         $previousCueEnd   = 0;
         $previousCueIndex = -1;
         foreach ($this->cues as $cueIndex => $cue) {
             if ($cue->getStart() < $previousCueEnd) {
-                $errors->add("The start-time ({$cue->getStart()}) of cue #$cueIndex is " .
-                             "before its predecessor's end-time ($previousCueEnd)! " .
-                             "Try running reIndexCues() on the subtitle to fix it.");
+                $errors[] = "The start-time ({$cue->getStart()}) of cue #$cueIndex is " .
+                            "before its predecessor's end-time ($previousCueEnd)! " .
+                            "Try running reIndexCues() on the subtitle to fix it.";
             }
             $previousCueEnd = $cue->getEnd();
 
             if ($cueIndex !== ++$previousCueIndex) {
-                $errors->add("The cue-index of cue #$cueIndex is $cueIndex " .
-                             "but we expected it to be $previousCueIndex! " .
-                             "Try running reIndexCues() on the subtitle to fix it.");
+                $errors[] = "The cue-index of cue #$cueIndex is $cueIndex " .
+                            "but we expected it to be $previousCueIndex! " .
+                            "Try running reIndexCues() on the subtitle to fix it.";
             }
 
             if ($cue->getStart() > $cue->getEnd()) {
-                $errors->add("The start-time of cue #$cueIndex is after its own end-time!");
+                $errors[] = "The start-time of cue #$cueIndex is after its own end-time!";
             }
         }
 

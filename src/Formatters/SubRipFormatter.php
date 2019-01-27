@@ -37,7 +37,7 @@ class SubRipFormatter extends SubtitleFormatter
         $endMillis = str_pad(round(($cue->getEnd() - floor($cue->getEnd())) * 1000), 3, "0", STR_PAD_LEFT);
 
         $time  = "$startHour:$startMinute:$startSecond,$startMillis --> $endHour:$endMinute:$endSecond,$endMillis";
-        $lines = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines()->toArray());
+        $lines = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines());
 
         // strip xml tags depending on option settings
         $lines = in_array(parent::OPTION_STRIP_ALL_XML_TAGS, $options)

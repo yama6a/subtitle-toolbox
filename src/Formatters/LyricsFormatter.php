@@ -26,7 +26,7 @@ class LyricsFormatter extends SubtitleFormatter
 
         // strip all xml markup
         // ToDo: make this more sophisticated to support word-timing (e.g. [00:11.22] Foo <00:12.50>Bar <00:13.80>Baz)
-        $lines = strip_tags(implode(" ", $cue->getLines()->toArray()));
+        $lines = strip_tags(implode(" ", $cue->getLines()));
 
         return $timestamp . " " . $lines;
     }

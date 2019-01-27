@@ -38,9 +38,9 @@ class LyricsParserTest extends TestCase
             file_get_contents(__DIR__ . "/../files/lrc/exceeded_minutes.lrc"), LyricsParser::class
         );
 
-        $this->assertSame("First Text", $subtitle->getCues()->first()->getLines()->first());
-        $this->assertSame("Second Text", $subtitle->getCues()->get(1)->getLines()->first());
-        $this->assertSame(2, $subtitle->getCues()->count());
+        $this->assertSame("First Text", $subtitle->getCues()[0]->getLines()[0]);
+        $this->assertSame("Second Text", $subtitle->getCues()[1]->getLines()[0]);
+        $this->assertSame(2, count($subtitle->getCues()));
     }
 
 
@@ -50,9 +50,9 @@ class LyricsParserTest extends TestCase
             file_get_contents(__DIR__ . "/../files/lrc/exceeded_seconds.lrc"), LyricsParser::class
         );
 
-        $this->assertSame("First Text", $subtitle->getCues()->first()->getLines()->first());
-        $this->assertSame("Third Text", $subtitle->getCues()->get(1)->getLines()->first());
-        $this->assertSame(2, $subtitle->getCues()->count());
+        $this->assertSame("First Text", $subtitle->getCues()[0]->getLines()[0]);
+        $this->assertSame("Third Text", $subtitle->getCues()[1]->getLines()[0]);
+        $this->assertSame(2, count($subtitle->getCues()));
     }
 
 
@@ -62,9 +62,9 @@ class LyricsParserTest extends TestCase
             file_get_contents(__DIR__ . "/../files/lrc/exceeded_centi_accuracy.lrc"), LyricsParser::class
         );
 
-        $this->assertSame("First Text", $subtitle->getCues()->first()->getLines()->first());
-        $this->assertSame("Third Text", $subtitle->getCues()->get(1)->getLines()->first());
-        $this->assertSame(2, $subtitle->getCues()->count());
+        $this->assertSame("First Text", $subtitle->getCues()[0]->getLines()[0]);
+        $this->assertSame("Third Text", $subtitle->getCues()[1]->getLines()[0]);
+        $this->assertSame(2, count($subtitle->getCues()));
     }
 
 
@@ -72,9 +72,9 @@ class LyricsParserTest extends TestCase
     {
         $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/lrc/missing_text.lrc"), LyricsParser::class);
 
-        $this->assertSame("First Text", $subtitle->getCues()->first()->getLines()->first());
-        $this->assertSame("Third Text", $subtitle->getCues()->get(1)->getLines()->first());
-        $this->assertSame(2, $subtitle->getCues()->count());
+        $this->assertSame("First Text", $subtitle->getCues()[0]->getLines()[0]);
+        $this->assertSame("Third Text", $subtitle->getCues()[1]->getLines()[0]);
+        $this->assertSame(2, count($subtitle->getCues()));
     }
 
 
@@ -84,8 +84,8 @@ class LyricsParserTest extends TestCase
             file_get_contents(__DIR__ . "/../files/lrc/missing_timestamps.lrc"), LyricsParser::class
         );
 
-        $this->assertSame("First Text", $subtitle->getCues()->first()->getLines()->first());
-        $this->assertSame("Third Text", $subtitle->getCues()->get(1)->getLines()->first());
-        $this->assertSame(2, $subtitle->getCues()->count());
+        $this->assertSame("First Text", $subtitle->getCues()[0]->getLines()[0]);
+        $this->assertSame("Third Text", $subtitle->getCues()[1]->getLines()[0]);
+        $this->assertSame(2, count($subtitle->getCues()));
     }
 }

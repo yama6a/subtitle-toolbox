@@ -2,7 +2,6 @@
 
 namespace SubtitleToolbox;
 
-use Doctrine\Common\Collections\ArrayCollection as Collection;
 use InvalidArgumentException;
 
 class SubtitleCue
@@ -13,7 +12,7 @@ class SubtitleCue
     /** @var float */
     protected $end;
 
-    /** @var Collection|string[] */
+    /** @var array|string[] */
     protected $lines;
 
 
@@ -54,9 +53,9 @@ class SubtitleCue
 
 
     /**
-     * @return Collection|string[]
+     * @return array|string[]
      */
-    public function getLines(): Collection
+    public function getLines(): array
     {
         return $this->lines;
     }
@@ -80,7 +79,6 @@ class SubtitleCue
 
     public function setLinesByString(string $lines): self
     {
-        $lines = StringHelpers::cleanString($lines); // remove empty lines and such stuff
         $this->setLinesByArray(explode(StringHelpers::UNIX_LINE_ENDING, $lines));
 
         return $this;
@@ -89,9 +87,12 @@ class SubtitleCue
 
     public function setLinesByArray(array $lines): self
     {
-        $this->lines = new Collection();
+        $this->lines = [];
         foreach ($lines as $line) {
-            $this->addLine($line);
+            $line = StringHelpers::cleanString($line); // remove empty lines and such stuff
+            if ($line !== "") {
+                $this->lines[] = $line;
+            }
         }
 
         return $this;
@@ -100,8 +101,8 @@ class SubtitleCue
 
     public function getText(): string
     {
-        return ($this->lines and $this->lines->count() > 0)
-            ? implode(StringHelpers::UNIX_LINE_ENDING, $this->lines->toArray())
+        return (count($this->lines) > 0)
+            ? implode(StringHelpers::UNIX_LINE_ENDING, $this->lines)
             : "";
     }
 
@@ -110,7 +111,7 @@ class SubtitleCue
     {
         $line = StringHelpers::cleanString($line);
         if ($line !== '') {
-            $this->lines->add($line);
+            $this->lines[] = $line;
         }
 
         return $this;
