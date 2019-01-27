@@ -16,7 +16,7 @@ class MpSubFormatter extends SubtitleFormatter
                          StringHelpers::UNIX_LINE_ENDING;
 
 
-    public function format(Subtitle $subtitle): string
+    public function format(Subtitle $subtitle, array $options = []): string
     {
         $output      = static::MPSUB_HEADER;
         $previousEnd = 0;

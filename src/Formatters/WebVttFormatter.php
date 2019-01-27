@@ -8,7 +8,7 @@ use SubtitleToolbox\SubtitleCue;
 
 class WebVttFormatter extends SubtitleFormatter
 {
-    function format(Subtitle $subtitle): string
+    function format(Subtitle $subtitle, array $options = []): string
     {
         $output = "WEBVTT" . StringHelpers::UNIX_LINE_ENDING . StringHelpers::UNIX_LINE_ENDING;
         foreach ($subtitle->getCues() as $cueIndex => $cue) {
@@ -16,7 +16,7 @@ class WebVttFormatter extends SubtitleFormatter
                 $output .= StringHelpers::UNIX_LINE_ENDING;
             }
             $output .= $cueIndex + 1 . StringHelpers::UNIX_LINE_ENDING;
-            $output .= $this->formatCue($cue);
+            $output .= $this->formatCue($cue, $options);
             $output .= StringHelpers::UNIX_LINE_ENDING;
         }
 
@@ -24,14 +24,16 @@ class WebVttFormatter extends SubtitleFormatter
     }
 
 
-    private function formatCue(SubtitleCue $cue)
+    private function formatCue(SubtitleCue $cue, array $options)
     {
         $timeStamps = $this->formatTimeToString($cue->getStart()) . " --> " . $this->formatTimeToString($cue->getEnd());
 
         // strip all xml markup except VTT-supported formatting tags
         // ToDo: make this more sophisticated to support e.g. <v.first.loud>Foo Bar</v> and <c.yellow>Yellow text</c>
-        $allowedTags = "<strong><b><u><i><v><lang><c><ruby><rt>";
-        $lines       = strip_tags(implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines()->toArray()), $allowedTags);
+        $lines = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines()->toArray());
+        $lines = in_array(parent::OPTION_STRIP_ALL_XML_TAGS, $options)
+            ? strip_tags($lines)
+            : strip_tags($lines, "<strong><b><u><i><v><lang><c><ruby><rt>");
 
         return $timeStamps . StringHelpers::UNIX_LINE_ENDING . $lines;
     }

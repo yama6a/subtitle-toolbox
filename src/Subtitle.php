@@ -34,7 +34,7 @@ class Subtitle
     }
 
 
-    public function format(string $formatterClass): string
+    public function format(string $formatterClass, array $options = []): string
     {
         $formatter = new $formatterClass();
 
@@ -43,7 +43,7 @@ class Subtitle
                                                 "is not of type " . SubtitleFormatter::class);
         }
 
-        return $formatter->format($this);
+        return $formatter->format($this, $options);
     }
 
 

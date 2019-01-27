@@ -6,5 +6,7 @@ use SubtitleToolbox\Subtitle;
 
 abstract class SubtitleFormatter
 {
-    abstract function format(Subtitle $subtitle): string;
+    const OPTION_STRIP_ALL_XML_TAGS = "OPTION_STRIP_ALL_XML_TAGS";
+
+    abstract function format(Subtitle $subtitle, array $options = []): string;
 }

@@ -8,7 +8,7 @@ use SubtitleToolbox\SubtitleCue;
 
 class LyricsFormatter extends SubtitleFormatter
 {
-    function format(Subtitle $subtitle): string
+    function format(Subtitle $subtitle, array $options = []): string
     {
         $output = "";
         foreach ($subtitle->getCues() as $cueIndex => $cue) {

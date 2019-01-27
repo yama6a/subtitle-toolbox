@@ -28,4 +28,15 @@ class SubRipFormatterTest extends TestCase
             $subtitle->format(SubRipFormatter::class)
         );
     }
+
+
+    public function testAllXmlTagsAreStrippedAwayIfOptionIsSet()
+    {
+        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/strip_xml.srt"), SubRipParser::class);
+
+        $this->assertSame(
+            file_get_contents(__DIR__ . "/../files/srt/all_tags_stripped.srt"),
+            $subtitle->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+        );
+    }
 }

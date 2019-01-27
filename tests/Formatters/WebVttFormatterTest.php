@@ -28,4 +28,15 @@ class WebVttFormatterTest extends TestCase
             $subtitle->format(WebVttFormatter::class)
         );
     }
+
+
+    public function testAllXmlTagsAreStrippedAwayIfOptionIsSet()
+    {
+        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/vtt/strip_xml.vtt"), WebVttParser::class);
+
+        $this->assertSame(
+            file_get_contents(__DIR__ . "/../files/vtt/all_xml_tags_stripped.vtt"),
+            $subtitle->format(WebVttFormatter::class, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+        );
+    }
 }
