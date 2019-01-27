@@ -22,9 +22,9 @@ class SubtitleCueTest extends TestCase
         $this->assertSame(0.1, $cue->getStart());
         $this->assertSame(0.33, $cue->getEnd());
         $this->assertSame($text, $cue->getText());
-        $this->assertSame(2, $cue->getLines()->count());
-        $this->assertSame($line1, $cue->getLines()->get(0));
-        $this->assertSame($line2, $cue->getLines()->get(1));
+        $this->assertSame(2, count($cue->getLines()));
+        $this->assertSame($line1, $cue->getLines()[0]);
+        $this->assertSame($line2, $cue->getLines()[1]);
     }
 
 
@@ -59,11 +59,11 @@ class SubtitleCueTest extends TestCase
 
         $this->assertNotEquals($text, $cue->getText());
         $this->assertSame(StringHelpers::cleanString($text), $cue->getText());
-        $this->assertSame(2, $cue->getLines()->count());
-        $this->assertNotEquals($line1, $cue->getLines()->get(0));
-        $this->assertNotEquals($line2, $cue->getLines()->get(1));
-        $this->assertSame(StringHelpers::cleanString($line1), $cue->getLines()->get(0));
-        $this->assertSame(StringHelpers::cleanString($line2), $cue->getLines()->get(1));
+        $this->assertSame(2, count($cue->getLines()));
+        $this->assertNotEquals($line1, $cue->getLines()[0]);
+        $this->assertNotEquals($line2, $cue->getLines()[1]);
+        $this->assertSame(StringHelpers::cleanString($line1), $cue->getLines()[0]);
+        $this->assertSame(StringHelpers::cleanString($line2), $cue->getLines()[1]);
     }
 
 
@@ -73,9 +73,9 @@ class SubtitleCueTest extends TestCase
         $cue->setLines($lines = [$line1 = "this is a line", $line2 = "with a linebreak"]);
 
         $this->assertSame($line1 . "\n" . $line2, $cue->getText());
-        $this->assertSame(2, $cue->getLines()->count());
-        $this->assertSame($line1, $cue->getLines()->get(0));
-        $this->assertSame($line2, $cue->getLines()->get(1));
+        $this->assertSame(2, count($cue->getLines()));
+        $this->assertSame($line1, $cue->getLines()[0]);
+        $this->assertSame($line2, $cue->getLines()[1]);
     }
 
 
@@ -91,9 +91,9 @@ class SubtitleCueTest extends TestCase
         );
 
         $this->assertSame($text, $cue->getText());
-        $this->assertSame(2, $cue->getLines()->count());
-        $this->assertSame($line1, $cue->getLines()->get(0));
-        $this->assertSame($line2, $cue->getLines()->get(1));
+        $this->assertSame(2, count($cue->getLines()));
+        $this->assertSame($line1, $cue->getLines()[0]);
+        $this->assertSame($line2, $cue->getLines()[1]);
     }
 
 
@@ -103,23 +103,23 @@ class SubtitleCueTest extends TestCase
         $cue->setLinesByArray($lines = [$line1 = "this is a line", $line2 = "with a linebreak"]);
 
         $this->assertSame($line1 . "\n" . $line2, $cue->getText());
-        $this->assertSame(2, $cue->getLines()->count());
-        $this->assertSame($line1, $cue->getLines()->get(0));
-        $this->assertSame($line2, $cue->getLines()->get(1));
+        $this->assertSame(2, count($cue->getLines()));
+        $this->assertSame($line1, $cue->getLines()[0]);
+        $this->assertSame($line2, $cue->getLines()[1]);
     }
 
 
     public function testAddLine()
     {
         $cue = new SubtitleCue();
-        $this->assertSame(0, $cue->getLines()->count());
+        $this->assertSame(0, count($cue->getLines()));
 
         $cue->addLine($line1 = "first line");
         $cue->addLine($line2 = "second line");
 
-        $this->assertSame(2, $cue->getLines()->count());
-        $this->assertSame($line1, $cue->getLines()->first());
-        $this->assertSame($line2, $cue->getLines()->get(1));
+        $this->assertSame(2, count($cue->getLines()));
+        $this->assertSame($line1, $cue->getLines()[0]);
+        $this->assertSame($line2, $cue->getLines()[1]);
     }
 
 

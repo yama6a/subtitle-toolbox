@@ -30,7 +30,7 @@ class WebVttFormatter extends SubtitleFormatter
 
         // strip all xml markup except VTT-supported formatting tags
         // ToDo: make this more sophisticated to support e.g. <v.first.loud>Foo Bar</v> and <c.yellow>Yellow text</c>
-        $lines = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines()->toArray());
+        $lines = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines());
         $lines = in_array(parent::OPTION_STRIP_ALL_XML_TAGS, $options)
             ? strip_tags($lines)
             : strip_tags($lines, "<strong><b><u><i><v><lang><c><ruby><rt>");
