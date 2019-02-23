@@ -26,13 +26,13 @@ class SubtitleCue
 
     public function getStart(): float
     {
-        return $this->start;
+        return round($this->start, 3);
     }
 
 
     public function setStart(float $start): self
     {
-        $this->start = $start;
+        $this->start = round($start, 3);
 
         return $this;
     }
@@ -40,13 +40,13 @@ class SubtitleCue
 
     public function getEnd(): float
     {
-        return $this->end;
+        return round($this->end, 3);
     }
 
 
     public function setEnd(float $end): self
     {
-        $this->end = $end;
+        $this->end = round($end, 3);
 
         return $this;
     }
@@ -72,7 +72,7 @@ class SubtitleCue
                 $type = gettype($lines) === 'object' ? get_class($lines) : gettype($lines);
                 throw new InvalidArgumentException(
                     "Can only set cue-text by string or array! " .
-                    "Tried to set cue-text of cue [{$this->start} >>> {$this->end}] by $type");
+                    "Tried to set cue-text of cue [{$this->getStart()} >>> {$this->getEnd()}] by $type");
         }
     }
 
