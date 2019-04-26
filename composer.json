@@ -6,6 +6,7 @@
       "SubtitleToolbox\\": "src/"
     }
   },
+  "license": "MIT",
   "require": {
     "php": ">=7.0"
   },
