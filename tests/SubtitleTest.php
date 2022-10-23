@@ -63,22 +63,22 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     public function testGetErrors()
     {
         $subtitle = new Subtitle();
-        $this->assertContains("subtitle contains no cues", $subtitle->getErrors()[0]);
+        $this->assertStringContainsString("subtitle contains no cues", $subtitle->getErrors()[0]);
 
         $subtitle->addCue($cue1 = new SubtitleCue(1, 2, "text1"), false);
         $subtitle->addCue($cue2 = new SubtitleCue(5, 6, "text2"), false);
         $subtitle->addCue($cue3 = new SubtitleCue(3, 4, "text3"), false);
 
-        $this->assertContains("before its predecessor's end-time", $subtitle->getErrors()[0]);
+        $this->assertStringContainsString("before its predecessor's end-time", $subtitle->getErrors()[0]);
 
         $subtitle->reIndexCues();
         $this->assertEmpty($subtitle->getErrors());
 
         $subtitle->removeCue(1, false);
-        $this->assertContains("we expected it to be", $subtitle->getErrors()[0]);
+        $this->assertStringContainsString("we expected it to be", $subtitle->getErrors()[0]);
 
         $subtitle->addCue(new SubtitleCue(9, 1, "text4"));
-        $this->assertContains("is after its own end-time", $subtitle->getErrors()[0]);
+        $this->assertStringContainsString("is after its own end-time", $subtitle->getErrors()[0]);
 
         $subtitle->removeCue(2);
         $this->assertEmpty($subtitle->getErrors());
