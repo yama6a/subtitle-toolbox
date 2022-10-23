@@ -1,0 +1,16 @@
+{
+  "name": "ymakhloufi/subtitle-toolbox",
+  "description": "A toolbox for parsing, manipulating and exporting subtitles to various formats.",
+  "autoload": {
+    "psr-4": {
+      "SubtitleToolbox\\": "src/"
+    }
+  },
+  "license": "MIT",
+  "require": {
+    "php": ">=7.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": ">=6.0"
+  }
+}
