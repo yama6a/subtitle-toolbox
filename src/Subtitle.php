@@ -27,6 +27,9 @@ class Subtitle
     /** @var list<array{text: string, beforeCueIndex: int}> */
     protected array $comments = [];
 
+    /** @var array<string, array> */
+    protected array $formatData = [];
+
 
     public function __construct()
     {
@@ -197,6 +200,27 @@ class Subtitle
 
         $this->comments[] = ["text" => $text, "beforeCueIndex" => $beforeCueIndex];
         $this->sortComments();
+
+        return $this;
+    }
+
+
+    /**
+     * Returns the data that only the given format reads, or an empty array.
+     */
+    public function getFormatData(string $format): array
+    {
+        return $this->formatData[$format] ?? [];
+    }
+
+
+    public function setFormatData(string $format, array $data): self
+    {
+        if ($data === []) {
+            unset($this->formatData[$format]);
+        } else {
+            $this->formatData[$format] = $data;
+        }
 
         return $this;
     }

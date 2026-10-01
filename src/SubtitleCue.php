@@ -19,6 +19,9 @@ class SubtitleCue
 
     protected ?int $alignment = null;
 
+    /** @var array<string, array> */
+    protected array $formatData = [];
+
 
     public function __construct(float $start = 0, float $end = 0, $lines = "")
     {
@@ -148,6 +151,27 @@ class SubtitleCue
         }
 
         $this->alignment = $alignment;
+
+        return $this;
+    }
+
+
+    /**
+     * Returns the data that only the given format reads, or an empty array.
+     */
+    public function getFormatData(string $format): array
+    {
+        return $this->formatData[$format] ?? [];
+    }
+
+
+    public function setFormatData(string $format, array $data): self
+    {
+        if ($data === []) {
+            unset($this->formatData[$format]);
+        } else {
+            $this->formatData[$format] = $data;
+        }
 
         return $this;
     }
