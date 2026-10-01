@@ -2,6 +2,7 @@
 
 namespace SubtitleToolbox\Formatters;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Subtitle;
@@ -294,5 +295,102 @@ class LyricsParserTest extends TestCase
             "<00:00:21.100>Bread <00:00:21.600>is <01:01:01.905>warm",
             $subtitle->getCues()[0]->getText()
         );
+    }
+
+
+    /**
+     * @return array<string, array{string, int, array{float, float, string}, array{float, float, string}}>
+     */
+    public static function realFiles(): array
+    {
+        return [
+            "justan-1"             => [
+                "justan-1.lrc", 42, [0.0, 1.0, "火车七点出发"], [202.98, 212.98, "烤箱闻起来很香"],
+            ],
+            "justan-4"             => [
+                "justan-4.lrc", 34, [0.0, 4.0, "火车七点出发"], [202.0, 207.0, "天气准时到站　站台下了一整天"],
+            ],
+            "lrc-maker-nami"       => [
+                "lrc-maker-nami.lrc", 39, [0.0, 1.0, "電車は七時に出る：example"], [235.536, 243.353, "——天気は晴れです、駅は少し混む。"],
+            ],
+            "mantas-done-lrc"      => [
+                "mantas-done-lrc.lrc", 5, [8.62, 9.64, "Trains run early"], [22.63, 32.63, "Rain comes later"],
+            ],
+            "subsrt-sample"        => [
+                "subsrt-sample.lrc", 6, [12.0, 17.2, "Line 1 about the train"], [29.02, 39.02, "Line 6 about the bread"],
+            ],
+            "handwritten-core"     => [
+                "handwritten-core.lrc",
+                5,
+                [5.0, 9.4, "The train leaves at seven"],
+                [32.8, 42.8, "Ring the bell, ring the bell"],
+            ],
+            "handwritten-enhanced" => [
+                "handwritten-enhanced.lrc",
+                3,
+                [3.0, 5.9, "<00:00:03.000> Slow <00:00:03.550> river <00:00:04.400> runs"],
+                [9.6, 19.6, "<00:00:09.600> Into <00:00:10.100> the <00:00:10.650> sea"],
+            ],
+        ];
+    }
+
+
+    #[DataProvider("realFiles")]
+    public function testRealFileParses(string $file, int $cueCount, array $firstCue, array $lastCue): void
+    {
+        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/lrc/real/" . $file), LyricsParser::class);
+        $cues     = $subtitle->getCues();
+        $last     = $cues[count($cues) - 1];
+
+        $this->assertCount($cueCount, $cues);
+        $this->assertSame($firstCue, [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
+        $this->assertSame($lastCue, [$last->getStart(), $last->getEnd(), $last->getText()]);
+    }
+
+
+    #[DataProvider("realFiles")]
+    public function testRealFileSurvivesRoundTrip(string $file): void
+    {
+        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/lrc/real/" . $file), LyricsParser::class);
+        $again    = Subtitle::parse(
+            $subtitle->format(LyricsFormatter::class), LyricsParser::class
+        );
+
+        $this->assertSame($this->describe($subtitle), $this->describe($again));
+    }
+
+
+    public function testRealFileMetadata(): void
+    {
+        $subtitle = Subtitle::parse(
+            file_get_contents(__DIR__ . "/../files/lrc/real/subsrt-sample.lrc"), LyricsParser::class
+        );
+
+        $this->assertSame("Weather (morning) report", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
+        $this->assertSame("Station choir", $subtitle->getMetadata(Subtitle::METADATA_ARTIST));
+        $this->assertSame("Songs from the bakery", $subtitle->getMetadata(Subtitle::METADATA_ALBUM));
+        $this->assertSame("Writer of the words", $subtitle->getMetadata(Subtitle::METADATA_AUTHOR));
+        $this->assertSame(
+            ["length", "by", "offset", "re", "ve"],
+            array_keys($subtitle->getFormatData(LyricsParser::FORMAT)["idTags"])
+        );
+    }
+
+
+    private function describe(Subtitle $subtitle): array
+    {
+        $metadata = $subtitle->getAllMetadata();
+        ksort($metadata);
+
+        // the formatter writes centiseconds, so millisecond timestamps come back rounded
+        return [
+            array_map(
+                fn ($cue) => [round($cue->getStart(), 2), round($cue->getEnd(), 2), $cue->getLines()],
+                $subtitle->getCues()
+            ),
+            $metadata,
+            $subtitle->getFormatData(LyricsParser::FORMAT),
+            $subtitle->getComments(),
+        ];
     }
 }
