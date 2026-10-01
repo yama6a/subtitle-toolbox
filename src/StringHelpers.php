@@ -63,7 +63,7 @@ class StringHelpers
 
     public static function removeDoubleEmptyLines(string $str): string
     {
-        return preg_replace('/\n{3,}/', "\n", $str);
+        return preg_replace('/\n{3,}/', "\n\n", $str);
     }
 
 

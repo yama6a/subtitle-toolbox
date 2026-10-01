@@ -14,8 +14,8 @@ class WebVttParser extends SubtitleParser
         $rawSubtitle = StringHelpers::removeUtf8Bom($rawSubtitle);
         $rawSubtitle = StringHelpers::normalizeEOLs($rawSubtitle);
         $rawSubtitle = StringHelpers::normalizeSpaces($rawSubtitle);
-        $rawSubtitle = StringHelpers::removeDoubleEmptyLines($rawSubtitle);
         $rawSubtitle = StringHelpers::trimEachLine($rawSubtitle);
+        $rawSubtitle = StringHelpers::removeDoubleEmptyLines($rawSubtitle);
         $rawSubtitle = trim($rawSubtitle);  // remove empty lines on the top and bottom of the file
 
         if (strpos($rawSubtitle, "WEBVTT") !== 0) {

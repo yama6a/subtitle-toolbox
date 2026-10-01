@@ -122,4 +122,15 @@ class WebVttParserTest extends TestCase
         $this->expectExceptionMessage("doesn't match anything that we can parse");
         Subtitle::parse(file_get_contents(__DIR__ . "/../files/vtt/missing_timestamps.vtt"), WebVttParser::class);
     }
+
+
+    public function testSeveralEmptyLinesBetweenCuesStillSeparateCues(): void
+    {
+        $raw = "WEBVTT\n\n\n00:01.000 --> 00:02.000\nFirst\n\n \n\n00:03.000 --> 00:04.000\nSecond\n";
+
+        $subtitle = Subtitle::parse($raw, WebVttParser::class);
+
+        $this->assertSame(2, count($subtitle->getCues()));
+        $this->assertSame("Second", $subtitle->getCues()[1]->getText());
+    }
 }
