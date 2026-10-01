@@ -103,4 +103,15 @@ class SubRipFormatterTest extends TestCase
             $subtitle->format(SubRipFormatter::class)
         );
     }
+
+
+    public function testLineThatBecomesEmptyIsDropped(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, ["Before", "<c.red></c>", "After"]));
+
+        $this->assertSame(
+            "\u{feff}1\n00:00:01,000 --> 00:00:02,000\nBefore\nAfter\n",
+            $subtitle->format(SubRipFormatter::class)
+        );
+    }
 }

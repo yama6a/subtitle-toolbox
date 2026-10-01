@@ -46,6 +46,10 @@ class SubRipFormatter extends SubtitleFormatter
             ? Markup::stripAllTags($lines)
             : Markup::keepTags($lines, ["b", "u", "i", "s", "font"]);
 
+        // A line that holds only a tag becomes empty, and an empty line ends the cue in SubRip.
+        $lines = explode(StringHelpers::UNIX_LINE_ENDING, $lines);
+        $lines = implode(StringHelpers::UNIX_LINE_ENDING, array_filter($lines, fn(string $line) => trim($line) !== ""));
+
         if ($cue->getAlignment() !== null && $cue->getAlignment() !== 2) {
             $lines = "{\\an{$cue->getAlignment()}}" . $lines;
         }
