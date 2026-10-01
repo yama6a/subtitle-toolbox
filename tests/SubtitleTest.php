@@ -4,7 +4,9 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
+use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
+use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\Parsers\SubtitleParser;
 
 class SubtitleTest extends \PHPUnit\Framework\TestCase
@@ -123,5 +125,23 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     {
         $this->expectException(InvalidFormatterException::class);
         (new Subtitle())->format("SubtitleToolbox\\Formatters\\DoesNotExist");
+    }
+
+
+    public function testFormattersNumberCuesFromOneAfterRemovalWithoutReIndex(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue(new SubtitleCue(1, 2, "first"));
+        $subtitle->addCue(new SubtitleCue(3, 4, "second"));
+        $subtitle->removeCue(0, false);
+
+        $this->assertSame(
+            "\u{feff}1\n00:00:03,000 --> 00:00:04,000\nsecond\n",
+            $subtitle->format(SubRipFormatter::class)
+        );
+        $this->assertSame(
+            "\u{feff}WEBVTT\n\n1\n00:00:03.000 --> 00:00:04.000\nsecond\n",
+            $subtitle->format(WebVttFormatter::class)
+        );
     }
 }
