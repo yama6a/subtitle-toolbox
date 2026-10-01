@@ -44,7 +44,7 @@ class LyricsParser extends SubtitleParser
                 }
             }
             if ($nextMatches) {
-                $end = $nextMatches[1] * 60 + $nextMatches[2] + round($nextMatches[3] / 100);
+                $end = $nextMatches[1] * 60 + $nextMatches[2] + round($nextMatches[3] / 100, 2);
             } else { // this is the final cue, so we have to assign an end time
                 // just assume no cue will never have to be visible for longer than 10 seconds.
                 $end = $start + 10;
