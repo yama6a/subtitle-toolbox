@@ -144,4 +144,52 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
             $subtitle->format(WebVttFormatter::class)
         );
     }
+
+
+    public function testMetadataIsEmptyByDefault(): void
+    {
+        $subtitle = new Subtitle();
+
+        $this->assertSame([], $subtitle->getAllMetadata());
+        $this->assertNull($subtitle->getMetadata(Subtitle::METADATA_TITLE));
+    }
+
+
+    public function testSetAndGetMetadata(): void
+    {
+        $subtitle = (new Subtitle())
+            ->setMetadata(Subtitle::METADATA_TITLE, "Yesterday")
+            ->setMetadata(Subtitle::METADATA_ARTIST, "The Beatles")
+            ->setMetadata("custom", "");
+
+        $this->assertSame("Yesterday", $subtitle->getMetadata("title"));
+        $this->assertSame("", $subtitle->getMetadata("custom"));
+        $this->assertSame(
+            ["title" => "Yesterday", "artist" => "The Beatles", "custom" => ""],
+            $subtitle->getAllMetadata()
+        );
+    }
+
+
+    public function testSettingMetadataOverwritesValue(): void
+    {
+        $subtitle = (new Subtitle())
+            ->setMetadata(Subtitle::METADATA_LANGUAGE, "en")
+            ->setMetadata(Subtitle::METADATA_LANGUAGE, "de");
+
+        $this->assertSame(["language" => "de"], $subtitle->getAllMetadata());
+    }
+
+
+    public function testSettingMetadataToNullRemovesKey(): void
+    {
+        $subtitle = (new Subtitle())
+            ->setMetadata(Subtitle::METADATA_AUTHOR, "Jane Doe")
+            ->setMetadata(Subtitle::METADATA_ALBUM, "Help!")
+            ->setMetadata(Subtitle::METADATA_AUTHOR, null)
+            ->setMetadata("missing", null);
+
+        $this->assertNull($subtitle->getMetadata("author"));
+        $this->assertSame(["album" => "Help!"], $subtitle->getAllMetadata());
+    }
 }

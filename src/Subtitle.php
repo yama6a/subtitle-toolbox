@@ -15,6 +15,15 @@ class Subtitle
     /** @var array|SubtitleCue[] */
     protected $cues;
 
+    public const METADATA_TITLE    = "title";
+    public const METADATA_AUTHOR   = "author";
+    public const METADATA_ARTIST   = "artist";
+    public const METADATA_ALBUM    = "album";
+    public const METADATA_LANGUAGE = "language";
+
+    /** @var array<string, string> */
+    protected array $metadata = [];
+
 
     public function __construct()
     {
@@ -119,6 +128,36 @@ class Subtitle
         }
 
         return $errors;
+    }
+
+
+    public function getMetadata(string $key): ?string
+    {
+        return $this->metadata[$key] ?? null;
+    }
+
+
+    /**
+     * Sets one metadata value, or removes the key when the value is null.
+     */
+    public function setMetadata(string $key, ?string $value): self
+    {
+        if ($value === null) {
+            unset($this->metadata[$key]);
+        } else {
+            $this->metadata[$key] = $value;
+        }
+
+        return $this;
+    }
+
+
+    /**
+     * @return array<string, string>
+     */
+    public function getAllMetadata(): array
+    {
+        return $this->metadata;
     }
 
 }
