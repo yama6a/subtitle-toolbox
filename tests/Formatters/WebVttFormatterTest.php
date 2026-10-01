@@ -2,9 +2,11 @@
 
 namespace SubtitleToolbox\Formatters;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 
 class WebVttFormatterTest extends TestCase
 {
@@ -38,5 +40,133 @@ class WebVttFormatterTest extends TestCase
             file_get_contents(__DIR__ . "/../files/vtt/all_xml_tags_stripped.vtt"),
             $subtitle->format(WebVttFormatter::class, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
         );
+    }
+
+
+    private const ISSUE_EXAMPLE = "WEBVTT Episode 1\nKind: captions\nLanguage: en\n\n"
+                                  . "REGION\nid:fred\nwidth:40%\nlines:3\nregionanchor:0%,100%\nviewportanchor:10%,90%\nscroll:up\n\n"
+                                  . "STYLE\n::cue {\n  color: lime;\n}\n\n"
+                                  . "NOTE Translated by Jane Doe\n\n"
+                                  . "intro\n00:00:01.000 --> 00:00:04.000 region:fred align:left line:85%\n"
+                                  . "<v Fred>Hi, I am Fred &amp; this is <c>Bob</c></v>\n\n"
+                                  . "2\n00:00:05.000 --> 00:00:06.000\nSecond\n\n"
+                                  . "NOTE\nend of\nfile\n";
+
+
+    public function testIssueExampleRoundTripsByteForByte(): void
+    {
+        $subtitle = Subtitle::parse(self::ISSUE_EXAMPLE, WebVttParser::class);
+
+        $this->assertSame(
+            "\xEF\xBB\xBF" . self::ISSUE_EXAMPLE,
+            $subtitle->format(WebVttFormatter::class)
+        );
+    }
+
+
+    public function testCuesWithoutIdentifierGetTheirCueNumber(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue((new SubtitleCue(1, 2, "One"))->setIdentifier("intro"));
+        $subtitle->addCue(new SubtitleCue(3, 4, "Two"));
+        $subtitle->addCue((new SubtitleCue(5, 6, "Three"))->setIdentifier("bad --> identifier"));
+
+        $this->assertSame(
+            "\xEF\xBB\xBFWEBVTT\n\nintro\n00:00:01.000 --> 00:00:02.000\nOne\n\n"
+            . "2\n00:00:03.000 --> 00:00:04.000\nTwo\n\n"
+            . "3\n00:00:05.000 --> 00:00:06.000\nThree\n",
+            $subtitle->format(WebVttFormatter::class)
+        );
+    }
+
+
+    public function testCommentsAreWrittenAsValidNoteBlocks(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue(new SubtitleCue(1, 2, "One"));
+        $subtitle->addComment("a --> b", 0);
+        $subtitle->addComment("", 1);
+
+        $this->assertSame(
+            "\xEF\xBB\xBFWEBVTT\n\nNOTE a -> b\n\n1\n00:00:01.000 --> 00:00:02.000\nOne\n\nNOTE\n",
+            $subtitle->format(WebVttFormatter::class)
+        );
+    }
+
+
+    #[DataProvider("alignmentProvider")]
+    public function testAlignmentBecomesCueSettings(?int $alignment, string $timingLine): void
+    {
+        $subtitle = (new Subtitle())->addCue((new SubtitleCue(1, 2, "One"))->setAlignment($alignment));
+
+        $this->assertSame(
+            "\xEF\xBB\xBFWEBVTT\n\n1\n$timingLine\nOne\n",
+            $subtitle->format(WebVttFormatter::class)
+        );
+    }
+
+
+    public static function alignmentProvider(): array
+    {
+        return [
+            "default"       => [null, "00:00:01.000 --> 00:00:02.000"],
+            "bottom left"   => [1, "00:00:01.000 --> 00:00:02.000 align:left"],
+            "bottom center" => [2, "00:00:01.000 --> 00:00:02.000"],
+            "bottom right"  => [3, "00:00:01.000 --> 00:00:02.000 align:right"],
+            "middle left"   => [4, "00:00:01.000 --> 00:00:02.000 line:50%,center align:left"],
+            "middle center" => [5, "00:00:01.000 --> 00:00:02.000 line:50%,center"],
+            "top center"    => [8, "00:00:01.000 --> 00:00:02.000 line:0"],
+            "top right"     => [9, "00:00:01.000 --> 00:00:02.000 line:0 align:right"],
+        ];
+    }
+
+
+    public function testAlignmentRoundTripsThroughCueSettings(): void
+    {
+        $subtitle = new Subtitle();
+        foreach (range(1, 9) as $alignment) {
+            $subtitle->addCue((new SubtitleCue($alignment, $alignment + 1, "Cue"))->setAlignment($alignment));
+        }
+
+        $parsed = Subtitle::parse($subtitle->format(WebVttFormatter::class), WebVttParser::class);
+
+        $this->assertSame(
+            [1, null, 3, 4, 5, 6, 7, 8, 9],
+            array_map(fn (SubtitleCue $cue): ?int => $cue->getAlignment(), $parsed->getCues())
+        );
+    }
+
+
+    public function testCueSettingsFromFormatDataWinOverAlignment(): void
+    {
+        $cue = (new SubtitleCue(1, 2, "One"))
+            ->setAlignment(8)
+            ->setFormatData("vtt", ["size" => "50%", "unknown" => "x", "align" => "start"]);
+
+        $this->assertSame(
+            "\xEF\xBB\xBFWEBVTT\n\n1\n00:00:01.000 --> 00:00:02.000 size:50% align:start\nOne\n",
+            (new Subtitle())->addCue($cue)->format(WebVttFormatter::class)
+        );
+    }
+
+
+    public function testInlineTimestampsAreKept(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 4, "<i>One</i> <00:00:02.500>two <00:03.000><foo>three</foo>"));
+
+        $this->assertSame(
+            "\xEF\xBB\xBFWEBVTT\n\n1\n00:00:01.000 --> 00:00:04.000\n<i>One</i> <00:00:02.500>two <00:03.000>three\n",
+            $subtitle->format(WebVttFormatter::class)
+        );
+        $this->assertSame(
+            "\xEF\xBB\xBFWEBVTT\n\n1\n00:00:01.000 --> 00:00:04.000\nOne two three\n",
+            $subtitle->format(WebVttFormatter::class, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+        );
+    }
+
+
+    public function testEmptySubtitleWritesOnlyTheHeader(): void
+    {
+        $this->assertSame("\xEF\xBB\xBFWEBVTT\n\n", (new Subtitle())->format(WebVttFormatter::class));
     }
 }

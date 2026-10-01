@@ -22,14 +22,14 @@ class WebVttParserTest extends TestCase
     }
 
 
-    public function testStripsNotesAndStyles()
+    public function testKeepsNotesAndStyles()
     {
         $subtitle = Subtitle::parse(
             file_get_contents(__DIR__ . "/../files/vtt/with_styles_and_notes.vtt"), WebVttParser::class
         );
 
         $this->assertSame(
-            file_get_contents(__DIR__ . "/../files/vtt/valid.vtt"),
+            file_get_contents(__DIR__ . "/../files/vtt/with_styles_and_notes_formatted.vtt"),
             $subtitle->format(WebVttFormatter::class)
         );
     }
@@ -41,10 +41,7 @@ class WebVttParserTest extends TestCase
             file_get_contents(__DIR__ . "/../files/vtt/missing_hours.vtt"), WebVttParser::class
         );
 
-        $this->assertSame(
-            file_get_contents(__DIR__ . "/../files/vtt/valid.vtt"),
-            $subtitle->format(WebVttFormatter::class)
-        );
+        $this->assertSame($this->validWithHeaderText(), $subtitle->format(WebVttFormatter::class));
     }
 
 
@@ -103,10 +100,7 @@ class WebVttParserTest extends TestCase
         $subtitle = Subtitle::parse(
             file_get_contents(__DIR__ . "/../files/vtt/missing_cue_number.vtt"), WebVttParser::class
         );
-        $this->assertSame(
-            file_get_contents(__DIR__ . "/../files/vtt/valid.vtt"),
-            $subtitle->format(WebVttFormatter::class)
-        );
+        $this->assertSame($this->validWithHeaderText(), $subtitle->format(WebVttFormatter::class));
     }
 
 
@@ -372,5 +366,11 @@ class WebVttParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("No empty line found after the first line containing WEBVTT");
         Subtitle::parse("WEBVTT\nKind: captions\n00:01.000 --> 00:02.000\nText\n", WebVttParser::class);
+    }
+
+
+    private function validWithHeaderText(): string
+    {
+        return str_replace("WEBVTT\n", "WEBVTT - some title\n", file_get_contents(__DIR__ . "/../files/vtt/valid.vtt"));
     }
 }
