@@ -2,6 +2,7 @@
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -32,8 +33,8 @@ class WebVttFormatter extends SubtitleFormatter
         // ToDo: make this more sophisticated to support e.g. <v.first.loud>Foo Bar</v> and <c.yellow>Yellow text</c>
         $lines = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines());
         $lines = in_array(parent::OPTION_STRIP_ALL_XML_TAGS, $options)
-            ? strip_tags($lines)
-            : strip_tags($lines, "<strong><b><u><i><v><lang><c><ruby><rt>");
+            ? Markup::stripAllTags($lines)
+            : Markup::keepTags($lines, ["strong", "b", "u", "i", "v", "lang", "c", "ruby", "rt"]);
 
         return $timeStamps . StringHelpers::UNIX_LINE_ENDING . $lines;
     }
