@@ -27,7 +27,7 @@ class SubRipParser extends SubtitleParser
                 throw new ParsingException("Block #$idx doesn't seem to have a cue-number on its first line!");
             }
 
-            if (strpos($rawLines[1], ' --> ') === false) {
+            if (strpos($rawLines[1] ?? "", ' --> ') === false) {
                 throw new ParsingException("Block #$idx doesn't seem to have its timestamps on its second line!");
             }
 

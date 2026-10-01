@@ -85,4 +85,12 @@ class SubRipParserTest extends TestCase
         $this->assertSame(2, count($subtitle->getCues()));
         $this->assertSame("Second", $subtitle->getCues()[1]->getText());
     }
+
+
+    public function testBlockWithOnlyACueNumberThrowsException(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("Block #1 doesn't seem to have its timestamps on its second line");
+        Subtitle::parse("1\n00:00:01,000 --> 00:00:02,000\nFirst\n\n2", SubRipParser::class);
+    }
 }
