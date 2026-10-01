@@ -12,7 +12,7 @@ class MpSubFormatter extends SubtitleFormatter
                          "AUTHOR=" . StringHelpers::UNIX_LINE_ENDING .
                          "TYPE=VIDEO" . StringHelpers::UNIX_LINE_ENDING .
                          "FORMAT=TIME" . StringHelpers::UNIX_LINE_ENDING .
-                         "NOTE=Created with the PHP Subtitle Toolbox (https://github.com/ymakhloufi/subtitle-toolbox)" .
+                         "NOTE=Created with the PHP Subtitle Toolbox (https://github.com/yama6a/subtitle-toolbox)" .
                          StringHelpers::UNIX_LINE_ENDING;
 
 
