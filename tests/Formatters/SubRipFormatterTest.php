@@ -75,4 +75,32 @@ class SubRipFormatterTest extends TestCase
 
         $this->assertSame($raw, $subtitle->format(SubRipFormatter::class));
     }
+
+
+    public function testAlignmentIsWrittenAtTheStartOfTheFirstLine(): void
+    {
+        $subtitle = Subtitle::parse("1\n00:00:01,000 --> 00:00:04,000\n<i>The train</i> {\\an8}leaves\nsoon\n", SubRipParser::class);
+
+        $this->assertSame(
+            "\u{feff}1\n00:00:01,000 --> 00:00:04,000\n{\\an8}<i>The train</i> leaves\nsoon\n",
+            $subtitle->format(SubRipFormatter::class)
+        );
+        $this->assertSame(
+            "\u{feff}1\n00:00:01,000 --> 00:00:04,000\n{\\an8}The train leaves\nsoon\n",
+            $subtitle->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+        );
+    }
+
+
+    public function testDefaultAlignmentIsNotWritten(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue((new SubtitleCue(1, 2, "Bottom center"))->setAlignment(2))
+            ->addCue(new SubtitleCue(3, 4, "Default"));
+
+        $this->assertSame(
+            "\u{feff}1\n00:00:01,000 --> 00:00:02,000\nBottom center\n\n2\n00:00:03,000 --> 00:00:04,000\nDefault\n",
+            $subtitle->format(SubRipFormatter::class)
+        );
+    }
 }

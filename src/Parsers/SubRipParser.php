@@ -9,6 +9,9 @@ use SubtitleToolbox\SubtitleCue;
 
 class SubRipParser extends SubtitleParser
 {
+    // Legacy SSA codes: 1 to 3 are bottom, +4 is top, +8 is middle.
+    private const LEGACY_ALIGNMENTS = [1 => 1, 2 => 2, 3 => 3, 5 => 7, 6 => 8, 7 => 9, 9 => 4, 10 => 5, 11 => 6];
+
     public function parse(string $rawSubtitle): Subtitle
     {
         $rawSubtitle = StringHelpers::removeUtf8Bom($rawSubtitle);
@@ -42,6 +45,7 @@ class SubRipParser extends SubtitleParser
                 $this->millisFromString($times[1]),
                 array_slice($rawLines, 2)
             );
+            $this->convertOverrideTags($cue);
             if ($coordinates !== null) {
                 $cue->setFormatData("srt", ["coordinates" => $coordinates]);
             }
@@ -86,5 +90,60 @@ class SubRipParser extends SubtitleParser
             "y1" => (int) $matches[4],
             "y2" => (int) $matches[5],
         ];
+    }
+
+
+    private function convertOverrideTags(SubtitleCue $cue): void
+    {
+        $alignment = null;
+        $openTags  = [];
+        $text      = preg_replace_callback(
+            '/\{(\\\\[^{}]*)\}/',
+            function (array $block) use (&$alignment, &$openTags): string {
+                preg_match_all('/\\\\[^\\\\]*/', $block[1], $tags);
+                $markup  = "";
+                $unknown = "";
+                foreach ($tags[0] as $tag) {
+                    if (preg_match('/^\\\\an([1-9])$/', $tag, $matches)) {
+                        $alignment ??= (int) $matches[1];
+                    } elseif (preg_match('/^\\\\a(\d{1,2})$/', $tag, $matches)
+                              && isset(self::LEGACY_ALIGNMENTS[(int) $matches[1]])) {
+                        $alignment ??= self::LEGACY_ALIGNMENTS[(int) $matches[1]];
+                    } elseif (preg_match('/^\\\\([bius])([01])$/', $tag, $matches)) {
+                        $markup .= $this->toggleTag($matches[1], $matches[2] === "1", $openTags);
+                    } else {
+                        $unknown .= $tag;
+                    }
+                }
+
+                return $markup . ($unknown === "" ? "" : "{" . $unknown . "}");
+            },
+            $cue->getText()
+        );
+
+        foreach (array_reverse(array_keys($openTags)) as $tagName) {
+            $text .= "</$tagName>";
+        }
+
+        $cue->setLines($text);
+        $cue->setAlignment($alignment);
+    }
+
+
+    private function toggleTag(string $tagName, bool $open, array &$openTags): string
+    {
+        if ($open === isset($openTags[$tagName])) {
+            return "";
+        }
+
+        if ($open) {
+            $openTags[$tagName] = true;
+
+            return "<$tagName>";
+        }
+
+        unset($openTags[$tagName]);
+
+        return "</$tagName>";
     }
 }

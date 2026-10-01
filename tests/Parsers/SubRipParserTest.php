@@ -127,4 +127,83 @@ class SubRipParserTest extends TestCase
         $this->expectExceptionMessage("timeString-string of at least one cue could not be parsed");
         Subtitle::parse("1\n00:00:01,000 --> 00:00:04,000 X1:100 X2:600\nText\n", SubRipParser::class);
     }
+
+
+    public function testAlignmentTagGoesToTheCueAlignment(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\an8}<i>The train leaves soon</i>\n";
+
+        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+        $this->assertSame(8, $cue->getAlignment());
+        $this->assertSame(["<i>The train leaves soon</i>"], $cue->getLines());
+    }
+
+
+    public function testFirstAlignmentTagWinsAndAllAreRemoved(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\an4}Middle and horiz{\\an6}ontally left\n";
+
+        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+        $this->assertSame(4, $cue->getAlignment());
+        $this->assertSame(["Middle and horizontally left"], $cue->getLines());
+    }
+
+
+    public function testLegacyAlignmentTagsAreConverted(): void
+    {
+        $expected = [1 => 1, 2 => 2, 3 => 3, 5 => 7, 6 => 8, 7 => 9, 9 => 4, 10 => 5, 11 => 6];
+        foreach ($expected as $legacy => $alignment) {
+            $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\a$legacy}Text\n";
+
+            $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+            $this->assertSame($alignment, $cue->getAlignment(), "Legacy code $legacy");
+            $this->assertSame(["Text"], $cue->getLines());
+        }
+    }
+
+
+    public function testInvalidLegacyAlignmentStaysInTheText(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\a4}Text\n";
+
+        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+        $this->assertNull($cue->getAlignment());
+        $this->assertSame(["{\\a4}Text"], $cue->getLines());
+    }
+
+
+    public function testAssStyleTagsBecomeCoreMarkup(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\b1}bold{\\b0} {\\i1}italic{\\i0} {\\u1}under{\\u0} {\\s1}struck{\\s0}\n";
+
+        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+        $this->assertSame(["<b>bold</b> <i>italic</i> <u>under</u> <s>struck</s>"], $cue->getLines());
+    }
+
+
+    public function testUnclosedAssStyleTagsAreClosedAtTheEndOfTheCue(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\an8\\i1}one {\\b1}two\nthree{\\u0}\n";
+
+        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+        $this->assertSame(8, $cue->getAlignment());
+        $this->assertSame(["<i>one <b>two", "three</b></i>"], $cue->getLines());
+    }
+
+
+    public function testUnknownOverrideTagsStayInTheText(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\an8\\fad(200,200)}Sign {\\pos(10,20)}here {normal text}\n";
+
+        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+        $this->assertSame(8, $cue->getAlignment());
+        $this->assertSame(["{\\fad(200,200)}Sign {\\pos(10,20)}here {normal text}"], $cue->getLines());
+    }
 }

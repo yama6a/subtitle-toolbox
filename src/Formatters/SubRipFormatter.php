@@ -46,6 +46,10 @@ class SubRipFormatter extends SubtitleFormatter
             ? Markup::stripAllTags($lines)
             : Markup::keepTags($lines, ["b", "u", "i", "s", "font"]);
 
+        if ($cue->getAlignment() !== null && $cue->getAlignment() !== 2) {
+            $lines = "{\\an{$cue->getAlignment()}}" . $lines;
+        }
+
 
         return $time . StringHelpers::UNIX_LINE_ENDING . $lines;
     }
