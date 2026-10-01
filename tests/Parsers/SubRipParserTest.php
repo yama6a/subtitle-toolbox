@@ -74,4 +74,15 @@ class SubRipParserTest extends TestCase
         $this->expectExceptionMessage("doesn't seem to have its timestamps");
         Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/missing_timestamps.srt"), SubRipParser::class);
     }
+
+
+    public function testSeveralEmptyLinesBetweenCuesStillSeparateCues(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:02,000\nFirst\n\n \n\n2\n00:00:03,000 --> 00:00:04,000\nSecond\n";
+
+        $subtitle = Subtitle::parse($raw, SubRipParser::class);
+
+        $this->assertSame(2, count($subtitle->getCues()));
+        $this->assertSame("Second", $subtitle->getCues()[1]->getText());
+    }
 }
