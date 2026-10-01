@@ -8,7 +8,7 @@ use SubtitleToolbox\SubtitleCue;
 
 class SubRipFormatter extends SubtitleFormatter
 {
-    function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, array $options = []): string
     {
         $output = "";
         foreach (array_values($subtitle->getCues()) as $cueIndex => $cue) {

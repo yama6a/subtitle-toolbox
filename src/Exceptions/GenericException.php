@@ -28,5 +28,5 @@ abstract class GenericException extends \RuntimeException
     }
 
 
-    abstract function getErrorCode(): int;
+    abstract public function getErrorCode(): int;
 }

@@ -4,7 +4,7 @@ namespace SubtitleToolbox\Exceptions;
 
 class InvalidFormatterException extends GenericException
 {
-    function getErrorCode(): int
+    public function getErrorCode(): int
     {
         return 101;
     }

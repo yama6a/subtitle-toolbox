@@ -4,7 +4,7 @@ namespace SubtitleToolbox\Exceptions;
 
 class InvalidParserException extends GenericException
 {
-    function getErrorCode(): int
+    public function getErrorCode(): int
     {
         return 102;
     }

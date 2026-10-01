@@ -8,7 +8,7 @@ use SubtitleToolbox\SubtitleCue;
 
 class WebVttFormatter extends SubtitleFormatter
 {
-    function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, array $options = []): string
     {
         $output = "WEBVTT" . StringHelpers::UNIX_LINE_ENDING . StringHelpers::UNIX_LINE_ENDING;
         foreach (array_values($subtitle->getCues()) as $cueIndex => $cue) {

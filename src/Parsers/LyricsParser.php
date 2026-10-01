@@ -8,7 +8,7 @@ use SubtitleToolbox\SubtitleCue;
 
 class LyricsParser extends SubtitleParser
 {
-    const REGEX = "/^\[(\d{2,3}):([0-5]\d).(\d\d)\](.+)$/";
+    public const REGEX = "/^\[(\d{2,3}):([0-5]\d).(\d\d)\](.+)$/";
 
 
     public function parse(string $rawSubtitle): Subtitle

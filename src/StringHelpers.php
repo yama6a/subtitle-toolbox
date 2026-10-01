@@ -4,9 +4,9 @@ namespace SubtitleToolbox;
 
 class StringHelpers
 {
-    const UNIX_LINE_ENDING    = "\n";
-    const MAC_LINE_ENDING     = "\r";
-    const WINDOWS_LINE_ENDING = "\r\n";
+    public const UNIX_LINE_ENDING    = "\n";
+    public const MAC_LINE_ENDING     = "\r";
+    public const WINDOWS_LINE_ENDING = "\r\n";
 
 
     public static function hasUtf8Bom(string $str): bool
