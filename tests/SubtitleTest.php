@@ -99,4 +99,15 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $this->expectExceptionMessage("formatter stdClass is not of type " . SubtitleFormatter::class);
         (new Subtitle())->format(\stdClass::class);
     }
+
+
+    public function testReIndexSortsStartsLessThanOneSecondApart(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue(new SubtitleCue(1.5, 2, "later"));
+        $subtitle->addCue(new SubtitleCue(1.2, 1.4, "earlier"));
+
+        $this->assertSame("earlier", $subtitle->getCues()[0]->getText());
+        $this->assertSame("later", $subtitle->getCues()[1]->getText());
+    }
 }
