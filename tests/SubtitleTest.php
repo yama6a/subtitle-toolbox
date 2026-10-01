@@ -110,4 +110,18 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $this->assertSame("earlier", $subtitle->getCues()[0]->getText());
         $this->assertSame("later", $subtitle->getCues()[1]->getText());
     }
+
+
+    public function testParsingWithUnknownClassThrowsException(): void
+    {
+        $this->expectException(InvalidParserException::class);
+        Subtitle::parse("", "SubtitleToolbox\\Parsers\\DoesNotExist");
+    }
+
+
+    public function testFormattingWithUnknownClassThrowsException(): void
+    {
+        $this->expectException(InvalidFormatterException::class);
+        (new Subtitle())->format("SubtitleToolbox\\Formatters\\DoesNotExist");
+    }
 }
