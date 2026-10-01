@@ -11,9 +11,7 @@ abstract class GenericException extends \RuntimeException
      */
     public function __construct($message)
     {
-        $code = "[Error #" . $this->getErrorCode() . "] ";
-
-        return parent::__construct($this->getClassName() . " (Error #$code): " . $message, $this->getErrorCode());
+        parent::__construct($this->getClassName() . " (Error #{$this->getErrorCode()}): " . $message, $this->getErrorCode());
     }
 
 
