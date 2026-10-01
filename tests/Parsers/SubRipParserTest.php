@@ -206,4 +206,15 @@ class SubRipParserTest extends TestCase
         $this->assertSame(8, $cue->getAlignment());
         $this->assertSame(["{\\fad(200,200)}Sign {\\pos(10,20)}here {normal text}"], $cue->getLines());
     }
+
+
+    public function testCarriageReturnCarriageReturnLineFeedIsOneLineEnding(): void
+    {
+        $raw = "1\r\r\n00:00:01,000 --> 00:00:02,000\r\r\nFirst\r\r\nline\r\r\n\r\r\n2\r\r\n00:00:03,000 --> 00:00:04,000\r\r\nSecond\r\r\n";
+
+        $cues = Subtitle::parse($raw, SubRipParser::class)->getCues();
+
+        $this->assertSame(2, count($cues));
+        $this->assertSame(["First", "line"], $cues[0]->getLines());
+    }
 }

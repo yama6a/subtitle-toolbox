@@ -15,6 +15,8 @@ class SubRipParser extends SubtitleParser
     public function parse(string $rawSubtitle): Subtitle
     {
         $rawSubtitle = StringHelpers::removeUtf8Bom($rawSubtitle);
+        // A CR CR LF line ending comes from a CR LF file that went through a text-mode conversion a second time.
+        $rawSubtitle = preg_replace('/\r+\n/', StringHelpers::UNIX_LINE_ENDING, $rawSubtitle);
         $rawSubtitle = StringHelpers::normalizeEOLs($rawSubtitle);
         $rawSubtitle = StringHelpers::normalizeSpaces($rawSubtitle);
         $rawSubtitle = StringHelpers::trimEachLine($rawSubtitle);
