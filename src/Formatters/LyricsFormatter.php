@@ -34,9 +34,11 @@ class LyricsFormatter extends SubtitleFormatter
 
     private function formatTimeToString(float $timeInSeconds)
     {
-        $minute       = str_pad(floor($timeInSeconds / 60), 2, "0", STR_PAD_LEFT);
-        $second       = str_pad(floor($timeInSeconds) % 60, 2, "0", STR_PAD_LEFT);
-        $centiseconds = str_pad(round(($timeInSeconds - floor($timeInSeconds)) * 100), 2, "0", STR_PAD_LEFT);
+        // round once on the total, so 1.996 s becomes [00:02.00] and not [00:01.100]
+        $totalCentiseconds = (int) round($timeInSeconds * 100);
+        $minute            = str_pad(intdiv($totalCentiseconds, 6000), 2, "0", STR_PAD_LEFT);
+        $second            = str_pad(intdiv($totalCentiseconds, 100) % 60, 2, "0", STR_PAD_LEFT);
+        $centiseconds      = str_pad($totalCentiseconds % 100, 2, "0", STR_PAD_LEFT);
 
         return "[" . $minute . ":" . $second . "." . $centiseconds . "]";
     }
