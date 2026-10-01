@@ -46,7 +46,7 @@ class SbvParser extends SubtitleParser
     private function millisFromString(string $timeString): float
     {
         $timeString = trim($timeString);
-        if (!preg_match("/^(\d{1,2}):([0-5]\d):([0-5]\d)\.(\d{3})$/", $timeString, $matches)) {
+        if (!preg_match("/^(\d+):([0-5]\d):([0-5]\d)\.(\d{3})$/", $timeString, $matches)) {
             throw new ParsingException("The timeString-string of at least one cue could not be parsed: $timeString");
         }
 

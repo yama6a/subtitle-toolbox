@@ -4,6 +4,7 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Formatters\SbvFormatter;
 use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Subtitle;
 
@@ -54,11 +55,13 @@ class SbvParserTest extends TestCase
     }
 
 
-    public function testExceededHoursThrowsException(): void
+    public function testThreeDigitHoursParseAndRoundTrip(): void
     {
-        $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("timeString-string of at least one cue could not be parsed: 100:00:01.500");
-        Subtitle::parse(file_get_contents(__DIR__ . "/../files/sbv/exceeded_hours.sbv"), SbvParser::class);
+        $raw      = file_get_contents(__DIR__ . "/../files/sbv/three_digit_hours.sbv");
+        $subtitle = Subtitle::parse($raw, SbvParser::class);
+
+        $this->assertSame(360001.5, $subtitle->getCues()[0]->getStart());
+        $this->assertSame($raw, $subtitle->format(SbvFormatter::class));
     }
 
 
