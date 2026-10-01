@@ -86,7 +86,7 @@ class Subtitle
     public function reIndexCues(): self
     {
         usort($this->cues, function (SubtitleCue $cue1, SubtitleCue $cue2) {
-            return $cue1->getStart() - $cue2->getStart();
+            return $cue1->getStart() <=> $cue2->getStart();
         });
 
         return $this;
