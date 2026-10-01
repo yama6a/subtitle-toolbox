@@ -38,7 +38,7 @@ class WebVttParser extends SubtitleParser
                 case strpos(strtoupper($rawLines[0]), "STYLE") === 0:
                     $this->addStyleToSubtitle($subtitle, $rawLines);
                     break;
-                case (strpos($rawLines[0], ' --> ') !== false) or (strpos($rawLines[1], ' --> ') !== false):
+                case (strpos($rawLines[0], ' --> ') !== false) or (strpos($rawLines[1] ?? "", ' --> ') !== false):
                     $subtitle->addCue($this->parseCue($rawLines, $idx));
                     break;
                 default:
@@ -52,7 +52,7 @@ class WebVttParser extends SubtitleParser
 
     private function parseCue(array $rawLines, int $index): SubtitleCue
     {
-        if (strpos($rawLines[1], ' --> ') !== false) {
+        if (strpos($rawLines[1] ?? "", ' --> ') !== false) {
             $cueTitle = $rawLines[0];
             $rawLines = array_slice($rawLines, 1);
         }

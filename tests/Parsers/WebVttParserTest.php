@@ -133,4 +133,20 @@ class WebVttParserTest extends TestCase
         $this->assertSame(2, count($subtitle->getCues()));
         $this->assertSame("Second", $subtitle->getCues()[1]->getText());
     }
+
+
+    public function testSingleLineBlockThrowsException(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("Block #1 doesn't match anything");
+        Subtitle::parse("WEBVTT\n\nstray line", WebVttParser::class);
+    }
+
+
+    public function testCueWithOnlyATimestampThrowsException(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("Block #1 doesn't have any text lines");
+        Subtitle::parse("WEBVTT\n\n00:01.000 --> 00:02.000", WebVttParser::class);
+    }
 }
