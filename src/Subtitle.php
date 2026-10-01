@@ -22,27 +22,23 @@ class Subtitle
 
     public static function parse(string $content, string $parserClass): self
     {
-        $parser = new $parserClass();
-
-        if (!($parser instanceof SubtitleParser)) {
+        if (!is_subclass_of($parserClass, SubtitleParser::class)) {
             throw new InvalidParserException("The supplied parser $parserClass " .
                                              "is not of type " . SubtitleParser::class);
         }
 
-        return $parser->parse($content);
+        return (new $parserClass())->parse($content);
     }
 
 
     public function format(string $formatterClass, array $options = []): string
     {
-        $formatter = new $formatterClass();
-
-        if (!($formatter instanceof SubtitleFormatter)) {
+        if (!is_subclass_of($formatterClass, SubtitleFormatter::class)) {
             throw new InvalidFormatterException("The supplied formatter $formatterClass " .
                                                 "is not of type " . SubtitleFormatter::class);
         }
 
-        return $formatter->format($this, $options);
+        return (new $formatterClass())->format($this, $options);
     }
 
 
