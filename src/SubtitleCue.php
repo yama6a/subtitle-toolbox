@@ -15,6 +15,8 @@ class SubtitleCue
     /** @var array|string[] */
     protected $lines;
 
+    protected ?string $identifier = null;
+
 
     public function __construct(float $start = 0, float $end = 0, $lines = "")
     {
@@ -108,6 +110,20 @@ class SubtitleCue
         if ($line !== '') {
             $this->lines[] = $line;
         }
+
+        return $this;
+    }
+
+
+    public function getIdentifier(): ?string
+    {
+        return $this->identifier;
+    }
+
+
+    public function setIdentifier(?string $identifier): self
+    {
+        $this->identifier = $identifier;
 
         return $this;
     }

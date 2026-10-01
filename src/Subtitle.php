@@ -15,6 +15,18 @@ class Subtitle
     /** @var array|SubtitleCue[] */
     protected $cues;
 
+    public const METADATA_TITLE    = "title";
+    public const METADATA_AUTHOR   = "author";
+    public const METADATA_ARTIST   = "artist";
+    public const METADATA_ALBUM    = "album";
+    public const METADATA_LANGUAGE = "language";
+
+    /** @var array<string, string> */
+    protected array $metadata = [];
+
+    /** @var list<array{text: string, beforeCueIndex: int}> */
+    protected array $comments = [];
+
 
     public function __construct()
     {
@@ -83,7 +95,19 @@ class Subtitle
 
     public function reIndexCues(): self
     {
+        $commentCues = array_map(
+            fn (array $comment): ?SubtitleCue => $this->findCueAtOrAfter($comment["beforeCueIndex"]),
+            $this->comments
+        );
+
         usort($this->cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
+
+        foreach ($commentCues as $commentIndex => $cue) {
+            $cueIndex = $cue === null ? false : array_search($cue, $this->cues, true);
+
+            $this->comments[$commentIndex]["beforeCueIndex"] = $cueIndex === false ? count($this->cues) : $cueIndex;
+        }
+        $this->sortComments();
 
         return $this;
     }
@@ -119,6 +143,81 @@ class Subtitle
         }
 
         return $errors;
+    }
+
+
+    public function getMetadata(string $key): ?string
+    {
+        return $this->metadata[$key] ?? null;
+    }
+
+
+    /**
+     * Sets one metadata value, or removes the key when the value is null.
+     */
+    public function setMetadata(string $key, ?string $value): self
+    {
+        if ($value === null) {
+            unset($this->metadata[$key]);
+        } else {
+            $this->metadata[$key] = $value;
+        }
+
+        return $this;
+    }
+
+
+    /**
+     * @return array<string, string>
+     */
+    public function getAllMetadata(): array
+    {
+        return $this->metadata;
+    }
+
+
+    /**
+     * @return list<array{text: string, beforeCueIndex: int}>
+     */
+    public function getComments(): array
+    {
+        return $this->comments;
+    }
+
+
+    /**
+     * Adds a comment that a formatter writes before the cue at the given index, or after the last cue.
+     */
+    public function addComment(string $text, int $beforeCueIndex): self
+    {
+        if ($beforeCueIndex < 0) {
+            throw new \InvalidArgumentException("Cannot add a comment before cue $beforeCueIndex - " .
+                                                "the cue index must not be negative!");
+        }
+
+        $this->comments[] = ["text" => $text, "beforeCueIndex" => $beforeCueIndex];
+        $this->sortComments();
+
+        return $this;
+    }
+
+
+    private function findCueAtOrAfter(int $cueIndex): ?SubtitleCue
+    {
+        foreach ($this->cues as $index => $cue) {
+            if ($index >= $cueIndex) {
+                return $cue;
+            }
+        }
+
+        return null;
+    }
+
+
+    private function sortComments(): void
+    {
+        usort($this->comments, fn (array $comment1, array $comment2): int =>
+            $comment1["beforeCueIndex"] <=> $comment2["beforeCueIndex"]);
     }
 
 }

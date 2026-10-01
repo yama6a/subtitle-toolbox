@@ -4,6 +4,8 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
+use SubtitleToolbox\Formatters\LyricsFormatter;
+use SubtitleToolbox\Formatters\MpSubFormatter;
 use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
@@ -143,5 +145,191 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
             "\u{feff}WEBVTT\n\n1\n00:00:03.000 --> 00:00:04.000\nsecond\n",
             $subtitle->format(WebVttFormatter::class)
         );
+    }
+
+
+    public function testMetadataIsEmptyByDefault(): void
+    {
+        $subtitle = new Subtitle();
+
+        $this->assertSame([], $subtitle->getAllMetadata());
+        $this->assertNull($subtitle->getMetadata(Subtitle::METADATA_TITLE));
+    }
+
+
+    public function testSetAndGetMetadata(): void
+    {
+        $subtitle = (new Subtitle())
+            ->setMetadata(Subtitle::METADATA_TITLE, "Yesterday")
+            ->setMetadata(Subtitle::METADATA_ARTIST, "The Beatles")
+            ->setMetadata("custom", "");
+
+        $this->assertSame("Yesterday", $subtitle->getMetadata("title"));
+        $this->assertSame("", $subtitle->getMetadata("custom"));
+        $this->assertSame(
+            ["title" => "Yesterday", "artist" => "The Beatles", "custom" => ""],
+            $subtitle->getAllMetadata()
+        );
+    }
+
+
+    public function testSettingMetadataOverwritesValue(): void
+    {
+        $subtitle = (new Subtitle())
+            ->setMetadata(Subtitle::METADATA_LANGUAGE, "en")
+            ->setMetadata(Subtitle::METADATA_LANGUAGE, "de");
+
+        $this->assertSame(["language" => "de"], $subtitle->getAllMetadata());
+    }
+
+
+    public function testSettingMetadataToNullRemovesKey(): void
+    {
+        $subtitle = (new Subtitle())
+            ->setMetadata(Subtitle::METADATA_AUTHOR, "Jane Doe")
+            ->setMetadata(Subtitle::METADATA_ALBUM, "Help!")
+            ->setMetadata(Subtitle::METADATA_AUTHOR, null)
+            ->setMetadata("missing", null);
+
+        $this->assertNull($subtitle->getMetadata("author"));
+        $this->assertSame(["album" => "Help!"], $subtitle->getAllMetadata());
+    }
+
+
+    public function testCommentsAreEmptyByDefault(): void
+    {
+        $this->assertSame([], (new Subtitle())->getComments());
+    }
+
+
+    public function testAddCommentKeepsCommentsInCueOrder(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addComment("after last cue", 2)
+            ->addComment("first before cue 0", 0)
+            ->addComment("second before cue 0", 0)
+            ->addComment("before cue 1", 1);
+
+        $this->assertSame(
+            [
+                ["text" => "first before cue 0", "beforeCueIndex" => 0],
+                ["text" => "second before cue 0", "beforeCueIndex" => 0],
+                ["text" => "before cue 1", "beforeCueIndex" => 1],
+                ["text" => "after last cue", "beforeCueIndex" => 2],
+            ],
+            $subtitle->getComments()
+        );
+    }
+
+
+    public function testAddCommentWithNegativeIndexThrowsException(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("must not be negative");
+        (new Subtitle())->addComment("text", -1);
+    }
+
+
+    public function testReIndexKeepsEachCommentBeforeItsCue(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue(new SubtitleCue(5, 6, "late"), false);
+        $subtitle->addCue(new SubtitleCue(1, 2, "early"), false);
+        $subtitle->addComment("before late", 0);
+        $subtitle->addComment("before early", 1);
+        $subtitle->addComment("at the end", 2);
+
+        $subtitle->reIndexCues();
+
+        $this->assertSame("early", $subtitle->getCues()[0]->getText());
+        $this->assertSame(
+            [
+                ["text" => "before early", "beforeCueIndex" => 0],
+                ["text" => "before late", "beforeCueIndex" => 1],
+                ["text" => "at the end", "beforeCueIndex" => 2],
+            ],
+            $subtitle->getComments()
+        );
+    }
+
+
+    public function testCommentBeforeAddedCueMovesWithIt(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue(new SubtitleCue(3, 4, "second"));
+        $subtitle->addComment("before first", 1);
+        $subtitle->addCue(new SubtitleCue(1, 2, "first"));
+
+        $this->assertSame([["text" => "before first", "beforeCueIndex" => 0]], $subtitle->getComments());
+    }
+
+
+    public function testCommentBeforeRemovedCueMovesToNextCue(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue(new SubtitleCue(1, 2, "first"));
+        $subtitle->addCue(new SubtitleCue(3, 4, "second"));
+        $subtitle->addCue(new SubtitleCue(5, 6, "third"));
+        $subtitle->addComment("before second", 1);
+        $subtitle->addComment("before third", 2);
+
+        $subtitle->removeCue(1);
+
+        $this->assertSame(
+            [
+                ["text" => "before second", "beforeCueIndex" => 1],
+                ["text" => "before third", "beforeCueIndex" => 1],
+            ],
+            $subtitle->getComments()
+        );
+    }
+
+
+    public function testCommentBeforeRemovedLastCueMovesToEnd(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue(new SubtitleCue(1, 2, "first"));
+        $subtitle->addCue(new SubtitleCue(3, 4, "second"));
+        $subtitle->addComment("before second", 1);
+
+        $subtitle->removeCue(1);
+
+        $this->assertSame([["text" => "before second", "beforeCueIndex" => 1]], $subtitle->getComments());
+    }
+
+
+    public function testCommentKeepsIndexAfterRemovalWithoutReIndex(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue(new SubtitleCue(1, 2, "first"));
+        $subtitle->addCue(new SubtitleCue(3, 4, "second"));
+        $subtitle->addComment("before second", 1);
+
+        $subtitle->removeCue(0, false);
+
+        $this->assertSame([["text" => "before second", "beforeCueIndex" => 1]], $subtitle->getComments());
+
+        $subtitle->reIndexCues();
+
+        $this->assertSame([["text" => "before second", "beforeCueIndex" => 0]], $subtitle->getComments());
+    }
+
+
+    public function testFormattersIgnoreMetadataCommentsAndIdentifiers(): void
+    {
+        $plain = new Subtitle();
+        $plain->addCue(new SubtitleCue(1, 2, "first"));
+        $plain->addCue(new SubtitleCue(3, 4, "second"));
+
+        $annotated = new Subtitle();
+        $annotated->addCue((new SubtitleCue(1, 2, "first"))->setIdentifier("intro"));
+        $annotated->addCue((new SubtitleCue(3, 4, "second"))->setIdentifier("outro"));
+        $annotated->setMetadata(Subtitle::METADATA_TITLE, "Yesterday");
+        $annotated->addComment("Translated by Jane Doe", 0);
+        $annotated->addComment("End of file", 2);
+
+        foreach ([LyricsFormatter::class, MpSubFormatter::class, SubRipFormatter::class, WebVttFormatter::class] as $formatter) {
+            $this->assertSame($plain->format($formatter), $annotated->format($formatter), $formatter);
+        }
     }
 }
