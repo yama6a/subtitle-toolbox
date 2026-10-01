@@ -27,7 +27,7 @@ class SubRipParser extends SubtitleParser
                 throw new ParsingException("Block #$idx doesn't seem to have a cue-number on its first line!");
             }
 
-            if (strpos($rawLines[1] ?? "", ' --> ') === false) {
+            if (!str_contains($rawLines[1] ?? "", ' --> ')) {
                 throw new ParsingException("Block #$idx doesn't seem to have its timestamps on its second line!");
             }
 
@@ -54,10 +54,10 @@ class SubRipParser extends SubtitleParser
             throw new ParsingException("The timeString-string of at least one cue could not be parsed: $timeString");
         }
 
-        $hours   = intval($matches[1]);
-        $minutes = intval($matches[2]);
-        $seconds = intval($matches[3]);
-        $millis  = intval($matches[4]);
+        $hours   = (int) $matches[1];
+        $minutes = (int) $matches[2];
+        $seconds = (int) $matches[3];
+        $millis  = (int) $matches[4];
 
         return $hours * 3600 + $minutes * 60 + $seconds + $millis / 1000;
     }

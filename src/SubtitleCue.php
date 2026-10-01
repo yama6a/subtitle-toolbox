@@ -63,17 +63,14 @@ class SubtitleCue
 
     public function setLines($lines): self
     {
-        switch (true) {
-            case is_array($lines):
-                return $this->setLinesByArray($lines);
-            case is_string($lines):
-                return $this->setLinesByString($lines);
-            default:
-                $type = gettype($lines) === 'object' ? get_class($lines) : gettype($lines);
-                throw new InvalidArgumentException(
-                    "Can only set cue-text by string or array! " .
-                    "Tried to set cue-text of cue [{$this->getStart()} >>> {$this->getEnd()}] by $type");
-        }
+        return match (true) {
+            is_array($lines)  => $this->setLinesByArray($lines),
+            is_string($lines) => $this->setLinesByString($lines),
+            default           => throw new InvalidArgumentException(
+                "Can only set cue-text by string or array! " .
+                "Tried to set cue-text of cue [{$this->getStart()} >>> {$this->getEnd()}] by " .
+                (is_object($lines) ? $lines::class : gettype($lines))),
+        };
     }
 
 
@@ -101,9 +98,7 @@ class SubtitleCue
 
     public function getText(): string
     {
-        return (count($this->lines) > 0)
-            ? implode(StringHelpers::UNIX_LINE_ENDING, $this->lines)
-            : "";
+        return implode(StringHelpers::UNIX_LINE_ENDING, $this->lines);
     }
 
 

@@ -143,4 +143,40 @@ class SubtitleCueTest extends TestCase
         $this->expectExceptionMessage("by stdClass");
         $cue->setLines(new \stdClass());
     }
+
+
+    public function testSetLinesExceptionNamesTheGettypeOfScalars(): void
+    {
+        $cue = new SubtitleCue(1.5, 2);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Tried to set cue-text of cue [1.5 >>> 2] by NULL");
+        $cue->setLines(null);
+    }
+
+
+    public function testSetLinesExceptionNamesIntegerType(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("by integer");
+        (new SubtitleCue())->setLines(123);
+    }
+
+
+    public function testSetLinesExceptionNamesAnonymousClass(): void
+    {
+        $object = new class {
+        };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("by " . get_class($object));
+        (new SubtitleCue())->setLines($object);
+    }
+
+
+    public function testGetTextOfCueWithoutLinesIsEmpty(): void
+    {
+        $this->assertSame("", (new SubtitleCue())->getText());
+        $this->assertSame("", (new SubtitleCue(0, 1, ["", " "]))->getText());
+    }
 }

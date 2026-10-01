@@ -18,7 +18,7 @@ class WebVttParser extends SubtitleParser
         $rawSubtitle = StringHelpers::removeDoubleEmptyLines($rawSubtitle);
         $rawSubtitle = trim($rawSubtitle);  // remove empty lines on the top and bottom of the file
 
-        if (strpos($rawSubtitle, "WEBVTT") !== 0) {
+        if (!str_starts_with($rawSubtitle, "WEBVTT")) {
             throw new ParsingException("The file doesn't start with the string WEBVTT!");
         }
 
@@ -32,13 +32,13 @@ class WebVttParser extends SubtitleParser
                         throw new ParsingException("No empty line found after the first line containing WEBVTT!");
                     }
                     break;
-                case strpos(strtoupper($rawLines[0]), "NOTE") === 0:
+                case str_starts_with(strtoupper($rawLines[0]), "NOTE"):
                     $this->addCommentToSubtitle($subtitle, $idx, $rawLines);
                     break;
-                case strpos(strtoupper($rawLines[0]), "STYLE") === 0:
+                case str_starts_with(strtoupper($rawLines[0]), "STYLE"):
                     $this->addStyleToSubtitle($subtitle, $rawLines);
                     break;
-                case (strpos($rawLines[0], ' --> ') !== false) or (strpos($rawLines[1] ?? "", ' --> ') !== false):
+                case str_contains($rawLines[0], ' --> ') || str_contains($rawLines[1] ?? "", ' --> '):
                     $subtitle->addCue($this->parseCue($rawLines, $idx));
                     break;
                 default:
@@ -52,7 +52,7 @@ class WebVttParser extends SubtitleParser
 
     private function parseCue(array $rawLines, int $index): SubtitleCue
     {
-        if (strpos($rawLines[1] ?? "", ' --> ') !== false) {
+        if (str_contains($rawLines[1] ?? "", ' --> ')) {
             $cueTitle = $rawLines[0];
             $rawLines = array_slice($rawLines, 1);
         }
@@ -83,10 +83,10 @@ class WebVttParser extends SubtitleParser
             throw new ParsingException("The time-string of at least one cue could not be parsed: $timeString");
         }
 
-        $hours   = intval($matches[2]);
-        $minutes = intval($matches[3]);
-        $seconds = intval($matches[4]);
-        $millis  = intval($matches[5]);
+        $hours   = (int) $matches[2];
+        $minutes = (int) $matches[3];
+        $seconds = (int) $matches[4];
+        $millis  = (int) $matches[5];
 
         return $hours * 3600 + $minutes * 60 + $seconds + $millis / 1000;
     }
@@ -99,9 +99,8 @@ class WebVttParser extends SubtitleParser
      * @param SubtitleCue $cue
      * @param string      $cueTitle
      */
-    private function addCueTitle(SubtitleCue $cue, string $cueTitle)
+    private function addCueTitle(SubtitleCue $cue, string $cueTitle): void
     {
-        return;
     }
 
 
@@ -113,9 +112,8 @@ class WebVttParser extends SubtitleParser
      * @param int      $index
      * @param array    $rawLines
      */
-    private function addCommentToSubtitle(Subtitle $subtitle, int $index, array $rawLines)
+    private function addCommentToSubtitle(Subtitle $subtitle, int $index, array $rawLines): void
     {
-        return;
     }
 
 
@@ -126,8 +124,7 @@ class WebVttParser extends SubtitleParser
      * @param Subtitle $subtitle
      * @param array    $rawLines
      */
-    private function addStyleToSubtitle(Subtitle $subtitle, array $rawLines)
+    private function addStyleToSubtitle(Subtitle $subtitle, array $rawLines): void
     {
-        return;
     }
 }

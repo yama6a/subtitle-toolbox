@@ -8,7 +8,7 @@ use SubtitleToolbox\SubtitleCue;
 
 class WebVttFormatter extends SubtitleFormatter
 {
-    function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, array $options = []): string
     {
         $output = "WEBVTT" . StringHelpers::UNIX_LINE_ENDING . StringHelpers::UNIX_LINE_ENDING;
         foreach (array_values($subtitle->getCues()) as $cueIndex => $cue) {
@@ -24,7 +24,7 @@ class WebVttFormatter extends SubtitleFormatter
     }
 
 
-    private function formatCue(SubtitleCue $cue, array $options)
+    private function formatCue(SubtitleCue $cue, array $options): string
     {
         $timeStamps = $this->formatTimeToString($cue->getStart()) . " --> " . $this->formatTimeToString($cue->getEnd());
 
@@ -39,7 +39,7 @@ class WebVttFormatter extends SubtitleFormatter
     }
 
 
-    private function formatTimeToString(float $timeInSeconds)
+    private function formatTimeToString(float $timeInSeconds): string
     {
         $hour   = str_pad(floor($timeInSeconds / 3600), 2, "0", STR_PAD_LEFT);
         $minute = str_pad(floor($timeInSeconds / 60) % 60, 2, "0", STR_PAD_LEFT);

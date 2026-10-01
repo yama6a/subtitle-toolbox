@@ -10,7 +10,7 @@ namespace SubtitleToolbox\Exceptions;
  */
 class ParsingException extends GenericException
 {
-    function getErrorCode(): int
+    public function getErrorCode(): int
     {
         return 100;
     }

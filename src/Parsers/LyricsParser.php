@@ -8,7 +8,7 @@ use SubtitleToolbox\SubtitleCue;
 
 class LyricsParser extends SubtitleParser
 {
-    const REGEX = "/^\[(\d{2,3}):([0-5]\d).(\d\d)\](.+)$/";
+    public const REGEX = "/^\[(\d{2,3}):([0-5]\d).(\d\d)\](.+)$/";
 
 
     public function parse(string $rawSubtitle): Subtitle
@@ -63,8 +63,7 @@ class LyricsParser extends SubtitleParser
      * @param Subtitle $subtitle
      * @param          $currentLine
      */
-    private function addIdTagToSubtitle(Subtitle $subtitle, string $currentLine)
+    private function addIdTagToSubtitle(Subtitle $subtitle, string $currentLine): void
     {
-        return;
     }
 }
