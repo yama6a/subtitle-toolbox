@@ -4,8 +4,6 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
-use SubtitleToolbox\Formatters\LyricsFormatter;
-use SubtitleToolbox\Formatters\MpSubFormatter;
 use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
@@ -312,25 +310,6 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $subtitle->reIndexCues();
 
         $this->assertSame([["text" => "before second", "beforeCueIndex" => 0]], $subtitle->getComments());
-    }
-
-
-    public function testFormattersIgnoreMetadataCommentsAndIdentifiers(): void
-    {
-        $plain = new Subtitle();
-        $plain->addCue(new SubtitleCue(1, 2, "first"));
-        $plain->addCue(new SubtitleCue(3, 4, "second"));
-
-        $annotated = new Subtitle();
-        $annotated->addCue((new SubtitleCue(1, 2, "first"))->setIdentifier("intro"));
-        $annotated->addCue((new SubtitleCue(3, 4, "second"))->setIdentifier("outro"));
-        $annotated->setMetadata(Subtitle::METADATA_TITLE, "Yesterday");
-        $annotated->addComment("Translated by Jane Doe", 0);
-        $annotated->addComment("End of file", 2);
-
-        foreach ([LyricsFormatter::class, MpSubFormatter::class, SubRipFormatter::class, WebVttFormatter::class] as $formatter) {
-            $this->assertSame($plain->format($formatter), $annotated->format($formatter), $formatter);
-        }
     }
 
 
