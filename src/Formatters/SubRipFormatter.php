@@ -38,6 +38,7 @@ class SubRipFormatter extends SubtitleFormatter
         $endMillis = str_pad(round(($cue->getEnd() - floor($cue->getEnd())) * 1000), 3, "0", STR_PAD_LEFT);
 
         $time  = "$startHour:$startMinute:$startSecond,$startMillis --> $endHour:$endMinute:$endSecond,$endMillis";
+        $time .= $this->formatCoordinates($cue);
         $lines = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines());
 
         // strip xml tags depending on option settings
@@ -47,5 +48,16 @@ class SubRipFormatter extends SubtitleFormatter
 
 
         return $time . StringHelpers::UNIX_LINE_ENDING . $lines;
+    }
+
+
+    private function formatCoordinates(SubtitleCue $cue): string
+    {
+        $coordinates = $cue->getFormatData("srt")["coordinates"] ?? null;
+        if (!is_array($coordinates)) {
+            return "";
+        }
+
+        return " X1:{$coordinates["x1"]} X2:{$coordinates["x2"]} Y1:{$coordinates["y1"]} Y2:{$coordinates["y2"]}";
     }
 }

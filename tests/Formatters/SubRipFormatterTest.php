@@ -55,4 +55,24 @@ class SubRipFormatterTest extends TestCase
             $subtitle->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
         );
     }
+
+
+    public function testTimestampsAreWrittenInTheStandardForm(): void
+    {
+        $subtitle = Subtitle::parse("1\n0:00:01.5 --> 0:00:02.25\nText\n", SubRipParser::class);
+
+        $this->assertSame(
+            "\u{feff}1\n00:00:01,500 --> 00:00:02,250\nText\n",
+            $subtitle->format(SubRipFormatter::class)
+        );
+    }
+
+
+    public function testCoordinatesAreWrittenBack(): void
+    {
+        $raw      = "\u{feff}1\n00:00:01,000 --> 00:00:04,000 X1:100 X2:600 Y1:40 Y2:80\nText\n";
+        $subtitle = Subtitle::parse($raw, SubRipParser::class);
+
+        $this->assertSame($raw, $subtitle->format(SubRipFormatter::class));
+    }
 }

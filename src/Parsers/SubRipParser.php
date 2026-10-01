@@ -35,12 +35,17 @@ class SubRipParser extends SubtitleParser
                 throw new ParsingException("Block #$idx doesn't have any text lines!");
             }
 
-            $times = explode('-->', $rawLines[1]);
-            $subtitle->addCue(new SubtitleCue(
+            $times       = explode('-->', $rawLines[1]);
+            $coordinates = $this->extractCoordinates($times[1]);
+            $cue         = new SubtitleCue(
                 $this->millisFromString($times[0]),
                 $this->millisFromString($times[1]),
                 array_slice($rawLines, 2)
-            ));
+            );
+            if ($coordinates !== null) {
+                $cue->setFormatData("srt", ["coordinates" => $coordinates]);
+            }
+            $subtitle->addCue($cue);
         }
 
         return $subtitle;
@@ -50,15 +55,36 @@ class SubRipParser extends SubtitleParser
     private function millisFromString(string $timeString): float
     {
         $timeString = trim($timeString);
-        if (!preg_match("/^(\d{2,3}):([0-5]\d):([0-5]\d),(\d{3})$/", $timeString, $matches)) {
+        if (!preg_match("/^(\d{1,3}):([0-5]\d):([0-5]\d)[,.](\d{1,3})$/", $timeString, $matches)) {
             throw new ParsingException("The timeString-string of at least one cue could not be parsed: $timeString");
         }
 
         $hours   = (int) $matches[1];
         $minutes = (int) $matches[2];
         $seconds = (int) $matches[3];
-        $millis  = (int) $matches[4];
+        $millis  = (int) str_pad($matches[4], 3, "0");
 
         return $hours * 3600 + $minutes * 60 + $seconds + $millis / 1000;
+    }
+
+
+    /**
+     * @return array{x1: int, x2: int, y1: int, y2: int}|null
+     */
+    private function extractCoordinates(string &$endTimeString): ?array
+    {
+        $pattern = "/^(.*?)\s+X1:(\d+)\s+X2:(\d+)\s+Y1:(\d+)\s+Y2:(\d+)\s*$/";
+        if (!preg_match($pattern, $endTimeString, $matches)) {
+            return null;
+        }
+
+        $endTimeString = $matches[1];
+
+        return [
+            "x1" => (int) $matches[2],
+            "x2" => (int) $matches[3],
+            "y1" => (int) $matches[4],
+            "y2" => (int) $matches[5],
+        ];
     }
 }
