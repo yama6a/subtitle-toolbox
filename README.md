@@ -50,6 +50,39 @@ $cue->setIdentifier('intro');
 - **Comments**: a comment comes before the cue at `beforeCueIndex`. An index equal to the cue count puts it after the last cue.
 - **Re-index**: `reIndexCues()` moves each comment together with its cue. A comment before a removed cue moves to the next cue.
 
+## Core markup
+Cue lines hold HTML-like inline tags. Parsers convert their styling to this tag set. Formatters strip the tags that their format cannot show.
+
+| Tag | Meaning |
+|:--- |:--- |
+| `<b>` | bold |
+| `<i>` | italic |
+| `<u>` | underline |
+| `<s>` | strikethrough |
+| `<font color="#ff0000">` | text colour |
+| `<v Fred>` | speaker |
+| `<00:01:02.500>` | word timestamp |
+
+Text that is not markup keeps `&lt;`, `&gt;` and `&amp;` escaped. The `Markup` class has the helpers that the formatters use:
+
+```php
+Markup::stripAllTags('<b>Hi</b> &amp; bye');            // 'Hi &amp; bye'
+Markup::keepTags('<b>Hi</b> <c.red>you</c>', ['b']);    // '<b>Hi</b> you'
+Markup::decodeEntities('Hi &amp; bye');                 // 'Hi & bye'
+```
+
+## Alignment and format data
+The parsers and formatters do not read or write these fields yet.
+
+```php
+$cue->setAlignment(8);                                  // top center
+$cue->setFormatData('ass', ['style' => 'Sign']);
+$subtitle->getFormatData('ass');                        // [] when not set
+```
+
+- **Alignment**: a number from 1 to 9 in numeric keypad layout. 1 is bottom left, 2 is bottom center, 8 is top center. `null` means the format default, bottom center.
+- **Format data**: styling outside the core markup and the alignment. Only the formatter of the same format reads it. The key is the lowercase file extension of the format, for example `ass` or `vtt`.
+
 ## Restrictions
 This project currently focuses on adding basic support for additional formats, rather than more sophisticated functionality, such as comments, styling, and cue positioning. 
 
@@ -57,7 +90,7 @@ This project currently focuses on adding basic support for additional formats, r
 | Format | Reads | Outputs | Additional Info
 |:--- |:--- |:--- |:--- |
 | LyRiCs (.lrc)   | No support for ID tags | No support for ID tags | Strips all xml tags, including word-timing of enhanced LRC files
-| SubRip (.srt)   | Full Support | Full Support  | Formatter strips all xml tags except: \<b>\<i>\<u>\<font>
+| SubRip (.srt)   | Full Support | Full Support  | Formatter strips all xml tags except: \<b>\<i>\<u>\<s>\<font>
 | MpSub (.mpsub)  | n/a | Only supports FORMAT=TIME, No support for metadata | Formatter strips all xml tags  
 | SBV (.sbv)      | Accepts any number of hour digits | Writes one hour digit below 10 hours, no UTF-8 BOM | Formatter strips all xml tags and decodes HTML entities
 | WebVTT (.vtt)   | No Support for comments, styling or positioning| No Support for comments, styling or positioning | Formatter strips all xml tags except: \<b>\<u>\<i>\<v>\<lang>\<c>\<ruby>\<rt>
