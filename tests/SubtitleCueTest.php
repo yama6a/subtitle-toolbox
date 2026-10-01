@@ -195,4 +195,66 @@ class SubtitleCueTest extends TestCase
         $cue->setIdentifier(null);
         $this->assertNull($cue->getIdentifier());
     }
+
+
+    public function testAlignmentIsNullByDefault(): void
+    {
+        $this->assertNull((new SubtitleCue())->getAlignment());
+    }
+
+
+    public function testGetAndSetAlignment(): void
+    {
+        $cue = new SubtitleCue();
+
+        foreach ([1, 2, 8, 9] as $alignment) {
+            $this->assertSame($alignment, $cue->setAlignment($alignment)->getAlignment());
+        }
+
+        $this->assertNull($cue->setAlignment(null)->getAlignment());
+    }
+
+
+    public function testAlignmentOutOfRangeThrowsException(): void
+    {
+        foreach ([0, 10, -1] as $alignment) {
+            try {
+                (new SubtitleCue())->setAlignment($alignment);
+                $this->fail("Alignment $alignment was accepted");
+            } catch (InvalidArgumentException $e) {
+                $this->assertStringContainsString("must be a number from 1 to 9", $e->getMessage());
+            }
+        }
+    }
+
+
+    public function testFormatDataIsEmptyByDefault(): void
+    {
+        $this->assertSame([], (new SubtitleCue())->getFormatData("ass"));
+    }
+
+
+    public function testSetAndGetFormatDataPerFormat(): void
+    {
+        $object = (new SubtitleCue())
+            ->setFormatData("ass", ["style" => "Default", "marginV" => 10])
+            ->setFormatData("vtt", ["region" => "top"]);
+
+        $this->assertSame(["style" => "Default", "marginV" => 10], $object->getFormatData("ass"));
+        $this->assertSame(["region" => "top"], $object->getFormatData("vtt"));
+        $this->assertSame([], $object->getFormatData("srt"));
+    }
+
+
+    public function testSettingFormatDataReplacesPreviousData(): void
+    {
+        $object = (new SubtitleCue())
+            ->setFormatData("ass", ["style" => "Default", "marginV" => 10])
+            ->setFormatData("ass", ["style" => "Sign"]);
+
+        $this->assertSame(["style" => "Sign"], $object->getFormatData("ass"));
+
+        $object->setFormatData("ass", []);
+        $this->assertSame([], $object->getFormatData("ass"));
+    }
 }

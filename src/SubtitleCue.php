@@ -17,6 +17,11 @@ class SubtitleCue
 
     protected ?string $identifier = null;
 
+    protected ?int $alignment = null;
+
+    /** @var array<string, array> */
+    protected array $formatData = [];
+
 
     public function __construct(float $start = 0, float $end = 0, $lines = "")
     {
@@ -124,6 +129,49 @@ class SubtitleCue
     public function setIdentifier(?string $identifier): self
     {
         $this->identifier = $identifier;
+
+        return $this;
+    }
+
+
+    public function getAlignment(): ?int
+    {
+        return $this->alignment;
+    }
+
+
+    /**
+     * Sets the position from 1 to 9 in numeric keypad layout, or null for the format default.
+     */
+    public function setAlignment(?int $alignment): self
+    {
+        if ($alignment !== null && ($alignment < 1 || $alignment > 9)) {
+            throw new InvalidArgumentException("Cannot set alignment $alignment - " .
+                                               "the alignment must be a number from 1 to 9!");
+        }
+
+        $this->alignment = $alignment;
+
+        return $this;
+    }
+
+
+    /**
+     * Returns the data that only the given format reads, or an empty array.
+     */
+    public function getFormatData(string $format): array
+    {
+        return $this->formatData[$format] ?? [];
+    }
+
+
+    public function setFormatData(string $format, array $data): self
+    {
+        if ($data === []) {
+            unset($this->formatData[$format]);
+        } else {
+            $this->formatData[$format] = $data;
+        }
 
         return $this;
     }

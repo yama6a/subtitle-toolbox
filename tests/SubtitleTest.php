@@ -332,4 +332,35 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
             $this->assertSame($plain->format($formatter), $annotated->format($formatter), $formatter);
         }
     }
+
+
+    public function testFormatDataIsEmptyByDefault(): void
+    {
+        $this->assertSame([], (new Subtitle())->getFormatData("ass"));
+    }
+
+
+    public function testSetAndGetFormatDataPerFormat(): void
+    {
+        $object = (new Subtitle())
+            ->setFormatData("ass", ["style" => "Default", "marginV" => 10])
+            ->setFormatData("vtt", ["region" => "top"]);
+
+        $this->assertSame(["style" => "Default", "marginV" => 10], $object->getFormatData("ass"));
+        $this->assertSame(["region" => "top"], $object->getFormatData("vtt"));
+        $this->assertSame([], $object->getFormatData("srt"));
+    }
+
+
+    public function testSettingFormatDataReplacesPreviousData(): void
+    {
+        $object = (new Subtitle())
+            ->setFormatData("ass", ["style" => "Default", "marginV" => 10])
+            ->setFormatData("ass", ["style" => "Sign"]);
+
+        $this->assertSame(["style" => "Sign"], $object->getFormatData("ass"));
+
+        $object->setFormatData("ass", []);
+        $this->assertSame([], $object->getFormatData("ass"));
+    }
 }
