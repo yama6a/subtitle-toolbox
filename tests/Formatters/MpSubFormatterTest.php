@@ -2,9 +2,11 @@
 
 namespace SubtitleToolbox\Formatters;
 
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 
 class MpSubFormatterTest extends TestCase
 {
@@ -14,6 +16,61 @@ class MpSubFormatterTest extends TestCase
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/mpsub/valid.mpsub"),
+            $subtitle->format(MpSubFormatter::class)
+        );
+    }
+
+
+    public function testFrameRateOptionWritesFrames(): void
+    {
+        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/valid.srt"), SubRipParser::class);
+
+        $this->assertSame(
+            file_get_contents(__DIR__ . "/../files/mpsub/valid_25fps.mpsub"),
+            $subtitle->format(MpSubFormatter::class, [MpSubFormatter::OPTION_FRAME_RATE => 25])
+        );
+    }
+
+
+    public function testFramesAreRoundedFromAbsoluteTimesSoErrorsDoNotAddUp(): void
+    {
+        $subtitle = new Subtitle();
+        for ($i = 0; $i < 4; $i++) {
+            $subtitle->addCue(new SubtitleCue($i * 0.06, ($i + 1) * 0.06, "Cue $i"));
+        }
+
+        $output = $subtitle->format(MpSubFormatter::class, [MpSubFormatter::OPTION_FRAME_RATE => 25]);
+
+        $this->assertStringContainsString("\n0 2\nCue 0\n\n0 1\nCue 1\n\n0 2\nCue 2\n\n0 1\nCue 3\n", $output);
+    }
+
+
+    public function testNonIntegerFrameRateThrowsException(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("The MPSub frame rate must be a positive integer!");
+        (new Subtitle())->format(MpSubFormatter::class, [MpSubFormatter::OPTION_FRAME_RATE => 23.976]);
+    }
+
+
+    public function testHeaderWithoutMetadataAndFormatDataIsUnchanged(): void
+    {
+        $subtitle = (new Subtitle())->setMetadata(Subtitle::METADATA_LANGUAGE, "en");
+
+        $this->assertSame("\xEF\xBB\xBF" . MpSubFormatter::MPSUB_HEADER, $subtitle->format(MpSubFormatter::class));
+    }
+
+
+    public function testHeaderHoldsMetadataAndFormatData(): void
+    {
+        $subtitle = (new Subtitle())
+            ->setMetadata(Subtitle::METADATA_TITLE, "Yesterday")
+            ->setMetadata(Subtitle::METADATA_AUTHOR, "Jane Doe")
+            ->setMetadata(Subtitle::METADATA_LANGUAGE, "en")
+            ->setFormatData("mpsub", ["NOTE" => "Draft", "FILE" => "123,abc", "FORMAT" => "30", "TYPE" => "AUDIO"]);
+
+        $this->assertSame(
+            "\xEF\xBB\xBFTITLE=Yesterday\nAUTHOR=Jane Doe\nTYPE=AUDIO\nFILE=123,abc\nFORMAT=TIME\nNOTE=Draft\n",
             $subtitle->format(MpSubFormatter::class)
         );
     }
