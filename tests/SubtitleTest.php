@@ -192,4 +192,123 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $this->assertNull($subtitle->getMetadata("author"));
         $this->assertSame(["album" => "Help!"], $subtitle->getAllMetadata());
     }
+
+
+    public function testCommentsAreEmptyByDefault(): void
+    {
+        $this->assertSame([], (new Subtitle())->getComments());
+    }
+
+
+    public function testAddCommentKeepsCommentsInCueOrder(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addComment("after last cue", 2)
+            ->addComment("first before cue 0", 0)
+            ->addComment("second before cue 0", 0)
+            ->addComment("before cue 1", 1);
+
+        $this->assertSame(
+            [
+                ["text" => "first before cue 0", "beforeCueIndex" => 0],
+                ["text" => "second before cue 0", "beforeCueIndex" => 0],
+                ["text" => "before cue 1", "beforeCueIndex" => 1],
+                ["text" => "after last cue", "beforeCueIndex" => 2],
+            ],
+            $subtitle->getComments()
+        );
+    }
+
+
+    public function testAddCommentWithNegativeIndexThrowsException(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("must not be negative");
+        (new Subtitle())->addComment("text", -1);
+    }
+
+
+    public function testReIndexKeepsEachCommentBeforeItsCue(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue(new SubtitleCue(5, 6, "late"), false);
+        $subtitle->addCue(new SubtitleCue(1, 2, "early"), false);
+        $subtitle->addComment("before late", 0);
+        $subtitle->addComment("before early", 1);
+        $subtitle->addComment("at the end", 2);
+
+        $subtitle->reIndexCues();
+
+        $this->assertSame("early", $subtitle->getCues()[0]->getText());
+        $this->assertSame(
+            [
+                ["text" => "before early", "beforeCueIndex" => 0],
+                ["text" => "before late", "beforeCueIndex" => 1],
+                ["text" => "at the end", "beforeCueIndex" => 2],
+            ],
+            $subtitle->getComments()
+        );
+    }
+
+
+    public function testCommentBeforeAddedCueMovesWithIt(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue(new SubtitleCue(3, 4, "second"));
+        $subtitle->addComment("before first", 1);
+        $subtitle->addCue(new SubtitleCue(1, 2, "first"));
+
+        $this->assertSame([["text" => "before first", "beforeCueIndex" => 0]], $subtitle->getComments());
+    }
+
+
+    public function testCommentBeforeRemovedCueMovesToNextCue(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue(new SubtitleCue(1, 2, "first"));
+        $subtitle->addCue(new SubtitleCue(3, 4, "second"));
+        $subtitle->addCue(new SubtitleCue(5, 6, "third"));
+        $subtitle->addComment("before second", 1);
+        $subtitle->addComment("before third", 2);
+
+        $subtitle->removeCue(1);
+
+        $this->assertSame(
+            [
+                ["text" => "before second", "beforeCueIndex" => 1],
+                ["text" => "before third", "beforeCueIndex" => 1],
+            ],
+            $subtitle->getComments()
+        );
+    }
+
+
+    public function testCommentBeforeRemovedLastCueMovesToEnd(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue(new SubtitleCue(1, 2, "first"));
+        $subtitle->addCue(new SubtitleCue(3, 4, "second"));
+        $subtitle->addComment("before second", 1);
+
+        $subtitle->removeCue(1);
+
+        $this->assertSame([["text" => "before second", "beforeCueIndex" => 1]], $subtitle->getComments());
+    }
+
+
+    public function testCommentKeepsIndexAfterRemovalWithoutReIndex(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue(new SubtitleCue(1, 2, "first"));
+        $subtitle->addCue(new SubtitleCue(3, 4, "second"));
+        $subtitle->addComment("before second", 1);
+
+        $subtitle->removeCue(0, false);
+
+        $this->assertSame([["text" => "before second", "beforeCueIndex" => 1]], $subtitle->getComments());
+
+        $subtitle->reIndexCues();
+
+        $this->assertSame([["text" => "before second", "beforeCueIndex" => 0]], $subtitle->getComments());
+    }
 }
