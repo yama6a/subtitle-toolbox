@@ -11,7 +11,7 @@ class SubRipFormatter extends SubtitleFormatter
     function format(Subtitle $subtitle, array $options = []): string
     {
         $output = "";
-        foreach ($subtitle->getCues() as $cueIndex => $cue) {
+        foreach (array_values($subtitle->getCues()) as $cueIndex => $cue) {
             if ($cueIndex > 0) {
                 $output .= StringHelpers::UNIX_LINE_ENDING;
             }
