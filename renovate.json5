@@ -1,0 +1,19 @@
+{
+  // The schedule is the cron in .github/workflows/renovate.yaml, so workflow_dispatch works too.
+  // Every automerged non-major bump cuts a patch release.
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["github>yama6a/gha:default.json5"],
+
+  // ci.yaml fails a PR without a release label. A dependency bump never changes the public API.
+  labels: ["patch"],
+
+  packageRules: [
+    {
+      // Raising the PHP floor drops users, so it is a release decision and never a bot update.
+      description: "the php constraint in composer.json is set by hand",
+      matchManagers: ["composer"],
+      matchPackageNames: ["php"],
+      enabled: false,
+    },
+  ],
+}
