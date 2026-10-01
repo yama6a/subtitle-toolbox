@@ -89,12 +89,24 @@ This project currently focuses on adding basic support for additional formats, r
 ## Supported formats
 | Format | Reads | Outputs | Additional Info
 |:--- |:--- |:--- |:--- |
-| LyRiCs (.lrc)   | No support for ID tags | No support for ID tags | Strips all xml tags, including word-timing of enhanced LRC files
+| LyRiCs (.lrc)   | ID tags, `[offset:]`, several timestamps per line, enhanced LRC word timing | ID tags, `[#:]` comments, word timing as `<mm:ss.xx>` | Formatter strips all other xml tags and writes times in centiseconds
 | MicroDVD (.sub) | Frame rate from the parser constructor or a `{1}{1}<fps>` first line | Needs `OPTION_FRAME_RATE` | Converts `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` to core markup. Keeps other control codes in the `sub` format data
 | MpSub (.mpsub)  | FORMAT=TIME and FORMAT=<fps>, header lines | FORMAT=TIME by default, FORMAT=<fps> as an option, header lines | Formatter strips all xml tags
 | SBV (.sbv)      | Accepts any number of hour digits | Writes one hour digit below 10 hours, no UTF-8 BOM | Formatter strips all xml tags and decodes HTML entities
 | SubRip (.srt)   | Reads coordinates, alignment tags and lenient timestamps | Writes standard timestamps, coordinates and alignment tags | Formatter strips all xml tags except: \<b>\<i>\<u>\<s>\<font>
 | WebVTT (.vtt)   | No Support for comments, styling or positioning| No Support for comments, styling or positioning | Formatter strips all xml tags except: \<b>\<u>\<i>\<v>\<lang>\<c>\<ruby>\<rt>
+
+### LRC
+```php
+$subtitle = (new LyricsParser(lastCueDuration: 4))->parse(file_get_contents('song.lrc'));
+$subtitle->getMetadata(Subtitle::METADATA_TITLE);                          // from [ti:]
+$subtitle->getFormatData('lrc');                                           // ['idTags' => ['by' => 'Jane Doe']]
+$subtitle->format(LyricsFormatter::class);                                 // ID tags first, then the lyrics
+```
+
+- **ID tags**: `[ti:]`, `[ar:]`, `[al:]` and `[au:]` become the metadata keys `title`, `artist`, `album` and `author`. The parser keeps all other ID tags in the `lrc` format data. `[#:]` lines become comments. The formatter writes ID tags at the top and each comment before its cue.
+- **Offset**: the parser subtracts `[offset:]` milliseconds from every time, so `[offset:+500]` turns `[00:12.00]` into 11.5 s. The formatter writes the shifted times and no `[offset:]` tag.
+- **End times**: a cue ends at the next timestamp in time order. A timestamp without text, such as `[00:17.20]`, only ends the cue before it. The formatter writes such a line back. The last cue lasts 10 s unless you pass `lastCueDuration`.
 
 ### MicroDVD
 MicroDVD counts time in video frames, so the parser and the formatter need the frame rate of the video.
