@@ -88,4 +88,12 @@ class LyricsParserTest extends TestCase
         $this->assertSame("Third Text", $subtitle->getCues()[1]->getLines()[0]);
         $this->assertSame(2, count($subtitle->getCues()));
     }
+
+
+    public function testEndTimeIsNextCueStartIncludingCentiseconds(): void
+    {
+        $subtitle = Subtitle::parse("[00:01.00] First\n[00:02.75] Second\n", LyricsParser::class);
+
+        $this->assertSame(2.75, $subtitle->getCues()[0]->getEnd());
+    }
 }
