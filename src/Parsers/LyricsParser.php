@@ -63,8 +63,7 @@ class LyricsParser extends SubtitleParser
      * @param Subtitle $subtitle
      * @param          $currentLine
      */
-    private function addIdTagToSubtitle(Subtitle $subtitle, string $currentLine)
+    private function addIdTagToSubtitle(Subtitle $subtitle, string $currentLine): void
     {
-        return;
     }
 }

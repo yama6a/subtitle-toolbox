@@ -33,7 +33,7 @@ class MpSubFormatter extends SubtitleFormatter
     }
 
 
-    private function getTimestamp(SubtitleCue $cue, float $previousEnd)
+    private function getTimestamp(SubtitleCue $cue, float $previousEnd): string
     {
         $start    = round($cue->getStart() - $previousEnd, 3);
         $duration = round($cue->getEnd() - $cue->getStart(), 3);

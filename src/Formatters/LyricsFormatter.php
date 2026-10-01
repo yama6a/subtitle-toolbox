@@ -20,7 +20,7 @@ class LyricsFormatter extends SubtitleFormatter
     }
 
 
-    private function formatCue(SubtitleCue $cue)
+    private function formatCue(SubtitleCue $cue): string
     {
         $timestamp = $this->formatTimeToString($cue->getStart());
 
@@ -32,7 +32,7 @@ class LyricsFormatter extends SubtitleFormatter
     }
 
 
-    private function formatTimeToString(float $timeInSeconds)
+    private function formatTimeToString(float $timeInSeconds): string
     {
         // round once on the total, so 1.996 s becomes [00:02.00] and not [00:01.100]
         $totalCentiseconds = (int) round($timeInSeconds * 100);

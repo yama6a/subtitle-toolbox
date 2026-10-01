@@ -24,7 +24,7 @@ class SubRipFormatter extends SubtitleFormatter
     }
 
 
-    private function formatCue(SubtitleCue $cue, array $options)
+    private function formatCue(SubtitleCue $cue, array $options): string
     {
         $startHour   = str_pad(floor($cue->getStart() / 3600), 2, "0", STR_PAD_LEFT);
         $startMinute = str_pad(floor($cue->getStart() / 60) % 60, 2, "0", STR_PAD_LEFT);

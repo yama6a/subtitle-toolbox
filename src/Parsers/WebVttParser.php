@@ -99,9 +99,8 @@ class WebVttParser extends SubtitleParser
      * @param SubtitleCue $cue
      * @param string      $cueTitle
      */
-    private function addCueTitle(SubtitleCue $cue, string $cueTitle)
+    private function addCueTitle(SubtitleCue $cue, string $cueTitle): void
     {
-        return;
     }
 
 
@@ -113,9 +112,8 @@ class WebVttParser extends SubtitleParser
      * @param int      $index
      * @param array    $rawLines
      */
-    private function addCommentToSubtitle(Subtitle $subtitle, int $index, array $rawLines)
+    private function addCommentToSubtitle(Subtitle $subtitle, int $index, array $rawLines): void
     {
-        return;
     }
 
 
@@ -126,8 +124,7 @@ class WebVttParser extends SubtitleParser
      * @param Subtitle $subtitle
      * @param array    $rawLines
      */
-    private function addStyleToSubtitle(Subtitle $subtitle, array $rawLines)
+    private function addStyleToSubtitle(Subtitle $subtitle, array $rawLines): void
     {
-        return;
     }
 }
