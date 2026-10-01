@@ -22,7 +22,7 @@ abstract class GenericException extends \RuntimeException
      */
     private function getClassName(): string
     {
-        $classNameArray = explode('\\', get_class($this));
+        $classNameArray = explode('\\', static::class);
 
         return array_pop($classNameArray);
     }

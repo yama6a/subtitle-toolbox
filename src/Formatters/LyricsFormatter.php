@@ -11,7 +11,7 @@ class LyricsFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, array $options = []): string
     {
         $output = "";
-        foreach ($subtitle->getCues() as $cueIndex => $cue) {
+        foreach ($subtitle->getCues() as $cue) {
             $output .= $this->formatCue($cue);
             $output .= StringHelpers::UNIX_LINE_ENDING;
         }

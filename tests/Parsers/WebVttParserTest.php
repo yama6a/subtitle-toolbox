@@ -149,4 +149,15 @@ class WebVttParserTest extends TestCase
         $this->expectExceptionMessage("Block #1 doesn't have any text lines");
         Subtitle::parse("WEBVTT\n\n00:01.000 --> 00:02.000", WebVttParser::class);
     }
+
+
+    public function testLowercaseNoteAndStyleBlocksAreSkipped(): void
+    {
+        $raw = "WEBVTT\n\nnote a comment\n\nstyle\n::cue {}\n\n00:01.000 --> 00:02.000\nText\n";
+
+        $subtitle = Subtitle::parse($raw, WebVttParser::class);
+
+        $this->assertSame(1, count($subtitle->getCues()));
+        $this->assertSame("Text", $subtitle->getCues()[0]->getText());
+    }
 }

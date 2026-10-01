@@ -8,12 +8,12 @@ class StringHelpers
     public const MAC_LINE_ENDING     = "\r";
     public const WINDOWS_LINE_ENDING = "\r\n";
 
+    private const UTF8_BOM = "\xEF\xBB\xBF";
+
 
     public static function hasUtf8Bom(string $str): bool
     {
-        $bom = pack("CCC", 0xef, 0xbb, 0xbf);
-
-        return strncmp($str, $bom, 3) === 0;
+        return str_starts_with($str, self::UTF8_BOM);
     }
 
 
@@ -25,7 +25,7 @@ class StringHelpers
 
     public static function addUtf8Bom(string $str): string
     {
-        return self::hasUtf8Bom($str) ? $str : chr(239) . chr(187) . chr(191) . $str;
+        return self::hasUtf8Bom($str) ? $str : self::UTF8_BOM . $str;
     }
 
 
