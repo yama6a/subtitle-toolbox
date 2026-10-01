@@ -43,7 +43,7 @@ class SubRipFormatter extends SubtitleFormatter
         // strip xml tags depending on option settings
         $lines = in_array(parent::OPTION_STRIP_ALL_XML_TAGS, $options)
             ? Markup::stripAllTags($lines)
-            : Markup::keepTags($lines, ["b", "u", "i", "font"]);
+            : Markup::keepTags($lines, ["b", "u", "i", "s", "font"]);
 
 
         return $time . StringHelpers::UNIX_LINE_ENDING . $lines;
