@@ -31,6 +31,25 @@ $subtitle->syncByTwoPoints(10, 12, 6260, 6005);      // 10 s becomes 12 s, 6260 
 - A start or end time that becomes negative becomes 0. The cue stays in the subtitle.
 - `FrameRate` converts between frames and seconds: `(new FrameRate(23.976))->framesToSeconds(1000)` returns about 41.708.
 
+## Metadata, comments and cue identifiers
+The parsers and formatters do not read or write these fields yet.
+
+```php
+$subtitle->setMetadata(Subtitle::METADATA_TITLE, 'Yesterday');
+$subtitle->getMetadata('title');            // 'Yesterday'
+$subtitle->setMetadata('title', null);      // removes the key
+$subtitle->getAllMetadata();                // []
+
+$subtitle->addComment('Translated by Jane Doe', 0);
+$subtitle->getComments();                   // [['text' => 'Translated by Jane Doe', 'beforeCueIndex' => 0]]
+
+$cue->setIdentifier('intro');
+```
+
+- **Metadata keys**: `Subtitle` has constants for the shared keys `title`, `author`, `artist`, `album` and `language`.
+- **Comments**: a comment comes before the cue at `beforeCueIndex`. An index equal to the cue count puts it after the last cue.
+- **Re-index**: `reIndexCues()` moves each comment together with its cue. A comment before a removed cue moves to the next cue.
+
 ## Restrictions
 This project currently focuses on adding basic support for additional formats, rather than more sophisticated functionality, such as comments, styling, and cue positioning. 
 
