@@ -91,6 +91,7 @@ $subtitle->getFormatData('ass');                        // [] when not set
 | LyRiCs (.lrc)   | ID tags, `[offset:]`, several timestamps per line, enhanced LRC word timing | ID tags, `[#:]` comments, word timing as `<mm:ss.xx>` | Formatter strips all other xml tags and writes times in centiseconds. Text with `<`, `>` and `&` round-trips
 | MicroDVD (.sub) | Frame rate from the parser constructor or a `{1}{1}<fps>` first line | Needs `OPTION_FRAME_RATE` | Converts `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` to core markup. Keeps other control codes in the `sub` format data
 | MpSub (.mpsub)  | FORMAT=TIME and FORMAT=<fps>, header lines | FORMAT=TIME by default, FORMAT=<fps> as an option, header lines | Formatter strips all xml tags. Text with `<`, `>` and `&` round-trips
+| PGS (.sup)      | Blu-ray bitmaps as image cues, with palettes, cropping, windows and forced flags | Not supported | See [PGS](#pgs)
 | SAMI (.smi)     | One language class, `<TITLE>`, the `<STYLE>` block and `<SAMIParam>` | Writes them back, and a `&nbsp;` SYNC after each cue that has a gap before the next cue | Converts `<b>`, `<i>`, `<u>`, `<s>`, `<strike>` and `<font color>` to core markup. Formatter strips all xml tags except: \<b>\<i>\<u>\<s>\<font>
 | SBV (.sbv)      | Accepts any number of hour digits | Writes one hour digit below 10 hours, no UTF-8 BOM | Formatter strips all xml tags and decodes HTML entities. Text with `<`, `>` and `&` round-trips
 | SSA (.ssa)      | SubStation Alpha v4.00 with `[V4 Styles]` and `Marked=` columns | Writes SSA back when the parsed file was SSA, legacy `\a` alignment tags | Same parser and formatter as ASS
@@ -276,6 +277,7 @@ Detection ignores a UTF-8 BOM and leading blank lines. It checks the signatures 
 | 7 | `SubRipParser` | `1`, then `00:00:01,000 -->` |
 | 8 | `SbvParser` | `0:00:01.500,0:00:04.000` |
 | 9 | `LyricsParser` | `[ti:Title]` or `[00:12.00]`, and at least one timestamp line |
+| 10 | `PgsParser` | the bytes `PG`, then a known segment type at byte 10 |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line looks like SubRip, so it detects as SubRip.
 - **MicroDVD**: detection does not find the frame rate. `parse()` throws `ParsingException` for a MicroDVD file without a `{1}{1}<fps>` first line. Then pass the frame rate: `(new MicroDvdParser(23.976))->parse($content)`.
@@ -596,6 +598,30 @@ $subtitle->filterCues(fn (SubtitleCue $cue) => $cue->getEnd() - $cue->getStart()
 - **Speed**: when the cues are in start order, `getCuesAt()` and `getCuesBetween()` use binary search. On 10,000 cues, a call takes about 0.6 ms instead of 2 ms. The lookup sees changes to cue times without a call to `reIndexCues()`.
 - **Filter**: `filterCues()` moves a comment before a removed cue to the next kept cue, and then calls `reIndexCues()`.
 - **No array access**: `$subtitle[3]` does not work. Use `getCues()`, `addCue()` and `removeCue()`, so the cue indexes and comments stay correct.
+
+## PGS
+Blu-ray discs and many MKV files store subtitles as PGS bitmaps in `.sup` files. `PgsParser` reads them as image cues, so run OCR before you write a text format.
+
+```php
+use SubtitleToolbox\Formatters\SubRipFormatter;
+use SubtitleToolbox\Parsers\PgsParser;
+use SubtitleToolbox\Subtitle;
+
+$subtitle = Subtitle::parse(file_get_contents('movie.sup'));                     // detects PGS
+$subtitle = (new PgsParser(3.0))->parse(file_get_contents('movie.sup'));         // the last cue lasts 3 s, not 5 s
+$subtitle->recognizeText(new TesseractEngine(), 'eng');
+file_put_contents('movie.srt', $subtitle->format(SubRipFormatter::class));
+```
+
+- **Cues**: each display set that shows objects gives one cue. It starts at the time stamp of its composition segment and ends at the next one. A display set that repeats the same image does not start a new cue.
+- **Last cue**: a last cue that no later display set ends lasts 5 s. Pass another duration in seconds to the constructor.
+- **Image**: one PNG covers all objects of the display set on a transparent background. The parser applies cropping, windows and palette updates.
+- **Colors**: the parser converts the palette with the BT.709 matrix for video higher than 576 lines, and with BT.601 for SD video, as FFmpeg does.
+- **Forced**: `forced` in the image data is true when at least one object of the display set has the forced flag.
+- **Alignment**: an image whose center is in the top third of the screen gets alignment 8. Other cues keep the default.
+- **Errors**: segments of unknown types are skipped. `parse()` throws `ParsingException` for a segment without the `PG` bytes, a cut-off segment, and a bitmap with too few pixels.
+- **Speed**: a 1,500-cue file of 640x90 images takes about 18 s on PHP 8.5. The PNG compression takes most of this time.
+- **Spec**: [PGS segments](http://blog.thescorpius.com/index.php/2017/07/15/presentation-graphic-stream-sup-files-bluray-subtitle-format/), the patent application [US 2009/0185789 A1](https://patents.google.com/patent/US20090185789A1/en) and the FFmpeg [decoder](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/pgssubdec.c).
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.

@@ -6,6 +6,7 @@ use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\MpSubParser;
+use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SubRipParser;
@@ -32,6 +33,7 @@ class FormatDetector
      *    a WebVTT file without its header has the same shape.
      * 8. SBV: two timestamps and a comma between them. Three millisecond digits keep out SubViewer, which has two.
      * 9. LRC: an ID tag or a timestamp in brackets, and at least one timestamp line.
+     * 10. PGS: the `PG` magic bytes, then a known segment type after the two 4-byte time stamps.
      */
     private const SIGNATURES = [
         WebVttParser::class   => '/\AWEBVTT(?:[ \t\n]|\z)/',
@@ -44,6 +46,7 @@ class FormatDetector
         SbvParser::class      => '/\A\d+:\d{2}:\d{2}\.\d{3},\d+:\d{2}:\d{2}\.\d{3}[ \t]*$/m',
         LyricsParser::class   => '/\A(?=' . self::LRC_TIMESTAMP . '|\[[A-Za-z#][A-Za-z0-9_]*:[^\]\n]*\]).*?^[ \t]*' .
                                  self::LRC_TIMESTAMP . '/ms',
+        PgsParser::class      => '/\APG.{8}[\x14-\x17\x80]/s',
     ];
 
 
