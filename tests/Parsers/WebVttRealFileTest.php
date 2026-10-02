@@ -108,8 +108,7 @@ class WebVttRealFileTest extends TestCase
             array_map(fn (SubtitleCue $cue): array => [
                 $cue->getStart(),
                 $cue->getEnd(),
-                // The formatter strips class names such as <c.yellow>, so the round trip cannot keep them.
-                preg_replace("/<c\.[^>]*>/", "", $cue->getLines()),
+                $cue->getLines(),
                 $cue->getAlignment(),
                 $cue->getFormatData("vtt"),
             ], $subtitle->getCues()),

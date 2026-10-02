@@ -165,6 +165,56 @@ class WebVttFormatterTest extends TestCase
     }
 
 
+    #[DataProvider("classSpanProvider")]
+    public function testSpansWithClassesAreKept(string $text): void
+    {
+        $subtitle = Subtitle::parse("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n$text\n", WebVttParser::class);
+
+        $this->assertSame(
+            "\xEF\xBB\xBFWEBVTT\n\n1\n00:00:01.000 --> 00:00:02.000\n$text\n",
+            $subtitle->format(WebVttFormatter::class)
+        );
+    }
+
+
+    public static function classSpanProvider(): array
+    {
+        return [
+            "class"           => ["<c.colorE5E5E5>hello</c> world"],
+            "italics"         => ["<i.quiet>hello</i> world"],
+            "bold"            => ["<b.loud>hello</b> world"],
+            "underline"       => ["<u.link>hello</u> world"],
+            "ruby"            => ["<ruby.small>base <rt.top>text</rt></ruby> world"],
+            "voice"           => ["<v.first.loud Fred>hello</v> world"],
+            "language"        => ["<lang.x en>hello</lang> world"],
+            "nested"          => ["<c.yellow.bg_blue><b.loud>hello</b></c> world"],
+            "word timestamps" => ["the<00:00:01.199><c> train</c><c.colorE5E5E5><00:00:01.379><c> leaves</c></c>"],
+        ];
+    }
+
+
+    #[DataProvider("droppedTagProvider")]
+    public function testDroppedTagsLoseTheirOpeningAndClosingTag(string $text, string $expected): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, $text));
+
+        $this->assertSame(
+            "\xEF\xBB\xBFWEBVTT\n\n1\n00:00:01.000 --> 00:00:02.000\n$expected\n",
+            $subtitle->format(WebVttFormatter::class)
+        );
+    }
+
+
+    public static function droppedTagProvider(): array
+    {
+        return [
+            "unknown tag with class"     => ["<foo.bar>hello</foo> world", "hello world"],
+            "longer name than a span"    => ["<bold.x>hello</bold> <cite.y>world</cite>", "hello world"],
+            "core tags without classes"  => ["<font color=\"#ff0000\">red</font> <s>gone</s> <b>bold</b>", "red gone <b>bold</b>"],
+        ];
+    }
+
+
     public function testEmptySubtitleWritesOnlyTheHeader(): void
     {
         $this->assertSame("\xEF\xBB\xBFWEBVTT\n\n", (new Subtitle())->format(WebVttFormatter::class));
