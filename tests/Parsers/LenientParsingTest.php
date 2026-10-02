@@ -344,6 +344,18 @@ class LenientParsingTest extends TestCase
                     [0, 3, self::SKIPPED, "The field cues[3].lines[1] must be a string."],
                 ],
             ],
+            "Whisper JSON with a segment without end" => [
+                "missing_segment_end.whisper.json",
+                WhisperJsonParser::class,
+                "The field segments[1].end must be a number.",
+                [
+                    [0, 2.5, "The meeting starts at ten."],
+                    [5, 7.5, "Coffee is in the kitchen."],
+                ],
+                [
+                    [0, 1, self::SKIPPED, "The field segments[1].end must be a number."],
+                ],
+            ],
         ];
     }
 
@@ -608,6 +620,19 @@ class LenientParsingTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The field version is missing.");
         (new JsonParser())->setLenient()->parse('{"cues": []}');
+    }
+
+
+    public function testWhisperCppSkipsASegmentWithoutOffsets(): void
+    {
+        $content = '{"transcription": [{"offsets": {"from": 0, "to": 2000}, "text": " Hello"}, {"text": " Lost"},' .
+                   ' {"offsets": {"from": 3000, "to": 4000}, "text": " Bye"}]}';
+
+        $parser   = (new WhisperJsonParser())->setLenient();
+        $subtitle = $parser->parse($content);
+
+        $this->assertEquals([[0, 2, "Hello"], [3, 4, "Bye"]], $this->cueRows($subtitle->getCues()));
+        $this->assertSame([[0, 1, self::SKIPPED, "The field transcription[1].offsets.from must be a number."]], $this->warningRows($parser->getWarnings()));
     }
 
 
