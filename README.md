@@ -460,6 +460,32 @@ Subtitle::parse($srt)->format(IttFormatter::class, [IttFormatter::OPTION_FRAME_R
 - **Apple limits**: one `div`, `sansSerif` as the only font family, and a fixed `<head>` with the `normal` style and the `top` and `bottom` regions. Alignment 7, 8 and 9 go to `top`, all others to `bottom`. The formatter does not keep the `<head>` or the attributes of the input file.
 - **Markup**: the formatter keeps `<b>`, `<i>`, `<u>` and `<font color>`. It writes a colour only as `#rrggbb` or a TTML colour name, and drops an alpha channel. It strips `<s>`, `<v>` and word timestamps.
 
+## Dual subtitles
+A dual subtitle shows two languages at the same time, for example for language learners. Most players show only one subtitle track, so both languages go into one file.
+
+```php
+$english = Subtitle::parse(file_get_contents('movie.en.srt'));
+$german  = Subtitle::parse(file_get_contents('movie.de.srt'));
+
+$dual = DualSubtitle::merge($english, $german, new DualSubtitleOptions(secondaryStyle: 'i'));
+$dual = DualSubtitle::merge($english, $german, new DualSubtitleOptions(
+    mode: DualSubtitleOptions::MODE_TOP_BOTTOM,     // English at the bottom, German at the top
+    snapTolerance: 0.25,                            // seconds
+    secondaryStyle: 'font color="#ffff00"',
+    secondaryAlignment: 8,
+));
+```
+
+| Mode | Result for `00:00:01.000 --> 00:00:04.000 Where are you going?` and `00:00:01.200 --> 00:00:03.900 Wohin gehst du?` | Formats |
+|:--- |:--- |:--- |
+| `stack`, the default | one cue from 1.000 s to 4.000 s with the lines `Where are you going?` and `<i>Wohin gehst du?</i>` | all |
+| `topBottom` | the English cue with alignment `null`, and the German cue with alignment 8 from 1.000 s to 4.000 s | SubRip with `{\an8}`, WebVTT, ASS and TTML. The other formats do not write the alignment |
+
+- **Stack**: each secondary cue joins the primary cue that it overlaps most. The joined cue spans from the earlier start to the later end. A cue without an overlap stays a cue of its own.
+- **Top and bottom**: a secondary start or end time moves to the closest primary start or end time within `snapTolerance`. So the two languages appear and disappear together. A cue keeps its times when both would move to the same time.
+- **Secondary style**: a core markup tag, such as `i` or `font color="#ffff00"`, around each secondary line. WebVTT has no font colour, so its formatter drops the `font` tag.
+- **Copied data**: the result is a new `Subtitle`. Metadata, comments and format data come from the primary subtitle. The secondary cues lose their identifiers and format data. The language becomes `en+de` when both subtitles have a language.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
