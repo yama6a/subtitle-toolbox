@@ -89,6 +89,7 @@ $subtitle->getFormatData('ass');                        // [] when not set
 | LyRiCs (.lrc)   | ID tags, `[offset:]`, several timestamps per line, enhanced LRC word timing | ID tags, `[#:]` comments, word timing as `<mm:ss.xx>` | Formatter strips all other xml tags and writes times in centiseconds
 | MicroDVD (.sub) | Frame rate from the parser constructor or a `{1}{1}<fps>` first line | Needs `OPTION_FRAME_RATE` | Converts `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` to core markup. Keeps other control codes in the `sub` format data
 | MpSub (.mpsub)  | FORMAT=TIME and FORMAT=<fps>, header lines | FORMAT=TIME by default, FORMAT=<fps> as an option, header lines | Formatter strips all xml tags
+| SAMI (.smi)     | One language class, `<TITLE>`, the `<STYLE>` block and `<SAMIParam>` | Writes them back, and a `&nbsp;` SYNC after each cue that has a gap before the next cue | Converts `<b>`, `<i>`, `<u>`, `<s>`, `<strike>` and `<font color>` to core markup. Formatter strips all xml tags except: \<b>\<i>\<u>\<s>\<font>
 | SBV (.sbv)      | Accepts any number of hour digits | Writes one hour digit below 10 hours, no UTF-8 BOM | Formatter strips all xml tags and decodes HTML entities
 | SubRip (.srt)   | Reads coordinates, alignment tags and lenient timestamps | Writes standard timestamps, coordinates and alignment tags | Formatter strips all xml tags except: \<b>\<i>\<u>\<s>\<font>
 | WebVTT (.vtt)   | Header, comments, cue identifiers, styles, regions and cue settings | Writes them back, numbers cues without identifier, always writes hours | Formatter strips all xml tags except: \<b>\<u>\<i>\<v>\<lang>\<c>\<ruby>\<rt> and inline timestamps
@@ -159,6 +160,20 @@ Other override tags such as `{\pos(10,20)}` stay in the cue text.
 - **Alignment from cue settings**: `line:0` is the top row, `line:50%,center` the middle row, and no `line`, `line:-1` or `line:100%,end` the bottom row. `align:left`, `center` and `right` set the column. Other values, `align:start`, `align:end` and `vertical` give no alignment.
 - **Cue settings from alignment**: a cue without `vtt` format data gets settings from its alignment. Alignment 8 becomes `line:0`, 7 becomes `line:0 align:left`. The `vtt` format data wins over the alignment.
 - **Limits**: the formatter strips classes such as `<c.yellow>`. It writes `REGION` blocks before `STYLE` blocks, and both before the comments that come before the first cue.
+
+### SAMI
+```php
+$subtitle = Subtitle::parse(file_get_contents('movie.smi'), SamiParser::class);   // the first class of the STYLE block
+$subtitle = (new SamiParser('FRCC'))->parse(file_get_contents('movie.smi'));      // the FRCC class
+$subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);                              // 'fr-FR', from the lang property of .FRCC
+$subtitle->getFormatData('smi');                                                  // keys style, class and samiParam
+```
+
+- **Language class**: a SAMI file holds one CSS class per language, for example `.FRCC { Name: French; lang: fr-FR; }`. The parser reads one class. Without a STYLE block, it reads the first class that a `<P>` uses. A `<P>` without a class belongs to every class.
+- **End times**: a cue ends at the next `SYNC` that has a `<P>` of the same class, or no `<P>` at all. A `SYNC` with only `&nbsp;` ends a cue and starts none. The last cue lasts 10 s unless you pass `lastCueDuration`.
+- **Text**: a line break in the file is a space, as in HTML. Only `<br>` starts a new cue line. `<font color>` accepts `#rrggbb`, `rrggbb` and the 16 colour names of HTML 4. The parser drops other tags from the cue text. The cue format data keeps the HTML of each `<P>`, and the formatter writes it back for an unchanged cue.
+- **Formatter**: it writes the stored STYLE block without the rules of the other language classes. Without a stored block, it names the class after the language metadata, for example `KOKRCC` for `ko-KR`, or `SUBTTL` without a language. A cue that overlaps the next cue ends where the next cue starts.
+- **Encoding**: the parser reads UTF-8 only. It throws `ParsingException` for other encodings, for example EUC-KR or CP949.
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
