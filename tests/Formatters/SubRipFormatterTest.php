@@ -137,4 +137,15 @@ class SubRipFormatterTest extends TestCase
 
         $this->assertSame($raw, Subtitle::parse($raw, SubRipParser::class)->format(SubRipFormatter::class));
     }
+
+
+    public function testLineThatIsNotUtf8KeepsItsBytes(): void
+    {
+        $raw = "\u{feff}1\n00:00:01,000 --> 00:00:02,000\ncaf\xE9 & <i>cr\xE8me</i>\n";
+
+        $subtitle = Subtitle::parse($raw, SubRipParser::class);
+
+        $this->assertSame(["caf\xE9 &amp; <i>cr\xE8me</i>"], $subtitle->getCues()[0]->getLines());
+        $this->assertSame($raw, $subtitle->format(SubRipFormatter::class));
+    }
 }
