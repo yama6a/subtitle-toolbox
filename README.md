@@ -87,6 +87,7 @@ $subtitle->getFormatData('ass');                        // [] when not set
 | Format | Reads | Outputs | Additional Info
 |:--- |:--- |:--- |:--- |
 | ASS (.ass)      | Script Info, styles, other sections, `Dialogue:` and `Comment:` events, columns by the `Format:` line | Writes them back, the original event text for unchanged cues, a minimal header for cues from other formats | Converts `\b`, `\i`, `\u`, `\s`, `\c`, alignment, karaoke and the Name field to core markup. Writes times in centiseconds
+| EBU STL (.stl)  | Binary EBU Tech 3264 files at 25 or 30 fps, character code tables 00 to 04, extension blocks | The stored GSI and TTI blocks, 25 fps by default, `OPTION_FRAME_RATE` for 30 fps | Converts italics, underline and the teletext colours to core markup. See [EBU STL](#ebu-stl)
 | iTunes Timed Text (.itt) | The TTML parser with the SMPTE timing parameters in the `itt` format data | SMPTE times `hh:mm:ss:ff`, one `div`, a `top` and a `bottom` region. Needs a frame rate | Writes bold, italic, underline and text colour as `tts:` attributes on `<span>`. Strips all other tags
 | LyRiCs (.lrc)   | ID tags, `[offset:]`, several timestamps per line, enhanced LRC word timing | ID tags, `[#:]` comments, word timing as `<mm:ss.xx>` | Formatter strips all other xml tags and writes times in centiseconds. Text with `<`, `>` and `&` round-trips
 | MicroDVD (.sub) | Frame rate from the parser constructor or a `{1}{1}<fps>` first line | Needs `OPTION_FRAME_RATE` | Converts `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` to core markup. Keeps other control codes in the `sub` format data
@@ -281,6 +282,7 @@ Detection ignores a UTF-8 BOM and leading blank lines. It checks the signatures 
 | 10 | `LyricsParser` | `[ti:Title]` or `[00:12.00]`, and at least one timestamp line |
 | 11 | `PgsParser` | the bytes `PG`, then a known segment type at byte 10 |
 | 12 | `JsonParser` | an object with a numeric `"version"` key and a `"cues"` list |
+| 13 | `EbuStlParser` | a 3-digit code page such as `850`, then `STL25.01` or `STL30.01` |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line looks like SubRip, so it detects as SubRip.
 - **`.sub` files**: MicroDVD, MPSub and SubViewer text files all use `.sub`. SBV has three digits after the dot, SubViewer 2 has two.
@@ -712,6 +714,30 @@ $subtitle->format(SubViewerFormatter::class, [SubViewerFormatter::OPTION_VERSION
 - **SubViewer 2 text**: `[br]` and each text line become a cue line. The formatter writes all lines of a cue on one line, joined by `[br]`. The parser accepts one to three digits after the dot, as FFmpeg does.
 - **SubViewer 1 cues**: a `[00:00:01]` line with text below starts a cue. A time line with an empty line below ends the cue before it. A cue without such an end line ends where the next cue starts. The last cue lasts 10 s unless you pass `lastCueDuration` to the parser. `|` is a line break. As in FFmpeg, the parser reads only the first text line after a time line.
 - **Cues without text**: the formatter skips them, because an empty line ends a cue.
+
+## EBU STL
+```php
+$subtitle = Subtitle::parse(file_get_contents('news.stl'));                   // detects EbuStlParser
+$subtitle = (new EbuStlParser(true))->parse(file_get_contents('news.stl'));   // cue times minus the start of programme
+$subtitle->getFormatData('stl')['gsi']['TCP'];                                // '10000000'
+$subtitle->format(EbuStlFormatter::class, [EbuStlFormatter::OPTION_FRAME_RATE => 30]);
+```
+
+- **Spec**: [EBU Tech 3264](https://tech.ebu.ch/docs/tech/tech3264.pdf). The file is binary, so pass its bytes unchanged.
+- **Times**: the disk format code `STL25.01` or `STL30.01` sets the frame rate. By default, the parser keeps the time codes of the file.
+- **Start of programme**: `new EbuStlParser(true)` subtracts the TCP time code, for example `10:00:00:00`. A time before it becomes 0. The formatter adds TCP again.
+- **Characters**: the parser reads the character code tables 00 (ISO 6937) and 01 to 04 (ISO 8859-5, -6, -7 and -8). `Encoding\Iso6937` and `Encoding\CodePage` hold the tables, so the library needs no `mbstring` or `iconv`.
+- **ISO 6937**: byte `24h` is the currency sign and byte `A4h` is the dollar sign. An accent byte comes before its letter. The formatter writes `?` for a character outside the table.
+- **Codes**: `80h` to `83h` become `<i>` and `<u>`. The teletext colour codes `00h` to `07h` become `<font color>`. White gives no tag. Other teletext codes become a space.
+- **Colours**: the formatter writes only the 8 teletext colours, for example `#ff0000` as `01h`. It drops other colours.
+- **Blocks**: the parser joins the TTI blocks with the same subtitle number and skips user data blocks. A subtitle with the comment flag becomes a comment.
+- **Extension blocks**: the formatter splits text of more than 111 bytes into extension blocks. The last text field always ends with `8Fh`.
+- **Alignment**: the justification code gives the column. `00h` and `02h` are centred. The vertical position gives the row: the top, middle or bottom third of the rows. Teletext has the rows 1 to 23. Open subtitles have the rows 0 to MNR.
+- **Metadata**: the title is the OPT field. The language is the LC field, for example `09` is `en`.
+- **Format data**: the subtitle keeps the GSI fields by mnemonic in `gsi`, for example `DSC` and `TCP`. Each cue keeps `subtitleGroupNumber`, `cumulativeStatus`, `verticalPosition`, `justificationCode` and its original blocks.
+- **Round trip**: an unchanged file comes out byte for byte. A cue with unchanged text keeps its text field bytes, also after retiming. The formatter writes the stored position while it gives the cue alignment.
+- **Counts**: the formatter computes TNB, TNS, TNG and TCF. It numbers the subtitles in order, from the first stored subtitle number.
+- **New files**: a subtitle from another format gets code page 850, 25 fps, level-1 teletext, table 00, 40 characters, 23 rows and subtitle numbers from 1. The creation date is today.
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.

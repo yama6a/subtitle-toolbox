@@ -1,0 +1,139 @@
+<?php
+
+namespace SubtitleToolbox\Parsers;
+
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Formatters\EbuStlFormatter;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
+
+class EbuStlRealFilesTest extends TestCase
+{
+    private const DIR = __DIR__ . "/../files/stl/real/";
+
+
+    public static function realFileProvider(): array
+    {
+        return [
+            "astisub_opn"           => ["astisub_opn.stl", 5, 0.0, 0.32, "Title: Test-OPN\nStory:\nLang: opn\nConfig: 1", 1,
+                                        72.16, 77.36, "<i>TEST ÆæØøÅå</i>\n<i>#123&amp;\"@!?`++?'*\$£-</i>", 2],
+            "bakery_teletext_25fps" => ["bakery_teletext_25fps.stl", 6, 36001.0, 36003.48, "The ovens are warm.\nBread is ready at six.", 2,
+                                        36030.96, 36033.0, "Good night.", 2],
+            "harbour_open_30fps"    => ["harbour_open_30fps.stl", 5, 1.5, 6.0, "Le vent tourne au nord.", 2,
+                                        60.0, 62.967, "Le port ferme à minuit.\n<i>Fin</i>", 2],
+            "library_hebrew"        => ["library_hebrew.stl", 3, 1.0, 3.0, "הספרייה פתוחה עד שמונה.", 3, 6.4, 9.0, "תודה ולהתראות.", 3],
+            "market_arabic"         => ["market_arabic.stl", 2, 1.0, 3.0, "السوق مفتوح اليوم.", 3, 3.4, 6.0, "الخبز طازج؟\nنعم، من الفرن.", 3],
+            "train_cyrillic"        => ["train_cyrillic.stl", 2, 2.0, 4.0, "Поезд отправляется в семь часов.", 2,
+                                        5.0, 8.0, "Следующая станция:\n<font color=\"#00ff00\">Северный вокзал.</font>", 2],
+            "weather_greek"         => ["weather_greek.stl", 3, 1.0, 3.0, "Αύριο θα βρέξει.", 2, 6.4, 9.0, "Ο άνεμος είναι ασθενής.", 2],
+        ];
+    }
+
+
+    #[DataProvider("realFileProvider")]
+    public function testRealFileParses(
+        string $file,
+        int $cueCount,
+        float $firstStart,
+        float $firstEnd,
+        string $firstText,
+        int $firstAlignment,
+        float $lastStart,
+        float $lastEnd,
+        string $lastText,
+        int $lastAlignment
+    ): void {
+        $cues = array_values(Subtitle::parse(file_get_contents(self::DIR . $file), EbuStlParser::class)->getCues());
+
+        $this->assertCount($cueCount, $cues);
+        $this->assertSame([$firstStart, $firstEnd, $firstText, $firstAlignment], $this->describeCue($cues[0]));
+        $this->assertSame([$lastStart, $lastEnd, $lastText, $lastAlignment], $this->describeCue(end($cues)));
+    }
+
+
+    #[DataProvider("realFileProvider")]
+    public function testRealFileRoundTripsByteForByte(string $file): void
+    {
+        $raw = file_get_contents(self::DIR . $file);
+
+        $this->assertSame(bin2hex($raw), bin2hex(Subtitle::parse($raw, EbuStlParser::class)->format(EbuStlFormatter::class)));
+    }
+
+
+    #[DataProvider("realFileProvider")]
+    public function testRealFileKeepsCuesWhenTheFormatterEncodesTheTextAgain(string $file): void
+    {
+        $subtitle = Subtitle::parse(file_get_contents(self::DIR . $file), EbuStlParser::class);
+        foreach ($subtitle->getCues() as $cue) {
+            $cue->setFormatData("stl", ["blocks" => []] + $cue->getFormatData("stl"));
+        }
+
+        $reparsed = Subtitle::parse($subtitle->format(EbuStlFormatter::class), EbuStlParser::class);
+
+        $this->assertSame(array_map($this->describeCue(...), $subtitle->getCues()), array_map($this->describeCue(...), $reparsed->getCues()));
+        $this->assertSame($subtitle->getAllMetadata(), $reparsed->getAllMetadata());
+    }
+
+
+    public function testRealFileMetadataAndGsiFields(): void
+    {
+        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "harbour_open_30fps.stl"), EbuStlParser::class);
+        $gsi      = $subtitle->getFormatData("stl")["gsi"];
+
+        $this->assertSame(["title" => "Météo du port", "language" => "fr"], $subtitle->getAllMetadata());
+        $this->assertSame(["850", "STL30.01", "0", "00", "002", "15", "FRA"], [
+            $gsi["CPN"], $gsi["DFC"], $gsi["DSC"], $gsi["CCT"], $gsi["TNG"], $gsi["MNR"], $gsi["CO"],
+        ]);
+    }
+
+
+    public function testRealFileKeepsPositionGroupAndCumulativeStatus(): void
+    {
+        $cues = array_values(Subtitle::parse(file_get_contents(self::DIR . "harbour_open_30fps.stl"), EbuStlParser::class)->getCues());
+        $keys = array_flip(["subtitleGroupNumber", "cumulativeStatus", "verticalPosition", "justificationCode"]);
+
+        $this->assertSame([8, 4, 3], [$cues[1]->getAlignment(), $cues[2]->getAlignment(), $cues[3]->getAlignment()]);
+        $this->assertSame(
+            ["subtitleGroupNumber" => 0, "cumulativeStatus" => 3, "verticalPosition" => 7, "justificationCode" => 1],
+            array_intersect_key($cues[2]->getFormatData("stl"), $keys)
+        );
+        $this->assertSame("<u>Les bateaux</u>\n<u>restent au port.</u>", $cues[2]->getText());
+        $this->assertSame(1, $cues[3]->getFormatData("stl")["subtitleGroupNumber"]);
+    }
+
+
+    public function testRealFileTeletextCodesExtensionBlocksCommentsAndUserData(): void
+    {
+        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "bakery_teletext_25fps.stl"), EbuStlParser::class);
+        $cues     = array_values($subtitle->getCues());
+
+        $this->assertSame("<font color=\"#ff0000\">Fresh</font> rolls are <i>warm</i> today.", $cues[1]->getText());
+        $this->assertSame("Café <i>crème</i> $3 or £2\n<u>Äpfel</u> und Straße", $cues[2]->getText());
+        $this->assertSame(7, $cues[2]->getAlignment());
+        $this->assertSame("Sign: \u{2018}Open\u{2019} \u{00A4}", $cues[3]->getText());
+        $this->assertSame(6, $cues[3]->getAlignment());
+        $this->assertCount(2, $cues[3]->getFormatData("stl")["blocks"]);
+        $this->assertCount(4, $cues[4]->getLines());
+        $this->assertSame("<font color=\"#ffff00\">Rye bread and white bread are baked</font>", $cues[4]->getLines()[2]);
+        $this->assertSame([["text" => "Check the price list before air.", "beforeCueIndex" => 3]], $subtitle->getComments());
+    }
+
+
+    public function testRealFileStartOfProgrammeCanBeSubtracted(): void
+    {
+        $raw      = file_get_contents(self::DIR . "bakery_teletext_25fps.stl");
+        $subtitle = (new EbuStlParser(true))->parse($raw);
+        $cues     = array_values($subtitle->getCues());
+
+        $this->assertSame([1.0, 3.48], [$cues[0]->getStart(), $cues[0]->getEnd()]);
+        $this->assertSame([30.96, 33.0], [$cues[5]->getStart(), $cues[5]->getEnd()]);
+        $this->assertSame(bin2hex($raw), bin2hex($subtitle->format(EbuStlFormatter::class)));
+    }
+
+
+    private function describeCue(SubtitleCue $cue): array
+    {
+        return [$cue->getStart(), $cue->getEnd(), $cue->getText(), $cue->getAlignment()];
+    }
+}
