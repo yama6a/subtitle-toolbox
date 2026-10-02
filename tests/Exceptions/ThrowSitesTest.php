@@ -61,6 +61,7 @@ use SubtitleToolbox\Timing\ShotChanges;
 use SubtitleToolbox\Translation\TranslationEngine;
 use SubtitleToolbox\Translation\TranslationOptions;
 use SubtitleToolbox\Translation\TranslationRunner;
+use SubtitleToolbox\Validation\ValidationRules;
 
 class ThrowSitesTest extends TestCase
 {
@@ -419,6 +420,9 @@ class ThrowSitesTest extends TestCase
                     return [];
                 }
             }))->translate(self::subtitle(), "en", "de"), ...$invalid],
+            "Validation/ValidationRules.php: dialogue dash style" => [fn () => new ValidationRules(dialogueDashStyle: "*"), ...$invalid],
+            "Validation/ValidationRules.php: invalid character class" => [fn () => new ValidationRules(allowedCharacters: "[z-a]"),
+                ...$invalid],
         ];
     }
 

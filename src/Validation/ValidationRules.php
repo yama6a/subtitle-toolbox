@@ -2,6 +2,7 @@
 
 namespace SubtitleToolbox\Validation;
 
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\FrameRate;
 
 final class ValidationRules
@@ -18,7 +19,25 @@ final class ValidationRules
         public readonly ?float $minGap = null,
         public readonly bool $noOverlap = false,
         public readonly bool $noEmptyCues = false,
+        public readonly bool $noDoubleSpaces = false,
+        public readonly bool $noLeadingOrTrailingSpaces = false,
+        public readonly bool $noUnbalancedTags = false,
+        public readonly ?string $dialogueDashStyle = null,
+        public readonly ?int $maxSpeakersPerCue = null,
+        public readonly ?float $maxWordsPerMinute = null,
+        public readonly ?float $minSecondsPerWord = null,
+        public readonly ?string $allowedCharacters = null,
+        public readonly bool $noAllCapsLines = false,
     ) {
+        if ($dialogueDashStyle !== null && preg_match("/^[-\x{2010}\x{2013}\x{2014}] ?$/u", $dialogueDashStyle) !== 1) {
+            throw new InvalidArgumentException("The dialogue dash style must be a hyphen, an en dash or an em dash, " .
+                                               "with or without one space after it, got \"$dialogueDashStyle\".");
+        }
+        if ($allowedCharacters !== null && TextChecks::isCharacterClass($allowedCharacters)
+            && @preg_match(TextChecks::characterClassPattern($allowedCharacters) . "u", "") === false) {
+            throw new InvalidArgumentException("The allowed characters \"$allowedCharacters\" are no valid regular " .
+                                               "expression character class.");
+        }
     }
 
 
@@ -35,6 +54,22 @@ final class ValidationRules
             maxDuration: 7,
             minGap: (new FrameRate($fps))->framesToSeconds(2),
             noOverlap: true,
+        );
+    }
+
+
+    /**
+     * Returns the line length and reading speed limits of the BBC Subtitle Guidelines.
+     */
+    public static function bbc(): self
+    {
+        return new self(
+            // https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/#Line-length (3.1, broadcast limit)
+            maxCharactersPerLine: 37,
+            // https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/#Timing (4, upper end of 160 to 180)
+            maxWordsPerMinute: 180,
+            // https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/#Target-minimum-timing (4.1)
+            minSecondsPerWord: 0.3,
         );
     }
 }

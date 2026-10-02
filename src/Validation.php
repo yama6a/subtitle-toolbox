@@ -2,6 +2,7 @@
 
 namespace SubtitleToolbox;
 
+use SubtitleToolbox\Validation\TextChecks;
 use SubtitleToolbox\Validation\ValidationResult;
 use SubtitleToolbox\Validation\ValidationRules;
 
@@ -64,6 +65,8 @@ trait Validation
                 $results[] = new ValidationResult($cueIndex, ValidationResult::RULE_MAX_DURATION,
                                                   $duration, $rules->maxDuration);
             }
+
+            array_push($results, ...TextChecks::check($cueIndex, $cue, $duration, $rules));
 
             if ($previousEnd !== null) {
                 $gap = round($cue->getStart() - $previousEnd, 3);

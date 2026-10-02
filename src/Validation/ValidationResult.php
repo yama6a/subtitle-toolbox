@@ -13,6 +13,16 @@ final class ValidationResult
     public const RULE_OVERLAP                   = "noOverlap";
     public const RULE_EMPTY_CUE                 = "noEmptyCues";
 
+    public const RULE_NO_DOUBLE_SPACES              = "noDoubleSpaces";
+    public const RULE_NO_LEADING_OR_TRAILING_SPACES = "noLeadingOrTrailingSpaces";
+    public const RULE_NO_UNBALANCED_TAGS            = "noUnbalancedTags";
+    public const RULE_DIALOGUE_DASH_STYLE           = "dialogueDashStyle";
+    public const RULE_MAX_SPEAKERS_PER_CUE          = "maxSpeakersPerCue";
+    public const RULE_MAX_WORDS_PER_MINUTE          = "maxWordsPerMinute";
+    public const RULE_MIN_SECONDS_PER_WORD          = "minSecondsPerWord";
+    public const RULE_ALLOWED_CHARACTERS            = "allowedCharacters";
+    public const RULE_NO_ALL_CAPS_LINES             = "noAllCapsLines";
+
 
     public function __construct(
         private readonly int $cueIndex,
@@ -39,7 +49,7 @@ final class ValidationResult
 
 
     /**
-     * Returns the measured value in the unit of the rule: characters, lines, characters per second or seconds.
+     * Returns the measured value in the unit of the rule, for example characters, seconds or a count of lines.
      */
     public function getValue(): int|float
     {
@@ -48,7 +58,7 @@ final class ValidationResult
 
 
     /**
-     * Returns the limit from the rules, or null for the overlap and empty cue rules.
+     * Returns the number limit from the rules, or null for a rule without a number limit such as noOverlap.
      */
     public function getLimit(): int|float|null
     {
