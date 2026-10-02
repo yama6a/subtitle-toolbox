@@ -161,9 +161,15 @@ class LyricsParser extends SubtitleParser
             "/<" . self::TIMESTAMP_PATTERN . ">|[^<]+|</",
             fn (array $matches): string => isset($matches[1])
                 ? "<" . $this->toCoreTimestamp($this->toSeconds($matches, $offset)) . ">"
-                : htmlspecialchars($matches[0], ENT_NOQUOTES, "UTF-8"),
+                : $this->escape($matches[0]),
             $text
         );
+    }
+
+
+    private function escape(string $text): string
+    {
+        return str_replace(["&", "<", ">"], ["&amp;", "&lt;", "&gt;"], $text);
     }
 
 

@@ -317,6 +317,15 @@ class LyricsParserTest extends TestCase
     }
 
 
+    public function testTextThatIsNotUtf8KeepsItsBytes(): void
+    {
+        $subtitle = Subtitle::parse("[00:01.00]caf\xE9 & tea\n", LyricsParser::class);
+
+        $this->assertSame("caf\xE9 &amp; tea", $subtitle->getCues()[0]->getText());
+        $this->assertSame("\u{feff}[00:01.00] caf\xE9 & tea\n", $subtitle->format(LyricsFormatter::class));
+    }
+
+
     public function testIdTagsAndCommentsAreNotEscaped(): void
     {
         $subtitle = Subtitle::parse(
