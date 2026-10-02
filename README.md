@@ -1012,6 +1012,40 @@ vendor/bin/subtitle-toolbox convert movie.idx movie.srt --ocr --ocr-database my-
 - **Memory**: a 1,500-cue PGS file needs up to 139 MB, above the default `memory_limit` of 128 MB. Run `php -d memory_limit=512M vendor/bin/subtitle-toolbox convert movie.sup movie.srt --ocr` for long files.
 - **Info**: `info` prints `Image cues: 12, 0 with text` for a file with image cues. The JSON holds `"imageCues": {"count": 12, "withText": 0}` for every file.
 
+## Shot changes and gaps
+A shot change is the frame where the picture cuts to a new shot. `ShotChangeTiming` times cues to the shot changes and closes small gaps, as the [Netflix Subtitle Timing Guidelines](https://partnerhelp.netflixstudios.com/hc/en-us/articles/360051554394) require. You pass the shot change times. The library does not read video.
+
+```php
+use SubtitleToolbox\Timing\ShotChangeOptions;
+use SubtitleToolbox\Timing\ShotChanges;
+use SubtitleToolbox\Timing\ShotChangeTiming;
+
+// ffmpeg -i in.mp4 -vf "select='gt(scene,0.3)',showinfo" -f null - 2> scenes.log
+$shotChanges = ShotChanges::fromFfmpegLog(file_get_contents('scenes.log'));   // [12.5, 62.5, 70.0]
+$shotChanges = ShotChanges::fromText("12.5\n00:01:02.500\n70\n");               // the same times
+
+ShotChangeTiming::apply($subtitle, $shotChanges, new ShotChangeOptions(
+    frameRate: 24,
+    snapWindow: 12,        // frames, default half a second: 12 at 23.976, 24 and 25 fps, 15 at 29.97 fps
+    minGapFrames: 2,       // frames between a cue and the next cue or shot change, default 2
+    chain: true,           // true (default) closes small gaps, false keeps them
+    minDuration: 20,       // frames, default 20
+));
+ShotChangeTiming::chainGaps($subtitle, new ShotChangeOptions(frameRate: 24));   // only closes small gaps
+```
+
+| Rule | Before, at 24 fps | After |
+|:--- |:--- |:--- |
+| An in-time up to `snapWindow` frames after a shot change moves to the shot change. | shot change 62.500, cue starts 62.708 | starts 62.500 |
+| An out-time up to `snapWindow` frames before a shot change ends `minGapFrames` before it. | shot change 70.000, cue ends 69.750 | ends 69.917 |
+| **Chaining**: a gap of more than `minGapFrames` and less than `snapWindow` frames closes to `minGapFrames`. The earlier cue ends later. | cue A ends 10.000, cue B starts 10.292 | A ends 10.208 |
+
+- **Frames**: all cue times of the result fall on frames of `frameRate`, rounded to milliseconds. The first step rounds each time to the nearest frame.
+- **Blocked moves**: a move does not happen when it makes a cue shorter than `minDuration`, or when it brings the cue closer than `minGapFrames` to the cue before or after it. A move that makes a short cue longer still happens.
+- **Order**: `apply()` moves the out-times first, then the in-times, then chains. It handles the cues in start order.
+- **Chaining across a cut**: `apply()` does not chain a gap that holds a shot change. `chainGaps()` knows no shot changes and chains every small gap.
+- **Input**: `fromFfmpegLog()` reads the `pts_time:` values. `fromText()` reads one time per line, in seconds or as `hh:mm:ss.mmm`, and skips empty lines. Both return the times sorted, without duplicates.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
