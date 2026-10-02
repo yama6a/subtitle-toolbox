@@ -94,6 +94,7 @@ $subtitle->getFormatData('ass');                        // [] when not set
 | SBV (.sbv)      | Accepts any number of hour digits | Writes one hour digit below 10 hours, no UTF-8 BOM | Formatter strips all xml tags and decodes HTML entities
 | SSA (.ssa)      | SubStation Alpha v4.00 with `[V4 Styles]` and `Marked=` columns | Writes SSA back when the parsed file was SSA, legacy `\a` alignment tags | Same parser and formatter as ASS
 | SubRip (.srt)   | Reads coordinates, alignment tags and lenient timestamps | Writes standard timestamps, coordinates and alignment tags | Formatter strips all xml tags except: \<b>\<i>\<u>\<s>\<font>
+| TTML (.ttml, .dfxp, .xml) | TTML 1, TTML 2, IMSC and the DFXP namespace. All time expressions, `body` and `div` offsets | Media clock times, `<head>` and attributes of the input file | Converts `tts:fontWeight`, `tts:fontStyle`, `tts:textDecoration`, `tts:color` and `ttm:agent` to core markup and back
 | WebVTT (.vtt)   | Header, comments, cue identifiers, styles, regions and cue settings | Writes them back, numbers cues without identifier, always writes hours | Formatter strips all xml tags except: \<b>\<u>\<i>\<v>\<lang>\<c>\<ruby>\<rt> and inline timestamps
 
 ### LRC
@@ -203,6 +204,24 @@ $subtitle->format(AssFormatter::class);
 - **Changed cues**: the formatter writes the text from the core markup. Other override tags are lost.
 - **Limits**: other override tags, `{...}` notes and `\p1` drawings are not cue text. An event that holds only a drawing becomes a cue without lines. Style definitions do not change the core markup. Events come out in time order.
 - **Output**: UTF-8 BOM and LF line endings. A cue from another format gets style `Default`. The minimal header has the same values as the header that FFmpeg writes.
+
+### TTML
+```php
+$subtitle = Subtitle::parse(file_get_contents('movie.ttml'), TtmlParser::class);
+$subtitle->getFormatData('ttml')['head'];              // <head> without ttm:title, as XML
+$subtitle->getCues()[0]->getFormatData('ttml');        // ['attributes' => ['region' => 'bottom'], 'div' => [...]]
+$subtitle->format(TtmlFormatter::class);
+```
+
+- **Time expressions**: `00:00:01.500`, `00:00:01:12` with frames, and `1.5s`, `1500ms`, `36f`, `15000000t`. Frames use `ttp:frameRate` and `ttp:frameRateMultiplier`, 30 fps by default. Ticks use `ttp:tickRate`. The parser adds the `begin` of the parent `body` and `div` elements. A paragraph without `end` or `dur` ends with its parent. Without any end, the parser throws `ParsingException`. The formatter writes `00:00:01.500`.
+- **Styles**: the parser resolves the `style` references and the inline `tts:` attributes of `<p>` and `<span>`. Bold, italic, oblique, underline, line-through and the text colour become core markup. White text gives no `<font>` tag, because white is the default colour of every player. The formatter writes each tag as a `<span>` with an inline style.
+- **Speakers**: `ttm:agent` becomes `<v Name>`, with the name from the `ttm:name` of the agent. The formatter adds a `ttm:agent` element to the head for a new name.
+- **Alignment**: the parser maps the region to an alignment only for `tts:textAlign` `left`, `center` or `right`. The text anchor sets the row: the top edge of the region for `displayAlign="before"`, the middle for `center`, the bottom edge for `after`. An anchor in the top third of the screen is the top row, in the bottom third the bottom row. The region `tts:origin` and `tts:extent` can use `%`, `px` with a pixel `tts:extent` on the root, or `c` cells.
+- **Regions from alignment**: a cue without a stored `region` gets a region such as `topCenter` that matches its alignment. A subtitle from another format gets `bottomCenter` for cues without alignment. The stored `region` wins over the alignment.
+- **Metadata**: `xml:lang` of `<tt>` is the `language` and the first `ttm:title` is the `title`. The formatter writes the title as the first child of `<head>`.
+- **Kept as is**: the `<head>`, the attributes of `<tt>`, `<body>`, `<div>` and `<p>`, and the namespace, so a DFXP file stays DFXP. The formatter drops `ttp:timeBase`, `ttp:clockMode`, `ttp:dropMode` and `ttp:markerMode`, because it writes media times.
+- **Limits**: the parser reads `seq` time containers as `par` and ignores the timing of `<span>` elements. The formatter strips word timestamps. A cue identifier that is not a valid `xml:id` is not written.
+- **Security**: the parser loads no external entity or DTD and makes no network access.
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
