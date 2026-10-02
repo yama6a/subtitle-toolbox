@@ -843,6 +843,37 @@ $subtitle->getCues()[0]->getFormatData('whisper')['avg_logprob'];            // 
 - **Cue format data**: each cue keeps the fields of its segment except the times and the text. Examples are `avg_logprob`, `no_speech_prob`, `words` with `probability` or `score`, `speaker` and the whisper.cpp `tokens` with `p`.
 - **Errors**: JSON without a `segments` or `transcription` list throws `ParsingException`. A response with only `words` or `text` has no cue times, so it throws too.
 
+## Lenient parsing
+A subtitle download is often broken in one place. By default, the parsers throw `ParsingException` at the first broken block. In lenient mode, the SubRip, WebVTT and SBV parsers skip or repair the broken block, record a `ParseWarning` and go on.
+
+```php
+use SubtitleToolbox\Parsers\SubRipParser;
+
+$parser   = (new SubRipParser())->setLenient();
+$subtitle = Subtitle::parse($download, $parser);     // a parser instance in place of the class name
+foreach ($parser->getWarnings() as $warning) {
+    $logger->warning("line $warning->lineNumber: $warning->message ($warning->action)");
+}
+// line 5: Block #1 doesn't seem to have its timestamps on its second line! (skipped)
+```
+
+| Damage | SubRip | WebVTT | SBV |
+|:--- |:--- |:--- |:--- |
+| cue without a cue number | repaired | not an error | not an error |
+| bad timestamp, `->` arrow, cue without text | skipped | skipped | skipped |
+| no empty line between two cues | repaired | split as the spec says, no warning | repaired |
+| no empty line after the `WEBVTT` header | not an error | repaired | not an error |
+| text before the first cue | skipped | skipped | skipped |
+| truncated last cue | skipped | skipped | skipped |
+
+- **Default**: strict mode. Cues, exceptions and messages stay as they were.
+- **`ParseWarning`**: `message`, the 1-based `lineNumber`, the 0-based `blockIndex` of the "Block #n" messages, the trimmed lines of the `block`, and the `action`, `ParseWarning::SKIPPED` or `ParseWarning::REPAIRED`. A skipped block reports its first line. A repair reports the line where the parser split or read the cue.
+- **Warnings**: `getWarnings()` returns the warnings of the last `parse()` call. Each call starts with an empty list.
+- **Not the format**: lenient mode still throws for a WebVTT file without `WEBVTT`. SubRip and SBV have no signature, so a file without one readable cue gives no cues and warnings.
+- **`Subtitle::parse()`**: pass a parser instance to keep its mode and read its warnings after the call. The encoding conversion and the `sourceEncoding` argument work as with a class name. A class name parses in strict mode. Format detection returns a class name, so call `Subtitle::detectParser()` first to detect and parse leniently.
+- **Stream readers**: `SubRipStreamReader` and `WebVttStreamReader` have the same `setLenient()` and `getWarnings()`. They use the block methods of `SubRipParser` and `WebVttParser`, so a file gives the same cues and warnings as in the batch parser. During the read, `getWarnings()` holds the warnings of the blocks read so far.
+- **Other parsers**: they ignore `setLenient()` and throw as before.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:

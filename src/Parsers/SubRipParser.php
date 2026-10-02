@@ -2,7 +2,9 @@
 
 namespace SubtitleToolbox\Parsers;
 
+use Generator;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -14,20 +16,84 @@ class SubRipParser extends SubtitleParser
 
     public function parse(string $rawSubtitle): Subtitle
     {
-        $rawSubtitle = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawSubtitle = StringHelpers::normalizeEOLs($rawSubtitle);
-        $rawSubtitle = StringHelpers::normalizeSpaces($rawSubtitle);
-        $rawSubtitle = StringHelpers::trimEachLine($rawSubtitle);
-        $rawSubtitle = StringHelpers::removeDoubleEmptyLines($rawSubtitle);
-        $rawSubtitle = trim($rawSubtitle);  // remove empty lines on the top and bottom of the file
+        $this->warnings = [];
+        $rawSubtitle    = StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle));
 
-        $rawCues  = explode(StringHelpers::UNIX_LINE_ENDING . StringHelpers::UNIX_LINE_ENDING, $rawSubtitle);
         $subtitle = new Subtitle();
-        foreach ($rawCues as $idx => $rawCue) {
-            $subtitle->addCue($this->parseCueBlock(explode(StringHelpers::UNIX_LINE_ENDING, $rawCue), $idx));
+        $index    = 0;
+        foreach ($this->splitIntoBlocks(explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle)) as $lineNumber => $rawLines) {
+            foreach ($this->parseBlock($rawLines, $index++, $lineNumber) as $cue) {
+                $subtitle->addCue($cue);
+            }
         }
 
         return $subtitle;
+    }
+
+
+    /**
+     * Yields the trimmed lines of each block between empty lines, keyed by the 1-based number of its first line.
+     *
+     * @param iterable<int, string> $lines keyed by the 0-based line number
+     *
+     * @return Generator<int, list<string>>
+     */
+    public function splitIntoBlocks(iterable $lines): Generator
+    {
+        return $this->splitAtEmptyLines($lines);
+    }
+
+
+    /**
+     * Returns the cues of one block from splitIntoBlocks(). In lenient mode, it skips or repairs a broken block and warns.
+     *
+     * @param list<string> $rawLines
+     *
+     * @return list<SubtitleCue>
+     */
+    public function parseBlock(array $rawLines, int $index, int $lineNumber): array
+    {
+        if (!$this->lenient) {
+            return [$this->parseCueBlock($rawLines, $index)];
+        }
+
+        if ($rawLines === [""]) {
+            $this->warn("The file has no cues.", $lineNumber, $index, $rawLines, ParseWarning::SKIPPED);
+
+            return [];
+        }
+
+        $cues  = [];
+        $parts = $this->repairMissingEmptyLines($rawLines, $lineNumber, $index, $this->isTimingLine(...), true);
+        foreach ($parts as $offset => $part) {
+            $partLine  = $lineNumber + $offset;
+            $hasNumber = !$this->isTimingLine($part[0]);
+            try {
+                $cue = $this->parseCueBlock($hasNumber ? $part : array_merge(["0"], $part), $index);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, $partLine, $index, $part);
+                continue;
+            }
+
+            if (!$hasNumber) {
+                $this->warn(
+                    "Block #$index has no cue number on line $partLine. The parser read the cue without it.",
+                    $partLine,
+                    $index,
+                    $part,
+                    ParseWarning::REPAIRED
+                );
+            }
+            $cues[] = $cue;
+        }
+
+        return $cues;
+    }
+
+
+    private function isTimingLine(string $line): bool
+    {
+        return preg_match("/^\d+:\d\d:\d\d\S* --> /", $line) === 1;
     }
 
 

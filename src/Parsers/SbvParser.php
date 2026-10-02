@@ -4,6 +4,7 @@ namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -12,35 +13,55 @@ class SbvParser extends SubtitleParser
 {
     public function parse(string $rawSubtitle): Subtitle
     {
-        $rawSubtitle = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawSubtitle = StringHelpers::normalizeEOLs($rawSubtitle);
-        $rawSubtitle = StringHelpers::normalizeSpaces($rawSubtitle);
-        $rawSubtitle = StringHelpers::trimEachLine($rawSubtitle);
-        $rawSubtitle = StringHelpers::removeDoubleEmptyLines($rawSubtitle);
-        $rawSubtitle = trim($rawSubtitle);
+        $this->warnings = [];
+        $rawSubtitle    = StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle));
 
-        $rawCues  = explode(StringHelpers::UNIX_LINE_ENDING . StringHelpers::UNIX_LINE_ENDING, $rawSubtitle);
         $subtitle = new Subtitle();
-        foreach ($rawCues as $idx => $rawCue) {
-            $rawLines = explode(StringHelpers::UNIX_LINE_ENDING, $rawCue);
-
-            if (substr_count($rawLines[0], ",") !== 1) {
-                throw new ParsingException("Block #$idx doesn't seem to have its timestamps on its first line!");
+        $idx      = 0;
+        foreach ($this->splitAtEmptyLines(explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle)) as $lineNumber => $rawLines) {
+            if ($this->lenient && $rawLines === [""]) {
+                $this->warn("The file has no cues.", $lineNumber, $idx, $rawLines, ParseWarning::SKIPPED);
+                break;
             }
 
-            if (count($rawLines) < 2) {
-                throw new ParsingException("Block #$idx doesn't have any text lines!");
+            $parts = $this->repairMissingEmptyLines($rawLines, $lineNumber, $idx, $this->isTimingLine(...), false);
+            foreach ($parts as $offset => $part) {
+                try {
+                    $subtitle->addCue($this->parseCueBlock($part, $idx));
+                } catch (ParsingException $exception) {
+                    $this->fail($exception, $lineNumber + $offset, $idx, $part);
+                }
             }
-
-            $times = explode(",", $rawLines[0]);
-            $subtitle->addCue(new SubtitleCue(
-                $this->millisFromString($times[0]),
-                $this->millisFromString($times[1]),
-                array_map(Markup::escapeText(...), array_slice($rawLines, 1))
-            ));
+            $idx++;
         }
 
         return $subtitle;
+    }
+
+
+    private function parseCueBlock(array $rawLines, int $idx): SubtitleCue
+    {
+        if (substr_count($rawLines[0], ",") !== 1) {
+            throw new ParsingException("Block #$idx doesn't seem to have its timestamps on its first line!");
+        }
+
+        if (count($rawLines) < 2) {
+            throw new ParsingException("Block #$idx doesn't have any text lines!");
+        }
+
+        $times = explode(",", $rawLines[0]);
+
+        return new SubtitleCue(
+            $this->millisFromString($times[0]),
+            $this->millisFromString($times[1]),
+            array_map(Markup::escapeText(...), array_slice($rawLines, 1))
+        );
+    }
+
+
+    private function isTimingLine(string $line): bool
+    {
+        return preg_match("/^\d+:\d\d:\d\d\.\d+,/", $line) === 1;
     }
 
 
