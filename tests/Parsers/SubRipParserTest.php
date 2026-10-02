@@ -247,4 +247,22 @@ class SubRipParserTest extends TestCase
 
         $this->assertSame(["<B>bold</B> <font color=\"#00aa00\">green</font> <foo>unknown</foo>"], $cue->getLines());
     }
+
+
+    public function testTimestampWithoutMillisecondsParses(): void
+    {
+        $raw = "1\n00:01:39 --> 00:01:41,000\nText\n\n2\n00:01:42,500 --> 00:01:44\nMore\n";
+
+        $cues = Subtitle::parse($raw, SubRipParser::class)->getCues();
+
+        $this->assertSame([99.0, 101.0], [$cues[0]->getStart(), $cues[0]->getEnd()]);
+        $this->assertSame([102.5, 104.0], [$cues[1]->getStart(), $cues[1]->getEnd()]);
+    }
+
+
+    public function testTimestampWithSeparatorButNoMillisecondsThrowsException(): void
+    {
+        $this->expectException(ParsingException::class);
+        Subtitle::parse("1\n00:01:39, --> 00:01:41,000\nText\n", SubRipParser::class);
+    }
 }

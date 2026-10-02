@@ -44,6 +44,12 @@ class SubRipRealFilesTest extends TestCase
                 [1.0, 2.5, "Every line in this file\nends with CR CR LF"],
                 [5.0, 6.5, "Last cue"],
             ],
+            "Own timestamp without milliseconds" => [
+                "own_timestamp_without_millis.srt",
+                6,
+                [99.0, 101.04, "(train brakes squeal)"],
+                [151.4, 153.44, "(radio playing\nsoft piano music)"],
+            ],
             "Own escaping" => [
                 "own_escaping.srt",
                 5,
@@ -109,6 +115,14 @@ class SubRipRealFilesTest extends TestCase
         $raw = file_get_contents(__DIR__ . "/../files/srt/real/own_escaping.srt");
 
         $this->assertSame($raw, Subtitle::parse($raw, SubRipParser::class)->format(SubRipFormatter::class));
+    }
+
+
+    public function testTimestampWithoutMillisecondsIsWrittenWithMilliseconds(): void
+    {
+        $formatted = $this->parseFile("own_timestamp_without_millis.srt")->format(SubRipFormatter::class);
+
+        $this->assertStringStartsWith("\u{feff}1\n00:01:39,000 --> 00:01:41,040\n(train brakes squeal)\n", $formatted);
     }
 
 

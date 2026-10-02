@@ -9,3 +9,4 @@
 | `own_styled.srt` | Written for this repository in the shape of https://github.com/asticode/go-astisub/blob/58297a613f70cac3d29e5ce52a7215a3b4038b40/testdata/example-in-styled.srt | MIT |
 | `own_cr_cr_lf.srt` | Written for this repository. Copies the CR CR LF line endings of a subtitle in the FFmpeg FATE suite. | MIT |
 | `own_escaping.srt` | Written for this repository. Holds `<`, `>` and `&` as plain text next to SubRip tags. | MIT |
+| `own_timestamp_without_millis.srt` | Written for this repository in the shape of https://github.com/asticode/go-astisub/blob/b6b18718ddb6ee0da08772d8ab310c9c3d2d0459/testdata/example-in.srt | MIT |
