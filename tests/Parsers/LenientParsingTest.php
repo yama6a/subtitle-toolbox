@@ -305,6 +305,19 @@ class LenientParsingTest extends TestCase
                     [14, 2, self::SKIPPED, "SYNC tag 3 has no valid Start attribute."],
                 ],
             ],
+            "TTML with a bad begin time and a paragraph without end" => [
+                "bad_begin.ttml",
+                TtmlParser::class,
+                "The time expression \"00:00:0x.000\" could not be parsed!",
+                [
+                    [1, 3, "The library opens at nine."],
+                    [10, 12, "<i>The reading room</i> is upstairs."],
+                ],
+                [
+                    [6, 1, self::SKIPPED, "The time expression \"00:00:0x.000\" could not be parsed!"],
+                    [7, 2, self::SKIPPED, "The paragraph that begins at 7s has no end time!"],
+                ],
+            ],
         ];
     }
 
@@ -525,6 +538,24 @@ class LenientParsingTest extends TestCase
         $parser->parse(file_get_contents(self::DIR . "bad_sync_start.smi"));
 
         $this->assertSame(["<SYNC Start=><P Class=ENCC>Cut the grass."], $parser->getWarnings()[0]->block);
+    }
+
+
+    public function testTtmlWithInvalidXmlStillThrows(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The file is not well-formed XML!");
+        (new TtmlParser())->setLenient()->parse("<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><p begin=\"1s\" end=\"2s\">text</body></tt>");
+    }
+
+
+    public function testIttParserInheritsLenientMode(): void
+    {
+        $parser   = (new IttParser())->setLenient();
+        $subtitle = $parser->parse(file_get_contents(self::DIR . "bad_begin.ttml"));
+
+        $this->assertCount(2, $subtitle->getCues());
+        $this->assertCount(2, $parser->getWarnings());
     }
 
 

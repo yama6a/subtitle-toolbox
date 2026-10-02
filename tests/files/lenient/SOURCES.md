@@ -26,3 +26,4 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `bad_timing_line.mpsub` | no `FORMAT=` line, a letter as duration, a last cue without text, LF | MIT |
 | `broken_time_tag.lrc` | a letter in the seconds of a time tag, CR LF | MIT |
 | `bad_sync_start.smi` | a `SYNC` tag with an empty `Start` attribute, CR LF | MIT |
+| `bad_begin.ttml` | a letter in a `begin` time, a `p` without `end` or `dur`, LF | MIT |
