@@ -1,0 +1,42 @@
+<?php
+
+namespace SubtitleToolbox\Cli;
+
+use Composer\InstalledVersions;
+
+final class Version
+{
+    public const PACKAGE = "ymakhloufi/subtitle-toolbox";
+
+    // Box replaces this placeholder with the release tag when it builds the PHAR. See "git-version" in box.json.
+    private const BUILD_VERSION = "@package_version@";
+
+
+    /**
+     * Returns the release version, such as "1.40.0", or "dev" outside a release.
+     */
+    public static function get(): string
+    {
+        if (self::BUILD_VERSION !== "@" . "package_version@") {
+            return self::normalize(self::BUILD_VERSION);
+        }
+        if (class_exists(InstalledVersions::class) && InstalledVersions::isInstalled(self::PACKAGE)) {
+            return self::normalize(InstalledVersions::getPrettyVersion(self::PACKAGE));
+        }
+
+        return "dev";
+    }
+
+
+    /**
+     * Turns "v1.40.0" into "1.40.0", and a branch or an unknown version, such as "dev-master", into "dev".
+     */
+    public static function normalize(?string $version): string
+    {
+        if ($version === null || $version === "" || str_starts_with($version, "dev-") || str_contains($version, "no-version-set")) {
+            return "dev";
+        }
+
+        return preg_replace('/^v(?=\d)/', "", $version);
+    }
+}
