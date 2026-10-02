@@ -513,6 +513,47 @@ $subtitle->removeHearingImpaired(new HearingImpairedOptions(
 - **Empty lines and cues**: a line with only a dash left goes. A cue with no text left goes, and comments stay before the next cue.
 - **Dialogue dashes**: when only one of two or more dash lines stays, its `- ` goes too. `- Is it open?` and `- (laughs)` become `Is it open?`.
 
+## Comparing two subtitles
+A translator delivers `episode1_v2.srt`. `SubtitleDiff` lists what changed against `episode1_v1.srt`. It pairs cues by time and text, not by cue number, so one added cue does not shift the rest.
+
+```php
+use SubtitleToolbox\Diff\CueDifference;
+use SubtitleToolbox\Diff\SubtitleDiff;
+use SubtitleToolbox\Diff\SubtitleDiffOptions;
+
+$differences = SubtitleDiff::compare($v1, $v2);
+$differences[0]->getKind();       // CueDifference::KIND_TEXT_CHANGED, "text changed"
+$differences[0]->getOldIndex();   // 11, the key in $v1->getCues(), null for an added cue
+$differences[0]->getNewIndex();   // 11, the key in $v2->getCues(), null for a removed cue
+$differences[0]->getOldCue();     // the SubtitleCue in $v1
+echo SubtitleDiff::toText($differences);
+
+SubtitleDiff::compare($v1, $v2, new SubtitleDiffOptions(
+    timeTolerance: 0.04,      // seconds, default 0.001. A larger difference is a timing change
+    ignoreFormatting: true,   // compares the text without tags, with entities decoded
+    ignoreWhitespace: true,   // compares the text without spaces, tabs and line breaks
+    textOnly: true,           // reports no timing changes
+));
+SubtitleDiff::isEqual($a, $b);    // true when compare() finds no difference
+```
+
+`toText()` writes one block per difference, with cue numbers that start at 1:
+
+```
+text changed: old cue 12, new cue 12
+- 00:00:39.000 --> 00:00:40.500
+  I'll be their.
++ 00:00:39.000 --> 00:00:40.500
+  I'll be there.
+```
+
+- **Kinds**: `added`, `removed`, `text changed`, `timing changed` and `text and timing changed`. Pairs without a change are not in the list.
+- **Pairing**: two cues pair when their text is the same, when their text is nearly the same, or when they overlap for at least half of the shorter cue. Nearly the same means that the edit distance is at most 30 % of the longer text, counted in bytes. A weighted longest common subsequence keeps the pairs in order. Same text weighs most, then a time overlap. The idea comes from the Compare tool of [Subtitle Edit](https://github.com/SubtitleEdit/subtitleedit/blob/main/docs/features/compare.md).
+- **Split and merged cues**: one half of a split cue pairs with the old cue as a text change. The other half is an added cue.
+- **Moved cues**: a cue that moves past other cues is removed in one place and added in the other.
+- **Speed**: 2,000 cues against 2,000 cues with 500 changes take about 0.03 s. A stretch of 200 changed cues against 200 changed cues takes about 0.2 s.
+- **Limits**: cues with the same text split the files into stretches. In a stretch of more than 40,000 cue pairs, for example 250 cues against 250 cues, only cues that overlap in time pair. This happens when a translation is compared with its source.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
