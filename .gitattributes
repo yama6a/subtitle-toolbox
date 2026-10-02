@@ -7,6 +7,7 @@
 /composer.lock   export-ignore
 /box.json        export-ignore
 /.build          export-ignore
+/.dockerignore   export-ignore
 /tests/files/encoding/** -text
 /tests/files/vobsub/** -text
 /tests/files/pgs/** -text

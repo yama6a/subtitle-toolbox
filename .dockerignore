@@ -1,0 +1,7 @@
+*
+!/bin/
+!/src/
+!/composer.json
+!/composer.lock
+!/box.json
+!/.build/build-phar.sh
