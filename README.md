@@ -102,6 +102,7 @@ $subtitle->getFormatData('ass');                        // [] when not set
 | TTML (.ttml, .dfxp, .xml) | TTML 1, TTML 2, IMSC and the DFXP namespace. All time expressions, `body` and `div` offsets | Media clock times, `<head>` and attributes of the input file | Converts `tts:fontWeight`, `tts:fontStyle`, `tts:textDecoration`, `tts:color` and `ttm:agent` to core markup and back
 | VobSub (.idx and .sub) | DVD bitmaps as image cues. The `size`, `palette`, `custom colors`, `id`, `delay` and `timestamp` lines of the `.idx` | Not supported | See [VobSub](#vobsub)
 | WebVTT (.vtt)   | Header, comments, cue identifiers, styles, regions and cue settings | Writes them back, numbers cues without identifier, always writes hours | Formatter strips all xml tags except: \<b>\<u>\<i>\<v>\<lang>\<c>\<ruby>\<rt> and inline timestamps
+| Whisper JSON (.json) | The JSON of the OpenAI transcription API, openai-whisper, faster-whisper, WhisperX and whisper.cpp | Not supported | See [Whisper JSON](#whisper-json)
 
 ### LRC
 ```php
@@ -285,6 +286,7 @@ Detection ignores a UTF-8 BOM and leading blank lines. It checks the signatures 
 | 12 | `JsonParser` | an object with a numeric `"version"` key and a `"cues"` list |
 | 13 | `EbuStlParser` | a 3-digit code page such as `850`, then `STL25.01` or `STL30.01` |
 | 14 | `SccParser` | `Scenarist_SCC V1.0` |
+| 15 | `WhisperJsonParser` | an object with a `"segments"` or `"transcription"` list |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line looks like SubRip, so it detects as SubRip.
 - **`.sub` files**: MicroDVD, MPSub and SubViewer text files all use `.sub`. SBV has three digits after the dot, SubViewer 2 has two.
@@ -812,6 +814,34 @@ $writer->close();
 - **Comments**: `WebVttStreamReader` skips `NOTE` blocks. `WebVttStreamWriter` writes no comments.
 - **Encoding**: the readers accept UTF-8, with or without a BOM, and keep the bytes of other 8-bit encodings. For UTF-16, add a filter: `stream_filter_append($in, 'convert.iconv.UTF-16/UTF-8')`.
 - **Closing**: `close()` flushes the stream. It closes the stream only when the writer opened it from a file path.
+
+## Whisper JSON
+A speech-to-text tool based on OpenAI Whisper writes a JSON transcript. The parser turns it into cues for SubRip or WebVTT.
+
+```php
+$subtitle = Subtitle::parse($openAiResponseBody);                          // detects WhisperJsonParser
+$parser   = new WhisperJsonParser([WhisperJsonParser::OPTION_WORD_TIMESTAMPS => true]);
+$subtitle = $parser->parse(file_get_contents('lecture.json'));
+$subtitle->getCues()[0]->getText();                                          // '<00:00:00.000>The <00:00:00.240>beach was quiet.'
+$subtitle->getCues()[0]->getFormatData('whisper')['avg_logprob'];            // -0.25
+```
+
+| Tool | Shape | Source |
+|:--- |:--- |:--- |
+| OpenAI API | `response_format=verbose_json`. `segments`, and `words` at the top level with `timestamp_granularities[]=word` | [API reference](https://platform.openai.com/docs/api-reference/audio/createTranscription), [`TranscriptionVerbose`](https://github.com/openai/openai-python/blob/e5de2e5656fb3d4fa70f050195382e6a4d59f806/src/openai/types/audio/transcription_verbose.py) |
+| openai-whisper | `--output_format json`. `segments`, with `words` per segment with `--word_timestamps True` | [`transcribe.py`](https://github.com/openai/whisper/blob/86098128c0b4f24f0e2aa2994de830614b474227/whisper/transcribe.py) |
+| faster-whisper | `segments` with the fields of the `Segment` class. whisper-ctranslate2 writes them as openai-whisper does, with `"words": null` without word timestamps | [`transcribe.py`](https://github.com/SYSTRAN/faster-whisper/blob/7b99be5376b41cd481dfc52e8caa00a497c3294e/faster_whisper/transcribe.py), [whisper-ctranslate2](https://github.com/Softcatala/whisper-ctranslate2/blob/7c06913255bea6f630b6d1357e99dc0c3bfa1819/src/whisper_ctranslate2/transcribe.py) |
+| WhisperX | `segments` with `words` that have `score` and, after diarization, `speaker` | [`alignment.py`](https://github.com/m-bain/whisperX/blob/771b4a14a9486f8fd5aef18ef49e35d639523dd3/whisperx/alignment.py) |
+| whisper.cpp | `-oj`: `transcription` with `offsets` in milliseconds. `-ojf` adds `tokens` | [`cli.cpp`](https://github.com/ggml-org/whisper.cpp/blob/60c0be6ac8fa71b1a2ae2dd938a31a34a508e774/examples/cli/cli.cpp) |
+
+- **Cues**: one cue per segment. The parser trims the text and skips segments without text. A long segment stays one cue. `wrapLines()` and `splitCue()` break it up.
+- **Word timestamps**: off by default. With `OPTION_WORD_TIMESTAMPS`, each word that has a start time and occurs in the segment text gets a core word timestamp before it. The parser finds the words in order and skips the others.
+- **API words**: the API lists the words of all segments at the top level. A word goes to the segment that holds the middle of the word.
+- **whisper.cpp tokens**: a token with a leading space starts a new word, as `--split-on-word` does. The parser skips special tokens such as `[_BEG_]`.
+- **Language**: the `language` metadata. A name such as `english` becomes `en`. A code such as `en` stays. whisper.cpp gives it in `result.language`.
+- **Format data**: the subtitle keeps all top-level fields in `getFormatData('whisper')` except `segments`, `transcription`, `words`, `word_segments` and `text`. Examples are `duration` from the API and `model.type` from whisper.cpp.
+- **Cue format data**: each cue keeps the fields of its segment except the times and the text. Examples are `avg_logprob`, `no_speech_prob`, `words` with `probability` or `score`, `speaker` and the whisper.cpp `tokens` with `p`.
+- **Errors**: JSON without a `segments` or `transcription` list throws `ParsingException`. A response with only `words` or `text` has no cue times, so it throws too.
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
