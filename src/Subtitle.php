@@ -2,9 +2,14 @@
 
 namespace SubtitleToolbox;
 
+use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
+use SubtitleToolbox\Formatters\ImageFormatter;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
+use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\Ocr\OcrEngine;
+use SubtitleToolbox\Ocr\OcrRunner;
 use SubtitleToolbox\Parsers\SubtitleParser;
 
 
@@ -69,6 +74,9 @@ class Subtitle
     }
 
 
+    /**
+     * Writes the subtitle with $formatterClass and throws on an image cue without text, unless the formatter is an ImageFormatter.
+     */
     public function format(string $formatterClass, array $options = []): string
     {
         if (!is_subclass_of($formatterClass, SubtitleFormatter::class)) {
@@ -76,7 +84,22 @@ class Subtitle
                                                 "is not of type " . SubtitleFormatter::class);
         }
 
-        return (new $formatterClass())->format($this, $options);
+        $subtitle = $this;
+        if (!is_subclass_of($formatterClass, ImageFormatter::class)) {
+            $imageCueIndexes = array_keys(array_filter($this->cues, fn (SubtitleCue $cue): bool =>
+                CueImage::isImageCue($cue) && $cue->getLines() === []));
+
+            if ($imageCueIndexes !== [] && !($options[SubtitleFormatter::OPTION_SKIP_IMAGE_CUES] ?? false)) {
+                throw new ImageCueWithoutTextException("Cue #{$imageCueIndexes[0]} holds an image but no text. " .
+                                                       "Run recognizeText() first, or pass the option " .
+                                                       "SubtitleFormatter::OPTION_SKIP_IMAGE_CUES.");
+            }
+            if ($imageCueIndexes !== []) {
+                $subtitle = $this->withoutCues($imageCueIndexes);
+            }
+        }
+
+        return (new $formatterClass())->format($subtitle, $options);
     }
 
 
@@ -263,6 +286,37 @@ class Subtitle
     {
         usort($this->comments, fn (array $comment1, array $comment2): int =>
             $comment1["beforeCueIndex"] <=> $comment2["beforeCueIndex"]);
+    }
+
+
+    /**
+     * Sets the lines of every image cue without text to the text that $engine reads, see OcrRunner.
+     */
+    public function recognizeText(OcrEngine $engine, ?string $language = null): self
+    {
+        (new OcrRunner($engine))->run($this, $language);
+
+        return $this;
+    }
+
+
+    /**
+     * @param list<int> $cueIndexes
+     */
+    private function withoutCues(array $cueIndexes): self
+    {
+        $copy = clone $this;
+        $kept = array_diff_key($this->cues, array_flip($cueIndexes));
+
+        $copy->cues = array_values($kept);
+        foreach ($copy->comments as $commentIndex => $comment) {
+            $copy->comments[$commentIndex]["beforeCueIndex"] = count(array_filter(
+                array_keys($kept),
+                fn (int $cueIndex): bool => $cueIndex < $comment["beforeCueIndex"]
+            ));
+        }
+
+        return $copy;
     }
 
 }

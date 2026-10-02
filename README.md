@@ -323,6 +323,56 @@ $subtitle->format(SubRipFormatter::class, [
 - **Source encodings**: the conversion uses the PHP extension iconv. It accepts the names that the iconv of the system knows, for example `Windows-1251`, `ISO-8859-15`, `Shift_JIS` or `EUC-KR`. An unknown name or a byte that is invalid in the encoding throws `ParsingException`.
 - **Output defaults**: every formatter writes LF. ASS, LRC, MPSub, SubRip and WebVTT write a UTF-8 BOM. MicroDVD, SAMI, SBV and TTML do not.
 
+## Image cues and OCR
+Some formats store each cue as a bitmap. An **image cue** is a cue with a PNG image in the format data key `image`. It has no text lines until an OCR engine reads it. OCR (optical character recognition) turns the bitmap into text.
+
+```php
+use SubtitleToolbox\Formatters\SubRipFormatter;
+use SubtitleToolbox\Formatters\SubtitleFormatter;
+use SubtitleToolbox\Image\CueImage;
+
+$image = CueImage::fromCue($cue);                    // $image->png, x, y, width, height, screenWidth, screenHeight, forced
+file_put_contents('cue.png', $image->png);
+
+$subtitle->recognizeText(new TesseractEngine(), 'eng');   // sets the lines of each image cue without text
+$subtitle->format(SubRipFormatter::class);
+
+$subtitle->format(SubRipFormatter::class, [
+    SubtitleFormatter::OPTION_SKIP_IMAGE_CUES => true,    // drops image cues without text
+]);
+```
+
+- **Text formatters**: `format()` throws `ImageCueWithoutTextException` for an image cue without text. A file without OCR then fails at once, and does not become a valid file with missing cues.
+- **After OCR**: the cue keeps its image, so a formatter that implements `ImageFormatter` can still write it. `ImageFormatter` formatters also get image cues without text.
+- **Engines**: this package ships no OCR engine, so it has no native dependencies. An engine is a separate Composer package that implements `OcrEngine`. `TesseractEngine` above is such a package.
+- **Language**: `recognizeText()` passes the language code to the engine as it is. Use a code that the engine knows, for example `eng` for Tesseract.
+- **Confidence**: `(new OcrRunner($engine))->run($subtitle, 'eng')` does the same as `recognizeText()` and returns the `OcrResult` of each cue by cue index.
+- **PNG**: `PngEncoder::encode($width, $height, $pixels)` makes a PNG from a list of `0xRRGGBBAA` integers. It needs no ext-gd. It compresses with ext-zlib when it is loaded, and else writes larger, uncompressed PNG files.
+
+An engine package implements one method:
+
+```php
+use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\Ocr\OcrEngine;
+use SubtitleToolbox\Ocr\OcrResult;
+
+final class TesseractEngine implements OcrEngine
+{
+    public function recognize(CueImage $image, ?string $language): OcrResult
+    {
+        $file = tempnam(sys_get_temp_dir(), 'cue');
+        file_put_contents($file, $image->png);
+        $text = shell_exec('tesseract ' . escapeshellarg($file) . ' - -l ' . escapeshellarg($language ?? 'eng'));
+        unlink($file);
+
+        return new OcrResult(explode("\n", trim((string)$text)));
+    }
+}
+```
+
+- **Lines**: the engine returns plain text or core markup, for example `<i>` for italic text. Empty lines are dropped.
+- **Confidence**: pass a value from 0 to 1 as the second argument of `OcrResult`, or leave it null.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
