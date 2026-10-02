@@ -1,0 +1,170 @@
+<?php
+
+namespace SubtitleToolbox;
+
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\InvalidParserException;
+use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Parsers\AssParser;
+use SubtitleToolbox\Parsers\LyricsParser;
+use SubtitleToolbox\Parsers\MicroDvdParser;
+use SubtitleToolbox\Parsers\MpSubParser;
+use SubtitleToolbox\Parsers\SamiParser;
+use SubtitleToolbox\Parsers\SbvParser;
+use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Parsers\TtmlParser;
+use SubtitleToolbox\Parsers\WebVttParser;
+
+class FormatDetectorTest extends TestCase
+{
+    private const DIR = __DIR__ . "/files/";
+
+    private const PARSERS = [
+        "ass"      => AssParser::class,
+        "lrc"      => LyricsParser::class,
+        "microdvd" => MicroDvdParser::class,
+        "mpsub"    => MpSubParser::class,
+        "sami"     => SamiParser::class,
+        "sbv"      => SbvParser::class,
+        "srt"      => SubRipParser::class,
+        "ttml"     => TtmlParser::class,
+        "vtt"      => WebVttParser::class,
+    ];
+
+    // These fixtures break their own format on purpose, so their parser rejects them.
+    private const BROKEN_FIXTURES = [
+        "sbv/missing_milli_digits.sbv"  => null,
+        "sbv/srt_timestamps.sbv"        => null,
+        "vtt/missing_webvtt_header.vtt" => SubRipParser::class,
+    ];
+
+
+    public static function fixtures(): array
+    {
+        $fixtures = [];
+        foreach (self::PARSERS as $directory => $parserClass) {
+            foreach (array_merge(glob(self::DIR . "$directory/*.*"), glob(self::DIR . "$directory/real/*.*")) as $path) {
+                $name = substr($path, strlen(self::DIR));
+                if (!str_ends_with($path, ".md") && !array_key_exists($name, self::BROKEN_FIXTURES)) {
+                    $fixtures[$name] = [$name, $parserClass];
+                }
+            }
+        }
+
+        return $fixtures;
+    }
+
+
+    public static function realFiles(): array
+    {
+        return array_filter(self::fixtures(), fn (array $fixture): bool => str_contains($fixture[0], "/real/"));
+    }
+
+
+    public static function brokenFixtures(): array
+    {
+        return array_map(null, array_keys(self::BROKEN_FIXTURES), array_values(self::BROKEN_FIXTURES));
+    }
+
+
+    #[DataProvider("fixtures")]
+    public function testDetectsTheFormatOfEveryFixture(string $file, string $parserClass): void
+    {
+        $this->assertSame($parserClass, Subtitle::detectParser(file_get_contents(self::DIR . $file)));
+    }
+
+
+    #[DataProvider("brokenFixtures")]
+    public function testDetectsBrokenFixturesByTheirShape(string $file, ?string $parserClass): void
+    {
+        $this->assertSame($parserClass, Subtitle::detectParser(file_get_contents(self::DIR . $file)));
+    }
+
+
+    #[DataProvider("realFiles")]
+    public function testParseWithoutParserGivesTheSameCuesAsTheDetectedParser(string $file, string $parserClass): void
+    {
+        $content = file_get_contents(self::DIR . $file);
+        if ($parserClass === MicroDvdParser::class && !str_starts_with(ltrim($content), "{1}{1}")) {
+            $this->expectException(ParsingException::class);
+            $this->expectExceptionMessage("The frame rate is unknown.");
+        }
+
+        $detected = Subtitle::parse($content);
+        $explicit = Subtitle::parse($content, $parserClass);
+
+        $this->assertEquals($explicit->getCues(), $detected->getCues());
+    }
+
+
+    public static function signatures(): array
+    {
+        return [
+            "WebVTT with title"          => ["WEBVTT - Weather report\n\n00:01.000 --> 00:02.000\nRain\n", WebVttParser::class],
+            "WebVTT header only"         => ["WEBVTT", WebVttParser::class],
+            "TTML with XML declaration"  => ["<?xml version=\"1.0\"?>\n<!-- made by hand -->\n<tt xmlns=\"http://www.w3.org/ns/ttml\"/>", TtmlParser::class],
+            "TTML with prefixed root"    => ["<tt:tt xmlns:tt=\"http://www.w3.org/ns/ttml\"></tt:tt>", TtmlParser::class],
+            "SAMI in lower case"         => ["<sami><body></body></sami>", SamiParser::class],
+            "SSA header"                 => ["[Script Info]\r\nScriptType: v4.00\r\n", AssParser::class],
+            "MPSub with FORMAT first"    => ["FORMAT=25\n\n0 50\nHello\n", MpSubParser::class],
+            "MPSub with header comment"  => ["TITLE=Bakery\nFORMAT=TIME   # seconds\n\n1 2\nHello\n", MpSubParser::class],
+            "MicroDVD with fps line"     => ["{1}{1}25\n{24}{72}Hello\n", MicroDvdParser::class],
+            "MicroDVD without end frame" => ["{24}{}Hello\n", MicroDvdParser::class],
+            "SubRip with dot"            => ["1\n00:00:01.000 --> 00:00:04.000\nHello\n", SubRipParser::class],
+            "SBV"                        => ["0:00:01.500,0:00:04.000\nHello\n", SbvParser::class],
+            "LRC with ID tag"            => ["[ti:Morning Train]\n[00:12.00]Hello\n", LyricsParser::class],
+            "LRC without fraction"       => ["[00:12]Hello\n", LyricsParser::class],
+        ];
+    }
+
+
+    #[DataProvider("signatures")]
+    public function testDetectsSignatures(string $content, string $parserClass): void
+    {
+        $this->assertSame($parserClass, FormatDetector::detect($content));
+    }
+
+
+    public function testIgnoresUtf8BomAndLeadingBlankLines(): void
+    {
+        $content = "\xEF\xBB\xBF\r\n\r\n  \n1\r\n00:00:01,000 --> 00:00:04,000\r\nHello\r\n";
+
+        $this->assertSame(SubRipParser::class, Subtitle::detectParser($content));
+        $this->assertCount(1, Subtitle::parse($content)->getCues());
+    }
+
+
+    public static function unknownContent(): array
+    {
+        return [
+            "empty string"             => [""],
+            "blank lines"              => ["\n\r\n  \n"],
+            "BOM only"                 => ["\xEF\xBB\xBF"],
+            "plain text"               => ["The train to the coast leaves at 7:15.\nBring a coat.\n"],
+            "JSON"                     => ["{\"cues\": [{\"start\": 1, \"end\": 2, \"text\": \"Hello\"}]}"],
+            "HTML"                     => ["<!DOCTYPE html>\n<html><head><title>Bakery</title></head><body><p>Hello</p></body></html>"],
+            "XHTML"                    => ["<?xml version=\"1.0\"?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\"></html>"],
+            "INI section with colon"   => ["[server:main]\nport=80\n"],
+            "key value lines"          => ["TITLE=Bakery\nAUTHOR=Jane Doe\n"],
+            "number without timing"    => ["1\nHello\n"],
+            "WEBVTT inside a word"     => ["WEBVTTX\n"],
+        ];
+    }
+
+
+    #[DataProvider("unknownContent")]
+    public function testReturnsNullForUnknownContent(string $content): void
+    {
+        $this->assertNull(Subtitle::detectParser($content));
+    }
+
+
+    public function testParseWithoutParserThrowsForUnknownContent(): void
+    {
+        $this->expectException(InvalidParserException::class);
+        $this->expectExceptionMessage("The subtitle format of the content is unknown.");
+
+        Subtitle::parse("Just some text.");
+    }
+}
