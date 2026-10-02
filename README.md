@@ -87,6 +87,7 @@ $subtitle->getFormatData('ass');                        // [] when not set
 | Format | Reads | Outputs | Additional Info
 |:--- |:--- |:--- |:--- |
 | ASS (.ass)      | Script Info, styles, other sections, `Dialogue:` and `Comment:` events, columns by the `Format:` line | Writes them back, the original event text for unchanged cues, a minimal header for cues from other formats | Converts `\b`, `\i`, `\u`, `\s`, `\c`, alignment, karaoke and the Name field to core markup. Writes times in centiseconds
+| iTunes Timed Text (.itt) | The TTML parser with the SMPTE timing parameters in the `itt` format data | SMPTE times `hh:mm:ss:ff`, one `div`, a `top` and a `bottom` region. Needs a frame rate | Writes bold, italic, underline and text colour as `tts:` attributes on `<span>`. Strips all other tags
 | LyRiCs (.lrc)   | ID tags, `[offset:]`, several timestamps per line, enhanced LRC word timing | ID tags, `[#:]` comments, word timing as `<mm:ss.xx>` | Formatter strips all other xml tags and writes times in centiseconds. Text with `<`, `>` and `&` round-trips
 | MicroDVD (.sub) | Frame rate from the parser constructor or a `{1}{1}<fps>` first line | Needs `OPTION_FRAME_RATE` | Converts `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` to core markup. Keeps other control codes in the `sub` format data
 | MpSub (.mpsub)  | FORMAT=TIME and FORMAT=<fps>, header lines | FORMAT=TIME by default, FORMAT=<fps> as an option, header lines | Formatter strips all xml tags. Text with `<`, `>` and `&` round-trips
@@ -442,6 +443,22 @@ json_encode($stats->toArray());    // all numbers and the 10 most used words
 - **Reading speed**: a cue with a duration of 0 has no characters per second and no words per minute.
 - **Gap**: the start of a cue minus the latest end of the earlier cues. An overlap gives a negative gap.
 - **No cues**: all numbers are 0.
+
+## iTunes Timed Text
+Apple TV and the iTunes Store take subtitles as iTunes Timed Text (iTT). iTT is a TTML profile with SMPTE frame times.
+
+```php
+$subtitle = Subtitle::parse(file_get_contents('movie.itt'), IttParser::class);
+$subtitle->getFormatData('itt');   // ['timeBase' => 'smpte', 'frameRate' => '24', 'frameRateMultiplier' => '999 1000', 'dropMode' => 'nonDrop']
+$subtitle->format(IttFormatter::class);
+Subtitle::parse($srt)->format(IttFormatter::class, [IttFormatter::OPTION_FRAME_RATE => 23.976]);
+```
+
+- **Parser**: `IttParser` is `TtmlParser` plus the `itt` format data. Format detection returns `TtmlParser` for an iTT file. Both read the same cues.
+- **Frame rate**: the formatter takes it from the `itt` format data, else from `OPTION_FRAME_RATE`. It accepts 23.976, 24, 25, 29.97 and 30. Without one of these, it throws `InvalidArgumentException`. 23.976 becomes `ttp:frameRate="24" ttp:frameRateMultiplier="999 1000"`.
+- **Times**: `00:00:01:12` is 1 s plus 12 frames, the same reading as `TtmlParser`. The formatter rounds each time to the nearest frame and gives each cue at least one frame. It always writes `ttp:dropMode="nonDrop"`.
+- **Apple limits**: one `div`, `sansSerif` as the only font family, and a fixed `<head>` with the `normal` style and the `top` and `bottom` regions. Alignment 7, 8 and 9 go to `top`, all others to `bottom`. The formatter does not keep the `<head>` or the attributes of the input file.
+- **Markup**: the formatter keeps `<b>`, `<i>`, `<u>` and `<font color>`. It writes a colour only as `#rrggbb` or a TTML colour name, and drops an alpha channel. It strips `<s>`, `<v>` and word timestamps.
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
