@@ -3,6 +3,7 @@
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Parsers\AssParser;
+use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
@@ -42,6 +43,7 @@ class FormatDetector
      * 10. LRC: an ID tag or a timestamp in brackets, and at least one timestamp line.
      * 11. PGS: the `PG` magic bytes, then a known segment type after the two 4-byte time stamps.
      * 12. JSON: an object with a numeric "version" key and a "cues" list. The possessive loops skip strings without backtracking.
+     * 13. EBU STL: a 3-digit code page, then the disk format code STL25.01 or STL30.01.
      */
     private const SIGNATURES = [
         WebVttParser::class   => '/\AWEBVTT(?:[ \t\n]|\z)/',
@@ -58,6 +60,7 @@ class FormatDetector
                                  self::LRC_TIMESTAMP . '/ms',
         PgsParser::class      => '/\APG.{8}[\x14-\x17\x80]/s',
         JsonParser::class     => '/\A\{(?=(?:[^"]++|"(?!version"\s*+:))*+"version"\s*+:\s*+\d)(?=(?:[^"]++|"(?!cues"\s*+:))*+"cues"\s*+:\s*+\[)/',
+        EbuStlParser::class   => '/\A\d{3}STL(?:25|30)\.01/',
     ];
 
 

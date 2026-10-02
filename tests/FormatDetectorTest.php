@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Parsers\AssParser;
+use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
@@ -32,6 +33,7 @@ class FormatDetectorTest extends TestCase
         "sbv"      => SbvParser::class,
         "srt"      => SubRipParser::class,
         "subviewer" => SubViewerParser::class,
+        "stl"      => EbuStlParser::class,
         "ttml"     => TtmlParser::class,
         "vtt"      => WebVttParser::class,
     ];
@@ -50,7 +52,7 @@ class FormatDetectorTest extends TestCase
         foreach (self::PARSERS as $directory => $parserClass) {
             foreach (array_merge(glob(self::DIR . "$directory/*.*"), glob(self::DIR . "$directory/real/*.*")) as $path) {
                 $name = substr($path, strlen(self::DIR));
-                if (!str_ends_with($path, ".md") && !array_key_exists($name, self::BROKEN_FIXTURES)) {
+                if (!str_ends_with($path, ".md") && !str_ends_with($path, ".php") && !array_key_exists($name, self::BROKEN_FIXTURES)) {
                     $fixtures[$name] = [$name, $parserClass];
                 }
             }
@@ -127,6 +129,7 @@ class FormatDetectorTest extends TestCase
             "LRC without fraction"       => ["[00:12]Hello\n", LyricsParser::class],
             "JSON with cues first"       => ["{\"cues\": [], \"metadata\": {\"title\": \"version\"}, \"version\": 1}", JsonParser::class],
             "JSON with spaces"           => ["{\n  \"version\" : 1 ,\n  \"cues\" : [ ]\n}\n", JsonParser::class],
+            "EBU STL at 30 fps"          => [str_pad("865STL30.011", 1024), EbuStlParser::class],
         ];
     }
 
@@ -184,6 +187,7 @@ class FormatDetectorTest extends TestCase
             "key value lines"          => ["TITLE=Bakery\nAUTHOR=Jane Doe\n"],
             "number without timing"    => ["1\nHello\n"],
             "WEBVTT inside a word"     => ["WEBVTTX\n"],
+            "EBU STL at 24 fps"        => [str_pad("850STL24.011", 1024)],
         ];
     }
 
