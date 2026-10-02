@@ -399,6 +399,27 @@ ReferenceSync::sync($german, $english, new ReferenceSyncOptions(
 - **Speed**: 2,000 cues against 2,000 cues take about 0.5 s.
 - **Limits**: one scale and one offset apply to the whole file. A file with a different shift after a cut, which alass calls a split, does not sync. Other frame-rate factors and offsets outside the range are not found.
 
+## Transforming text
+```php
+$subtitle->replaceText('Colour', 'Color');               // '<i>Colour</i> me' becomes '<i>Color</i> me'
+$subtitle->replaceText('/\.{4,}/', '...', true);         // a regex with delimiters, '$1' works in the replacement
+$subtitle->replaceText('colour', 'color', false, false); // case-insensitive
+$subtitle->stripFormatting();                            // '<b>Run</b>, now!' becomes 'Run, now!'
+$subtitle->stripFormatting(['i']);                       // keeps <i>, removes all other tags
+$subtitle->changeCase('sentence');                       // 'WHERE ARE YOU? HOME.' becomes 'Where are you? Home.'
+$subtitle->changeCase('upper', 'tr');                    // Turkish rules: 'istanbul' becomes 'İSTANBUL'
+$subtitle->mapText(fn (string $text, SubtitleCue $cue): string => str_replace("''", '"', $text));
+$subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>");
+```
+
+- **Text runs**: `replaceText()`, `changeCase()` and `mapText()` see only the text between tags, with `&lt;`, `&gt;` and `&amp;` decoded. A search for `&` finds `&amp;`. A search for `amp` or `font` finds no markup. The result gets escaped again, so a replacement cannot add tags. Use `mapLines()` to change tags.
+- **Run limits**: a match cannot cross a tag. `replaceText('Colour', ...)` does not find `<i>Col</i>our`.
+- **Word timestamps**: `stripFormatting()` keeps them. Pass `false` as the second argument to remove them too.
+- **Empty cues**: a transform removes a cue that had text before and has only tags or spaces after. Comments stay before the next cue.
+- **Upper and lower case**: with `ext-mbstring`, the full Unicode case mapping applies. `ß` becomes `SS`, and `ẞ` becomes `ß`. Lower case turns Greek `Σ` at the end of a word into `ς`. Without `ext-mbstring`, or for text that is not valid UTF-8, only the letters A to Z change.
+- **Turkish and Azerbaijani**: pass `'tr'` or `'az'` as the second argument of `changeCase()`. Then `i` and `İ` pair, and `ı` and `I` pair. Without it, `İ` becomes `i` with a combining dot, U+0307.
+- **Sentence case**: a sentence starts at the start of a cue, and at the first letter or digit after `.`, `!` or `?` and a space or line break. `www.example.com` stays lower case. `ß` at the start of a sentence becomes `Ss`. Names and the English word `I` become lower case. Fix them after with `replaceText()`.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
