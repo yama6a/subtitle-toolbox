@@ -49,6 +49,9 @@ use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
 use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\Timing\ShotChanges;
+use SubtitleToolbox\Translation\TranslationEngine;
+use SubtitleToolbox\Translation\TranslationOptions;
+use SubtitleToolbox\Translation\TranslationRunner;
 
 class ThrowSitesTest extends TestCase
 {
@@ -373,6 +376,14 @@ class ThrowSitesTest extends TestCase
             "Timing/ShotChangeOptions.php: negative minimum duration" => [fn () => new ShotChangeOptions(24, minDuration: -1),
                                                                 ...$invalid],
             "Timing/ShotChanges.php: line without a time"   => [fn () => ShotChanges::fromText("abc"), ...$parsing],
+            "Translation/TranslationOptions.php: cue limit 0" => [fn () => new TranslationOptions(maxCuesPerSentence: 0), ...$invalid],
+            "Translation/TranslationOptions.php: character limit 0" => [fn () => new TranslationOptions(maxCharactersPerRequest: 0), ...$invalid],
+            "Translation/TranslationRunner.php: no translations" => [fn () => (new TranslationRunner(new class implements TranslationEngine {
+                public function translate(array $texts, string $sourceLanguage, string $targetLanguage): array
+                {
+                    return [];
+                }
+            }))->translate(self::subtitle(), "en", "de"), ...$invalid],
         ];
     }
 
