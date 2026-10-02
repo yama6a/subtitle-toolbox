@@ -141,14 +141,14 @@ class AssParser extends SubtitleParser
         $format = $data["eventFormat"] ?? ($this->isSsa($data) ? self::SSA_EVENT_FORMAT : self::ASS_EVENT_FORMAT);
         $fields = $this->combine($format, $value, false);
         if ($fields === null) {
-            throw new ParsingException("Line $lineNumber has fewer fields than the Format line of the [Events] section: $line");
+            throw new ParsingException("Line $lineNumber has fewer fields than the Format line of the [Events] section: $line", $lineNumber);
         }
 
         $start = $this->findField($fields, "Start");
         $end   = $this->findField($fields, "End");
         $text  = $this->findField($fields, "Text");
         if ($start === null || $end === null || $text === null) {
-            throw new ParsingException("The Format line of the [Events] section needs the fields Start, End and Text!");
+            throw new ParsingException("The Format line of the [Events] section needs the fields Start, End and Text!", $lineNumber);
         }
 
         if ($isComment) {

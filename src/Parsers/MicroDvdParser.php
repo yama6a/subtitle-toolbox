@@ -58,7 +58,7 @@ class MicroDvdParser extends SubtitleParser
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["frameRate" => $frameRate]);
         foreach ($rawLines as $lineNumber => $rawLine) {
             if (!preg_match('/^\{(\d+)\}\{(\d+)\}(.*)$/', $rawLine, $matches)) {
-                throw new ParsingException("Line " . ($lineNumber + 1) . " is not a MicroDVD cue: $rawLine");
+                throw new ParsingException("Line " . ($lineNumber + 1) . " is not a MicroDVD cue: $rawLine", $lineNumber + 1);
             }
 
             $subtitle->addCue($this->parseCue(
