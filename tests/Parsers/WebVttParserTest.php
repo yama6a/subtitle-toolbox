@@ -373,4 +373,15 @@ class WebVttParserTest extends TestCase
     {
         return str_replace("WEBVTT\n", "WEBVTT - some title\n", file_get_contents(__DIR__ . "/../files/vtt/valid.vtt"));
     }
+
+
+    public function testWebVttWithCrCrLfLineEndingsKeepsCuesApart(): void
+    {
+        $raw = "WEBVTT\r\r\n\r\r\n00:01.000 --> 00:02.000\r\r\nFirst\r\r\n\r\r\n00:03.000 --> 00:04.000\r\r\nSecond\r\r\n";
+
+        $cues = Subtitle::parse($raw, WebVttParser::class)->getCues();
+
+        $this->assertSame(2, count($cues));
+        $this->assertSame("Second", $cues[1]->getText());
+    }
 }

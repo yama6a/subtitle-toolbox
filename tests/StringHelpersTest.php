@@ -25,4 +25,12 @@ class StringHelpersTest extends TestCase
         $this->assertSame("text", StringHelpers::removeUtf8Bom($withBom));
         $this->assertSame("text", StringHelpers::removeUtf8Bom("text"));
     }
+
+
+    public function testNormalizeEolsTurnsEveryLineEndingIntoOneLineFeed(): void
+    {
+        $this->assertSame("a\nb\nc\nd", StringHelpers::normalizeEOLs("a\r\nb\rc\nd"));
+        $this->assertSame("a\n\nb", StringHelpers::normalizeEOLs("a\r\rb"));
+        $this->assertSame("a\nb\n\nc", StringHelpers::normalizeEOLs("a\r\r\nb\r\r\n\r\r\nc"));
+    }
 }
