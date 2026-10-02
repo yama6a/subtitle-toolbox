@@ -358,7 +358,7 @@ $subtitle->format(SubRipFormatter::class, [
 
 - **Text formatters**: `format()` throws `ImageCueWithoutTextException` for an image cue without text. A file without OCR then fails at once, and does not become a valid file with missing cues.
 - **After OCR**: the cue keeps its image, so a formatter that implements `ImageFormatter` can still write it. `ImageFormatter` formatters also get image cues without text.
-- **Engines**: this package ships no OCR engine, so it has no native dependencies. An engine is a separate Composer package that implements `OcrEngine`. `TesseractEngine` above is such a package.
+- **Engines**: `GlyphOcrEngine` reads text in pure PHP with an optional package, see [Built-in OCR](#built-in-ocr). Other engines are separate Composer packages that implement `OcrEngine`. `TesseractEngine` above is such a package.
 - **Language**: `recognizeText()` passes the language code to the engine as it is. Use a code that the engine knows, for example `eng` for Tesseract.
 - **Confidence**: `(new OcrRunner($engine))->run($subtitle, 'eng')` does the same as `recognizeText()` and returns the `OcrResult` of each cue by cue index.
 - **PNG**: `PngEncoder::encode($width, $height, $pixels)` makes a PNG from a list of `0xRRGGBBAA` integers. It needs no ext-gd. It compresses with ext-zlib when it is loaded, and else writes larger, uncompressed PNG files.
@@ -921,6 +921,82 @@ curl -s https://example.com/movie.srt | vendor/bin/subtitle-toolbox convert - --
 - **Batch**: the tool prints one line per file and a summary. It stops at the first failed file, unless you pass `--keep-going`.
 - **Exit code**: 0 when all files succeed, 1 when a file fails or breaks a validation rule, 2 for invalid arguments.
 - **Version**: `subtitle-toolbox --version` prints the installed release, for example `1.40.0`, or `dev` in a Git checkout.
+
+## Built-in OCR
+`GlyphOcrEngine` reads the bitmaps of PGS and VobSub cues in pure PHP. It uses the optional package [yama6a/php-glyph-ocr](https://github.com/yama6a/php-glyph-ocr), a port of the nOCR engine of Subtitle Edit.
+
+```sh
+composer require yama6a/php-glyph-ocr:^0.1
+```
+
+```php
+$subtitle = Subtitle::parse(file_get_contents('movie.sup'));            // PGS, image cues
+$subtitle->recognizeText(new GlyphOcrEngine());                        // Latin database by default
+file_put_contents('movie.srt', $subtitle->format(SubRipFormatter::class));
+```
+
+- **Package**: without php-glyph-ocr, `new GlyphOcrEngine()` throws `InvalidArgumentException` with the `composer require` command.
+- **Database**: the first argument is a `GlyphOcr\GlyphDatabase`. The default is the Latin database of Subtitle Edit. It takes about 50 MB of memory, so engines that exist at the same time share one copy.
+- **Options**: the second argument holds named arguments of `GlyphOcr\Recognizer`, for example `['italicSlant' => 0.2]`. An unknown name or an invalid value throws `InvalidArgumentException`.
+- **One engine per stream**: the engine keeps one recognizer for all cues. The recognizer learns the glyph heights from the cues it reads, so use a new engine for each subtitle stream.
+- **Italic**: a word becomes italic when most of its characters match italic glyphs. Italic words next to each other share one `<i>` run.
+- **Language**: the engine ignores the language argument. The database sets the characters it knows.
+- **Confidence**: the `OcrResult` confidence is the mean confidence of the glyphs of the cue. A glyph that matches nothing reads as `*` with confidence 0.
+- **Limits**: the text must have one color on a transparent or dark background. Glyphs with the same shape, such as I and l in sans-serif fonts, come out as the one the database has first. There is no dictionary that fixes OCR errors.
+
+### Accuracy
+| Images | Characters | Lines without error |
+|:--- | ---:| ---:|
+| php-glyph-ocr test images, DejaVu Sans and Liberation Sans, 20 to 60 px, Latin database | 79.1% | 5 of 41 |
+| The same images after training | 94.6% | 19 of 41 |
+| `tests/files/pgs/text_1080p.sup`, Liberation Sans, 44 to 60 px | 97.1% | 8 of 16 |
+| `tests/files/vobsub/text-pal.sub`, Liberation Sans, 24 to 30 px, 4 colors | 69.0% | 0 of 8 |
+
+- Character accuracy is 1 minus the edit distance divided by the length of the drawn text.
+- The Latin database holds neither font. Small DVD text reads worst. Training adds glyphs of the font of your file and fixes most errors.
+- The tests fail when a fixture set reads below its number in this table. The `.ocr.srt` file next to each fixture holds the expected output.
+
+### Speed
+OCR of a 1,500-cue PGS file of 1080p text in 1 or 2 lines, with the Latin database, on one core of an x86_64 machine:
+
+| | PHP 8.2 | PHP 8.5 |
+|:--- | ---:| ---:|
+| OCR | 163 s | 110 s |
+| OCR per cue | 109 ms | 73 ms |
+| Parse the file first | 26 s | 16 s |
+| Peak memory | 102 MB | 139 MB |
+
+- Raise `memory_limit` above the default 128 MB for a long file. The database and the PNG images of all cues stay in memory.
+- A trained database is faster. php-glyph-ocr reads its test images in 92 ms each after training, and in 280 ms with the Latin database.
+
+### Training a database
+Train a glyph from a sample that a person confirmed. Then save the database and pass it to the engine:
+
+```php
+use GlyphOcr\GlyphDatabase;
+use GlyphOcr\Image;
+use GlyphOcr\Recognizer;
+use GlyphOcr\Trainer;
+use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\Ocr\GlyphOcrEngine;
+
+$database   = GlyphDatabase::latin();
+$recognizer = new Recognizer($database);
+$trainer    = new Trainer();
+foreach ($subtitle->getCues() as $cue) {
+    $result = $recognizer->recognize(Image::fromPng(CueImage::fromCue($cue)->png));
+    foreach ($result->unknownChars() as $char) {
+        $database->add($trainer->train($char->sample, askAPerson($char->sample->toAscii())));
+    }
+}
+$database->save('my-font.nocr');
+
+$subtitle->recognizeText(new GlyphOcrEngine(GlyphDatabase::fromFile('my-font.nocr')));
+```
+
+- `askAPerson()` is your own code. It shows the glyph and returns the text that a person types.
+- A new glyph goes first, so it wins over older glyphs that match equally well. Train a misread character the same way, from `$result->lines[$line]->chars[$index]->sample`.
+- The [php-glyph-ocr README](https://github.com/yama6a/php-glyph-ocr#databases-and-training) describes the `.nocr` files, `Recognizer::split()` and `GlyphSample::merge()`.
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
