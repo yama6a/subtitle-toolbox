@@ -253,6 +253,19 @@ class LenientParsingTest extends TestCase
                     [12, 2, self::SKIPPED, "The time of at least one event could not be parsed: 0:00:0x.00"],
                 ],
             ],
+            "SubViewer with text before the header and a bad time line" => [
+                "bad_time_line.sub",
+                SubViewerParser::class,
+                "Line 1 is neither a header tag nor a timing line: Downloaded from a subtitle site",
+                [
+                    [1, 3, "The market opens at eight."],
+                    [7, 9, "The stalls close\nat noon."],
+                ],
+                [
+                    [1, 0, self::SKIPPED, "Line 1 is neither a header tag nor a timing line: Downloaded from a subtitle site (line 1)"],
+                    [9, 1, self::SKIPPED, "Line 9 is a timing line with a bad time: 00:00:04.00,00:00:0x.00"],
+                ],
+            ],
         ];
     }
 
@@ -427,6 +440,33 @@ class LenientParsingTest extends TestCase
         $subtitle = (new WebVttParser())->setLenient()->parse(file_get_contents(self::DIR . "missing_empty_line.vtt"));
 
         $this->assertSame(["headerLines" => ["Kind: captions", "Language: en"]], $subtitle->getFormatData("vtt"));
+    }
+
+
+    public function testSubViewerKeepsTheTextOfTheSkippedCueInTheWarning(): void
+    {
+        $parser = (new SubViewerParser())->setLenient();
+        $parser->parse(file_get_contents(self::DIR . "bad_time_line.sub"));
+
+        $this->assertSame(["00:00:04.00,00:00:0x.00", "Apples are cheap today."], $parser->getWarnings()[1]->block);
+    }
+
+
+    public function testSubViewerStrictModeReadsABadTimeLineAsText(): void
+    {
+        $subtitle = (new SubViewerParser())->parse("00:00:01.00,00:00:03.00\nOne\n\n00:00:04.00,00:00:0x.00\nTwo\n");
+
+        $this->assertSame(["One", "00:00:04.00,00:00:0x.00", "Two"], $subtitle->getCues()[0]->getLines());
+    }
+
+
+    public function testSubViewer1SkipsABrokenHeaderLine(): void
+    {
+        $parser   = (new SubViewerParser())->setLenient();
+        $subtitle = $parser->parse("[TITLE]\nMarket\nbroken\n" . SubViewerParser::START_SCRIPT . "\n[00:00:01]\nHello\n[00:00:02]\n");
+
+        $this->assertSame("Hello", $subtitle->getCues()[0]->getText());
+        $this->assertSame([[3, 0, self::SKIPPED, "Line 3 is not a SubViewer 1 header tag: broken (line 3)"]], $this->warningRows($parser->getWarnings()));
     }
 
 

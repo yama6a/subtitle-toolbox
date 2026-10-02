@@ -22,3 +22,4 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `mixed_line_endings.sbv` | CR LF, LF and CR CR LF in one file | MIT |
 | `release_name.sub` | a release name before the `{1}{1}25` frame rate line, a cue with a letter as start frame, CR LF | MIT |
 | `broken_events.ass` | no `Format:` line in `[Events]`, an event with 4 fields, a letter in an end time, UTF-8 BOM, CR LF | MIT |
+| `bad_time_line.sub` | SubViewer 2, a note line before the header, a letter in the end time of cue 2, CR LF | MIT |
