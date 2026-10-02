@@ -318,6 +318,19 @@ class LenientParsingTest extends TestCase
                     [7, 2, self::SKIPPED, "The paragraph that begins at 7s has no end time!"],
                 ],
             ],
+            "EBU STL with a bad time code and a cut-off last block" => [
+                "bad_time_code.stl",
+                EbuStlParser::class,
+                "The TTI blocks of an EBU STL file must have 128 bytes each.",
+                [
+                    [1, 3, "The bread is fresh."],
+                    [7, 9, "We close at five."],
+                ],
+                [
+                    [0, 3, self::SKIPPED, "The TTI blocks of an EBU STL file must have 128 bytes each."],
+                    [0, 1, self::SKIPPED, "Subtitle number 2 has a time code that is not valid: 00000400 to 00000630"],
+                ],
+            ],
         ];
     }
 
@@ -556,6 +569,14 @@ class LenientParsingTest extends TestCase
 
         $this->assertCount(2, $subtitle->getCues());
         $this->assertCount(2, $parser->getWarnings());
+    }
+
+
+    public function testEbuStlStrictModeKeepsACueWithABadTimeCode(): void
+    {
+        $content = substr(file_get_contents(self::DIR . "bad_time_code.stl"), 0, EbuStlParser::GSI_BLOCK_SIZE + 3 * EbuStlParser::TTI_BLOCK_SIZE);
+
+        $this->assertCount(3, (new EbuStlParser())->parse($content)->getCues());
     }
 
 
