@@ -2,7 +2,7 @@
 
 namespace SubtitleToolbox\Ocr;
 
-use InvalidArgumentException;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 final class OcrResult
 {

@@ -4,8 +4,8 @@ namespace SubtitleToolbox;
 
 use ArrayIterator;
 use Closure;
-use InvalidArgumentException;
 use Iterator;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use WeakMap;
 
 trait CueLookup

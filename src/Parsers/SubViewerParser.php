@@ -2,7 +2,7 @@
 
 namespace SubtitleToolbox\Parsers;
 
-use InvalidArgumentException;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
@@ -75,7 +75,7 @@ class SubViewerParser extends SubtitleParser
             }
 
             if (!preg_match(self::TAG_REGEX, $line, $matches)) {
-                throw new ParsingException("Line " . ($idx + 1) . " is not a SubViewer 1 header tag: $line");
+                throw new ParsingException("Line " . ($idx + 1) . " is not a SubViewer 1 header tag: $line", $idx + 1);
             }
 
             $tag   = strtoupper(trim($matches[1]));
@@ -186,7 +186,7 @@ class SubViewerParser extends SubtitleParser
             }
 
             if (!preg_match(self::TAG_REGEX, $line, $matches)) {
-                throw new ParsingException("Line $lineNumber is neither a header tag nor a timing line: $line");
+                throw new ParsingException("Line $lineNumber is neither a header tag nor a timing line: $line", $lineNumber);
             }
 
             $tag = strtoupper(trim($matches[1]));

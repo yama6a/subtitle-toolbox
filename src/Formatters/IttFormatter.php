@@ -3,7 +3,7 @@
 namespace SubtitleToolbox\Formatters;
 
 use DOMDocument;
-use InvalidArgumentException;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\TtmlParser;

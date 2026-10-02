@@ -2,7 +2,7 @@
 
 namespace SubtitleToolbox\Diff;
 
-use InvalidArgumentException;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 final class SubtitleDiffOptions
 {

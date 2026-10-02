@@ -2,9 +2,9 @@
 
 namespace SubtitleToolbox\Formatters;
 
-use InvalidArgumentException;
 use SubtitleToolbox\Encoding\CodePage;
 use SubtitleToolbox\Encoding\Iso6937;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\EbuStlParser as Stl;

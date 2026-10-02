@@ -2,7 +2,7 @@
 
 namespace SubtitleToolbox\Sync;
 
-use InvalidArgumentException;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 final class ReferenceSyncOptions
 {

@@ -2,7 +2,7 @@
 
 namespace SubtitleToolbox\Parsers;
 
-use InvalidArgumentException;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
@@ -63,13 +63,13 @@ class MpSubParser extends SubtitleParser
             }
 
             if (!preg_match("/^(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/", $line, $matches)) {
-                throw new ParsingException("Line $lineNumber is neither a header, a comment nor a timing line: $line");
+                throw new ParsingException("Line $lineNumber is neither a header, a comment nor a timing line: $line", $lineNumber);
             }
 
             $wait     = $this->toSeconds((float)$matches[1], $frameRate);
             $duration = $this->toSeconds((float)$matches[2], $frameRate);
             if ($duration < 0) {
-                throw new ParsingException("The cue on line $lineNumber has a negative duration: $line");
+                throw new ParsingException("The cue on line $lineNumber has a negative duration: $line", $lineNumber);
             }
 
             $start    = $position + $wait;
@@ -90,7 +90,7 @@ class MpSubParser extends SubtitleParser
     private function addCue(Subtitle $subtitle, SubtitleCue $cue, int $lineNumber): void
     {
         if ($cue->getLines() === []) {
-            throw new ParsingException("The cue that ends on line $lineNumber doesn't have any text lines!");
+            throw new ParsingException("The cue that ends on line $lineNumber doesn't have any text lines!", $lineNumber);
         }
 
         $subtitle->addCue($cue, false);
@@ -105,13 +105,13 @@ class MpSubParser extends SubtitleParser
 
         // MPlayer and FFmpeg read only the leading integer, so "FORMAT=29.97" means 29 fps.
         if (!preg_match("/^\d+/", $value, $matches)) {
-            throw new ParsingException("Line $lineNumber has an unknown FORMAT value: $value");
+            throw new ParsingException("Line $lineNumber has an unknown FORMAT value: $value", $lineNumber);
         }
 
         try {
             return new FrameRate((int)$matches[0]);
         } catch (InvalidArgumentException $e) {
-            throw new ParsingException("Line $lineNumber has an invalid frame rate: $value");
+            throw new ParsingException("Line $lineNumber has an invalid frame rate: $value", $lineNumber);
         }
     }
 

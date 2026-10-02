@@ -2,7 +2,7 @@
 
 namespace SubtitleToolbox;
 
-use InvalidArgumentException;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 trait Retiming
 {
