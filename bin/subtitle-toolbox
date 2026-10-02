@@ -1,0 +1,23 @@
+#!/usr/bin/env php
+<?php
+
+use SubtitleToolbox\Cli\Application;
+
+$autoloaders = [
+    $GLOBALS["_composer_autoload_path"] ?? null,
+    __DIR__ . "/../vendor/autoload.php",
+    __DIR__ . "/../../../autoload.php",
+];
+foreach (array_filter($autoloaders) as $autoloader) {
+    if (is_file($autoloader)) {
+        require $autoloader;
+        break;
+    }
+}
+
+if (!class_exists(Application::class)) {
+    fwrite(STDERR, "Cannot find the Composer autoloader. Run \"composer install\" first.\n");
+    exit(2);
+}
+
+exit((new Application())->run($argv));

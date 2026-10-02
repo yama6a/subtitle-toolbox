@@ -890,6 +890,38 @@ foreach ($parser->getWarnings() as $warning) {
 - **Stream readers**: `SubRipStreamReader` and `WebVttStreamReader` have the same `setLenient()` and `getWarnings()`. They use the block methods of `SubRipParser` and `WebVttParser`, so a file gives the same cues and warnings as in the batch parser. During the read, `getWarnings()` holds the warnings of the blocks read so far.
 - **Other parsers**: the SCC, PGS and VobSub parsers ignore `setLenient()` and throw as before.
 
+## Command line tool
+Composer installs the tool as `vendor/bin/subtitle-toolbox`. It needs no package beyond the library.
+
+```sh
+vendor/bin/subtitle-toolbox convert movie.srt movie.vtt
+vendor/bin/subtitle-toolbox convert season1/ --to vtt --output-dir out/ --keep-going
+vendor/bin/subtitle-toolbox convert movie.sub movie.srt --fps 23.976
+vendor/bin/subtitle-toolbox shift movie.srt --by -2.5 --output movie.fixed.srt
+vendor/bin/subtitle-toolbox fps *.srt --from 25 --to 23.976 --in-place
+vendor/bin/subtitle-toolbox validate movie.srt --preset netflix-en --json
+curl -s https://example.com/movie.srt | vendor/bin/subtitle-toolbox convert - --to vtt > movie.vtt
+```
+
+| Command | Does |
+|:--- |:--- |
+| `convert` | writes each input in the format of `--to` or of the output file extension |
+| `shift`, `scale`, `fps` | call `shift()`, `scale()` and `convertFrameRate()`. `sync-fps` is another name for `fps` |
+| `fix` | calls `fixOverlaps()`, `extendShortCues()`, `wrapLines()`, `unwrapLines()` and `removeDuplicateCues()` |
+| `strip-sdh` | calls `removeHearingImpaired()` |
+| `info` | prints the format and the statistics, as text or with `--json` |
+| `validate` | prints each broken rule, as text or with `--json` |
+| `formats` | lists the format names and extensions |
+
+- **Help**: `subtitle-toolbox help convert` or `subtitle-toolbox convert --help` lists the options of a command.
+- **Inputs**: a file, a directory, a glob such as `"season1/*.srt"`, or `-` for standard input. A directory gives its files with a known extension.
+- **Input format**: `--from`, else format detection on the content, else the file extension. `.sub` is MicroDVD.
+- **Output**: `--output` for one file, `--output-dir`, or `--in-place`. `--output -` writes standard output. Without these, `convert` writes next to the input with the new extension, and the other commands write standard output.
+- **Overwrite**: the tool never overwrites a file without `--force` or `--in-place`.
+- **Batch**: the tool prints one line per file and a summary. It stops at the first failed file, unless you pass `--keep-going`.
+- **Exit code**: 0 when all files succeed, 1 when a file fails or breaks a validation rule, 2 for invalid arguments.
+- **Version**: `subtitle-toolbox --version` prints the installed release, for example `1.40.0`, or `dev` in a Git checkout.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:

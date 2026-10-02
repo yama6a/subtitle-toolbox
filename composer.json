@@ -22,6 +22,9 @@
       "SubtitleToolbox\\": "src/"
     }
   },
+  "bin": [
+    "bin/subtitle-toolbox"
+  ],
   "require": {
     "php": "^8.2",
     "ext-dom": "*",
