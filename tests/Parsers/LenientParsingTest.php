@@ -266,6 +266,20 @@ class LenientParsingTest extends TestCase
                     [9, 1, self::SKIPPED, "Line 9 is a timing line with a bad time: 00:00:04.00,00:00:0x.00"],
                 ],
             ],
+            "MPSub without a FORMAT line, with a bad timing line and a truncated last cue" => [
+                "bad_timing_line.mpsub",
+                MpSubParser::class,
+                "Line 7 is neither a header, a comment nor a timing line: 1 x",
+                [
+                    [1, 3, "The bus leaves at ten."],
+                    [5, 7, "Seats are free."],
+                ],
+                [
+                    [4, 0, self::REPAIRED, "The file has no FORMAT line before line 4. The parser read the times as seconds."],
+                    [7, 1, self::SKIPPED, "Line 7 is neither a header, a comment nor a timing line: 1 x (line 7)"],
+                    [13, 3, self::SKIPPED, "The cue that ends on line 13 doesn't have any text lines! (line 13)"],
+                ],
+            ],
         ];
     }
 
@@ -467,6 +481,16 @@ class LenientParsingTest extends TestCase
 
         $this->assertSame("Hello", $subtitle->getCues()[0]->getText());
         $this->assertSame([[3, 0, self::SKIPPED, "Line 3 is not a SubViewer 1 header tag: broken (line 3)"]], $this->warningRows($parser->getWarnings()));
+    }
+
+
+    public function testMpSubSkipsABadFormatLineAndReadsTheTimesAsSeconds(): void
+    {
+        $parser   = (new MpSubParser())->setLenient();
+        $subtitle = $parser->parse("FORMAT=PAL\n\n1 2\nHello\n");
+
+        $this->assertEquals([[1, 3, "Hello"]], $this->cueRows($subtitle->getCues()));
+        $this->assertSame([[1, 0, self::SKIPPED, "Line 1 has an unknown FORMAT value: PAL (line 1)"]], $this->warningRows($parser->getWarnings()));
     }
 
 
