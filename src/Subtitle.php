@@ -20,6 +20,7 @@ class Subtitle
     use CueEditing;
     use Fixes;
     use TextTransforms;
+    use HearingImpairedRemoval;
 
     /** @var array|SubtitleCue[] */
     protected $cues;

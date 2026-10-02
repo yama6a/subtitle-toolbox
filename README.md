@@ -486,6 +486,33 @@ $dual = DualSubtitle::merge($english, $german, new DualSubtitleOptions(
 - **Secondary style**: a core markup tag, such as `i` or `font color="#ffff00"`, around each secondary line. WebVTT has no font colour, so its formatter drops the `font` tag.
 - **Copied data**: the result is a new `Subtitle`. Metadata, comments and format data come from the primary subtitle. The secondary cues lose their identifiers and format data. The language becomes `en+de` when both subtitles have a language.
 
+## Removing hearing-impaired annotations
+```php
+$subtitle->removeHearingImpaired();         // '(laughs) You came back.' becomes 'You came back.'
+$subtitle->removeHearingImpaired(new HearingImpairedOptions(
+    speakerLabelsUpperCaseOnly: false,      // also removes 'Baker:' and 'Note:'
+    customBrackets: [['{', '}'], ['*', '*']],
+    lyrics: true,                           // removes '# The wheels go round #'
+));
+(new HearingImpairedOptions())->isHearingImpaired('JOHN: Hi.'); // true, the line stays unchanged
+```
+
+| Option | Default | Removes |
+|:--- |:--- |:--- |
+| `squareBrackets` | on | `[DOOR SLAMS]` |
+| `parentheses` | on | `(laughs)` |
+| `speakerLabels` | on | `JOHN:`, `MAN 2:` and `DR. O'NEIL:` at the start of a line or after its dash |
+| `speakerLabelsUpperCaseOnly` | on | When off, `speakerLabels` also removes labels such as `Baker:`, and so also `Note:` |
+| `musicOnlyLines` | on | Lines that hold only music notes U+2669 to U+266C or a separate `#` |
+| `customBrackets` | none | Text between each pair, for example `{laughs}`. `{\an8}` stays, because a backslash after `{` marks an ASS override tag. |
+| `lyrics` | off | Text between two music symbols, and lines that start or end with one |
+
+- **Rules**: they follow the "Remove text for hearing impaired" tool of [Subtitle Edit](https://github.com/SubtitleEdit/subtitleedit/blob/5b9ee8baf08c472c7a74fbc337446b656dedabb4/src/libse/Forms/RemoveTextForHI.cs). Its interjection list and its "only separate lines" options are not available.
+- **Visible text only**: the rules see the text between tags, with `&lt;`, `&gt;` and `&amp;` decoded. A bracket can span tags and lines. Tags stay, and a tag pair that becomes empty, such as `<i></i>`, goes.
+- **Spaces**: the space next to a removed annotation goes too. `Wait (sighs) now.` becomes `Wait now.`
+- **Empty lines and cues**: a line with only a dash left goes. A cue with no text left goes, and comments stay before the next cue.
+- **Dialogue dashes**: when only one of two or more dash lines stays, its `- ` goes too. `- Is it open?` and `- (laughs)` become `Is it open?`.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
