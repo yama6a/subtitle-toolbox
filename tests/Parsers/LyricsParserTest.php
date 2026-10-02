@@ -298,6 +298,38 @@ class LyricsParserTest extends TestCase
     }
 
 
+    public function testPlainTextIsEscaped(): void
+    {
+        $subtitle = Subtitle::parse("[00:01.00]I <3 bread & jam\n", LyricsParser::class);
+
+        $this->assertSame("I &lt;3 bread &amp; jam", $subtitle->getCues()[0]->getText());
+    }
+
+
+    public function testTextAroundWordTimestampsIsEscaped(): void
+    {
+        $subtitle = Subtitle::parse("[00:01.00]<00:01>Fish & <00:01.50>chips <3 <1:2>\n", LyricsParser::class);
+
+        $this->assertSame(
+            "<00:00:01.000>Fish &amp; <00:00:01.500>chips &lt;3 &lt;1:2&gt;",
+            $subtitle->getCues()[0]->getText()
+        );
+    }
+
+
+    public function testIdTagsAndCommentsAreNotEscaped(): void
+    {
+        $subtitle = Subtitle::parse(
+            "[ti:Fish & Chips]\n[re:<Editor>]\n[#:a < b & c]\n[00:01.00]Text\n",
+            LyricsParser::class
+        );
+
+        $this->assertSame("Fish & Chips", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
+        $this->assertSame(["idTags" => ["re" => "<Editor>"]], $subtitle->getFormatData(LyricsParser::FORMAT));
+        $this->assertSame("a < b & c", $subtitle->getComments()[0]["text"]);
+    }
+
+
     /**
      * @return array<string, array{string, int, array{float, float, string}, array{float, float, string}}>
      */

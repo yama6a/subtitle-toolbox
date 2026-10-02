@@ -76,7 +76,7 @@ class LyricsFormatter extends SubtitleFormatter
         $parts = preg_split(self::CORE_WORD_TIMESTAMP_REGEX, implode(" ", $cue->getLines()), -1, PREG_SPLIT_DELIM_CAPTURE);
         $lines = "";
         foreach ($parts as $idx => $part) {
-            $lines .= $idx % 2 === 1 ? $this->formatWordTimestamp($part) : Markup::stripAllTags($part);
+            $lines .= $idx % 2 === 1 ? $this->formatWordTimestamp($part) : Markup::decodeEntities(Markup::stripAllTags($part));
         }
 
         return $timestamp . " " . $lines;

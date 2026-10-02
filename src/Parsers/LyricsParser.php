@@ -158,8 +158,10 @@ class LyricsParser extends SubtitleParser
     private function convertWordTimestamps(string $text, float $offset): string
     {
         return preg_replace_callback(
-            "/<" . self::TIMESTAMP_PATTERN . ">/",
-            fn (array $matches): string => "<" . $this->toCoreTimestamp($this->toSeconds($matches, $offset)) . ">",
+            "/<" . self::TIMESTAMP_PATTERN . ">|[^<]+|</",
+            fn (array $matches): string => isset($matches[1])
+                ? "<" . $this->toCoreTimestamp($this->toSeconds($matches, $offset)) . ">"
+                : htmlspecialchars($matches[0], ENT_NOQUOTES, "UTF-8"),
             $text
         );
     }
