@@ -85,6 +85,7 @@ class StringHelpers
      */
     public static function normalizeEOLs(string $str): string
     {
-        return str_replace([static::WINDOWS_LINE_ENDING, static::MAC_LINE_ENDING], static::UNIX_LINE_ENDING, $str);
+        // CR CR LF comes from a CR LF file that went through a text-mode conversion a second time.
+        return preg_replace('/\r+\n|\r/', static::UNIX_LINE_ENDING, $str);
     }
 }
