@@ -38,6 +38,9 @@ use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\VobSubParser;
 use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\Streaming\SubRipStreamReader;
+use SubtitleToolbox\Streaming\SubRipStreamWriter;
+use SubtitleToolbox\Streaming\WebVttStreamReader;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
@@ -75,6 +78,28 @@ class ThrowSitesTest extends TestCase
         $body = "\x81\x00\x00\x20" . $unit;
 
         return "\x00\x00\x01\xBA\x44\x00\x04\x00\x04\x01\x01\x89\xC3\xFA\xFF\xFF\x00\x00\x01\xBD" . pack("n", strlen($body)) . $body;
+    }
+
+
+    private static function closedWriter(): SubRipStreamWriter
+    {
+        $writer = new SubRipStreamWriter(fopen("php://memory", "wb"));
+        $writer->close();
+
+        return $writer;
+    }
+
+
+    /**
+     * @return resource
+     */
+    private static function stream(string $content)
+    {
+        $stream = fopen("php://memory", "w+b");
+        fwrite($stream, $content);
+        rewind($stream);
+
+        return $stream;
     }
 
 
@@ -295,6 +320,15 @@ class ThrowSitesTest extends TestCase
             "Retiming.php: scale factor 0"                  => [fn () => self::subtitle()->scale(0), ...$invalid],
             "Retiming.php: same old times"                  => [fn () => self::subtitle()->syncByTwoPoints(1, 1, 1, 2), ...$invalid],
             "Retiming.php: new times in reverse"            => [fn () => self::subtitle()->syncByTwoPoints(1, 2, 2, 1), ...$invalid],
+            "Streaming/Streams.php: no stream"              => [fn () => iterator_to_array((new SubRipStreamReader())->read(5)), ...$invalid],
+            "Streaming/Streams.php: missing file"           => [fn () => iterator_to_array((new SubRipStreamReader())->read(__DIR__ . "/missing.srt")),
+                                                                ...$invalid],
+            "Streaming/Streams.php: closed writer"          => [fn () => self::closedWriter()->write(new SubtitleCue(1, 2, "text")), ...$invalid],
+            "Streaming/Streams.php: read-only stream"       => [fn () => new SubRipStreamWriter(fopen("php://memory", "rb")), ...$invalid],
+            "Streaming/WebVttStreamReader.php: no WEBVTT"   => [fn () => iterator_to_array((new WebVttStreamReader())->read(self::stream("text"))),
+                                                                ...$parsing],
+            "Streaming/WebVttStreamReader.php: unknown block" => [fn () => iterator_to_array((new WebVttStreamReader())->read(
+                self::stream("WEBVTT\n\ntext\nmore"))), ...$parsing],
             "StringHelpers.php: unknown encoding"           => [fn () => Subtitle::parse("text", SubRipParser::class, "NO-SUCH-ENCODING"),
                                                                 ...$parsing],
             "Subtitle.php: unknown format"                  => [fn () => Subtitle::parse("text"),
