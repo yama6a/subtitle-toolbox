@@ -280,6 +280,19 @@ class LenientParsingTest extends TestCase
                     [13, 3, self::SKIPPED, "The cue that ends on line 13 doesn't have any text lines! (line 13)"],
                 ],
             ],
+            "LRC with a broken time tag" => [
+                "broken_time_tag.lrc",
+                LyricsParser::class,
+                3,
+                [
+                    [1, 4.5, "The sun comes up"],
+                    [4.5, 9, "Birds sing in the trees"],
+                    [9, 12, "We walk to the lake"],
+                ],
+                [
+                    [6, 4, self::SKIPPED, "Line 6 has a time tag that could not be parsed: [01:2x.00]The path is long"],
+                ],
+            ],
         ];
     }
 

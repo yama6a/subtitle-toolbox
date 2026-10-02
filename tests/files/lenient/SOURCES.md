@@ -24,3 +24,4 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `broken_events.ass` | no `Format:` line in `[Events]`, an event with 4 fields, a letter in an end time, UTF-8 BOM, CR LF | MIT |
 | `bad_time_line.sub` | SubViewer 2, a note line before the header, a letter in the end time of cue 2, CR LF | MIT |
 | `bad_timing_line.mpsub` | no `FORMAT=` line, a letter as duration, a last cue without text, LF | MIT |
+| `broken_time_tag.lrc` | a letter in the seconds of a time tag, CR LF | MIT |
