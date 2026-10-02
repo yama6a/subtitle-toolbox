@@ -30,6 +30,7 @@ use SubtitleToolbox\Hls\TimestampMap;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Karaoke\WordHighlightOptions;
+use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Ocr\OcrResult;
 use SubtitleToolbox\Parsers\AssParser;
@@ -237,6 +238,10 @@ class ThrowSitesTest extends TestCase
             "Karaoke/WordHighlightOptions.php: speaker style" => [fn () => new WordHighlightOptions(style: "v Ann"), ...$invalid],
             "Karaoke/WordHighlightOptions.php: unknown mode"  => [fn () => new WordHighlightOptions(mode: "line"), ...$invalid],
             "Karaoke/WordHighlightOptions.php: 0 words"       => [fn () => new WordHighlightOptions(maxWordsPerCue: 0), ...$invalid],
+            "MergeShortCuesOptions.php: maximum lines 0"    => [fn () => new MergeShortCuesOptions(maxLines: 0), ...$invalid],
+            "MergeShortCuesOptions.php: negative gap"       => [fn () => new MergeShortCuesOptions(maxGap: -1), ...$invalid],
+            "MergeShortCuesOptions.php: maximum duration 0" => [fn () => new MergeShortCuesOptions(maxDuration: 0), ...$invalid],
+            "MergeShortCuesOptions.php: minimum characters 0" => [fn () => new MergeShortCuesOptions(minCharacters: 0), ...$invalid],
             "Ocr/GlyphOcrEngine.php: unknown option"        => [fn () => new GlyphOcrEngine(null, ["speed" => 2]), ...$invalid],
             "Ocr/GlyphOcrEngine.php: invalid option"        => [fn () => new GlyphOcrEngine(null, ["inkThreshold" => 0]), ...$invalid],
             "Ocr/GlyphOcrEngine.php: no PNG"                => [fn () => (new GlyphOcrEngine())

@@ -1346,6 +1346,41 @@ $subtitle->format(AssFormatter::class, [AssFormatter::OPTION_KARAOKE_TAG => 'kf'
 - **Markup**: the style wraps the text of each word in logical order, so right-to-left text such as Hebrew works. The style closes before another tag and opens again after it, for example `<i><u>train</u></i>`.
 - **ASS output**: `\kf` fills each syllable from left to right in Aegisub and libass. `\ko` hides the outline of a syllable until its time starts. The option applies to cues that the formatter writes from the core markup. An unchanged ASS cue keeps its original tags.
 
+## Merging short cues
+Speech-to-text output and fast dialogue often have many cues under 1 s. `mergeShortCues()` joins such a cue with its neighbour when the joined cue still fits the limits.
+
+```php
+// 00:01:02,100 --> 00:01:02,600  Wait.
+// 00:01:02,640 --> 00:01:03,300  Where are you
+// 00:01:03,320 --> 00:01:04,100  going?
+$subtitle->mergeShortCues(new MergeShortCuesOptions(
+    maxCharactersPerLine: 42,
+    maxLines: 2,
+    maxGap: 0.25,
+    maxDuration: 7,
+));
+// 00:01:02,100 --> 00:01:04,100  Wait. Where are you going?
+```
+
+| Option | Default | Meaning |
+|:--- |:--- |:--- |
+| `maxCharactersPerLine` | 42 | the line length of the joined text |
+| `maxLines` | 2 | the line count of the joined text |
+| `maxGap` | 0.25 | seconds from the end of one cue to the start of the next |
+| `maxDuration` | 7 | seconds from the start to the end of the joined cue |
+| `minDuration` | 1 | a cue shorter than this many seconds is short |
+| `minCharacters` | null | a cue with fewer visible characters is short. Null turns the rule off |
+| `maxCharactersPerSecond` | null | the reading speed of the joined cue. Null turns the rule off |
+| `keepSentenceEnds` | false | join only when the first cue does not end with `.`, `?` or `!` |
+| `sameSpeakerOnly` | false | join each cue with the next cue of the same `<v>` speaker, short or not, with no `maxDuration` limit |
+
+- **Order**: the method walks the cues in start time order. It joins a short cue with the next cue. When the next cue does not fit, it tries the previous cue. A joined cue that is still short joins again.
+- **Never joined**: cues with different `<v>` speakers, different alignments or different forced flags, and image cues. A cue without a `<v>` tag and a cue with one have different speakers. A cue with alignment `null` and a cue with alignment 2 have the same alignment.
+- **Joined cue**: it keeps the start, the identifier, the alignment and the format data of the first cue, and the end of the last cue. A comment before a joined cue moves before the result, as in `joinCues()`.
+- **Text**: the lines are joined with a space and wrapped as `wrapLines()` does, with the fewest lines that fit. A line that starts with a dialogue dash stays on its own line, and then each such line must fit on one line.
+- **Speakers**: when both cues start with a `<v>` tag of the same speaker, the joined text keeps only the tag of the first cue.
+- **Interview transcripts**: with `sameSpeakerOnly: true`, a cue without a `<v>` tag never joins.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
