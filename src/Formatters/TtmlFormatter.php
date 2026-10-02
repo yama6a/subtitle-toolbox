@@ -47,6 +47,9 @@ class TtmlFormatter extends SubtitleFormatter
     /** @var array<string, true> */
     private array $usedIds;
 
+    /** @var array<string, bool> region xml:id => itts:forcedDisplay of the region */
+    private array $forcedRegions;
+
 
     public function format(Subtitle $subtitle, array $options = []): string
     {
@@ -142,14 +145,19 @@ class TtmlFormatter extends SubtitleFormatter
             throw new InvalidFormatterException("The stored TTML head is not a well-formed <head> element!");
         }
 
-        $this->headDocument = $document;
-        $this->head         = $head;
-        $this->agentIds     = [];
-        $this->usedIds      = [];
+        $this->headDocument  = $document;
+        $this->head          = $head;
+        $this->agentIds      = [];
+        $this->usedIds       = [];
+        $this->forcedRegions = [];
         foreach ($head->getElementsByTagName("*") as $element) {
             $id = $element->getAttributeNS(TtmlParser::NAMESPACE_XML, "id");
             if ($id !== "") {
                 $this->usedIds[$id] = true;
+            }
+            if ($element->localName === "region" && $element->namespaceURI === $this->namespace
+                && $element->hasAttributeNS(TtmlParser::NAMESPACE_IMSC_STYLING, "forcedDisplay")) {
+                $this->forcedRegions[$id] ??= trim($element->getAttributeNS(TtmlParser::NAMESPACE_IMSC_STYLING, "forcedDisplay")) === "true";
             }
             if ($element->localName === "agent" && in_array($element->namespaceURI, TtmlParser::METADATA_NAMESPACES, true)) {
                 foreach ($element->getElementsByTagNameNS($element->namespaceURI, "name") as $name) {
@@ -190,10 +198,21 @@ class TtmlFormatter extends SubtitleFormatter
         $attributes .= $this->formatAttribute("begin", $this->formatTime($cue->getStart()));
         $attributes .= $this->formatAttribute("end", $this->formatTime($cue->getEnd()));
 
-        $stored      = $cue->getFormatData(TtmlParser::FORMAT)["attributes"] ?? [];
+        $cueData     = $cue->getFormatData(TtmlParser::FORMAT);
+        $stored      = $cueData["attributes"] ?? [];
+        $forcedName  = $this->forcedDisplayName($stored);
+        $forced      = $forcedName === null
+            ? $this->forcedDisplay($cueData["div"] ?? []) ?? $this->forcedRegions[$stored["region"] ?? ""] ?? false
+            : trim($stored[$forcedName]) === "true";
+        if ($forced !== $cue->isForced() && $forcedName !== null) {
+            $stored[$forcedName] = $cue->isForced() ? "true" : "false";
+        }
         $attributes .= $this->formatAttributes($stored, ["xml:id", "begin", "end", "dur"]);
         if (!isset($stored["region"]) && ($cue->getAlignment() !== null || $isForeignSubtitle)) {
             $attributes .= $this->formatAttribute("region", $this->regionId($cue->getAlignment() ?? 2));
+        }
+        if ($forced !== $cue->isForced() && $forcedName === null) {
+            $attributes .= $this->formatAttribute($this->ittsPrefix() . ":forcedDisplay", $cue->isForced() ? "true" : "false");
         }
 
         $text = implode(self::NL, $cue->getLines());
@@ -207,6 +226,43 @@ class TtmlFormatter extends SubtitleFormatter
         }
 
         return "<p$attributes>$content</p>";
+    }
+
+
+    /**
+     * Returns the name of the stored itts:forcedDisplay attribute, or null when the attributes do not hold it.
+     */
+    private function forcedDisplayName(array $attributes): ?string
+    {
+        foreach (array_keys($attributes) as $name) {
+            [$prefix, $localName] = str_contains($name, ":") ? explode(":", $name, 2) : ["", $name];
+            if ($localName === "forcedDisplay" && $prefix !== ""
+                && ($this->namespaces[$prefix] ?? null) === TtmlParser::NAMESPACE_IMSC_STYLING) {
+                return $name;
+            }
+        }
+
+        return null;
+    }
+
+
+    private function forcedDisplay(array $attributes): ?bool
+    {
+        $name = $this->forcedDisplayName($attributes);
+
+        return $name === null ? null : trim($attributes[$name]) === "true";
+    }
+
+
+    /**
+     * Declares the IMSC styling namespace on the root element when the input file did not.
+     */
+    private function ittsPrefix(): string
+    {
+        $prefix = $this->bindPrefix($this->namespaces, "itts", [TtmlParser::NAMESPACE_IMSC_STYLING], 0);
+        ksort($this->namespaces);
+
+        return $prefix;
     }
 
 

@@ -50,10 +50,7 @@ trait CueEditing
             throw new InvalidArgumentException("The slice start $from must not be after the slice end $to.");
         }
 
-        $anchors = $this->getCommentAnchors();
-        $slice   = clone $this;
-        $cues    = [];
-        $copies  = new \SplObjectStorage();
+        $copies = new \SplObjectStorage();
         foreach ($this->cues as $cue) {
             if ($cue->getEnd() <= $from || $cue->getStart() >= $to) {
                 continue;
@@ -63,8 +60,43 @@ trait CueEditing
                 ->setStart(max($cue->getStart(), $from) - ($moveToZero ? $from : 0))
                 ->setEnd(min($cue->getEnd(), $to) - ($moveToZero ? $from : 0));
 
-            $cues[]       = $copy;
             $copies[$cue] = $copy;
+        }
+
+        return $this->copyWithCues($copies);
+    }
+
+
+    /**
+     * Returns a copy with copies of the forced cues and the comments before these cues.
+     */
+    public function forcedOnly(): self
+    {
+        $copies = new \SplObjectStorage();
+        foreach ($this->cues as $cue) {
+            if ($cue->isForced()) {
+                $copies[$cue] = clone $cue;
+            }
+        }
+
+        return $this->copyWithCues($copies);
+    }
+
+
+    /**
+     * Returns a copy that holds the cue copies in $copies, in the order of their originals.
+     *
+     * @param \SplObjectStorage<SubtitleCue, SubtitleCue> $copies original cue => copy
+     */
+    private function copyWithCues(\SplObjectStorage $copies): self
+    {
+        $anchors = $this->getCommentAnchors();
+        $copy    = clone $this;
+        $cues    = [];
+        foreach ($this->cues as $cue) {
+            if (isset($copies[$cue])) {
+                $cues[] = $copies[$cue];
+            }
         }
 
         $lastCue    = end($this->cues) ?: null;
@@ -79,10 +111,10 @@ trait CueEditing
             }
         }
 
-        $slice->cues = $cues;
-        $slice->setCommentsByAnchors($comments, $newAnchors);
+        $copy->cues = $cues;
+        $copy->setCommentsByAnchors($comments, $newAnchors);
 
-        return $slice;
+        return $copy;
     }
 
 

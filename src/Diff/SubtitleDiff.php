@@ -73,7 +73,7 @@ final class SubtitleDiff
                 continue;
             }
 
-            $textChanged   = $oldTexts[$i] !== $newTexts[$j];
+            $textChanged   = $oldTexts[$i] !== $newTexts[$j] || $oldCues[$i]->isForced() !== $newCues[$j]->isForced();
             $timingChanged = !$options->textOnly && !$diff->isSameTime($i, $j);
             $kind          = match (true) {
                 $textChanged && $timingChanged => CueDifference::KIND_TEXT_AND_TIMING_CHANGED,
@@ -132,7 +132,8 @@ final class SubtitleDiff
 
     private static function describeCue(string $marker, SubtitleCue $cue): string
     {
-        $text = "$marker " . self::formatTime($cue->getStart()) . " --> " . self::formatTime($cue->getEnd()) . "\n";
+        $text = "$marker " . self::formatTime($cue->getStart()) . " --> " . self::formatTime($cue->getEnd())
+                . ($cue->isForced() ? " forced" : "") . "\n";
         foreach ($cue->getLines() as $line) {
             $text .= "  $line\n";
         }

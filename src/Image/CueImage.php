@@ -69,11 +69,11 @@ final class CueImage
 
 
     /**
-     * Writes the image to the format data key "image" of the cue and keeps its text lines.
+     * Writes the image to the format data key "image" of the cue, sets the forced flag of the cue and keeps its text lines.
      */
     public function toCue(SubtitleCue $cue): SubtitleCue
     {
-        return $cue->setFormatData(self::FORMAT_DATA_KEY, [
+        return $cue->setForced($this->forced)->setFormatData(self::FORMAT_DATA_KEY, [
             "png"          => $this->png,
             "x"            => $this->x,
             "y"            => $this->y,
