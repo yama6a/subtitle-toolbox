@@ -12,6 +12,7 @@ use SubtitleToolbox\Encoding\Cea608;
 use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Fixing\OcrReplaceList;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\Formatters\AssFormatter;
 use SubtitleToolbox\Formatters\EbuStlFormatter;
 use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
@@ -28,6 +29,7 @@ use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\Hls\TimestampMap;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
+use SubtitleToolbox\Karaoke\WordHighlightOptions;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Ocr\OcrResult;
 use SubtitleToolbox\Parsers\AssParser;
@@ -179,6 +181,8 @@ class ThrowSitesTest extends TestCase
             "Fixing/CommonErrorOptions.php: dialogue dash"  => [fn () => new CommonErrorOptions(dialogueDash: "*"), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid regex"      => [fn () => new OcrReplaceList(regularExpressions: ["/(/" => ""]), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid XML"        => [fn () => OcrReplaceList::fromSubtitleEditXml("<ReplaceList>"), ...$parsing],
+            "Formatters/AssFormatter.php: karaoke tag"      => [fn () => self::subtitle()->format(AssFormatter::class,
+                                                                [AssFormatter::OPTION_KARAOKE_TAG => "K"]), ...$invalid],
             "Formatters/EbuStlFormatter.php: frame rate 24" => [fn () => self::subtitle()->format(EbuStlFormatter::class,
                 [EbuStlFormatter::OPTION_FRAME_RATE => 24]), ...$invalid],
             "Formatters/EbuStlFormatter.php: code table 09" => [fn () => self::subtitle()->setFormatData(EbuStlParser::FORMAT_DATA_KEY,
@@ -230,6 +234,9 @@ class ThrowSitesTest extends TestCase
                                                             "screenWidth" => 1, "screenHeight" => 1])), ...$invalid],
             "Image/PngEncoder.php: width 0"                 => [fn () => PngEncoder::encode(0, 1, []), ...$invalid],
             "Image/PngEncoder.php: pixel count"             => [fn () => PngEncoder::encode(1, 1, []), ...$invalid],
+            "Karaoke/WordHighlightOptions.php: speaker style" => [fn () => new WordHighlightOptions(style: "v Ann"), ...$invalid],
+            "Karaoke/WordHighlightOptions.php: unknown mode"  => [fn () => new WordHighlightOptions(mode: "line"), ...$invalid],
+            "Karaoke/WordHighlightOptions.php: 0 words"       => [fn () => new WordHighlightOptions(maxWordsPerCue: 0), ...$invalid],
             "Ocr/GlyphOcrEngine.php: unknown option"        => [fn () => new GlyphOcrEngine(null, ["speed" => 2]), ...$invalid],
             "Ocr/GlyphOcrEngine.php: invalid option"        => [fn () => new GlyphOcrEngine(null, ["inkThreshold" => 0]), ...$invalid],
             "Ocr/GlyphOcrEngine.php: no PNG"                => [fn () => (new GlyphOcrEngine())

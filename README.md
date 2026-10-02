@@ -1310,6 +1310,42 @@ new ProfanityOptions(['hell'], fn (string $word): string => '[beep]');
 - **EDL**: `toEdl()` writes the [Kodi](https://kodi.wiki/view/Edit_decision_list) and MPlayer format. Each line holds the start, the end and action `1`, mute.
 - **FFmpeg**: use the filter as `ffmpeg -i in.mp4 -af "<filter>" -c:v copy out.mp4`. It returns `""` for no ranges. Then leave out `-af`.
 
+## Word highlight and karaoke
+Lyric videos and short-form captions show a line and mark the word that is sung or spoken. SubRip and WebVTT players have no karaoke effect. So `WordHighlight` writes one cue per word, with the active word styled. The word timestamps come from Whisper JSON with `OPTION_WORD_TIMESTAMPS`, enhanced LRC, or ASS `\k` tags.
+
+```php
+use SubtitleToolbox\Formatters\AssFormatter;
+use SubtitleToolbox\Karaoke\WordHighlight;
+use SubtitleToolbox\Karaoke\WordHighlightOptions;
+
+// 00:00:00.000 --> 00:00:01.600  <00:00:00.000>The <00:00:00.240>beach <00:00:00.710>was <00:00:00.950>quiet.
+$karaoke = WordHighlight::expand($subtitle, new WordHighlightOptions(style: 'u'));
+// 00:00:00.000 --> 00:00:00.240  <u>The</u> beach was quiet.
+// 00:00:00.240 --> 00:00:00.710  The <u>beach</u> was quiet.
+// ...
+
+WordHighlight::expand($subtitle, new WordHighlightOptions(
+    style: 'font color="#ffff00"',                     // b, i, u (default), s or font
+    mode: WordHighlightOptions::MODE_CUMULATIVE,       // styles all words up to the active one
+    maxWordsPerCue: 1,                                 // shows only the active word
+));
+
+$subtitle->format(AssFormatter::class, [AssFormatter::OPTION_KARAOKE_TAG => 'kf']);   // k (default), kf or ko
+```
+
+| Mode | Cue at `was` |
+|:--- |:--- |
+| `word`, the default | `The beach <u>was</u> quiet.` |
+| `cumulative` | `<u>The beach was</u> quiet.` |
+| `word` with `maxWordsPerCue: 3` | `beach <u>was</u> quiet.` |
+
+- **Result**: a new subtitle without word timestamps. The input stays unchanged. A cue without word timestamps stays as it is.
+- **Times**: a word cue lasts from its timestamp to the next one. The last word lasts until the cue end. The time before the first timestamp gets a cue without a styled word. A timestamp outside its cue moves to the cue start or end. A word of 0 s gets no cue.
+- **Cue data**: each word cue keeps the alignment, the forced flag and the format data. Only the first word cue keeps the identifier.
+- **Window**: `maxWordsPerCue` shows the active word in the middle of N words. At the start and the end of a cue, the window stops at the first or last word. Lines without visible words go.
+- **Markup**: the style wraps the text of each word in logical order, so right-to-left text such as Hebrew works. The style closes before another tag and opens again after it, for example `<i><u>train</u></i>`.
+- **ASS output**: `\kf` fills each syllable from left to right in Aegisub and libass. `\ko` hides the outline of a syllable until its time starts. The option applies to cues that the formatter writes from the core markup. An unchanged ASS cue keeps its original tags.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
