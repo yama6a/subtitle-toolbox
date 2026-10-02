@@ -13,7 +13,7 @@ use SubtitleToolbox\Ocr\OcrRunner;
 use SubtitleToolbox\Parsers\SubtitleParser;
 
 
-class Subtitle
+class Subtitle implements \IteratorAggregate, \Countable
 {
     use Retiming;
     use Validation;
@@ -21,6 +21,7 @@ class Subtitle
     use Fixes;
     use TextTransforms;
     use HearingImpairedRemoval;
+    use CueLookup;
 
     /** @var array|SubtitleCue[] */
     protected $cues;

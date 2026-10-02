@@ -578,6 +578,25 @@ $subtitle->recognizeText(new TesseractEngine(), 'deu');
 - **Limits**: the parser reads one image per unit. Color and contrast changes after the start command, and the `CHG_COLCON` command, do not apply. The parser ignores the `org`, `scale`, `align`, `fadein/out` and `time offset` player settings.
 - **Spec**: [DVD subtitles](http://sam.zoy.org/writings/dvd/subtitles/), [DVD sub-pictures](http://dvd.sourceforge.net/dvdinfo/spu.html) and the FFmpeg [decoder](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/dvdsubdec.c) and [demuxer](https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/mpeg.c).
 
+## Finding cues
+```php
+count($subtitle);                               // 612
+foreach ($subtitle as $index => $cue) { }       // in index order
+
+$subtitle->getCuesAt(83.2);                     // [41 => $cue], the cues on screen at 83.2 s
+$subtitle->getCueIndexAt(83.2);                 // 41, or null when no cue is on screen
+$subtitle->getCuesBetween(600, 660);            // the cues that overlap 600 s to 660 s, not cut
+$subtitle->findCues(fn (SubtitleCue $cue) => str_contains($cue->getText(), 'Paris'));
+$subtitle->filterCues(fn (SubtitleCue $cue) => $cue->getEnd() - $cue->getStart() >= 0.5);   // removes the other cues
+```
+
+- **On screen**: a cue is on screen at time `t` when `start <= t < end`. A cue from 4.0 s to 6.0 s is on screen at 4.0 s, but not at 6.0 s. A cue with the same start and end is never on screen.
+- **Overlaps**: cues can overlap, so `getCuesAt()` returns an array. `getCueIndexAt()` returns the lowest index of these cues.
+- **Keys**: `getCuesAt()`, `getCuesBetween()` and `findCues()` keep the cue index as the array key.
+- **Speed**: when the cues are in start order, `getCuesAt()` and `getCuesBetween()` use binary search. On 10,000 cues, a call takes about 0.6 ms instead of 2 ms. The lookup sees changes to cue times without a call to `reIndexCues()`.
+- **Filter**: `filterCues()` moves a comment before a removed cue to the next kept cue, and then calls `reIndexCues()`.
+- **No array access**: `$subtitle[3]` does not work. Use `getCues()`, `addCue()` and `removeCue()`, so the cue indexes and comments stay correct.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
