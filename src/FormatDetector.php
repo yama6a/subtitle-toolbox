@@ -11,12 +11,15 @@ use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\WebVttParser;
 
 class FormatDetector
 {
     private const LRC_TIMESTAMP = '\[\d{2,3}:\d{2}(?:[.:]\d{2,3})?\]';
+
+    private const SUBVIEWER_TIMING = '\d{2}:\d{2}:\d{2}\.\d{2},\d{2}:\d{2}:\d{2}\.\d{2}';
 
     private const XML_PROLOG = '(?:\s|<\?.*?\?>|<!--.*?-->|<!DOCTYPE[^>]*>)*';
 
@@ -36,6 +39,11 @@ class FormatDetector
      * 9. LRC: an ID tag or a timestamp in brackets, and at least one timestamp line.
      * 10. PGS: the `PG` magic bytes, then a known segment type after the two 4-byte time stamps.
      * 11. JSON: an object with a numeric "version" key and a "cues" list. The possessive loops skip strings without backtracking.
+     * 9. SubViewer: a `******** START SCRIPT ********` line for version 1. For version 2, an `[INFORMATION]` first line,
+     *    or a timing line with two digits after the dot that only header tags precede. It comes after SBV, and before
+     *    LRC, whose signature also matches `[00:00:01]`.
+     * 10. LRC: an ID tag or a timestamp in brackets, and at least one timestamp line.
+     * 11. PGS: the `PG` magic bytes, then a known segment type after the two 4-byte time stamps.
      */
     private const SIGNATURES = [
         WebVttParser::class   => '/\AWEBVTT(?:[ \t\n]|\z)/',
@@ -46,6 +54,8 @@ class FormatDetector
         MicroDvdParser::class => '/\A\{\d+\}\{\d*\}/',
         SubRipParser::class   => '/\A\d+[ \t]*\n[ \t]*\d+:\d{2}:\d{2}(?:[,.]\d+)?[ \t]*-->/',
         SbvParser::class      => '/\A\d+:\d{2}:\d{2}\.\d{3},\d+:\d{2}:\d{2}\.\d{3}[ \t]*$/m',
+        SubViewerParser::class => '/^\*{8} START SCRIPT \*{8}[ \t]*$' .
+                                  '|\A(?:\[INFORMATION\]|(?:\[.*\n)*' . self::SUBVIEWER_TIMING . ')[ \t]*$/m',
         LyricsParser::class   => '/\A(?=' . self::LRC_TIMESTAMP . '|\[[A-Za-z#][A-Za-z0-9_]*:[^\]\n]*\]).*?^[ \t]*' .
                                  self::LRC_TIMESTAMP . '/ms',
         PgsParser::class      => '/\APG.{8}[\x14-\x17\x80]/s',

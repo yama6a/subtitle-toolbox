@@ -96,6 +96,7 @@ $subtitle->getFormatData('ass');                        // [] when not set
 | SBV (.sbv)      | Accepts any number of hour digits | Writes one hour digit below 10 hours, no UTF-8 BOM | Formatter strips all xml tags and decodes HTML entities. Text with `<`, `>` and `&` round-trips
 | SSA (.ssa)      | SubStation Alpha v4.00 with `[V4 Styles]` and `Marked=` columns | Writes SSA back when the parsed file was SSA, legacy `\a` alignment tags | Same parser and formatter as ASS
 | SubRip (.srt)   | Reads coordinates, alignment tags and lenient timestamps | Writes standard timestamps, coordinates and alignment tags | Formatter strips all xml tags except: \<b>\<i>\<u>\<s>\<font>
+| SubViewer (.sub) | SubViewer 1 and 2, header tags, the `[COLF]` style line | SubViewer 2 by default, SubViewer 1 with `OPTION_VERSION` | Formatter strips all xml tags and decodes HTML entities. Writes times in centiseconds for version 2 and in seconds for version 1
 | TTML (.ttml, .dfxp, .xml) | TTML 1, TTML 2, IMSC and the DFXP namespace. All time expressions, `body` and `div` offsets | Media clock times, `<head>` and attributes of the input file | Converts `tts:fontWeight`, `tts:fontStyle`, `tts:textDecoration`, `tts:color` and `ttm:agent` to core markup and back
 | VobSub (.idx and .sub) | DVD bitmaps as image cues. The `size`, `palette`, `custom colors`, `id`, `delay` and `timestamp` lines of the `.idx` | Not supported | See [VobSub](#vobsub)
 | WebVTT (.vtt)   | Header, comments, cue identifiers, styles, regions and cue settings | Writes them back, numbers cues without identifier, always writes hours | Formatter strips all xml tags except: \<b>\<u>\<i>\<v>\<lang>\<c>\<ruby>\<rt> and inline timestamps
@@ -276,10 +277,12 @@ Detection ignores a UTF-8 BOM and leading blank lines. It checks the signatures 
 | 6 | `MicroDvdParser` | `{24}{72}` |
 | 7 | `SubRipParser` | `1`, then `00:00:01,000 -->` |
 | 8 | `SbvParser` | `0:00:01.500,0:00:04.000` |
-| 9 | `LyricsParser` | `[ti:Title]` or `[00:12.00]`, and at least one timestamp line |
-| 10 | `PgsParser` | the bytes `PG`, then a known segment type at byte 10 |
+| 9 | `SubViewerParser` | `******** START SCRIPT ********`, `[INFORMATION]` or `00:00:01.50,00:00:04.00` |
+| 10 | `LyricsParser` | `[ti:Title]` or `[00:12.00]`, and at least one timestamp line |
+| 11 | `PgsParser` | the bytes `PG`, then a known segment type at byte 10 |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line looks like SubRip, so it detects as SubRip.
+- **`.sub` files**: MicroDVD, MPSub and SubViewer text files all use `.sub`. SBV has three digits after the dot, SubViewer 2 has two.
 - **MicroDVD**: detection does not find the frame rate. `parse()` throws `ParsingException` for a MicroDVD file without a `{1}{1}<fps>` first line. Then pass the frame rate: `(new MicroDvdParser(23.976))->parse($content)`.
 
 ## Editing cues
@@ -691,6 +694,23 @@ Home.
 
 - **Gap**: the start of a cue minus the latest end of the earlier cues.
 - **Cues without text**: the formatter skips them. Image cues without text need `OPTION_SKIP_IMAGE_CUES`, as in all text formatters.
+
+## SubViewer
+SubViewer 1 and 2 are `.sub` formats from older DivX releases and DVD rippers. One parser reads both versions.
+
+```php
+$subtitle = Subtitle::parse(file_get_contents('movie.sub'), SubViewerParser::class);
+$subtitle->getFormatData('subviewer');   // ['version' => 2, 'header' => ['DELAY' => '0', 'CD TRACK' => '0'], 'style' => '[COLF]&HFFFFFF,[STYLE]bd,[SIZE]18,[FONT]Arial']
+$subtitle->format(SubViewerFormatter::class);                                            // SubViewer 2
+$subtitle->format(SubViewerFormatter::class, [SubViewerFormatter::OPTION_VERSION => 1]); // SubViewer 1
+```
+
+- **Version**: a `******** START SCRIPT ********` line makes a file SubViewer 1. All other files are SubViewer 2.
+- **Header**: `[TITLE]` and `[AUTHOR]` become the metadata keys `title` and `author`. The parser keeps the other header tags and the `[COLF]` style line in the `subviewer` format data. The formatter writes them back after `[TITLE]` and `[AUTHOR]`. For a subtitle from another format, it writes the tags that Subtitle Edit writes.
+- **Delay**: the parser adds the SubViewer 1 `[DELAY]` seconds to every time, as FFmpeg does. It stores `[DELAY]` as 0. It keeps the SubViewer 2 `[DELAY]` value and does not apply it.
+- **SubViewer 2 text**: `[br]` and each text line become a cue line. The formatter writes all lines of a cue on one line, joined by `[br]`. The parser accepts one to three digits after the dot, as FFmpeg does.
+- **SubViewer 1 cues**: a `[00:00:01]` line with text below starts a cue. A time line with an empty line below ends the cue before it. A cue without such an end line ends where the next cue starts. The last cue lasts 10 s unless you pass `lastCueDuration` to the parser. `|` is a line break. As in FFmpeg, the parser reads only the first text line after a time line.
+- **Cues without text**: the formatter skips them, because an empty line ends a cue.
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
