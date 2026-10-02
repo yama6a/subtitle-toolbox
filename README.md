@@ -1396,6 +1396,48 @@ $subtitle->mergeShortCues(new MergeShortCuesOptions(
 - **Speakers**: when both cues start with a `<v>` tag of the same speaker, the joined text keeps only the tag of the first cue.
 - **Interview transcripts**: with `sameSpeakerOnly: true`, a cue without a `<v>` tag never joins.
 
+## Speakers
+Core markup holds a speaker as `<v Anna>`. `SpeakerLabels` converts it to the forms that formats without `<v>` can show, and back.
+
+```php
+use SubtitleToolbox\Parsers\WhisperJsonParser;
+use SubtitleToolbox\Speakers\SpeakerLabels;
+
+$subtitle = (new WhisperJsonParser([WhisperJsonParser::OPTION_SPEAKER_VOICES => true]))->parse($whisperXJson);
+SpeakerLabels::list($subtitle);                                            // ['SPEAKER_00' => 14, 'SPEAKER_01' => 9], cues per speaker
+SpeakerLabels::rename($subtitle, ['SPEAKER_00' => 'Anna', 'SPEAKER_01' => 'Ben']);
+SpeakerLabels::toPrefix($subtitle);                                        // '<v Anna>Where were you?' becomes 'ANNA: Where were you?'
+$subtitle->format(SubRipFormatter::class);
+```
+
+| Method | Input | Output |
+|:--- |:--- |:--- |
+| `toPrefix($subtitle, $upperCase = true, $separator = ': ')` | `<v Anna>Where were you?` | `ANNA: Where were you?` |
+| `toDialogueDashes($subtitle, $dash = '- ')` | `<v Anna>Where?` and `<v Ben>Home.` in one cue | `- Where?` and `- Home.` |
+| `toColours($subtitle, $colours = SpeakerLabels::BBC_COLOURS)` | `<v Anna>Where?` and `<v Ben>Home.` | `<font color="#ffffff">Where?</font>` and `<font color="#ffff00">Home.</font>` |
+| `fromPrefix($subtitle, $upperCaseOnly = true)` | `JOHN: Hi.` | `<v John>Hi.` |
+| `rename($subtitle, $names)` | `<v SPEAKER_00>` | `<v Anna>` |
+| `list($subtitle)` | the subtitle | `['Anna' => 14, 'Ben' => 9]` |
+
+| Format | Reads `<v>` from | Writes `<v>` as |
+|:--- |:--- |:--- |
+| WebVTT | `<v Anna>` | `<v Anna>` |
+| TTML, IMSC, DFXP | `ttm:agent` with its `ttm:name` | `ttm:agent` |
+| ASS, SSA | the Name field | the Name field, only the first speaker of a cue |
+| Whisper JSON | the segment `speaker`, with `OPTION_SPEAKER_VOICES` | no formatter |
+| JSON | the cue lines | the cue lines |
+| all other formats, iTT too | no speaker | nothing. Convert with `toPrefix()`, `toDialogueDashes()` or `toColours()` first |
+
+- **Speaker**: a `<v>` tag sets the speaker until `</v>`, the next `<v>` tag or the end of the cue.
+- **New line**: where the speaker changes in the middle of a line, the converters start a new line. Style tags such as `<i>` close at the end of the first line and open again on the next.
+- **Prefix**: every cue repeats the name of its speaker. `$upperCase = false` keeps the name as it is.
+- **Dashes**: only cues with two or more speakers get dashes. Text without a speaker counts as one speaker. A line that already starts with `-` gets no second dash.
+- **Colours**: the BBC order is white, yellow, cyan and green, from the [BBC Subtitle Guidelines](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/). Each speaker gets the next colour in the order of its first cue. The fifth speaker gets the first colour again. A colour that is not `#rrggbb` throws `InvalidArgumentException`.
+- **Labels**: `fromPrefix()` uses the `speakerLabels` rule of `HearingImpairedOptions`. It reads `JOHN:`, `MAN 2:` and `DR. O'NEIL:` at the start of a line or after its dash. With `$upperCaseOnly = false`, it also reads `Baker:` and `Note:`.
+- **Label names**: an upper case label becomes title case, so `DR. O'NEIL:` becomes `<v Dr. O'Neil>`. The dash before a label goes. A label on a line of its own names the speaker of the next line.
+- **Whisper**: `OPTION_SPEAKER_VOICES` is off by default. The `speaker` field also stays in the cue format data. whisper.cpp `-di` writes the speakers `0` and `1`, and `?` when it cannot tell. The parser ignores the speaker of each WhisperX word.
+- **Names**: the `list()` key of a speaker such as `0` is an int. A quote in a name is written as `&#39;` or `&quot;` in the tag.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:

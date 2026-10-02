@@ -15,6 +15,9 @@ class WhisperJsonParser extends SubtitleParser
 
     public const OPTION_WORD_TIMESTAMPS = "OPTION_WORD_TIMESTAMPS";
 
+    /** Writes the "speaker" field of each segment as a <v> tag at the start of its cue, for example <v SPEAKER_00>. */
+    public const OPTION_SPEAKER_VOICES = "OPTION_SPEAKER_VOICES";
+
     // TO_LANGUAGE_CODE of openai/whisper, whisper/tokenizer.py. The OpenAI API returns these names in verbose_json.
     private const LANGUAGE_CODES = [
         "english" => "en", "chinese" => "zh", "german" => "de", "spanish" => "es", "russian" => "ru",
@@ -42,14 +45,17 @@ class WhisperJsonParser extends SubtitleParser
     ];
 
     private bool $wordTimestamps;
+    private bool $speakerVoices;
 
 
     /**
-     * Creates a parser that writes the word timestamps into the cue lines as core markup when OPTION_WORD_TIMESTAMPS is true.
+     * Creates a parser that writes word timestamps and speakers as core markup when OPTION_WORD_TIMESTAMPS and
+     * OPTION_SPEAKER_VOICES are true.
      */
     public function __construct(array $options = [])
     {
         $this->wordTimestamps = !empty($options[self::OPTION_WORD_TIMESTAMPS]);
+        $this->speakerVoices  = !empty($options[self::OPTION_SPEAKER_VOICES]);
     }
 
 
@@ -90,7 +96,14 @@ class WhisperJsonParser extends SubtitleParser
                 continue;
             }
 
-            $cue = new SubtitleCue($start, $end, $this->wordTimestamps ? $this->withWordTimestamps($text, $words) : $this->escape($text));
+            $markup  = $this->wordTimestamps ? $this->withWordTimestamps($text, $words) : $this->escape($text);
+            $speaker = is_string($formatData["speaker"] ?? null) ? trim($formatData["speaker"]) : "";
+            if ($this->speakerVoices && $speaker !== "") {
+                // strip_tags() in the formatters reads a quote in a tag as the start of an attribute value.
+                $markup = "<v " . str_replace(["'", "\""], ["&#39;", "&quot;"], $this->escape($speaker)) . ">" . $markup;
+            }
+
+            $cue = new SubtitleCue($start, $end, $markup);
             $subtitle->addCue($cue->setFormatData(self::FORMAT_DATA_KEY, $formatData), false);
         }
 
