@@ -9,6 +9,8 @@ use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\DualSubtitleOptions;
 use SubtitleToolbox\Encoding\Cea608;
+use SubtitleToolbox\Fixing\CommonErrorOptions;
+use SubtitleToolbox\Fixing\OcrReplaceList;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Formatters\EbuStlFormatter;
 use SubtitleToolbox\Formatters\IttFormatter;
@@ -173,6 +175,9 @@ class ThrowSitesTest extends TestCase
             "Fixes.php: minimum duration 0"                 => [fn () => self::subtitle()->extendShortCues(0), ...$invalid],
             "Fixes.php: maximum characters 0"               => [fn () => self::subtitle()->wrapLines(0), ...$invalid],
             "Fixes.php: negative gap"                       => [fn () => self::subtitle()->fixOverlaps(-1), ...$invalid],
+            "Fixing/CommonErrorOptions.php: dialogue dash"  => [fn () => new CommonErrorOptions(dialogueDash: "*"), ...$invalid],
+            "Fixing/OcrReplaceList.php: invalid regex"      => [fn () => new OcrReplaceList(regularExpressions: ["/(/" => ""]), ...$invalid],
+            "Fixing/OcrReplaceList.php: invalid XML"        => [fn () => OcrReplaceList::fromSubtitleEditXml("<ReplaceList>"), ...$parsing],
             "Formatters/EbuStlFormatter.php: frame rate 24" => [fn () => self::subtitle()->format(EbuStlFormatter::class,
                 [EbuStlFormatter::OPTION_FRAME_RATE => 24]), ...$invalid],
             "Formatters/EbuStlFormatter.php: code table 09" => [fn () => self::subtitle()->setFormatData(EbuStlParser::FORMAT_DATA_KEY,
