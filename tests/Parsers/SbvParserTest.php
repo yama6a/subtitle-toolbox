@@ -65,6 +65,34 @@ class SbvParserTest extends TestCase
     }
 
 
+    public function testTextIsStoredWithMarkupCharactersEscaped(): void
+    {
+        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/sbv/special_characters.sbv"), SbvParser::class);
+
+        $this->assertSame(["I &lt;3 bread &amp; jam"], $subtitle->getCues()[0]->getLines());
+        $this->assertSame(
+            ["&lt;b&gt;is not bold&lt;/b&gt; in SBV", "The bakery &amp;amp; the station"],
+            $subtitle->getCues()[1]->getLines()
+        );
+    }
+
+
+    public function testTextWithMarkupCharactersRoundTrips(): void
+    {
+        $raw = file_get_contents(__DIR__ . "/../files/sbv/special_characters.sbv");
+
+        $this->assertSame($raw, Subtitle::parse($raw, SbvParser::class)->format(SbvFormatter::class));
+    }
+
+
+    public function testLatin1TextKeepsItsBytes(): void
+    {
+        $subtitle = Subtitle::parse("0:00:01.000,0:00:02.000\ncaf\xE9 & bread\n", SbvParser::class);
+
+        $this->assertSame(["caf\xE9 &amp; bread"], $subtitle->getCues()[0]->getLines());
+    }
+
+
     public function testExceededMinutesThrowsException(): void
     {
         $this->expectException(ParsingException::class);

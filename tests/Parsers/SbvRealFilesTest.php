@@ -16,7 +16,7 @@ class SbvRealFilesTest extends TestCase
             "subsrt shape" => [
                 "subsrt_shape.sbv",
                 5,
-                [0.48, 3.95, ">> MARA: Good morning, this is Mara Lind[br]and this is Tom Berg"],
+                [0.48, 3.95, "&gt;&gt; MARA: Good morning, this is Mara Lind[br]and this is Tom Berg"],
                 [16.3, 21.15, "First, we put the flour and the water on the table"],
             ],
             "YouTube Studio LF" => [
