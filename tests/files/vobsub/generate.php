@@ -3,6 +3,10 @@
 // Writes the VobSub test fixtures in this folder. Run: php tests/files/vobsub/generate.php
 // The encoder here is separate from src/Parsers/VobSubParser.php, so the tests compare two implementations.
 
+require_once __DIR__ . "/../ocr/generator/TextBitmap.php";
+
+use SubtitleToolbox\Ocr\TextBitmap;
+
 const PACK_SIZE = 2048;
 const PALETTE   = "000000, f0f0f0, cccccc, 999999, 3333fa, 1111bb, fa3333, bb1111, " .
                   "33fa33, 11bb11, fafa33, bbbb11, fa33fa, bb11bb, 33fafa, 11bbbb";
@@ -187,9 +191,42 @@ function idxTime(float $time): string
 
 
 /**
+ * Text in Liberation Sans with a 2 pixel outline: background (0), pattern for the fill (1), emphasis 1 for
+ * the anti-aliased fill edge (2) and emphasis 2 for the outline (3).
+ */
+function text(array $lines, float $size): array
+{
+    $bitmap = TextBitmap::render($lines, $size, 2.0, 4);
+    $rows   = [];
+    foreach ($bitmap->fill as $index => $fill) {
+        $rows[intdiv($index, $bitmap->width)][] = match (true) {
+            $fill >= 0.6                      => 1,
+            $fill >= 0.25                     => 2,
+            $bitmap->outline[$index] >= 0.5   => 3,
+            default                           => 0,
+        };
+    }
+
+    return $rows;
+}
+
+
+/**
  * @param list<array{lines: list<string>, index: int, delay?: float, units: list<array{float, string}>}> $tracks
  */
 function writeFixture(string $name, array $header, array $tracks, string $eol): void
+{
+    [$idx, $sub] = buildFixture($header, $tracks, $eol);
+    file_put_contents(__DIR__ . "/$name.idx", $idx);
+    file_put_contents(__DIR__ . "/$name.sub", $sub);
+}
+
+
+/**
+ * @param list<array{lines: list<string>, index: int, delay?: float, units: list<array{float, string}>}> $tracks
+ * @return array{string, string} the .idx and the .sub content
+ */
+function buildFixture(array $header, array $tracks, string $eol): array
 {
     $all = [];
     foreach ($tracks as $trackNumber => $track) {
@@ -215,8 +252,7 @@ function writeFixture(string $name, array $header, array $tracks, string $eol): 
         $lines[] = "";
     }
 
-    file_put_contents(__DIR__ . "/$name.idx", implode($eol, $lines));
-    file_put_contents(__DIR__ . "/$name.sub", $sub);
+    return [implode($eol, $lines), $sub];
 }
 
 
@@ -269,6 +305,46 @@ function idxHeader(string $size, string $customColors): array
     ];
 }
 
+
+/** Start and end in seconds, the text lines with <i> runs and the font size in pixels. */
+const TEXT_CUES = [
+    [1.0, 3.5, ["The ferry leaves from pier 2."], 28],
+    [4.0, 7.0, ["Bring a warm coat.", "It gets cold on deck."], 28],
+    [7.5, 10.0, ["<i>Fog over the harbour this morning.</i>"], 26],
+    [10.5, 13.0, ["The cafe sells soup until 4 p.m."], 24],
+    [13.5, 16.5, ["Wind from the west,", "about 20 km per hour."], 30],
+    [17.0, 19.5, ["Please keep your ticket."], 26],
+];
+
+
+/**
+ * One English track of text units on a 720x576 screen, see TEXT_CUES.
+ *
+ * @return array{string, string} the .idx and the .sub content
+ */
+function textFixture(): array
+{
+    $units = [];
+    foreach (TEXT_CUES as [$start, $end, $lines, $size]) {
+        $rows    = text($lines, $size);
+        $stop    = (int)round(($end - $start) * 90000 / 1024);
+        $units[] = [$start, unit($rows, intdiv(720 - count($rows[0]), 2), 536 - count($rows), [0, 1, 3, 0], [0, 15, 15, 15],
+                                 [[0, ["params", "\x01"]], [$stop, ["\x02"]]])];
+    }
+
+    return buildFixture(idxHeader("720x576", "OFF, tridx: 0000, colors: 000000, 000000, 000000, 000000"), [
+        ["lines" => ["# English", "id: en, index: 0"], "index" => 0, "units" => $units],
+    ], "\r\n");
+}
+
+
+if (realpath($_SERVER["SCRIPT_FILENAME"] ?? "") !== __FILE__) {
+    return;
+}
+
+[$idx, $sub] = textFixture();
+file_put_contents(__DIR__ . "/text-pal.idx", $idx);
+file_put_contents(__DIR__ . "/text-pal.sub", $sub);
 
 $show = fn (int $stop): array => [[0, ["params", "\x01"]], [$stop, ["\x02"]]];
 

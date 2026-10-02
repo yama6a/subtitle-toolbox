@@ -3,6 +3,9 @@
 namespace SubtitleToolbox\Parsers;
 
 require_once __DIR__ . "/PgsFixtureWriter.php";
+require_once __DIR__ . "/../../ocr/generator/TextBitmap.php";
+
+use SubtitleToolbox\Ocr\TextBitmap;
 
 /**
  * Builds the PGS test fixtures from simple shapes. generate.php writes them to tests/files/pgs/.
@@ -27,6 +30,26 @@ final class PgsFixtures
     public const FILES = [
         "shapes_1080p.sup" => "shapes1080p",
         "shapes_576p.sup"  => "shapes576p",
+        "text_1080p.sup"   => "text1080p",
+    ];
+
+    private const WHITE_RGB  = [255, 255, 255];
+    private const YELLOW_RGB = [255, 255, 0];
+
+    /** Start and end in seconds, the text lines with <i> runs, the font size in pixels, the fill and the top position. */
+    public const TEXT_CUES = [
+        [1.0, 3.5, ["The train to Bergen leaves at 7:45."], 52, self::WHITE_RGB, false],
+        [4.0, 7.0, ["The bakery opens at six.", "Fresh bread is ready by seven."], 52, self::WHITE_RGB, false],
+        [7.5, 10.0, ["Rain is likely after 3 p.m. today."], 48, self::WHITE_RGB, false],
+        [10.5, 13.0, ["Platform 4, please.", "Watch your step."], 56, self::YELLOW_RGB, false],
+        [13.5, 16.0, ["<i>The wind turns north tonight.</i>"], 52, self::WHITE_RGB, false],
+        [16.5, 19.0, ["We sold 120 rolls before noon!"], 60, self::WHITE_RGB, false],
+        [19.5, 22.5, ["Is the 9:10 bus late again?", "Yes, by about five minutes."], 48, self::WHITE_RGB, false],
+        [23.0, 25.5, ["<i>Snow</i> is expected on Friday."], 52, self::WHITE_RGB, true],
+        [26.0, 28.5, ["Two loaves of rye, one baguette."], 44, self::WHITE_RGB, false],
+        [29.0, 31.5, ["The next stop is Central Station."], 52, self::YELLOW_RGB, false],
+        [32.0, 35.0, ["Temperatures stay near 18 degrees.", "Light clouds in the evening."], 50, self::WHITE_RGB, false],
+        [35.5, 38.0, ["<i>Tickets cost 4.50 each.</i>"], 56, self::WHITE_RGB, false],
     ];
 
 
@@ -139,6 +162,88 @@ final class PgsFixtures
         }
 
         return $w->bytes();
+    }
+
+
+    /**
+     * Text cues in Liberation Sans on a 1920x1080 screen, with a black outline and anti-aliased edges, see TEXT_CUES.
+     */
+    public static function text1080p(): string
+    {
+        $w = new PgsFixtureWriter();
+        foreach (self::TEXT_CUES as $index => [$start, $end, $lines, $size, $fill, $top]) {
+            [$pixels, $palette, $width, $height] = self::textObject(TextBitmap::render($lines, $size, $size / 16, 2), $fill);
+            $x        = intdiv(1920 - $width, 2);
+            $y        = $top ? 60 : 1020 - $height;
+            $startPts = (int)round($start * 90000);
+            $endPts   = (int)round($end * 90000);
+            $w->presentation($startPts, 1920, 1080, 2 * $index, PgsFixtureWriter::STATE_EPOCH_START, 0,
+                             [["id" => 0, "window" => 0, "x" => $x, "y" => $y]])
+              ->windows($startPts, [0 => [$x, $y, $width, $height]])
+              ->palette($startPts, 0, 0, $palette)
+              ->object($startPts, 0, 0, $width, $height, $pixels)
+              ->end($startPts)
+              ->presentation($endPts, 1920, 1080, 2 * $index + 1, PgsFixtureWriter::STATE_NORMAL, 0, [])
+              ->windows($endPts, [0 => [$x, $y, $width, $height]])
+              ->end($endPts);
+        }
+
+        return $w->bytes();
+    }
+
+
+    /**
+     * Quantizes fill and outline coverage to 16 levels each, so the palette has at most 136 entries.
+     *
+     * @param array{int, int, int} $fill
+     * @return array{string, array<int, array{int, int, int, int}>, int, int} the pixels, the palette, the width and the height
+     */
+    public static function textObject(TextBitmap $bitmap, array $fill): array
+    {
+        $palette = [self::TRANSPARENT => self::PALETTE[self::TRANSPARENT]];
+        $lookup  = [];
+        $pixels  = "";
+        foreach ($bitmap->fill as $index => $fillCoverage) {
+            $f     = self::roundHalfUp($fillCoverage * 15) / 15;
+            $o     = max($f, self::roundHalfUp($bitmap->outline[$index] * 15) / 15);
+            $alpha = $f + $o * (1 - $f);
+            if ($alpha <= 0.0) {
+                $pixels .= chr(self::TRANSPARENT);
+                continue;
+            }
+            $key = "$f/$o";
+            if (!isset($lookup[$key])) {
+                $rgb          = array_map(fn (int $channel): float => $channel * $f / $alpha / 255, $fill);
+                $lookup[$key] = count($palette);
+                $palette[]    = [...self::ycrcb709($rgb), self::roundHalfUp($alpha * 255)];
+            }
+            $pixels .= chr($lookup[$key]);
+        }
+
+        return [$pixels, $palette, $bitmap->width, $bitmap->height];
+    }
+
+
+    /**
+     * Converts red, green and blue from 0 to 1 to limited range BT.709 [Y, Cr, Cb].
+     *
+     * @param list<float> $rgb
+     * @return array{int, int, int}
+     */
+    private static function ycrcb709(array $rgb): array
+    {
+        [$red, $green, $blue] = $rgb;
+        $luma                 = 0.2126 * $red + 0.7152 * $green + 0.0722 * $blue;
+
+        return [self::roundHalfUp(16 + 219 * $luma), self::roundHalfUp(128 + 224 * ($red - $luma) / 1.5748),
+                self::roundHalfUp(128 + 224 * ($blue - $luma) / 1.8556)];
+    }
+
+
+    // PHP 8.4 changed round() for values close to .5, so round() gives other bytes on PHP 8.2.
+    private static function roundHalfUp(float $value): int
+    {
+        return (int)floor($value + 0.5);
     }
 
 
