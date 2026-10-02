@@ -238,6 +238,8 @@ use SubtitleToolbox\Validation\ValidationRules;
 
 $results = $subtitle->validate(ValidationRules::netflixEnglish(23.976));
 $results = $subtitle->validate(new ValidationRules(maxCharactersPerLine: 37, noEmptyCues: true));
+$results = $subtitle->validate(ValidationRules::bbc());
+$results = $subtitle->validate(new ValidationRules(noUnbalancedTags: true, maxSpeakersPerCue: 2));
 
 $results[0]->getCueIndex();     // 1
 $results[0]->getRule();         // 'maxCharactersPerLine', see the ValidationResult::RULE_* constants
@@ -254,11 +256,24 @@ $results[0]->getLimit();        // 37
 | `minGap` | seconds | start minus the latest end of the earlier cues. Overlaps are not gaps |
 | `noOverlap` | `true` to check, result limit `null` | seconds of overlap with the earlier cues |
 | `noEmptyCues` | `true` to check, result limit `null` | 0 |
+| `noDoubleSpaces` | `true` to check, result limit `null` | runs of two or more spaces between words. A non-breaking space counts as a space |
+| `noLeadingOrTrailingSpaces` | `true` to check, result limit `null` | lines that start or end with a space or a non-breaking space |
+| `noUnbalancedTags` | `true` to check, result limit `null` | `<b>`, `<i>`, `<u>`, `<s>` and `<font>` tags without a partner tag, across all lines of the cue. An open `<v>` needs no `</v>` |
+| `dialogueDashStyle` | the dash and the space after it: `'- '`, `'-'`, `'\u{2013} '` and so on. Result limit `null` | lines with a dialogue dash in another style |
+| `maxSpeakersPerCue` | speakers | the lines with a dialogue dash or the different `<v>` names, the larger count |
+| `maxWordsPerMinute` | words per minute | words divided by the duration. `INF` for a cue with words and no duration |
+| `minSecondsPerWord` | seconds per word | duration divided by the words |
+| `allowedCharacters` | the allowed characters as a string, or a regular expression character class such as `'[A-Za-z0-9 .,!?]'`. Result limit `null` | characters that are not allowed. A space is always allowed |
+| `noAllCapsLines` | `true` to check, result limit `null` | lines with two or more upper case letters and no lower case letter. `<v>` names and text in `[]` or `()` do not count |
 
 - **Off by default**: a rule with the limit `null` or `false` is off.
 - **Characters**: the count leaves out tags and leading and trailing spaces. It counts an entity such as `&amp;` as one character and a UTF-8 letter of several bytes as one character.
+- **Spaces**: the text rules check the text without tags, with entities decoded. A cue stores runs of spaces as one space, so two spaces come from tags, as in `you? <i> Home</i>`, or from non-breaking spaces.
+- **Dialogue dash**: a hyphen, an en dash or an em dash at the start of a line, not followed by a digit or another dash. So `-20 degrees` has no dialogue dash.
+- **Words**: text runs between white space, as `SubtitleStatistics` counts them. A lone dash is a word.
 - **Milliseconds**: cue times have millisecond precision. So a cue of 0.833 s meets a minimum duration of 5/6 s.
 - **Netflix English preset**: 20 characters per second for adult programs, 42 characters per line, 2 lines, 5/6 s to 7 s, a gap of 2 frames at the given frame rate, no overlaps. The values come from the [English (USA) Timed Text Style Guide](https://partnerhelp.netflixstudios.com/hc/en-us/articles/217350977-English-USA-Timed-Text-Style-Guide), the [General Requirements](https://partnerhelp.netflixstudios.com/hc/en-us/articles/215758617) and the [Subtitle Timing Guidelines](https://partnerhelp.netflixstudios.com/hc/en-us/articles/360051554394).
+- **BBC preset**: 37 characters per line, 180 words per minute and 0.3 s per word. The values come from the [BBC Subtitle Guidelines](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/). The line length is the broadcast limit in [3.1 Line length](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/#Line-length). The speed is the upper end of the 160 to 180 words per minute in [4 Timing](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/#Timing). The time per word is the minimum in [4.1 Target minimum timing](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/#Target-minimum-timing). 0.3 s per word allows 200 words per minute, so a cue can break the speed rule and still meet the time per word.
 
 ## Format detection
 File extensions do not identify a format. For example, a `.sub` file can be MicroDVD or MPSub. So the library reads the start of the content.

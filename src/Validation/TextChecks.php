@@ -1,0 +1,230 @@
+<?php
+
+namespace SubtitleToolbox\Validation;
+
+use SubtitleToolbox\Markup;
+use SubtitleToolbox\SubtitleCue;
+
+/**
+ * @internal
+ */
+final class TextChecks
+{
+    private const DASHES = '\-\x{2010}\x{2013}\x{2014}';
+
+    // A dash before a digit, such as "-20 degrees", is a minus sign and starts no dialogue.
+    private const DIALOGUE_DASH = '/^[' . self::DASHES . '](?![' . self::DASHES . '])[ \t\x{00A0}]*(?=[^\s\p{N}])/u';
+
+    private const STYLE_TAG = '/<(\/?)(b|i|u|s|font|v)(?=[\s.>])[^<>]*>/i';
+
+
+    /**
+     * Returns one result per text rule that the cue breaks.
+     *
+     * @return list<ValidationResult>
+     */
+    public static function check(int $cueIndex, SubtitleCue $cue, float $duration, ValidationRules $rules): array
+    {
+        $lines   = array_map(fn (string $line): string => Markup::decodeEntities(Markup::stripAllTags($line)), $cue->getLines());
+        $visible = array_values(array_filter($lines, fn (string $line): bool => trim($line) !== ""));
+        $counts  = [];
+
+        if ($rules->noDoubleSpaces) {
+            $counts[ValidationResult::RULE_NO_DOUBLE_SPACES] = [array_sum(array_map(
+                fn (string $line): int => self::count('/(?<=\S)\h{2,}(?=\S)/u', '/(?<=\S)[ \t]{2,}(?=\S)/', $line),
+                $visible
+            )), null];
+        }
+
+        if ($rules->noLeadingOrTrailingSpaces) {
+            $counts[ValidationResult::RULE_NO_LEADING_OR_TRAILING_SPACES] = [count(array_filter(
+                $visible,
+                fn (string $line): bool => self::count('/^\h|\h$/u', '/^[ \t]|[ \t]$/', $line) > 0
+            )), null];
+        }
+
+        if ($rules->noUnbalancedTags) {
+            $counts[ValidationResult::RULE_NO_UNBALANCED_TAGS] = [self::unbalancedTags(implode("\n", $cue->getLines())), null];
+        }
+
+        if ($rules->dialogueDashStyle !== null) {
+            $style = '/^' . preg_quote($rules->dialogueDashStyle, "/") . '(?=\S)/u';
+            $counts[ValidationResult::RULE_DIALOGUE_DASH_STYLE] = [count(array_filter(
+                $visible,
+                fn (string $line): bool => self::startsWithDialogueDash($line) && preg_match($style, ltrim($line)) !== 1
+            )), null];
+        }
+
+        if ($rules->maxSpeakersPerCue !== null) {
+            $speakers = self::speakers($cue->getLines(), $visible);
+            if ($speakers > $rules->maxSpeakersPerCue) {
+                $counts[ValidationResult::RULE_MAX_SPEAKERS_PER_CUE] = [$speakers, $rules->maxSpeakersPerCue];
+            }
+        }
+
+        $words = self::countWords(implode("\n", $lines));
+        if ($rules->maxWordsPerMinute !== null && $words > 0) {
+            $wordsPerMinute = $duration > 0 ? $words / $duration * 60 : INF;
+            if ($wordsPerMinute > $rules->maxWordsPerMinute) {
+                $counts[ValidationResult::RULE_MAX_WORDS_PER_MINUTE] = [$wordsPerMinute, $rules->maxWordsPerMinute];
+            }
+        }
+
+        // Cue times have millisecond precision, so compare the duration with the needed time in milliseconds.
+        if ($rules->minSecondsPerWord !== null && $words > 0 && $duration < round($rules->minSecondsPerWord * $words, 3)) {
+            $counts[ValidationResult::RULE_MIN_SECONDS_PER_WORD] = [$duration / $words, $rules->minSecondsPerWord];
+        }
+
+        if ($rules->allowedCharacters !== null) {
+            $counts[ValidationResult::RULE_ALLOWED_CHARACTERS] = [array_sum(array_map(
+                fn (string $line): int => self::disallowedCharacters($line, $rules->allowedCharacters),
+                $visible
+            )), null];
+        }
+
+        if ($rules->noAllCapsLines) {
+            $counts[ValidationResult::RULE_NO_ALL_CAPS_LINES] = [count(array_filter(
+                $visible,
+                fn (string $line): bool => self::isAllCaps($line)
+            )), null];
+        }
+
+        $results = [];
+        foreach ($counts as $rule => [$value, $limit]) {
+            // A count rule gives the int 0 for a cue without problems. A limit rule is only set when the cue breaks it.
+            if ($value !== 0) {
+                $results[] = new ValidationResult($cueIndex, $rule, $value, $limit);
+            }
+        }
+
+        return $results;
+    }
+
+
+    /**
+     * Counts the words of text without tags as SubtitleStatistics does: runs of characters between white space.
+     */
+    public static function countWords(string $text): int
+    {
+        $words = preg_split('/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY);
+        // Invalid UTF-8, such as the Latin-1 bytes that MicroDVD keeps, makes the /u pattern fail.
+        $words = $words === false ? preg_split('/\s+/', $text, -1, PREG_SPLIT_NO_EMPTY) : $words;
+
+        return count($words);
+    }
+
+
+    /**
+     * Tells if $characters is a regular expression character class such as "[A-Za-z0-9 .,!?]".
+     */
+    public static function isCharacterClass(string $characters): bool
+    {
+        return strlen($characters) >= 2 && $characters[0] === "[" && str_ends_with($characters, "]");
+    }
+
+
+    /**
+     * Returns the pattern without modifiers that matches one character of the class $characters.
+     */
+    public static function characterClassPattern(string $characters): string
+    {
+        $escaped = preg_replace_callback(
+            '/\\\\.|\//s',
+            fn (array $match): string => $match[0] === "/" ? "\\/" : $match[0],
+            $characters
+        );
+
+        return '/^(?:' . $escaped . ')$/';
+    }
+
+
+    private static function startsWithDialogueDash(string $line): bool
+    {
+        return preg_match(self::DIALOGUE_DASH, ltrim($line)) === 1;
+    }
+
+
+    /**
+     * @param list<string> $markupLines
+     * @param list<string> $visible
+     */
+    private static function speakers(array $markupLines, array $visible): int
+    {
+        $dashLines = count(array_filter($visible, fn (string $line): bool => self::startsWithDialogueDash($line)));
+
+        preg_match_all('/<v(?:\.[^\s<>]*)?\s+([^<>]*)>/', implode("\n", $markupLines), $matches);
+        $names = array_unique(array_map("trim", $matches[1]));
+
+        return max($dashLines, count($names), $visible === [] ? 0 : 1);
+    }
+
+
+    /**
+     * Counts closing tags without an opening tag and opening tags without a closing tag. An open <v> needs no </v>.
+     */
+    private static function unbalancedTags(string $text): int
+    {
+        preg_match_all(self::STYLE_TAG, $text, $matches, PREG_SET_ORDER);
+
+        $open       = [];
+        $unbalanced = 0;
+        foreach ($matches as [, $slash, $name]) {
+            $name = strtolower($name);
+            if ($slash === "") {
+                $open[] = $name;
+                continue;
+            }
+
+            $position = array_search($name, array_reverse($open, true), true);
+            if ($position === false) {
+                $unbalanced++;
+                continue;
+            }
+            $unbalanced += count(array_filter(array_slice($open, $position + 1), fn (string $tag): bool => $tag !== "v"));
+            $open        = array_slice($open, 0, $position);
+        }
+
+        return $unbalanced + count(array_filter($open, fn (string $tag): bool => $tag !== "v"));
+    }
+
+
+    private static function disallowedCharacters(string $line, string $allowed): int
+    {
+        $isUtf8     = preg_match('//u', $line) === 1;
+        $characters = $isUtf8 ? preg_split('//u', $line, -1, PREG_SPLIT_NO_EMPTY) : str_split($line);
+
+        if (self::isCharacterClass($allowed)) {
+            $pattern = self::characterClassPattern($allowed) . ($isUtf8 ? "u" : "");
+
+            return count(array_filter($characters, fn (string $character): bool =>
+                $character !== " " && preg_match($pattern, $character) !== 1));
+        }
+
+        $set = array_flip(preg_split('//u', $allowed, -1, PREG_SPLIT_NO_EMPTY) ?: str_split($allowed));
+
+        return count(array_filter($characters, fn (string $character): bool =>
+            $character !== " " && !isset($set[$character])));
+    }
+
+
+    /**
+     * Tells if a line has two or more upper case letters and no lower case letter. Text in brackets does not count.
+     */
+    private static function isAllCaps(string $line): bool
+    {
+        $line = preg_replace('/\[[^\]]*\]|\([^)]*\)/', "", $line);
+
+        return self::count('/\p{Lu}/u', '/[A-Z]/', $line) >= 2 && self::count('/\p{Ll}/u', '/[a-z]/', $line) === 0;
+    }
+
+
+    /**
+     * Counts the matches of $utf8Pattern, or of $bytePattern for invalid UTF-8 such as Latin-1 bytes.
+     */
+    private static function count(string $utf8Pattern, string $bytePattern, string $text): int
+    {
+        $count = preg_match_all($utf8Pattern, $text);
+
+        return $count === false ? (int)preg_match_all($bytePattern, $text) : $count;
+    }
+}
