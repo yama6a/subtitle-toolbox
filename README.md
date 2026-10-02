@@ -457,7 +457,7 @@ Subtitle::parse($srt)->format(IttFormatter::class, [IttFormatter::OPTION_FRAME_R
 
 - **Parser**: `IttParser` is `TtmlParser` plus the `itt` format data. Format detection returns `TtmlParser` for an iTT file. Both read the same cues.
 - **Frame rate**: the formatter takes it from the `itt` format data, else from `OPTION_FRAME_RATE`. It accepts 23.976, 24, 25, 29.97 and 30. Without one of these, it throws `InvalidArgumentException`. 23.976 becomes `ttp:frameRate="24" ttp:frameRateMultiplier="999 1000"`.
-- **Times**: `00:00:01:12` is 1 s plus 12 frames, the same reading as `TtmlParser`. The formatter rounds each time to the nearest frame and gives each cue at least one frame. It always writes `ttp:dropMode="nonDrop"`.
+- **Times**: a time such as `00:00:01:12` is an SMPTE time code. It counts frames at the effective frame rate, so at 29.97 fps `01:00:00:00` is 3603.6 s. The formatter rounds each time to the nearest frame and gives each cue at least one frame. It always writes `ttp:dropMode="nonDrop"`.
 - **Apple limits**: one `div`, `sansSerif` as the only font family, and a fixed `<head>` with the `normal` style and the `top` and `bottom` regions. Alignment 7, 8 and 9 go to `top`, all others to `bottom`. The formatter does not keep the `<head>` or the attributes of the input file.
 - **Markup**: the formatter keeps `<b>`, `<i>`, `<u>` and `<font color>`. It writes a colour only as `#rrggbb` or a TTML colour name, and drops an alpha channel. It strips `<s>`, `<v>` and word timestamps.
 
