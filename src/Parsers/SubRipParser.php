@@ -24,35 +24,43 @@ class SubRipParser extends SubtitleParser
         $rawCues  = explode(StringHelpers::UNIX_LINE_ENDING . StringHelpers::UNIX_LINE_ENDING, $rawSubtitle);
         $subtitle = new Subtitle();
         foreach ($rawCues as $idx => $rawCue) {
-            $rawLines = explode(StringHelpers::UNIX_LINE_ENDING, $rawCue);
-
-            if (!is_numeric($rawLines[0])) {
-                throw new ParsingException("Block #$idx doesn't seem to have a cue-number on its first line!");
-            }
-
-            if (!str_contains($rawLines[1] ?? "", ' --> ')) {
-                throw new ParsingException("Block #$idx doesn't seem to have its timestamps on its second line!");
-            }
-
-            if (count($rawLines) < 3) {
-                throw new ParsingException("Block #$idx doesn't have any text lines!");
-            }
-
-            $times       = explode('-->', $rawLines[1]);
-            $coordinates = $this->extractCoordinates($times[1]);
-            $cue         = new SubtitleCue(
-                $this->millisFromString($times[0]),
-                $this->millisFromString($times[1]),
-                array_map($this->escapeText(...), array_slice($rawLines, 2))
-            );
-            $this->convertOverrideTags($cue);
-            if ($coordinates !== null) {
-                $cue->setFormatData("srt", ["coordinates" => $coordinates]);
-            }
-            $subtitle->addCue($cue);
+            $subtitle->addCue($this->parseCueBlock(explode(StringHelpers::UNIX_LINE_ENDING, $rawCue), $idx));
         }
 
         return $subtitle;
+    }
+
+
+    /**
+     * Parses one cue block of trimmed lines without empty lines, as parse() splits the file.
+     */
+    public function parseCueBlock(array $rawLines, int $idx): SubtitleCue
+    {
+        if (!is_numeric($rawLines[0])) {
+            throw new ParsingException("Block #$idx doesn't seem to have a cue-number on its first line!");
+        }
+
+        if (!str_contains($rawLines[1] ?? "", ' --> ')) {
+            throw new ParsingException("Block #$idx doesn't seem to have its timestamps on its second line!");
+        }
+
+        if (count($rawLines) < 3) {
+            throw new ParsingException("Block #$idx doesn't have any text lines!");
+        }
+
+        $times       = explode('-->', $rawLines[1]);
+        $coordinates = $this->extractCoordinates($times[1]);
+        $cue         = new SubtitleCue(
+            $this->millisFromString($times[0]),
+            $this->millisFromString($times[1]),
+            array_map($this->escapeText(...), array_slice($rawLines, 2))
+        );
+        $this->convertOverrideTags($cue);
+        if ($coordinates !== null) {
+            $cue->setFormatData("srt", ["coordinates" => $coordinates]);
+        }
+
+        return $cue;
     }
 
 

@@ -42,8 +42,7 @@ class WebVttFormatter extends SubtitleFormatter
             while ($comments !== [] && $comments[0]["beforeCueIndex"] <= $cueIndex) {
                 $blocks[] = $this->formatComment(array_shift($comments)["text"]);
             }
-            $blocks[] = $this->formatIdentifier($cue->getIdentifier(), $cueIndex) . StringHelpers::UNIX_LINE_ENDING
-                        . $this->formatCue($cue, $options);
+            $blocks[] = $this->formatIdentifiedCue($cue, $cueIndex, $options);
         }
         foreach ($comments as $comment) {
             $blocks[] = $this->formatComment($comment["text"]);
@@ -56,6 +55,24 @@ class WebVttFormatter extends SubtitleFormatter
         }
 
         return $this->applyOutputOptions(StringHelpers::addUtf8Bom($output), $options);
+    }
+
+
+    /**
+     * Returns the cue block format() writes for the cue at $cueIndex, in the line ending of $options, without a BOM.
+     */
+    public function formatCueBlock(SubtitleCue $cue, int $cueIndex, array $options = []): string
+    {
+        $block = $this->formatIdentifiedCue($cue, $cueIndex, $options);
+
+        return $this->applyOutputOptions($block, [...$options, parent::OPTION_BOM => null]);
+    }
+
+
+    private function formatIdentifiedCue(SubtitleCue $cue, int $cueIndex, array $options): string
+    {
+        return $this->formatIdentifier($cue->getIdentifier(), $cueIndex) . StringHelpers::UNIX_LINE_ENDING
+               . $this->formatCue($cue, $options);
     }
 
 
