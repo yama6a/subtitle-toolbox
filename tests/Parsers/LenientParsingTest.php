@@ -331,6 +331,19 @@ class LenientParsingTest extends TestCase
                     [0, 1, self::SKIPPED, "Subtitle number 2 has a time code that is not valid: 00000400 to 00000630"],
                 ],
             ],
+            "JSON with a cue without end and a line that is not a string" => [
+                "missing_end.json",
+                JsonParser::class,
+                "The field cues[1].end must be a number.",
+                [
+                    [1, 3, "The train to the coast is late."],
+                    [7, 9, "The buffet car is closed."],
+                ],
+                [
+                    [0, 1, self::SKIPPED, "The field cues[1].end must be a number."],
+                    [0, 3, self::SKIPPED, "The field cues[3].lines[1] must be a string."],
+                ],
+            ],
         ];
     }
 
@@ -577,6 +590,24 @@ class LenientParsingTest extends TestCase
         $content = substr(file_get_contents(self::DIR . "bad_time_code.stl"), 0, EbuStlParser::GSI_BLOCK_SIZE + 3 * EbuStlParser::TTI_BLOCK_SIZE);
 
         $this->assertCount(3, (new EbuStlParser())->parse($content)->getCues());
+    }
+
+
+    public function testJsonMovesTheCommentsToTheCueNumbersAfterTheSkip(): void
+    {
+        $parser   = (new JsonParser())->setLenient();
+        $subtitle = $parser->parse(file_get_contents(self::DIR . "missing_end.json"));
+
+        $this->assertSame([["text" => "Platform changes", "beforeCueIndex" => 1]], $subtitle->getComments());
+        $this->assertSame(['{"start":4,"lines":["It leaves from platform two."]}'], $parser->getWarnings()[0]->block);
+    }
+
+
+    public function testJsonWithAnErrorOutsideTheCuesStillThrows(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The field version is missing.");
+        (new JsonParser())->setLenient()->parse('{"cues": []}');
     }
 
 
