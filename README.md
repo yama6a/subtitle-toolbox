@@ -223,6 +223,36 @@ $subtitle->format(TtmlFormatter::class);
 - **Limits**: the parser reads `seq` time containers as `par` and ignores the timing of `<span>` elements. The formatter strips word timestamps. A cue identifier that is not a valid `xml:id` is not written.
 - **Security**: the parser loads no external entity or DTD and makes no network access.
 
+## Validation
+`validate()` checks the cues against reading and timing rules. It returns one `ValidationResult` per broken rule. `getErrors()` stays as it is.
+
+```php
+use SubtitleToolbox\Validation\ValidationRules;
+
+$results = $subtitle->validate(ValidationRules::netflixEnglish(23.976));
+$results = $subtitle->validate(new ValidationRules(maxCharactersPerLine: 37, noEmptyCues: true));
+
+$results[0]->getCueIndex();     // 1
+$results[0]->getRule();         // 'maxCharactersPerLine', see the ValidationResult::RULE_* constants
+$results[0]->getValue();        // 45
+$results[0]->getLimit();        // 37
+```
+
+| Rule | Limit | Value |
+|:--- |:--- |:--- |
+| `maxCharactersPerSecond` | characters per second | characters of all lines divided by the duration. `INF` for a cue with text and no duration |
+| `maxCharactersPerLine` | characters | one result per line that is too long |
+| `maxLinesPerCue` | lines | lines with visible text |
+| `minDuration`, `maxDuration` | seconds | end minus start |
+| `minGap` | seconds | start minus the latest end of the earlier cues. Overlaps are not gaps |
+| `noOverlap` | `true` to check, result limit `null` | seconds of overlap with the earlier cues |
+| `noEmptyCues` | `true` to check, result limit `null` | 0 |
+
+- **Off by default**: a rule with the limit `null` or `false` is off.
+- **Characters**: the count leaves out tags and leading and trailing spaces. It counts an entity such as `&amp;` as one character and a UTF-8 letter of several bytes as one character.
+- **Milliseconds**: cue times have millisecond precision. So a cue of 0.833 s meets a minimum duration of 5/6 s.
+- **Netflix English preset**: 20 characters per second for adult programs, 42 characters per line, 2 lines, 5/6 s to 7 s, a gap of 2 frames at the given frame rate, no overlaps. The values come from the [English (USA) Timed Text Style Guide](https://partnerhelp.netflixstudios.com/hc/en-us/articles/217350977-English-USA-Timed-Text-Style-Guide), the [General Requirements](https://partnerhelp.netflixstudios.com/hc/en-us/articles/215758617) and the [Subtitle Timing Guidelines](https://partnerhelp.netflixstudios.com/hc/en-us/articles/360051554394).
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:

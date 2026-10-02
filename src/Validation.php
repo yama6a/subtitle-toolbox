@@ -1,0 +1,93 @@
+<?php
+
+namespace SubtitleToolbox;
+
+use SubtitleToolbox\Validation\ValidationResult;
+use SubtitleToolbox\Validation\ValidationRules;
+
+trait Validation
+{
+    /**
+     * Checks every cue against the rules that have a limit and returns one result per broken rule.
+     *
+     * @return list<ValidationResult>
+     */
+    public function validate(ValidationRules $rules): array
+    {
+        $results     = [];
+        $previousEnd = null;
+
+        foreach ($this->getCues() as $cueIndex => $cue) {
+            $lineLengths = [];
+            foreach ($cue->getLines() as $line) {
+                $length = self::countVisibleCharacters($line);
+                if ($length > 0) {
+                    $lineLengths[] = $length;
+                }
+            }
+            $characters = array_sum($lineLengths);
+            $duration   = round($cue->getEnd() - $cue->getStart(), 3);
+
+            if ($rules->noEmptyCues && $characters === 0) {
+                $results[] = new ValidationResult($cueIndex, ValidationResult::RULE_EMPTY_CUE, 0, null);
+            }
+
+            if ($rules->maxCharactersPerLine !== null) {
+                foreach ($lineLengths as $length) {
+                    if ($length > $rules->maxCharactersPerLine) {
+                        $results[] = new ValidationResult($cueIndex, ValidationResult::RULE_MAX_CHARACTERS_PER_LINE,
+                                                          $length, $rules->maxCharactersPerLine);
+                    }
+                }
+            }
+
+            if ($rules->maxLinesPerCue !== null && count($lineLengths) > $rules->maxLinesPerCue) {
+                $results[] = new ValidationResult($cueIndex, ValidationResult::RULE_MAX_LINES_PER_CUE,
+                                                  count($lineLengths), $rules->maxLinesPerCue);
+            }
+
+            if ($rules->maxCharactersPerSecond !== null && $characters > 0) {
+                $charactersPerSecond = $duration > 0 ? $characters / $duration : INF;
+                if ($charactersPerSecond > $rules->maxCharactersPerSecond) {
+                    $results[] = new ValidationResult($cueIndex, ValidationResult::RULE_MAX_CHARACTERS_PER_SECOND,
+                                                      $charactersPerSecond, $rules->maxCharactersPerSecond);
+                }
+            }
+
+            // Cue times have millisecond precision, so a limit such as 5/6 s must match a cue of 0.833 s.
+            if ($rules->minDuration !== null && $duration < round($rules->minDuration, 3)) {
+                $results[] = new ValidationResult($cueIndex, ValidationResult::RULE_MIN_DURATION,
+                                                  $duration, $rules->minDuration);
+            }
+
+            if ($rules->maxDuration !== null && $duration > round($rules->maxDuration, 3)) {
+                $results[] = new ValidationResult($cueIndex, ValidationResult::RULE_MAX_DURATION,
+                                                  $duration, $rules->maxDuration);
+            }
+
+            if ($previousEnd !== null) {
+                $gap = round($cue->getStart() - $previousEnd, 3);
+
+                if ($rules->noOverlap && $gap < 0) {
+                    $results[] = new ValidationResult($cueIndex, ValidationResult::RULE_OVERLAP, -$gap, null);
+                }
+
+                if ($rules->minGap !== null && $gap >= 0 && $gap < round($rules->minGap, 3)) {
+                    $results[] = new ValidationResult($cueIndex, ValidationResult::RULE_MIN_GAP, $gap, $rules->minGap);
+                }
+            }
+            $previousEnd = max($previousEnd ?? $cue->getEnd(), $cue->getEnd());
+        }
+
+        return $results;
+    }
+
+
+    // mbstring is not part of a default PHP build, but PCRE is.
+    private static function countVisibleCharacters(string $line): int
+    {
+        $text = trim(Markup::decodeEntities(Markup::stripAllTags($line)));
+
+        return preg_match_all('/./su', $text) ?: strlen($text);
+    }
+}
