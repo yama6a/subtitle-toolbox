@@ -161,7 +161,7 @@ class LyricsParser extends SubtitleParser
         return preg_replace_callback(
             "/<" . self::TIMESTAMP_PATTERN . ">|[^<]+|</",
             fn (array $matches): string => isset($matches[1])
-                ? "<" . $this->toCoreTimestamp($this->toSeconds($matches, $offset)) . ">"
+                ? "<" . Markup::coreTimestamp($this->toSeconds($matches, $offset)) . ">"
                 : Markup::escapeText($matches[0]),
             $text
         );
@@ -181,19 +181,5 @@ class LyricsParser extends SubtitleParser
         };
 
         return $offset === 0.0 ? (float) $seconds : max(0.0, round($seconds - $offset, 3));
-    }
-
-
-    private function toCoreTimestamp(float $seconds): string
-    {
-        $milliseconds = (int) round($seconds * 1000);
-
-        return sprintf(
-            "%02d:%02d:%02d.%03d",
-            intdiv($milliseconds, 3600000),
-            intdiv($milliseconds, 60000) % 60,
-            intdiv($milliseconds, 1000) % 60,
-            $milliseconds % 1000
-        );
     }
 }

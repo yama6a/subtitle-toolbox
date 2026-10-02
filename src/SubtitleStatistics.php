@@ -146,7 +146,9 @@ class SubtitleStatistics
     /**
      * Returns the $limit most used words in lower case with their counts, the most used first.
      *
-     * @return array<string, int>
+     * PHP turns a word that is a plain integer such as "2024" into an int key, so cast a key to string before string use.
+     *
+     * @return array<string|int, int>
      */
     public function getMostUsedWords(int $limit): array
     {

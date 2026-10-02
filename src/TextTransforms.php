@@ -6,9 +6,6 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 trait TextTransforms
 {
-    private const TEXT_TRANSFORMS_WORD_TIMESTAMP = "/(<\d{2,}:[0-5]\d:[0-5]\d\.\d{3}>)/";
-
-
     /**
      * Calls fn (string $text, SubtitleCue $cue): string for each text run between tags, with &lt;, &gt; and &amp; decoded.
      */
@@ -72,7 +69,7 @@ trait TextTransforms
                     return Markup::keepTags($line, $keepTags);
                 }
 
-                $parts = preg_split(self::TEXT_TRANSFORMS_WORD_TIMESTAMP, $line, -1, PREG_SPLIT_DELIM_CAPTURE);
+                $parts = preg_split(Markup::WORD_TIMESTAMP_REGEX, $line, -1, PREG_SPLIT_DELIM_CAPTURE);
 
                 return implode("", array_map(
                     fn (string $part, int $index): string => $index % 2 === 1 ? $part : Markup::keepTags($part, $keepTags),

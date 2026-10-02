@@ -3,6 +3,7 @@
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -286,7 +287,7 @@ class AssParser extends SubtitleParser
                 } elseif (preg_match('/^\\\\1?c(?:&H([0-9A-Fa-f]{1,8})&?)?$/', $tag, $matches)) {
                     $markup .= $this->setTag("font", isset($matches[1]) ? $this->fontTag($matches[1]) : null, $openTags);
                 } elseif (preg_match('/^\\\\(?:k|K|kf|ko)(\d+(?:\.\d+)?)$/', $tag, $matches)) {
-                    $markup       .= "<" . $this->toCoreTimestamp($karaokeStart) . ">";
+                    $markup       .= "<" . Markup::coreTimestamp($karaokeStart) . ">";
                     $karaokeStart += $matches[1] / 100;
                 } elseif (preg_match('/^\\\\r/', $tag)) {
                     $markup .= $this->closeAll($openTags);
@@ -356,19 +357,5 @@ class AssParser extends SubtitleParser
         $bgr = substr(str_pad($hex, 6, "0", STR_PAD_LEFT), -6);
 
         return "<font color=\"#" . strtolower(substr($bgr, 4, 2) . substr($bgr, 2, 2) . substr($bgr, 0, 2)) . "\">";
-    }
-
-
-    private function toCoreTimestamp(float $seconds): string
-    {
-        $milliseconds = (int) round($seconds * 1000);
-
-        return sprintf(
-            "%02d:%02d:%02d.%03d",
-            intdiv($milliseconds, 3600000),
-            intdiv($milliseconds, 60000) % 60,
-            intdiv($milliseconds, 1000) % 60,
-            $milliseconds % 1000
-        );
     }
 }

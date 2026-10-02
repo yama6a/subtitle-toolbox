@@ -95,4 +95,34 @@ class MarkupTest extends TestCase
         $this->assertSame(4, Markup::countCharacters("Caf\xe9"));
         $this->assertSame(0, Markup::countCharacters(""));
     }
+
+
+    public function testWordTimestampRegexSplitsOnCoreWordTimestamps(): void
+    {
+        $this->assertSame(
+            ["<b>One</b> ", "<00:00:01.500>", "two ", "<100:59:59.999>", ""],
+            preg_split(Markup::WORD_TIMESTAMP_REGEX, "<b>One</b> <00:00:01.500>two <100:59:59.999>", -1, PREG_SPLIT_DELIM_CAPTURE)
+        );
+        $this->assertSame(0, preg_match(Markup::WORD_TIMESTAMP_REGEX, "<01:02.500> <00:60:00.000> <00:00:01.50> <0:00:01.500>"));
+    }
+
+
+    public function testCoreTimestampFormatsSecondsWithRoundedMilliseconds(): void
+    {
+        $this->assertSame("00:00:00.000", Markup::coreTimestamp(0.0));
+        $this->assertSame("00:01:02.500", Markup::coreTimestamp(62.5));
+        $this->assertSame("01:00:00.001", Markup::coreTimestamp(3600.0006));
+        $this->assertSame("00:00:02.000", Markup::coreTimestamp(1.9996));
+        $this->assertSame("100:00:00.000", Markup::coreTimestamp(360000.0));
+    }
+
+
+    public function testPlainLinesStripsDecodesTrimsAndDropsEmptyLines(): void
+    {
+        $this->assertSame(
+            ["Tom & Jerry", "<not a tag>", "Caf\u{e9}"],
+            Markup::plainLines([" <i>Tom &amp; Jerry</i> ", "<b></b>", "&lt;not a tag&gt;", "  ", "Caf&eacute;<00:00:01.000>"])
+        );
+        $this->assertSame([], Markup::plainLines([]));
+    }
 }

@@ -12,10 +12,7 @@ class SbvFormatter extends SubtitleFormatter
     {
         $blocks = [];
         foreach ($subtitle->getCues() as $cue) {
-            $lines = array_filter(
-                array_map(fn (string $line): string => trim(Markup::decodeEntities(Markup::stripAllTags($line))), $cue->getLines()),
-                fn (string $line): bool => $line !== ""
-            );
+            $lines = Markup::plainLines($cue->getLines());
 
             // An empty line ends an SBV cue, so a cue without text cannot be written.
             if ($lines === []) {

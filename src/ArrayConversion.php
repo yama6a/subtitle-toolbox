@@ -24,7 +24,7 @@ trait ArrayConversion
                 "alignment"  => $cue->getAlignment(),
             ];
             if ($withFormatData) {
-                $cueArray["formatData"] = $this->arrayConversionCueFormatData($cue);
+                $cueArray["formatData"] = $cue->getAllFormatData();
             }
             $cues[] = $cueArray;
         }
@@ -165,15 +165,4 @@ trait ArrayConversion
         }
 
         return $value;
-    }
-
-
-    /**
-     * @return array<string, array>
-     */
-    private function arrayConversionCueFormatData(SubtitleCue $cue): array
-    {
-        // SubtitleCue has no getter that lists all its format keys.
-        return (fn (): array => $this->formatData)->call($cue);
-    }
-}
+    }}
