@@ -1,0 +1,28 @@
+<?php
+
+namespace SubtitleToolbox\Ocr;
+
+use InvalidArgumentException;
+
+final class OcrResult
+{
+    /**
+     * Holds the recognized text lines and the confidence of the engine from 0 to 1, or null when it gives none.
+     *
+     * @param list<string> $lines
+     */
+    public function __construct(
+        public readonly array $lines,
+        public readonly ?float $confidence = null,
+    ) {
+        foreach ($lines as $line) {
+            if (!is_string($line)) {
+                throw new InvalidArgumentException("Cannot create an OCR result - every line must be a string!");
+            }
+        }
+        if ($confidence !== null && ($confidence < 0 || $confidence > 1)) {
+            throw new InvalidArgumentException("Cannot create an OCR result with confidence $confidence - " .
+                                               "the confidence must be from 0 to 1!");
+        }
+    }
+}

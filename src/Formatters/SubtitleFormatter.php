@@ -10,6 +10,7 @@ abstract class SubtitleFormatter
     public const OPTION_STRIP_ALL_XML_TAGS = "OPTION_STRIP_ALL_XML_TAGS";
     public const OPTION_LINE_ENDING        = "lineEnding";
     public const OPTION_BOM                = "bom";
+    public const OPTION_SKIP_IMAGE_CUES    = "skipImageCues";
 
     abstract public function format(Subtitle $subtitle, array $options = []): string;
 
