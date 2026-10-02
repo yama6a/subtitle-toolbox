@@ -32,7 +32,7 @@ $subtitle->syncByTwoPoints(10, 12, 6260, 6005);      // 10 s becomes 12 s, 6260 
 - `FrameRate` converts between frames and seconds: `(new FrameRate(23.976))->framesToSeconds(1000)` returns about 41.708.
 
 ## Metadata, comments and cue identifiers
-The parsers and formatters do not read or write these fields yet.
+Parsers fill these fields where their format has them, and formatters write them back. The format sections below list what each format keeps.
 
 ```php
 $subtitle->setMetadata(Subtitle::METADATA_TITLE, 'Yesterday');
@@ -72,7 +72,7 @@ Markup::decodeEntities('Hi &amp; bye');                 // 'Hi & bye'
 ```
 
 ## Alignment and format data
-The parsers and formatters do not read or write these fields yet.
+SubRip and WebVTT read and write the alignment. Every parser keeps the data of its format that has no shared field in the format data.
 
 ```php
 $cue->setAlignment(8);                                  // top center
@@ -82,9 +82,6 @@ $subtitle->getFormatData('ass');                        // [] when not set
 
 - **Alignment**: a number from 1 to 9 in numeric keypad layout. 1 is bottom left, 2 is bottom center, 8 is top center. `null` means the format default, bottom center.
 - **Format data**: styling outside the core markup and the alignment. Only the formatter of the same format reads it. The key is the lowercase file extension of the format, for example `ass` or `vtt`.
-
-## Restrictions
-This project currently focuses on adding basic support for additional formats, rather than more sophisticated functionality, such as comments, styling, and cue positioning. 
 
 ## Supported formats
 | Format | Reads | Outputs | Additional Info
