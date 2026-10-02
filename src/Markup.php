@@ -7,6 +7,9 @@ class Markup
     // Word timestamps such as <00:01:02.500> are core markup too, but they are no tag names that keepTags() keeps.
     public const CORE_TAGS = ["b", "i", "u", "s", "font", "v"];
 
+    /** Matches a core word timestamp such as <00:01:02.500> and captures it as group 1. */
+    public const WORD_TIMESTAMP_REGEX = "/(<\d{2,}:[0-5]\d:[0-5]\d\.\d{3}>)/";
+
 
     public static function stripAllTags(string $text): string
     {
@@ -59,5 +62,22 @@ class Markup
     {
         // mbstring is not part of a default PHP build, but PCRE is. preg_match_all() fails on invalid UTF-8.
         return preg_match_all('/./su', $text) ?: strlen($text);
+    }
+
+
+    /**
+     * Formats seconds as the body of a core word timestamp, for example 62.5 becomes "00:01:02.500".
+     */
+    public static function coreTimestamp(float $seconds): string
+    {
+        $milliseconds = (int) round($seconds * 1000);
+
+        return sprintf(
+            "%02d:%02d:%02d.%03d",
+            intdiv($milliseconds, 3600000),
+            intdiv($milliseconds, 60000) % 60,
+            intdiv($milliseconds, 1000) % 60,
+            $milliseconds % 1000
+        );
     }
 }

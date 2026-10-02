@@ -4,6 +4,7 @@ namespace SubtitleToolbox\Parsers;
 
 use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -211,7 +212,7 @@ class WhisperJsonParser extends SubtitleParser
                 continue;
             }
 
-            $markup  .= $this->escape(substr($text, $copied, $position - $copied)) . "<" . $this->toCoreTimestamp($start) . ">";
+            $markup  .= $this->escape(substr($text, $copied, $position - $copied)) . "<" . Markup::coreTimestamp($start) . ">";
             $copied   = $position;
             $searchAt = $position + strlen($word);
         }
@@ -223,19 +224,5 @@ class WhisperJsonParser extends SubtitleParser
     private function escape(string $text): string
     {
         return str_replace(["&", "<", ">"], ["&amp;", "&lt;", "&gt;"], $text);
-    }
-
-
-    private function toCoreTimestamp(float $seconds): string
-    {
-        $milliseconds = (int) round($seconds * 1000);
-
-        return sprintf(
-            "%02d:%02d:%02d.%03d",
-            intdiv($milliseconds, 3600000),
-            intdiv($milliseconds, 60000) % 60,
-            intdiv($milliseconds, 1000) % 60,
-            $milliseconds % 1000
-        );
     }
 }
