@@ -278,6 +278,19 @@ Detection ignores a UTF-8 BOM and leading blank lines. It checks the signatures 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line looks like SubRip, so it detects as SubRip.
 - **MicroDVD**: detection does not find the frame rate. `parse()` throws `ParsingException` for a MicroDVD file without a `{1}{1}<fps>` first line. Then pass the frame rate: `(new MicroDvdParser(23.976))->parse($content)`.
 
+## Editing cues
+```php
+$part1->merge($part2, 3130);                    // appends part 2, 3130 s later
+$clip = $subtitle->slice(600, 1200, true);      // a new Subtitle with the cues from 600 s to 1200 s, moved to start at 0
+$subtitle->splitCue(4, 63.5, 1);                // cue 4 becomes two cues at 63.5 s, line 1 in the first
+$subtitle->joinCues(4, 5);                      // one cue with the lines of cue 4 and 5
+$subtitle->removeDuplicateCues();               // joins touching cues with the same text
+```
+
+- **Merge**: the metadata and the format data of `$this` win over those of the merged file. The comments of both files stay before their cues. At the same place, the comments of `$this` come first.
+- **Slice**: a cue that crosses `$from` or `$to` gets cut there. The copy keeps the metadata, the format data and the comments before the kept cues. The original stays unchanged.
+- **Split and join**: the first cue keeps its identifier. A comment before a joined cue moves before the result.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:

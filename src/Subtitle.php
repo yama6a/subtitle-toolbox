@@ -12,6 +12,7 @@ class Subtitle
 {
     use Retiming;
     use Validation;
+    use CueEditing;
 
     /** @var array|SubtitleCue[] */
     protected $cues;
