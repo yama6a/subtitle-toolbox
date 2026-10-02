@@ -13,6 +13,7 @@ class Subtitle
     use Retiming;
     use Validation;
     use CueEditing;
+    use Fixes;
 
     /** @var array|SubtitleCue[] */
     protected $cues;

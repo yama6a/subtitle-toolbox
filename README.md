@@ -291,6 +291,21 @@ $subtitle->removeDuplicateCues();               // joins touching cues with the 
 - **Slice**: a cue that crosses `$from` or `$to` gets cut there. The copy keeps the metadata, the format data and the comments before the kept cues. The original stays unchanged.
 - **Split and join**: the first cue keeps its identifier. A comment before a joined cue moves before the result.
 
+## Fixing timing and layout
+```php
+$gap = (new FrameRate(24))->framesToSeconds(2);   // about 0.083 s
+
+$subtitle->fixOverlaps($gap);                     // end each cue at least $gap before the next cue starts
+$subtitle->extendShortCues(0.833, $gap);          // show each cue for at least 0.833 s where the next cue allows it
+$subtitle->wrapLines(42);                         // at most 42 characters per line, at most 2 lines
+$subtitle->unwrapLines();                         // join the lines of each cue with a space
+```
+
+- **Start times**: the fixes move only end times. `fixOverlaps()` ends a cue at its own start when the gap does not fit. `extendShortCues()` never creates an overlap and never makes a cue shorter.
+- **Line breaks**: `wrapLines()` changes only cues with a longer line or with more lines than allowed. It uses the fewest lines that fit and makes them about equal in length. When the text does not fit, the lines get longer than the limit.
+- **Characters**: tags count 0 characters, and an entity such as `&amp;` counts 1. `wrapLines()` breaks only at spaces outside tags. It closes the open core markup tags at a break and opens them again on the next line.
+- **Text without spaces**: Chinese or Japanese text has no break points, so `wrapLines()` keeps such a line long.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
