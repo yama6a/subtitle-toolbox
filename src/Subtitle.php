@@ -42,9 +42,12 @@ class Subtitle
 
     /**
      * Parses $content with $parserClass, or with the parser that detectParser() returns when $parserClass is null.
+     * A UTF-16 or UTF-32 BOM, or else $sourceEncoding such as "Windows-1252", sets the encoding to convert from.
      */
-    public static function parse(string $content, ?string $parserClass = null): self
+    public static function parse(string $content, ?string $parserClass = null, ?string $sourceEncoding = null): self
     {
+        $content = StringHelpers::convertToUtf8($content, $sourceEncoding);
+
         $parserClass ??= self::detectParser($content)
             ?? throw new InvalidParserException("The subtitle format of the content is unknown. Pass a parser class.");
 
