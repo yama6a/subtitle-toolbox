@@ -93,4 +93,128 @@ class SubRipParserTest extends TestCase
         $this->expectExceptionMessage("Block #1 doesn't seem to have its timestamps on its second line");
         Subtitle::parse("1\n00:00:01,000 --> 00:00:02,000\nFirst\n\n2", SubRipParser::class);
     }
+
+
+    public function testLenientTimestampsParse(): void
+    {
+        $raw = "1\n0:00:01.5 --> 00:00:02,25\nDot, one hour digit, short milliseconds\n\n" .
+               "2\n00:00:03.000 --> 01:02:03.004\nDots\n";
+
+        $cues = Subtitle::parse($raw, SubRipParser::class)->getCues();
+
+        $this->assertSame(1.5, $cues[0]->getStart());
+        $this->assertSame(2.25, $cues[0]->getEnd());
+        $this->assertSame(3.0, $cues[1]->getStart());
+        $this->assertSame(3723.004, $cues[1]->getEnd());
+    }
+
+
+    public function testCoordinatesGoToTheFormatData(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:04,000 X1:100 X2:600 Y1:40 Y2:80\nThe train leaves soon\n";
+
+        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+        $this->assertSame(4.0, $cue->getEnd());
+        $this->assertSame(["The train leaves soon"], $cue->getLines());
+        $this->assertSame(["coordinates" => ["x1" => 100, "x2" => 600, "y1" => 40, "y2" => 80]], $cue->getFormatData("srt"));
+    }
+
+
+    public function testIncompleteCoordinatesThrowException(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("timeString-string of at least one cue could not be parsed");
+        Subtitle::parse("1\n00:00:01,000 --> 00:00:04,000 X1:100 X2:600\nText\n", SubRipParser::class);
+    }
+
+
+    public function testAlignmentTagGoesToTheCueAlignment(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\an8}<i>The train leaves soon</i>\n";
+
+        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+        $this->assertSame(8, $cue->getAlignment());
+        $this->assertSame(["<i>The train leaves soon</i>"], $cue->getLines());
+    }
+
+
+    public function testFirstAlignmentTagWinsAndAllAreRemoved(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\an4}Middle and horiz{\\an6}ontally left\n";
+
+        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+        $this->assertSame(4, $cue->getAlignment());
+        $this->assertSame(["Middle and horizontally left"], $cue->getLines());
+    }
+
+
+    public function testLegacyAlignmentTagsAreConverted(): void
+    {
+        $expected = [1 => 1, 2 => 2, 3 => 3, 5 => 7, 6 => 8, 7 => 9, 9 => 4, 10 => 5, 11 => 6];
+        foreach ($expected as $legacy => $alignment) {
+            $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\a$legacy}Text\n";
+
+            $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+            $this->assertSame($alignment, $cue->getAlignment(), "Legacy code $legacy");
+            $this->assertSame(["Text"], $cue->getLines());
+        }
+    }
+
+
+    public function testInvalidLegacyAlignmentStaysInTheText(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\a4}Text\n";
+
+        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+        $this->assertNull($cue->getAlignment());
+        $this->assertSame(["{\\a4}Text"], $cue->getLines());
+    }
+
+
+    public function testAssStyleTagsBecomeCoreMarkup(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\b1}bold{\\b0} {\\i1}italic{\\i0} {\\u1}under{\\u0} {\\s1}struck{\\s0}\n";
+
+        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+        $this->assertSame(["<b>bold</b> <i>italic</i> <u>under</u> <s>struck</s>"], $cue->getLines());
+    }
+
+
+    public function testUnclosedAssStyleTagsAreClosedAtTheEndOfTheCue(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\an8\\i1}one {\\b1}two\nthree{\\u0}\n";
+
+        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+        $this->assertSame(8, $cue->getAlignment());
+        $this->assertSame(["<i>one <b>two", "three</b></i>"], $cue->getLines());
+    }
+
+
+    public function testUnknownOverrideTagsStayInTheText(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\an8\\fad(200,200)}Sign {\\pos(10,20)}here {normal text}\n";
+
+        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+        $this->assertSame(8, $cue->getAlignment());
+        $this->assertSame(["{\\fad(200,200)}Sign {\\pos(10,20)}here {normal text}"], $cue->getLines());
+    }
+
+
+    public function testCarriageReturnCarriageReturnLineFeedIsOneLineEnding(): void
+    {
+        $raw = "1\r\r\n00:00:01,000 --> 00:00:02,000\r\r\nFirst\r\r\nline\r\r\n\r\r\n2\r\r\n00:00:03,000 --> 00:00:04,000\r\r\nSecond\r\r\n";
+
+        $cues = Subtitle::parse($raw, SubRipParser::class)->getCues();
+
+        $this->assertSame(2, count($cues));
+        $this->assertSame(["First", "line"], $cues[0]->getLines());
+    }
 }

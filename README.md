@@ -90,10 +90,15 @@ This project currently focuses on adding basic support for additional formats, r
 | Format | Reads | Outputs | Additional Info
 |:--- |:--- |:--- |:--- |
 | LyRiCs (.lrc)   | No support for ID tags | No support for ID tags | Strips all xml tags, including word-timing of enhanced LRC files
-| SubRip (.srt)   | Full Support | Full Support  | Formatter strips all xml tags except: \<b>\<i>\<u>\<s>\<font>
+| `0:00:01.5` | 1.5 s. Accepts a dot, one to three hour digits and one to three millisecond digits. | `00:00:01,500` |
+| `X1:100 X2:600 Y1:40 Y2:80` after the end time | `getFormatData('srt')['coordinates']` | the same coordinates |
+| `{\an8}` anywhere in the cue | alignment 8. The first tag wins. Legacy SSA `{\a6}` also becomes 8. | `{\an8}` at the start of the first line, nothing for 2 or `null` |
+| `{\b1}`, `{\i1}`, `{\u1}`, `{\s1}` and their `0` forms | `<b>`, `<i>`, `<u>`, `<s>` and their closing tags. An open tag closes at the end of the cue. | the HTML-like tags |
+| Input | Parser result | Formatter output |
 | MicroDVD (.sub) | Frame rate from the parser constructor or a `{1}{1}<fps>` first line | Needs `OPTION_FRAME_RATE` | Converts `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` to core markup. Keeps other control codes in the `sub` format data
-| MpSub (.mpsub)  | FORMAT=TIME and FORMAT=<fps>, header lines | FORMAT=TIME by default, FORMAT=<fps> as an option, header lines | Formatter strips all xml tags
+| MpSub (.mpsub)  | n/a | Only supports FORMAT=TIME, No support for metadata | Formatter strips all xml tags  
 | SBV (.sbv)      | Accepts any number of hour digits | Writes one hour digit below 10 hours, no UTF-8 BOM | Formatter strips all xml tags and decodes HTML entities
+| SubRip (.srt)   | Reads coordinates, alignment tags and lenient timestamps | Writes standard timestamps, coordinates and alignment tags | Formatter strips all xml tags except: \<b>\<i>\<u>\<s>\<font>
 | WebVTT (.vtt)   | No Support for comments, styling or positioning| No Support for comments, styling or positioning | Formatter strips all xml tags except: \<b>\<u>\<i>\<v>\<lang>\<c>\<ruby>\<rt>
 
 ### MicroDVD
@@ -125,6 +130,11 @@ $subtitle->format(MpSubFormatter::class, [MpSubFormatter::OPTION_FRAME_RATE => 2
 - **Header lines**: the parser reads `TITLE` and `AUTHOR` into the metadata. It keeps all other header lines, such as `TYPE` and `NOTE`, in the `mpsub` format data. `FORMAT` only sets the time unit. The formatter writes these lines back, and writes empty `TITLE` and `AUTHOR` lines when the values are not set.
 - **Frame rate**: MPlayer and FFmpeg read only the integer part of `FORMAT=29.97`. So the parser uses 29 fps, and the formatter accepts only whole frame rates.
 - **Overlapping cues**: a cue that starts before the previous cue ends gets a negative wait, for example `-1.5 2`. The parser reads it back. FFmpeg accepts a negative wait.
+
+## SubRip
+|:--- |:--- |:--- |
+
+Other override tags such as `{\pos(10,20)}` stay in the cue text.
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.

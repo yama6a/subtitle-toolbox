@@ -38,6 +38,7 @@ class SubRipFormatter extends SubtitleFormatter
         $endMillis = str_pad(round(($cue->getEnd() - floor($cue->getEnd())) * 1000), 3, "0", STR_PAD_LEFT);
 
         $time  = "$startHour:$startMinute:$startSecond,$startMillis --> $endHour:$endMinute:$endSecond,$endMillis";
+        $time .= $this->formatCoordinates($cue);
         $lines = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines());
 
         // strip xml tags depending on option settings
@@ -45,7 +46,26 @@ class SubRipFormatter extends SubtitleFormatter
             ? Markup::stripAllTags($lines)
             : Markup::keepTags($lines, ["b", "u", "i", "s", "font"]);
 
+        // A line that holds only a tag becomes empty, and an empty line ends the cue in SubRip.
+        $lines = explode(StringHelpers::UNIX_LINE_ENDING, $lines);
+        $lines = implode(StringHelpers::UNIX_LINE_ENDING, array_filter($lines, fn(string $line) => trim($line) !== ""));
+
+        if ($cue->getAlignment() !== null && $cue->getAlignment() !== 2) {
+            $lines = "{\\an{$cue->getAlignment()}}" . $lines;
+        }
+
 
         return $time . StringHelpers::UNIX_LINE_ENDING . $lines;
+    }
+
+
+    private function formatCoordinates(SubtitleCue $cue): string
+    {
+        $coordinates = $cue->getFormatData("srt")["coordinates"] ?? null;
+        if (!is_array($coordinates)) {
+            return "";
+        }
+
+        return " X1:{$coordinates["x1"]} X2:{$coordinates["x2"]} Y1:{$coordinates["y1"]} Y2:{$coordinates["y2"]}";
     }
 }
