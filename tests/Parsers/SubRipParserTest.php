@@ -217,4 +217,34 @@ class SubRipParserTest extends TestCase
         $this->assertSame(2, count($cues));
         $this->assertSame(["First", "line"], $cues[0]->getLines());
     }
+
+
+    public function testTextOutsideTagsIsEscaped(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:04,000\nI <3 bread & jam\n<i>Salt & pepper</i> 2 > 1\n";
+
+        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+        $this->assertSame(["I &lt;3 bread &amp; jam", "<i>Salt &amp; pepper</i> 2 &gt; 1"], $cue->getLines());
+    }
+
+
+    public function testEntityInTheFileIsLiteralText(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:04,000\nThe sign says &amp; and &lt;b&gt;\n";
+
+        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+        $this->assertSame(["The sign says &amp;amp; and &amp;lt;b&amp;gt;"], $cue->getLines());
+    }
+
+
+    public function testTagsStayMarkup(): void
+    {
+        $raw = "1\n00:00:01,000 --> 00:00:04,000\n<B>bold</B> <font color=\"#00aa00\">green</font> <foo>unknown</foo>\n";
+
+        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+
+        $this->assertSame(["<B>bold</B> <font color=\"#00aa00\">green</font> <foo>unknown</foo>"], $cue->getLines());
+    }
 }

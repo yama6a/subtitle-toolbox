@@ -44,6 +44,12 @@ class SubRipRealFilesTest extends TestCase
                 [1.0, 2.5, "Every line in this file\nends with CR CR LF"],
                 [5.0, 6.5, "Last cue"],
             ],
+            "Own escaping" => [
+                "own_escaping.srt",
+                5,
+                [1.0, 3.5, "I &lt;3 bread &amp; jam"],
+                [12.5, 15.0, "<font color=\"#ffcc00\">Rain &amp; wind &gt;&gt; 40 km/h</font>"],
+            ],
         ];
     }
 
@@ -95,6 +101,14 @@ class SubRipRealFilesTest extends TestCase
             file_get_contents(__DIR__ . "/../files/srt/real/own_alignment_and_coordinates_formatted.srt"),
             $this->parseFile("own_alignment_and_coordinates.srt")->format(SubRipFormatter::class)
         );
+    }
+
+
+    public function testOwnEscapingFileSurvivesARoundTripByteForByte(): void
+    {
+        $raw = file_get_contents(__DIR__ . "/../files/srt/real/own_escaping.srt");
+
+        $this->assertSame($raw, Subtitle::parse($raw, SubRipParser::class)->format(SubRipFormatter::class));
     }
 
 

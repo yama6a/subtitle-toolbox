@@ -114,4 +114,38 @@ class SubRipFormatterTest extends TestCase
             $subtitle->format(SubRipFormatter::class)
         );
     }
+
+
+    public function testEntitiesAreDecoded(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, ["I &lt;3 bread &amp; jam", "<i>Salt &amp; pepper</i> 2 &gt; 1"]));
+
+        $this->assertSame(
+            "\u{feff}1\n00:00:01,000 --> 00:00:02,000\nI <3 bread & jam\n<i>Salt & pepper</i> 2 > 1\n",
+            $subtitle->format(SubRipFormatter::class)
+        );
+        $this->assertSame(
+            "\u{feff}1\n00:00:01,000 --> 00:00:02,000\nI <3 bread & jam\nSalt & pepper 2 > 1\n",
+            $subtitle->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+        );
+    }
+
+
+    public function testTextWithLessThanAndAmpersandSurvivesARoundTrip(): void
+    {
+        $raw = "\u{feff}1\n00:00:01,000 --> 00:00:02,000\nI <3 bread & jam\n";
+
+        $this->assertSame($raw, Subtitle::parse($raw, SubRipParser::class)->format(SubRipFormatter::class));
+    }
+
+
+    public function testLineThatIsNotUtf8KeepsItsBytes(): void
+    {
+        $raw = "\u{feff}1\n00:00:01,000 --> 00:00:02,000\ncaf\xE9 & <i>cr\xE8me</i>\n";
+
+        $subtitle = Subtitle::parse($raw, SubRipParser::class);
+
+        $this->assertSame(["caf\xE9 &amp; <i>cr\xE8me</i>"], $subtitle->getCues()[0]->getLines());
+        $this->assertSame($raw, $subtitle->format(SubRipFormatter::class));
+    }
 }
