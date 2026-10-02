@@ -2,6 +2,7 @@
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 
@@ -12,7 +13,7 @@ class SbvFormatter extends SubtitleFormatter
         $blocks = [];
         foreach ($subtitle->getCues() as $cue) {
             $lines = array_filter(
-                array_map(fn (string $line): string => trim($this->toPlainText($line)), $cue->getLines()),
+                array_map(fn (string $line): string => trim(Markup::decodeEntities(Markup::stripAllTags($line))), $cue->getLines()),
                 fn (string $line): bool => $line !== ""
             );
 
@@ -41,11 +42,5 @@ class SbvFormatter extends SubtitleFormatter
         $millis  = $totalMillis % 1000;
 
         return sprintf("%d:%02d:%02d.%03d", $hours, $minutes, $secs, $millis);
-    }
-
-
-    private function toPlainText(string $line): string
-    {
-        return html_entity_decode(strip_tags($line), ENT_QUOTES | ENT_HTML5, "UTF-8");
     }
 }
