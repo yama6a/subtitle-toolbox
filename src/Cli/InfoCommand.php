@@ -2,7 +2,9 @@
 
 namespace SubtitleToolbox\Cli;
 
+use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\SubtitleStatistics;
 
 class InfoCommand extends ReportCommand
@@ -49,9 +51,17 @@ class InfoCommand extends ReportCommand
             $words[] = "$word ($count)";
         }
 
+        $imageCues         = array_filter($subtitle->getCues(), fn (SubtitleCue $cue): bool => CueImage::isImageCue($cue));
+        $imageCuesWithText = count(array_filter($imageCues, fn (SubtitleCue $cue): bool => $cue->getLines() !== []));
+
         $rows = [
-            "Format"                => $format,
-            "Cues"                  => (string)$statistics->getCueCount(),
+            "Format" => $format,
+            "Cues"   => (string)$statistics->getCueCount(),
+        ];
+        if ($imageCues !== []) {
+            $rows["Image cues"] = count($imageCues) . ", $imageCuesWithText with text";
+        }
+        $rows += [
             "Words"                 => (string)$statistics->getWordCount(),
             "Characters"            => (string)$statistics->getCharacterCount(),
             "Display time"          => self::number($statistics->getTotalDisplayTime()) . " s",
@@ -79,6 +89,7 @@ class InfoCommand extends ReportCommand
             "format"     => $format,
             "metadata"   => (object)$subtitle->getAllMetadata(),
             "statistics" => $data,
+            "imageCues"  => ["count" => count($imageCues), "withText" => $imageCuesWithText],
         ]);
     }
 }

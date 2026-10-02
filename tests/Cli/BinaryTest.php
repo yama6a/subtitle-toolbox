@@ -538,6 +538,29 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testInfoCountsImageCuesAndImageCuesWithText(): void
+    {
+        copy(__DIR__ . "/../files/vobsub/text-pal.idx", "$this->dir/text.idx");
+        copy(__DIR__ . "/../files/vobsub/text-pal.sub", "$this->dir/text.sub");
+        $this->assertSame(0, $this->runBinary(["convert", "text.idx", "text.json", "--ocr"])[0]);
+
+        [$code, $stdout] = $this->runBinary(["info", "text.idx"]);
+        $this->assertSame(0, $code);
+        $this->assertStringContainsString("\n  Cues:                  6\n  Image cues:            6, 0 with text\n", $stdout);
+
+        [, $stdout] = $this->runBinary(["info", "text.json"]);
+        $this->assertStringContainsString("\n  Cues:                  6\n  Image cues:            6, 6 with text\n", $stdout);
+
+        [$code, $stdout] = $this->runBinary(["info", "text.idx", "text.json", "trip.srt", "--json"]);
+        $this->assertSame(0, $code);
+        $this->assertSame([["count" => 6, "withText" => 0], ["count" => 6, "withText" => 6], ["count" => 0, "withText" => 0]],
+                          array_column(json_decode($stdout, true), "imageCues"));
+
+        [, $stdout] = $this->runBinary(["info", "trip.srt"]);
+        $this->assertStringNotContainsString("Image cues", $stdout);
+    }
+
+
     public function testFormatsListsTheRegistry(): void
     {
         [$code, $stdout, $stderr] = $this->runBinary(["formats"]);
