@@ -2,6 +2,7 @@
 
 namespace SubtitleToolbox\Cli;
 
+use GlyphOcr\GlyphDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\FormatRegistry;
@@ -482,6 +483,58 @@ class BinaryTest extends TestCase
         $this->assertSame(["disc/shapes.sup", "disc/tracks.idx"], array_column(json_decode($stdout, true), "file"));
         $this->assertSame(["pgs", "vobsub"], array_column(json_decode($stdout, true), "format"));
         $this->assertSame(5, json_decode($stdout, true)[1]["statistics"]["cueCount"]);
+    }
+
+
+    public function testOcrReadsTheImageCuesOfTheTextFixtures(): void
+    {
+        copy(__DIR__ . "/../files/pgs/text_1080p.sup", "$this->dir/text.sup");
+        copy(__DIR__ . "/../files/vobsub/text-pal.idx", "$this->dir/text.idx");
+        copy(__DIR__ . "/../files/vobsub/text-pal.sub", "$this->dir/text.sub");
+
+        $this->assertSame([0, "text.sup -> text.srt\n", "text.sup: OCR 12/12\n"], $this->runBinary(["convert", "text.sup", "text.srt", "--ocr"]));
+        $this->assertFileEquals(__DIR__ . "/../files/pgs/text_1080p.ocr.srt", "$this->dir/text.srt");
+
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "text.idx", "--to", "srt", "--output", "-", "--ocr"]);
+        $this->assertSame([0, "text.idx: OCR 6/6\n"], [$code, $stderr]);
+        $this->assertStringEqualsFile(__DIR__ . "/../files/vobsub/text-pal.ocr.srt", $stdout);
+    }
+
+
+    public function testOcrDatabaseReplacesTheLatinDatabase(): void
+    {
+        copy(__DIR__ . "/../files/pgs/text_1080p.sup", "$this->dir/text.sup");
+        (new GlyphDatabase())->save("$this->dir/empty.nocr");
+
+        [$code, $stdout] = $this->runBinary(["convert", "text.sup", "--to", "srt", "-o", "-", "--ocr", "--ocr-database", "empty.nocr"]);
+
+        $this->assertSame(0, $code);
+        $subtitle = Subtitle::parse($stdout);
+        $this->assertCount(12, $subtitle->getCues());
+        foreach ($subtitle->getCues() as $cue) {
+            $this->assertMatchesRegularExpression("/^\\*+( \\*+)*$/", implode(" ", $cue->getLines()));
+        }
+    }
+
+
+    public function testOcrOptionErrors(): void
+    {
+        copy(__DIR__ . "/../files/pgs/text_1080p.sup", "$this->dir/text.sup");
+        file_put_contents("$this->dir/broken.nocr", "no database");
+
+        $this->assertSame([2, "", "Error: Pass --ocr with --ocr-database.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+                          $this->runBinary(["convert", "text.sup", "text.srt", "--ocr-database", "broken.nocr"]));
+        $this->assertSame([2, "", "Error: Cannot read the glyph database - the data is not gzip-compressed!\n" .
+                                  "Run \"subtitle-toolbox help convert\" for the usage.\n"],
+                          $this->runBinary(["convert", "text.sup", "text.srt", "--ocr", "--ocr-database", "broken.nocr"]));
+        $this->assertFileDoesNotExist("$this->dir/text.srt");
+    }
+
+
+    public function testOcrLeavesFilesWithoutImageCuesAsTheyAre(): void
+    {
+        $this->assertSame([0, "trip.srt -> trip.vtt\n", ""], $this->runBinary(["convert", "trip.srt", "--to", "vtt", "--ocr"]));
+        $this->assertSame(Subtitle::parse($this->file("trip.srt"))->format(WebVttFormatter::class), $this->file("trip.vtt"));
     }
 
 

@@ -2,6 +2,8 @@
 
 namespace SubtitleToolbox\Cli;
 
+use Composer\Autoload\ClassLoader;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\Subtitle;
@@ -63,5 +65,25 @@ class ApplicationTest extends TestCase
         $this->assertSame([1, "", "stdin: The format is unknown. Pass --from.\n"], self::runApplication(["info", "-"], "hello"));
         $this->assertSame([1, "", "stdin: VobSub needs the path of the .idx file. Standard input does not work.\n"],
                           self::runApplication(["info", "-", "--from", "vobsub"], "hello"));
+    }
+
+
+    #[RunInSeparateProcess]
+    public function testOcrWithoutTheGlyphOcrPackageFailsWithTheInstallHint(): void
+    {
+        foreach (ClassLoader::getRegisteredLoaders() as $loader) {
+            $loader->unregister();
+            spl_autoload_register(function (string $class) use ($loader): void {
+                if (!str_starts_with($class, "GlyphOcr\\")) {
+                    $loader->loadClass($class);
+                }
+            });
+        }
+
+        $this->assertSame(
+            [2, "", "Error: --ocr needs the package yama6a/php-glyph-ocr. Install it with: composer require yama6a/php-glyph-ocr\n" .
+                    "Run \"subtitle-toolbox help convert\" for the usage.\n"],
+            self::runApplication(["convert", __DIR__ . "/../files/pgs/text_1080p.sup", "--to", "srt", "--output", "-", "--ocr"])
+        );
     }
 }
