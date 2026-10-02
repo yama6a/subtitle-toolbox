@@ -277,10 +277,12 @@ Detection ignores a UTF-8 BOM and leading blank lines. It checks the signatures 
 | 6 | `MicroDvdParser` | `{24}{72}` |
 | 7 | `SubRipParser` | `1`, then `00:00:01,000 -->` |
 | 8 | `SbvParser` | `0:00:01.500,0:00:04.000` |
-| 9 | `LyricsParser` | `[ti:Title]` or `[00:12.00]`, and at least one timestamp line |
-| 10 | `PgsParser` | the bytes `PG`, then a known segment type at byte 10 |
+| 9 | `SubViewerParser` | `******** START SCRIPT ********`, `[INFORMATION]` or `00:00:01.50,00:00:04.00` |
+| 10 | `LyricsParser` | `[ti:Title]` or `[00:12.00]`, and at least one timestamp line |
+| 11 | `PgsParser` | the bytes `PG`, then a known segment type at byte 10 |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line looks like SubRip, so it detects as SubRip.
+- **`.sub` files**: MicroDVD, MPSub and SubViewer text files all use `.sub`. SBV has three digits after the dot, SubViewer 2 has two.
 - **MicroDVD**: detection does not find the frame rate. `parse()` throws `ParsingException` for a MicroDVD file without a `{1}{1}<fps>` first line. Then pass the frame rate: `(new MicroDvdParser(23.976))->parse($content)`.
 
 ## Editing cues

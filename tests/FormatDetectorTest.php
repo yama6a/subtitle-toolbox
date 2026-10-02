@@ -14,6 +14,7 @@ use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\WebVttParser;
 
@@ -30,6 +31,7 @@ class FormatDetectorTest extends TestCase
         "sami"     => SamiParser::class,
         "sbv"      => SbvParser::class,
         "srt"      => SubRipParser::class,
+        "subviewer" => SubViewerParser::class,
         "ttml"     => TtmlParser::class,
         "vtt"      => WebVttParser::class,
     ];
@@ -115,11 +117,37 @@ class FormatDetectorTest extends TestCase
             "MicroDVD without end frame" => ["{24}{}Hello\n", MicroDvdParser::class],
             "SubRip with dot"            => ["1\n00:00:01.000 --> 00:00:04.000\nHello\n", SubRipParser::class],
             "SBV"                        => ["0:00:01.500,0:00:04.000\nHello\n", SbvParser::class],
+            "SubViewer 2 information"    => ["[INFORMATION]\r\n[TITLE]Bakery\r\n[END INFORMATION]\r\n", SubViewerParser::class],
+            "SubViewer 2 timing line"    => ["00:00:01.50,00:00:04.00\nHello[br]world\n", SubViewerParser::class],
+            "SubViewer 2 after [SUBTITLE]" => ["[SUBTITLE]\n[COLF]&HFFFFFF,[SIZE]18\n00:00:01.50,00:00:04.00\nHello\n", SubViewerParser::class],
+            "SubViewer 1"                => ["[TITLE]\nBakery\n[DELAY]\n0\n******** START SCRIPT ********\n[00:00:01]\nHello\n", SubViewerParser::class],
+            "SBV with three digits"      => ["0:00:01.500,0:00:04.000\nHello[br]world\n", SbvParser::class],
+            "SBV with two hour digits"   => ["00:00:01.500,00:00:04.000\nHello\n", SbvParser::class],
             "LRC with ID tag"            => ["[ti:Morning Train]\n[00:12.00]Hello\n", LyricsParser::class],
             "LRC without fraction"       => ["[00:12]Hello\n", LyricsParser::class],
             "JSON with cues first"       => ["{\"cues\": [], \"metadata\": {\"title\": \"version\"}, \"version\": 1}", JsonParser::class],
             "JSON with spaces"           => ["{\n  \"version\" : 1 ,\n  \"cues\" : [ ]\n}\n", JsonParser::class],
         ];
+    }
+
+
+    public static function subFiles(): array
+    {
+        $files = [];
+        foreach (["microdvd" => MicroDvdParser::class, "mpsub" => MpSubParser::class, "subviewer" => SubViewerParser::class] as $directory => $parserClass) {
+            foreach (glob(self::DIR . "$directory/real/*.sub") as $path) {
+                $files[basename($path)] = [$path, $parserClass];
+            }
+        }
+
+        return $files;
+    }
+
+
+    #[DataProvider("subFiles")]
+    public function testSubFilesDetectByTheirContent(string $path, string $parserClass): void
+    {
+        $this->assertSame($parserClass, FormatDetector::detect(file_get_contents($path)));
     }
 
 
