@@ -6,4 +6,13 @@
 
   // ci.yaml fails a PR without a release label. A dependency bump never changes the public API.
   labels: ["patch"],
+
+  packageRules: [
+    {
+      // composer.lock is not part of the Packagist archive, so a refresh changes nothing for users.
+      description: "lock file refreshes publish no release",
+      matchUpdateTypes: ["lockFileMaintenance"],
+      labels: ["skip-release"],
+    },
+  ],
 }
