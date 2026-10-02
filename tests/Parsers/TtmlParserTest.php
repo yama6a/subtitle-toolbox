@@ -166,6 +166,21 @@ class TtmlParserTest extends TestCase
     }
 
 
+    public function testWhiteTextGivesNoFontTag(): void
+    {
+        $head = "<styling><style xml:id=\"s1\" tts:color=\"white\" tts:fontSize=\"100%\"/></styling>";
+        $text = $this->parseParagraph(
+            "<p end=\"1s\" style=\"s1\">white <span tts:color=\"yellow\">yellow</span>"
+            . " <span tts:color=\"rgb(255,255,255)\">rgb</span> <span tts:color=\"rgba(255,255,255,255)\">rgba</span>"
+            . " <span tts:color=\"#FFFFFFFF\">hex</span></p>",
+            "",
+            $head
+        )[2];
+
+        $this->assertSame("white <font color=\"#ffff00\">yellow </font>rgb rgba hex", $text);
+    }
+
+
     public function testAgentsBecomeSpeakerTags(): void
     {
         $head = "<metadata><ttm:agent xml:id=\"a1\" type=\"person\"><ttm:name type=\"full\">Anna</ttm:name></ttm:agent></metadata>";

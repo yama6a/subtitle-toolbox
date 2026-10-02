@@ -17,9 +17,9 @@ class TtmlRealFileTest extends TestCase
     {
         return [
             "astisub_breaklines"         => ["astisub_breaklines.ttml", 4, 0.0, 1.0, "First line\nSecond line", null, 3.0, 4.0, "Seventh line\nEighth middle line", null],
-            "astisub_merging_style"      => ["astisub_merging_style.ttml", 4, 0.0, 60.0, "text1.0 <font color=\"#ffffff\">text1.1</font>", 8, 120.0, 180.0, "<font color=\"#ffffff\">text3</font>", 8],
-            "astisub_smpte"              => ["astisub_smpte.ttml", 6, 99.0, 101.04, "<font color=\"#ffffff\">(light rain)</font>", 8, 151.4, 153.44, "<font color=\"#ffff00\"><i>(music for the</i></font>\n<font color=\"#ffffff\">traffic news)</font>", null],
-            "bbc_ebu_tt_d"               => ["bbc_ebu_tt_d.ttml", 20, 10.0, 13.0, "<v Anna><font color=\"#ffffff\">Good morning from the harbour.</font>", 2, 76.12, 79.52, "<font color=\"#ffffff\"><i>(music)</i></font>", 8],
+            "astisub_merging_style"      => ["astisub_merging_style.ttml", 4, 0.0, 60.0, "text1.0 text1.1", 8, 120.0, 180.0, "text3", 8],
+            "astisub_smpte"              => ["astisub_smpte.ttml", 6, 99.0, 101.04, "(light rain)", 8, 151.4, 153.44, "<font color=\"#ffff00\"><i>(music for the</i></font>\ntraffic news)", null],
+            "bbc_ebu_tt_d"               => ["bbc_ebu_tt_d.ttml", 20, 10.0, 13.0, "<v Anna>Good morning from the harbour.", 2, 76.12, 79.52, "<i>(music)</i>", 8],
             "mantas_dfxp_br"             => ["mantas_dfxp_br.dfxp", 1, 0.0, 1.0, "one\ntwo\nthree", 2, 0.0, 1.0, "one\ntwo\nthree", 2],
             "mantas_duplicated_ids"      => ["mantas_duplicated_ids.ttml", 3, 0.0, 1.0, "First line.", null, 2.0, 3.0, "Third line.", null],
             "mantas_fps_multiplier"      => ["mantas_fps_multiplier.ttml", 1, 15.015, 17.684, "First line.", null, 15.015, 17.684, "First line.", null],
@@ -29,8 +29,8 @@ class TtmlRealFileTest extends TestCase
             "pysubs2_regions"            => ["pysubs2_regions.ttml", 10, 1.375, 5.75, "TOP SAMPLE TEXT", 8, 45.325, 50.041, "for the weekend market.", 2],
             "w3c_dfxp_timing"            => ["w3c_dfxp_timing.dfxp", 4, 0.0, 2.0, "Text 1", 8, 1.0, 3.0, "Text 4", 8],
             "w3c_imsc11_frames"          => ["w3c_imsc11_frames.ttml", 3, 1.01, 3.0, "This should appear on frame 25.", null, 7.33, 9.0, "This should appear on frame 176.", null],
-            "w3c_imsc11_line_gaps"       => ["w3c_imsc11_line_gaps.ttml", 1, 0.0, 30.0, "<font color=\"#ffffff\">##Line gaps##</font>\n<font color=\"#ffffff\">The quick brown fox</font>\n<font color=\"#ffffff\">jumps over the </font><font color=\"#000000\">lazy </font><font color=\"#ffffff\">dog</font>\n<font color=\"#ffffff\">##Line gaps##</font>", 2, 0.0, 30.0, "<font color=\"#ffffff\">##Line gaps##</font>\n<font color=\"#ffffff\">The quick brown fox</font>\n<font color=\"#ffffff\">jumps over the </font><font color=\"#000000\">lazy </font><font color=\"#ffffff\">dog</font>\n<font color=\"#ffffff\">##Line gaps##</font>", 2],
-            "w3c_imsc11_paragraphs"      => ["w3c_imsc11_paragraphs.ttml", 4, 0.0, 30.0, "<font color=\"#ffffff\">Paragraph 1</font>", 2, 0.0, 30.0, "<font color=\"#ffffff\">Paragraph 2</font>", 8],
+            "w3c_imsc11_line_gaps"       => ["w3c_imsc11_line_gaps.ttml", 1, 0.0, 30.0, "##Line gaps##\nThe quick brown fox\njumps over the <font color=\"#000000\">lazy </font>dog\n##Line gaps##", 2, 0.0, 30.0, "##Line gaps##\nThe quick brown fox\njumps over the <font color=\"#000000\">lazy </font>dog\n##Line gaps##", 2],
+            "w3c_imsc11_paragraphs"      => ["w3c_imsc11_paragraphs.ttml", 4, 0.0, 30.0, "Paragraph 1", 2, 0.0, 30.0, "Paragraph 2", 8],
             "w3c_imsc11_regions"         => ["w3c_imsc11_regions.ttml", 3, 0.0, 6.0, "This region is within the editorial area.", 8, 0.0, 6.0, "This region is not.", 2],
             "w3c_ttml1_cells"            => ["w3c_ttml1_cells.ttml", 5, 0.0, 8.0, "Lorem ipsum dolor sit", null, 18.0, 29.0, "Ut enim ad minim veniam quis, nostrud", null],
             "w3c_ttml1_timed_spans"      => ["w3c_ttml1_timed_spans.ttml", 5, 0.0, 25.0, "Lorem ipsum dolor sit", null, 0.0, 25.0, "Ut enim ad minim veniam quis, nostrud", null],
@@ -84,8 +84,8 @@ class TtmlRealFileTest extends TestCase
         $this->assertSame("Harbour weather", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
         $this->assertSame("en-GB", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame("sub3", $cues[2]->getIdentifier());
-        $this->assertSame("<v Ben><font color=\"#ffffff\">The first ferry left</font>\n<font color=\"#ffffff\">at seven o'clock.</font>", $cues[2]->getText());
-        $this->assertSame("<v Ben><font color=\"#ffffff\">Tide tables are <b>on the <u>board</u></b></font>", $cues[10]->getText());
+        $this->assertSame("<v Ben>The first ferry left\nat seven o'clock.", $cues[2]->getText());
+        $this->assertSame("<v Ben>Tide tables are <b>on the <u>board</u></b>", $cues[10]->getText());
         $this->assertStringNotContainsString("ttm:title", $subtitle->getFormatData("ttml")["head"]);
         $this->assertStringContainsString("ebuttm:documentMetadata", $subtitle->getFormatData("ttml")["head"]);
     }

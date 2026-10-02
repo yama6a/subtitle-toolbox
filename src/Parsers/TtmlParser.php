@@ -439,7 +439,9 @@ class TtmlParser extends SubtitleParser
                                   || $style["s"] && !in_array("noLineThrough", $decorations, true);
                     break;
                 case "color":
-                    $style["color"] = $this->normalizeColor($value);
+                    $color          = $this->normalizeColor($value);
+                    // White is the default text colour of every player, so it adds no markup.
+                    $style["color"] = $color === "#ffffff" ? null : $color;
                     break;
             }
         }
