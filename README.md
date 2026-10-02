@@ -91,9 +91,30 @@ This project currently focuses on adding basic support for additional formats, r
 |:--- |:--- |:--- |:--- |
 | LyRiCs (.lrc)   | No support for ID tags | No support for ID tags | Strips all xml tags, including word-timing of enhanced LRC files
 | SubRip (.srt)   | Full Support | Full Support  | Formatter strips all xml tags except: \<b>\<i>\<u>\<s>\<font>
+| MicroDVD (.sub) | Frame rate from the parser constructor or a `{1}{1}<fps>` first line | Needs `OPTION_FRAME_RATE` | Converts `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` to core markup. Keeps other control codes in the `sub` format data
 | MpSub (.mpsub)  | n/a | Only supports FORMAT=TIME, No support for metadata | Formatter strips all xml tags  
 | SBV (.sbv)      | Accepts any number of hour digits | Writes one hour digit below 10 hours, no UTF-8 BOM | Formatter strips all xml tags and decodes HTML entities
 | WebVTT (.vtt)   | No Support for comments, styling or positioning| No Support for comments, styling or positioning | Formatter strips all xml tags except: \<b>\<u>\<i>\<v>\<lang>\<c>\<ruby>\<rt>
+
+### MicroDVD
+MicroDVD counts time in video frames, so the parser and the formatter need the frame rate of the video.
+
+```php
+$subtitle = (new MicroDvdParser(23.976))->parse(file_get_contents('movie.sub'));
+$subtitle = Subtitle::parse(file_get_contents('movie.sub'), MicroDvdParser::class);   // reads {1}{1}23.976
+
+$subtitle->format(MicroDvdFormatter::class, [
+    MicroDvdFormatter::OPTION_FRAME_RATE            => 23.976,
+    MicroDvdFormatter::OPTION_WRITE_FRAME_RATE_LINE => true,                         // writes {1}{1}23.976 first
+]);
+```
+
+- **Frame rate**: the constructor value wins over a `{1}{1}<fps>` first line. The parser never reads that line as a cue. Without either, the parser throws `ParsingException`.
+- `$subtitle->getFormatData('sub')['frameRate']` returns the frame rate that the parser used.
+- **Control codes**: the parser reads the codes at the start of each `|`-separated line. A code later in the line stays text.
+- A lower-case code styles one line. An upper-case code styles the whole cue.
+- The formatter writes control codes only for tags that wrap a whole line. It strips other tags.
+- An unchanged cue keeps its original control codes. The formatter writes `{y:b}{y:i}` for a changed cue or a cue from another format.
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
