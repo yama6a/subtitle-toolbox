@@ -239,6 +239,20 @@ class LenientParsingTest extends TestCase
                     [4, 3, self::SKIPPED, "Line 4 is not a MicroDVD cue: {x}{120}The deck is wet. (line 4)"],
                 ],
             ],
+            "ASS without a Format line, with a short event and a bad time" => [
+                "broken_events.ass",
+                AssParser::class,
+                "Line 11 has fewer fields than the Format line of the [Events] section: Dialogue: 0,0:00:04.00,0:00:06.00,Default",
+                [
+                    [1, 3, "The boats come in at dawn."],
+                    [10, 12, "<i>Fish is sold at the pier.</i>"],
+                ],
+                [
+                    [11, 1, self::SKIPPED, "Line 11 has fewer fields than the Format line of the [Events] section: " .
+                                           "Dialogue: 0,0:00:04.00,0:00:06.00,Default (line 11)"],
+                    [12, 2, self::SKIPPED, "The time of at least one event could not be parsed: 0:00:0x.00"],
+                ],
+            ],
         ];
     }
 
