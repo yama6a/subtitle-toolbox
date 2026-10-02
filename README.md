@@ -1101,6 +1101,62 @@ final class DeepLEngine implements TranslationEngine
 - **Texts**: each text holds placeholders and the entities `&lt;`, `&gt;` and `&amp;`, so it is valid XML content. Tell the engine to keep tags, for example with `tag_handling` for DeepL.
 - **Answer**: return one string per text, in the same order.
 
+## HLS
+HLS (HTTP Live Streaming) cuts a subtitle track into short WebVTT files, the segments, and lists them in an `.m3u8` playlist. Each segment has an `X-TIMESTAMP-MAP` header. The header maps a WebVTT cue time to the 90 kHz MPEG-2 timestamp of the video.
+
+```php
+use SubtitleToolbox\Hls\HlsSegmentOptions;
+use SubtitleToolbox\Hls\HlsWebVttJoiner;
+use SubtitleToolbox\Hls\HlsWebVttSegmenter;
+use SubtitleToolbox\Hls\TimestampMap;
+
+$hls = HlsWebVttSegmenter::segment($subtitle, new HlsSegmentOptions(
+    segmentDuration: 6,                 // seconds
+    mpegts: 900000,                     // MPEG-2 timestamp at which subtitle time 0 plays
+    local: 0,                           // WebVTT cue time in seconds that maps to mpegts
+    fileNamePattern: 'sub%d.vtt',       // %d is the 0-based segment number
+    mediaDuration: 20,                  // seconds the playlist covers, null for the end of the last cue
+));
+foreach ($hls->getSegments() as $name => $vtt) {   // 'sub0.vtt' => "WEBVTT\nX-TIMESTAMP-MAP=LOCAL:00:00:00.000,MPEGTS:900000\n\n..."
+    file_put_contents("out/$name", $vtt);
+}
+file_put_contents('out/subs.m3u8', $hls->getPlaylist());
+
+$subtitle = HlsWebVttJoiner::join([$vtt0, $vtt1, $vtt2, $vtt3]);    // cue times from the start of the stream
+$subtitle = HlsWebVttJoiner::join($segments, streamStartPts: 126000);
+
+$map = TimestampMap::fromHeader('X-TIMESTAMP-MAP=MPEGTS:181083,LOCAL:00:00:00.000');
+$map->offset(126000);                   // about 0.612, the seconds to add to a cue time
+```
+
+The playlist for a 20 s subtitle with 6 s segments:
+
+```
+#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:6
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXTINF:6.000,
+sub0.vtt
+#EXTINF:6.000,
+sub1.vtt
+#EXTINF:6.000,
+sub2.vtt
+#EXTINF:2.000,
+sub3.vtt
+#EXT-X-ENDLIST
+```
+
+- **Cues across a boundary**: a cue goes into every segment that it overlaps, with its full start and end time. [RFC 8216 section 3.5](https://datatracker.ietf.org/doc/html/rfc8216#section-3.5) requires this. A cue without an identifier gets its number in the whole subtitle, so it has the same identifier in each segment.
+- **Empty segments**: a segment without cues still has the header. Apple's [HLS authoring specification](https://developer.apple.com/documentation/http-live-streaming/hls-authoring-specification-for-apple-devices) item 5.5 requires a subtitle playlist for the whole content. Set `mediaDuration` to the video duration for that.
+- **Header**: the segmenter writes `LOCAL` before `MPEGTS`, as in RFC 8216 section 3.5. A cue at subtitle time `t` gets the WebVTT time `t + local`. `TimestampMap::fromHeader()` reads both attribute orders.
+- **Playlist**: a VOD media playlist with `#EXT-X-VERSION:3`, because decimal `#EXTINF` durations need version 3 (RFC 8216 section 7). `#EXT-X-TARGETDURATION` is the largest `#EXTINF` duration rounded to the nearest integer (RFC 8216 section 4.3.3.1). Apple recommends 6 s segments in item 7.5.
+- **Segment files**: UTF-8 without BOM, LF line endings. The header text, other header lines, `STYLE` and `REGION` blocks of the subtitle go into each segment. An old `X-TIMESTAMP-MAP` line is replaced. Comments are not copied.
+- **Joining**: `join()` parses the segments in playlist order, adds each map's `offset()` to its cue times, and keeps one copy of a cue that repeats with the same times and text. Then `removeDuplicateCues()` joins a cue that a segmenter split at a boundary. That call also joins two cues with the same text in the source when one ends at the start of the next.
+- **Stream start**: `join()` returns cue times from `streamStartPts`. Without it, the `MPEGTS` value of the first segment is the start. A segment without the header maps cue time 0 to `MPEGTS` 0, as RFC 8216 section 3.5 requires. A cue time that becomes negative becomes 0.
+- **Timestamp wrap**: MPEG-2 timestamps have 33 bits and wrap after about 26.5 hours. `offset()` takes the shorter way around the wrap, so a difference above half the range counts as a wrap.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
