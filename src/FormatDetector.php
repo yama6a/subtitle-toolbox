@@ -3,6 +3,7 @@
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Parsers\AssParser;
+use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\MpSubParser;
@@ -34,6 +35,7 @@ class FormatDetector
      * 8. SBV: two timestamps and a comma between them. Three millisecond digits keep out SubViewer, which has two.
      * 9. LRC: an ID tag or a timestamp in brackets, and at least one timestamp line.
      * 10. PGS: the `PG` magic bytes, then a known segment type after the two 4-byte time stamps.
+     * 11. JSON: an object with a numeric "version" key and a "cues" list. The possessive loops skip strings without backtracking.
      */
     private const SIGNATURES = [
         WebVttParser::class   => '/\AWEBVTT(?:[ \t\n]|\z)/',
@@ -47,6 +49,7 @@ class FormatDetector
         LyricsParser::class   => '/\A(?=' . self::LRC_TIMESTAMP . '|\[[A-Za-z#][A-Za-z0-9_]*:[^\]\n]*\]).*?^[ \t]*' .
                                  self::LRC_TIMESTAMP . '/ms',
         PgsParser::class      => '/\APG.{8}[\x14-\x17\x80]/s',
+        JsonParser::class     => '/\A\{(?=(?:[^"]++|"(?!version"\s*+:))*+"version"\s*+:\s*+\d)(?=(?:[^"]++|"(?!cues"\s*+:))*+"cues"\s*+:\s*+\[)/',
     ];
 
 
