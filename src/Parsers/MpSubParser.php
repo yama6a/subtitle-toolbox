@@ -34,7 +34,7 @@ class MpSubParser extends SubtitleParser
 
             if ($cue !== null) {
                 if ($line !== "") {
-                    $cue->addLine($line);
+                    $cue->addLine($this->escapeText($line));
                     continue;
                 }
 
@@ -93,6 +93,13 @@ class MpSubParser extends SubtitleParser
         }
 
         $subtitle->addCue($cue, false);
+    }
+
+
+    // htmlspecialchars() returns an empty string for invalid UTF-8, which would drop the text of Latin-1 files.
+    private function escapeText(string $line): string
+    {
+        return str_replace(["&", "<", ">"], ["&amp;", "&lt;", "&gt;"], $line);
     }
 
 
