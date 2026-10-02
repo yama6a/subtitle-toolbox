@@ -16,6 +16,8 @@ RUN .build/build-phar.sh "$VERSION" /subtitle-toolbox.phar
 
 FROM php:8.5-cli-alpine@sha256:93684051146ec037620855feb77f278090bde45ddc030801cd3f2a7685bc4deb
 COPY --from=build /subtitle-toolbox.phar /usr/local/bin/subtitle-toolbox.phar
+# OCR of a 1,500-cue PGS file peaks at about 139 MB, above the 128 MB default.
+RUN echo "memory_limit=512M" > "$PHP_INI_DIR/conf.d/subtitle-toolbox.ini"
 WORKDIR /work
 USER www-data
 ENTRYPOINT ["php", "/usr/local/bin/subtitle-toolbox.phar"]
