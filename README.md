@@ -94,7 +94,7 @@ This project currently focuses on adding basic support for additional formats, r
 | MpSub (.mpsub)  | FORMAT=TIME and FORMAT=<fps>, header lines | FORMAT=TIME by default, FORMAT=<fps> as an option, header lines | Formatter strips all xml tags
 | SBV (.sbv)      | Accepts any number of hour digits | Writes one hour digit below 10 hours, no UTF-8 BOM | Formatter strips all xml tags and decodes HTML entities
 | SubRip (.srt)   | Reads coordinates, alignment tags and lenient timestamps | Writes standard timestamps, coordinates and alignment tags | Formatter strips all xml tags except: \<b>\<i>\<u>\<s>\<font>
-| WebVTT (.vtt)   | No Support for comments, styling or positioning| No Support for comments, styling or positioning | Formatter strips all xml tags except: \<b>\<u>\<i>\<v>\<lang>\<c>\<ruby>\<rt>
+| WebVTT (.vtt)   | Header, comments, cue identifiers, styles, regions and cue settings | Writes them back, numbers cues without identifier, always writes hours | Formatter strips all xml tags except: \<b>\<u>\<i>\<v>\<lang>\<c>\<ruby>\<rt> and inline timestamps
 
 ### LRC
 ```php
@@ -147,6 +147,21 @@ $subtitle->format(MpSubFormatter::class, [MpSubFormatter::OPTION_FRAME_RATE => 2
 | `{\b1}`, `{\i1}`, `{\u1}`, `{\s1}` and their `0` forms | `<b>`, `<i>`, `<u>`, `<s>` and their closing tags. An open tag closes at the end of the cue. | the HTML-like tags |
 
 Other override tags such as `{\pos(10,20)}` stay in the cue text.
+
+### WebVTT
+| Input | Goes to |
+|:--- |:--- |
+| `NOTE` block | `$subtitle->getComments()` |
+| Cue identifier | `$cue->getIdentifier()` |
+| Text after `WEBVTT`, lines up to the first empty line | `$subtitle->getFormatData('vtt')`, keys `header` and `headerLines` |
+| `STYLE` blocks, CSS not parsed | `$subtitle->getFormatData('vtt')['styles']` |
+| `REGION` blocks | `$subtitle->getFormatData('vtt')['regions']`, one `name => value` array per region |
+| Cue settings `vertical`, `line`, `position`, `size`, `align`, `region` | `$cue->getFormatData('vtt')`, exact values |
+| `&nbsp;`, `&lrm;`, `&rlm;` | the characters U+00A0, U+200E, U+200F |
+
+- **Alignment from cue settings**: `line:0` is the top row, `line:50%,center` the middle row, and no `line`, `line:-1` or `line:100%,end` the bottom row. `align:left`, `center` and `right` set the column. Other values, `align:start`, `align:end` and `vertical` give no alignment.
+- **Cue settings from alignment**: a cue without `vtt` format data gets settings from its alignment. Alignment 8 becomes `line:0`, 7 becomes `line:0 align:left`. The `vtt` format data wins over the alignment.
+- **Limits**: the formatter strips classes such as `<c.yellow>`. It writes `REGION` blocks before `STYLE` blocks, and both before the comments that come before the first cue.
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
