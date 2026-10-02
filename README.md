@@ -373,6 +373,32 @@ final class TesseractEngine implements OcrEngine
 - **Lines**: the engine returns plain text or core markup, for example `<i>` for italic text. Empty lines are dropped.
 - **Confidence**: pass a value from 0 to 1 as the second argument of `OcrResult`, or leave it null.
 
+## Sync to a reference subtitle
+A German SRT for the 25 fps release is late and drifts against a 23.976 fps video. An English SRT for that video is in sync. `ReferenceSync` finds the scale and the offset from the cue times alone, so the languages can differ.
+
+```php
+use SubtitleToolbox\Sync\ReferenceSync;
+use SubtitleToolbox\Sync\ReferenceSyncOptions;
+
+$result = ReferenceSync::sync($german, $english);   // $german stays unchanged
+$result->getScale();                                // 1.04271 (25 / 23.976)
+$result->getOffset();                               // -2.3, added after the scale
+$result->getScore();                                // 0.89
+$result->apply($german);                            // calls scale() and then shift()
+
+ReferenceSync::sync($german, $english, new ReferenceSyncOptions(
+    minOffset: -120,       // seconds, default -60
+    maxOffset: 120,        // seconds, default 60
+    searchScale: false,    // true (default) tries the frame-rate factors, false keeps the scale at 1
+));
+```
+
+- **Matching**: a candidate maps each target time t to t * scale + offset. Its score is the time that cues of both files cover, divided by the time that cues of at least one file cover. Only the times count, not the text. The idea comes from [alass](https://github.com/kaegi/alass), which also aligns by time spans.
+- **Search**: the scale factors are 1, 24/23.976, 25/24 and 25/23.976 and their inverses, as in the frame-rate ratios of [ffsubsync](https://github.com/smacke/ffsubsync). For each factor, the search tries offsets in steps of 0.1 s, then steps of 0.01 s around the best one. The best score over all factors wins.
+- **Score**: from 0 to 1. A score below 0.5 means the files likely do not match. Missing and extra cues lower the score. The result stays correct while most cues match.
+- **Speed**: 2,000 cues against 2,000 cues take about 0.5 s.
+- **Limits**: one scale and one offset apply to the whole file. A file with a different shift after a cut, which alass calls a split, does not sync. Other frame-rate factors and offsets outside the range are not found.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
