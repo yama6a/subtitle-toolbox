@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Parsers\AssParser;
+use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\MpSubParser;
@@ -22,6 +23,7 @@ class FormatDetectorTest extends TestCase
 
     private const PARSERS = [
         "ass"      => AssParser::class,
+        "json"     => JsonParser::class,
         "lrc"      => LyricsParser::class,
         "microdvd" => MicroDvdParser::class,
         "mpsub"    => MpSubParser::class,
@@ -115,6 +117,8 @@ class FormatDetectorTest extends TestCase
             "SBV"                        => ["0:00:01.500,0:00:04.000\nHello\n", SbvParser::class],
             "LRC with ID tag"            => ["[ti:Morning Train]\n[00:12.00]Hello\n", LyricsParser::class],
             "LRC without fraction"       => ["[00:12]Hello\n", LyricsParser::class],
+            "JSON with cues first"       => ["{\"cues\": [], \"metadata\": {\"title\": \"version\"}, \"version\": 1}", JsonParser::class],
+            "JSON with spaces"           => ["{\n  \"version\" : 1 ,\n  \"cues\" : [ ]\n}\n", JsonParser::class],
         ];
     }
 
@@ -142,6 +146,9 @@ class FormatDetectorTest extends TestCase
             "blank lines"              => ["\n\r\n  \n"],
             "BOM only"                 => ["\xEF\xBB\xBF"],
             "plain text"               => ["The train to the coast leaves at 7:15.\nBring a coat.\n"],
+            "JSON with version string" => ["{\"version\": \"1\", \"cues\": []}"],
+            "JSON with cues as text"   => ["{\"version\": 1, \"text\": \"\\\"cues\\\": [\"}"],
+            "Whisper JSON"             => ["{\"text\": \" Hello\", \"segments\": [{\"id\": 0, \"start\": 0.0, \"end\": 2.0, \"text\": \" Hello\"}], \"language\": \"en\"}"],
             "JSON"                     => ["{\"cues\": [{\"start\": 1, \"end\": 2, \"text\": \"Hello\"}]}"],
             "HTML"                     => ["<!DOCTYPE html>\n<html><head><title>Bakery</title></head><body><p>Hello</p></body></html>"],
             "XHTML"                    => ["<?xml version=\"1.0\"?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\"></html>"],

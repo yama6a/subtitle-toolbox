@@ -22,6 +22,7 @@ class Subtitle implements \IteratorAggregate, \Countable
     use TextTransforms;
     use HearingImpairedRemoval;
     use CueLookup;
+    use ArrayConversion;
 
     /** @var array|SubtitleCue[] */
     protected $cues;
