@@ -226,6 +226,19 @@ class LenientParsingTest extends TestCase
                 ],
                 [],
             ],
+            "MicroDVD with a release name and a line without frames" => [
+                "release_name.sub",
+                MicroDvdParser::class,
+                "The frame rate is unknown. Pass it to the constructor or start the file with {1}{1}<fps>.",
+                [
+                    [1, 3, "The ferry leaves at noon."],
+                    [5, 7, "<i>Tickets are sold on board.</i>"],
+                ],
+                [
+                    [1, 0, self::SKIPPED, "Line 1 is not a MicroDVD cue: Movie.Name.2003.DVDRip (line 1)"],
+                    [4, 3, self::SKIPPED, "Line 4 is not a MicroDVD cue: {x}{120}The deck is wet. (line 4)"],
+                ],
+            ],
         ];
     }
 
@@ -406,7 +419,7 @@ class LenientParsingTest extends TestCase
     public function testParsersWithoutLenientModeStillThrow(): void
     {
         $this->expectException(ParsingException::class);
-        (new MicroDvdParser())->setLenient()->parse("{1}{x}broken");
+        (new SccParser())->setLenient()->parse("Scenarist_SCC V1.0\n\nbroken\n");
     }
 
 

@@ -20,3 +20,4 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `text_before_first_cue.sbv` | a note line before cue 1, LF | MIT |
 | `truncated_last_cue.sbv` | the file ends inside the time line of cue 3, LF | MIT |
 | `mixed_line_endings.sbv` | CR LF, LF and CR CR LF in one file | MIT |
+| `release_name.sub` | a release name before the `{1}{1}25` frame rate line, a cue with a letter as start frame, CR LF | MIT |
