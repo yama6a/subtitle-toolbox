@@ -998,6 +998,20 @@ $subtitle->recognizeText(new GlyphOcrEngine(GlyphDatabase::fromFile('my-font.noc
 - A new glyph goes first, so it wins over older glyphs that match equally well. Train a misread character the same way, from `$result->lines[$line]->chars[$index]->sample`.
 - The [php-glyph-ocr README](https://github.com/yama6a/php-glyph-ocr#databases-and-training) describes the `.nocr` files, `Recognizer::split()` and `GlyphSample::merge()`.
 
+## OCR in the command line tool
+`convert --ocr` reads the image cues of PGS and VobSub files with `GlyphOcrEngine` before it writes the output. It needs the package php-glyph-ocr, see [Built-in OCR](#built-in-ocr).
+
+```sh
+vendor/bin/subtitle-toolbox convert movie.sup movie.srt --ocr
+vendor/bin/subtitle-toolbox convert movie.idx movie.srt --ocr --ocr-database my-font.nocr
+```
+
+- **Database**: `--ocr-database` loads a `.nocr` file in place of the Latin database. See [Training a database](#training-a-database).
+- **Missing package**: without php-glyph-ocr, `--ocr` stops with exit code 2 and prints the `composer require` command.
+- **Progress**: the tool prints `movie.sup: OCR 100/1500` to standard error after every 100 image cues and after the last one.
+- **Memory**: a 1,500-cue PGS file needs up to 139 MB, above the default `memory_limit` of 128 MB. Run `php -d memory_limit=512M vendor/bin/subtitle-toolbox convert movie.sup movie.srt --ocr` for long files.
+- **Info**: `info` prints `Image cues: 12, 0 with text` for a file with image cues. The JSON holds `"imageCues": {"count": 12, "withText": 0}` for every file.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:

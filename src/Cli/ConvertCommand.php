@@ -2,10 +2,19 @@
 
 namespace SubtitleToolbox\Cli;
 
+use GlyphOcr\Exceptions\GlyphOcrException;
+use GlyphOcr\GlyphDatabase;
+use GlyphOcr\Recognizer;
+use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 
 class ConvertCommand extends WriteCommand
 {
+    private ?GlyphDatabase $ocrDatabase = null;
+
+
     public function name(): string
     {
         return "convert";
@@ -34,7 +43,11 @@ class ConvertCommand extends WriteCommand
 
     protected function commandOptions(): array
     {
-        return [Option::flag("strip-tags", "Remove all formatting tags, such as <i> and <font>, from the cue text.")];
+        return [
+            Option::flag("strip-tags", "Remove all formatting tags, such as <i> and <font>, from the cue text."),
+            Option::flag("ocr", "Read the text of image cues, for example from PGS or VobSub, with GlyphOcrEngine."),
+            Option::value("ocr-database", "FILE", "The .nocr glyph database for --ocr. Default: the Latin database of php-glyph-ocr."),
+        ];
     }
 
 
@@ -67,6 +80,11 @@ class ConvertCommand extends WriteCommand
         if ($this->toFormat === null && ($this->output === null || $this->output === self::DASH)) {
             self::fail("Pass --to FORMAT or an output file.");
         }
+
+        $this->ocrDatabase = $arguments->has("ocr") ? self::loadOcrDatabase($arguments->value("ocr-database")) : null;
+        if ($this->ocrDatabase === null && $arguments->has("ocr-database")) {
+            self::fail("Pass --ocr with --ocr-database.");
+        }
     }
 
 
@@ -75,6 +93,22 @@ class ConvertCommand extends WriteCommand
         $directory = dirname($input);
 
         return $directory === "." && !str_starts_with($input, ".") ? $fileName : "$directory/$fileName";
+    }
+
+
+    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    {
+        if ($this->ocrDatabase !== null) {
+            $total = count(array_filter($subtitle->getCues(),
+                                        fn (SubtitleCue $cue): bool => CueImage::isImageCue($cue) && $cue->getLines() === []));
+            if ($total > 0) {
+                // A new engine for each file, because the recognizer learns the glyph heights of one stream.
+                $engine = new GlyphOcrEngine($this->ocrDatabase);
+                $subtitle->recognizeText(new OcrProgress($engine, $console, self::label($input), $total));
+            }
+        }
+
+        parent::process($input, $subtitle, $format, $arguments, $console);
     }
 
 
@@ -90,5 +124,19 @@ class ConvertCommand extends WriteCommand
     {
         return count($arguments->positionals) === 2 && !$arguments->has("to")
             && !$arguments->has("output") && !$arguments->has("output-dir");
+    }
+
+
+    private static function loadOcrDatabase(?string $path): GlyphDatabase
+    {
+        if (!class_exists(Recognizer::class)) {
+            self::fail("--ocr needs the package yama6a/php-glyph-ocr. Install it with: composer require yama6a/php-glyph-ocr");
+        }
+
+        try {
+            return $path === null ? GlyphDatabase::latin() : GlyphDatabase::fromFile($path);
+        } catch (GlyphOcrException $exception) {
+            return self::fail($exception->getMessage());
+        }
     }
 }
