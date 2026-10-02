@@ -12,6 +12,8 @@ class WebVttFormatter extends SubtitleFormatter
 {
     private const INLINE_TIMESTAMP_PATTERN = "/(<(?:\d{2,}:)?[0-5]\d:[0-5]\d\.\d{3}>)/";
 
+    private const SPAN_TAGS = ["strong", "b", "u", "i", "v", "lang", "c", "ruby", "rt"];
+
     private const ALIGNMENT_ROWS    = [0 => "", 1 => "line:50%,center", 2 => "line:0"];
     private const ALIGNMENT_COLUMNS = [1 => "align:left", 2 => "", 3 => "align:right"];
 
@@ -103,7 +105,6 @@ class WebVttFormatter extends SubtitleFormatter
             $timeStamps .= " " . $settings;
         }
 
-        // ToDo: make this more sophisticated to support e.g. <v.first.loud>Foo Bar</v> and <c.yellow>Yellow text</c>
         $lines = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines());
         $lines = in_array(parent::OPTION_STRIP_ALL_XML_TAGS, $options)
             ? Markup::stripAllTags($lines)
@@ -137,11 +138,26 @@ class WebVttFormatter extends SubtitleFormatter
         $parts = preg_split(self::INLINE_TIMESTAMP_PATTERN, $text, -1, PREG_SPLIT_DELIM_CAPTURE);
         foreach ($parts as $idx => $part) {
             if ($idx % 2 === 0) {
-                $parts[$idx] = Markup::keepTags($part, ["strong", "b", "u", "i", "v", "lang", "c", "ruby", "rt"]);
+                $parts[$idx] = Markup::keepTags($part, $this->spanTagNamesWithClasses($part));
             }
         }
 
         return implode("", $parts);
+    }
+
+
+    /**
+     * strip_tags() compares the whole name before the first space, so "c.yellow" must be allowed next to "c".
+     *
+     * @see https://www.w3.org/TR/webvtt1/#webvtt-cue-span-start-tag
+     */
+    private function spanTagNamesWithClasses(string $text): array
+    {
+        preg_match_all("/<\/?((?:" . implode("|", self::SPAN_TAGS) . ")\.[^\s>]*)/i", $text, $matches);
+
+        $namesWithClasses = array_map(fn (string $name): string => rtrim($name, "/"), $matches[1]);
+
+        return array_values(array_unique([...self::SPAN_TAGS, ...$namesWithClasses]));
     }
 
 
