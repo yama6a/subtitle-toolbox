@@ -20,7 +20,7 @@ trait Validation
         foreach ($this->getCues() as $cueIndex => $cue) {
             $lineLengths = [];
             foreach ($cue->getLines() as $line) {
-                $length = self::countVisibleCharacters($line);
+                $length = Markup::visibleLength($line);
                 if ($length > 0) {
                     $lineLengths[] = $length;
                 }
@@ -80,14 +80,5 @@ trait Validation
         }
 
         return $results;
-    }
-
-
-    // mbstring is not part of a default PHP build, but PCRE is.
-    private static function countVisibleCharacters(string $line): int
-    {
-        $text = trim(Markup::decodeEntities(Markup::stripAllTags($line)));
-
-        return preg_match_all('/./su', $text) ?: strlen($text);
     }
 }
