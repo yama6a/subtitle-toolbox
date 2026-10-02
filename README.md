@@ -280,6 +280,7 @@ Detection ignores a UTF-8 BOM and leading blank lines. It checks the signatures 
 | 9 | `SubViewerParser` | `******** START SCRIPT ********`, `[INFORMATION]` or `00:00:01.50,00:00:04.00` |
 | 10 | `LyricsParser` | `[ti:Title]` or `[00:12.00]`, and at least one timestamp line |
 | 11 | `PgsParser` | the bytes `PG`, then a known segment type at byte 10 |
+| 12 | `JsonParser` | an object with a numeric `"version"` key and a `"cues"` list |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line looks like SubRip, so it detects as SubRip.
 - **`.sub` files**: MicroDVD, MPSub and SubViewer text files all use `.sub`. SBV has three digits after the dot, SubViewer 2 has two.

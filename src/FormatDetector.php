@@ -36,14 +36,12 @@ class FormatDetector
      * 7. SubRip: a cue number, then a timing line with `-->`. It comes after WebVTT, because
      *    a WebVTT file without its header has the same shape.
      * 8. SBV: two timestamps and a comma between them. Three millisecond digits keep out SubViewer, which has two.
-     * 9. LRC: an ID tag or a timestamp in brackets, and at least one timestamp line.
-     * 10. PGS: the `PG` magic bytes, then a known segment type after the two 4-byte time stamps.
-     * 11. JSON: an object with a numeric "version" key and a "cues" list. The possessive loops skip strings without backtracking.
      * 9. SubViewer: a `******** START SCRIPT ********` line for version 1. For version 2, an `[INFORMATION]` first line,
      *    or a timing line with two digits after the dot that only header tags precede. It comes after SBV, and before
      *    LRC, whose signature also matches `[00:00:01]`.
      * 10. LRC: an ID tag or a timestamp in brackets, and at least one timestamp line.
      * 11. PGS: the `PG` magic bytes, then a known segment type after the two 4-byte time stamps.
+     * 12. JSON: an object with a numeric "version" key and a "cues" list. The possessive loops skip strings without backtracking.
      */
     private const SIGNATURES = [
         WebVttParser::class   => '/\AWEBVTT(?:[ \t\n]|\z)/',
