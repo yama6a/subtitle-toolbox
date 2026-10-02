@@ -22,51 +22,10 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-26.04-arm
     steps:
-      - name: Exactly one release label
-        env:
-          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
-        run: |
-          set -euo pipefail
-          picked=$(jq -r '.[]' <<<"$LABELS" | grep -x -E 'patch|minor|major|skip-release' || true)
-          count=$(grep -c . <<<"$picked" || true)
-          if [ "$count" -ne 1 ]; then
-            echo "::error::${count} release labels (${picked//$'\n'/, }); need exactly one of patch, minor, major, skip-release"
-            exit 1
-          fi
-          echo "release label: ${picked}"
+      - uses: yama6a/gha/.github/actions/release-label@php-workflows
 
-  test:
-    name: test (php ${{ matrix.php }})
-    runs-on: ubuntu-26.04-arm
-    strategy:
-      fail-fast: false
-      matrix:
-        php: ["8.2", "8.3", "8.4", "8.5"]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
-        with:
-          php-version: ${{ matrix.php }}
-          coverage: none
-          tools: composer
-      - run: composer validate --strict
-      - run: composer install --no-progress --no-interaction
-      - run: composer audit
-      - run: composer test
-
-  # Branch protection requires this one context. A matrix shard cannot be required on its own.
   php:
-    name: php
-    if: always()
-    needs: test
-    runs-on: ubuntu-26.04-arm
-    steps:
-      - name: Every PHP version passed
-        env:
-          RESULT: ${{ needs.test.result }}
-        run: |
-          echo "test matrix: ${RESULT}"
-          [ "$RESULT" = success ]
+    uses: yama6a/gha/.github/workflows/php-ci.yaml@php-workflows
 
   yaml:
     runs-on: ubuntu-26.04-arm
