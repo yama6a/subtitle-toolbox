@@ -425,8 +425,29 @@ ReferenceSync::sync($german, $english, new ReferenceSyncOptions(
 - **Matching**: a candidate maps each target time t to t * scale + offset. Its score is the time that cues of both files cover, divided by the time that cues of at least one file cover. Only the times count, not the text. The idea comes from [alass](https://github.com/kaegi/alass), which also aligns by time spans.
 - **Search**: the scale factors are 1, 24/23.976, 25/24 and 25/23.976 and their inverses, as in the frame-rate ratios of [ffsubsync](https://github.com/smacke/ffsubsync). For each factor, the search tries offsets in steps of 0.1 s, then steps of 0.01 s around the best one. The best score over all factors wins.
 - **Score**: from 0 to 1. A score below 0.5 means the files likely do not match. Missing and extra cues lower the score. The result stays correct while most cues match.
-- **Speed**: 2,000 cues against 2,000 cues take about 0.5 s.
-- **Limits**: one scale and one offset apply to the whole file. A file with a different shift after a cut, which alass calls a split, does not sync. Other frame-rate factors and offsets outside the range are not found.
+- **Speed**: 2,000 cues against 2,000 cues take about 0.5 s. With `maxSplits: 2` they take about 1.5 s.
+- **Limits**: one scale applies to the whole file. Other frame-rate factors and offsets outside the range are not found.
+
+### Splits
+A TV recording has a 2:30 ad break at 6:30. The German SRT of the streaming release has none. A **split** is a point where the offset jumps. With `maxSplits`, each part between two splits gets its own offset. All parts share one scale.
+
+```php
+$result = ReferenceSync::sync($german, $englishTv, new ReferenceSyncOptions(
+    minOffset: -180,
+    maxOffset: 180,        // the part after the break needs 147.7 s
+    maxSplits: 2,          // default 0, no split search
+    splitPenalty: 0.1,     // score units, default 0.1
+));
+$result->getSegments();    // [['from' => 0.0, 'to' => 414.32, 'scale' => 1.04271, 'offset' => -2.31],
+                           //  ['from' => 414.32, 'to' => INF, 'scale' => 1.04271, 'offset' => 147.7]]
+$result->getOffset();      // -2.31, the offset of the first part
+$result->apply($german);   // shifts each part with its own offset
+```
+
+- **Segments**: `from` and `to` are target cue start times before the sync. A cue goes to the part that holds its start. Without a split, `getSegments()` returns one part from 0 to `INF`.
+- **Penalty**: a split stays only when it raises the score by more than `splitPenalty`. A part with 5% of the cue time raises the score by about 0.1. A split by chance in unrelated files raised the score by up to 0.04 with 300 cues and up to 0.12 with 60 cues. So a short file needs a higher penalty.
+- **Search**: splits fall between cues. The search groups the target into at most 200 blocks of cues and finds the best offset of each part in steps of 0.1 s. Then each split moves to the best cue near its block boundary, and each part gets the 0.01 s search. The split penalty comes from [alass](https://github.com/kaegi/alass).
+- **Overlaps**: when `apply()` moves a part onto the next part, each cue of the earlier part that overlaps the later part ends 1 ms before the later part starts.
 
 ## Transforming text
 ```php

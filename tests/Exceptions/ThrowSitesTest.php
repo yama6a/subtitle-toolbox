@@ -405,6 +405,8 @@ class ThrowSitesTest extends TestCase
             "SubtitleCue.php: lines of the wrong type"      => [fn () => (new SubtitleCue())->setLines(5), ...$invalid],
             "SubtitleCue.php: alignment 10"                 => [fn () => (new SubtitleCue())->setAlignment(10), ...$invalid],
             "Sync/ReferenceSyncOptions.php: offsets in reverse" => [fn () => new ReferenceSyncOptions(5, 1), ...$invalid],
+            "Sync/ReferenceSyncOptions.php: negative split count" => [fn () => new ReferenceSyncOptions(maxSplits: -1), ...$invalid],
+            "Sync/ReferenceSyncOptions.php: negative split penalty" => [fn () => new ReferenceSyncOptions(splitPenalty: -1), ...$invalid],
             "TextTransforms.php: empty search"              => [fn () => self::subtitle()->replaceText("", "x"), ...$invalid],
             "TextTransforms.php: invalid regex"             => [fn () => self::subtitle()->replaceText("/[/", "x", true), ...$invalid],
             "TextTransforms.php: unknown case mode"         => [fn () => self::subtitle()->changeCase("title"), ...$invalid],
