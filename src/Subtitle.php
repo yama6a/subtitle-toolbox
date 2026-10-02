@@ -38,14 +38,29 @@ class Subtitle
     }
 
 
-    public static function parse(string $content, string $parserClass): self
+    /**
+     * Parses $content with $parserClass, or with the parser that detectParser() returns when $parserClass is null.
+     */
+    public static function parse(string $content, ?string $parserClass = null): self
     {
+        $parserClass ??= self::detectParser($content)
+            ?? throw new InvalidParserException("The subtitle format of the content is unknown. Pass a parser class.");
+
         if (!is_subclass_of($parserClass, SubtitleParser::class)) {
             throw new InvalidParserException("The supplied parser $parserClass " .
                                              "is not of type " . SubtitleParser::class);
         }
 
         return (new $parserClass())->parse($content);
+    }
+
+
+    /**
+     * Returns the parser class for the format of $content, or null when no known format matches.
+     */
+    public static function detectParser(string $content): ?string
+    {
+        return FormatDetector::detect($content);
     }
 
 

@@ -253,6 +253,31 @@ $results[0]->getLimit();        // 37
 - **Milliseconds**: cue times have millisecond precision. So a cue of 0.833 s meets a minimum duration of 5/6 s.
 - **Netflix English preset**: 20 characters per second for adult programs, 42 characters per line, 2 lines, 5/6 s to 7 s, a gap of 2 frames at the given frame rate, no overlaps. The values come from the [English (USA) Timed Text Style Guide](https://partnerhelp.netflixstudios.com/hc/en-us/articles/217350977-English-USA-Timed-Text-Style-Guide), the [General Requirements](https://partnerhelp.netflixstudios.com/hc/en-us/articles/215758617) and the [Subtitle Timing Guidelines](https://partnerhelp.netflixstudios.com/hc/en-us/articles/360051554394).
 
+## Format detection
+File extensions do not identify a format. For example, a `.sub` file can be MicroDVD or MPSub. So the library reads the start of the content.
+
+```php
+Subtitle::detectParser(file_get_contents('upload.sub'));        // MicroDvdParser::class, or null for an unknown format
+$subtitle = Subtitle::parse(file_get_contents('upload.sub'));   // throws InvalidParserException for an unknown format
+```
+
+Detection ignores a UTF-8 BOM and leading blank lines. It checks the signatures in this order and takes the first match:
+
+| Order | Parser | Signature |
+|:--- |:--- |:--- |
+| 1 | `WebVttParser` | `WEBVTT` |
+| 2 | `TtmlParser` | `<tt` after an optional XML declaration, comments and DOCTYPE |
+| 3 | `SamiParser` | `<SAMI>` |
+| 4 | `AssParser` | `[Script Info]`, for ASS and SSA |
+| 5 | `MpSubParser` | a first line such as `TITLE=`, and a `FORMAT=` line |
+| 6 | `MicroDvdParser` | `{24}{72}` |
+| 7 | `SubRipParser` | `1`, then `00:00:01,000 -->` |
+| 8 | `SbvParser` | `0:00:01.500,0:00:04.000` |
+| 9 | `LyricsParser` | `[ti:Title]` or `[00:12.00]`, and at least one timestamp line |
+
+- **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line looks like SubRip, so it detects as SubRip.
+- **MicroDVD**: detection does not find the frame rate. `parse()` throws `ParsingException` for a MicroDVD file without a `{1}{1}<fps>` first line. Then pass the frame rate: `(new MicroDvdParser(23.976))->parse($content)`.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
