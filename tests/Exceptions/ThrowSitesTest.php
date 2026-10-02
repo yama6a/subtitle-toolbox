@@ -14,6 +14,7 @@ use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
 use SubtitleToolbox\Formatters\MpSubFormatter;
 use SubtitleToolbox\Formatters\PlainTextFormatter;
+use SubtitleToolbox\Formatters\SccFormatter;
 use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Formatters\SubViewerFormatter;
@@ -150,6 +151,14 @@ class ThrowSitesTest extends TestCase
                 [MpSubFormatter::OPTION_FRAME_RATE => 25.5]), ...$invalid],
             "Formatters/PlainTextFormatter.php: paragraph gap" => [fn () => self::subtitle()->format(PlainTextFormatter::class,
                 [PlainTextFormatter::OPTION_PARAGRAPH_GAP => "2"]), ...$invalid],
+            "Formatters/SccFormatter.php: drop frame option" => [fn () => self::subtitle()->format(SccFormatter::class,
+                [SccFormatter::OPTION_DROP_FRAME => "yes"]), ...$invalid],
+            "Formatters/SccFormatter.php: 5 lines"          => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, ["1", "2", "3", "4", "5"]))
+                ->format(SccFormatter::class), ...$invalid],
+            "Formatters/SccFormatter.php: 33 characters"    => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 33)))
+                ->format(SccFormatter::class), ...$invalid],
+            "Formatters/SccFormatter.php: no CEA-608 character" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, "\u{20AC}"))
+                ->format(SccFormatter::class), ...$invalid],
             "Formatters/SubViewerFormatter.php: version 3"  => [fn () => self::subtitle()->format(SubViewerFormatter::class,
                 [SubViewerFormatter::OPTION_VERSION => 3]), ...$invalid],
             "Formatters/SubtitleFormatter.php: line ending" => [fn () => self::subtitle()->format(SubRipFormatter::class,

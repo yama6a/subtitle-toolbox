@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\FormatDetector;
+use SubtitleToolbox\Formatters\SccFormatter;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -80,6 +81,48 @@ class SccRealFileTest extends TestCase
     }
 
 
+    public static function popOnFileProvider(): array
+    {
+        return [
+            "popon_broadcast_df"  => ["popon_broadcast_df.scc"],
+            "painton_corrections" => ["painton_corrections.scc"],
+            "interleaved_pac_tab" => ["interleaved_pac_tab.scc"],
+            "raw_data_row"        => ["raw_data_row.scc"],
+        ];
+    }
+
+
+    #[DataProvider("popOnFileProvider")]
+    public function testRealFileRoundTripKeepsCues(string $file): void
+    {
+        $subtitle = Subtitle::parse(file_get_contents(self::DIR . $file), SccParser::class);
+        $output   = $subtitle->format(SccFormatter::class);
+        $reparsed = Subtitle::parse($output, SccParser::class);
+
+        $this->assertSame($this->describe($subtitle), $this->describe($reparsed));
+        $this->assertSame($output, $reparsed->format(SccFormatter::class));
+    }
+
+
+    /**
+     * The formatter writes pop-on captions. A pop-on caption needs time to load, so a caption can show later than in the file.
+     */
+    #[DataProvider("realFileProvider")]
+    public function testRealFileRoundTripKeepsTextAndEndTimes(string $file): void
+    {
+        $subtitle = Subtitle::parse(file_get_contents(self::DIR . $file), SccParser::class);
+        $reparsed = Subtitle::parse($subtitle->format(SccFormatter::class), SccParser::class);
+
+        $this->assertSame(count($subtitle->getCues()), count($reparsed->getCues()));
+        foreach ($subtitle->getCues() as $idx => $cue) {
+            $copy = $reparsed->getCues()[$idx];
+            $this->assertSame([$cue->getLines(), $cue->getEnd()], [$copy->getLines(), $copy->getEnd()]);
+            $this->assertGreaterThanOrEqual($cue->getStart(), $copy->getStart());
+            $this->assertLessThan($copy->getEnd(), $copy->getStart());
+        }
+    }
+
+
     public function testDropFrameTimeCodesAcrossMinutes(): void
     {
         $cues = array_values(Subtitle::parse(file_get_contents(self::DIR . "popon_broadcast_df.scc"), SccParser::class)->getCues());
@@ -124,4 +167,15 @@ class SccRealFileTest extends TestCase
         $this->assertSame([27.828, 30.03], [$cues[1]->getStart(), $cues[1]->getEnd()]);
     }
 
+
+    private function describe(Subtitle $subtitle): array
+    {
+        return array_map(
+            fn (SubtitleCue $cue): array => [
+                $cue->getStart(), $cue->getEnd(), $cue->getLines(), $cue->getAlignment(),
+                $cue->getFormatData(SccParser::FORMAT)["rows"], $cue->getFormatData(SccParser::FORMAT)["columns"],
+            ],
+            $subtitle->getCues()
+        );
+    }
 }

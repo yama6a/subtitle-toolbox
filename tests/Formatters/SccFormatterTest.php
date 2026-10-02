@@ -1,0 +1,253 @@
+<?php
+
+namespace SubtitleToolbox\Formatters;
+
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Parsers\SccParser;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
+
+class SccFormatterTest extends TestCase
+{
+    private const HEADER = "Scenarist_SCC V1.0\n\n";
+
+
+    private function subtitle(SubtitleCue ...$cues): Subtitle
+    {
+        $subtitle = new Subtitle();
+        foreach ($cues as $cue) {
+            $subtitle->addCue($cue);
+        }
+
+        return $subtitle;
+    }
+
+
+    public function testIssueExampleRoundTrips(): void
+    {
+        $scc = self::HEADER . "00:00:01;12\t9420 9420 94ae 94ae 9452 9452 97a1 97a1 c8e5 ecec efa1 942f 942f\n\n00:00:04;00\t942c 942c\n";
+
+        $this->assertSame(
+            self::HEADER . "00:00:01;12\t94ae 94ae 9420 9420 9452 9452 97a1 97a1 c8e5 ecec efa1 942f 942f\n\n00:00:04;00\t942c 942c\n",
+            Subtitle::parse($scc, SccParser::class)->format(SccFormatter::class)
+        );
+    }
+
+
+    public function testLoadsTheCaptionSoThatEocFallsOnTheCueStart(): void
+    {
+        $output = $this->subtitle(new SubtitleCue(1.0, 3.0, "Hello!"))->format(SccFormatter::class);
+
+        // 30 frames is 1.001 s, the nearest frame to 1.0 s. The load takes the 11 frames before it.
+        $this->assertSame(self::HEADER . "00:00:00;19\t94ae 94ae 9420 9420 9476 9476 97a1 97a1 c8e5 ecec efa1 942f 942f\n\n"
+                          . "00:00:03;00\t942c 942c\n", $output);
+        $cue = Subtitle::parse($output, SccParser::class)->getCues()[0];
+        $this->assertSame([1.001, 3.003, ["Hello!"]], [$cue->getStart(), $cue->getEnd(), $cue->getLines()]);
+    }
+
+
+    public function testPadsAnOddCharacterWithFillerAndDoublesControlCodes(): void
+    {
+        $output = $this->subtitle(new SubtitleCue(2.0, 4.0, ["Hi!", "\u{266A} A"]))->format(SccFormatter::class);
+
+        $this->assertStringContainsString("94ae 94ae 9420 9420 94d6 94d6 97a2 97a2 c8e9 a180 9476 9476 97a2 97a2 9137 9137 20c1 942f 942f", $output);
+    }
+
+
+    public function testWritesExtendedCharactersAfterTheirStandardFallback(): void
+    {
+        $text   = "Caf\u{E9} \u{201C}\u{D6}\u{201D} \u{A1}S\u{ED}!";
+        $output = $this->subtitle(new SubtitleCue(2.0, 4.0, $text))->format(SccFormatter::class);
+
+        // The standard set has e and i with acute accent as 5c and 5e. The quotes, the O with umlaut
+        // and the inverted exclamation mark are extended characters after their fallbacks.
+        $this->assertStringContainsString("4361 e6dc 20a2 92ae 92ae 4f80 1332 1332 a280 922f 922f 20a1 92a7 92a7 d35e a180", $output);
+        $this->assertSame([$text], Subtitle::parse($output, SccParser::class)->getCues()[0]->getLines());
+    }
+
+
+    public function testWritesCoreMarkupAsMidRowCodesAndPacStyles(): void
+    {
+        $lines  = ["<i>Rain</i> and <font color=\"#ffff00\">sun <u>later</u></font>", "<font color=\"#ff0000\"><i>Red</i></font> sky"];
+        $cue    = (new SubtitleCue(2.0, 4.0, $lines))->setAlignment(1);
+        $output = $this->subtitle($cue)->format(SccFormatter::class);
+
+        // Line 1 starts with the italics PAC 94ce. Line 2 starts with the red PAC 9468 and the italics mid-row code 91ae.
+        $this->assertStringContainsString("94ce 94ce 5261 e96e 9120 9120 616e 6480 912a 912a 7375 6e80 91ab 91ab", $output);
+        $this->assertStringContainsString("9468 9468 91ae 91ae 52e5 6480 9120 9120 736b 7980", $output);
+        $this->assertSame($lines, Subtitle::parse($output, SccParser::class)->getCues()[0]->getLines());
+    }
+
+
+    public function testDropsTagsThatCea608CannotShow(): void
+    {
+        $output = $this->subtitle(new SubtitleCue(2.0, 4.0, "<b>Bold</b> <v Ann>and <font color=\"#123456\">grey</font>"))->format(SccFormatter::class);
+
+        $this->assertSame(["Bold and grey"], Subtitle::parse($output, SccParser::class)->getCues()[0]->getLines());
+    }
+
+
+    public static function alignmentProvider(): array
+    {
+        return [
+            "default is bottom centre" => [null, [14, 15], [12, 13]],
+            "top left"                 => [7, [1, 2], [0, 0]],
+            "top centre"               => [8, [1, 2], [12, 13]],
+            "middle right"             => [6, [7, 8], [25, 27]],
+            "bottom left"              => [1, [14, 15], [0, 0]],
+        ];
+    }
+
+
+    #[DataProvider("alignmentProvider")]
+    public function testAlignmentSetsRowsAndColumns(?int $alignment, array $rows, array $columns): void
+    {
+        $cue    = (new SubtitleCue(2.0, 4.0, ["Weather", "today"]))->setAlignment($alignment);
+        $parsed = Subtitle::parse($this->subtitle($cue)->format(SccFormatter::class), SccParser::class)->getCues()[0];
+
+        $this->assertSame(["rows" => $rows, "columns" => $columns], array_diff_key($parsed->getFormatData(SccParser::FORMAT), ["mode" => 0]));
+        $this->assertSame(in_array($alignment, [7, 8], true) ? 8 : null, $parsed->getAlignment());
+    }
+
+
+    public function testKeepsRowsAndColumnsFromTheSccFormatData(): void
+    {
+        $cue = (new SubtitleCue(2.0, 4.0, ["Left", "Right"]))->setFormatData(SccParser::FORMAT, ["rows" => [10, 12], "columns" => [3, 27]]);
+
+        $parsed = Subtitle::parse($this->subtitle($cue)->format(SccFormatter::class), SccParser::class)->getCues()[0];
+
+        $this->assertSame([10, 12], $parsed->getFormatData(SccParser::FORMAT)["rows"]);
+        $this->assertSame([3, 27], $parsed->getFormatData(SccParser::FORMAT)["columns"]);
+    }
+
+
+    public function testIgnoresSccFormatDataThatNoLongerFitsTheCue(): void
+    {
+        $cue = (new SubtitleCue(2.0, 4.0, ["One line"]))->setFormatData(SccParser::FORMAT, ["rows" => [10, 12], "columns" => [3, 27]]);
+
+        $parsed = Subtitle::parse($this->subtitle($cue)->format(SccFormatter::class), SccParser::class)->getCues()[0];
+
+        $this->assertSame([15], $parsed->getFormatData(SccParser::FORMAT)["rows"]);
+    }
+
+
+    public function testMovesTheEocLaterWhenTheLoadDoesNotFit(): void
+    {
+        // The cue times of https://github.com/pbs/pycaption/issues/352: a short cue, then a long cue soon after it.
+        // The long cue needs 23 frames to load, so it shows 0.7 s late. Cue 3 has no room for an EDM before cue 4 shows.
+        $output = $this->subtitle(
+            new SubtitleCue(2.2, 2.359, "so,"),
+            new SubtitleCue(2.4, 3.76, "the bus was late again today."),
+            new SubtitleCue(4.7, 5.169, "And then,"),
+            new SubtitleCue(5.21, 5.52, "oh")
+        )->format(SccFormatter::class);
+
+        preg_match_all("/^(\d\d:\d\d:\d\d;\d\d)\t/m", $output, $matches);
+        $sorted = $matches[1];
+        sort($sorted);
+        $this->assertSame($sorted, $matches[1]);
+
+        $cues = Subtitle::parse($output, SccParser::class)->getCues();
+        $this->assertSame([[2.202, 2.369], [3.103, 3.77], [4.705, 5.205], [5.205, 5.506]], array_map(
+            fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()],
+            $cues
+        ));
+        $this->assertSame(["so,", "the bus was late again today.", "And then,", "oh"], array_map(fn (SubtitleCue $cue): string => $cue->getText(), $cues));
+    }
+
+
+    public function testOverlappingCueReplacesTheEarlierCue(): void
+    {
+        $output = $this->subtitle(new SubtitleCue(1.0, 5.0, "First"), new SubtitleCue(3.0, 4.0, "Second"))->format(SccFormatter::class);
+        $cues   = Subtitle::parse($output, SccParser::class)->getCues();
+
+        $this->assertSame([[1.001, 3.003], [3.003, 4.004]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $cues));
+    }
+
+
+    public function testWritesDropFrameTimeCodesByDefaultAndNonDropAsAnOption(): void
+    {
+        $subtitle = $this->subtitle(new SubtitleCue(58.0, 61.0, "Hi"));
+
+        $this->assertStringContainsString("\n00:01:01;00\t942c 942c\n", $subtitle->format(SccFormatter::class));
+        $this->assertStringContainsString(
+            "\n00:01:00:28\t942c 942c\n",
+            $subtitle->format(SccFormatter::class, [SccFormatter::OPTION_DROP_FRAME => false])
+        );
+    }
+
+
+    public function testKeepsTheTimeCodeTypeOfTheParsedFile(): void
+    {
+        $subtitle = Subtitle::parse(self::HEADER . "00:00:01:00\t9420 9420 9470 9470 c8e9 942f 942f\n\n00:00:03:00\t942c 942c\n", SccParser::class);
+
+        $this->assertStringContainsString("\n00:00:03:00\t942c 942c\n", $subtitle->format(SccFormatter::class));
+        $this->assertStringContainsString("\n00:00:03;00\t942c 942c\n", $subtitle->format(SccFormatter::class, [SccFormatter::OPTION_DROP_FRAME => true]));
+    }
+
+
+    public function testInvalidDropFrameOptionThrows(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->subtitle(new SubtitleCue(1.0, 2.0, "Hi"))->format(SccFormatter::class, [SccFormatter::OPTION_DROP_FRAME => "yes"]);
+    }
+
+
+    public function testThrowsForMoreThanFourLines(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Cue #1 at 3 s has 5 lines, but SCC allows 4. Call wrapLines(32, 4) first.");
+
+        $this->subtitle(new SubtitleCue(1.0, 2.0, "Hi"), new SubtitleCue(3.0, 4.0, ["1", "2", "3", "4", "5"]))->format(SccFormatter::class);
+    }
+
+
+    public function testThrowsForALineLongerThan32Characters(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Cue #0 at 1 s has a line with 33 characters, but SCC allows 32. Call wrapLines(32, 4) first.");
+
+        $this->subtitle(new SubtitleCue(1.0, 2.0, "<i>" . str_repeat("a", 33) . "</i>"))->format(SccFormatter::class);
+    }
+
+
+    public function testWrapLinesMakesALongCueFit(): void
+    {
+        $subtitle = $this->subtitle(new SubtitleCue(1.0, 4.0, "The night train to the coast leaves from platform two at ten past eleven."));
+        $subtitle->wrapLines(32, 4);
+
+        $cue = Subtitle::parse($subtitle->format(SccFormatter::class), SccParser::class)->getCues()[0];
+        $this->assertSame($subtitle->getCues()[0]->getLines(), $cue->getLines());
+    }
+
+
+    public function testThrowsForACharacterThatCea608Lacks(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Cue #0 at 1 s has the character \"\u{65E5}\", which CEA-608 cannot show.");
+
+        $this->subtitle(new SubtitleCue(1.0, 2.0, "\u{65E5}"))->format(SccFormatter::class);
+    }
+
+
+    public function testWritesOnlyTheHeaderForASubtitleWithoutText(): void
+    {
+        $this->assertSame("Scenarist_SCC V1.0\n", $this->subtitle(new SubtitleCue(1.0, 2.0, ["<i></i>", " "]))->format(SccFormatter::class));
+        $this->assertSame("Scenarist_SCC V1.0\n", (new Subtitle())->format(SccFormatter::class));
+    }
+
+
+    public function testLineEndingAndBomOptions(): void
+    {
+        $output = $this->subtitle(new SubtitleCue(1.0, 3.0, "Hi"))->format(SccFormatter::class, [
+            SubtitleFormatter::OPTION_LINE_ENDING => "\r\n",
+            SubtitleFormatter::OPTION_BOM         => true,
+        ]);
+
+        $this->assertStringStartsWith("\xEF\xBB\xBFScenarist_SCC V1.0\r\n\r\n00:00:00;21\t", $output);
+        $this->assertStringEndsWith("\r\n\r\n00:00:03;00\t942c 942c\r\n", $output);
+    }
+}
