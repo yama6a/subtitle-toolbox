@@ -1,0 +1,127 @@
+<?php
+
+namespace SubtitleToolbox\Parsers;
+
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\FormatDetector;
+use SubtitleToolbox\Markup;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
+
+class SccRealFileTest extends TestCase
+{
+    private const DIR = __DIR__ . "/../files/scc/real/";
+
+
+    public static function realFileProvider(): array
+    {
+        return [
+            "popon_broadcast_df"    => [
+                "popon_broadcast_df.scc", 10,
+                3501.131, 3503.3, ["THE NEXT TRAIN TO LAKESIDE", "LEAVES AT NINE."], null,
+                3604.868, 3607.003, ["\u{A1}HASTA MAÑANA, ZÜRICH!"], 8,
+            ],
+            "rollup_news_ndf"       => [
+                "rollup_news_ndf.scc", 7,
+                0.2, 1.335, ["&gt;&gt; GOOD MORNING."], null,
+                8.008, 10.01, ["&gt;&gt; NOW THE TRAFFIC.", "THE BRIDGE IS OPEN."], null,
+            ],
+            "painton_corrections"   => [
+                "painton_corrections.scc", 4,
+                10.143, 11.144, ["BAKERY NEWS"], null,
+                15.148, 17.017, ["<font color=\"#00ffff\">SEE YOU TOMORROW.</font>"], null,
+            ],
+            "interleaved_pac_tab"   => [
+                "interleaved_pac_tab.scc", 2,
+                30.998, 33.2, ["<i>[Station announcer]</i>", "<i>The ferry to the island</i>", "<i>leaves from pier four,</i>"], null,
+                33.267, 35.035, ["<i>not from pier two</i>", "<i>as printed in the guide.</i>"], null,
+            ],
+            "out_of_order_lines"    => [
+                "out_of_order_lines.scc", 4,
+                2.269, 2.436, ["the bus was late again today."], null,
+                5.138, 5.506, ["oh"], null,
+            ],
+            "raw_data_row"          => [
+                "raw_data_row.scc", 3,
+                0.234, 4.004, ["OK"], null,
+                31.665, 34.034, ["THE NEXT CAPTION IS FINE."], null,
+            ],
+        ];
+    }
+
+
+    #[DataProvider("realFileProvider")]
+    public function testRealFileParses(
+        string $file,
+        int $cueCount,
+        float $firstStart,
+        float $firstEnd,
+        array $firstLines,
+        ?int $firstAlignment,
+        float $lastStart,
+        float $lastEnd,
+        array $lastLines,
+        ?int $lastAlignment
+    ): void {
+        $cues = array_values(Subtitle::parse(file_get_contents(self::DIR . $file), SccParser::class)->getCues());
+
+        $this->assertCount($cueCount, $cues);
+        $this->assertSame([$firstStart, $firstEnd, $firstLines, $firstAlignment], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getLines(), $cues[0]->getAlignment()]);
+        $last = end($cues);
+        $this->assertSame([$lastStart, $lastEnd, $lastLines, $lastAlignment], [$last->getStart(), $last->getEnd(), $last->getLines(), $last->getAlignment()]);
+    }
+
+
+    #[DataProvider("realFileProvider")]
+    public function testRealFileDetectsAsScc(string $file): void
+    {
+        $this->assertSame(SccParser::class, FormatDetector::detect(file_get_contents(self::DIR . $file)));
+    }
+
+
+    public function testDropFrameTimeCodesAcrossMinutes(): void
+    {
+        $cues = array_values(Subtitle::parse(file_get_contents(self::DIR . "popon_broadcast_df.scc"), SccParser::class)->getCues());
+
+        // 00:59:00;02 is the first frame of minute 59, frame 106094. The EOC is the 24th byte pair of the line.
+        $this->assertSame(["WE HAVE <i>FRESH</i> BREAD TODAY."], $cues[5]->getLines());
+        $this->assertSame(round((106094 + 23) * 1001 / 30000, 3), $cues[5]->getStart());
+        $this->assertSame(["PLATFORM <u>TWO</u> NOT THREE."], $cues[8]->getLines());
+        $this->assertSame(["\u{266A} SOFT PIANO MUSIC \u{266A}"], $cues[3]->getLines());
+        $this->assertSame(["\u{201C}CAFÉ NORD\u{201D} \u{2014} OPEN DAILY."], $cues[7]->getLines());
+        $this->assertSame(["<font color=\"#ffff00\">RAIN IS LIKELY TONIGHT.</font>", "TAKE AN UMBRELLA."], $cues[6]->getLines());
+        $this->assertSame(["mode" => "pop-on", "rows" => [1], "columns" => [9]], $cues[4]->getFormatData(SccParser::FORMAT));
+    }
+
+
+    public function testRollUpFileShowsEachScreen(): void
+    {
+        $cues  = array_values(Subtitle::parse(file_get_contents(self::DIR . "rollup_news_ndf.scc"), SccParser::class)->getCues());
+        $lines = array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $cues);
+
+        $this->assertSame(["&gt;&gt; GOOD MORNING. HERE IS THE"], $lines[1]);
+        $this->assertSame(["WEATHER FOR TODAY.", "CLOUDS IN THE MORNING,", "SUN IN THE AFTERNOON."], $lines[4]);
+        $this->assertSame(["roll-up", [13, 14, 15]], [$cues[4]->getFormatData(SccParser::FORMAT)["mode"], $cues[4]->getFormatData(SccParser::FORMAT)["rows"]]);
+    }
+
+
+    public function testPaintOnFileAppliesBackspaceAndDeleteToEndOfRow(): void
+    {
+        $cues = array_values(Subtitle::parse(file_get_contents(self::DIR . "painton_corrections.scc"), SccParser::class)->getCues());
+
+        $this->assertSame(["BAKERY NEWS", "BREAD IS READY"], $cues[1]->getLines());
+        $this->assertSame(["BAKERY NEWS", "BREAD IS READY SOON."], $cues[2]->getLines());
+    }
+
+
+    public function testRawDataRowStaysInOneRow(): void
+    {
+        $cues = array_values(Subtitle::parse(file_get_contents(self::DIR . "raw_data_row.scc"), SccParser::class)->getCues());
+
+        $this->assertCount(1, $cues[1]->getLines());
+        $this->assertLessThanOrEqual(32, Markup::countCharacters(Markup::decodeEntities($cues[1]->getLines()[0])));
+        $this->assertSame([27.828, 30.03], [$cues[1]->getStart(), $cues[1]->getEnd()]);
+    }
+
+}

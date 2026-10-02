@@ -11,6 +11,7 @@ use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SbvParser;
+use SubtitleToolbox\Parsers\SccParser;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
@@ -44,6 +45,7 @@ class FormatDetector
      * 11. PGS: the `PG` magic bytes, then a known segment type after the two 4-byte time stamps.
      * 12. JSON: an object with a numeric "version" key and a "cues" list. The possessive loops skip strings without backtracking.
      * 13. EBU STL: a 3-digit code page, then the disk format code STL25.01 or STL30.01.
+     * 14. SCC: the `Scenarist_SCC V1.0` header line.
      */
     private const SIGNATURES = [
         WebVttParser::class   => '/\AWEBVTT(?:[ \t\n]|\z)/',
@@ -61,6 +63,7 @@ class FormatDetector
         PgsParser::class      => '/\APG.{8}[\x14-\x17\x80]/s',
         JsonParser::class     => '/\A\{(?=(?:[^"]++|"(?!version"\s*+:))*+"version"\s*+:\s*+\d)(?=(?:[^"]++|"(?!cues"\s*+:))*+"cues"\s*+:\s*+\[)/',
         EbuStlParser::class   => '/\A\d{3}STL(?:25|30)\.01/',
+        SccParser::class      => '/\AScenarist_SCC V1\.0[ \t]*$/m',
     ];
 
 
