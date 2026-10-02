@@ -16,4 +16,4 @@ permissions:
 
 jobs:
   release:
-    uses: yama6a/gha/.github/workflows/php-release.yaml@php-workflows
+    uses: yama6a/gha/.github/workflows/php-release.yaml@v2

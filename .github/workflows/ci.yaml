@@ -22,10 +22,10 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-26.04-arm
     steps:
-      - uses: yama6a/gha/.github/actions/release-label@php-workflows
+      - uses: yama6a/gha/.github/actions/release-label@v2
 
   php:
-    uses: yama6a/gha/.github/workflows/php-ci.yaml@php-workflows
+    uses: yama6a/gha/.github/workflows/php-ci.yaml@v2
 
   yaml:
     runs-on: ubuntu-26.04-arm
