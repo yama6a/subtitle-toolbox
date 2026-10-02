@@ -1157,6 +1157,33 @@ sub3.vtt
 - **Stream start**: `join()` returns cue times from `streamStartPts`. Without it, the `MPEGTS` value of the first segment is the start. A segment without the header maps cue time 0 to `MPEGTS` 0, as RFC 8216 section 3.5 requires. A cue time that becomes negative becomes 0.
 - **Timestamp wrap**: MPEG-2 timestamps have 33 bits and wrap after about 26.5 hours. `offset()` takes the shorter way around the wrap, so a difference above half the range counts as a wrap.
 
+## Forced cues
+A **forced cue** shows also when the viewer has turned subtitles off, for example the translation of a sign. Apple and Netflix take a full subtitle file and a separate file with only the forced cues.
+
+```php
+$subtitle = Subtitle::parse(file_get_contents('movie.itt'));   // <p itts:forcedDisplay="true">Sector 7 ahead</p>
+$subtitle->getCues()[3]->isForced();                            // true
+$subtitle->getCues()[4]->setForced(true);
+$forced = $subtitle->forcedOnly();                              // a new Subtitle with copies of the forced cues
+file_put_contents('movie.forced.itt', $forced->format(IttFormatter::class));
+```
+
+| Format | Read | Write |
+|:--- |:--- |:--- |
+| TTML, IMSC, DFXP | `itts:forcedDisplay="true"` on `p`, `span`, `div`, `body`, the region or a referenced style | the same attribute on `p` |
+| iTT | as TTML | the same attribute on `p` |
+| PGS, VobSub | the forced flag of the object or unit | no writer |
+| JSON | `forced` | `forced` |
+| other formats | no flag | the flag is lost |
+
+- **Default**: a cue is not forced. A cue from a format without the flag is not forced.
+- **TTML spans**: one forced `span` makes the whole cue forced. The formatter then writes the flag on the `p`, so the whole paragraph becomes forced.
+- **TTML output**: the formatter writes `itts:forcedDisplay` on the `p` only when the stored `p`, `div` or region attributes give another value. It declares the `itts` namespace on `<tt>` when the input file did not.
+- **Image cues**: `CueImage::toCue()` sets the cue flag from the `forced` field of the image. OCR keeps the flag.
+- **JSON**: `toArray()` and `JsonFormatter` write `"forced": true` after `alignment`, only for a forced cue. The `version` stays 1. `fromArray()` accepts `true`, `false` or no field.
+- **`forcedOnly()`**: works as `slice()`. The copy keeps the metadata, the format data and the comments before the forced cues. The original stays unchanged.
+- **Compare**: `SubtitleDiff` reports a cue whose flag changed as `text changed`. `toText()` writes `forced` after the times of a forced cue.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
