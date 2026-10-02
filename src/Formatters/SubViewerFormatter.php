@@ -7,7 +7,6 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\SubtitleCue;
 
 class SubViewerFormatter extends SubtitleFormatter
 {
@@ -46,7 +45,7 @@ class SubViewerFormatter extends SubtitleFormatter
         $output .= SubViewerParser::START_SCRIPT . StringHelpers::UNIX_LINE_ENDING;
 
         foreach ($subtitle->getCues() as $cue) {
-            $lines = $this->plainLines($cue);
+            $lines = Markup::plainLines($cue->getLines());
             // An empty line after a time ends a SubViewer 1 cue, so a cue without text cannot be written.
             if ($lines === []) {
                 continue;
@@ -77,7 +76,7 @@ class SubViewerFormatter extends SubtitleFormatter
 
         $blocks = [];
         foreach ($subtitle->getCues() as $cue) {
-            $lines = $this->plainLines($cue);
+            $lines = Markup::plainLines($cue->getLines());
             // An empty line after the timing line would leave the cue without text.
             if ($lines === []) {
                 continue;
@@ -104,18 +103,6 @@ class SubViewerFormatter extends SubtitleFormatter
         }
 
         return $header + ($subtitle->getFormatData(SubViewerParser::FORMAT)["header"] ?? $defaultHeader);
-    }
-
-
-    /**
-     * @return list<string>
-     */
-    private function plainLines(SubtitleCue $cue): array
-    {
-        return array_values(array_filter(
-            array_map(fn (string $line): string => trim(Markup::decodeEntities(Markup::stripAllTags($line))), $cue->getLines()),
-            fn (string $line): bool => $line !== ""
-        ));
     }
 
 

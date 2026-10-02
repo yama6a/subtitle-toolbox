@@ -115,4 +115,14 @@ class MarkupTest extends TestCase
         $this->assertSame("00:00:02.000", Markup::coreTimestamp(1.9996));
         $this->assertSame("100:00:00.000", Markup::coreTimestamp(360000.0));
     }
+
+
+    public function testPlainLinesStripsDecodesTrimsAndDropsEmptyLines(): void
+    {
+        $this->assertSame(
+            ["Tom & Jerry", "<not a tag>", "Caf\u{e9}"],
+            Markup::plainLines([" <i>Tom &amp; Jerry</i> ", "<b></b>", "&lt;not a tag&gt;", "  ", "Caf&eacute;<00:00:01.000>"])
+        );
+        $this->assertSame([], Markup::plainLines([]));
+    }
 }

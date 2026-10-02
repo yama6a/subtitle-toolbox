@@ -47,6 +47,21 @@ class Markup
 
 
     /**
+     * Removes tags, decodes entities, trims each line and drops the lines that end up empty, for formats without markup.
+     *
+     * @param list<string> $lines
+     * @return list<string>
+     */
+    public static function plainLines(array $lines): array
+    {
+        return array_values(array_filter(
+            array_map(fn (string $line): string => trim(self::decodeEntities(self::stripAllTags($line))), $lines),
+            fn (string $line): bool => $line !== ""
+        ));
+    }
+
+
+    /**
      * Counts the characters of the text without tags and entities and without leading and trailing spaces.
      */
     public static function visibleLength(string $text): int
