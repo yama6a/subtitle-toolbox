@@ -1,0 +1,146 @@
+<?php
+
+namespace SubtitleToolbox\Fixing;
+
+use DOMDocument;
+use DOMElement;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\ParsingException;
+
+/**
+ * The sections and their rules follow OcrFixReplaceList2.cs of Subtitle Edit, MIT license, at commit e1b8546:
+ * https://github.com/SubtitleEdit/subtitleedit/blob/e1b854665b40bf6e04271c2ec64084947060e632/src/libuilogic/Ocr/FixEngine/OcrFixReplaceList2.cs
+ */
+final class OcrReplaceList
+{
+    private const SECTIONS = [
+        "WholeWords"         => "wholeWords",
+        "PartialWordsAlways" => "partialWordsAlways",
+        "WholeLines"         => "wholeLines",
+        "BeginLines"         => "beginLines",
+        "EndLines"           => "endLines",
+        "PartialLines"       => "partialLines",
+        "PartialLinesAlways" => "partialLinesAlways",
+    ];
+
+    private const DELIMITERS = ["/", "~", "#", "%", "@", "!", "\x01"];
+
+
+    /**
+     * Creates a list of replacements, each an array of search text => replacement text.
+     *
+     * @param array<string, string> $wholeWords         a word between spaces, without the punctuation around it
+     * @param array<string, string> $partialWordsAlways a part of any word
+     * @param array<string, string> $wholeLines         the whole visible text of a line
+     * @param array<string, string> $beginLines         the start of a line or of a sentence after ". ", "! " or "? "
+     * @param array<string, string> $endLines           the end of the last line of a cue
+     * @param array<string, string> $partialLines       a text that starts and ends at a word boundary
+     * @param array<string, string> $partialLinesAlways any part of a line
+     * @param array<string, string> $regularExpressions a PCRE pattern with delimiters => a preg_replace() replacement
+     */
+    public function __construct(
+        public readonly array $wholeWords = [],
+        public readonly array $partialWordsAlways = [],
+        public readonly array $wholeLines = [],
+        public readonly array $beginLines = [],
+        public readonly array $endLines = [],
+        public readonly array $partialLines = [],
+        public readonly array $partialLinesAlways = [],
+        public readonly array $regularExpressions = [],
+    ) {
+        foreach (array_keys($regularExpressions) as $pattern) {
+            if (@preg_match((string)$pattern, "") === false) {
+                throw new InvalidArgumentException("The regular expression $pattern is invalid: " . preg_last_error_msg());
+            }
+        }
+    }
+
+
+    /**
+     * Reads a Subtitle Edit OCR replace list such as eng_OCRFixReplaceList_User.xml. It skips the sections that need a
+     * spell checker and the regular expressions that PCRE cannot run.
+     */
+    public static function fromSubtitleEditXml(string $xml): self
+    {
+        $document = new DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        $loaded   = $xml !== "" && $document->loadXML($xml, LIBXML_NONET);
+        $error    = libxml_get_last_error();
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+        if (!$loaded || $document->documentElement === null) {
+            throw new ParsingException("The OCR replace list is not valid XML" .
+                                       ($error !== false ? ": " . trim($error->message) : "."),
+                                       $error !== false && $error->line > 0 ? $error->line : null);
+        }
+
+        $lists = array_fill_keys(array_values(self::SECTIONS), []);
+        $regex = [];
+        foreach ($document->documentElement->childNodes as $section) {
+            if (!$section instanceof DOMElement) {
+                continue;
+            }
+            foreach ($section->childNodes as $entry) {
+                if (!$entry instanceof DOMElement) {
+                    continue;
+                }
+                if ($section->tagName === "RegularExpressions" && $entry->hasAttribute("replaceWith")) {
+                    $converted = self::convertRegex($entry->getAttribute("find"), $entry->getAttribute("replaceWith"));
+                    if ($converted !== null) {
+                        $regex[$converted[0]] ??= $converted[1];
+                    }
+                } elseif (isset(self::SECTIONS[$section->tagName]) && $entry->hasAttribute("to")) {
+                    $from = $entry->getAttribute("from");
+                    $to   = $entry->getAttribute("to");
+                    if ($from !== "" && $from !== $to) {
+                        $lists[self::SECTIONS[$section->tagName]][$from] ??= $to;
+                    }
+                }
+            }
+        }
+
+        return new self(...$lists, regularExpressions: $regex);
+    }
+
+
+    /**
+     * Turns a .NET pattern and replacement into a PCRE pattern with delimiters and a preg_replace() replacement.
+     *
+     * @return array{string, string}|null null when PCRE rejects the pattern or the replacement uses a named group
+     */
+    private static function convertRegex(string $find, string $replaceWith): ?array
+    {
+        $delimiters = array_filter(self::DELIMITERS, fn (string $candidate): bool => !str_contains($find, $candidate));
+        if ($find === "" || $delimiters === []) {
+            return null;
+        }
+        $delimiter = reset($delimiters);
+        $pattern   = $delimiter . $find . $delimiter . "u";
+        if (@preg_match($pattern, "") === false) {
+            return null;
+        }
+
+        $supported   = true;
+        $replacement = preg_replace_callback('/\\\\|\$(?:\$|&|\d+|\{\d+\}|\{\w*\}|[`\'+_])?/',
+            function (array $match) use (&$supported): string {
+                if ($match[0] === "\\") {
+                    return "\\\\";
+                }
+                if ($match[0] === "$" || $match[0] === "$$") {
+                    return "\\$";
+                }
+                if ($match[0] === "$&") {
+                    return "\$0";
+                }
+                if (preg_match('/^\$(?:\d+|\{\d+\})$/', $match[0]) === 1) {
+                    return $match[0];
+                }
+                $supported = false;
+
+                return "";
+            },
+            $replaceWith);
+
+        return $supported && $replacement !== null ? [$pattern, $replacement] : null;
+    }
+}

@@ -1184,6 +1184,69 @@ file_put_contents('movie.forced.itt', $forced->format(IttFormatter::class));
 - **`forcedOnly()`**: works as `slice()`. The copy keeps the metadata, the format data and the comments before the forced cues. The original stays unchanged.
 - **Compare**: `SubtitleDiff` reports a cue whose flag changed as `text changed`. `toText()` writes `forced` after the times of a forced cue.
 
+## Fixing common errors
+OCR of PGS and VobSub cues reads `It's` as `lt's`. Files from the web have spaces before `?` and tags that never close. `CommonErrorFixer` fixes such errors in one call and lists each change for review.
+
+```php
+use SubtitleToolbox\Fixing\CommonErrorFixer;
+use SubtitleToolbox\Fixing\CommonErrorOptions;
+use SubtitleToolbox\Fixing\OcrReplaceList;
+
+$fixes = CommonErrorFixer::fix($subtitle, new CommonErrorOptions(language: 'en'));
+$fixes[0]->cueIndex;   // 14
+$fixes[0]->rule;       // 'ocrLowercaseL'
+$fixes[0]->before;     // "lt's late."
+$fixes[0]->after;      // "It's late."
+
+CommonErrorFixer::fix($subtitle, new CommonErrorOptions(
+    language: 'fr',
+    dialogueDash: '-',                                       // '- ' (default), '-', or an en or em dash with or without a space
+    unicodeEllipsis: true,                                   // writes U+2026 for every ellipsis
+    replaceList: OcrReplaceList::fromSubtitleEditXml(file_get_contents('fra_OCRFixReplaceList_User.xml')),
+    dryRun: true,                                            // lists the fixes and changes nothing
+));
+```
+
+| Option | Before | After |
+|:--- |:--- |:--- |
+| `doubleSpaces` | `Hi <i> there</i>` | `Hi <i>there</i>` |
+| `spaceBeforePunctuation` | `Really ?` | `Really?`. French keeps the space before `?`, `!`, `:` and `;` |
+| `missingSpaceAfterPunctuation` | `Stop.Now`, `Hi!How` | `Stop. Now`, `Hi! How`. Not in `1.5`, `www.example.com`, `e.g.` or `U.S.Army` |
+| `unbalancedTags` | `<i>Hello` | `<i>Hello</i>` |
+| `emptyTags` | `Hi <i></i>there` | `Hi there` |
+| `dialogueDashes` | `-Hi.` and `-Hello.` | `- Hi.` and `- Hello.`, or the style of `dialogueDash` |
+| `ellipsis` | `. . .` or `....` | `...`, or U+2026 with `unicodeEllipsis` |
+| `ocrLowercaseL` | `lt's`, `l'm`, `l'll`, `lT lS` | `It's`, `I'm`, `I'll`, `IT IS` |
+| `ocrPipe` | `\|t was`, `wi\|\|` | `It was`, `will` |
+| `ocrZeroInWords` | `D0N'T`, `n0rth` | `DON'T`, `north`. Not in `007` or `2.0` |
+| `replaceList` | the words of an `OcrReplaceList` | the replacement |
+
+- **Defaults**: every fix is on, except `replaceList` and `unicodeEllipsis`. The fixes run in the order of `CommonErrorFixer::RULES`. The result holds one `AppliedFix` for each rule that changed a cue.
+- **Visible text only**: the fixes see the text between tags, with `&lt;`, `&gt;` and `&amp;` decoded, as `replaceText()` does. Only `unbalancedTags` and `emptyTags` change tags. A tag spans the lines of its cue, so `unbalancedTags` closes a tag at the end of the last line. It removes a closing tag without an opening tag.
+- **Double spaces**: a cue line never holds two spaces in a row, because `SubtitleCue` joins them. `doubleSpaces` removes the space after a tag when a space comes before it, and joins non-breaking spaces.
+- **Language**: `language` takes a code such as `en`, `de-AT` or `fra`. Null takes the `language` metadata of the subtitle. English, German, French and Spanish have their own rules for I and l. Other languages get only the rules that apply to all languages, for example `lT` to `IT`.
+- **I and l**: OCR reads a capital I as l when the font draws both the same. `ocrLowercaseL` changes an `l` at the start of a word before a consonant: `lch` to `Ich`, `lsabel` to `Isabel`. French also changes `ll` to `Il`, and keeps `l'hôtel`. Spanish keeps `llega`. English also changes `l`, `l'm`, `l'll`, `l've` and `l'd`. `5 lbs` and `2 l` stay.
+- **Image cues**: run the fixes after `recognizeText()`. Cues without text lines stay unchanged.
+- **Empty cues**: a cue that the replace list empties goes. `cueIndex` is the index before the removal.
+- **Limits**: a fix sees one text run, so it does not find `l<i>t's</i>`. A 0 that stands for another letter, such as `B0ro` for `Büro`, becomes `o`.
+
+`OcrReplaceList::fromSubtitleEditXml()` reads an OCR replace list of [Subtitle Edit](https://github.com/SubtitleEdit/subtitleedit), such as `eng_OCRFixReplaceList_User.xml`. The package ships no list. Pass the arrays to `new OcrReplaceList(wholeWords: ['Teh' => 'The'])` to build a list in code.
+
+| Section | Replaces |
+|:--- |:--- |
+| `WholeWords` | a word between spaces, also with the punctuation around it, such as `"Teh,` |
+| `PartialWordsAlways` | a part of any word, before the `WholeWords` lookup |
+| `WholeLines` | the whole visible text of a line |
+| `BeginLines` | the start of a line, after a dialogue dash or a quote, and the start of a sentence after `. `, `! ` or `? ` |
+| `EndLines` | the end of the cue. It adds no period when the next cue starts with a lower case letter within 0.6 s |
+| `PartialLines` | a text that starts and ends at a space, a punctuation mark or the line edge |
+| `PartialLinesAlways` | any part of a line |
+| `RegularExpressions` | a .NET pattern, run with PCRE on each text run. `^` and `$` match at the tags around the run |
+
+- **Rules**: the sections work as in `OcrFixReplaceList2.cs` of Subtitle Edit at commit [`e1b8546`](https://github.com/SubtitleEdit/subtitleedit/blob/e1b854665b40bf6e04271c2ec64084947060e632/src/libuilogic/Ocr/FixEngine/OcrFixReplaceList2.cs), MIT license.
+- **Skipped**: `PartialWords` and `RegularExpressionsIfSpelledCorrectly` need a spell checker. `Removed...` sections change the list that Subtitle Edit ships. A regular expression that PCRE rejects, or a replacement with a named group such as `${name}`, is skipped as Subtitle Edit skips invalid ones.
+- **Errors**: XML that does not parse throws `ParsingException` with the line. An invalid PCRE pattern in the constructor throws `InvalidArgumentException`.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
