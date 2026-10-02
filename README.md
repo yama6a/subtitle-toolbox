@@ -95,6 +95,7 @@ $subtitle->getFormatData('ass');                        // [] when not set
 | PGS (.sup)      | Blu-ray bitmaps as image cues, with palettes, cropping, windows and forced flags | Not supported | See [PGS](#pgs)
 | SAMI (.smi)     | One language class, `<TITLE>`, the `<STYLE>` block and `<SAMIParam>` | Writes them back, and a `&nbsp;` SYNC after each cue that has a gap before the next cue | Converts `<b>`, `<i>`, `<u>`, `<s>`, `<strike>` and `<font color>` to core markup. Formatter strips all xml tags except: \<b>\<i>\<u>\<s>\<font>
 | SBV (.sbv)      | Accepts any number of hour digits | Writes one hour digit below 10 hours, no UTF-8 BOM | Formatter strips all xml tags and decodes HTML entities. Text with `<`, `>` and `&` round-trips
+| SCC (.scc)      | Pop-on, roll-up and paint-on CEA-608 captions, drop-frame and non-drop time codes | Pop-on captions on data channel 1, drop-frame time codes by default | Converts PAC styles and mid-row codes to `<i>`, `<u>` and `<font color>` and back. Strips all other tags. Throws for more than 4 lines or 32 characters per line
 | SSA (.ssa)      | SubStation Alpha v4.00 with `[V4 Styles]` and `Marked=` columns | Writes SSA back when the parsed file was SSA, legacy `\a` alignment tags | Same parser and formatter as ASS
 | SubRip (.srt)   | Reads coordinates, alignment tags and lenient timestamps | Writes standard timestamps, coordinates and alignment tags | Formatter strips all xml tags except: \<b>\<i>\<u>\<s>\<font>
 | SubViewer (.sub) | SubViewer 1 and 2, header tags, the `[COLF]` style line | SubViewer 2 by default, SubViewer 1 with `OPTION_VERSION` | Formatter strips all xml tags and decodes HTML entities. Writes times in centiseconds for version 2 and in seconds for version 1
@@ -283,6 +284,7 @@ Detection ignores a UTF-8 BOM and leading blank lines. It checks the signatures 
 | 11 | `PgsParser` | the bytes `PG`, then a known segment type at byte 10 |
 | 12 | `JsonParser` | an object with a numeric `"version"` key and a `"cues"` list |
 | 13 | `EbuStlParser` | a 3-digit code page such as `850`, then `STL25.01` or `STL30.01` |
+| 14 | `SccParser` | `Scenarist_SCC V1.0` |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line looks like SubRip, so it detects as SubRip.
 - **`.sub` files**: MicroDVD, MPSub and SubViewer text files all use `.sub`. SBV has three digits after the dot, SubViewer 2 has two.
@@ -765,6 +767,27 @@ try {
 - **Messages**: the first four classes start the message with the class name and the code, for example `ParsingException (Error #100): `. The last two keep the plain message.
 - **Line number**: `ParsingException::getLineNumber()` returns the 1-based input line when the parser knows it, and null otherwise. Then the message ends with ` (line 12)`. The ASS, MicroDVD, MPSub and SubViewer parsers set it.
 - **Codes**: a new exception class takes the next free code after 105.
+
+## Scenarist Closed Captions
+US broadcast and many streaming services take closed captions as SCC. Each line of an SCC file is a time code and CEA-608 byte pairs, one pair per frame at 29.97 fps.
+
+```php
+$subtitle = Subtitle::parse(file_get_contents('show.scc'));              // detects SccParser
+$subtitle->getFormatData('scc');                                         // ['dropFrame' => true]
+$subtitle->getCues()[0]->getFormatData('scc');                           // ['mode' => 'pop-on', 'rows' => [14, 15], 'columns' => [4, 8]]
+(new SccParser(2))->parse($content);                                     // data channel 2, CC2 or CC4
+
+$subtitle->wrapLines(32, 4)->format(SccFormatter::class);
+$subtitle->format(SccFormatter::class, [SccFormatter::OPTION_DROP_FRAME => false]);
+```
+
+- **Decoder**: the parser follows the screen model of [47 CFR 15.119](https://www.govinfo.gov/content/pkg/CFR-2010-title47-vol1/xml/CFR-2010-title47-vol1-sec15-119.xml). Each change of the displayed captions starts a new cue. Paint-on and roll-up data on one line of the file give one cue. So a roll-up file gives one cue per screen, and a row shows in each cue until it rolls off.
+- **Times**: a semicolon before the frames marks drop-frame time code, a colon marks non-drop time code. Both count frames at 30000/1001 fps. Each byte pair takes one frame, so a code later on the line acts later. A caption that no command erases ends 4 s after its start, as in [pycaption](https://github.com/pbs/pycaption).
+- **Damaged data**: 47 CFR 15.119 (i) and (j) define the rules. The parser ignores the second copy of a doubled control code. It drops a byte with a parity error, where a television shows a solid block. It reads the lines in time order. It skips data channel 2, XDS packets and text mode.
+- **Position**: rows 1 to 4 give alignment 8, and all other rows give `null`. The `scc` format data keeps the row and column of each line. The formatter writes them back when they still fit the cue. Else it places the lines by the alignment, at the bottom and centred by default.
+- **Timing of the writer**: the formatter loads each caption before the cue start, so that EOC falls on the first frame of the cue. When the frames after the previous caption are too few for the load, the caption shows late. An EDM erases the caption at its end, unless the next caption replaces it. Of two overlapping cues, the later one replaces the earlier one.
+- **Markup**: PAC styles and mid-row codes become `<i>`, `<u>` and `<font color>` with `#ffffff`, `#00ff00`, `#0000ff`, `#00ffff`, `#ff0000`, `#ffff00` and `#ff00ff`. The formatter writes other colours as white. A mid-row code takes the place of one character. The formatter puts it on the space before a style change. A style change inside a word adds a space.
+- **Characters**: the standard, special and extended sets of CEA-608. The formatter writes an extended character after a standard fallback character, for decoders without the extended set. For a character outside the sets, it throws `InvalidArgumentException`.
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.

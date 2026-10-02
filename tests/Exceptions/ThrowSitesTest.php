@@ -7,12 +7,14 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\DualSubtitleOptions;
+use SubtitleToolbox\Encoding\Cea608;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Formatters\EbuStlFormatter;
 use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
 use SubtitleToolbox\Formatters\MpSubFormatter;
 use SubtitleToolbox\Formatters\PlainTextFormatter;
+use SubtitleToolbox\Formatters\SccFormatter;
 use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Formatters\SubViewerFormatter;
@@ -30,6 +32,7 @@ use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SbvParser;
+use SubtitleToolbox\Parsers\SccParser;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
@@ -128,6 +131,7 @@ class ThrowSitesTest extends TestCase
             "DualSubtitleOptions.php: negative snap"        => [fn () => new DualSubtitleOptions(snapTolerance: -1), ...$invalid],
             "DualSubtitleOptions.php: unknown style"        => [fn () => new DualSubtitleOptions(secondaryStyle: "blink"), ...$invalid],
             "DualSubtitleOptions.php: alignment 0"          => [fn () => new DualSubtitleOptions(secondaryAlignment: 0), ...$invalid],
+            "Encoding/Cea608.php: row 16"                   => [fn () => Cea608::encodePac(16, 0), ...$invalid],
             "Fixes.php: minimum duration 0"                 => [fn () => self::subtitle()->extendShortCues(0), ...$invalid],
             "Fixes.php: maximum characters 0"               => [fn () => self::subtitle()->wrapLines(0), ...$invalid],
             "Fixes.php: negative gap"                       => [fn () => self::subtitle()->fixOverlaps(-1), ...$invalid],
@@ -147,6 +151,14 @@ class ThrowSitesTest extends TestCase
                 [MpSubFormatter::OPTION_FRAME_RATE => 25.5]), ...$invalid],
             "Formatters/PlainTextFormatter.php: paragraph gap" => [fn () => self::subtitle()->format(PlainTextFormatter::class,
                 [PlainTextFormatter::OPTION_PARAGRAPH_GAP => "2"]), ...$invalid],
+            "Formatters/SccFormatter.php: drop frame option" => [fn () => self::subtitle()->format(SccFormatter::class,
+                [SccFormatter::OPTION_DROP_FRAME => "yes"]), ...$invalid],
+            "Formatters/SccFormatter.php: 5 lines"          => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, ["1", "2", "3", "4", "5"]))
+                ->format(SccFormatter::class), ...$invalid],
+            "Formatters/SccFormatter.php: 33 characters"    => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 33)))
+                ->format(SccFormatter::class), ...$invalid],
+            "Formatters/SccFormatter.php: no CEA-608 character" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, "\u{20AC}"))
+                ->format(SccFormatter::class), ...$invalid],
             "Formatters/SubViewerFormatter.php: version 3"  => [fn () => self::subtitle()->format(SubViewerFormatter::class,
                 [SubViewerFormatter::OPTION_VERSION => 3]), ...$invalid],
             "Formatters/SubtitleFormatter.php: line ending" => [fn () => self::subtitle()->format(SubRipFormatter::class,
@@ -218,6 +230,12 @@ class ThrowSitesTest extends TestCase
             "Parsers/SbvParser.php: no timestamps"          => [fn () => (new SbvParser())->parse("text\nmore"), ...$parsing],
             "Parsers/SbvParser.php: no text lines"          => [fn () => (new SbvParser())->parse("0:00:01.000,0:00:02.000"), ...$parsing],
             "Parsers/SbvParser.php: invalid time"           => [fn () => (new SbvParser())->parse("soon,0:00:02.000\ntext"), ...$parsing],
+            "Parsers/SccParser.php: channel 3"              => [fn () => new SccParser(3), ...$invalid],
+            "Parsers/SccParser.php: other header"           => [fn () => (new SccParser())->parse("Scenarist_SCC V2.0\n"), ...$parsing],
+            "Parsers/SccParser.php: no time code"           => [fn () => (new SccParser())->parse(SccParser::HEADER . "\n\n942c\n"), ...$parsing],
+            "Parsers/SccParser.php: invalid byte pair"      => [fn () => (new SccParser())->parse(SccParser::HEADER . "\n\n00:00:01:00\t94zz\n"),
+                                                                ...$parsing],
+            "Parsers/SccParser.php: empty file"             => [fn () => (new SccParser())->parse(""), ...$parsing],
             "Parsers/SubRipParser.php: no cue number"       => [fn () => (new SubRipParser())->parse("x\n00:00:01,000 --> 00:00:02,000\ntext"),
                                                                 ...$parsing],
             "Parsers/SubRipParser.php: no timestamps"       => [fn () => (new SubRipParser())->parse("1\ntext\nmore"), ...$parsing],
