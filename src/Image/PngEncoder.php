@@ -2,7 +2,7 @@
 
 namespace SubtitleToolbox\Image;
 
-use InvalidArgumentException;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 final class PngEncoder
 {

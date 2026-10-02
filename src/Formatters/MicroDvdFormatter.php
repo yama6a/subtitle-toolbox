@@ -2,7 +2,7 @@
 
 namespace SubtitleToolbox\Formatters;
 
-use InvalidArgumentException;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\MicroDvdParser;

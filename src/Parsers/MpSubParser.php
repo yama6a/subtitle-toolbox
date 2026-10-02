@@ -2,7 +2,7 @@
 
 namespace SubtitleToolbox\Parsers;
 
-use InvalidArgumentException;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;

@@ -6,7 +6,7 @@ use DOMDocument;
 use DOMElement;
 use DOMNode;
 use DOMText;
-use InvalidArgumentException;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;

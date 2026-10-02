@@ -2,6 +2,7 @@
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 
@@ -24,12 +25,12 @@ abstract class SubtitleFormatter
         if ($lineEnding === StringHelpers::WINDOWS_LINE_ENDING) {
             $output = preg_replace('/\r?\n/', StringHelpers::WINDOWS_LINE_ENDING, $output);
         } elseif ($lineEnding !== StringHelpers::UNIX_LINE_ENDING) {
-            throw new \InvalidArgumentException("The option " . self::OPTION_LINE_ENDING . " must be \"\\n\" or \"\\r\\n\".");
+            throw new InvalidArgumentException("The option " . self::OPTION_LINE_ENDING . " must be \"\\n\" or \"\\r\\n\".");
         }
 
         $bom = $options[self::OPTION_BOM] ?? null;
         if (!is_bool($bom) && $bom !== null) {
-            throw new \InvalidArgumentException("The option " . self::OPTION_BOM . " must be true or false.");
+            throw new InvalidArgumentException("The option " . self::OPTION_BOM . " must be true or false.");
         }
 
         return match ($bom) {

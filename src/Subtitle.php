@@ -2,7 +2,9 @@
 
 namespace SubtitleToolbox;
 
+use SubtitleToolbox\Exceptions\CueNotFoundException;
 use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Formatters\ImageFormatter;
@@ -131,7 +133,7 @@ class Subtitle implements \IteratorAggregate, \Countable
     public function removeCue(int $cueIndex, bool $reIndexAfterRemoval = true): self
     {
         if (!array_key_exists($cueIndex, $this->cues)) {
-            throw new \RuntimeException("Cannot remove cue $cueIndex - cue not found!");
+            throw new CueNotFoundException("Cannot remove cue $cueIndex - cue not found!");
         }
 
         unset($this->cues[$cueIndex]);
@@ -242,7 +244,7 @@ class Subtitle implements \IteratorAggregate, \Countable
     public function addComment(string $text, int $beforeCueIndex): self
     {
         if ($beforeCueIndex < 0) {
-            throw new \InvalidArgumentException("Cannot add a comment before cue $beforeCueIndex - " .
+            throw new InvalidArgumentException("Cannot add a comment before cue $beforeCueIndex - " .
                                                 "the cue index must not be negative!");
         }
 

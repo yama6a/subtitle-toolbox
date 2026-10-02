@@ -2,7 +2,7 @@
 
 namespace SubtitleToolbox\Exceptions;
 
-abstract class GenericException extends \RuntimeException
+abstract class GenericException extends \RuntimeException implements SubtitleToolboxException
 {
     /**
      * GenericException constructor.
