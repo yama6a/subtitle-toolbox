@@ -38,6 +38,7 @@ use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\VobSubParser;
 use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Streaming\SubRipStreamReader;
 use SubtitleToolbox\Streaming\SubRipStreamWriter;
 use SubtitleToolbox\Streaming\WebVttStreamReader;
@@ -317,6 +318,13 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Parsers/WebVttParser.php: invalid start time"  => [fn () => (new WebVttParser())->parse("WEBVTT\n\nsoon --> 00:00:02.000\ntext"),
                                                                 ...$parsing],
+            "Parsers/WhisperJsonParser.php: no JSON"        => [fn () => (new WhisperJsonParser())->parse("{"), ...$parsing],
+            "Parsers/WhisperJsonParser.php: root no object" => [fn () => (new WhisperJsonParser())->parse("[1]"), ...$parsing],
+            "Parsers/WhisperJsonParser.php: no segments"    => [fn () => (new WhisperJsonParser())->parse('{"text": "Hi"}'), ...$parsing],
+            "Parsers/WhisperJsonParser.php: time no number" => [fn () => (new WhisperJsonParser())->parse('{"segments": [{"start": "0"}]}'),
+                                                                ...$parsing],
+            "Parsers/WhisperJsonParser.php: text no string" => [fn () => (new WhisperJsonParser())->parse(
+                '{"segments": [{"start": 0, "end": 1}]}'), ...$parsing],
             "Retiming.php: scale factor 0"                  => [fn () => self::subtitle()->scale(0), ...$invalid],
             "Retiming.php: same old times"                  => [fn () => self::subtitle()->syncByTwoPoints(1, 1, 1, 2), ...$invalid],
             "Retiming.php: new times in reverse"            => [fn () => self::subtitle()->syncByTwoPoints(1, 2, 2, 1), ...$invalid],

@@ -18,6 +18,7 @@ use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\Parsers\WhisperJsonParser;
 
 class FormatDetectorTest extends TestCase
 {
@@ -36,6 +37,7 @@ class FormatDetectorTest extends TestCase
         "stl"      => EbuStlParser::class,
         "ttml"     => TtmlParser::class,
         "vtt"      => WebVttParser::class,
+        "whisper"  => WhisperJsonParser::class,
     ];
 
     // These fixtures break their own format on purpose, so their parser rejects them.
@@ -130,6 +132,10 @@ class FormatDetectorTest extends TestCase
             "JSON with cues first"       => ["{\"cues\": [], \"metadata\": {\"title\": \"version\"}, \"version\": 1}", JsonParser::class],
             "JSON with spaces"           => ["{\n  \"version\" : 1 ,\n  \"cues\" : [ ]\n}\n", JsonParser::class],
             "EBU STL at 30 fps"          => [str_pad("865STL30.011", 1024), EbuStlParser::class],
+            "JSON with a segments key"   => ["{\"version\": 1, \"formatData\": {\"x\": {\"segments\": [1]}}, \"cues\": []}", JsonParser::class],
+            "Whisper JSON"               => ["{\"text\": \" Hello\", \"segments\": [{\"id\": 0, \"start\": 0.0, \"end\": 2.0, \"text\": \" Hello\"}], \"language\": \"en\"}",
+                                             WhisperJsonParser::class],
+            "whisper.cpp JSON"           => ["{\n\t\"systeminfo\": \"\",\n\t\"transcription\": [\n\t]\n}\n", WhisperJsonParser::class],
         ];
     }
 
@@ -179,7 +185,6 @@ class FormatDetectorTest extends TestCase
             "plain text"               => ["The train to the coast leaves at 7:15.\nBring a coat.\n"],
             "JSON with version string" => ["{\"version\": \"1\", \"cues\": []}"],
             "JSON with cues as text"   => ["{\"version\": 1, \"text\": \"\\\"cues\\\": [\"}"],
-            "Whisper JSON"             => ["{\"text\": \" Hello\", \"segments\": [{\"id\": 0, \"start\": 0.0, \"end\": 2.0, \"text\": \" Hello\"}], \"language\": \"en\"}"],
             "JSON"                     => ["{\"cues\": [{\"start\": 1, \"end\": 2, \"text\": \"Hello\"}]}"],
             "HTML"                     => ["<!DOCTYPE html>\n<html><head><title>Bakery</title></head><body><p>Hello</p></body></html>"],
             "XHTML"                    => ["<?xml version=\"1.0\"?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\"></html>"],

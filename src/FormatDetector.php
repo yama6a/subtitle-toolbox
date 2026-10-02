@@ -16,6 +16,7 @@ use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\Parsers\WhisperJsonParser;
 
 class FormatDetector
 {
@@ -46,6 +47,7 @@ class FormatDetector
      * 12. JSON: an object with a numeric "version" key and a "cues" list. The possessive loops skip strings without backtracking.
      * 13. EBU STL: a 3-digit code page, then the disk format code STL25.01 or STL30.01.
      * 14. SCC: the `Scenarist_SCC V1.0` header line.
+     * 15. Whisper JSON: an object with a "segments" or "transcription" list. It comes after JSON, whose format data can hold such a key.
      */
     private const SIGNATURES = [
         WebVttParser::class   => '/\AWEBVTT(?:[ \t\n]|\z)/',
@@ -64,6 +66,7 @@ class FormatDetector
         JsonParser::class     => '/\A\{(?=(?:[^"]++|"(?!version"\s*+:))*+"version"\s*+:\s*+\d)(?=(?:[^"]++|"(?!cues"\s*+:))*+"cues"\s*+:\s*+\[)/',
         EbuStlParser::class   => '/\A\d{3}STL(?:25|30)\.01/',
         SccParser::class      => '/\AScenarist_SCC V1\.0[ \t]*$/m',
+        WhisperJsonParser::class => '/\A\{(?=(?:[^"]++|"(?!(?:segments|transcription)"\s*+:))*+"(?:segments|transcription)"\s*+:\s*+\[)/',
     ];
 
 
