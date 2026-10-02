@@ -1247,6 +1247,25 @@ CommonErrorFixer::fix($subtitle, new CommonErrorOptions(
 - **Skipped**: `PartialWords` and `RegularExpressionsIfSpelledCorrectly` need a spell checker. `Removed...` sections change the list that Subtitle Edit ships. A regular expression that PCRE rejects, or a replacement with a named group such as `${name}`, is skipped as Subtitle Edit skips invalid ones.
 - **Errors**: XML that does not parse throws `ParsingException` with the line. An invalid PCRE pattern in the constructor throws `InvalidArgumentException`.
 
+## Install the command line tool
+Every release also ships the [command line tool](#command-line-tool) without Composer.
+
+| Form | Needs | Example |
+|:--- |:--- |:--- |
+| PHAR on the [GitHub release](https://github.com/yama6a/subtitle-toolbox/releases) | PHP 8.2 or later with `ext-dom`, `ext-iconv` and `ext-zlib` | `php subtitle-toolbox.phar convert in.srt out.vtt` |
+| Image `ghcr.io/yama6a/subtitle-toolbox` | Docker or another container runtime | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:1.42.0 convert in.srt out.vtt` |
+
+```sh
+curl -fsSLO https://github.com/yama6a/subtitle-toolbox/releases/latest/download/subtitle-toolbox.phar
+php subtitle-toolbox.phar --version
+```
+
+- **Version**: the PHAR file, the image tag, the Git tag and the Packagist version are the same string, for example `1.42.0`. The image also has the tags `1.42`, `1` and `latest`.
+- **Image**: the tool runs in `/work`. Mount your files there. `--user` makes the tool write files that you own. Without it, the tool runs as `www-data` and cannot write to most mounted folders.
+- **Platforms**: the image is for `linux/amd64` and `linux/arm64`.
+- **OCR**: `convert --ocr` works in both forms with no extra steps, because both include php-glyph-ocr. See [OCR in the command line tool](#ocr-in-the-command-line-tool).
+- **Memory**: the image sets `memory_limit` to 512 MB. The PHAR raises a `memory_limit` of 128 MB to 512 MB when you pass `--ocr`. It keeps any other value, for example from `php -d memory_limit=1G`.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
