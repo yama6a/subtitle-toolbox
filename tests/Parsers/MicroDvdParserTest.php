@@ -95,6 +95,14 @@ class MicroDvdParserTest extends TestCase
     }
 
 
+    public function testLatin1TextKeepsItsBytes(): void
+    {
+        $subtitle = (new MicroDvdParser(25))->parse("{0}{25}{y:i}caf\xE9 & bread|<3 jam");
+
+        $this->assertSame(["<i>caf\xE9 &amp; bread</i>", "&lt;3 jam"], $subtitle->getCues()[0]->getLines());
+    }
+
+
     public function testConstructorFrameRateWinsOverFrameRateLine(): void
     {
         $subtitle = (new MicroDvdParser(25))->parse("{1}{1}23.976\n{25}{50}Hello");
