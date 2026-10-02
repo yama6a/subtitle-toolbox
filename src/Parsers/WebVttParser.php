@@ -4,6 +4,7 @@ namespace SubtitleToolbox\Parsers;
 
 use Generator;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -22,42 +23,55 @@ class WebVttParser extends SubtitleParser
 
     public function parse(string $rawSubtitle): Subtitle
     {
-        $rawSubtitle = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawSubtitle = StringHelpers::normalizeEOLs($rawSubtitle);
-        $rawSubtitle = trim($rawSubtitle);
+        $this->warnings = [];
+        $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
+        $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
+        $leadingLines   = substr_count(substr($rawSubtitle, 0, strlen($rawSubtitle) - strlen(ltrim($rawSubtitle))), "\n");
+        $rawSubtitle    = trim($rawSubtitle);
 
         if (!str_starts_with($rawSubtitle, "WEBVTT")) {
             throw new ParsingException("The file doesn't start with the string WEBVTT!");
         }
 
-        $blocks   = iterator_to_array($this->splitIntoBlocks(explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle)));
+        $lines    = array_merge(array_fill(0, $leadingLines, ""), explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle));
         $subtitle = new Subtitle();
-        $fileData = $this->parseHeader($blocks[0]);
+        $fileData = [];
         $seenCue  = false;
-        foreach (array_slice($blocks, 1, null, true) as $idx => $rawLines) {
+        $count    = 0;
+        foreach ($this->numberedBlocks($lines) as $lineNumber => $rawLines) {
+            $idx = $count++;
+            if ($idx === 0) {
+                $fileData = $this->parseHeader($rawLines);
+                continue;
+            }
+
             $firstLine = trim($rawLines[0]);
-            switch (true) {
-                case str_contains($rawLines[0], "-->") || str_contains($rawLines[1] ?? "", "-->"):
-                    $subtitle->addCue($this->parseCueBlock($rawLines, $idx));
-                    $seenCue = true;
-                    break;
-                case $this->startsWithKeyword($firstLine, "NOTE"):
-                    $subtitle->addComment($this->parseComment($rawLines), count($subtitle->getCues()));
-                    break;
-                case !$seenCue && $firstLine === "STYLE":
-                    $fileData["styles"][] = implode(StringHelpers::UNIX_LINE_ENDING, array_slice($rawLines, 1));
-                    break;
-                case !$seenCue && $firstLine === "REGION":
-                    $fileData["regions"][] = $this->parseSettings(
-                        implode(" ", array_slice($rawLines, 1)),
-                        self::REGION_SETTINGS
-                    );
-                    break;
-                case preg_match("/^(NOTE|STYLE|REGION)/i", $firstLine) === 1:
-                    // The spec parser ignores every block that is not a cue, so these blocks do not throw.
-                    break;
-                default:
-                    throw new ParsingException("Block #$idx doesn't match anything that we can parse as a WebVTT cue!");
+            try {
+                switch (true) {
+                    case str_contains($rawLines[0], "-->") || str_contains($rawLines[1] ?? "", "-->"):
+                        $subtitle->addCue($this->parseCueBlock($rawLines, $idx));
+                        $seenCue = true;
+                        break;
+                    case $this->startsWithKeyword($firstLine, "NOTE"):
+                        $subtitle->addComment($this->parseComment($rawLines), count($subtitle->getCues()));
+                        break;
+                    case !$seenCue && $firstLine === "STYLE":
+                        $fileData["styles"][] = implode(StringHelpers::UNIX_LINE_ENDING, array_slice($rawLines, 1));
+                        break;
+                    case !$seenCue && $firstLine === "REGION":
+                        $fileData["regions"][] = $this->parseSettings(
+                            implode(" ", array_slice($rawLines, 1)),
+                            self::REGION_SETTINGS
+                        );
+                        break;
+                    case preg_match("/^(NOTE|STYLE|REGION)/i", $firstLine) === 1:
+                        // The spec parser ignores every block that is not a cue, so these blocks do not throw.
+                        break;
+                    default:
+                        throw new ParsingException("Block #$idx doesn't match anything that we can parse as a WebVTT cue!");
+                }
+            } catch (ParsingException $exception) {
+                $this->fail($exception, $lineNumber, $idx, $rawLines);
             }
         }
 
@@ -72,12 +86,75 @@ class WebVttParser extends SubtitleParser
      */
     public function splitIntoBlocks(iterable $lines): Generator
     {
-        $hasBlocks = false;
+        foreach ($this->collectBlocks($lines, false) as [, $block]) {
+            yield $block;
+        }
+    }
+
+
+    /**
+     * Yields the blocks of splitIntoBlocks(), keyed by the 1-based number of their first line.
+     * In lenient mode, it splits the cues off a header block that has no empty line after it, and warns.
+     *
+     * @param iterable<int, string> $lines keyed by the 0-based line number
+     *
+     * @return Generator<int, list<string>>
+     */
+    public function numberedBlocks(iterable $lines): Generator
+    {
+        $isHeader = true;
+        foreach ($this->collectBlocks($lines, false) as [$lineNumber, $block]) {
+            $timingOffset = $isHeader && $this->lenient ? $this->firstTimingLineOffset($block) : null;
+            $isHeader     = false;
+            if ($timingOffset === null) {
+                yield $lineNumber => $block;
+                continue;
+            }
+
+            $this->warn(
+                "No empty line found after the first line containing WEBVTT! The parser split the header block at line " .
+                ($lineNumber + $timingOffset) . ".",
+                $lineNumber + $timingOffset,
+                0,
+                $block,
+                ParseWarning::REPAIRED
+            );
+            yield $lineNumber => array_slice($block, 0, $timingOffset);
+
+            $rest = array_combine(
+                range($lineNumber - 1 + $timingOffset, $lineNumber - 2 + count($block)),
+                array_slice($block, $timingOffset)
+            );
+            foreach ($this->collectBlocks($rest, true) as [$restLineNumber, $restBlock]) {
+                yield $restLineNumber => $restBlock;
+            }
+        }
+    }
+
+
+    private function firstTimingLineOffset(array $block): ?int
+    {
+        foreach (array_slice($block, 1, null, true) as $offset => $line) {
+            if (str_contains($line, "-->")) {
+                return $offset;
+            }
+        }
+
+        return null;
+    }
+
+
+    /**
+     * @return Generator<int, array{int, list<string>}>
+     */
+    private function collectBlocks(iterable $lines, bool $hasBlocks): Generator
+    {
         $current   = [];
-        foreach ($lines as $line) {
+        $startLine = 1;
+        foreach ($lines as $index => $line) {
             if (trim($line) === "") {
                 if ($current !== []) {
-                    yield $current;
+                    yield [$startLine, $current];
                     $hasBlocks = true;
                 }
                 $current = [];
@@ -88,13 +165,16 @@ class WebVttParser extends SubtitleParser
                          || (count($current) === 1 && !str_contains($current[0], "-->"));
             // The header block is exempt, so that a missing empty line after WEBVTT still throws.
             if (str_contains($line, "-->") && !$startsCue && $hasBlocks) {
-                yield $current;
+                yield [$startLine, $current];
                 $current = [];
+            }
+            if ($current === []) {
+                $startLine = $index + 1;
             }
             $current[] = $line;
         }
         if ($current !== []) {
-            yield $current;
+            yield [$startLine, $current];
         }
     }
 
