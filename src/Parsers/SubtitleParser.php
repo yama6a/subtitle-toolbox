@@ -20,7 +20,7 @@ abstract class SubtitleParser
 
 
     /**
-     * Makes the SubRip, WebVTT and SBV parsers skip or repair a broken block and record a ParseWarning instead of throwing.
+     * Makes the parser skip or repair a broken block and record a ParseWarning instead of throwing. The SCC, PGS and VobSub parsers ignore it.
      */
     public function setLenient(bool $lenient = true): static
     {
