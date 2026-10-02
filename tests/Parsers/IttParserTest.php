@@ -29,8 +29,8 @@ class IttParserTest extends TestCase
         $subtitle = Subtitle::parse(self::ISSUE_EXAMPLE, IttParser::class);
         $cue      = $subtitle->getCues()[0];
 
-        $this->assertSame(1.501, $cue->getStart());
-        $this->assertSame([4.0, ["Hello", "<i>world</i>"], 2], [$cue->getEnd(), $cue->getLines(), $cue->getAlignment()]);
+        $this->assertSame(1.502, $cue->getStart());
+        $this->assertSame([4.004, ["Hello", "<i>world</i>"], 2], [$cue->getEnd(), $cue->getLines(), $cue->getAlignment()]);
         $this->assertSame(
             ["timeBase" => "smpte", "frameRate" => "24", "frameRateMultiplier" => "999 1000", "dropMode" => "nonDrop"],
             $subtitle->getFormatData(IttParser::FORMAT)

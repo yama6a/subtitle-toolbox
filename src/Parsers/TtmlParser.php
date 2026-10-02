@@ -53,6 +53,13 @@ class TtmlParser extends SubtitleParser
 
     private float $frameRate;
 
+    /** Frame labels per second of an SMPTE time code, which is ttp:frameRate without the multiplier. */
+    private float $smpteFrameRate;
+
+    private bool $smpteTimeBase;
+
+    private string $dropMode;
+
     private float $subFrameRate;
 
     private float $tickRate;
@@ -115,13 +122,14 @@ class TtmlParser extends SubtitleParser
             if (($matches[4] ?? "") !== "") {
                 return $seconds + (float) ("0." . $matches[4]);
             }
-            if (($matches[5] ?? "") !== "") {
-                $subFrames = ($matches[6] ?? "") === "" ? 0 : (int) $matches[6];
-
-                return $seconds + ((int) $matches[5] + $subFrames / $this->subFrameRate) / $this->frameRate;
+            $frames = ($matches[5] ?? "") === "" ? 0 : (int) $matches[5];
+            $frames += ($matches[6] ?? "") === "" ? 0 : (int) $matches[6] / $this->subFrameRate;
+            if ($this->smpteTimeBase) {
+                return ($seconds * $this->smpteFrameRate + $frames - $this->droppedFrames((int) $matches[1], (int) $matches[2]))
+                       / $this->frameRate;
             }
 
-            return $seconds;
+            return $seconds + $frames / $this->frameRate;
         }
 
         if (preg_match("/^(\d+(?:\.\d+)?)(h|ms|m|s|f|t)$/", $expression, $matches)) {
@@ -138,6 +146,21 @@ class TtmlParser extends SubtitleParser
         }
 
         throw new ParsingException("The time expression \"$expression\" could not be parsed!");
+    }
+
+
+    /**
+     * Counts the frame labels that drop-frame time code skips before hh:mm:00, as in SMPTE ST 12-1.
+     *
+     * @see https://www.w3.org/TR/ttml1/#time-expression-semantics-smpte
+     */
+    private function droppedFrames(int $hours, int $minutes): int
+    {
+        return match ($this->dropMode) {
+            "dropNTSC" => ($hours * 54 + $minutes - intdiv($minutes, 10)) * 2,
+            "dropPAL"  => ($hours * 27 + intdiv($minutes, 2) - intdiv($minutes, 20)) * 4,
+            default    => 0,
+        };
     }
 
 
@@ -173,10 +196,13 @@ class TtmlParser extends SubtitleParser
             $multiplier = [1, 1];
         }
 
-        $this->frameRate    = ((float) ($frameRate ?? 30) ?: 30) * (float) $multiplier[0] / (float) $multiplier[1];
-        $this->subFrameRate = (float) ($this->attribute($this->root, "ttp", "subFrameRate") ?? 1) ?: 1;
-        $tickRate           = $this->attribute($this->root, "ttp", "tickRate");
-        $this->tickRate     = $tickRate !== null && (float) $tickRate > 0
+        $this->smpteFrameRate = (float) ($frameRate ?? 30) ?: 30;
+        $this->frameRate      = $this->smpteFrameRate * (float) $multiplier[0] / (float) $multiplier[1];
+        $this->smpteTimeBase  = trim($this->attribute($this->root, "ttp", "timeBase") ?? "") === "smpte";
+        $this->dropMode       = trim($this->attribute($this->root, "ttp", "dropMode") ?? "nonDrop");
+        $this->subFrameRate   = (float) ($this->attribute($this->root, "ttp", "subFrameRate") ?? 1) ?: 1;
+        $tickRate             = $this->attribute($this->root, "ttp", "tickRate");
+        $this->tickRate       = $tickRate !== null && (float) $tickRate > 0
             ? (float) $tickRate
             : ($frameRate !== null ? $this->frameRate : 1);
     }

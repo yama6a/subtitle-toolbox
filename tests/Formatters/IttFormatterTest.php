@@ -113,7 +113,7 @@ class IttFormatterTest extends TestCase
             "end before start"             => [25, 1.0, 0.5, "00:00:01:00", "00:00:01:01"],
             "negative start"               => [25, -1.0, 0.04, "00:00:00:00", "00:00:00:01"],
             "23.976 fps, last frame"       => [23.976, 0.958, 1.0, "00:00:00:23", "00:00:01:00"],
-            "29.97 fps, past one hour"     => [29.97, 3725.5, 3725.6, "01:02:05:15", "01:02:05:18"],
+            "29.97 fps, past one hour"     => [29.97, 3725.5, 3725.6, "01:02:01:23", "01:02:01:26"],
             "24000/1001 fps"               => [24000 / 1001, 0.5, 1.0, "00:00:00:12", "00:00:01:00"],
         ];
     }
@@ -127,6 +127,38 @@ class IttFormatterTest extends TestCase
         $this->assertSame(
             ["<p begin=\"$begin\" end=\"$expectedEnd\" region=\"bottom\">a</p>"],
             $this->paragraphs($subtitle->format(IttFormatter::class, [IttFormatter::OPTION_FRAME_RATE => $fps]))
+        );
+    }
+
+
+    public static function hourRoundTripProvider(): array
+    {
+        return [
+            "29.97 fps" => [29.97, ["00:59:56:12", "01:01:36:09", "01:59:52:24", "02:01:32:21"]],
+            "25 fps"    => [25, ["01:00:00:00", "01:01:40:00", "02:00:00:00", "02:01:40:00"]],
+        ];
+    }
+
+
+    #[DataProvider("hourRoundTripProvider")]
+    public function testRoundTripAtOneAndTwoHours(float $fps, array $labels): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(3600, 3700, "a"))->addCue(new SubtitleCue(7200, 7300, "b"));
+        $output   = $subtitle->format(IttFormatter::class, [IttFormatter::OPTION_FRAME_RATE => $fps]);
+
+        $this->assertSame(
+            [
+                "<p begin=\"$labels[0]\" end=\"$labels[1]\" region=\"bottom\">a</p>",
+                "<p begin=\"$labels[2]\" end=\"$labels[3]\" region=\"bottom\">b</p>",
+            ],
+            $this->paragraphs($output)
+        );
+        $this->assertSame(
+            [[3600.0, 3700.0], [7200.0, 7300.0]],
+            array_map(
+                fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()],
+                Subtitle::parse($output, IttParser::class)->getCues()
+            )
         );
     }
 
