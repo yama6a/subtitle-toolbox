@@ -2,6 +2,8 @@
 
 namespace SubtitleToolbox;
 
+use SubtitleToolbox\Exceptions\ParsingException;
+
 class StringHelpers
 {
     public const UNIX_LINE_ENDING    = "\n";
@@ -9,6 +11,14 @@ class StringHelpers
     public const WINDOWS_LINE_ENDING = "\r\n";
 
     private const UTF8_BOM = "\xEF\xBB\xBF";
+
+    // UTF-32 LE comes before UTF-16 LE because their BOMs share the first two bytes.
+    private const UNICODE_BOMS = [
+        "\x00\x00\xFE\xFF" => "UTF-32BE",
+        "\xFF\xFE\x00\x00" => "UTF-32LE",
+        "\xFE\xFF"         => "UTF-16BE",
+        "\xFF\xFE"         => "UTF-16LE",
+    ];
 
 
     public static function hasUtf8Bom(string $str): bool
@@ -26,6 +36,46 @@ class StringHelpers
     public static function addUtf8Bom(string $str): string
     {
         return self::hasUtf8Bom($str) ? $str : self::UTF8_BOM . $str;
+    }
+
+
+    public static function isValidUtf8(string $str): bool
+    {
+        return preg_match('//u', $str) === 1;
+    }
+
+
+    /**
+     * Converts $str to UTF-8 from the encoding that its BOM names, or else from $sourceEncoding when it is not null.
+     */
+    public static function convertToUtf8(string $str, ?string $sourceEncoding = null): string
+    {
+        if (self::hasUtf8Bom($str)) {
+            return $str;
+        }
+
+        foreach (self::UNICODE_BOMS as $bom => $encoding) {
+            if (str_starts_with($str, $bom)) {
+                return self::iconvToUtf8(substr($str, strlen($bom)), $encoding);
+            }
+        }
+
+        if ($sourceEncoding === null || in_array(strtoupper($sourceEncoding), ["UTF-8", "UTF8"], true)) {
+            return $str;
+        }
+
+        return self::iconvToUtf8($str, $sourceEncoding);
+    }
+
+
+    private static function iconvToUtf8(string $str, string $encoding): string
+    {
+        $converted = @iconv($encoding, "UTF-8", $str);
+        if ($converted === false) {
+            throw new ParsingException("Cannot convert the content from $encoding to UTF-8.");
+        }
+
+        return $converted;
     }
 
 

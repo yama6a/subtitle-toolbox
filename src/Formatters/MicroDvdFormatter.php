@@ -39,7 +39,7 @@ class MicroDvdFormatter extends SubtitleFormatter
                        StringHelpers::UNIX_LINE_ENDING;
         }
 
-        return $output;
+        return $this->applyOutputOptions($output, $options);
     }
 
 

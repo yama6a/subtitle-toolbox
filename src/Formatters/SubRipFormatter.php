@@ -21,7 +21,7 @@ class SubRipFormatter extends SubtitleFormatter
             $output .= StringHelpers::UNIX_LINE_ENDING;
         }
 
-        return StringHelpers::addUtf8Bom($output);
+        return $this->applyOutputOptions(StringHelpers::addUtf8Bom($output), $options);
     }
 
 
@@ -42,7 +42,7 @@ class SubRipFormatter extends SubtitleFormatter
         $lines = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines());
 
         // strip xml tags depending on option settings
-        $lines = in_array(parent::OPTION_STRIP_ALL_XML_TAGS, $options)
+        $lines = in_array(parent::OPTION_STRIP_ALL_XML_TAGS, $options, true)
             ? Markup::stripAllTags($lines)
             : Markup::keepTags($lines, ["b", "u", "i", "s", "font"]);
         $lines = Markup::decodeEntities($lines);

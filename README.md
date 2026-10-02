@@ -176,7 +176,7 @@ $subtitle->getFormatData('smi');                                                
 - **End times**: a cue ends at the next `SYNC` that has a `<P>` of the same class, or no `<P>` at all. A `SYNC` with only `&nbsp;` ends a cue and starts none. The last cue lasts 10 s unless you pass `lastCueDuration`.
 - **Text**: a line break in the file is a space, as in HTML. Only `<br>` starts a new cue line. `<font color>` accepts `#rrggbb`, `rrggbb` and the 16 colour names of HTML 4. The parser drops other tags from the cue text. The cue format data keeps the HTML of each `<P>`, and the formatter writes it back for an unchanged cue.
 - **Formatter**: it writes the stored STYLE block without the rules of the other language classes. Without a stored block, it names the class after the language metadata, for example `KOKRCC` for `ko-KR`, or `SUBTTL` without a language. A cue that overlaps the next cue ends where the next cue starts.
-- **Encoding**: the parser reads UTF-8 only. It throws `ParsingException` for other encodings, for example EUC-KR or CP949.
+- **Encoding**: the parser reads UTF-8 only. It throws `ParsingException` for other encodings. For a file in EUC-KR or CP949, pass the encoding to `Subtitle::parse()`, as the section on encodings shows.
 
 ### ASS and SSA
 `AssParser` reads ASS v4.00+ and SSA v4.00. `AssFormatter` writes the version that the parser read, or ASS for cues from other formats.
@@ -305,6 +305,23 @@ $subtitle->unwrapLines();                         // join the lines of each cue 
 - **Line breaks**: `wrapLines()` changes only cues with a longer line or with more lines than allowed. It uses the fewest lines that fit and makes them about equal in length. When the text does not fit, the lines get longer than the limit.
 - **Characters**: tags count 0 characters, and an entity such as `&amp;` counts 1. `wrapLines()` breaks only at spaces outside tags. It closes the open core markup tags at a break and opens them again on the next line.
 - **Text without spaces**: Chinese or Japanese text has no break points, so `wrapLines()` keeps such a line long.
+
+## Encodings and line endings
+```php
+$subtitle = Subtitle::parse(file_get_contents('movie.srt'), SubRipParser::class, 'Windows-1252');
+$subtitle = Subtitle::parse(file_get_contents('movie.smi'), null, 'CP949');
+StringHelpers::isValidUtf8(file_get_contents('movie.srt'));   // false for a Windows-1252 file with letters such as é
+
+$subtitle->format(SubRipFormatter::class, [
+    SubtitleFormatter::OPTION_LINE_ENDING => "\r\n",   // "\n" (default) or "\r\n"
+    SubtitleFormatter::OPTION_BOM         => false,    // true adds a UTF-8 BOM, false removes it
+]);
+```
+
+- **Input**: the library converts UTF-16 and UTF-32 with a BOM to UTF-8 without being asked. A BOM wins over the source encoding argument. Without a BOM and without the argument, the parsers read the bytes as UTF-8 and keep invalid bytes.
+- **Parsers called directly**: only `Subtitle::parse()` converts. Before `(new SamiParser())->parse($content)`, call `StringHelpers::convertToUtf8($content, 'CP949')`.
+- **Source encodings**: the conversion uses the PHP extension iconv. It accepts the names that the iconv of the system knows, for example `Windows-1251`, `ISO-8859-15`, `Shift_JIS` or `EUC-KR`. An unknown name or a byte that is invalid in the encoding throws `ParsingException`.
+- **Output defaults**: every formatter writes LF. ASS, LRC, MPSub, SubRip and WebVTT write a UTF-8 BOM. MicroDVD, SAMI, SBV and TTML do not.
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
