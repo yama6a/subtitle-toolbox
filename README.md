@@ -96,6 +96,7 @@ $subtitle->getFormatData('ass');                        // [] when not set
 | SSA (.ssa)      | SubStation Alpha v4.00 with `[V4 Styles]` and `Marked=` columns | Writes SSA back when the parsed file was SSA, legacy `\a` alignment tags | Same parser and formatter as ASS
 | SubRip (.srt)   | Reads coordinates, alignment tags and lenient timestamps | Writes standard timestamps, coordinates and alignment tags | Formatter strips all xml tags except: \<b>\<i>\<u>\<s>\<font>
 | TTML (.ttml, .dfxp, .xml) | TTML 1, TTML 2, IMSC and the DFXP namespace. All time expressions, `body` and `div` offsets | Media clock times, `<head>` and attributes of the input file | Converts `tts:fontWeight`, `tts:fontStyle`, `tts:textDecoration`, `tts:color` and `ttm:agent` to core markup and back
+| VobSub (.idx and .sub) | DVD bitmaps as image cues. The `size`, `palette`, `custom colors`, `id`, `delay` and `timestamp` lines of the `.idx` | Not supported | See [VobSub](#vobsub)
 | WebVTT (.vtt)   | Header, comments, cue identifiers, styles, regions and cue settings | Writes them back, numbers cues without identifier, always writes hours | Formatter strips all xml tags except: \<b>\<u>\<i>\<v>\<lang>\<c>\<ruby>\<rt> and inline timestamps
 
 ### LRC
@@ -553,6 +554,29 @@ text changed: old cue 12, new cue 12
 - **Moved cues**: a cue that moves past other cues is removed in one place and added in the other.
 - **Speed**: 2,000 cues against 2,000 cues with 500 changes take about 0.03 s. A stretch of 200 changed cues against 200 changed cues takes about 0.2 s.
 - **Limits**: cues with the same text split the files into stretches. In a stretch of more than 40,000 cue pairs, for example 250 cues against 250 cues, only cues that overlap in time pair. This happens when a translation is compared with its source.
+
+## VobSub
+VobSub is the subtitle format of DVD rips. It is a pair of files. The `.idx` text file holds the palette, the screen size, the tracks and their timestamps. The `.sub` file is an MPEG-2 program stream. It holds one **unit** (subpicture unit) per cue: a bitmap and the commands that show and hide it.
+
+```php
+use SubtitleToolbox\Parsers\VobSubParser;
+use SubtitleToolbox\Subtitle;
+
+$idx      = file_get_contents('movie.idx');
+$subtitle = (new VobSubParser($idx))->parse(file_get_contents('movie.sub'));         // first track
+$subtitle = (new VobSubParser($idx, 'de'))->parse(file_get_contents('movie.sub'));   // first track with "id: de"
+$subtitle = (new VobSubParser($idx, 1))->parse(file_get_contents('movie.sub'));      // track with "index: 1"
+
+$subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);   // "de", from the id line
+$subtitle->recognizeText(new TesseractEngine(), 'deu');
+```
+
+- **Cues**: every cue is an image cue without text. See [Image cues and OCR](#image-cues-and-ocr). The image has the size and the position of the display area of the unit, on a screen of the `.idx` size. A unit with the forced start command sets `forced`.
+- **Times**: a cue starts at its `timestamp`, plus the `delay` lines of its track, plus the start delay of the unit. It ends at the stop delay of the unit. A unit without a stop command ends at the next unit, at most 5 s later.
+- **Colors**: the unit picks 4 of the 16 `.idx` palette colors and sets their alpha. A `custom colors: ON` line replaces both with its 4 colors, and `tridx` marks the transparent ones.
+- **Parse**: call the parser directly. `Subtitle::parse()` creates the parser without arguments, so it cannot pass the `.idx` content. For the same reason, format detection does not know VobSub.
+- **Limits**: the parser reads one image per unit. Color and contrast changes after the start command, and the `CHG_COLCON` command, do not apply. The parser ignores the `org`, `scale`, `align`, `fadein/out` and `time offset` player settings.
+- **Spec**: [DVD subtitles](http://sam.zoy.org/writings/dvd/subtitles/), [DVD sub-pictures](http://dvd.sourceforge.net/dvdinfo/spu.html) and the FFmpeg [decoder](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/dvdsubdec.c) and [demuxer](https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/mpeg.c).
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
