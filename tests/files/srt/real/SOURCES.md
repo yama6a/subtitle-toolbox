@@ -8,3 +8,4 @@
 | `own_alignment_and_coordinates_formatted.srt` | Written for this repository. Expected `SubRipFormatter` output for `own_alignment_and_coordinates.srt`. | MIT |
 | `own_styled.srt` | Written for this repository in the shape of https://github.com/asticode/go-astisub/blob/58297a613f70cac3d29e5ce52a7215a3b4038b40/testdata/example-in-styled.srt | MIT |
 | `own_cr_cr_lf.srt` | Written for this repository. Copies the CR CR LF line endings of a subtitle in the FFmpeg FATE suite. | MIT |
+| `own_escaping.srt` | Written for this repository. Holds `<`, `>` and `&` as plain text next to SubRip tags. | MIT |
