@@ -35,6 +35,7 @@ class TtmlRealFileTest extends TestCase
             "w3c_ttml1_cells"            => ["w3c_ttml1_cells.ttml", 5, 0.0, 8.0, "Lorem ipsum dolor sit", null, 18.0, 29.0, "Ut enim ad minim veniam quis, nostrud", null],
             "w3c_ttml1_timed_spans"      => ["w3c_ttml1_timed_spans.ttml", 5, 0.0, 25.0, "Lorem ipsum dolor sit", null, 0.0, 25.0, "Ut enim ad minim veniam quis, nostrud", null],
             "w3c_ttml1_timing"           => ["w3c_ttml1_timing.ttml", 4, 0.0, 2.0, "Text 1", 8, 1.0, 3.0, "Text 4", 8],
+            "smpte_drop_ntsc"            => ["smpte_drop_ntsc.ttml", 5, 57.391, 60.027, "The morning train leaves platform two.", 2, 3599.996, 3602.999, "The evening train runs on time.", 2],
         ];
     }
 
@@ -73,6 +74,17 @@ class TtmlRealFileTest extends TestCase
         );
         $this->assertSame($subtitle->getAllMetadata(), $reparsed->getAllMetadata());
         $this->assertSame($output, $reparsed->format(TtmlFormatter::class));
+    }
+
+
+    public function testRealFileSmpteDropFrameTimes(): void
+    {
+        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "smpte_drop_ntsc.ttml"), TtmlParser::class);
+
+        $this->assertSame(
+            [[57.391, 60.027], [60.06, 63.497], [597.997, 599.999], [599.999, 602.669], [3599.996, 3602.999]],
+            array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues())
+        );
     }
 
 

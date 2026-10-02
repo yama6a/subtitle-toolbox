@@ -17,9 +17,9 @@ class IttRealFileTest extends TestCase
     public static function realFileProvider(): array
     {
         return [
-            "avscript_testing"   => ["avscript_testing.itt", 6, 3.0, 123.0, "Testing testing", null, 616.0, 741.0, "Testing testing", null],
-            "fcp_23976_styles"   => ["fcp_23976_styles.itt", 8, 1 + 12 / 23.976, 4.0, "The bakery opens at six.", 2, 21 + 2 / 23.976, 23 + 22 / 23.976, "<i>The shop closes at noon.</i>", 2],
-            "bom_2997_crlf"      => ["bom_2997_crlf.itt", 6, 3598.0, 3600 + 15 / 29.97, "Guten Abend, hier ist das Wetter.", 2, 3612.0, 3614 + 29 / 29.97, "Das war das Wetter. Gute Nacht.", 2],
+            "avscript_testing"   => ["avscript_testing.itt", 6, 3.003, 123.123, "Testing testing", null, 616.616, 741.741, "Testing testing", null],
+            "fcp_23976_styles"   => ["fcp_23976_styles.itt", 8, 36 / 23.976, 96 / 23.976, "The bakery opens at six.", 2, (21 * 24 + 2) / 23.976, (23 * 24 + 22) / 23.976, "<i>The shop closes at noon.</i>", 2],
+            "bom_2997_crlf"      => ["bom_2997_crlf.itt", 6, 3598 * 30 / 29.97, (3600 * 30 + 15) / 29.97, "Guten Abend, hier ist das Wetter.", 2, 3612 * 30 / 29.97, (3614 * 30 + 29) / 29.97, "Das war das Wetter. Gute Nacht.", 2],
         ];
     }
 

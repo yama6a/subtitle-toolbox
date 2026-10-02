@@ -77,6 +77,36 @@ class TtmlParserTest extends TestCase
     }
 
 
+    public static function smpteTimeExpressionProvider(): array
+    {
+        $ntsc = "ttp:timeBase=\"smpte\" ttp:frameRate=\"30\" ttp:frameRateMultiplier=\"1000 1001\"";
+
+        return [
+            "29.97 fps non-drop, one hour"         => ["01:00:00:00", "$ntsc ttp:dropMode=\"nonDrop\"", 3603.6],
+            "29.97 fps, non-drop is the default"   => ["01:00:00:00", $ntsc, 3603.6],
+            "29.97 fps drop, after minute 1"       => ["00:01:00:02", "$ntsc ttp:dropMode=\"dropNTSC\"", 60.06],
+            "29.97 fps drop, last frame before"    => ["00:00:59:29", "$ntsc ttp:dropMode=\"dropNTSC\"", 60.027],
+            "29.97 fps drop, minute 10"            => ["00:10:00:00", "$ntsc ttp:dropMode=\"dropNTSC\"", 599.999],
+            "29.97 fps drop, one hour"             => ["01:00:00:00", "$ntsc ttp:dropMode=\"dropNTSC\"", 3599.996],
+            "Apple 999/1000 drop, minute 10"       => ["00:10:00:00", "ttp:timeBase=\"smpte\" ttp:frameRate=\"30\" ttp:frameRateMultiplier=\"999 1000\" ttp:dropMode=\"dropNTSC\"", 600.0],
+            "drop PAL, minute 10"                  => ["01:10:00:04", "$ntsc ttp:dropMode=\"dropPAL\"", 4200.063],
+            "23.976 fps"                           => ["00:00:01:00", "ttp:timeBase=\"smpte\" ttp:frameRate=\"24\" ttp:frameRateMultiplier=\"1000 1001\"", 1.001],
+            "25 fps, one hour"                     => ["01:00:00:00", "ttp:timeBase=\"smpte\" ttp:frameRate=\"25\"", 3600.0],
+            "25 fps, frames"                       => ["00:00:01:05", "ttp:timeBase=\"smpte\" ttp:frameRate=\"25\" ttp:dropMode=\"dropNTSC\"", 1.2],
+            "sub-frames"                           => ["00:00:00:01.1", "ttp:timeBase=\"smpte\" ttp:frameRate=\"25\" ttp:subFrameRate=\"2\"", 0.06],
+            "media time base, frames"              => ["01:00:00:00", "ttp:frameRate=\"30\" ttp:frameRateMultiplier=\"1000 1001\"", 3600.0],
+            "media time base, drop mode ignored"   => ["00:01:00:02", "ttp:timeBase=\"media\" ttp:frameRate=\"30\" ttp:dropMode=\"dropNTSC\"", 60.067],
+        ];
+    }
+
+
+    #[DataProvider("smpteTimeExpressionProvider")]
+    public function testSmpteTimeExpressions(string $expression, string $rootAttributes, float $seconds): void
+    {
+        $this->assertSame($seconds, $this->parseParagraph("<p begin=\"$expression\" end=\"99:00:00:00\">x</p>", $rootAttributes)[0]);
+    }
+
+
     public function testInvalidTimeExpressionThrows(): void
     {
         $this->expectException(ParsingException::class);

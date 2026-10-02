@@ -70,8 +70,8 @@ class IttFormatter extends SubtitleFormatter
         $cues       = $ttml->getCues();
         $paragraphs = $document->getElementsByTagNameNS(TtmlParser::NAMESPACE_TTML, "p");
         foreach ($paragraphs as $idx => $paragraph) {
-            $begin = $this->frameIndex($cues[$idx]->getStart(), (int) $frameRate, $fps);
-            $end   = max($begin + 1, $this->frameIndex($cues[$idx]->getEnd(), (int) $frameRate, $fps));
+            $begin = $this->frameIndex($cues[$idx]->getStart(), $fps);
+            $end   = max($begin + 1, $this->frameIndex($cues[$idx]->getEnd(), $fps));
             $paragraph->setAttribute("begin", $this->formatFrameIndex($begin, (int) $frameRate));
             $paragraph->setAttribute("end", $this->formatFrameIndex($end, (int) $frameRate));
         }
@@ -178,22 +178,15 @@ class IttFormatter extends SubtitleFormatter
     }
 
 
-    /**
-     * Rounds to the nearest frame of the hh:mm:ss:ff grid that TtmlParser reads: whole seconds plus frames at $fps.
-     */
-    private function frameIndex(float $seconds, int $framesPerSecond, float $fps): int
+    private function frameIndex(float $seconds, float $fps): int
     {
-        $seconds = max(0.0, $seconds);
-        $whole   = (int) floor($seconds);
-        $frames  = (int) round(($seconds - $whole) * $fps);
-        if ($frames >= $framesPerSecond) {
-            return ($whole + 1) * $framesPerSecond;
-        }
-
-        return $whole * $framesPerSecond + $frames;
+        return (int) round(max(0.0, $seconds) * $fps);
     }
 
 
+    /**
+     * Writes a non-drop SMPTE time code, which counts $framesPerSecond labels per second, as TTML 1 section 6.2.3 defines.
+     */
     private function formatFrameIndex(int $index, int $framesPerSecond): string
     {
         $seconds = intdiv($index, $framesPerSecond);
