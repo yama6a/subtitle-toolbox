@@ -41,4 +41,23 @@ class Markup
     {
         return str_replace(["&", "<", ">"], ["&amp;", "&lt;", "&gt;"], $text);
     }
+
+
+    /**
+     * Counts the characters of the text without tags and entities and without leading and trailing spaces.
+     */
+    public static function visibleLength(string $text): int
+    {
+        return self::countCharacters(trim(self::decodeEntities(self::stripAllTags($text))));
+    }
+
+
+    /**
+     * Counts UTF-8 characters, or bytes for invalid UTF-8 such as the Latin-1 bytes that MicroDVD keeps.
+     */
+    public static function countCharacters(string $text): int
+    {
+        // mbstring is not part of a default PHP build, but PCRE is. preg_match_all() fails on invalid UTF-8.
+        return preg_match_all('/./su', $text) ?: strlen($text);
+    }
 }

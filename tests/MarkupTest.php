@@ -79,4 +79,20 @@ class MarkupTest extends TestCase
 
         $this->assertSame($text, Markup::decodeEntities(Markup::stripAllTags(Markup::escapeText($text))));
     }
+
+
+    public function testVisibleLengthLeavesOutTagsAndOuterSpacesAndCountsEntitiesAsOne(): void
+    {
+        $this->assertSame(11, Markup::visibleLength(" <i>Gr\u{fc}\u{df}e &amp; </i><00:00:01.000>Tee "));
+        $this->assertSame(0, Markup::visibleLength("<b></b> "));
+    }
+
+
+    public function testCountCharactersCountsUtf8LettersOrBytesOfInvalidUtf8(): void
+    {
+        $this->assertSame(4, Markup::countCharacters("Caf\u{e9}"));
+        $this->assertSame(2, Markup::countCharacters("\u{4f60}\u{597d}"));
+        $this->assertSame(4, Markup::countCharacters("Caf\xe9"));
+        $this->assertSame(0, Markup::countCharacters(""));
+    }
 }

@@ -420,6 +420,29 @@ $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>
 - **Turkish and Azerbaijani**: pass `'tr'` or `'az'` as the second argument of `changeCase()`. Then `i` and `İ` pair, and `ı` and `I` pair. Without it, `İ` becomes `i` with a combining dot, U+0307.
 - **Sentence case**: a sentence starts at the start of a cue, and at the first letter or digit after `.`, `!` or `?` and a space or line break. `www.example.com` stays lower case. `ß` at the start of a sentence becomes `Ss`. Names and the English word `I` become lower case. Fix them after with `replaceText()`.
 
+## Statistics
+```php
+$stats = SubtitleStatistics::of($subtitle);
+$stats->getCueCount();             // 612
+$stats->getWordCount();            // 4870
+$stats->getCharacterCount();       // 25310
+$stats->getTotalDisplayTime();     // 1742.5, the sum of the cue durations in seconds
+$stats->getSpan();                 // 2688.0, the seconds from the first start to the last end
+$stats->getCharactersPerSecond();  // ['min' => 3.1, 'average' => 14.5, 'max' => 31.2]
+$stats->getWordsPerMinute();       // ['min' => 40.0, 'average' => 168.0, 'max' => 390.0]
+$stats->getCharactersPerLine();    // ['min' => 2.0, 'average' => 31.0, 'max' => 47.0]
+$stats->getGap();                  // ['min' => 0.0, 'average' => 2.9, 'max' => 41.0]
+$stats->getMostUsedWords(10);      // ['you' => 211, 'the' => 160, ...]
+json_encode($stats->toArray());    // all numbers and the 10 most used words
+```
+
+- **Characters**: the count uses the rule of `validate()`. It leaves out tags and leading and trailing spaces. An entity such as `&amp;` and a UTF-8 letter of several bytes count as one character.
+- **Words**: the text without tags, split at whitespace. A dialogue dash counts as a word. `getMostUsedWords()` removes punctuation at the start and end of each word and compares in lower case.
+- **Cues without text**: an image cue counts in `getCueCount()`, the display time, the span and the gaps. The text numbers leave it out.
+- **Reading speed**: a cue with a duration of 0 has no characters per second and no words per minute.
+- **Gap**: the start of a cue minus the latest end of the earlier cues. An overlap gives a negative gap.
+- **No cues**: all numbers are 0.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:

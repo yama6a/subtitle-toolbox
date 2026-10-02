@@ -140,7 +140,7 @@ trait Fixes
             $word["length"] += match (true) {
                 preg_match('/^<[^>]*>$/', $token) === 1   => 0,
                 preg_match("/^$entity\$/", $token) === 1 => 1,
-                default                                   => self::fixesCountCharacters($token),
+                default                                   => Markup::countCharacters($token),
             };
         }
         if ($word["text"] !== "") {
@@ -148,13 +148,6 @@ trait Fixes
         }
 
         return $words;
-    }
-
-
-    private static function fixesCountCharacters(string $text): int
-    {
-        // Invalid UTF-8, such as the Latin-1 bytes that MicroDVD keeps, makes preg_match_all() fail.
-        return preg_match_all('/./su', $text) ?: strlen($text);
     }
 
 
