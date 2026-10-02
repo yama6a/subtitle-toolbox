@@ -100,6 +100,29 @@ class LyricsFormatterTest extends TestCase
     }
 
 
+    public function testEscapedTextRoundTripsByteForByte(): void
+    {
+        $lrc      = "\u{feff}[ti:Fish & Chips]\n[#:a < b & c]\n[00:01.00] I <3 bread & jam\n" .
+            "[00:03.00] <00:03.00>Fish & <00:03.50>chips &amp; <1:2>\n";
+        $subtitle = Subtitle::parse($lrc, LyricsParser::class);
+
+        $this->assertSame($lrc, $subtitle->format(LyricsFormatter::class));
+    }
+
+
+    public function testEntitiesFromOtherFormatsAreDecoded(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue(new SubtitleCue(1, 2, "I &lt;3 bread &amp; jam"))
+            ->addCue(new SubtitleCue(3, 4, "<b><00:00:03.000>Fish</b> &amp; <00:00:03.500>chips"));
+
+        $this->assertSame(
+            "\u{feff}[00:01.00] I <3 bread & jam\n[00:03.00] <00:03.00>Fish & <00:03.50>chips\n",
+            $subtitle->format(LyricsFormatter::class)
+        );
+    }
+
+
     public function testSubtitleWithoutMetadataGetsNoIdTags(): void
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "Text"));
