@@ -7,6 +7,7 @@ use SubtitleToolbox\Encoding\Iso6937;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -98,12 +99,18 @@ class EbuStlParser extends SubtitleParser
 
     public function parse(string $rawSubtitle): Subtitle
     {
+        $this->warnings = [];
         if (strlen($rawSubtitle) < self::GSI_BLOCK_SIZE) {
             throw new ParsingException("An EBU STL file starts with a GSI block of " . self::GSI_BLOCK_SIZE . " bytes.");
         }
 
-        if ((strlen($rawSubtitle) - self::GSI_BLOCK_SIZE) % self::TTI_BLOCK_SIZE !== 0) {
-            throw new ParsingException("The TTI blocks of an EBU STL file must have " . self::TTI_BLOCK_SIZE . " bytes each.");
+        try {
+            self::checkTtiBlockSize($rawSubtitle);
+        } catch (ParsingException $exception) {
+            $complete    = intdiv(strlen($rawSubtitle) - self::GSI_BLOCK_SIZE, self::TTI_BLOCK_SIZE);
+            $cutLength   = self::GSI_BLOCK_SIZE + $complete * self::TTI_BLOCK_SIZE;
+            $this->fail($exception, 0, $complete, [bin2hex(substr($rawSubtitle, $cutLength))]);
+            $rawSubtitle = substr($rawSubtitle, 0, $cutLength);
         }
 
         $gsi = self::readGsi(substr($rawSubtitle, 0, self::GSI_BLOCK_SIZE));
@@ -128,8 +135,10 @@ class EbuStlParser extends SubtitleParser
         $comments    = [];
         $groups      = [];
         $firstTimeIn = null;
+        $blockIndex  = 0;
         foreach ($sets as $blocks) {
-            $header = $blocks[0];
+            $header      = $blocks[0];
+            $blockIndex += count($blocks);
             $lines  = self::decodeLines(self::textBytes($blocks), $gsi["CCT"]);
             $hexes  = array_map("bin2hex", $blocks);
             if (ord($header[15]) === 1) {
@@ -137,6 +146,18 @@ class EbuStlParser extends SubtitleParser
                 $text  = Markup::decodeEntities(Markup::stripAllTags(implode("\n", $lines)));
                 $subtitle->addComment($text, count($subtitle->getCues()));
                 $comments[] = ["text" => $text, "blocks" => $hexes];
+                continue;
+            }
+
+            if ($this->lenient && !self::hasValidTimeCodes($header, $frameRate)) {
+                $this->warn(
+                    "Subtitle number " . unpack("v", $header, 1)[1] . " has a time code that is not valid: " .
+                    self::timeCodeDigits(substr($header, 5, 4)) . " to " . self::timeCodeDigits(substr($header, 9, 4)),
+                    0,
+                    $blockIndex - count($blocks),
+                    $hexes,
+                    ParseWarning::SKIPPED
+                );
                 continue;
             }
 
@@ -249,6 +270,28 @@ class EbuStlParser extends SubtitleParser
     public static function timeCodeDigits(string $bytes): string
     {
         return vsprintf("%02d%02d%02d%02d", array_map("ord", str_split($bytes)));
+    }
+
+
+    private static function checkTtiBlockSize(string $rawSubtitle): void
+    {
+        if ((strlen($rawSubtitle) - self::GSI_BLOCK_SIZE) % self::TTI_BLOCK_SIZE !== 0) {
+            throw new ParsingException("The TTI blocks of an EBU STL file must have " . self::TTI_BLOCK_SIZE . " bytes each.");
+        }
+    }
+
+
+    // EBU Tech 3264 limits the TCI and TCO fields to hours 0 to 23, minutes and seconds 0 to 59, and frames below the frame rate.
+    private static function hasValidTimeCodes(string $header, FrameRate $frameRate): bool
+    {
+        foreach ([5, 9] as $offset) {
+            [$hours, $minutes, $seconds, $frames] = array_map("ord", str_split(substr($header, $offset, 4)));
+            if ($hours > 23 || $minutes > 59 || $seconds > 59 || $frames >= $frameRate->getFps()) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
 

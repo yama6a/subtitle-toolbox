@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Parsers;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -47,9 +48,10 @@ class SubViewerParser extends SubtitleParser
 
     public function parse(string $rawSubtitle): Subtitle
     {
-        $rawSubtitle = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawSubtitle = StringHelpers::normalizeEOLs($rawSubtitle);
-        $lines       = array_map("trim", explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle));
+        $this->warnings = [];
+        $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
+        $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
+        $lines          = array_map("trim", explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle));
 
         $startScript = array_search(self::START_SCRIPT, $lines, true);
 
@@ -74,8 +76,11 @@ class SubViewerParser extends SubtitleParser
                 continue;
             }
 
-            if (!preg_match(self::TAG_REGEX, $line, $matches)) {
-                throw new ParsingException("Line " . ($idx + 1) . " is not a SubViewer 1 header tag: $line", $idx + 1);
+            try {
+                $matches = $this->version1HeaderTag($line, $idx + 1);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, $idx + 1, 0, [$line]);
+                continue;
             }
 
             $tag   = strtoupper(trim($matches[1]));
@@ -152,14 +157,27 @@ class SubViewerParser extends SubtitleParser
         $header   = [];
         $style    = null;
         $cue      = null;
+        $cueIndex = 0;
+        $skipped  = null;
         foreach ($lines as $idx => $line) {
             $lineNumber = $idx + 1;
             if ($line === "") {
                 continue;
             }
 
+            if ($this->lenient && $this->hasOneBadTime($line)) {
+                $this->addCueWithText($subtitle, $cue);
+                $this->warnSkipped($skipped);
+                $cue     = null;
+                $skipped = [$lineNumber, $cueIndex++, [$line]];
+                continue;
+            }
+
             if (preg_match(self::VERSION_2_TIME_REGEX, $line, $matches)) {
                 $this->addCueWithText($subtitle, $cue);
+                $this->warnSkipped($skipped);
+                $skipped = null;
+                $cueIndex++;
                 $cue = new SubtitleCue(
                     $this->secondsFromParts($matches[1], $matches[2], $matches[3], $matches[4]),
                     $this->secondsFromParts($matches[5], $matches[6], $matches[7], $matches[8]),
@@ -176,6 +194,11 @@ class SubViewerParser extends SubtitleParser
                 continue;
             }
 
+            if ($skipped !== null) {
+                $skipped[2][] = $line;
+                continue;
+            }
+
             if ($cue !== null) {
                 foreach (explode("[br]", $line) as $textLine) {
                     if (trim($textLine) !== "") {
@@ -185,8 +208,11 @@ class SubViewerParser extends SubtitleParser
                 continue;
             }
 
-            if (!preg_match(self::TAG_REGEX, $line, $matches)) {
-                throw new ParsingException("Line $lineNumber is neither a header tag nor a timing line: $line", $lineNumber);
+            try {
+                $matches = $this->version2HeaderTag($line, $lineNumber);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, $lineNumber, 0, [$line]);
+                continue;
             }
 
             $tag = strtoupper(trim($matches[1]));
@@ -195,6 +221,7 @@ class SubViewerParser extends SubtitleParser
             }
         }
         $this->addCueWithText($subtitle, $cue);
+        $this->warnSkipped($skipped);
 
         $subtitle->setFormatData(self::FORMAT, array_filter(
             ["version" => 2, "header" => $header, "style" => $style],
@@ -231,6 +258,49 @@ class SubViewerParser extends SubtitleParser
         }
 
         return false;
+    }
+
+
+    private function version1HeaderTag(string $line, int $lineNumber): array
+    {
+        if (!preg_match(self::TAG_REGEX, $line, $matches)) {
+            throw new ParsingException("Line $lineNumber is not a SubViewer 1 header tag: $line", $lineNumber);
+        }
+
+        return $matches;
+    }
+
+
+    private function version2HeaderTag(string $line, int $lineNumber): array
+    {
+        if (!preg_match(self::TAG_REGEX, $line, $matches)) {
+            throw new ParsingException("Line $lineNumber is neither a header tag nor a timing line: $line", $lineNumber);
+        }
+
+        return $matches;
+    }
+
+
+    private function hasOneBadTime(string $line): bool
+    {
+        $time  = '\d+:\d{2}:\d{2}\.\d{1,3}';
+        $parts = explode(",", $line);
+
+        return count($parts) === 2
+            && !preg_match(self::VERSION_2_TIME_REGEX, $line)
+            && (preg_match("/^$time$/", $parts[0]) || preg_match("/^$time$/", $parts[1]));
+    }
+
+
+    /**
+     * @param ?array{int, int, list<string>} $skipped the line number, the cue index and the lines of a cue with a bad time line
+     */
+    private function warnSkipped(?array $skipped): void
+    {
+        if ($skipped !== null) {
+            [$lineNumber, $cueIndex, $block] = $skipped;
+            $this->warn("Line $lineNumber is a timing line with a bad time: $block[0]", $lineNumber, $cueIndex, $block, ParseWarning::SKIPPED);
+        }
     }
 
 

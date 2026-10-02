@@ -4,6 +4,7 @@ namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -47,8 +48,12 @@ class LyricsParser extends SubtitleParser
 
     public function parse(string $rawSubtitle): Subtitle
     {
-        $rawSubtitle = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawSubtitle = StringHelpers::normalizeEOLs($rawSubtitle);
+        $this->warnings = [];
+        $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
+        $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
+        if ($this->lenient) {
+            $this->warnBrokenTimeTags(explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle));
+        }
         $rawSubtitle = StringHelpers::normalizeSpaces($rawSubtitle);
         $rawSubtitle = StringHelpers::removeEmptyLines($rawSubtitle);
         $rawSubtitle = StringHelpers::trimEachLine($rawSubtitle);
@@ -87,6 +92,27 @@ class LyricsParser extends SubtitleParser
         $subtitle->reIndexCues();
 
         return $subtitle;
+    }
+
+
+    /**
+     * @param list<string> $lines
+     */
+    private function warnBrokenTimeTags(array $lines): void
+    {
+        $blockIndex = 0;
+        foreach ($lines as $lineIndex => $line) {
+            $line = trim(StringHelpers::normalizeSpaces($line));
+            if ($line === "") {
+                continue;
+            }
+
+            if (preg_match("/^\[\d/", $line) && !preg_match(self::TIMESTAMP_LINE_REGEX, $line)) {
+                $lineNumber = $lineIndex + 1;
+                $this->warn("Line $lineNumber has a time tag that could not be parsed: $line", $lineNumber, $blockIndex, [$line], ParseWarning::SKIPPED);
+            }
+            $blockIndex++;
+        }
     }
 
 

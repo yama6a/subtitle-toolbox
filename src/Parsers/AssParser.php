@@ -34,11 +34,15 @@ class AssParser extends SubtitleParser
     // A tag ends at the next backslash, except inside parentheses such as \t(\1c&HFF&).
     private const OVERRIDE_TAG_REGEX = '/\\\\[^\\\\(]*(?<args>\((?:[^()]++|(?&args))*\))?[^\\\\]*/';
 
+    private int $eventIndex = 0;
+
 
     public function parse(string $rawSubtitle): Subtitle
     {
-        $rawSubtitle = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawSubtitle = StringHelpers::normalizeEOLs($rawSubtitle);
+        $this->warnings   = [];
+        $this->eventIndex = 0;
+        $rawSubtitle      = StringHelpers::removeUtf8Bom($rawSubtitle);
+        $rawSubtitle      = StringHelpers::normalizeEOLs($rawSubtitle);
 
         $subtitle = new Subtitle();
         $data     = [
@@ -139,6 +143,17 @@ class AssParser extends SubtitleParser
             return;
         }
 
+        try {
+            $this->readEvent($subtitle, $data, $line, $lineNumber, $value, $isComment);
+        } catch (ParsingException $exception) {
+            $this->fail($exception, $lineNumber, $this->eventIndex, [$line]);
+        }
+        $this->eventIndex++;
+    }
+
+
+    private function readEvent(Subtitle $subtitle, array &$data, string $line, int $lineNumber, string $value, bool $isComment): void
+    {
         $format = $data["eventFormat"] ?? ($this->isSsa($data) ? self::SSA_EVENT_FORMAT : self::ASS_EVENT_FORMAT);
         $fields = $this->combine($format, $value, false);
         if ($fields === null) {

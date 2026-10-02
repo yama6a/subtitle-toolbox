@@ -64,10 +64,14 @@ class TtmlParser extends SubtitleParser
 
     private float $tickRate;
 
+    private int $paragraphIndex = 0;
+
 
     public function parse(string $rawSubtitle): Subtitle
     {
-        $document = $this->loadDocument(StringHelpers::removeUtf8Bom($rawSubtitle));
+        $this->warnings       = [];
+        $this->paragraphIndex = 0;
+        $document             = $this->loadDocument(StringHelpers::removeUtf8Bom($rawSubtitle));
         $this->root      = $document->documentElement;
         $this->namespace = $this->root->namespaceURI;
         if ($this->root->localName !== "tt"
@@ -236,13 +240,30 @@ class TtmlParser extends SubtitleParser
             if ($this->isTtElement($child, "div")) {
                 $this->readContainer($subtitle, $child, $begin, $end, $region, $textAlign, $preserveSpace, $divAttributes);
             } elseif ($this->isTtElement($child, "p")) {
-                $cue = $this->readParagraph($child, $begin, $end, $region, $textAlign, $preserveSpace);
+                try {
+                    $cue = $this->readParagraph($child, $begin, $end, $region, $textAlign, $preserveSpace);
+                } catch (ParsingException $exception) {
+                    $this->fail($exception, $child->getLineNo(), $this->paragraphIndex++, $this->xmlLines($child));
+                    continue;
+                }
+                $this->paragraphIndex++;
                 if ($divAttributes !== []) {
                     $cue->setFormatData(self::FORMAT, [...$cue->getFormatData(self::FORMAT), "div" => $divAttributes]);
                 }
                 $subtitle->addCue($cue);
             }
         }
+    }
+
+
+    /**
+     * @return list<string>
+     */
+    private function xmlLines(DOMElement $element): array
+    {
+        $lines = array_map("trim", explode("\n", $element->ownerDocument->saveXML($element)));
+
+        return array_values(array_filter($lines, fn (string $line): bool => $line !== ""));
     }
 
 

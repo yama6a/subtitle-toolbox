@@ -58,6 +58,7 @@ class WhisperJsonParser extends SubtitleParser
      */
     public function parse(string $rawSubtitle): Subtitle
     {
+        $this->warnings = [];
         try {
             // Older whisper.cpp versions split multi-byte characters across tokens and write invalid UTF-8 in token texts.
             $data = json_decode(StringHelpers::removeUtf8Bom($rawSubtitle), true, 512, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
@@ -105,9 +106,15 @@ class WhisperJsonParser extends SubtitleParser
         $result        = [];
 
         foreach ($segments as $index => $segment) {
-            $path  = "segments[$index]";
-            $start = $this->seconds($segment, "start", $path);
-            $end   = $this->seconds($segment, "end", $path);
+            $path = "segments[$index]";
+            try {
+                $start = $this->seconds($segment, "start", $path);
+                $end   = $this->seconds($segment, "end", $path);
+                $text  = $this->text($segment, $path);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, 0, $index, [$this->encode($segment)]);
+                continue;
+            }
             $words = is_array($segment["words"] ?? null) ? $segment["words"] : [];
 
             if ($topLevelWords !== []) {
@@ -127,7 +134,7 @@ class WhisperJsonParser extends SubtitleParser
                 ];
             }
 
-            $result[] = [$start, $end, $this->text($segment, $path), $timedWords, array_diff_key($segment, array_flip(["start", "end", "text"]))];
+            $result[] = [$start, $end, $text, $timedWords, array_diff_key($segment, array_flip(["start", "end", "text"]))];
         }
 
         return $result;
@@ -140,8 +147,14 @@ class WhisperJsonParser extends SubtitleParser
         foreach ($transcription as $index => $segment) {
             $path    = "transcription[$index]";
             $offsets = is_array($segment) ? $segment["offsets"] ?? null : null;
-            $start   = round($this->seconds($offsets, "from", "$path.offsets") / 1000, 3);
-            $end     = round($this->seconds($offsets, "to", "$path.offsets") / 1000, 3);
+            try {
+                $start = round($this->seconds($offsets, "from", "$path.offsets") / 1000, 3);
+                $end   = round($this->seconds($offsets, "to", "$path.offsets") / 1000, 3);
+                $text  = $this->text($segment, $path);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, 0, $index, [$this->encode($segment)]);
+                continue;
+            }
 
             // A token with a leading space starts a new word, as in should_split_on_word() of whisper.cpp.
             $words = [];
@@ -161,7 +174,7 @@ class WhisperJsonParser extends SubtitleParser
             $result[] = [
                 $start,
                 $end,
-                $this->text($segment, $path),
+                $text,
                 array_map(fn (array $word): array => [trim($word[0]), $word[1]], $words),
                 array_diff_key($segment, array_flip(["timestamps", "offsets", "text"])),
             ];
@@ -189,6 +202,12 @@ class WhisperJsonParser extends SubtitleParser
         }
 
         return $segment["text"];
+    }
+
+
+    private function encode(mixed $segment): string
+    {
+        return json_encode($segment, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
     }
 
 

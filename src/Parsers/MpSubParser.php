@@ -6,6 +6,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -20,15 +21,20 @@ class MpSubParser extends SubtitleParser
 
     public function parse(string $rawSubtitle): Subtitle
     {
-        $rawSubtitle = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawSubtitle = StringHelpers::normalizeEOLs($rawSubtitle);
-        $lines       = explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle);
+        $this->warnings = [];
+        $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
+        $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
+        $lines          = explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle);
 
         $subtitle   = new Subtitle();
         $formatData = [];
         $frameRate  = null;
+        $hasFormat  = false;
         $position   = 0.0;
         $cue        = null;
+        $cueLine    = 0;
+        $cueIndex   = 0;
+        $skipping   = false;
         foreach ($lines as $lineIdx => $line) {
             $line       = trim($line);
             $lineNumber = $lineIdx + 1;
@@ -39,8 +45,13 @@ class MpSubParser extends SubtitleParser
                     continue;
                 }
 
-                $this->addCue($subtitle, $cue, $lineNumber - 1);
+                $this->addCue($subtitle, $cue, $lineNumber - 1, $cueLine, $cueIndex - 1, $lines);
                 $cue = null;
+                continue;
+            }
+
+            if ($skipping) {
+                $skipping = $line !== "";
                 continue;
             }
 
@@ -53,7 +64,12 @@ class MpSubParser extends SubtitleParser
                 $value = trim($matches[2]);
 
                 if ($key === "FORMAT") {
-                    $frameRate = $this->frameRateFromFormat($value, $lineNumber);
+                    $hasFormat = true;
+                    try {
+                        $frameRate = $this->frameRateFromFormat($value, $lineNumber);
+                    } catch (ParsingException $exception) {
+                        $this->fail($exception, $lineNumber, $cueIndex, [$line]);
+                    }
                 } elseif (array_key_exists($key, self::METADATA_HEADERS)) {
                     $subtitle->setMetadata(self::METADATA_HEADERS[$key], $value === "" ? null : $value);
                 } elseif ($value !== "") {
@@ -62,23 +78,30 @@ class MpSubParser extends SubtitleParser
                 continue;
             }
 
-            if (!preg_match("/^(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/", $line, $matches)) {
-                throw new ParsingException("Line $lineNumber is neither a header, a comment nor a timing line: $line", $lineNumber);
+            if ($this->lenient && !$hasFormat) {
+                $this->warn(
+                    "The file has no FORMAT line before line $lineNumber. The parser read the times as seconds.",
+                    $lineNumber,
+                    $cueIndex,
+                    [$line],
+                    ParseWarning::REPAIRED
+                );
+                $hasFormat = true;
             }
 
-            $wait     = $this->toSeconds((float)$matches[1], $frameRate);
-            $duration = $this->toSeconds((float)$matches[2], $frameRate);
-            if ($duration < 0) {
-                throw new ParsingException("The cue on line $lineNumber has a negative duration: $line", $lineNumber);
+            try {
+                $cue = $this->readTimingLine($line, $lineNumber, $frameRate, $position);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, $lineNumber, $cueIndex++, [$line]);
+                $skipping = true;
+                continue;
             }
-
-            $start    = $position + $wait;
-            $position = $start + $duration;
-            $cue      = new SubtitleCue($start, $position, []);
+            $cueLine = $lineNumber;
+            $cueIndex++;
         }
 
         if ($cue !== null) {
-            $this->addCue($subtitle, $cue, count($lines));
+            $this->addCue($subtitle, $cue, count($lines), $cueLine, $cueIndex - 1, $lines);
         }
 
         $subtitle->setFormatData("mpsub", $formatData);
@@ -87,13 +110,48 @@ class MpSubParser extends SubtitleParser
     }
 
 
-    private function addCue(Subtitle $subtitle, SubtitleCue $cue, int $lineNumber): void
+    /**
+     * Returns the cue of a timing line without text, and moves $position to its end.
+     */
+    private function readTimingLine(string $line, int $lineNumber, ?FrameRate $frameRate, float &$position): SubtitleCue
+    {
+        if (!preg_match("/^(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/", $line, $matches)) {
+            throw new ParsingException("Line $lineNumber is neither a header, a comment nor a timing line: $line", $lineNumber);
+        }
+
+        $wait     = $this->toSeconds((float)$matches[1], $frameRate);
+        $duration = $this->toSeconds((float)$matches[2], $frameRate);
+        if ($duration < 0) {
+            throw new ParsingException("The cue on line $lineNumber has a negative duration: $line", $lineNumber);
+        }
+
+        $start    = $position + $wait;
+        $position = $start + $duration;
+
+        return new SubtitleCue($start, $position, []);
+    }
+
+
+    /**
+     * @param list<string> $lines
+     */
+    private function addCue(Subtitle $subtitle, SubtitleCue $cue, int $lineNumber, int $cueLine, int $cueIndex, array $lines): void
+    {
+        try {
+            $subtitle->addCue($this->withText($cue, $lineNumber), false);
+        } catch (ParsingException $exception) {
+            $this->fail($exception, $cueLine, $cueIndex, [trim($lines[$cueLine - 1])]);
+        }
+    }
+
+
+    private function withText(SubtitleCue $cue, int $lineNumber): SubtitleCue
     {
         if ($cue->getLines() === []) {
             throw new ParsingException("The cue that ends on line $lineNumber doesn't have any text lines!", $lineNumber);
         }
 
-        $subtitle->addCue($cue, false);
+        return $cue;
     }
 
 

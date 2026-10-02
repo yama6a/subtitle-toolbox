@@ -20,3 +20,13 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `text_before_first_cue.sbv` | a note line before cue 1, LF | MIT |
 | `truncated_last_cue.sbv` | the file ends inside the time line of cue 3, LF | MIT |
 | `mixed_line_endings.sbv` | CR LF, LF and CR CR LF in one file | MIT |
+| `release_name.sub` | a release name before the `{1}{1}25` frame rate line, a cue with a letter as start frame, CR LF | MIT |
+| `broken_events.ass` | no `Format:` line in `[Events]`, an event with 4 fields, a letter in an end time, UTF-8 BOM, CR LF | MIT |
+| `bad_time_line.sub` | SubViewer 2, a note line before the header, a letter in the end time of cue 2, CR LF | MIT |
+| `bad_timing_line.mpsub` | no `FORMAT=` line, a letter as duration, a last cue without text, LF | MIT |
+| `broken_time_tag.lrc` | a letter in the seconds of a time tag, CR LF | MIT |
+| `bad_sync_start.smi` | a `SYNC` tag with an empty `Start` attribute, CR LF | MIT |
+| `bad_begin.ttml` | a letter in a `begin` time, a `p` without `end` or `dur`, LF | MIT |
+| `bad_time_code.stl` | written by `generate-stl.php`. Frame 30 in a 25 fps time code out, the last TTI block cut off after 60 bytes | MIT |
+| `missing_end.json` | a cue without `end`, a cue with a number as line, a comment after the first broken cue, LF | MIT |
+| `missing_segment_end.whisper.json` | the OpenAI API shape, a segment without `end`, LF | MIT |

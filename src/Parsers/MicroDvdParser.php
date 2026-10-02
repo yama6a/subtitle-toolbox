@@ -16,6 +16,8 @@ class MicroDvdParser extends SubtitleParser
 
     private const STYLE_TAGS = ["b", "i", "u", "s"];
 
+    private const CUE_REGEX = '/^\{(\d+)\}\{(\d+)\}(.*)$/';
+
     protected ?float $frameRate;
 
 
@@ -30,12 +32,16 @@ class MicroDvdParser extends SubtitleParser
 
     public function parse(string $rawSubtitle): Subtitle
     {
-        $rawSubtitle = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawSubtitle = StringHelpers::normalizeEOLs($rawSubtitle);
-        $rawLines    = array_filter(
+        $this->warnings = [];
+        $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
+        $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
+        $rawLines       = array_filter(
             array_map("trim", explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle)),
             fn (string $line): bool => $line !== ""
         );
+        if ($this->lenient) {
+            $rawLines = $this->skipLinesWithoutFrames($rawLines);
+        }
 
         $frameRate = $this->frameRate;
         $firstLine = reset($rawLines);
@@ -57,7 +63,7 @@ class MicroDvdParser extends SubtitleParser
         $subtitle = new Subtitle();
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["frameRate" => $frameRate]);
         foreach ($rawLines as $lineNumber => $rawLine) {
-            if (!preg_match('/^\{(\d+)\}\{(\d+)\}(.*)$/', $rawLine, $matches)) {
+            if (!preg_match(self::CUE_REGEX, $rawLine, $matches)) {
                 throw new ParsingException("Line " . ($lineNumber + 1) . " is not a MicroDVD cue: $rawLine", $lineNumber + 1);
             }
 
@@ -69,6 +75,28 @@ class MicroDvdParser extends SubtitleParser
         }
 
         return $subtitle;
+    }
+
+
+    /**
+     * @param array<int, string> $rawLines the non-empty lines, keyed by the 0-based line number
+     *
+     * @return array<int, string>
+     */
+    private function skipLinesWithoutFrames(array $rawLines): array
+    {
+        $blockIndex = 0;
+        foreach ($rawLines as $lineIndex => $rawLine) {
+            if (!preg_match(self::CUE_REGEX, $rawLine)) {
+                $lineNumber = $lineIndex + 1;
+                $exception  = new ParsingException("Line $lineNumber is not a MicroDVD cue: $rawLine", $lineNumber);
+                $this->fail($exception, $lineNumber, $blockIndex, [$rawLine]);
+                unset($rawLines[$lineIndex]);
+            }
+            $blockIndex++;
+        }
+
+        return $rawLines;
     }
 
 

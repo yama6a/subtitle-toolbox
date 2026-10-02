@@ -844,7 +844,7 @@ $subtitle->getCues()[0]->getFormatData('whisper')['avg_logprob'];            // 
 - **Errors**: JSON without a `segments` or `transcription` list throws `ParsingException`. A response with only `words` or `text` has no cue times, so it throws too.
 
 ## Lenient parsing
-A subtitle download is often broken in one place. By default, the parsers throw `ParsingException` at the first broken block. In lenient mode, the SubRip, WebVTT and SBV parsers skip or repair the broken block, record a `ParseWarning` and go on.
+A subtitle download is often broken in one place. By default, the parsers throw `ParsingException` at the first broken block. In lenient mode, the parsers in the two tables below skip or repair the broken block, record a `ParseWarning` and go on.
 
 ```php
 use SubtitleToolbox\Parsers\SubRipParser;
@@ -866,13 +866,29 @@ foreach ($parser->getWarnings() as $warning) {
 | text before the first cue | skipped | skipped | skipped |
 | truncated last cue | skipped | skipped | skipped |
 
+| Parser | Skipped with a warning | `blockIndex` counts |
+|:--- |:--- |:--- |
+| ASS, SSA | a `Dialogue:` or `Comment:` line with too few fields or a bad time. A file without a `Format:` line is not an error: the parser uses the default fields. | events |
+| MicroDVD | a line without `{start}{end}` frames, also before the `{1}{1}<fps>` line | non-empty lines |
+| SubViewer | SubViewer 2: a timing line with one bad time and its text, and text before the first cue. SubViewer 1: a bad header line. | cues |
+| MPSub | a bad wait and duration pair and its text, a cue without text, a bad `FORMAT=` value. A file without `FORMAT=` gets a `repaired` warning, and the parser reads the times as seconds. | cues |
+| LRC | a line with a time tag that the parser cannot read, for example `[01:2x.00]` | non-empty lines |
+| SAMI | a `<SYNC>` tag without a valid `Start` | `<SYNC>` tags |
+| TTML, iTT | a `<p>` with a bad time or without an end time | `<p>` elements |
+| EBU STL | a subtitle with a time code out of range, a cut-off last TTI block | TTI blocks |
+| JSON | a cue with a bad field | cues |
+| Whisper JSON | a segment without `start`, `end` or `text` | segments |
+
 - **Default**: strict mode. Cues, exceptions and messages stay as they were.
-- **`ParseWarning`**: `message`, the 1-based `lineNumber`, the 0-based `blockIndex` of the "Block #n" messages, the trimmed lines of the `block`, and the `action`, `ParseWarning::SKIPPED` or `ParseWarning::REPAIRED`. A skipped block reports its first line. A repair reports the line where the parser split or read the cue.
+- **`ParseWarning`**: `message`, the 1-based `lineNumber`, the 0-based `blockIndex` of the "Block #n" messages or of the units in the table, the trimmed lines of the `block`, and the `action`, `ParseWarning::SKIPPED` or `ParseWarning::REPAIRED`. A skipped block reports its first line. A repair reports the line where the parser split or read the cue.
 - **Warnings**: `getWarnings()` returns the warnings of the last `parse()` call. Each call starts with an empty list.
 - **Not the format**: lenient mode still throws for a WebVTT file without `WEBVTT`. SubRip and SBV have no signature, so a file without one readable cue gives no cues and warnings.
+- **Whole-file errors**: lenient mode still throws for a problem outside one cue. Examples are invalid XML in TTML, invalid JSON, a SAMI file that is not UTF-8, an ASS file without `[Events]` and a MicroDVD file without a frame rate.
+- **No line numbers**: EBU STL is binary and JSON has no line numbers after decoding. Their warnings have `lineNumber` 0.
+- **Strict mode without an exception**: the LRC parser drops a line with a bad time tag, and the EBU STL parser reads a time code out of range as it is. In lenient mode, both record a warning, and the EBU STL parser also skips the subtitle.
 - **`Subtitle::parse()`**: pass a parser instance to keep its mode and read its warnings after the call. The encoding conversion and the `sourceEncoding` argument work as with a class name. A class name parses in strict mode. Format detection returns a class name, so call `Subtitle::detectParser()` first to detect and parse leniently.
 - **Stream readers**: `SubRipStreamReader` and `WebVttStreamReader` have the same `setLenient()` and `getWarnings()`. They use the block methods of `SubRipParser` and `WebVttParser`, so a file gives the same cues and warnings as in the batch parser. During the read, `getWarnings()` holds the warnings of the blocks read so far.
-- **Other parsers**: they ignore `setLenient()` and throw as before.
+- **Other parsers**: the SCC, PGS and VobSub parsers ignore `setLenient()` and throw as before.
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.

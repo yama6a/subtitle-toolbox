@@ -226,6 +226,136 @@ class LenientParsingTest extends TestCase
                 ],
                 [],
             ],
+            "MicroDVD with a release name and a line without frames" => [
+                "release_name.sub",
+                MicroDvdParser::class,
+                "The frame rate is unknown. Pass it to the constructor or start the file with {1}{1}<fps>.",
+                [
+                    [1, 3, "The ferry leaves at noon."],
+                    [5, 7, "<i>Tickets are sold on board.</i>"],
+                ],
+                [
+                    [1, 0, self::SKIPPED, "Line 1 is not a MicroDVD cue: Movie.Name.2003.DVDRip (line 1)"],
+                    [4, 3, self::SKIPPED, "Line 4 is not a MicroDVD cue: {x}{120}The deck is wet. (line 4)"],
+                ],
+            ],
+            "ASS without a Format line, with a short event and a bad time" => [
+                "broken_events.ass",
+                AssParser::class,
+                "Line 11 has fewer fields than the Format line of the [Events] section: Dialogue: 0,0:00:04.00,0:00:06.00,Default",
+                [
+                    [1, 3, "The boats come in at dawn."],
+                    [10, 12, "<i>Fish is sold at the pier.</i>"],
+                ],
+                [
+                    [11, 1, self::SKIPPED, "Line 11 has fewer fields than the Format line of the [Events] section: " .
+                                           "Dialogue: 0,0:00:04.00,0:00:06.00,Default (line 11)"],
+                    [12, 2, self::SKIPPED, "The time of at least one event could not be parsed: 0:00:0x.00"],
+                ],
+            ],
+            "SubViewer with text before the header and a bad time line" => [
+                "bad_time_line.sub",
+                SubViewerParser::class,
+                "Line 1 is neither a header tag nor a timing line: Downloaded from a subtitle site",
+                [
+                    [1, 3, "The market opens at eight."],
+                    [7, 9, "The stalls close\nat noon."],
+                ],
+                [
+                    [1, 0, self::SKIPPED, "Line 1 is neither a header tag nor a timing line: Downloaded from a subtitle site (line 1)"],
+                    [9, 1, self::SKIPPED, "Line 9 is a timing line with a bad time: 00:00:04.00,00:00:0x.00"],
+                ],
+            ],
+            "MPSub without a FORMAT line, with a bad timing line and a truncated last cue" => [
+                "bad_timing_line.mpsub",
+                MpSubParser::class,
+                "Line 7 is neither a header, a comment nor a timing line: 1 x",
+                [
+                    [1, 3, "The bus leaves at ten."],
+                    [5, 7, "Seats are free."],
+                ],
+                [
+                    [4, 0, self::REPAIRED, "The file has no FORMAT line before line 4. The parser read the times as seconds."],
+                    [7, 1, self::SKIPPED, "Line 7 is neither a header, a comment nor a timing line: 1 x (line 7)"],
+                    [13, 3, self::SKIPPED, "The cue that ends on line 13 doesn't have any text lines! (line 13)"],
+                ],
+            ],
+            "LRC with a broken time tag" => [
+                "broken_time_tag.lrc",
+                LyricsParser::class,
+                3,
+                [
+                    [1, 4.5, "The sun comes up"],
+                    [4.5, 9, "Birds sing in the trees"],
+                    [9, 12, "We walk to the lake"],
+                ],
+                [
+                    [6, 4, self::SKIPPED, "Line 6 has a time tag that could not be parsed: [01:2x.00]The path is long"],
+                ],
+            ],
+            "SAMI with a SYNC tag without a Start time" => [
+                "bad_sync_start.smi",
+                SamiParser::class,
+                "SYNC tag 3 has no valid Start attribute.",
+                [
+                    [1, 3, "Water the roses."],
+                    [6, 8, "Pick the <i>beans</i>."],
+                ],
+                [
+                    [14, 2, self::SKIPPED, "SYNC tag 3 has no valid Start attribute."],
+                ],
+            ],
+            "TTML with a bad begin time and a paragraph without end" => [
+                "bad_begin.ttml",
+                TtmlParser::class,
+                "The time expression \"00:00:0x.000\" could not be parsed!",
+                [
+                    [1, 3, "The library opens at nine."],
+                    [10, 12, "<i>The reading room</i> is upstairs."],
+                ],
+                [
+                    [6, 1, self::SKIPPED, "The time expression \"00:00:0x.000\" could not be parsed!"],
+                    [7, 2, self::SKIPPED, "The paragraph that begins at 7s has no end time!"],
+                ],
+            ],
+            "EBU STL with a bad time code and a cut-off last block" => [
+                "bad_time_code.stl",
+                EbuStlParser::class,
+                "The TTI blocks of an EBU STL file must have 128 bytes each.",
+                [
+                    [1, 3, "The bread is fresh."],
+                    [7, 9, "We close at five."],
+                ],
+                [
+                    [0, 3, self::SKIPPED, "The TTI blocks of an EBU STL file must have 128 bytes each."],
+                    [0, 1, self::SKIPPED, "Subtitle number 2 has a time code that is not valid: 00000400 to 00000630"],
+                ],
+            ],
+            "JSON with a cue without end and a line that is not a string" => [
+                "missing_end.json",
+                JsonParser::class,
+                "The field cues[1].end must be a number.",
+                [
+                    [1, 3, "The train to the coast is late."],
+                    [7, 9, "The buffet car is closed."],
+                ],
+                [
+                    [0, 1, self::SKIPPED, "The field cues[1].end must be a number."],
+                    [0, 3, self::SKIPPED, "The field cues[3].lines[1] must be a string."],
+                ],
+            ],
+            "Whisper JSON with a segment without end" => [
+                "missing_segment_end.whisper.json",
+                WhisperJsonParser::class,
+                "The field segments[1].end must be a number.",
+                [
+                    [0, 2.5, "The meeting starts at ten."],
+                    [5, 7.5, "Coffee is in the kitchen."],
+                ],
+                [
+                    [0, 1, self::SKIPPED, "The field segments[1].end must be a number."],
+                ],
+            ],
         ];
     }
 
@@ -403,10 +533,113 @@ class LenientParsingTest extends TestCase
     }
 
 
+    public function testSubViewerKeepsTheTextOfTheSkippedCueInTheWarning(): void
+    {
+        $parser = (new SubViewerParser())->setLenient();
+        $parser->parse(file_get_contents(self::DIR . "bad_time_line.sub"));
+
+        $this->assertSame(["00:00:04.00,00:00:0x.00", "Apples are cheap today."], $parser->getWarnings()[1]->block);
+    }
+
+
+    public function testSubViewerStrictModeReadsABadTimeLineAsText(): void
+    {
+        $subtitle = (new SubViewerParser())->parse("00:00:01.00,00:00:03.00\nOne\n\n00:00:04.00,00:00:0x.00\nTwo\n");
+
+        $this->assertSame(["One", "00:00:04.00,00:00:0x.00", "Two"], $subtitle->getCues()[0]->getLines());
+    }
+
+
+    public function testSubViewer1SkipsABrokenHeaderLine(): void
+    {
+        $parser   = (new SubViewerParser())->setLenient();
+        $subtitle = $parser->parse("[TITLE]\nMarket\nbroken\n" . SubViewerParser::START_SCRIPT . "\n[00:00:01]\nHello\n[00:00:02]\n");
+
+        $this->assertSame("Hello", $subtitle->getCues()[0]->getText());
+        $this->assertSame([[3, 0, self::SKIPPED, "Line 3 is not a SubViewer 1 header tag: broken (line 3)"]], $this->warningRows($parser->getWarnings()));
+    }
+
+
+    public function testMpSubSkipsABadFormatLineAndReadsTheTimesAsSeconds(): void
+    {
+        $parser   = (new MpSubParser())->setLenient();
+        $subtitle = $parser->parse("FORMAT=PAL\n\n1 2\nHello\n");
+
+        $this->assertEquals([[1, 3, "Hello"]], $this->cueRows($subtitle->getCues()));
+        $this->assertSame([[1, 0, self::SKIPPED, "Line 1 has an unknown FORMAT value: PAL (line 1)"]], $this->warningRows($parser->getWarnings()));
+    }
+
+
+    public function testSamiWarningHoldsTheLinesOfTheSkippedSync(): void
+    {
+        $parser = (new SamiParser())->setLenient();
+        $parser->parse(file_get_contents(self::DIR . "bad_sync_start.smi"));
+
+        $this->assertSame(["<SYNC Start=><P Class=ENCC>Cut the grass."], $parser->getWarnings()[0]->block);
+    }
+
+
+    public function testTtmlWithInvalidXmlStillThrows(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The file is not well-formed XML!");
+        (new TtmlParser())->setLenient()->parse("<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><p begin=\"1s\" end=\"2s\">text</body></tt>");
+    }
+
+
+    public function testIttParserInheritsLenientMode(): void
+    {
+        $parser   = (new IttParser())->setLenient();
+        $subtitle = $parser->parse(file_get_contents(self::DIR . "bad_begin.ttml"));
+
+        $this->assertCount(2, $subtitle->getCues());
+        $this->assertCount(2, $parser->getWarnings());
+    }
+
+
+    public function testEbuStlStrictModeKeepsACueWithABadTimeCode(): void
+    {
+        $content = substr(file_get_contents(self::DIR . "bad_time_code.stl"), 0, EbuStlParser::GSI_BLOCK_SIZE + 3 * EbuStlParser::TTI_BLOCK_SIZE);
+
+        $this->assertCount(3, (new EbuStlParser())->parse($content)->getCues());
+    }
+
+
+    public function testJsonMovesTheCommentsToTheCueNumbersAfterTheSkip(): void
+    {
+        $parser   = (new JsonParser())->setLenient();
+        $subtitle = $parser->parse(file_get_contents(self::DIR . "missing_end.json"));
+
+        $this->assertSame([["text" => "Platform changes", "beforeCueIndex" => 1]], $subtitle->getComments());
+        $this->assertSame(['{"start":4,"lines":["It leaves from platform two."]}'], $parser->getWarnings()[0]->block);
+    }
+
+
+    public function testJsonWithAnErrorOutsideTheCuesStillThrows(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The field version is missing.");
+        (new JsonParser())->setLenient()->parse('{"cues": []}');
+    }
+
+
+    public function testWhisperCppSkipsASegmentWithoutOffsets(): void
+    {
+        $content = '{"transcription": [{"offsets": {"from": 0, "to": 2000}, "text": " Hello"}, {"text": " Lost"},' .
+                   ' {"offsets": {"from": 3000, "to": 4000}, "text": " Bye"}]}';
+
+        $parser   = (new WhisperJsonParser())->setLenient();
+        $subtitle = $parser->parse($content);
+
+        $this->assertEquals([[0, 2, "Hello"], [3, 4, "Bye"]], $this->cueRows($subtitle->getCues()));
+        $this->assertSame([[0, 1, self::SKIPPED, "The field transcription[1].offsets.from must be a number."]], $this->warningRows($parser->getWarnings()));
+    }
+
+
     public function testParsersWithoutLenientModeStillThrow(): void
     {
         $this->expectException(ParsingException::class);
-        (new MicroDvdParser())->setLenient()->parse("{1}{x}broken");
+        (new SccParser())->setLenient()->parse("Scenarist_SCC V1.0\n\nbroken\n");
     }
 
 
