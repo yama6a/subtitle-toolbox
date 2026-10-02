@@ -51,7 +51,8 @@ class SamiParser extends SubtitleParser
 
     public function parse(string $rawSubtitle): Subtitle
     {
-        $rawSubtitle = StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle));
+        $this->warnings = [];
+        $rawSubtitle    = StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle));
         if (!preg_match('//u', $rawSubtitle)) {
             throw new ParsingException("The SAMI file is not valid UTF-8. Convert it to UTF-8 before parsing.");
         }
@@ -150,18 +151,45 @@ class SamiParser extends SubtitleParser
         $body = preg_replace('/<\/SYNC\s*>/i', "", $body);
 
         $syncs = [];
-        foreach (array_slice(preg_split('/<SYNC\b/i', $body), 1) as $index => $chunk) {
-            if (!preg_match('/^([^>]*)>(.*)$/s', $chunk, $matches) ||
-                !preg_match('/\bStart\s*=\s*["\']?\s*(\d+)/i', $matches[1], $start)) {
-                throw new ParsingException("SYNC tag " . ($index + 1) . " has no valid Start attribute.");
+        foreach (array_slice(preg_split('/<SYNC\b/i', $body, -1, PREG_SPLIT_OFFSET_CAPTURE), 1) as $index => [$chunk, $offset]) {
+            try {
+                [$start, $content] = $this->readSyncTag($chunk, $index);
+            } catch (ParsingException $exception) {
+                $lineNumber = $this->lineNumberInBody($rawSubtitle, $body, $offset);
+                $lines      = array_map("trim", explode("\n", "<SYNC" . $chunk));
+                $block      = array_values(array_filter($lines, fn (string $line): bool => $line !== ""));
+                $this->fail($exception, $lineNumber, $index, $block);
+                continue;
             }
 
-            $syncs[] = ["start" => ((int) $start[1]) / 1000, "paragraphs" => $this->readParagraphs($matches[2])];
+            $syncs[] = ["start" => $start, "paragraphs" => $this->readParagraphs($content)];
         }
 
         usort($syncs, fn (array $sync1, array $sync2): int => $sync1["start"] <=> $sync2["start"]);
 
         return $syncs;
+    }
+
+
+    /**
+     * @return array{float, string} the Start time in seconds and the content after the SYNC tag
+     */
+    private function readSyncTag(string $chunk, int $index): array
+    {
+        if (!preg_match('/^([^>]*)>(.*)$/s', $chunk, $matches) ||
+            !preg_match('/\bStart\s*=\s*["\']?\s*(\d+)/i', $matches[1], $start)) {
+            throw new ParsingException("SYNC tag " . ($index + 1) . " has no valid Start attribute.");
+        }
+
+        return [((int) $start[1]) / 1000, $matches[2]];
+    }
+
+
+    private function lineNumberInBody(string $rawSubtitle, string $body, int $offset): int
+    {
+        $head = preg_match('/^.*?<BODY\b[^>]*>/is', $rawSubtitle, $matches) ? $matches[0] : "";
+
+        return 1 + substr_count($head, "\n") + substr_count(substr($body, 0, $offset), "\n");
     }
 
 

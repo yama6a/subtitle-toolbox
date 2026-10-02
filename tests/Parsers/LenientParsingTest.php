@@ -293,6 +293,18 @@ class LenientParsingTest extends TestCase
                     [6, 4, self::SKIPPED, "Line 6 has a time tag that could not be parsed: [01:2x.00]The path is long"],
                 ],
             ],
+            "SAMI with a SYNC tag without a Start time" => [
+                "bad_sync_start.smi",
+                SamiParser::class,
+                "SYNC tag 3 has no valid Start attribute.",
+                [
+                    [1, 3, "Water the roses."],
+                    [6, 8, "Pick the <i>beans</i>."],
+                ],
+                [
+                    [14, 2, self::SKIPPED, "SYNC tag 3 has no valid Start attribute."],
+                ],
+            ],
         ];
     }
 
@@ -504,6 +516,15 @@ class LenientParsingTest extends TestCase
 
         $this->assertEquals([[1, 3, "Hello"]], $this->cueRows($subtitle->getCues()));
         $this->assertSame([[1, 0, self::SKIPPED, "Line 1 has an unknown FORMAT value: PAL (line 1)"]], $this->warningRows($parser->getWarnings()));
+    }
+
+
+    public function testSamiWarningHoldsTheLinesOfTheSkippedSync(): void
+    {
+        $parser = (new SamiParser())->setLenient();
+        $parser->parse(file_get_contents(self::DIR . "bad_sync_start.smi"));
+
+        $this->assertSame(["<SYNC Start=><P Class=ENCC>Cut the grass."], $parser->getWarnings()[0]->block);
     }
 
 
