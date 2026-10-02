@@ -449,6 +449,28 @@ $result->apply($german);   // shifts each part with its own offset
 - **Search**: splits fall between cues. The search groups the target into at most 200 blocks of cues and finds the best offset of each part in steps of 0.1 s. Then each split moves to the best cue near its block boundary, and each part gets the 0.01 s search. The split penalty comes from [alass](https://github.com/kaegi/alass).
 - **Overlaps**: when `apply()` moves a part onto the next part, each cue of the earlier part that overlaps the later part ends 1 ms before the later part starts.
 
+### Sync to speech
+Without a reference subtitle, the speech in the audio is the reference. ffmpeg finds the silences, and `SpeechReference` turns the speech between them into cues without text.
+
+```php
+use SubtitleToolbox\Sync\SpeechReference;
+
+// ffmpeg -i movie.mkv -af silencedetect=noise=-30dB:d=0.4 -f null - 2> silence.log
+$speech = SpeechReference::fromFfmpegSilencedetect(file_get_contents('silence.log'), mediaDuration: 840);
+ReferenceSync::sync($german, $speech)->apply($german);
+
+$speech = SpeechReference::fromIntervals([[1.2, 3.4], [5.0, 7.75]]);   // seconds, from any voice activity detector
+
+$transcript = Subtitle::parse(file_get_contents('whisper.json'));       // a Whisper JSON transcript of the audio
+ReferenceSync::sync($german, $transcript)->apply($german);
+```
+
+- **Log**: the reader takes the `silence_start` and `silence_end` lines that [`af_silencedetect.c`](https://github.com/FFmpeg/FFmpeg/blob/98e92563a3b60dbf6d370fd3491d7f896398e4c1/libavfilter/af_silencedetect.c) writes. Speech fills the time between the silences from 0 to `mediaDuration`. A silence without an end runs to `mediaDuration`.
+- **Mono**: `silencedetect=mono=1` writes one line per channel. The reader throws `ParsingException` for such a log, and for a `silence_end` without a `silence_start` before it.
+- **Score**: speech starts later and ends earlier than its cue. So the score stays lower than with a reference subtitle. The German example scores 0.78 against the speech and 0.89 against the English subtitle.
+- **Whisper**: a Whisper JSON transcript has cue times from the audio. See [Whisper JSON](#whisper-json). Its language does not matter, because only the times count.
+- **Intervals**: `fromIntervals()` throws `InvalidArgumentException` for an entry that is not `[start, end]` with 0 <= start <= end.
+
 ## Transforming text
 ```php
 $subtitle->replaceText('Colour', 'Color');               // '<i>Colour</i> me' becomes '<i>Color</i> me'
