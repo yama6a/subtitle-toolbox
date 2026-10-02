@@ -21,6 +21,9 @@ use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Formatters\SubViewerFormatter;
 use SubtitleToolbox\Formatters\TtmlFormatter;
 use SubtitleToolbox\HearingImpairedOptions;
+use SubtitleToolbox\Hls\HlsSegmentOptions;
+use SubtitleToolbox\Hls\HlsWebVttSegmenter;
+use SubtitleToolbox\Hls\TimestampMap;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
@@ -203,6 +206,14 @@ class ThrowSitesTest extends TestCase
                 ->format(TtmlFormatter::class), InvalidFormatterException::class, InvalidFormatterException::class],
             "FrameRate.php: frame rate 0"                   => [fn () => new FrameRate(0), ...$invalid],
             "HearingImpairedOptions.php: empty bracket"     => [fn () => new HearingImpairedOptions(customBrackets: [["{", ""]]), ...$invalid],
+            "Hls/HlsSegmentOptions.php: segment duration 0" => [fn () => new HlsSegmentOptions(segmentDuration: 0), ...$invalid],
+            "Hls/HlsSegmentOptions.php: no %d in pattern"   => [fn () => new HlsSegmentOptions(fileNamePattern: "sub.vtt"), ...$invalid],
+            "Hls/HlsSegmentOptions.php: media duration 0"   => [fn () => new HlsSegmentOptions(mediaDuration: 0), ...$invalid],
+            "Hls/HlsWebVttSegmenter.php: no duration"       => [fn () => HlsWebVttSegmenter::segment(new Subtitle()), ...$invalid],
+            "Hls/TimestampMap.php: MPEGTS above 33 bits"    => [fn () => new TimestampMap(TimestampMap::MPEGTS_WRAP), ...$invalid],
+            "Hls/TimestampMap.php: negative LOCAL"          => [fn () => new TimestampMap(0, -1), ...$invalid],
+            "Hls/TimestampMap.php: other header"            => [fn () => TimestampMap::fromHeader("WEBVTT"), ...$parsing],
+            "Hls/TimestampMap.php: no MPEGTS"               => [fn () => TimestampMap::fromHeader("X-TIMESTAMP-MAP=LOCAL:00:00.000"), ...$parsing],
             "Image/CueImage.php: width 0"                   => [fn () => new CueImage("png", 0, 0, 0, 1, 1, 1), ...$invalid],
             "Image/CueImage.php: no image"                  => [fn () => CueImage::fromCue(new SubtitleCue(1, 2, "text")), ...$invalid],
             "Image/CueImage.php: no integer x"              => [fn () => CueImage::fromCue((new SubtitleCue(1, 2))
