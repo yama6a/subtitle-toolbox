@@ -6,3 +6,4 @@
 /renovate.json5  export-ignore
 /tests/files/encoding/** -text
 /tests/files/vobsub/** -text
+/tests/files/pgs/** -text
