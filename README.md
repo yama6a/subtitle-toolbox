@@ -1266,6 +1266,50 @@ php subtitle-toolbox.phar --version
 - **OCR**: `convert --ocr` works in both forms with no extra steps, because both include php-glyph-ocr. See [OCR in the command line tool](#ocr-in-the-command-line-tool).
 - **Memory**: the image sets `memory_limit` to 512 MB. The PHAR raises a `memory_limit` of 128 MB to 512 MB when you pass `--ocr`. It keeps any other value, for example from `php -d memory_limit=1G`.
 
+## Profanity filter
+`ProfanityFilter` masks words in the cue text. It returns the time ranges of the matches, so that a video player or FFmpeg can mute the audio there.
+
+```php
+use SubtitleToolbox\Profanity\MuteRange;
+use SubtitleToolbox\Profanity\ProfanityFilter;
+use SubtitleToolbox\Profanity\ProfanityOptions;
+
+// 00:01:02.000 --> 00:01:04.000
+// <00:01:02.000>What <00:01:02.300>the <00:01:02.480>hell <00:01:02.800>is this?
+$ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(
+    words: ['hell', 'damn*'],                    // * at the end matches any ending, so "damned" matches
+    mask: ProfanityOptions::MASK_FIRST_LETTER,
+    padding: 0.1,                                // seconds added on both sides of a range
+));
+// cue text: "<00:01:02.000>What <00:01:02.300>the <00:01:02.480>h*** <00:01:02.800>is this?"
+$ranges[0]->start;                               // 62.38
+$ranges[0]->end;                                 // 62.9
+
+file_put_contents('movie.edl', MuteRange::toEdl($ranges));     // "62.380 62.900 1\n"
+MuteRange::toFfmpegVolumeFilter($ranges);                       // "volume=enable='between(t,62.380,62.900)':volume=0"
+
+new ProfanityOptions(wordFile: 'words-en.txt');                 // one word per line
+new ProfanityOptions(['hell'], fn (string $word): string => '[beep]');
+```
+
+| Mask | `What the hell?` becomes |
+|:--- |:--- |
+| `MASK_STARS` (default) | `What the ****?` |
+| `MASK_FIRST_LETTER` | `What the h***?` |
+| `MASK_REMOVE` | `What the ?` |
+| `MASK_NONE` | `What the hell?`. Only the ranges are returned |
+| a callback | the string the callback returns for the matched word |
+
+- **No word list**: the package ships none. The words to filter depend on the language and the audience, for example a children's app or a family film night.
+- **Matches**: case-insensitive and Unicode-aware. A match is a whole word, so `hell` does not match `hello` or `shell`. A word can hold spaces, such as `son of a`. A `*` in another place than the end throws `InvalidArgumentException`.
+- **Word file**: one word per line. The filter ignores a UTF-8 BOM, CR LF line endings and empty lines. The words of `wordFile` add to the words of `words`.
+- **Range**: a word timestamp is the time a word is spoken. The range runs from the word timestamp before the match to the next word timestamp. Without a timestamp on a side, the range uses the start or end of the cue. Padding then widens the range. A range does not start before 0.
+- **Joining**: the result is sorted by time. Ranges that touch or overlap after the padding become one range.
+- **Removed cues**: `MASK_REMOVE` removes a cue that has no visible text left, and re-indexes the cues.
+- **Text runs**: the filter sees the text between tags, with `&lt;`, `&gt;` and `&amp;` decoded, as `replaceText()` does. It does not find a word that a tag splits, such as `h<i>ell</i>`, or a word across two lines.
+- **EDL**: `toEdl()` writes the [Kodi](https://kodi.wiki/view/Edit_decision_list) and MPlayer format. Each line holds the start, the end and action `1`, mute.
+- **FFmpeg**: use the filter as `ffmpeg -i in.mp4 -af "<filter>" -c:v copy out.mp4`. It returns `""` for no ranges. Then leave out `-af`.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:

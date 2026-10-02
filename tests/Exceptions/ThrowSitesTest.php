@@ -46,6 +46,7 @@ use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\VobSubParser;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
+use SubtitleToolbox\Profanity\ProfanityOptions;
 use SubtitleToolbox\Streaming\SubRipStreamReader;
 use SubtitleToolbox\Streaming\SubRipStreamWriter;
 use SubtitleToolbox\Streaming\WebVttStreamReader;
@@ -356,6 +357,11 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Parsers/WhisperJsonParser.php: text no string" => [fn () => (new WhisperJsonParser())->parse(
                 '{"segments": [{"start": 0, "end": 1}]}'), ...$parsing],
+            "Profanity/ProfanityOptions.php: star in a word" => [fn () => new ProfanityOptions(["f*ck"]), ...$invalid],
+            "Profanity/ProfanityOptions.php: no words"      => [fn () => new ProfanityOptions(), ...$invalid],
+            "Profanity/ProfanityOptions.php: unknown mask"  => [fn () => new ProfanityOptions(["hell"], "blur"), ...$invalid],
+            "Profanity/ProfanityOptions.php: negative padding" => [fn () => new ProfanityOptions(["hell"], padding: -1), ...$invalid],
+            "Profanity/ProfanityOptions.php: missing word file" => [fn () => new ProfanityOptions(wordFile: __DIR__ . "/missing.txt"), ...$invalid],
             "Retiming.php: scale factor 0"                  => [fn () => self::subtitle()->scale(0), ...$invalid],
             "Retiming.php: same old times"                  => [fn () => self::subtitle()->syncByTwoPoints(1, 1, 1, 2), ...$invalid],
             "Retiming.php: new times in reverse"            => [fn () => self::subtitle()->syncByTwoPoints(1, 2, 2, 1), ...$invalid],
