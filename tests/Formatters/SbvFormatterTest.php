@@ -55,6 +55,14 @@ class SbvFormatterTest extends TestCase
     }
 
 
+    public function testEscapedCoreTextIsWrittenAsPlainText(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "I &lt;3 bread &amp; jam"));
+
+        $this->assertSame("0:00:01.000,0:00:02.000\nI <3 bread & jam\n", $subtitle->format(SbvFormatter::class));
+    }
+
+
     public function testLinesThatAreEmptyAfterStrippingAreDropped(): void
     {
         $subtitle = (new Subtitle())

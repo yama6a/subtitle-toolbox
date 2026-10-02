@@ -35,7 +35,7 @@ class SbvParser extends SubtitleParser
             $subtitle->addCue(new SubtitleCue(
                 $this->millisFromString($times[0]),
                 $this->millisFromString($times[1]),
-                array_slice($rawLines, 1)
+                array_map(fn (string $line): string => htmlspecialchars($line, ENT_NOQUOTES, "UTF-8"), array_slice($rawLines, 1))
             ));
         }
 
