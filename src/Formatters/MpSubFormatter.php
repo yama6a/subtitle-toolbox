@@ -41,7 +41,7 @@ class MpSubFormatter extends SubtitleFormatter
             $previousEnd = $cue->getEnd();
         }
 
-        return StringHelpers::addUtf8Bom($output);
+        return $this->applyOutputOptions(StringHelpers::addUtf8Bom($output), $options);
     }
 
 

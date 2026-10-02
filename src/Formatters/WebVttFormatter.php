@@ -55,7 +55,7 @@ class WebVttFormatter extends SubtitleFormatter
                        . StringHelpers::UNIX_LINE_ENDING;
         }
 
-        return StringHelpers::addUtf8Bom($output);
+        return $this->applyOutputOptions(StringHelpers::addUtf8Bom($output), $options);
     }
 
 
@@ -106,7 +106,7 @@ class WebVttFormatter extends SubtitleFormatter
         }
 
         $lines = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines());
-        $lines = in_array(parent::OPTION_STRIP_ALL_XML_TAGS, $options)
+        $lines = in_array(parent::OPTION_STRIP_ALL_XML_TAGS, $options, true)
             ? Markup::stripAllTags($lines)
             : $this->keepVttTags($lines);
 

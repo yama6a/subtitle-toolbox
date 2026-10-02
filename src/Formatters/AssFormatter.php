@@ -47,9 +47,9 @@ class AssFormatter extends SubtitleFormatter
             $blocks[] = implode(StringHelpers::UNIX_LINE_ENDING, ["[$section]", ...$lines]);
         }
 
-        return StringHelpers::addUtf8Bom(
+        return $this->applyOutputOptions(StringHelpers::addUtf8Bom(
             implode(StringHelpers::UNIX_LINE_ENDING . StringHelpers::UNIX_LINE_ENDING, $blocks) . StringHelpers::UNIX_LINE_ENDING
-        );
+        ), $options);
     }
 
 

@@ -28,7 +28,7 @@ class SbvFormatter extends SubtitleFormatter
                         StringHelpers::UNIX_LINE_ENDING;
         }
 
-        return implode(StringHelpers::UNIX_LINE_ENDING, $blocks);
+        return $this->applyOutputOptions(implode(StringHelpers::UNIX_LINE_ENDING, $blocks), $options);
     }
 
 

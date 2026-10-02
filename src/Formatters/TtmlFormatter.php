@@ -85,7 +85,7 @@ class TtmlFormatter extends SubtitleFormatter
             $output .= "    <div{$div["attributes"]}>" . self::NL . $div["content"] . "    </div>" . self::NL;
         }
 
-        return $output . "  </body>" . self::NL . "</tt>" . self::NL;
+        return $this->applyOutputOptions($output . "  </body>" . self::NL . "</tt>" . self::NL, $options);
     }
 
 

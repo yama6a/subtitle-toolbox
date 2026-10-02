@@ -30,7 +30,7 @@ class LyricsFormatter extends SubtitleFormatter
         }
         $output .= $this->formatComments($comments, count($cues), PHP_INT_MAX);
 
-        return StringHelpers::addUtf8Bom($output);
+        return $this->applyOutputOptions(StringHelpers::addUtf8Bom($output), $options);
     }
 
 

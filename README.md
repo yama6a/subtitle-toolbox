@@ -306,6 +306,16 @@ $subtitle->unwrapLines();                         // join the lines of each cue 
 - **Characters**: tags count 0 characters, and an entity such as `&amp;` counts 1. `wrapLines()` breaks only at spaces outside tags. It closes the open core markup tags at a break and opens them again on the next line.
 - **Text without spaces**: Chinese or Japanese text has no break points, so `wrapLines()` keeps such a line long.
 
+## Encodings and line endings
+```php
+$subtitle->format(SubRipFormatter::class, [
+    SubtitleFormatter::OPTION_LINE_ENDING => "\r\n",   // "\n" (default) or "\r\n"
+    SubtitleFormatter::OPTION_BOM         => false,    // true adds a UTF-8 BOM, false removes it
+]);
+```
+
+- **Output defaults**: every formatter writes LF. ASS, LRC, MPSub, SubRip and WebVTT write a UTF-8 BOM. MicroDVD, SAMI, SBV and TTML do not.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:

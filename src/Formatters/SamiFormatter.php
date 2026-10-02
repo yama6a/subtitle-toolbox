@@ -47,7 +47,7 @@ class SamiFormatter extends SubtitleFormatter
             }
         }
 
-        return $output . "</BODY>$eol</SAMI>$eol";
+        return $this->applyOutputOptions($output . "</BODY>$eol</SAMI>$eol", $options);
     }
 
 
