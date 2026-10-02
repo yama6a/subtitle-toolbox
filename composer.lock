@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "790e4bd7aef1610baa98c998d1d24893",
+    "content-hash": "c9d5fc8610fde6c849bef1ab57aaef30",
     "packages": [],
     "packages-dev": [
         {
@@ -1770,6 +1770,57 @@
                 }
             ],
             "time": "2025-11-17T20:03:58+00:00"
+        },
+        {
+            "name": "yama6a/php-glyph-ocr",
+            "version": "0.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/yama6a/php-glyph-ocr.git",
+                "reference": "534852491d0ba92acdb8e9a373e14e2bf9e53f76"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/yama6a/php-glyph-ocr/zipball/534852491d0ba92acdb8e9a373e14e2bf9e53f76",
+                "reference": "534852491d0ba92acdb8e9a373e14e2bf9e53f76",
+                "shasum": ""
+            },
+            "require": {
+                "ext-zlib": "*",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "ext-mbstring": "*",
+                "phpunit/phpunit": "^11.5"
+            },
+            "suggest": {
+                "ext-gd": "Needed only for Image::fromGd()"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "GlyphOcr\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Pure PHP OCR for clean rendered text bitmaps such as image subtitles. A port of the nOCR engine from Subtitle Edit.",
+            "homepage": "https://github.com/yama6a/php-glyph-ocr",
+            "keywords": [
+                "OCR",
+                "bitmap",
+                "glyph",
+                "png",
+                "subtitle edit",
+                "text recognition"
+            ],
+            "support": {
+                "issues": "https://github.com/yama6a/php-glyph-ocr/issues",
+                "source": "https://github.com/yama6a/php-glyph-ocr"
+            },
+            "time": "2026-10-02T20:31:20+00:00"
         }
     ],
     "aliases": [],

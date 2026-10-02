@@ -23,6 +23,7 @@ use SubtitleToolbox\Formatters\TtmlFormatter;
 use SubtitleToolbox\HearingImpairedOptions;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
+use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Ocr\OcrResult;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
@@ -206,6 +207,12 @@ class ThrowSitesTest extends TestCase
                                                             "screenWidth" => 1, "screenHeight" => 1])), ...$invalid],
             "Image/PngEncoder.php: width 0"                 => [fn () => PngEncoder::encode(0, 1, []), ...$invalid],
             "Image/PngEncoder.php: pixel count"             => [fn () => PngEncoder::encode(1, 1, []), ...$invalid],
+            "Ocr/GlyphOcrEngine.php: unknown option"        => [fn () => new GlyphOcrEngine(null, ["speed" => 2]), ...$invalid],
+            "Ocr/GlyphOcrEngine.php: invalid option"        => [fn () => new GlyphOcrEngine(null, ["inkThreshold" => 0]), ...$invalid],
+            "Ocr/GlyphOcrEngine.php: no PNG"                => [fn () => (new GlyphOcrEngine())
+                ->recognize(new CueImage("png", 0, 0, 1, 1, 1, 1), null), ...$invalid],
+            "Ocr/GlyphOcrEngine.php: package missing"       => [fn () => (new \ReflectionMethod(GlyphOcrEngine::class, "requireClass"))
+                ->invoke(null, "GlyphOcr\\Missing"), ...$invalid],
             "Ocr/OcrResult.php: line is no string"          => [fn () => new OcrResult([5]), ...$invalid],
             "Ocr/OcrResult.php: confidence above 1"         => [fn () => new OcrResult(["text"], 2), ...$invalid],
             "Parsers/AssParser.php: no events section"      => [fn () => (new AssParser())->parse("[Script Info]\nTitle: x\n"), ...$parsing],
