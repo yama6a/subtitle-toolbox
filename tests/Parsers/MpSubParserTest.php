@@ -180,6 +180,14 @@ class MpSubParserTest extends TestCase
     }
 
 
+    public function testLatin1TextKeepsItsBytes(): void
+    {
+        $subtitle = Subtitle::parse("FORMAT=TIME\n\n1 1\ncaf\xE9 & tea\n", MpSubParser::class);
+
+        $this->assertSame(["caf\xE9 &amp; tea"], $subtitle->getCues()[0]->getLines());
+    }
+
+
     public function testFrameRateUsesOnlyTheLeadingInteger(): void
     {
         $subtitle = Subtitle::parse("FORMAT=29.97\n\n29 58\nHello\n", MpSubParser::class);
