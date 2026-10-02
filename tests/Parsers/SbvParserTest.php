@@ -85,6 +85,14 @@ class SbvParserTest extends TestCase
     }
 
 
+    public function testLatin1TextKeepsItsBytes(): void
+    {
+        $subtitle = Subtitle::parse("0:00:01.000,0:00:02.000\ncaf\xE9 & bread\n", SbvParser::class);
+
+        $this->assertSame(["caf\xE9 &amp; bread"], $subtitle->getCues()[0]->getLines());
+    }
+
+
     public function testExceededMinutesThrowsException(): void
     {
         $this->expectException(ParsingException::class);

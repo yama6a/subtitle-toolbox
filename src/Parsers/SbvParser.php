@@ -35,11 +35,18 @@ class SbvParser extends SubtitleParser
             $subtitle->addCue(new SubtitleCue(
                 $this->millisFromString($times[0]),
                 $this->millisFromString($times[1]),
-                array_map(fn (string $line): string => htmlspecialchars($line, ENT_NOQUOTES, "UTF-8"), array_slice($rawLines, 1))
+                array_map($this->escapeText(...), array_slice($rawLines, 1))
             ));
         }
 
         return $subtitle;
+    }
+
+
+    // htmlspecialchars() returns an empty string for invalid UTF-8, so Latin-1 text would vanish.
+    private function escapeText(string $line): string
+    {
+        return str_replace(["&", "<", ">"], ["&amp;", "&lt;", "&gt;"], $line);
     }
 
 
