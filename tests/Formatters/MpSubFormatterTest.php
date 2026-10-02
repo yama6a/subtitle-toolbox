@@ -45,6 +45,14 @@ class MpSubFormatterTest extends TestCase
     }
 
 
+    public function testEscapedCoreMarkupTextIsWrittenAsPlainText(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, ["<i>I &lt;3 bread &amp; jam</i>"]));
+
+        $this->assertStringContainsString("\n1 1\nI <3 bread & jam\n", $subtitle->format(MpSubFormatter::class));
+    }
+
+
     public function testNonIntegerFrameRateThrowsException(): void
     {
         $this->expectException(InvalidArgumentException::class);

@@ -34,7 +34,7 @@ class MpSubParser extends SubtitleParser
 
             if ($cue !== null) {
                 if ($line !== "") {
-                    $cue->addLine($line);
+                    $cue->addLine(htmlspecialchars($line, ENT_NOQUOTES, "UTF-8"));
                     continue;
                 }
 

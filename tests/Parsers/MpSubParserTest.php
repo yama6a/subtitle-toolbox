@@ -162,6 +162,24 @@ class MpSubParserTest extends TestCase
     }
 
 
+    public function testPlainTextIsEscapedAndRoundTrips(): void
+    {
+        $raw      = "TITLE=Tom & Jerry <draft>\nFORMAT=TIME\n\n1 1\nI <3 bread & jam\n";
+        $subtitle = Subtitle::parse($raw, MpSubParser::class);
+
+        $this->assertSame(["I &lt;3 bread &amp; jam"], $subtitle->getCues()[0]->getLines());
+        $this->assertSame("Tom & Jerry <draft>", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
+        $this->assertStringContainsString(
+            "TITLE=Tom & Jerry <draft>\n",
+            $subtitle->format(MpSubFormatter::class)
+        );
+        $this->assertStringContainsString(
+            "\n1 1\nI <3 bread & jam\n",
+            $subtitle->format(MpSubFormatter::class)
+        );
+    }
+
+
     public function testFrameRateUsesOnlyTheLeadingInteger(): void
     {
         $subtitle = Subtitle::parse("FORMAT=29.97\n\n29 58\nHello\n", MpSubParser::class);
