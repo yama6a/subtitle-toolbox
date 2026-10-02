@@ -19,6 +19,8 @@ class TtmlParser extends SubtitleParser
     public const NAMESPACE_DFXP = "http://www.w3.org/2006/10/ttaf1";
     public const NAMESPACE_XML  = "http://www.w3.org/XML/1998/namespace";
 
+    public const NAMESPACE_IMSC_STYLING = "http://www.w3.org/ns/ttml/profile/imsc1#styling";
+
     public const STYLING_NAMESPACES   = [
         "http://www.w3.org/ns/ttml#styling",
         "http://www.w3.org/2006/10/ttaf1#style",
@@ -107,7 +109,7 @@ class TtmlParser extends SubtitleParser
         $subtitle->setFormatData(self::FORMAT, $fileData);
 
         if ($body !== null) {
-            $this->readContainer($subtitle, $body, 0.0, null, null, null, false, []);
+            $this->readContainer($subtitle, $body, 0.0, null, null, null, false, [], null);
         }
 
         return $subtitle;
@@ -223,9 +225,11 @@ class TtmlParser extends SubtitleParser
         ?string $region,
         ?string $textAlign,
         bool $preserveSpace,
-        array $divAttributes
+        array $divAttributes,
+        ?bool $forced
     ): void {
         [$begin, $end]  = $this->interval($container, $parentBegin, $parentEnd);
+        $forced         = $this->forcedDisplay($container) ?? $forced;
         $region         = $container->hasAttribute("region") ? $container->getAttribute("region") : $region;
         $textAlign      = $this->ownStyleProperties($container)["textAlign"] ?? $textAlign;
         $preserveSpace  = $this->preservesSpace($container, $preserveSpace);
@@ -238,10 +242,10 @@ class TtmlParser extends SubtitleParser
 
         foreach ($container->childNodes as $child) {
             if ($this->isTtElement($child, "div")) {
-                $this->readContainer($subtitle, $child, $begin, $end, $region, $textAlign, $preserveSpace, $divAttributes);
+                $this->readContainer($subtitle, $child, $begin, $end, $region, $textAlign, $preserveSpace, $divAttributes, $forced);
             } elseif ($this->isTtElement($child, "p")) {
                 try {
-                    $cue = $this->readParagraph($child, $begin, $end, $region, $textAlign, $preserveSpace);
+                    $cue = $this->readParagraph($child, $begin, $end, $region, $textAlign, $preserveSpace, $forced);
                 } catch (ParsingException $exception) {
                     $this->fail($exception, $child->getLineNo(), $this->paragraphIndex++, $this->xmlLines($child));
                     continue;
@@ -273,7 +277,8 @@ class TtmlParser extends SubtitleParser
         ?float $parentEnd,
         ?string $region,
         ?string $textAlign,
-        bool $preserveSpace
+        bool $preserveSpace,
+        ?bool $forced
     ): SubtitleCue {
         [$begin, $end] = $this->interval($paragraph, $parentBegin, $parentEnd);
         if ($end === null) {
@@ -296,9 +301,72 @@ class TtmlParser extends SubtitleParser
         $cue->setFormatData(self::FORMAT, $attributes === [] ? [] : ["attributes" => $attributes]);
 
         $textAlign = $this->ownStyleProperties($paragraph)["textAlign"] ?? $textAlign;
-        $cue->setAlignment($this->alignment($paragraph->hasAttribute("region") ? $paragraph->getAttribute("region") : $region, $textAlign));
+        $region    = $paragraph->hasAttribute("region") ? $paragraph->getAttribute("region") : $region;
+        $cue->setAlignment($this->alignment($region, $textAlign));
+
+        $forced = $this->forcedDisplay($paragraph) ?? $forced ?? $this->regionForcedDisplay($region) ?? false;
+        $cue->setForced($forced || $this->hasForcedSpan($paragraph, $forced));
 
         return $cue;
+    }
+
+
+    /**
+     * Reads itts:forcedDisplay from the element or from the styles that it references.
+     *
+     * @see https://www.w3.org/TR/ttml-imsc1.1/#forceddisplay
+     */
+    private function forcedDisplay(DOMElement $element, int $depth = 0): ?bool
+    {
+        foreach ($element->attributes as $attribute) {
+            if ($attribute->namespaceURI === self::NAMESPACE_IMSC_STYLING && $attribute->localName === "forcedDisplay"
+                || $attribute->namespaceURI === null && $attribute->nodeName === "itts:forcedDisplay") {
+                return trim($attribute->value) === "true";
+            }
+        }
+
+        $forced = null;
+        if ($depth < 20) {
+            foreach (preg_split("/\s+/", trim($element->getAttribute("style")), -1, PREG_SPLIT_NO_EMPTY) as $id) {
+                if (isset($this->styles[$id])) {
+                    $forced = $this->forcedDisplay($this->styles[$id], $depth + 1) ?? $forced;
+                }
+            }
+        }
+
+        return $forced;
+    }
+
+
+    private function regionForcedDisplay(?string $regionId): ?bool
+    {
+        if ($regionId === null || !isset($this->regions[$regionId])) {
+            return null;
+        }
+
+        $forced = $this->forcedDisplay($this->regions[$regionId]);
+        foreach ($this->regions[$regionId]->childNodes as $child) {
+            if ($forced === null && $this->isTtElement($child, "style")) {
+                $forced = $this->forcedDisplay($child);
+            }
+        }
+
+        return $forced;
+    }
+
+
+    private function hasForcedSpan(DOMElement $element, bool $inherited): bool
+    {
+        foreach ($element->childNodes as $child) {
+            if ($this->isTtElement($child, "span")) {
+                $forced = $this->forcedDisplay($child) ?? $inherited;
+                if ($forced || $this->hasForcedSpan($child, $forced)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
 

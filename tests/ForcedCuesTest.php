@@ -2,23 +2,30 @@
 
 namespace SubtitleToolbox;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Diff\CueDifference;
 use SubtitleToolbox\Diff\SubtitleDiff;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\JsonFormatter;
 use SubtitleToolbox\Formatters\SubRipFormatter;
+use SubtitleToolbox\Formatters\TtmlFormatter;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\FakeOcrEngine;
+use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\VobSubParser;
 
 require_once __DIR__ . "/Ocr/FakeOcrEngine.php";
 
 class ForcedCuesTest extends TestCase
 {
+    private const DIR = __DIR__ . "/files/forced/";
+
     private const SRT = "1\n00:00:01,000 --> 00:00:02,000\nHello\n\n2\n00:00:03,000 --> 00:00:04,000\nEXIT\n\n" .
                         "3\n00:00:05,000 --> 00:00:06,000\nBye\n";
 
@@ -177,5 +184,94 @@ class ForcedCuesTest extends TestCase
                           "+ 00:00:03.000 --> 00:00:04.000 forced\n  EXIT\n",
                           SubtitleDiff::toText($differences));
         $this->assertTrue(SubtitleDiff::isEqual($new, $this->srtWithForcedSecondCue()));
+    }
+
+
+    public static function realFileProvider(): array
+    {
+        return [
+            "w3c_imsc11_forced"   => ["w3c_imsc11_forced.ttml", TtmlParser::class, TtmlFormatter::class,
+                                      [1.0, 6.0, "Lycée"], [4.0, 6.0, "Nous étions inscrits au même lycée."], [true, false]],
+            "forced_inheritance"  => ["forced_inheritance.ttml", TtmlParser::class, TtmlFormatter::class,
+                                      [1.0, 3.0, "Wir gehen zum Hafen."], [10.0, 12.0, "Der Zug fährt um acht."],
+                                      [false, true, true, true, false]],
+            "forced_signs_2398"   => ["forced_signs_2398.itt", IttParser::class, IttFormatter::class,
+                                      [2.002, 4.505, "SECTOR 7 AHEAD"], [17.184, 19.019, "<i>Mill Road 2 km</i>"],
+                                      [true, false, false, true, false, true]],
+        ];
+    }
+
+
+    #[DataProvider("realFileProvider")]
+    public function testRealFileParses(string $file, string $parser, string $formatter, array $first, array $last, array $flags): void
+    {
+        $subtitle = Subtitle::parse(file_get_contents(self::DIR . $file), $parser);
+        $cues     = array_values($subtitle->getCues());
+
+        $this->assertCount(count($flags), $cues);
+        $this->assertSame($first, [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
+        $this->assertSame($last, [end($cues)->getStart(), end($cues)->getEnd(), end($cues)->getText()]);
+        $this->assertSame($flags, $this->forcedFlags($subtitle));
+    }
+
+
+    #[DataProvider("realFileProvider")]
+    public function testRealFileRoundTripKeepsTheFlags(string $file, string $parser, string $formatter, array $first, array $last, array $flags): void
+    {
+        $subtitle = Subtitle::parse(file_get_contents(self::DIR . $file), $parser);
+        $output   = $subtitle->format($formatter);
+        $reparsed = Subtitle::parse($output, $parser);
+
+        $this->assertSame($flags, $this->forcedFlags($reparsed));
+        $this->assertSame(array_map(fn (SubtitleCue $cue): string => $cue->getText(), $subtitle->getCues()),
+                          array_map(fn (SubtitleCue $cue): string => $cue->getText(), $reparsed->getCues()));
+        $this->assertSame($output, $reparsed->format($formatter));
+        $this->assertSame($flags, $this->forcedFlags(Subtitle::parse($subtitle->format(JsonFormatter::class), JsonParser::class)));
+    }
+
+
+    public function testTtmlFormatterKeepsTheFileWhenTheFlagComesFromTheRegion(): void
+    {
+        $output = Subtitle::parse(file_get_contents(self::DIR . "w3c_imsc11_forced.ttml"), TtmlParser::class)->format(TtmlFormatter::class);
+
+        $this->assertSame(1, substr_count($output, "itts:forcedDisplay"));
+        $this->assertStringContainsString('<p begin="00:00:01.000" end="00:00:06.000" region="r1">Lycée</p>', $output);
+    }
+
+
+    public function testTtmlFormatterWritesTheFlagOnTheParagraph(): void
+    {
+        $output = $this->srtWithForcedSecondCue()->format(TtmlFormatter::class);
+
+        $this->assertStringContainsString(' xmlns:itts="http://www.w3.org/ns/ttml/profile/imsc1#styling"', $output);
+        $this->assertStringContainsString('<p begin="00:00:03.000" end="00:00:04.000" region="bottomCenter" itts:forcedDisplay="true">EXIT</p>', $output);
+        $this->assertSame(1, substr_count($output, "itts:forcedDisplay"));
+        $this->assertStringNotContainsString("itts", Subtitle::parse(self::SRT, SubRipParser::class)->format(TtmlFormatter::class));
+    }
+
+
+    public function testTtmlFormatterWritesAClearedFlag(): void
+    {
+        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "forced_inheritance.ttml"), TtmlParser::class);
+        $subtitle->getCues()[3]->setForced(false);
+        $subtitle->getCues()[4]->setForced(true);
+
+        $output = $subtitle->format(TtmlFormatter::class);
+
+        $this->assertStringContainsString('<p begin="00:00:08.000" end="00:00:09.500" region="bottom" itts:forcedDisplay="false">BAHNHOF</p>', $output);
+        $this->assertStringContainsString('<p begin="00:00:10.000" end="00:00:12.000" itts:forcedDisplay="true" region="bottom">Der Zug fährt um acht.</p>', $output);
+        $this->assertSame([false, true, true, false, true], $this->forcedFlags(Subtitle::parse($output, TtmlParser::class)));
+    }
+
+
+    public function testIttFormatterWritesTheFlagOnTheParagraph(): void
+    {
+        $output = $this->srtWithForcedSecondCue()->format(IttFormatter::class, [IttFormatter::OPTION_FRAME_RATE => 25]);
+
+        $this->assertStringContainsString('xmlns:itts="http://www.w3.org/ns/ttml/profile/imsc1#styling"', $output);
+        $this->assertStringContainsString('<p begin="00:00:03:00" end="00:00:04:00" region="bottom" itts:forcedDisplay="true">EXIT</p>', $output);
+        $this->assertSame([false, true, false], $this->forcedFlags(Subtitle::parse($output, IttParser::class)));
+        $this->assertStringNotContainsString("itts", Subtitle::parse(self::SRT, SubRipParser::class)
+                                                         ->format(IttFormatter::class, [IttFormatter::OPTION_FRAME_RATE => 25]));
     }
 }
