@@ -73,14 +73,14 @@ class SubRipParser extends SubtitleParser
     private function millisFromString(string $timeString): float
     {
         $timeString = trim($timeString);
-        if (!preg_match("/^(\d{1,3}):([0-5]\d):([0-5]\d)[,.](\d{1,3})$/", $timeString, $matches)) {
+        if (!preg_match("/^(\d{1,3}):([0-5]\d):([0-5]\d)(?:[,.](\d{1,3}))?$/", $timeString, $matches)) {
             throw new ParsingException("The timeString-string of at least one cue could not be parsed: $timeString");
         }
 
         $hours   = (int) $matches[1];
         $minutes = (int) $matches[2];
         $seconds = (int) $matches[3];
-        $millis  = (int) str_pad($matches[4], 3, "0");
+        $millis  = (int) str_pad($matches[4] ?? "", 3, "0");
 
         return $hours * 3600 + $minutes * 60 + $seconds + $millis / 1000;
     }
