@@ -19,6 +19,8 @@ class SubtitleCue
 
     protected ?int $alignment = null;
 
+    protected bool $forced = false;
+
     /** @var array<string, array> */
     protected array $formatData = [];
 
@@ -151,6 +153,23 @@ class SubtitleCue
         }
 
         $this->alignment = $alignment;
+
+        return $this;
+    }
+
+
+    public function isForced(): bool
+    {
+        return $this->forced;
+    }
+
+
+    /**
+     * Marks the cue as a forced narrative, which the player shows also when the viewer has turned subtitles off.
+     */
+    public function setForced(bool $forced): self
+    {
+        $this->forced = $forced;
 
         return $this;
     }

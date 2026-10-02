@@ -23,6 +23,9 @@ trait ArrayConversion
                 "identifier" => $cue->getIdentifier(),
                 "alignment"  => $cue->getAlignment(),
             ];
+            if ($cue->isForced()) {
+                $cueArray["forced"] = true;
+            }
             if ($withFormatData) {
                 $cueArray["formatData"] = $cue->getAllFormatData();
             }
@@ -119,9 +122,15 @@ trait ArrayConversion
             throw new ParsingException("The field $path.alignment must be an integer from 1 to 9 or null.");
         }
 
+        $forced = $cueData["forced"] ?? false;
+        if (!is_bool($forced)) {
+            throw new ParsingException("The field $path.forced must be a boolean.");
+        }
+
         $cue = (new SubtitleCue($cueData["start"], $cueData["end"], $cueData["lines"]))
             ->setIdentifier($identifier)
-            ->setAlignment($alignment);
+            ->setAlignment($alignment)
+            ->setForced($forced);
         foreach (self::arrayConversionFormatData($cueData, "formatData", "$path.") as $format => $formatData) {
             $cue->setFormatData($format, $formatData);
         }

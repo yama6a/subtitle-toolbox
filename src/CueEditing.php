@@ -68,6 +68,22 @@ trait CueEditing
 
 
     /**
+     * Returns a copy with copies of the forced cues and the comments before these cues.
+     */
+    public function forcedOnly(): self
+    {
+        $copies = new \SplObjectStorage();
+        foreach ($this->cues as $cue) {
+            if ($cue->isForced()) {
+                $copies[$cue] = clone $cue;
+            }
+        }
+
+        return $this->copyWithCues($copies);
+    }
+
+
+    /**
      * Returns a copy that holds the cue copies in $copies, in the order of their originals.
      *
      * @param \SplObjectStorage<SubtitleCue, SubtitleCue> $copies original cue => copy
