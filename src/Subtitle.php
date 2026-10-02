@@ -19,6 +19,7 @@ class Subtitle
     use Validation;
     use CueEditing;
     use Fixes;
+    use TextTransforms;
 
     /** @var array|SubtitleCue[] */
     protected $cues;
