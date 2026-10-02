@@ -257,4 +257,16 @@ class SubtitleCueTest extends TestCase
         $object->setFormatData("ass", []);
         $this->assertSame([], $object->getFormatData("ass"));
     }
+
+
+    public function testGetAllFormatDataReturnsEveryFormat(): void
+    {
+        $object = (new SubtitleCue())
+            ->setFormatData("ass", ["style" => "Default"])
+            ->setFormatData("vtt", ["region" => "top"])
+            ->setFormatData("vtt", []);
+
+        $this->assertSame(["ass" => ["style" => "Default"]], $object->getAllFormatData());
+        $this->assertSame([], (new SubtitleCue())->getAllFormatData());
+    }
 }

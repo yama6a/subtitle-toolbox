@@ -165,6 +165,17 @@ class SubtitleCue
     }
 
 
+    /**
+     * Returns the format data of all formats, keyed by format.
+     *
+     * @return array<string, array>
+     */
+    public function getAllFormatData(): array
+    {
+        return $this->formatData;
+    }
+
+
     public function setFormatData(string $format, array $data): self
     {
         if ($data === []) {
