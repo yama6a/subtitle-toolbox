@@ -2,6 +2,7 @@
 
 namespace SubtitleToolbox\Parsers;
 
+use Generator;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -29,7 +30,7 @@ class WebVttParser extends SubtitleParser
             throw new ParsingException("The file doesn't start with the string WEBVTT!");
         }
 
-        $blocks   = $this->splitIntoBlocks(explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle));
+        $blocks   = iterator_to_array($this->splitIntoBlocks(explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle)));
         $subtitle = new Subtitle();
         $fileData = $this->parseHeader($blocks[0]);
         $seenCue  = false;
@@ -37,7 +38,7 @@ class WebVttParser extends SubtitleParser
             $firstLine = trim($rawLines[0]);
             switch (true) {
                 case str_contains($rawLines[0], "-->") || str_contains($rawLines[1] ?? "", "-->"):
-                    $subtitle->addCue($this->parseCue($this->cleanLines($rawLines), $idx));
+                    $subtitle->addCue($this->parseCueBlock($rawLines, $idx));
                     $seenCue = true;
                     break;
                 case $this->startsWithKeyword($firstLine, "NOTE"):
@@ -69,14 +70,15 @@ class WebVttParser extends SubtitleParser
      *
      * @see https://www.w3.org/TR/webvtt1/#collect-a-webvtt-block
      */
-    private function splitIntoBlocks(array $lines): array
+    public function splitIntoBlocks(iterable $lines): Generator
     {
-        $blocks  = [];
-        $current = [];
+        $hasBlocks = false;
+        $current   = [];
         foreach ($lines as $line) {
             if (trim($line) === "") {
                 if ($current !== []) {
-                    $blocks[] = $current;
+                    yield $current;
+                    $hasBlocks = true;
                 }
                 $current = [];
                 continue;
@@ -85,21 +87,22 @@ class WebVttParser extends SubtitleParser
             $startsCue = count($current) === 0
                          || (count($current) === 1 && !str_contains($current[0], "-->"));
             // The header block is exempt, so that a missing empty line after WEBVTT still throws.
-            if (str_contains($line, "-->") && !$startsCue && $blocks !== []) {
-                $blocks[] = $current;
-                $current  = [];
+            if (str_contains($line, "-->") && !$startsCue && $hasBlocks) {
+                yield $current;
+                $current = [];
             }
             $current[] = $line;
         }
         if ($current !== []) {
-            $blocks[] = $current;
+            yield $current;
         }
-
-        return $blocks;
     }
 
 
-    private function parseHeader(array $rawLines): array
+    /**
+     * Returns the file format data of the header block that starts with WEBVTT.
+     */
+    public function parseHeader(array $rawLines): array
     {
         $fileData   = [];
         $headerText = trim(substr($rawLines[0], 6));
@@ -118,6 +121,15 @@ class WebVttParser extends SubtitleParser
         }
 
         return $fileData;
+    }
+
+
+    /**
+     * Parses one cue block as splitIntoBlocks() returns it.
+     */
+    public function parseCueBlock(array $rawLines, int $index): SubtitleCue
+    {
+        return $this->parseCue($this->cleanLines($rawLines), $index);
     }
 
 
@@ -180,7 +192,7 @@ class WebVttParser extends SubtitleParser
      *
      * @see https://www.w3.org/TR/webvtt1/#parse-the-webvtt-cue-settings
      */
-    private function parseSettings(string $input, array $knownNames): array
+    public function parseSettings(string $input, array $knownNames): array
     {
         $settings = [];
         foreach (preg_split("/[ \t]+/", trim($input), -1, PREG_SPLIT_NO_EMPTY) as $token) {

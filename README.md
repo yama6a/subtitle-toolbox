@@ -789,6 +789,30 @@ $subtitle->format(SccFormatter::class, [SccFormatter::OPTION_DROP_FRAME => false
 - **Markup**: PAC styles and mid-row codes become `<i>`, `<u>` and `<font color>` with `#ffffff`, `#00ff00`, `#0000ff`, `#00ffff`, `#ff0000`, `#ffff00` and `#ff00ff`. The formatter writes other colours as white. A mid-row code takes the place of one character. The formatter puts it on the space before a style change. A style change inside a word adds a space.
 - **Characters**: the standard, special and extended sets of CEA-608. The formatter writes an extended character after a standard fallback character, for decoders without the extended set. For a character outside the sets, it throws `InvalidArgumentException`.
 
+## Streaming large SRT and WebVTT files
+`Subtitle::parse()` keeps the whole file and one object per cue in memory. An 80 MB SRT file with 400,000 cues does not fit into the default `memory_limit` of 128 MB. The stream readers and writers handle one cue at a time.
+
+```php
+use SubtitleToolbox\Streaming\SubRipStreamReader;
+use SubtitleToolbox\Streaming\WebVttStreamWriter;
+
+$writer = new WebVttStreamWriter(fopen('show.vtt', 'wb'));     // or a file path
+foreach ((new SubRipStreamReader())->read('show.srt') as $cue) {     // or a stream resource
+    $writer->write($cue->setStart($cue->getStart() + 2)->setEnd($cue->getEnd() + 2));
+}
+$writer->close();
+```
+
+- **Formats**: only SubRip and WebVTT, because their cue blocks do not depend on each other. Other formats need the whole file, for example for LRC end times or ASS headers.
+- **Same result**: the readers parse each cue block with the method of `SubRipParser` and `WebVttParser`, and the writers use the method of `SubRipFormatter` and `WebVttFormatter`. Cues and output bytes are the same as in the batch classes, with the same options.
+- **Order**: the readers yield cues in file order. They do not sort the cues by start time, as `Subtitle` does.
+- **Errors**: a reader throws `ParsingException` at the first block that `parse()` rejects. It has yielded the cues before that block. A path that does not open, a write to a closed writer, and a stream that rejects writes throw `InvalidArgumentException`.
+- **Memory**: 200,000 cues in a 14.7 MB file take less than 1 MB of memory to read or write. The read takes about 3 s on PHP 8.5. A line ends at LF, CR LF or CR CR LF. A file with only CR line endings is one line for `fgets()`, so it takes memory for the whole file.
+- **WebVTT header**: `WebVttStreamReader::getHeader()` returns the header text, the header lines, and the `STYLE` and `REGION` blocks after the first cue. Pass this array to the `WebVttStreamWriter` constructor.
+- **Comments**: `WebVttStreamReader` skips `NOTE` blocks. `WebVttStreamWriter` writes no comments.
+- **Encoding**: the readers accept UTF-8, with or without a BOM, and keep the bytes of other 8-bit encodings. For UTF-16, add a filter: `stream_filter_append($in, 'convert.iconv.UTF-16/UTF-8')`.
+- **Closing**: `close()` flushes the stream. It closes the stream only when the writer opened it from a file path.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:

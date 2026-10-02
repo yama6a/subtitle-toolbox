@@ -1,0 +1,108 @@
+<?php
+
+namespace SubtitleToolbox\Streaming;
+
+use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\SubtitleFormatter;
+use SubtitleToolbox\SubtitleCue;
+
+class StreamWriterTest extends TestCase
+{
+    private const SUBRIP_FIXTURE = __DIR__ . "/../files/srt/real/own_styled.srt";
+    private const WEBVTT_FIXTURE = __DIR__ . "/../files/vtt/real/w3c_regions.vtt";
+
+    private string $path;
+
+
+    protected function setUp(): void
+    {
+        $this->path = tempnam(sys_get_temp_dir(), "stream-writer-");
+    }
+
+
+    protected function tearDown(): void
+    {
+        unlink($this->path);
+    }
+
+
+    public function testShiftsASubRipFileIntoAWebVttFile(): void
+    {
+        $writer = new WebVttStreamWriter($this->path);
+        foreach ((new SubRipStreamReader())->read(self::SUBRIP_FIXTURE) as $cue) {
+            $writer->write($cue->setStart($cue->getStart() + 2)->setEnd($cue->getEnd() + 2));
+        }
+        $writer->close();
+
+        $cues = iterator_to_array((new WebVttStreamReader())->read($this->path), false);
+        $this->assertCount(10, $cues);
+        $this->assertSame(19.985, $cues[0]->getStart());
+        $this->assertSame(22.521, $cues[0]->getEnd());
+        $this->assertSame(782.0, $cues[9]->getEnd());
+    }
+
+
+    public function testCopiesTheWebVttHeaderFromReaderToWriter(): void
+    {
+        $reader = new WebVttStreamReader();
+        $cues   = $reader->read(self::WEBVTT_FIXTURE);
+        $cues->current();
+        $writer = new WebVttStreamWriter($this->path, $reader->getHeader());
+        foreach ($cues as $cue) {
+            $writer->write($cue);
+        }
+        $writer->close();
+
+        $copy = new WebVttStreamReader();
+        iterator_to_array($copy->read($this->path));
+        $this->assertSame($reader->getHeader(), $copy->getHeader());
+        $this->assertNotSame([], $copy->getHeader()["regions"]);
+    }
+
+
+    public function testWritesCrlfWithoutBom(): void
+    {
+        $writer = new SubRipStreamWriter($this->path, [
+            SubtitleFormatter::OPTION_LINE_ENDING => "\r\n",
+            SubtitleFormatter::OPTION_BOM         => false,
+        ]);
+        $writer->write(new SubtitleCue(1, 2, "A"));
+        $writer->write(new SubtitleCue(3, 4.5, "B"));
+        $writer->close();
+
+        $this->assertSame(
+            "1\r\n00:00:01,000 --> 00:00:02,000\r\nA\r\n\r\n2\r\n00:00:03,000 --> 00:00:04,500\r\nB\r\n",
+            file_get_contents($this->path)
+        );
+    }
+
+
+    public function testCloseKeepsAStreamThatTheCallerOpened(): void
+    {
+        $stream = fopen($this->path, "wb");
+        $writer = new SubRipStreamWriter($stream);
+        $writer->close();
+
+        $this->assertTrue(is_resource($stream));
+        fclose($stream);
+    }
+
+
+    public function testRejectsAWriteAfterClose(): void
+    {
+        $writer = new WebVttStreamWriter($this->path);
+        $writer->close();
+
+        $this->expectException(InvalidArgumentException::class);
+        $writer->write(new SubtitleCue(1, 2, "A"));
+    }
+
+
+    public function testRejectsAnInvalidOptionBeforeItWrites(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new SubRipStreamWriter($this->path, [SubtitleFormatter::OPTION_LINE_ENDING => "\r"]);
+    }
+}

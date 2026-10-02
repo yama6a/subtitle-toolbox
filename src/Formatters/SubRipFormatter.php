@@ -13,15 +13,35 @@ class SubRipFormatter extends SubtitleFormatter
     {
         $output = "";
         foreach (array_values($subtitle->getCues()) as $cueIndex => $cue) {
-            if ($cueIndex > 0) {
-                $output .= StringHelpers::UNIX_LINE_ENDING;
-            }
-            $output .= $cueIndex + 1 . StringHelpers::UNIX_LINE_ENDING;
-            $output .= $this->formatCue($cue, $options);
-            $output .= StringHelpers::UNIX_LINE_ENDING;
+            $output .= $this->formatNumberedCue($cue, $cueIndex, $options);
         }
 
         return $this->applyOutputOptions(StringHelpers::addUtf8Bom($output), $options);
+    }
+
+
+    /**
+     * Returns what format() writes for the cue at $cueIndex, in the line ending of $options, without a BOM.
+     */
+    public function formatCueBlock(SubtitleCue $cue, int $cueIndex, array $options = []): string
+    {
+        $block = $this->formatNumberedCue($cue, $cueIndex, $options);
+
+        return $this->applyOutputOptions($block, [...$options, parent::OPTION_BOM => null]);
+    }
+
+
+    private function formatNumberedCue(SubtitleCue $cue, int $cueIndex, array $options): string
+    {
+        $output = "";
+        if ($cueIndex > 0) {
+            $output .= StringHelpers::UNIX_LINE_ENDING;
+        }
+        $output .= $cueIndex + 1 . StringHelpers::UNIX_LINE_ENDING;
+        $output .= $this->formatCue($cue, $options);
+        $output .= StringHelpers::UNIX_LINE_ENDING;
+
+        return $output;
     }
 
 
