@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Parsers;
 use InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -95,7 +96,7 @@ class MicroDvdParser extends SubtitleParser
                 }
             }
 
-            $lineText = trim($this->escapeText(substr($rawLine, strlen($prefix))));
+            $lineText = trim(Markup::escapeText(substr($rawLine, strlen($prefix))));
             if ($lineText === "") {
                 continue;
             }
@@ -117,13 +118,6 @@ class MicroDvdParser extends SubtitleParser
         }
 
         return (new SubtitleCue($start, $end, $lines))->setFormatData(self::FORMAT_DATA_KEY, ["lines" => $lineCodes]);
-    }
-
-
-    // htmlspecialchars() returns an empty string for invalid UTF-8, so Latin-1 text would vanish.
-    private function escapeText(string $text): string
-    {
-        return str_replace(["&", "<", ">"], ["&amp;", "&lt;", "&gt;"], $text);
     }
 
 

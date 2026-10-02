@@ -56,4 +56,27 @@ class MarkupTest extends TestCase
     {
         $this->assertSame("<b> is bold", Markup::decodeEntities(Markup::stripAllTags("<i>&lt;b&gt;</i> is bold")));
     }
+
+
+    public function testEscapeText(): void
+    {
+        $this->assertSame("&lt;b&gt;1 &amp; 2&lt;/b&gt;", Markup::escapeText("<b>1 & 2</b>"));
+        $this->assertSame("&amp;amp; stays text", Markup::escapeText("&amp; stays text"));
+        $this->assertSame("\"it's\" Caf\u{e9}", Markup::escapeText("\"it's\" Caf\u{e9}"));
+        $this->assertSame("", Markup::escapeText(""));
+    }
+
+
+    public function testEscapeTextKeepsLatin1Bytes(): void
+    {
+        $this->assertSame("caf\xE9 &amp; &lt;b&gt;", Markup::escapeText("caf\xE9 & <b>"));
+    }
+
+
+    public function testEscapeThenDecodeRoundTrips(): void
+    {
+        $text = "<b>1 & 2</b> &amp;";
+
+        $this->assertSame($text, Markup::decodeEntities(Markup::stripAllTags(Markup::escapeText($text))));
+    }
 }
