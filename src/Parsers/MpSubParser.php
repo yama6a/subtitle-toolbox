@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Parsers;
 use InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -34,7 +35,7 @@ class MpSubParser extends SubtitleParser
 
             if ($cue !== null) {
                 if ($line !== "") {
-                    $cue->addLine($this->escapeText($line));
+                    $cue->addLine(Markup::escapeText($line));
                     continue;
                 }
 
@@ -93,13 +94,6 @@ class MpSubParser extends SubtitleParser
         }
 
         $subtitle->addCue($cue, false);
-    }
-
-
-    // htmlspecialchars() returns an empty string for invalid UTF-8, which would drop the text of Latin-1 files.
-    private function escapeText(string $line): string
-    {
-        return str_replace(["&", "<", ">"], ["&amp;", "&lt;", "&gt;"], $line);
     }
 
 

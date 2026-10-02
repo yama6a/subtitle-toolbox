@@ -3,6 +3,7 @@
 namespace SubtitleToolbox\Parsers;
 
 use InvalidArgumentException;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -161,15 +162,9 @@ class LyricsParser extends SubtitleParser
             "/<" . self::TIMESTAMP_PATTERN . ">|[^<]+|</",
             fn (array $matches): string => isset($matches[1])
                 ? "<" . $this->toCoreTimestamp($this->toSeconds($matches, $offset)) . ">"
-                : $this->escape($matches[0]),
+                : Markup::escapeText($matches[0]),
             $text
         );
-    }
-
-
-    private function escape(string $text): string
-    {
-        return str_replace(["&", "<", ">"], ["&amp;", "&lt;", "&gt;"], $text);
     }
 
 

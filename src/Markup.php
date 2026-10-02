@@ -32,4 +32,13 @@ class Markup
     {
         return html_entity_decode($text, ENT_QUOTES | ENT_HTML5, "UTF-8");
     }
+
+
+    /**
+     * Escapes &, < and > without htmlspecialchars(), which returns "" for invalid UTF-8 such as Latin-1 text.
+     */
+    public static function escapeText(string $text): string
+    {
+        return str_replace(["&", "<", ">"], ["&amp;", "&lt;", "&gt;"], $text);
+    }
 }
