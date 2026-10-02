@@ -44,6 +44,47 @@ class MarkupTest extends TestCase
     }
 
 
+    public function testStripAllTagsKeepsTextAfterQuotesInTags(): void
+    {
+        $this->assertSame("Hi.", Markup::stripAllTags("<v O'Neil>Hi.</v>"));
+        $this->assertSame("We're out.", Markup::stripAllTags("<v O'Neil>We're out."));
+        $this->assertSame("Two rolls.", Markup::stripAllTags('<v Mo "Baker>Two rolls.'));
+        $this->assertSame('Take the "seeded" loaf.', Markup::stripAllTags('<v Sam "Ace" Reed>Take the "seeded" loaf.'));
+        $this->assertSame("Red jam", Markup::stripAllTags("<font color='#ff0000'>Red</font> jam"));
+        $this->assertSame("It's 'fine', \"really\"", Markup::stripAllTags("It's <i>'fine'</i>, \"really\""));
+    }
+
+
+    public function testStripAllTagsKeepsALessThanSignThatStartsNoTag(): void
+    {
+        $this->assertSame("I <3 bread", Markup::stripAllTags("I <3 bread"));
+        $this->assertSame("a < b", Markup::stripAllTags("a < b"));
+    }
+
+
+    public function testKeepTagsKeepsTextAfterQuotesInTags(): void
+    {
+        $this->assertSame("<i>Hi.</i>", Markup::keepTags("<v O'Neil><i>Hi.</i>", ["i"]));
+        $this->assertSame("<v O'Neil>We're out.", Markup::keepTags("<v O'Neil>We're out.", ["v"]));
+        $this->assertSame('<v Mo "Baker>Two rolls.', Markup::keepTags('<v Mo "Baker>Two rolls.', Markup::CORE_TAGS));
+        $this->assertSame("<font color='#ff0000'>Red</font> jam", Markup::keepTags("<font color='#ff0000'>Red</font> <s>jam</s>", ["font"]));
+        $this->assertSame("It's x", Markup::keepTags("It's <c.loud>x</c>", ["i"]));
+    }
+
+
+    public function testKeepTagsComparesTagNamesWithoutCase(): void
+    {
+        $this->assertSame("<B>bold</B> <c.Loud>x</c.Loud> y", Markup::keepTags("<B>bold</B> <c.Loud>x</c.Loud> <i>y</i>", ["b", "C.loud"]));
+    }
+
+
+    public function testPlainLinesAndVisibleLengthKeepTextAfterQuotesInTags(): void
+    {
+        $this->assertSame(["We're out."], Markup::plainLines(["<v O'Neil>We're out.", "<i></i>"]));
+        $this->assertSame(10, Markup::visibleLength("<v O'Neil>We're out."));
+    }
+
+
     public function testDecodeEntities(): void
     {
         $this->assertSame("<b>1 & 2</b> \"it's\"", Markup::decodeEntities("&lt;b&gt;1 &amp; 2&lt;/b&gt; &quot;it&#39;s&quot;"));

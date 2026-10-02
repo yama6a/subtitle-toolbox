@@ -11,9 +11,14 @@ class Markup
     public const WORD_TIMESTAMP_REGEX = "/(<\d{2,}:[0-5]\d:[0-5]\d\.\d{3}>)/";
 
 
+    // A tag ends at the first ">", even after a lone quote as in <v O'Neil>. strip_tags() would read the quote as
+    // the start of an attribute value and remove the text up to the next quote.
+    private const TAG_REGEX = '/<(?![ \t\n\r\f\v])[^<>]*>/';
+
+
     public static function stripAllTags(string $text): string
     {
-        return strip_tags($text);
+        return self::keepTags($text, []);
     }
 
 
@@ -24,7 +29,14 @@ class Markup
      */
     public static function keepTags(string $text, array $tagNames): string
     {
-        return strip_tags($text, $tagNames);
+        $keep = array_map("strtolower", $tagNames);
+
+        return preg_replace_callback(
+            self::TAG_REGEX,
+            fn (array $tag): string => preg_match('/^<\/?([^\s\/>]+)/', $tag[0], $name) === 1
+                && in_array(strtolower($name[1]), $keep, true) ? $tag[0] : "",
+            $text
+        ) ?? $text;
     }
 
 
