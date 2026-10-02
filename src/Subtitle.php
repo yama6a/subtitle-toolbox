@@ -11,6 +11,7 @@ use SubtitleToolbox\Parsers\SubtitleParser;
 class Subtitle
 {
     use Retiming;
+    use Validation;
 
     /** @var array|SubtitleCue[] */
     protected $cues;
