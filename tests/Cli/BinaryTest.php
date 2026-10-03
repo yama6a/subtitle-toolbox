@@ -9,8 +9,10 @@ use SubtitleToolbox\FormatRegistry;
 use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\MergeShortCuesOptions;
-use SubtitleToolbox\ResegmentOptions;
 use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Profanity\ProfanityFilter;
+use SubtitleToolbox\Profanity\ProfanityOptions;
+use SubtitleToolbox\ResegmentOptions;
 use SubtitleToolbox\Subtitle;
 
 /**
@@ -333,6 +335,39 @@ class BinaryTest extends TestCase
             [2, "", "Error: Unknown speaker mode \"names\". Known modes: prefix, dashes, colours, from-prefix.\n" .
                     "Run \"subtitle-toolbox help convert\" for the usage.\n"],
             $this->runBinary(["convert", "voices.vtt", "--to", "srt", "--speakers", "names"])
+        );
+    }
+
+
+    public function testMaskWords(): void
+    {
+        $files = __DIR__ . "/../files/profanity/";
+        copy($files . "keys.srt", "$this->dir/keys.srt");
+        copy($files . "words.txt", "$this->dir/words.txt");
+        $masked = function (string $mask): string {
+            $subtitle = Subtitle::parse($this->file("keys.srt"));
+            ProfanityFilter::apply($subtitle, new ProfanityOptions(mask: $mask, wordFile: "$this->dir/words.txt"));
+
+            return $subtitle->format(SubRipFormatter::class);
+        };
+
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "keys.srt", "--to", "srt", "-o", "-", "--mask-words", "words.txt"]);
+        $this->assertSame([0, $masked(ProfanityOptions::MASK_STARS), ""], [$code, $stdout, $stderr]);
+        $this->assertStringContainsString("- Go to ****.\n", $stdout);
+
+        $this->assertSame(
+            [0, $masked(ProfanityOptions::MASK_FIRST_LETTER), ""],
+            $this->runBinary(["convert", "keys.srt", "--to", "srt", "-o", "-", "--mask-words", "words.txt", "--mask", "first-letter"])
+        );
+        $this->assertSame(
+            [0, $masked(ProfanityOptions::MASK_REMOVE), ""],
+            $this->runBinary(["convert", "keys.srt", "--to", "srt", "-o", "-", "--mask-words", "words.txt", "--mask", "remove"])
+        );
+        $this->assertSame(2, $this->runBinary(["convert", "keys.srt", "--to", "srt", "--mask-words", "words.txt", "--mask", "beep"])[0]);
+        $this->assertSame(2, $this->runBinary(["convert", "keys.srt", "--to", "srt", "--mask", "stars"])[0]);
+        $this->assertSame(
+            [2, "", "Error: Cannot read the word file missing.txt.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            $this->runBinary(["convert", "keys.srt", "--to", "srt", "--mask-words", "missing.txt"])
         );
     }
 
