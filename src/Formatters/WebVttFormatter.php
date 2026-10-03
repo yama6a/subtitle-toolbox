@@ -164,7 +164,7 @@ class WebVttFormatter extends SubtitleFormatter
 
 
     /**
-     * strip_tags() compares the whole name before the first space, so "c.yellow" must be allowed next to "c".
+     * Markup::keepTags() compares the whole name before the first space, so "c.yellow" must be allowed next to "c".
      *
      * @see https://www.w3.org/TR/webvtt1/#webvtt-cue-span-start-tag
      */
