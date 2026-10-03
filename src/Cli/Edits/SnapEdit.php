@@ -27,7 +27,7 @@ final class SnapEdit extends Edit
         return [
             Option::value("snap-shot-changes", "FILE", "Time cues to these shot changes: one time per line in seconds or hh:mm:ss.mmm, or the log of the FFmpeg showinfo filter."),
             Option::value("video-fps", "RATE", "Frame rate of the video, for the shot changes and the --snap- options. Required with them."),
-            Option::value("snap-window", "FRAMES", "Largest move to a shot change, and largest gap that closes. Default: half a second."),
+            Option::value("snap-window-frames", "FRAMES", "Largest move to a shot change, and largest gap that closes. Default: half a second."),
             Option::value("snap-min-gap-frames", "FRAMES", "Gap between a cue and the next cue or shot change. Default: 2."),
             Option::value("snap-min-duration-frames", "FRAMES", "No move makes a cue shorter than this. Default: 20."),
             Option::flag("snap-no-chain", "Keep small gaps between cues."),
@@ -38,7 +38,7 @@ final class SnapEdit extends Edit
     public static function fromArguments(Arguments $arguments): ?static
     {
         $videoFps = $arguments->positiveFloat("video-fps") ?? $arguments->positiveFloat("fps");
-        $snaps    = array_filter(["snap-shot-changes", "snap-window", "snap-min-gap-frames", "snap-min-duration-frames", "snap-no-chain"], $arguments->has(...));
+        $snaps    = array_filter(["snap-shot-changes", "snap-window-frames", "snap-min-gap-frames", "snap-min-duration-frames", "snap-no-chain"], $arguments->has(...));
         if ($snaps === []) {
             if ($arguments->has("video-fps")) {
                 Command::fail("Pass --snap-shot-changes FILE with --video-fps.");
@@ -58,7 +58,7 @@ final class SnapEdit extends Edit
             return new self(new ShotChangeOptions(
                 frameRate: $videoFps,
                 shotChanges: $path === null ? [] : self::loadShotChanges($path),
-                snapWindow: self::frames($arguments, "snap-window"),
+                snapWindow: self::frames($arguments, "snap-window-frames"),
                 minGapFrames: self::frames($arguments, "snap-min-gap-frames") ?? 2,
                 chain: !$arguments->has("snap-no-chain"),
                 minDuration: self::frames($arguments, "snap-min-duration-frames") ?? 20,

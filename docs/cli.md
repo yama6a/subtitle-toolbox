@@ -55,9 +55,21 @@ php subtitle-toolbox.phar --version
 ## Input and output
 - **Inputs**: a file, a directory, a glob such as `"season1/*.srt"`, or `-` for standard input. A directory gives its files with a known extension.
 - **Input format**: `--from`, else format detection on the content, else the file extension. Chapters and cloud speech-to-text JSON need `--from`, for example `--from deepgram` or `--from ffmeta`. The tool reads like `Subtitle::loadAutoDetectFormat()`, see [formats.md](formats.md#load-and-save).
-- **Output**: `--output` for one file, `--output-dir`, or `--in-place`. `--output -` writes standard output. Without these, `convert` writes next to the input with the new extension, and the other commands write standard output.
-- **Overwrite**: the tool never overwrites a file without `--force` or `--in-place`.
-- **Batch**: the tool prints one line per file and a summary. It stops at the first failed file, unless you pass `--keep-going`.
+- **Output**: `-o` or `--output` for one file, `--output-dir`, or `--in-place`. `--output -` writes standard output. `convert`, `retime`, `sync`, `translate` and `dual` take all 4. `hls` takes only `--output-dir`.
+- **Default output**: without these options, one input goes to standard output. With 2 or more inputs, each output goes next to its input, with the extension of the output format. The tool counts the inputs after it expands directories and globs.
+
+| Call | Writes |
+|:--- |:--- |
+| `convert movie.srt --to vtt` | standard output |
+| `convert movie.srt --to vtt -o movie.vtt` | `movie.vtt` |
+| `convert a.srt b.srt --to vtt` | `a.vtt` and `b.vtt` |
+| `retime a.srt b.srt --shift 1` | nothing. The command fails, because each output would overwrite its input |
+| `retime a.srt b.srt --shift 1 --in-place` | `a.srt` and `b.srt` |
+
+- **Inputs stay**: the tool never overwrites an input file without `--in-place`, not even with `--force`. Such a file fails with a message that names `--in-place`, `-o` and `--output-dir`. With `--keep-going`, the other files still get written.
+- **Overwrite**: the tool overwrites another existing file only with `--force`.
+- **Batch**: the tool prints one line per file and a summary. It stops at the first failed file, unless you pass `--keep-going`. Every command that reads a file takes `--keep-going`, also `diff`, `dual` and `hls`, which read one input.
+- **Option names**: `--no-X` always turns X off, for example `--no-bom`. A time option is in seconds, unless its name ends in `-frames`.
 - **Encoding**: `--encoding` names the encoding of the input, for example `Windows-1252`. See [encodings.md](encodings.md).
 - **Output bytes**: `--line-ending lf|crlf`, `--bom` and `--no-bom`.
 - **Broken files**: `--lenient` skips or repairs broken cues and prints a warning for each, see [lenient-parsing.md](lenient-parsing.md).
@@ -107,7 +119,8 @@ movie.mkv
 
 - **Detection**: the tool knows an MKV or WebM file by its first 4 bytes, not by its extension. Standard input works too.
 - **Track**: a file with one subtitle track needs no `--track`. For a file with more, the tool fails and lists the tracks.
-- **Format**: an `S_TEXT/UTF8` track is SubRip, ASS and SSA tracks are ASS, `S_TEXT/WEBVTT` is WebVTT and `S_HDMV/PGS` is PGS. Without `--to`, the output keeps this format. `convert movie.mkv --to srt` writes `movie.srt`.
+- **Format**: an `S_TEXT/UTF8` track is SubRip, ASS and SSA tracks are ASS, `S_TEXT/WEBVTT` is WebVTT and `S_HDMV/PGS` is PGS. Without `--to`, the output keeps this format. `convert movie.mkv --to srt --track 3 --output-dir out` writes `out/movie.srt`.
+- **Second file**: `diff` and `dual` read the track of their second file with `--track2`, for example `diff old.mkv new.mkv --track 3 --track2 8`.
 - **Info**: without `--track`, `info` lists the tracks of a file whose extension names no subtitle format, such as `.mkv` and `.webm`. In the JSON, each track has `number`, `codecId`, `language`, `name`, `default` and `forced`. With `--track`, `info` prints the statistics of the track.
 - **Directories**: a directory argument skips MKV and WebM files. Pass them by name or with a glob.
 - **Errors**: `S_VOBSUB` tracks, bzlib and LZO compression and encryption fail, see [mkv.md](mkv.md).
@@ -137,13 +150,16 @@ vendor/bin/subtitle-toolbox retime movie.sub --from-fps 25 --to-fps 23.976 --inp
 The deprecated commands print `shift is deprecated. Use: subtitle-toolbox retime movie.srt --shift 2` on standard error, then run. `fps FILE --from A --to B` fails with exit code 2 and prints `fps was removed. Use: subtitle-toolbox retime FILE --from-fps A --to-fps B`.
 
 ## Convert
-`convert` reads each input, runs the edits of its options, and writes the result in the format of `--to` or of the output file extension. One call can run OCR, fix text, strip SDH, retime and convert:
+`convert` reads each input, runs the edits of its options, and writes the result in the format of `--to` or of the output file extension. Without both, the output keeps the input format. One call can run OCR, fix text, strip SDH, retime and convert:
 
 ```sh
 vendor/bin/subtitle-toolbox convert movie.sup movie.srt --ocr --fix-common-errors --sdh --shift -1.5
 vendor/bin/subtitle-toolbox convert lecture.json lecture.srt --fix-resegment --fix-min-duration 1
 vendor/bin/subtitle-toolbox convert song.json song.ass --ass-karaoke-tag kf
+vendor/bin/subtitle-toolbox convert season1/*.srt --fix-common-errors --in-place
 ```
+
+- **Output file argument**: `convert IN OUT` reads `IN` and writes `OUT` only without `--to`, `-o`, `--output-dir` and `--in-place`. With one of them, both arguments are inputs.
 
 ### Order
 `convert` always runs the edits in this order, whatever the order of the options:
@@ -225,7 +241,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 |:--- |:--- |
 | `--snap-shot-changes FILE` | [`ShotChangeTiming::apply()`](editing.md#shot-changes-and-gaps) with the shot changes of the file: the log of the FFmpeg `showinfo` filter, or one time per line in seconds or `hh:mm:ss.mmm` |
 | `--video-fps RATE` | `frameRate`, the frame rate of the shot changes and of the frame options. Required with the `--snap-` options |
-| `--snap-window FRAMES` | `snapWindow`, default half a second |
+| `--snap-window-frames FRAMES` | `snapWindow`, default half a second |
 | `--snap-min-gap-frames FRAMES` | `minGapFrames`, default 2 |
 | `--snap-min-duration-frames FRAMES` | `minDuration`, default 20 |
 | `--snap-no-chain` | `chain: false` |
@@ -259,6 +275,7 @@ vendor/bin/subtitle-toolbox convert movie.srt movie.timed.srt --video-fps 24 --s
 | `fix --language`, `convert --case-language` | `--language` |
 | `strip-sdh FILE --X` | `convert FILE --sdh --sdh-X`, for example `--lyrics` becomes `--sdh-lyrics` |
 | `snap FILE --shot-changes F` | `convert FILE --snap-shot-changes F` |
+| `snap --snap-window` | `--snap-window-frames` |
 | `snap --min-gap-frames`, `--min-duration-frames`, `--no-chain` | `--snap-min-gap-frames`, `--snap-min-duration-frames`, `--snap-no-chain` |
 | `--regex`, `--ignore-case` | `--replace-regex`, `--replace-ignore-case` |
 | `--karaoke-tag` | `--ass-karaoke-tag` |
@@ -277,11 +294,11 @@ vendor/bin/subtitle-toolbox convert movie.srt movie.timed.srt --video-fps 24 --s
 | `--min-duration`, `--max-duration`, `--min-gap` | `minDuration`, `maxDuration`, `minGap` |
 | `--max-wpm`, `--min-seconds-per-word` | `maxWordsPerMinute`, `minSecondsPerWord` |
 | `--max-speakers`, `--dialogue-dash STYLE`, `--allowed-characters CHARS` | `maxSpeakersPerCue`, `dialogueDashStyle`, `allowedCharacters` |
-| `--no-overlap`, `--no-empty-cues`, `--no-double-spaces` | `noOverlap`, `noEmptyCues`, `noDoubleSpaces` |
-| `--no-leading-or-trailing-spaces`, `--no-unbalanced-tags`, `--no-all-caps-lines` | `noLeadingOrTrailingSpaces`, `noUnbalancedTags`, `noAllCapsLines` |
+| `--check-overlap`, `--check-empty-cues`, `--check-double-spaces` | `noOverlap`, `noEmptyCues`, `noDoubleSpaces` |
+| `--check-leading-or-trailing-spaces`, `--check-unbalanced-tags`, `--check-all-caps-lines` | `noLeadingOrTrailingSpaces`, `noUnbalancedTags`, `noAllCapsLines` |
 
 ```sh
-vendor/bin/subtitle-toolbox validate movie.srt --preset bbc --no-unbalanced-tags --dialogue-dash '- '
+vendor/bin/subtitle-toolbox validate movie.srt --preset bbc --check-unbalanced-tags --dialogue-dash '- '
 ```
 
 ## Sync
@@ -321,6 +338,7 @@ vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-format
 |:--- |:--- |
 | `--time-tolerance SECONDS` | `timeTolerance`, default 0.001 |
 | `--ignore-formatting`, `--ignore-whitespace`, `--text-only` | `ignoreFormatting`, `ignoreWhitespace`, `textOnly` |
+| `--from2 FORMAT`, `--track2 NUMBER` | the format and the MKV or WebM track of the new file. `--from` and `--track` apply to the old file |
 | `--json` | one object with `old`, `new`, `equal` and `differences`. A difference has `kind`, `oldIndex`, `newIndex`, `old` and `new`. A cue has `start`, `end`, `lines` and `forced` |
 
 ## Translate
@@ -359,6 +377,9 @@ vendor/bin/subtitle-toolbox dual movie.en.srt movie.de.srt --mode top-bottom -o 
 | `--secondary-style TAG` | `secondaryStyle`, for example `i` or `'font color="#ffff00"'` |
 | `--secondary-alignment 1-9` | `secondaryAlignment` for `top-bottom`, default 8 |
 | `--snap-tolerance SECONDS` | `snapTolerance` for `top-bottom`, default 0.25 |
+| `--from2 FORMAT`, `--track2 NUMBER` | the format and the MKV or WebM track of the secondary file. `--from` and `--track` apply to the primary file |
+
+- **Output**: one result, so it goes to standard output unless `-o`, `--output-dir` or `--in-place` sets a file. `--in-place` overwrites the primary file.
 
 ## HLS
 `hls` cuts one subtitle into WebVTT segments with [`HlsWebVttSegmenter`](hls.md) and writes them with the playlist into `--output-dir`.

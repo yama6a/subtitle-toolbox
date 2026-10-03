@@ -26,6 +26,11 @@ abstract class WriteCommand extends FileCommand
 
     protected bool $dataOnStdout = false;
 
+    /** @var list<string> the real paths of the input files */
+    private array $inputPaths = [];
+
+    private bool $nextToInput = false;
+
     protected ?float $outputFps = null;
 
     private WriteOptions $writeOptions;
@@ -37,27 +42,12 @@ abstract class WriteCommand extends FileCommand
     }
 
 
-    protected function allowsInPlace(): bool
-    {
-        return true;
-    }
-
-
     /**
      * Returns the subtitle to write, changed in place or new.
      */
     protected function transform(Subtitle $subtitle, Arguments $arguments, Console $console, string $input): Subtitle
     {
         return $subtitle;
-    }
-
-
-    /**
-     * Returns the output path when no --output, --output-dir or --in-place is given, or "-" for standard output.
-     */
-    protected function defaultTarget(string $input, string $fileName): string
-    {
-        return self::DASH;
     }
 
 
@@ -78,16 +68,12 @@ abstract class WriteCommand extends FileCommand
      */
     protected function outputOptions(): array
     {
-        $options   = [Option::value("to", "FORMAT", "Output format. Default: the format of the --output extension, else the input format.")];
-        $options[] = Option::value("output", "PATH", "Output file, or - for standard output. Takes one input file.", "o");
-        $options[] = Option::value("output-dir", "DIR", "Write each output file into this directory. Creates it when it is missing.");
-        if ($this->allowsInPlace()) {
-            $options[] = Option::flag("in-place", "Overwrite each input file.");
-        }
-
         return [
-            ...$options,
-            Option::flag("force", "Overwrite output files that exist."),
+            Option::value("to", "FORMAT", "Output format. Default: the format of the --output extension, else the input format."),
+            Option::value("output", "PATH", "Output file, or - for standard output. Takes one input file.", "o"),
+            Option::value("output-dir", "DIR", "Write each output file into this directory. Creates it when it is missing."),
+            Option::flag("in-place", "Overwrite each input file."),
+            Option::flag("force", "Overwrite output files that exist. Never overwrites an input file, see --in-place."),
             Option::value("output-fps", "RATE", "Frame rate of MicroDVD and iTT output. Default: the frame rate of a MicroDVD or iTT input."),
             Option::value("line-ending", "lf|crlf", "Line ending of the output. Default: lf."),
             Option::flag("bom", "Start the output with a UTF-8 BOM."),
@@ -130,16 +116,26 @@ abstract class WriteCommand extends FileCommand
             self::fail("--output takes one input file, got " . count($inputs) . ". Use --output-dir for several files.");
         }
 
-        $toStdout = $this->output === self::DASH || in_array(self::DASH, $inputs, true);
-        if ($this->output === null && !$arguments->has("output-dir") && !$arguments->has("in-place")) {
-            $defaultsToStdout = array_filter($inputs, fn (string $input): bool =>
-                $input !== self::DASH && $this->defaultTarget($input, basename($input)) === self::DASH);
-            if ($defaultsToStdout !== [] && count($inputs) > 1) {
-                self::fail("Pass --output-dir or --in-place for several input files.");
-            }
-            $toStdout = $toStdout || $defaultsToStdout !== [];
-        }
-        $this->dataOnStdout = $toStdout;
+        $this->inputPaths   = array_values(array_filter(array_map(
+            fn (string $input): string|false => $input === self::DASH ? false : realpath($input),
+            $this->readPaths($inputs, $arguments)
+        )));
+        $defaultTarget      = $this->output === null && !$arguments->has("output-dir") && !$arguments->has("in-place");
+        $this->nextToInput  = $defaultTarget && count($inputs) > 1;
+        $this->dataOnStdout = $this->output === self::DASH || in_array(self::DASH, $inputs, true) || ($defaultTarget && count($inputs) === 1);
+    }
+
+
+    /**
+     * Returns the files that the command reads, which it never overwrites without --in-place.
+     *
+     * @param list<string> $inputs
+     *
+     * @return list<string>
+     */
+    protected function readPaths(array $inputs, Arguments $arguments): array
+    {
+        return $inputs;
     }
 
 
@@ -162,10 +158,13 @@ abstract class WriteCommand extends FileCommand
 
     protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
-        $subtitle = $this->transform($subtitle, $arguments, $console, $input);
-
         $outputFormat = $this->outputFormat($format);
         $target       = $this->target($input, $format, $outputFormat, $arguments);
+        if ($target !== self::DASH && !$arguments->has("in-place") && $this->isInput($target)) {
+            self::fail("The output $target is an input file. Pass --in-place to overwrite it, or -o or --output-dir to write another file.");
+        }
+
+        $subtitle = $this->transform($subtitle, $arguments, $console, $input);
 
         try {
             $content = $subtitle->toString($outputFormat, $this->formatterOptions($outputFormat, $arguments));
@@ -179,7 +178,7 @@ abstract class WriteCommand extends FileCommand
             return;
         }
 
-        $this->write($input, $target, $content, $arguments);
+        $this->write($target, $content, $arguments);
         $this->report($console, self::label($input) . " -> $target\n");
     }
 
@@ -222,7 +221,8 @@ abstract class WriteCommand extends FileCommand
         if ($this->output !== null) {
             return $this->output;
         }
-        if ($input === self::DASH) {
+        $directory = $arguments->value("output-dir");
+        if ($input === self::DASH || ($directory === null && !$this->nextToInput && !$arguments->has("in-place"))) {
             return self::DASH;
         }
         if ($arguments->has("in-place")) {
@@ -235,20 +235,26 @@ abstract class WriteCommand extends FileCommand
             $fileName = pathinfo($fileName, PATHINFO_FILENAME) . "." . $extensions[0];
         }
 
-        $directory = $arguments->value("output-dir");
+        if ($directory !== null) {
+            return rtrim($directory, "/\\") . "/$fileName";
+        }
+        $inputDirectory = dirname($input);
 
-        return $directory === null ? $this->defaultTarget($input, $fileName) : rtrim($directory, "/\\") . "/$fileName";
+        return $inputDirectory === "." && !str_starts_with($input, ".") ? $fileName : "$inputDirectory/$fileName";
     }
 
 
-    private function write(string $input, string $target, string $content, Arguments $arguments): void
+    private function isInput(string $path): bool
     {
-        $isInput = $input !== self::DASH && file_exists($target) && realpath($target) === realpath($input);
-        if ($isInput && !$arguments->has("in-place") && !$arguments->has("force")) {
-            self::fail("The output $target is the input file. Pass " . ($this->allowsInPlace() ? "--in-place or " : "") .
-                       "--force to overwrite it.");
-        }
-        if (!$isInput && file_exists($target) && !$arguments->has("force")) {
+        $realPath = realpath($path);
+
+        return $realPath !== false && in_array($realPath, $this->inputPaths, true);
+    }
+
+
+    private function write(string $target, string $content, Arguments $arguments): void
+    {
+        if (!$this->isInput($target) && file_exists($target) && !$arguments->has("force")) {
             self::fail("$target exists. Pass --force to overwrite it.");
         }
 

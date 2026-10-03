@@ -59,12 +59,6 @@ class HlsCommand extends FileCommand
     }
 
 
-    protected function inputOptions(): array
-    {
-        return array_values(array_filter(parent::inputOptions(), fn (Option $option): bool => $option->name !== "keep-going"));
-    }
-
-
     protected function prepare(Arguments $arguments): void
     {
         parent::prepare($arguments);

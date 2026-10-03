@@ -32,15 +32,17 @@ class ConvertCommand extends WriteCommand
 
     protected function usageLines(): array
     {
-        return ["<input> <output> [options]", "<input>... --to FORMAT [options]"];
+        return ["<input> <output> [options]", "<input>... [--to FORMAT] [options]"];
     }
 
 
     protected function details(): string
     {
-        return "With two arguments and no --to, the second argument is the output file, and its extension sets the format.\n" .
-               "Without --output or --output-dir, each output file goes next to its input file, with the extension of\n" .
-               "the output format. An input argument can be a file, a directory, a glob such as \"season1/*.srt\", or -.\n\n" .
+        return "With two arguments and no --to, --output, --output-dir or --in-place, the second argument is the output\n" .
+               "file, and its extension sets the format. Without --to, the output keeps the input format. Without --output,\n" .
+               "--output-dir or --in-place, one input file goes to standard output, and several go next to their input\n" .
+               "files, with the extension of the output format. An input argument can be a file, a directory, a glob such\n" .
+               "as \"season1/*.srt\", or -.\n\n" .
                "convert runs the edits in this order: --ocr, --forced-only, --fix-common-errors, --sdh, --replace,\n" .
                "--strip-tags, --case, --speakers, --mask-words, the structure fixes from --fix-resegment to\n" .
                "--fix-merge-duplicates, --shift, --scale, --from-fps and --to-fps, --snap-shot-changes, --fix-overlaps,\n" .
@@ -57,12 +59,6 @@ class ConvertCommand extends WriteCommand
     protected function commandOptions(): array
     {
         return [...EditPipeline::options(), ...AssOutput::options()];
-    }
-
-
-    protected function allowsInPlace(): bool
-    {
-        return false;
     }
 
 
@@ -86,9 +82,6 @@ class ConvertCommand extends WriteCommand
     {
         parent::prepare($arguments);
 
-        if ($this->toFormat === null && ($this->output === null || $this->output === self::DASH)) {
-            self::fail("Pass --to FORMAT or an output file.");
-        }
         $this->edits     = EditPipeline::fromArguments($arguments);
         $this->assOutput = AssOutput::fromArguments($arguments);
     }
@@ -108,14 +101,6 @@ class ConvertCommand extends WriteCommand
         if (count($inputs) > 1 && ($arguments->has("mute-edl") || $arguments->has("mute-filter"))) {
             self::fail("--mute-edl and --mute-filter take one input file, got " . count($inputs) . ".");
         }
-    }
-
-
-    protected function defaultTarget(string $input, string $fileName): string
-    {
-        $directory = dirname($input);
-
-        return $directory === "." && !str_starts_with($input, ".") ? $fileName : "$directory/$fileName";
     }
 
 
@@ -144,6 +129,6 @@ class ConvertCommand extends WriteCommand
     private function usesPositionalOutput(Arguments $arguments): bool
     {
         return count($arguments->positionals) === 2 && !$arguments->has("to")
-            && !$arguments->has("output") && !$arguments->has("output-dir");
+            && !$arguments->has("output") && !$arguments->has("output-dir") && !$arguments->has("in-place");
     }
 }
