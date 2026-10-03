@@ -717,6 +717,25 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testInfoListsTheParseWarnings(): void
+    {
+        $this->assertSame([], json_decode($this->runBinary(["info", "trip.srt", "--json"])[1], true)["warnings"]);
+
+        [$code, $stdout, $stderr] = $this->runBinary(["info", "broken.srt", "--json", "--lenient"]);
+        $this->assertSame(0, $code);
+        $this->assertSame([[
+            "lineNumber" => 5,
+            "blockIndex" => 1,
+            "message"    => "Block #1 doesn't seem to have its timestamps on its second line!",
+            "action"     => "skipped",
+        ]], json_decode($stdout, true)["warnings"]);
+        $this->assertSame("broken.srt: line 5: Block #1 doesn't seem to have its timestamps on its second line! (skipped)\n", $stderr);
+
+        $this->assertMatchesRegularExpression('/^  Warnings: +1$/m', $this->runBinary(["info", "broken.srt", "--lenient"])[1]);
+        $this->assertDoesNotMatchRegularExpression('/Warnings/', $this->runBinary(["info", "trip.srt"])[1]);
+    }
+
+
     public function testValidateWithThePreset(): void
     {
         [$code, $stdout, $stderr] = $this->runBinary(["validate", "trip.srt", "--preset", "netflix-en"]);

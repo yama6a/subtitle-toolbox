@@ -172,6 +172,10 @@ vendor/bin/subtitle-toolbox fix lecture.json --resegment -o lecture.srt
 | `--lyrics` | removes text between two music symbols |
 | `--brackets PAIR` | also removes text between this pair, for example `"{}"` or `"**"`. Repeatable |
 
+## Info
+- **Warnings**: with `--lenient`, `info` prints `Warnings: 1` for a file with one broken cue. The JSON holds a `warnings` list, empty for a file without warnings. A warning has `lineNumber`, `blockIndex`, `message` and `action`, see [lenient-parsing.md](lenient-parsing.md).
+- **MKV and WebM**: see [MKV and WebM](#mkv-and-webm).
+
 ## Validate
 `--preset` takes `netflix-en` or `bbc`, see [validation.md](validation.md#presets). A rule option overrides the value of the preset. `--fps` sets the frame rate for the 2-frame gap of `netflix-en`, default 23.976.
 

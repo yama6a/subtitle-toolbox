@@ -4,6 +4,7 @@ namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Container\Matroska\MatroskaTrack;
 use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\SubtitleStatistics;
@@ -83,6 +84,9 @@ class InfoCommand extends ReportCommand
             "Format" => $format,
             "Cues"   => (string)$statistics->getCueCount(),
         ];
+        if ($this->parseWarnings !== []) {
+            $rows["Warnings"] = (string)count($this->parseWarnings);
+        }
         if ($imageCues !== []) {
             $rows["Image cues"] = count($imageCues) . ", $imageCuesWithText with text";
         }
@@ -115,6 +119,12 @@ class InfoCommand extends ReportCommand
             "metadata"   => (object)$subtitle->getAllMetadata(),
             "statistics" => $data,
             "imageCues"  => ["count" => count($imageCues), "withText" => $imageCuesWithText],
+            "warnings"   => array_map(fn (ParseWarning $warning): array => [
+                "lineNumber" => $warning->lineNumber,
+                "blockIndex" => $warning->blockIndex,
+                "message"    => $warning->message,
+                "action"     => $warning->action,
+            ], $this->parseWarnings),
         ]);
     }
 }

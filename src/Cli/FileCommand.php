@@ -6,6 +6,7 @@ use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Matroska\MatroskaTrack;
 use SubtitleToolbox\FormatDetector;
 use SubtitleToolbox\FormatRegistry;
+use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\SubtitleParser;
 use SubtitleToolbox\Parsers\VobSubParser;
@@ -40,6 +41,9 @@ abstract class FileCommand extends Command
     protected bool $fromContainer = false;
 
     protected bool $wordTimestamps = false;
+
+    /** @var list<ParseWarning> */
+    protected array $parseWarnings = [];
 
     private bool $readingSecondFile = false;
 
@@ -281,6 +285,7 @@ abstract class FileCommand extends Command
     protected function read(string $input, Arguments $arguments, Console $console): ?array
     {
         $this->fromContainer = false;
+        $this->parseWarnings = [];
         if ($input !== self::DASH && is_file($input) && self::isMatroskaFile($input)) {
             return $this->readMatroska(MatroskaReader::open($input), $input, $arguments, $console);
         }
@@ -311,7 +316,8 @@ abstract class FileCommand extends Command
             $subtitle = $parser->parse($content);
         }
 
-        foreach ($parser->getWarnings() as $warning) {
+        $this->parseWarnings = $parser->getWarnings();
+        foreach ($this->parseWarnings as $warning) {
             $console->err(self::label($input) . ": line $warning->lineNumber: $warning->message ($warning->action)\n");
         }
 
