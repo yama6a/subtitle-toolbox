@@ -297,6 +297,20 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testForcedOnly(): void
+    {
+        copy(__DIR__ . "/../files/forced/forced_signs_2398.itt", "$this->dir/signs.itt");
+        $expected = Subtitle::parse($this->file("signs.itt"))->forcedOnly()->format(SubRipFormatter::class);
+
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "signs.itt", "signs.srt", "--forced-only"]);
+
+        $this->assertSame([0, "signs.itt -> signs.srt\n", ""], [$code, $stdout, $stderr]);
+        $this->assertSame($expected, $this->file("signs.srt"));
+        $this->assertSame(3, substr_count($expected, " --> "));
+        $this->assertSame(6, substr_count($this->runBinary(["convert", "signs.itt", "--to", "srt", "-o", "-"])[1], " --> "));
+    }
+
+
     public function testMicroDvdNeedsTheFrameRate(): void
     {
         [$code, , $stderr] = $this->runBinary(["convert", "frames.sub", "--to", "srt", "-o", "-"]);

@@ -1010,6 +1010,7 @@ curl -s https://example.com/movie.srt | vendor/bin/subtitle-toolbox convert - --
 - **CSV and TSV**: TSV output has tabs between the cells. CSV output from a TSV input has commas. Other CSV output keeps the delimiter of the input table.
 - **Overwrite**: the tool never overwrites a file without `--force` or `--in-place`.
 - **Batch**: the tool prints one line per file and a summary. It stops at the first failed file, unless you pass `--keep-going`.
+- **Forced cues**: `convert --forced-only` keeps only the forced cues, as `forcedOnly()` does. See [Forced cues](#forced-cues).
 - **Validate**: `--preset` takes `netflix-en` or `bbc`, see [Validation](#validation). A rule option overrides the value of the preset. The table below gives the rule of each option.
 - **Exit code**: 0 when all files succeed, 1 when a file fails or breaks a validation rule, 2 for invalid arguments.
 - **Version**: `subtitle-toolbox --version` prints the installed release, for example `1.40.0`, or `dev` in a Git checkout.

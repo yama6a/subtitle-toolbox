@@ -45,6 +45,7 @@ class ConvertCommand extends WriteCommand
     {
         return [
             Option::flag("strip-tags", "Remove all formatting tags, such as <i> and <font>, from the cue text."),
+            Option::flag("forced-only", "Keep only the forced cues, for example the translations of signs."),
             Option::flag("ocr", "Read the text of image cues, for example from PGS or VobSub, with GlyphOcrEngine."),
             Option::value("ocr-database", "FILE", "The .nocr glyph database for --ocr. Default: the Latin database of php-glyph-ocr."),
         ];
@@ -98,6 +99,10 @@ class ConvertCommand extends WriteCommand
 
     protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
     {
+        if ($arguments->has("forced-only")) {
+            $subtitle = $subtitle->forcedOnly();
+        }
+
         if ($this->ocrDatabase !== null) {
             $total = count(array_filter($subtitle->getCues(),
                                         fn (SubtitleCue $cue): bool => CueImage::isImageCue($cue) && $cue->getLines() === []));
