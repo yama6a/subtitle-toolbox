@@ -17,7 +17,9 @@ use SubtitleToolbox\Ocr\TesseractOcrEngine;
 use SubtitleToolbox\Profanity\MuteRange;
 use SubtitleToolbox\Profanity\ProfanityFilter;
 use SubtitleToolbox\Profanity\ProfanityOptions;
+use SubtitleToolbox\Speakers\SpeakerLabelOptions;
 use SubtitleToolbox\Speakers\SpeakerLabels;
+use SubtitleToolbox\Speakers\SpeakerStyle;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -286,7 +288,7 @@ class ConvertCommand extends WriteCommand
     protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         if ($arguments->has("forced-only")) {
-            $subtitle = $subtitle->forcedOnly();
+            $subtitle = $subtitle->onlyForced();
         }
 
         if ($this->ocrEngine !== null) {
@@ -318,13 +320,16 @@ class ConvertCommand extends WriteCommand
 
     protected function transform(Subtitle $subtitle, Arguments $arguments): void
     {
-        match ($arguments->value("speakers")) {
-            "prefix"      => SpeakerLabels::toPrefix($subtitle),
-            "dashes"      => SpeakerLabels::toDialogueDashes($subtitle),
-            "colours"     => SpeakerLabels::toColours($subtitle),
-            "from-prefix" => SpeakerLabels::fromPrefix($subtitle),
+        $speakers = match ($arguments->value("speakers")) {
+            "prefix"      => new SpeakerLabelOptions(to: SpeakerStyle::Prefix),
+            "dashes"      => new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes),
+            "colours"     => new SpeakerLabelOptions(to: SpeakerStyle::Colours),
+            "from-prefix" => new SpeakerLabelOptions(from: SpeakerStyle::Prefix),
             null          => null,
         };
+        if ($speakers !== null) {
+            SpeakerLabels::apply($subtitle, $speakers);
+        }
         foreach ($this->replacements as [$from, $to]) {
             $subtitle->replaceText($from, $to, $arguments->has("regex"), !$arguments->has("ignore-case"));
         }
@@ -332,17 +337,14 @@ class ConvertCommand extends WriteCommand
             $subtitle->changeCase($arguments->value("case"), $arguments->value("case-language"));
         }
         if ($this->profanity !== null) {
-            $this->muteRanges = ProfanityFilter::apply($subtitle, $this->profanity);
+            $this->muteRanges = ProfanityFilter::apply($subtitle, $this->profanity)->muteRanges;
         }
         if ($arguments->has("strip-tags")) {
             $subtitle->stripFormatting();
         }
-    }
-
-
-    protected function rebuild(Subtitle $subtitle, Arguments $arguments): Subtitle
-    {
-        return $this->karaoke === null ? $subtitle : WordHighlight::expand($subtitle, $this->karaoke);
+        if ($this->karaoke !== null) {
+            WordHighlight::apply($subtitle, $this->karaoke);
+        }
     }
 
 

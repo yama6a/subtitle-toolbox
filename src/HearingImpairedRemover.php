@@ -1,27 +1,58 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 /**
  * The rules follow the "Remove text for hearing impaired" tool of Subtitle Edit:
  * https://github.com/SubtitleEdit/subtitleedit/blob/5b9ee8baf08c472c7a74fbc337446b656dedabb4/src/libse/Forms/RemoveTextForHI.cs
  */
-trait HearingImpairedRemoval
+final class HearingImpairedRemover
 {
-    private const HEARING_IMPAIRED_MUSIC_SYMBOL = '(?:[\x{2669}-\x{266C}]|(?<!\S)#(?!\S))';
-    private const HEARING_IMPAIRED_UPPER_LABEL  = "(?=[^:\\n]*\\p{Lu})[\\p{Lu}\\p{N}][\\p{Lu}\\p{N}.'&-]*(?:\\h[\\p{Lu}\\p{N}.'&-]+){0,3}";
-    private const HEARING_IMPAIRED_ANY_LABEL    = "\\p{Lu}[\\p{L}\\p{N}.'&-]*(?:\\h[\\p{L}\\p{N}.'&-]+){0,3}";
+    private const MUSIC_SYMBOL = '(?:[\x{2669}-\x{266C}]|(?<!\S)#(?!\S))';
+    private const UPPER_LABEL  = "(?=[^:\\n]*\\p{Lu})[\\p{Lu}\\p{N}][\\p{Lu}\\p{N}.'&-]*(?:\\h[\\p{Lu}\\p{N}.'&-]+){0,3}";
+    private const ANY_LABEL    = "\\p{Lu}[\\p{L}\\p{N}.'&-]*(?:\\h[\\p{L}\\p{N}.'&-]+){0,3}";
 
 
     /**
      * Removes sound descriptions, speaker labels and music lines that the options select, and removes cues that become empty.
      */
-    public function removeHearingImpaired(?HearingImpairedOptions $options = null): self
+    public static function apply(Subtitle $subtitle, HearingImpairedOptions $options): HearingImpairedReport
     {
-        $options ??= new HearingImpairedOptions();
+        $removedLines = 0;
+        $removedCues  = 0;
+        foreach ($subtitle->getCues() as $index => $cue) {
+            $before  = array_values($cue->getLines());
+            $hadText = Markup::hasVisibleText($before);
+            $cue->setLinesByArray(self::removeFromLines($before, $options));
 
-        return $this->textTransformsMapCues(fn (SubtitleCue $cue): array =>
-            self::hearingImpairedRemoveFromLines(array_values($cue->getLines()), $options));
+            if ($hadText && !Markup::hasVisibleText($cue->getLines())) {
+                $subtitle->removeCue($index, false);
+                $removedLines += count($before);
+                $removedCues++;
+            } else {
+                $removedLines += max(0, count($before) - count($cue->getLines()));
+            }
+        }
+
+        if ($removedCues > 0) {
+            $subtitle->reIndexCues();
+        }
+
+        return new HearingImpairedReport($removedLines, $removedCues);
+    }
+
+
+    /**
+     * Returns true when apply() with $options changes $line or removes it.
+     */
+    public static function isAnnotation(string $line, HearingImpairedOptions $options): bool
+    {
+        $cue    = new SubtitleCue(0, 1, $line);
+        $before = $cue->getLines();
+
+        return $cue->setLinesByArray(self::removeFromLines($before, $options))->getLines() !== $before;
     }
 
 
@@ -29,7 +60,7 @@ trait HearingImpairedRemoval
      * @param list<string> $lines
      * @return list<string>
      */
-    private static function hearingImpairedRemoveFromLines(array $lines, HearingImpairedOptions $options): array
+    private static function removeFromLines(array $lines, HearingImpairedOptions $options): array
     {
         $original = $lines;
 
@@ -40,18 +71,18 @@ trait HearingImpairedRemoval
         if ($options->parentheses) {
             $brackets[] = ["(", ")"];
         }
-        $bracketPatterns = array_map(fn (array $pair): string => self::hearingImpairedBracketPattern($pair[0], $pair[1]), $brackets);
+        $bracketPatterns = array_map(fn (array $pair): string => self::bracketPattern($pair[0], $pair[1]), $brackets);
         do {
             $before = $lines;
-            $lines  = self::hearingImpairedRemoveMatches($lines, $bracketPatterns, true);
+            $lines  = self::removeMatches($lines, $bracketPatterns, true);
         } while ($lines !== $before);
 
         if ($options->speakerLabels) {
-            $label = $options->speakerLabelsUpperCaseOnly ? self::HEARING_IMPAIRED_UPPER_LABEL : self::HEARING_IMPAIRED_ANY_LABEL;
-            $lines = self::hearingImpairedRemoveMatches($lines, ["/^\\h*(?:-\\h*)?\\K$label\\h*:(?:\\h+|$)/mu"], false);
+            $label = $options->speakerLabelsUpperCaseOnly ? self::UPPER_LABEL : self::ANY_LABEL;
+            $lines = self::removeMatches($lines, ["/^\\h*(?:-\\h*)?\\K$label\\h*:(?:\\h+|$)/mu"], false);
         }
 
-        $music    = self::HEARING_IMPAIRED_MUSIC_SYMBOL;
+        $music    = self::MUSIC_SYMBOL;
         $patterns = [];
         if ($options->lyrics) {
             $patterns[] = "/$music(?:(?!$music).)*$music/su";
@@ -60,13 +91,13 @@ trait HearingImpairedRemoval
         if ($options->musicOnlyLines) {
             $patterns[] = "/^\\h*(?:-\\h*)?(?:$music\\h*)+$/mu";
         }
-        $lines = self::hearingImpairedRemoveMatches($lines, $patterns, true);
+        $lines = self::removeMatches($lines, $patterns, true);
 
-        return self::hearingImpairedRemoveEmptyLines($original, $lines);
+        return self::removeEmptyLines($original, $lines);
     }
 
 
-    private static function hearingImpairedBracketPattern(string $open, string $close): string
+    private static function bracketPattern(string $open, string $close): string
     {
         $open  = preg_quote($open, "/");
         $close = preg_quote($close, "/");
@@ -83,9 +114,9 @@ trait HearingImpairedRemoval
      * @param list<string> $patterns
      * @return list<string>
      */
-    private static function hearingImpairedRemoveMatches(array $lines, array $patterns, bool $widen): array
+    private static function removeMatches(array $lines, array $patterns, bool $widen): array
     {
-        [$visible, $map] = self::hearingImpairedVisibleText($lines);
+        [$visible, $map] = self::visibleText($lines);
 
         $removed = [];
         foreach ($patterns as $pattern) {
@@ -95,7 +126,7 @@ trait HearingImpairedRemoval
             foreach ($matches[0] as [$text, $start]) {
                 $end = $start + strlen($text);
                 if ($widen) {
-                    [$start, $end] = self::hearingImpairedWidenRange($visible, $start, $end);
+                    [$start, $end] = self::widenRange($visible, $start, $end);
                 }
                 for ($offset = $start; $offset < $end; $offset++) {
                     if ($map[$offset] !== null) {
@@ -128,7 +159,7 @@ trait HearingImpairedRemoval
      * @param list<string> $lines
      * @return array{string, list<array{int, int, int}|null>}
      */
-    private static function hearingImpairedVisibleText(array $lines): array
+    private static function visibleText(array $lines): array
     {
         $visible = "";
         $map     = [];
@@ -164,7 +195,7 @@ trait HearingImpairedRemoval
      *
      * @return array{int, int}
      */
-    private static function hearingImpairedWidenRange(string $visible, int $start, int $end): array
+    private static function widenRange(string $visible, int $start, int $end): array
     {
         $previous = $start > 0 ? $visible[$start - 1] : "\n";
         if (in_array($previous, ["\n", " ", "\t"], true)) {
@@ -189,14 +220,14 @@ trait HearingImpairedRemoval
      * @param list<string> $lines
      * @return list<string>
      */
-    private static function hearingImpairedRemoveEmptyLines(array $original, array $lines): array
+    private static function removeEmptyLines(array $original, array $lines): array
     {
         $result     = [];
         $pending    = "";
         $dashLines  = 0;
         $anyRemoved = false;
         foreach ($lines as $index => $line) {
-            $wasText = self::hearingImpairedPlainText($original[$index]);
+            $wasText = self::plainText($original[$index]);
             if (preg_match('/^\h*-/', $wasText) === 1) {
                 $dashLines++;
             }
@@ -211,7 +242,7 @@ trait HearingImpairedRemoval
                 $line   = preg_replace('/<([a-zA-Z][a-zA-Z0-9]*)(?:[\s.][^<>]*)?>\h*<\/\1\s*>/', "", $line) ?? $line;
             } while ($line !== $before);
 
-            if (trim($wasText) !== "" && in_array(trim(self::hearingImpairedPlainText($line)), ["", "-"], true)) {
+            if (trim($wasText) !== "" && in_array(trim(self::plainText($line)), ["", "-"], true)) {
                 preg_match_all('/<[^<>]*>/', $line, $tags);
                 $pending   .= implode("", $tags[0]);
                 $anyRemoved = true;
@@ -226,18 +257,18 @@ trait HearingImpairedRemoval
         }
 
         $remainingDashLines = array_keys(array_filter($result, fn (string $line): bool =>
-            preg_match('/^\h*-/', self::hearingImpairedPlainText($line)) === 1));
+            preg_match('/^\h*-/', self::plainText($line)) === 1));
         if ($anyRemoved && $dashLines >= 2 && count($remainingDashLines) === 1) {
             $index          = $remainingDashLines[0];
-            $result[$index] = self::hearingImpairedRemoveMatches([$result[$index]], ['/^\h*-\h*/'], false)[0];
+            $result[$index] = self::removeMatches([$result[$index]], ['/^\h*-\h*/'], false)[0];
         }
 
         return $result;
     }
 
 
-    private static function hearingImpairedPlainText(string $line): string
+    private static function plainText(string $line): string
     {
-        return self::hearingImpairedVisibleText([$line])[0];
+        return self::visibleText([$line])[0];
     }
 }

@@ -13,9 +13,6 @@ class SnapCommand extends WriteCommand
 {
     private ?ShotChangeOptions $timing = null;
 
-    /** @var list<float>|null */
-    private ?array $shotChanges = null;
-
 
     public function name(): string
     {
@@ -75,9 +72,11 @@ class SnapCommand extends WriteCommand
             self::fail("Pass --shot-changes FILE. With --no-chain and no shot changes, snap changes nothing.");
         }
 
+        $shotChanges = $path === null ? [] : self::loadShotChanges($path);
         try {
             $this->timing = new ShotChangeOptions(
                 frameRate: $this->fps,
+                shotChanges: $shotChanges,
                 snapWindow: self::frames($arguments, "snap-window"),
                 minGapFrames: self::frames($arguments, "min-gap-frames") ?? 2,
                 chain: !$arguments->has("no-chain"),
@@ -86,18 +85,12 @@ class SnapCommand extends WriteCommand
         } catch (InvalidArgumentException $exception) {
             self::fail($exception->getMessage());
         }
-
-        $this->shotChanges = $path === null ? null : self::loadShotChanges($path);
     }
 
 
     protected function transform(Subtitle $subtitle, Arguments $arguments): void
     {
-        if ($this->shotChanges === null) {
-            ShotChangeTiming::chainGaps($subtitle, $this->timing);
-        } else {
-            ShotChangeTiming::apply($subtitle, $this->shotChanges, $this->timing);
-        }
+        ShotChangeTiming::apply($subtitle, $this->timing);
     }
 
 

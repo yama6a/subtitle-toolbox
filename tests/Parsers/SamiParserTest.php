@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Validation\ValidationRules;
 
 class SamiParserTest extends TestCase
 {
@@ -52,7 +53,7 @@ class SamiParserTest extends TestCase
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . $file), Format::Sami);
         $cues     = $subtitle->getCues();
 
-        $this->assertSame([], $subtitle->getErrors());
+        $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
         $this->assertCount($cueCount, $cues);
         $this->assertSame($language, $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame($first, [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getLines()]);

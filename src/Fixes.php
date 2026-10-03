@@ -13,7 +13,7 @@ trait Fixes
     {
         $this->fixesAssertGap($minGap);
 
-        $cues = $this->fixesCuesInStartOrder();
+        $cues = CueList::inStartOrder($this->cues);
         foreach ($cues as $index => $cue) {
             if (!isset($cues[$index + 1])) {
                 continue;
@@ -39,7 +39,7 @@ trait Fixes
         }
         $this->fixesAssertGap($minGap);
 
-        $cues = $this->fixesCuesInStartOrder();
+        $cues = CueList::inStartOrder($this->cues);
         foreach ($cues as $index => $cue) {
             $end = $cue->getStart() + $minDuration;
             if (isset($cues[$index + 1])) {
@@ -94,17 +94,5 @@ trait Fixes
         if ($minGap < 0) {
             throw new InvalidArgumentException("The minimum gap must not be negative, got $minGap.");
         }
-    }
-
-
-    /**
-     * @return list<SubtitleCue>
-     */
-    private function fixesCuesInStartOrder(): array
-    {
-        $cues = array_values($this->getCues());
-        usort($cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
-
-        return $cues;
     }
 }

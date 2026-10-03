@@ -160,7 +160,6 @@ abstract class WriteCommand extends FileCommand
     protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         $this->transform($subtitle, $arguments);
-        $subtitle = $this->rebuild($subtitle, $arguments);
 
         $outputFormat = $this->outputFormat($format);
         $target       = $this->target($input, $format, $outputFormat, $arguments);
@@ -179,15 +178,6 @@ abstract class WriteCommand extends FileCommand
 
         $this->write($input, $target, $content, $arguments);
         $this->report($console, self::label($input) . " -> $target\n");
-    }
-
-
-    /**
-     * Returns the subtitle to write after transform(), for a change that builds a new Subtitle.
-     */
-    protected function rebuild(Subtitle $subtitle, Arguments $arguments): Subtitle
-    {
-        return $subtitle;
     }
 
 

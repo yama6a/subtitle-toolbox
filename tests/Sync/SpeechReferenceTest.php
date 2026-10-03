@@ -42,7 +42,7 @@ class SpeechReferenceTest extends TestCase
         $target = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sync/own_target_de_25fps.srt"), Format::SubRip);
         $speech = SpeechReference::fromFfmpegSilencedetect($this->loadLog(), 840);
 
-        $result = ReferenceSync::sync($target, $speech);
+        $result = ReferenceSync::apply($target, new ReferenceSyncOptions($speech));
 
         $this->assertEqualsWithDelta(25 / 23.976, $result->getScale(), 0.00001);
         $this->assertEqualsWithDelta(-2.3, $result->getOffset(), 0.15);

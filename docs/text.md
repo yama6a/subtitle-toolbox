@@ -29,14 +29,18 @@ $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>
 ## Hearing-impaired annotations
 ```php
 use SubtitleToolbox\HearingImpairedOptions;
+use SubtitleToolbox\HearingImpairedRemover;
 
-$subtitle->removeHearingImpaired();         // '(laughs) You came back.' becomes 'You came back.'
-$subtitle->removeHearingImpaired(new HearingImpairedOptions(
+$report = HearingImpairedRemover::apply($subtitle, new HearingImpairedOptions());   // '(laughs) You came back.' becomes 'You came back.'
+$report->removedLines;                      // the lines that went, the lines of removed cues included
+$report->removedCues;                       // the cues that had text and have none left
+
+HearingImpairedRemover::apply($subtitle, new HearingImpairedOptions(
     speakerLabelsUpperCaseOnly: false,      // also removes 'Baker:' and 'Note:'
     customBrackets: [['{', '}'], ['*', '*']],
     lyrics: true,                           // removes '# The wheels go round #'
 ));
-(new HearingImpairedOptions())->isHearingImpaired('JOHN: Hi.'); // true, the line stays unchanged
+HearingImpairedRemover::isAnnotation('JOHN: Hi.', new HearingImpairedOptions());   // true, apply() would change the line
 ```
 
 | Option | Default | Removes |
@@ -61,23 +65,29 @@ Core markup holds a speaker as `<v Anna>`. `SpeakerLabels` converts it to the fo
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
+use SubtitleToolbox\Speakers\SpeakerLabelOptions;
 use SubtitleToolbox\Speakers\SpeakerLabels;
+use SubtitleToolbox\Speakers\SpeakerStyle;
 
 $subtitle = (new WhisperJsonParser([WhisperJsonParser::OPTION_SPEAKER_VOICES => true]))->parse($whisperXJson);
-SpeakerLabels::list($subtitle);                                            // ['SPEAKER_00' => 14, 'SPEAKER_01' => 9], cues per speaker
-SpeakerLabels::rename($subtitle, ['SPEAKER_00' => 'Anna', 'SPEAKER_01' => 'Ben']);
-SpeakerLabels::toPrefix($subtitle);                                        // '<v Anna>Where were you?' becomes 'ANNA: Where were you?'
+SpeakerLabels::list($subtitle);                    // ['SPEAKER_00' => 14, 'SPEAKER_01' => 9], cues per speaker
+$report = SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(
+    rename: ['SPEAKER_00' => 'Anna', 'SPEAKER_01' => 'Ben'],
+    to: SpeakerStyle::Prefix,                      // '<v Anna>Where were you?' becomes 'ANNA: Where were you?'
+));
+$report->changedCues;                              // the cues whose lines changed
 $subtitle->toString(Format::SubRip);
 ```
 
-| Method | Input | Output |
+`apply()` runs the steps that the options ask for, in this order: `from`, `rename`, `to`.
+
+| Option | Input | Output |
 |:--- |:--- |:--- |
-| `toPrefix($subtitle, $upperCase = true, $separator = ': ')` | `<v Anna>Where were you?` | `ANNA: Where were you?` |
-| `toDialogueDashes($subtitle, $dash = '- ')` | `<v Anna>Where?` and `<v Ben>Home.` in one cue | `- Where?` and `- Home.` |
-| `toColours($subtitle, $colours = SpeakerLabels::BBC_COLOURS)` | `<v Anna>Where?` and `<v Ben>Home.` | `<font color="#ffffff">Where?</font>` and `<font color="#ffff00">Home.</font>` |
-| `fromPrefix($subtitle, $upperCaseOnly = true)` | `JOHN: Hi.` | `<v John>Hi.` |
-| `rename($subtitle, $names)` | `<v SPEAKER_00>` | `<v Anna>` |
-| `list($subtitle)` | the subtitle | `['Anna' => 14, 'Ben' => 9]` |
+| `from: SpeakerStyle::Prefix`, with `upperCaseOnly`, default `true` | `JOHN: Hi.` | `<v John>Hi.` |
+| `rename: ['SPEAKER_00' => 'Anna']` | `<v SPEAKER_00>` | `<v Anna>` |
+| `to: SpeakerStyle::Prefix`, with `upperCase`, default `true`, and `separator`, default `': '` | `<v Anna>Where were you?` | `ANNA: Where were you?` |
+| `to: SpeakerStyle::DialogueDashes`, with `dash`, default `'- '` | `<v Anna>Where?` and `<v Ben>Home.` in one cue | `- Where?` and `- Home.` |
+| `to: SpeakerStyle::Colours`, with `colours`, default `SpeakerLabels::BBC_COLOURS` | `<v Anna>Where?` and `<v Ben>Home.` | `<font color="#ffffff">Where?</font>` and `<font color="#ffff00">Home.</font>` |
 
 | Format | Reads `<v>` from | Writes `<v>` as |
 |:--- |:--- |:--- |
@@ -90,20 +100,21 @@ $subtitle->toString(Format::SubRip);
 | Whisper JSON | the segment `speaker`, with `OPTION_SPEAKER_VOICES` | no formatter |
 | Cloud speech-to-text JSON | the speaker labels of the service, with `OPTION_SPEAKER_VOICES` | no formatter |
 | JSON | the cue lines | the cue lines |
-| all other formats, iTT too | no speaker | nothing. Convert with `toPrefix()`, `toDialogueDashes()` or `toColours()` first |
+| all other formats, iTT too | no speaker | nothing. Convert with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colours` first |
 
 - **Speaker**: a `<v>` tag sets the speaker until `</v>`, the next `<v>` tag or the end of the cue.
 - **New line**: where the speaker changes in the middle of a line, the converters start a new line. Style tags such as `<i>` close at the end of the first line and open again on the next.
-- **Prefix**: every cue repeats the name of its speaker. `$upperCase = false` keeps the name as it is.
+- **Prefix**: every cue repeats the name of its speaker. `upperCase: false` keeps the name as it is.
 - **Dashes**: only cues with two or more speakers get dashes. Text without a speaker counts as one speaker. A line that already starts with `-` gets no second dash.
 - **Colours**: the BBC order is white, yellow, cyan and green, from the [BBC Subtitle Guidelines](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/). Each speaker gets the next colour in the order of its first cue. The fifth speaker gets the first colour again. A colour that is not `#rrggbb` throws `InvalidArgumentException`.
-- **Labels**: `fromPrefix()` uses the `speakerLabels` rule of `HearingImpairedOptions`. With `$upperCaseOnly = false`, it also reads `Baker:` and `Note:`.
+- **From**: `from` takes only `SpeakerStyle::Prefix`. Another style throws `InvalidArgumentException`.
+- **Labels**: `from: SpeakerStyle::Prefix` uses the `speakerLabels` rule of `HearingImpairedOptions`. With `upperCaseOnly: false`, it also reads `Baker:` and `Note:`.
 - **Label names**: an upper case label becomes title case, so `DR. O'NEIL:` becomes `<v Dr. O'Neil>`. The dash before a label goes. A label on a line of its own names the speaker of the next line.
 - **Whisper**: the `speaker` field also stays in the cue format data. whisper.cpp `-di` writes the speakers `0` and `1`, and `?` when it cannot tell. The parser ignores the speaker of each WhisperX word.
 - **Names**: the `list()` key of a speaker such as `0` is an int. A quote in a name stays a raw character, see [markup.md](markup.md).
 
 ## Profanity filter
-`ProfanityFilter` masks words in the cue text. It returns the time ranges of the matches, so that a video player or FFmpeg can mute the audio there.
+`ProfanityFilter` masks words in the cue text. Its report holds the time ranges of the matches, so that a video player or FFmpeg can mute the audio there.
 
 ```php
 use SubtitleToolbox\Profanity\MuteRange;
@@ -116,7 +127,7 @@ $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(
     words: ['hell', 'damn*'],                    // * at the end matches any ending, so "damned" matches
     mask: ProfanityOptions::MASK_FIRST_LETTER,
     padding: 0.1,                                // seconds added on both sides of a range
-));
+))->muteRanges;
 // cue text: "<00:01:02.000>What <00:01:02.300>the <00:01:02.480>h*** <00:01:02.800>is this?"
 $ranges[0]->start;                               // 62.38
 $ranges[0]->end;                                 // 62.9
@@ -133,14 +144,14 @@ new ProfanityOptions(['hell'], fn (string $word): string => '[beep]');
 | `MASK_STARS` (default) | `What the ****?` |
 | `MASK_FIRST_LETTER` | `What the h***?` |
 | `MASK_REMOVE` | `What the ?` |
-| `MASK_NONE` | `What the hell?`. Only the ranges are returned |
+| `MASK_NONE` | `What the hell?`. Only the report has the ranges |
 | a callback | the string the callback returns for the matched word |
 
 - **No word list**: the package ships none. The words to filter depend on the language and the audience.
 - **Matches**: case-insensitive and Unicode-aware. A match is a whole word, so `hell` does not match `hello` or `shell`. A word can hold spaces, such as `son of a`. A `*` in another place than the end throws `InvalidArgumentException`.
 - **Word file**: one word per line. The filter ignores a UTF-8 BOM, CR LF line endings and empty lines. The words of `wordFile` add to the words of `words`.
 - **Range**: the range runs from the word timestamp before the match to the next word timestamp. Without a timestamp on a side, the range uses the start or end of the cue. Padding then widens the range. A range does not start before 0.
-- **Joining**: the result is sorted by time. Ranges that touch or overlap after the padding become one range.
+- **Joining**: `muteRanges` is sorted by time. Ranges that touch or overlap after the padding become one range.
 - **Removed cues**: `MASK_REMOVE` removes a cue that has no visible text left, and re-indexes the cues.
 - **Text runs**: the filter sees text runs. It does not find a word that a tag splits, such as `h<i>ell</i>`, or a word across two lines.
 - **EDL**: `toEdl()` writes the [Kodi](https://kodi.wiki/view/Edit_decision_list) and MPlayer format. Each line holds the start, the end and action `1`, mute.
@@ -154,12 +165,14 @@ use SubtitleToolbox\Karaoke\WordHighlight;
 use SubtitleToolbox\Karaoke\WordHighlightOptions;
 
 // 00:00:00.000 --> 00:00:01.600  <00:00:00.000>The <00:00:00.240>beach <00:00:00.710>was <00:00:00.950>quiet.
-$karaoke = WordHighlight::expand($subtitle, new WordHighlightOptions(style: 'u'));
+$karaoke = clone $subtitle;
+$report  = WordHighlight::apply($karaoke, new WordHighlightOptions(style: 'u'));
+$report->cuesAfter;                                    // 4
 // 00:00:00.000 --> 00:00:00.240  <u>The</u> beach was quiet.
 // 00:00:00.240 --> 00:00:00.710  The <u>beach</u> was quiet.
 // ...
 
-WordHighlight::expand($subtitle, new WordHighlightOptions(
+WordHighlight::apply($subtitle, new WordHighlightOptions(
     style: 'font color="#ffff00"',                     // b, i, u (default), s or font
     mode: WordHighlightOptions::MODE_CUMULATIVE,       // styles all words up to the active one
     maxWordsPerCue: 1,                                 // shows only the active word
@@ -172,7 +185,7 @@ WordHighlight::expand($subtitle, new WordHighlightOptions(
 | `cumulative` | `<u>The beach was</u> quiet.` |
 | `word` with `maxWordsPerCue: 3` | `beach <u>was</u> quiet.` |
 
-- **Result**: a new subtitle without word timestamps. The input stays unchanged. A cue without word timestamps stays as it is.
+- **Result**: `apply()` replaces the cues of the subtitle with word cues without word timestamps. Pass `clone $subtitle` to keep the original. A cue without word timestamps stays as it is. Comments stay before the first word cue of their cue.
 - **Times**: a word cue lasts from its timestamp to the next one. The last word lasts until the cue end. The time before the first timestamp gets a cue without a styled word. A word of 0 s gets no cue.
 - **Cue data**: each word cue keeps the alignment, the forced flag and the format data. Only the first word cue keeps the identifier.
 - **Window**: `maxWordsPerCue` shows the active word in the middle of N words. At the start and the end of a cue, the window stops at the first or last word.
@@ -187,13 +200,13 @@ use SubtitleToolbox\Fixing\CommonErrorFixer;
 use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Fixing\OcrReplaceList;
 
-$fixes = CommonErrorFixer::fix($subtitle, new CommonErrorOptions(language: 'en'));
+$fixes = CommonErrorFixer::apply($subtitle, new CommonErrorOptions(language: 'en'))->fixes;
 $fixes[0]->cueIndex;   // 14
 $fixes[0]->rule;       // 'ocrLowercaseL'
 $fixes[0]->before;     // "lt's late."
 $fixes[0]->after;      // "It's late."
 
-CommonErrorFixer::fix($subtitle, new CommonErrorOptions(
+CommonErrorFixer::apply($subtitle, new CommonErrorOptions(
     language: 'fr',
     dialogueDash: '-',                                       // '- ' (default), '-', or an en or em dash with or without a space
     unicodeEllipsis: true,                                   // writes U+2026 for every ellipsis
@@ -216,7 +229,7 @@ CommonErrorFixer::fix($subtitle, new CommonErrorOptions(
 | `ocrZeroInWords` | `D0N'T`, `n0rth` | `DON'T`, `north`. Not in `007` or `2.0` |
 | `replaceList` | the words of an `OcrReplaceList` | the replacement |
 
-- **Defaults**: every fix is on, except `replaceList` and `unicodeEllipsis`. The fixes run in the order of `CommonErrorFixer::RULES`. The result holds one `AppliedFix` for each rule that changed a cue.
+- **Defaults**: every fix is on, except `replaceList` and `unicodeEllipsis`. The fixes run in the order of `CommonErrorFixer::RULES`. The report holds one `AppliedFix` in `fixes` for each rule that changed a cue.
 - **Text runs**: the fixes see text runs, as `replaceText()` does. Only `unbalancedTags` and `emptyTags` change tags. `unbalancedTags` closes a tag at the end of the last line of its cue. It removes a closing tag without an opening tag.
 - **Language**: `language` takes a code such as `en`, `de-AT` or `fra`. Null takes the `language` metadata of the subtitle. English, German, French and Spanish have their own rules for I and l. Other languages get only the rules that apply to all languages, for example `lT` to `IT`.
 - **I and l**: OCR reads a capital I as l when the font draws both the same. `ocrLowercaseL` changes an `l` at the start of a word before a consonant: `lch` to `Ich`, `lsabel` to `Isabel`. French also changes `ll` to `Il`, and keeps `l'hôtel`. Spanish keeps `llega`. English also changes `l`, `l'm`, `l'll`, `l've` and `l'd`. `5 lbs` and `2 l` stay.

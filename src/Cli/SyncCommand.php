@@ -79,7 +79,9 @@ class SyncCommand extends WriteCommand
         }
 
         try {
+            // The reference loads with the first input. Until then, an empty subtitle stands in for it.
             $this->syncOptions = new ReferenceSyncOptions(
+                reference: new Subtitle(),
                 minOffset: $arguments->float("min-offset") ?? -60,
                 maxOffset: $arguments->float("max-offset") ?? 60,
                 searchScale: !$arguments->has("no-scale"),
@@ -128,8 +130,15 @@ class SyncCommand extends WriteCommand
     {
         $this->reference ??= $this->loadReference($arguments, $console);
 
-        $result = ReferenceSync::sync($subtitle, $this->reference, $this->syncOptions);
-        $result->apply($subtitle);
+        $options = $this->syncOptions;
+        $result  = ReferenceSync::apply($subtitle, new ReferenceSyncOptions(
+            $this->reference,
+            $options->minOffset,
+            $options->maxOffset,
+            $options->searchScale,
+            $options->maxSplits,
+            $options->splitPenalty,
+        ));
 
         $label = self::label($input);
         $text  = "$label: scale " . self::number($result->getScale(), 5) . ", offset " . self::number($result->getOffset(), 3) .

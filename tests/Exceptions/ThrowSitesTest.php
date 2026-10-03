@@ -72,8 +72,10 @@ use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 use SubtitleToolbox\Profanity\ProfanityOptions;
+use SubtitleToolbox\ResegmentMode;
 use SubtitleToolbox\ResegmentOptions;
-use SubtitleToolbox\Speakers\SpeakerLabels;
+use SubtitleToolbox\Speakers\SpeakerLabelOptions;
+use SubtitleToolbox\Speakers\SpeakerStyle;
 use SubtitleToolbox\Streaming\SubRipStreamReader;
 use SubtitleToolbox\Streaming\SubRipStreamWriter;
 use SubtitleToolbox\Streaming\WebVttStreamReader;
@@ -553,13 +555,15 @@ class ThrowSitesTest extends TestCase
             "Profanity/ProfanityOptions.php: unknown mask"  => [fn () => new ProfanityOptions(["hell"], "blur"), ...$invalid],
             "Profanity/ProfanityOptions.php: negative padding" => [fn () => new ProfanityOptions(["hell"], padding: -1), ...$invalid],
             "Profanity/ProfanityOptions.php: missing word file" => [fn () => new ProfanityOptions(wordFile: __DIR__ . "/missing.txt"), ...$invalid],
-            "ResegmentOptions.php: maximum lines 0"         => [fn () => new ResegmentOptions(maxLines: 0), ...$invalid],
-            "ResegmentOptions.php: negative word gap"       => [fn () => new ResegmentOptions(maxWordGap: -1), ...$invalid],
-            "ResegmentOptions.php: maximum duration 0"      => [fn () => new ResegmentOptions(maxDuration: 0), ...$invalid],
+            "ResegmentOptions.php: maximum lines 0"         => [fn () => new ResegmentOptions(ResegmentMode::SplitLong, maxLines: 0), ...$invalid],
+            "ResegmentOptions.php: negative word gap"       => [fn () => new ResegmentOptions(ResegmentMode::SplitLong, maxWordGap: -1), ...$invalid],
+            "ResegmentOptions.php: maximum duration 0"      => [fn () => new ResegmentOptions(ResegmentMode::SplitLong, maxDuration: 0), ...$invalid],
             "Retiming.php: scale factor 0"                  => [fn () => self::subtitle()->scale(0), ...$invalid],
             "Retiming.php: same old times"                  => [fn () => self::subtitle()->syncByTwoPoints(1, 1, 1, 2), ...$invalid],
             "Retiming.php: new times in reverse"            => [fn () => self::subtitle()->syncByTwoPoints(1, 2, 2, 1), ...$invalid],
-            "Speakers/SpeakerLabels.php: invalid colour"    => [fn () => SpeakerLabels::toColours(self::subtitle(), ["yellow"]), ...$invalid],
+            "Speakers/SpeakerLabelOptions.php: from a style other than prefix" => [fn () => new SpeakerLabelOptions(from: SpeakerStyle::Colours),
+                                                                ...$invalid],
+            "Speakers/SpeakerLabelOptions.php: invalid colour" => [fn () => new SpeakerLabelOptions(colours: ["yellow"]), ...$invalid],
             "Streaming/Streams.php: no stream"              => [fn () => iterator_to_array((new SubRipStreamReader())->read(5)), ...$invalid],
             "Streaming/Streams.php: missing file"           => [fn () => iterator_to_array((new SubRipStreamReader())->read(__DIR__ . "/missing.srt")),
                                                                 ...$invalid],
@@ -586,9 +590,9 @@ class ThrowSitesTest extends TestCase
             "Subtitle.php: negative comment index"          => [fn () => self::subtitle()->addComment("note", -1), ...$invalid],
             "SubtitleCue.php: lines of the wrong type"      => [fn () => (new SubtitleCue())->setLines(5), ...$invalid],
             "SubtitleCue.php: alignment 10"                 => [fn () => (new SubtitleCue())->setAlignment(10), ...$invalid],
-            "Sync/ReferenceSyncOptions.php: offsets in reverse" => [fn () => new ReferenceSyncOptions(5, 1), ...$invalid],
-            "Sync/ReferenceSyncOptions.php: negative split count" => [fn () => new ReferenceSyncOptions(maxSplits: -1), ...$invalid],
-            "Sync/ReferenceSyncOptions.php: negative split penalty" => [fn () => new ReferenceSyncOptions(splitPenalty: -1), ...$invalid],
+            "Sync/ReferenceSyncOptions.php: offsets in reverse" => [fn () => new ReferenceSyncOptions(new Subtitle(), 5, 1), ...$invalid],
+            "Sync/ReferenceSyncOptions.php: negative split count" => [fn () => new ReferenceSyncOptions(new Subtitle(), maxSplits: -1), ...$invalid],
+            "Sync/ReferenceSyncOptions.php: negative split penalty" => [fn () => new ReferenceSyncOptions(new Subtitle(), splitPenalty: -1), ...$invalid],
             "Sync/SpeechReference.php: media duration 0"    => [fn () => SpeechReference::fromFfmpegSilencedetect("", 0), ...$invalid],
             "Sync/SpeechReference.php: mono log"            => [fn () => SpeechReference::fromFfmpegSilencedetect("channel: 0 | silence_start: 1", 9),
                                                                 ...$parsing],

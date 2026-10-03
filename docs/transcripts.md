@@ -25,7 +25,7 @@ $subtitle->getCues()[0]->getFormatData('whisper')['avg_logprob'];            // 
 | WhisperX | `segments` with `words` that have `score` and, after diarization, `speaker` | [`alignment.py`](https://github.com/m-bain/whisperX/blob/771b4a14a9486f8fd5aef18ef49e35d639523dd3/whisperx/alignment.py) |
 | whisper.cpp | `-oj`: `transcription` with `offsets` in milliseconds. `-ojf` adds `tokens` | [`cli.cpp`](https://github.com/ggml-org/whisper.cpp/blob/60c0be6ac8fa71b1a2ae2dd938a31a34a508e774/examples/cli/cli.cpp) |
 
-- **Cues**: one cue per segment. The parser trims the text and skips segments without text. A long segment stays one cue. [`splitLongCues()`](editing.md#long-cues) breaks it up.
+- **Cues**: one cue per segment. The parser trims the text and skips segments without text. A long segment stays one cue. [`Resegmenter`](editing.md#long-cues) breaks it up.
 - **Word timestamps**: off by default. With `OPTION_WORD_TIMESTAMPS`, each word that has a start time and occurs in the segment text gets a core word timestamp before it. The parser skips the other words. The OpenAI API lists the words at the top level. A word then goes to the segment that holds the middle of the word.
 - **Speakers**: off by default. `OPTION_SPEAKER_VOICES` writes the segment `speaker` as a `<v>` tag. See [text.md](text.md#speakers).
 - **Language**: the `language` metadata. A name such as `english` becomes `en`. A code such as `en` stays.
@@ -57,9 +57,9 @@ $subtitle->getCues()[2]->getFormatData('deepgram')['confidence'];            // 
 | [Google Cloud Speech-to-Text](https://cloud.google.com/speech-to-text/docs/async-time-offsets) | `GoogleSpeechParser`, `google-speech` | one per result, else grouped from the words of the last result |
 
 - **Word grouping**: a cue ends after a word that ends a sentence with `.`, `?`, `!` or their CJK forms. It also ends before a pause of 1 s or more, before a word that makes it longer than 84 characters, and where the speaker changes.
-- **Long cues**: an audio segment, utterance or result stays one cue. [`splitLongCues()`](editing.md#long-cues) breaks it up. With `OPTION_WORD_TIMESTAMPS`, `resegmentByWords()` regroups the words with other limits.
+- **Long cues**: an audio segment, utterance or result stays one cue. [`Resegmenter`](editing.md#long-cues) breaks it up. With `OPTION_WORD_TIMESTAMPS`, `ResegmentMode::ByWords` regroups the words with other limits.
 - **Word timestamps**: off by default. With `OPTION_WORD_TIMESTAMPS`, each word gets a core word timestamp before it.
-- **Speakers**: off by default. `OPTION_SPEAKER_VOICES` writes the speaker label of the service as a `<v>` tag, for example `<v spk_0>`, `<v 0>`, `<v A>` or `<v 1>`. [`SpeakerLabels::rename()`](text.md#speakers) gives them names.
+- **Speakers**: off by default. `OPTION_SPEAKER_VOICES` writes the speaker label of the service as a `<v>` tag, for example `<v spk_0>`, `<v 0>`, `<v A>` or `<v 1>`. The `rename` option of [`SpeakerLabels::apply()`](text.md#speakers) gives them names.
 - **Amazon Transcribe**: the language comes from `results.language_code`.
 - **Deepgram**: the parser reads every channel and sorts the cues by time. The language comes from `detected_language` of the first channel.
 - **AssemblyAI**: the language `en_us` becomes `en-US`.

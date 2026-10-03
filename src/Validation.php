@@ -15,8 +15,14 @@ trait Validation
      */
     public function validate(ValidationRules $rules): array
     {
-        $results     = [];
-        $previousEnd = null;
+        $results       = [];
+        $previousEnd   = null;
+        $previousStart = null;
+        $expectedIndex = 0;
+
+        if ($rules->requireCues && $this->getCues() === []) {
+            $results[] = new ValidationResult(null, ValidationResult::RULE_REQUIRE_CUES, 0, null);
+        }
 
         foreach ($this->getCues() as $cueIndex => $cue) {
             $lineLengths = [];
@@ -28,6 +34,21 @@ trait Validation
             }
             $characters = array_sum($lineLengths);
             $duration   = round($cue->getEnd() - $cue->getStart(), 3);
+
+            if ($rules->noIndexGaps && $cueIndex !== $expectedIndex) {
+                $results[] = new ValidationResult($cueIndex, ValidationResult::RULE_INDEX_GAP, $expectedIndex, null);
+            }
+            $expectedIndex++;
+
+            if ($rules->noUnsortedCues && $previousStart !== null && $cue->getStart() < $previousStart) {
+                $results[] = new ValidationResult($cueIndex, ValidationResult::RULE_UNSORTED_CUES,
+                                                  round($previousStart - $cue->getStart(), 3), null);
+            }
+            $previousStart = $cue->getStart();
+
+            if ($rules->noNegativeDuration && $duration < 0) {
+                $results[] = new ValidationResult($cueIndex, ValidationResult::RULE_NEGATIVE_DURATION, $duration, null);
+            }
 
             if ($rules->noEmptyCues && $characters === 0) {
                 $results[] = new ValidationResult($cueIndex, ValidationResult::RULE_EMPTY_CUE, 0, null);
