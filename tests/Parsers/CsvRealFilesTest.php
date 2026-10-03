@@ -6,6 +6,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
+use SubtitleToolbox\Parsers\CsvReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -36,7 +38,7 @@ class CsvRealFilesTest extends TestCase
                 new CsvColumns(start: "Start TC", text: "Text", speaker: "Character", frameRate: 25),
                 4,
                 [36001.48, 36004.0, "<v NARRATOR>The weather turns cold tonight."],
-                [36008.2, 36018.2, "<v NARRATOR>Snow falls in the hills, rain in the valley."],
+                [36008.2, 36013.2, "<v NARRATOR>Snow falls in the hills, rain in the valley."],
                 ["lineEnding" => "\n", "bom" => false],
             ],
             "spreadsheet TSV" => [
@@ -79,7 +81,7 @@ class CsvRealFilesTest extends TestCase
     public function testRealFileSurvivesARoundTripInTheDefaultLayout(string $fileName, CsvColumns $columns): void
     {
         $subtitle = $this->parseFile($fileName, $columns)->setFormatData("csv", []);
-        $fresh    = (new CsvParser())->parse($subtitle->toString(Format::Csv));
+        $fresh    = (new CsvParser())->parse($subtitle->toString(Format::Csv), new ReadOptions());
 
         $this->assertSame(array_map($this->describeCue(...), $subtitle->getCues()), array_map($this->describeCue(...), $fresh->getCues()));
     }
@@ -104,7 +106,7 @@ class CsvRealFilesTest extends TestCase
 
     private function parseFile(string $fileName, CsvColumns $columns): Subtitle
     {
-        return (new CsvParser($columns))->parse(file_get_contents(__DIR__ . "/../files/csv/real/$fileName"));
+        return (new CsvParser())->parse(file_get_contents(__DIR__ . "/../files/csv/real/$fileName"), new ReadOptions(format: new CsvReadOptions($columns)));
     }
 
 

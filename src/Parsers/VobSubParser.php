@@ -2,6 +2,7 @@
 
 namespace SubtitleToolbox\Parsers;
 
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
@@ -10,7 +11,7 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
 /**
- * Reads DVD VobSub subtitles: the .idx index from the constructor and the .sub program stream from parse().
+ * Reads DVD VobSub subtitles: the .idx index from VobSubReadOptions and the .sub program stream from parse().
  *
  * Program stream and SPU layout: http://sam.zoy.org/writings/dvd/subtitles/ and http://dvd.sourceforge.net/dvdinfo/spu.html
  * Decoder: https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/dvdsubdec.c
@@ -18,8 +19,6 @@ use SubtitleToolbox\SubtitleCue;
  */
 class VobSubParser extends SubtitleParser
 {
-    private const DURATION_WITHOUT_STOP = 5.0;
-
     // SP_DCSQ_STM delays count in units of 1024 ticks of the 90 kHz clock.
     private const SECONDS_PER_DELAY_UNIT = 1024 / 90000;
 
@@ -45,41 +44,24 @@ class VobSubParser extends SubtitleParser
     private array $entries = [];
 
 
-    /**
-     * Reads the .idx content and selects the track with index $track, or the first track with language id $track,
-     * or the first track when $track is null.
-     */
-    public function __construct(string $idx, int|string|null $track = null)
+    protected static function formatOptionsClass(): string
     {
-        $tracks = $this->readIndex($idx);
-
-        $selected = null;
-        foreach ($tracks as $candidate) {
-            if ($track === null
-                || (is_int($track) && $candidate["index"] === $track)
-                || (is_string($track) && strcasecmp($candidate["id"], $track) === 0)) {
-                $selected = $candidate;
-                break;
-            }
-        }
-        if ($selected === null) {
-            throw new ParsingException($track === null
-                ? "The .idx content has no \"id:\" line."
-                : "The .idx content has no track \"$track\".");
-        }
-
-        $this->trackIndex = $selected["index"];
-        $this->language   = $selected["id"];
-        $this->entries    = $selected["entries"];
-        usort($this->entries, fn (array $entry1, array $entry2): int => $entry1["time"] <=> $entry2["time"]);
+        return VobSubReadOptions::class;
     }
 
 
     /**
-     * Reads the image cues of the selected track from the .sub content.
+     * Reads the image cues of one track from the .sub content. VobSubReadOptions holds the .idx content.
+     * ReadOptions::$track and ReadOptions::$language select the track, else the parser reads the first track.
      */
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
+        $options = $this->options->format
+            ?? throw new InvalidArgumentException("VobSub needs the .idx content in VobSubReadOptions.");
+        $this->palette      = [];
+        $this->customColors = null;
+        $this->selectTrack($this->readIndex($options->idx));
+
         $units = [];
         foreach ($this->entries as $entry) {
             if ($entry["filepos"] >= strlen($rawSubtitle)) {
@@ -100,12 +82,44 @@ class VobSubParser extends SubtitleParser
                 continue;
             }
 
-            $end = $unit["stop"] ?? min($unit["start"] + self::DURATION_WITHOUT_STOP,
+            $end = $unit["stop"] ?? min($unit["start"] + $this->options->lastCueDuration,
                                         $units[$index + 1]["start"] ?? INF);
             $subtitle->addCue($unit["image"]->toCue(new SubtitleCue($unit["start"], $end)), false);
         }
 
         return $subtitle->reIndexCues();
+    }
+
+
+    /**
+     * @param list<array{id: string, index: int, entries: list<array{time: float, filepos: int}>}> $tracks
+     */
+    private function selectTrack(array $tracks): void
+    {
+        $track    = $this->options->track;
+        $language = $this->options->language;
+        $selected = null;
+        foreach ($tracks as $candidate) {
+            if (($track === null || $candidate["index"] === $track)
+                && ($language === null || strcasecmp($candidate["id"], $language) === 0)) {
+                $selected = $candidate;
+                break;
+            }
+        }
+        if ($selected === null) {
+            $wanted = implode(" and ", array_filter([
+                $track === null ? null : "index $track",
+                $language === null ? null : "language \"$language\"",
+            ]));
+            throw new ParsingException($wanted === ""
+                ? "The .idx content has no \"id:\" line."
+                : "The .idx content has no track with $wanted.");
+        }
+
+        $this->trackIndex = $selected["index"];
+        $this->language   = $selected["id"];
+        $this->entries    = $selected["entries"];
+        usort($this->entries, fn (array $entry1, array $entry2): int => $entry1["time"] <=> $entry2["time"]);
     }
 
 

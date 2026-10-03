@@ -16,15 +16,13 @@ class OgmChaptersParser extends SubtitleParser
     private const NAME_LINE      = '/^CHAPTER\d+NAME\s*=(.*)$/';
 
 
-    /**
-     * Creates a parser that ends the last chapter at $mediaDuration seconds, or at its own start when it is null.
-     */
-    public function __construct(private readonly ?float $mediaDuration = null)
+    protected static function formatOptionsClass(): string
     {
+        return ChapterReadOptions::class;
     }
 
 
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $lines          = explode("\n", StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle)));
@@ -50,7 +48,7 @@ class OgmChaptersParser extends SubtitleParser
         usort($chapters, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());
         $subtitle = new Subtitle();
         foreach ($chapters as $index => $cue) {
-            $cue->setEnd(isset($chapters[$index + 1]) ? $chapters[$index + 1]->getStart() : max($cue->getStart(), $this->mediaDuration ?? 0));
+            $cue->setEnd(isset($chapters[$index + 1]) ? $chapters[$index + 1]->getStart() : max($cue->getStart(), $this->formatOptions()->mediaDuration ?? 0));
             $subtitle->addCue($cue, false);
         }
 

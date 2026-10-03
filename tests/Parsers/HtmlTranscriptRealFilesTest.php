@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -20,13 +21,13 @@ class HtmlTranscriptRealFilesTest extends TestCase
                 "spec_example_shape.html",
                 5,
                 [0.0, 12.0, "<v Marta>Welcome back to the garden show. Today we're planting tomatoes, and we'll talk about the right soil for them."],
-                [62.0, 72.0, "<v Marta>That's all for this week. Next time we talk about water."],
+                [62.0, 67.0, "<v Marta>That's all for this week. Next time we talk about water."],
             ],
             "hh:mm:ss times and empty paragraphs" => [
                 "hhmmss_empty_paragraphs.html",
                 6,
                 [0.0, 4.0, "<v Speaker 1>Good morning and welcome to the station news."],
-                [3603.0, 3613.0, "<v Speaker 1>See you next week."],
+                [3603.0, 3608.0, "<v Speaker 1>See you next week."],
             ],
         ];
     }
@@ -34,7 +35,7 @@ class HtmlTranscriptRealFilesTest extends TestCase
 
     private static function parse(string $fileName): Subtitle
     {
-        return (new HtmlTranscriptParser())->parse(file_get_contents(self::DIR . $fileName));
+        return (new HtmlTranscriptParser())->parse(file_get_contents(self::DIR . $fileName), new ReadOptions());
     }
 
 
@@ -55,14 +56,14 @@ class HtmlTranscriptRealFilesTest extends TestCase
     {
         $html = self::parse($fileName)->toString(Format::HtmlTranscript);
 
-        $this->assertSame($html, (new HtmlTranscriptParser())->parse($html)->toString(Format::HtmlTranscript));
+        $this->assertSame($html, (new HtmlTranscriptParser())->parse($html, new ReadOptions())->toString(Format::HtmlTranscript));
     }
 
 
     public function testSpecExampleShapeKeepsItsCuesThroughTheFormatter(): void
     {
         $subtitle = self::parse("spec_example_shape.html");
-        $again    = (new HtmlTranscriptParser())->parse($subtitle->toString(Format::HtmlTranscript));
+        $again    = (new HtmlTranscriptParser())->parse($subtitle->toString(Format::HtmlTranscript), new ReadOptions());
 
         $this->assertEquals($subtitle->getCues(), $again->getCues());
     }

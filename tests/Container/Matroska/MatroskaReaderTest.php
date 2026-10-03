@@ -9,6 +9,7 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\PgsFixtures;
 use SubtitleToolbox\Parsers\PgsParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -181,7 +182,7 @@ class MatroskaReaderTest extends TestCase
     public function testExtractsPgsAsThePgsParserReadsTheSupFile(): void
     {
         $mkv      = MatroskaReader::open(self::DIR . "pgs.mkv");
-        $expected = (new PgsParser())->parse(PgsFixtures::shapes1080p())->getCues();
+        $expected = (new PgsParser())->parse(PgsFixtures::shapes1080p(), new ReadOptions())->getCues();
         $toArray  = fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getAllFormatData(), $cue->isForced()];
 
         $this->assertSame(array_map($toArray, $expected), array_map($toArray, $mkv->extract(3)->getCues()));

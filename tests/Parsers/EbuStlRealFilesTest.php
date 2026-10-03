@@ -5,6 +5,8 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\EbuStlReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -123,7 +125,7 @@ class EbuStlRealFilesTest extends TestCase
     public function testRealFileStartOfProgrammeCanBeSubtracted(): void
     {
         $raw      = file_get_contents(self::DIR . "bakery_teletext_25fps.stl");
-        $subtitle = (new EbuStlParser(true))->parse($raw);
+        $subtitle = (new EbuStlParser())->parse($raw, new ReadOptions(format: new EbuStlReadOptions(subtractStartOfProgramme: true)));
         $cues     = array_values($subtitle->getCues());
 
         $this->assertSame([1.0, 3.48], [$cues[0]->getStart(), $cues[0]->getEnd()]);

@@ -42,6 +42,9 @@ class Subtitle implements \IteratorAggregate, \Countable
     /** @var array<string, array> */
     protected array $formatData = [];
 
+    /** @var list<ParseWarning> */
+    protected array $parseWarnings = [];
+
 
     public function __construct()
     {
@@ -59,31 +62,61 @@ class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Reads $content in $format. A UTF-16 or UTF-32 BOM, or else $sourceEncoding such as "Windows-1252", sets the
-     * encoding to convert from.
+     * Reads $content in $format. A UTF-16 or UTF-32 BOM, or else ReadOptions::$encoding such as "Windows-1252", sets
+     * the encoding to convert from.
      */
-    public static function fromString(string $content, Format $format, ?string $sourceEncoding = null): self
+    public static function fromString(string $content, Format $format, ?ReadOptions $options = null): self
     {
-        $parserClass = FormatRegistry::parserClass($format)
-            ?? throw new InvalidParserException("The format {$format->value} can be written but not read.");
-        if ($format === Format::VobSub) {
-            throw new InvalidParserException("VobSub needs the content of its .idx file. Use VobSubParser.");
-        }
+        $options ??= new ReadOptions();
 
-        return (new $parserClass())->parse(StringHelpers::convertToUtf8($content, $sourceEncoding));
+        return self::parseUtf8(StringHelpers::convertToUtf8($content, $options->encoding), $format, $options);
     }
 
 
     /**
      * Reads $content in the format that Format::detect() finds. It tries only formats whose isAutoDetected() is true.
      */
-    public static function fromStringAutoDetectFormat(string $content, ?string $sourceEncoding = null): self
+    public static function fromStringAutoDetectFormat(string $content, ?ReadOptions $options = null): self
     {
-        $content = StringHelpers::convertToUtf8($content, $sourceEncoding);
-        $format  = Format::detect($content)
+        $options ??= new ReadOptions();
+        $content   = StringHelpers::convertToUtf8($content, $options->encoding);
+        $format    = Format::detect($content)
             ?? throw new InvalidParserException("The subtitle format of the content is unknown. Call fromString() with a format.");
 
-        return self::fromString($content, $format);
+        return self::parseUtf8($content, $format, $options);
+    }
+
+
+    private static function parseUtf8(string $content, Format $format, ReadOptions $options): self
+    {
+        $parserClass = FormatRegistry::parserClass($format)
+            ?? throw new InvalidParserException("The format {$format->value} can be written but not read.");
+
+        return (new $parserClass())->parse($content, $options);
+    }
+
+
+    /**
+     * Returns what the parser skipped or repaired in lenient mode. A subtitle that no parser read has none.
+     *
+     * @return list<ParseWarning>
+     */
+    public function getParseWarnings(): array
+    {
+        return $this->parseWarnings;
+    }
+
+
+    /**
+     * @internal SubtitleParser::parse() sets the warnings of its read.
+     *
+     * @param list<ParseWarning> $warnings
+     */
+    public function setParseWarnings(array $warnings): self
+    {
+        $this->parseWarnings = $warnings;
+
+        return $this;
     }
 
 

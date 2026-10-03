@@ -7,6 +7,8 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\SccReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -96,11 +98,11 @@ class SccParserTest extends TestCase
     }
 
 
-    public function testLastCaptionWithoutEraseLastsFourSeconds(): void
+    public function testLastCaptionWithoutEraseLastsFiveSeconds(): void
     {
         $cue = $this->cues($this->popOn("9470 9470 " . self::text("Hi")))[0];
 
-        $this->assertSame(round($cue->getStart() + 4, 3), $cue->getEnd());
+        $this->assertSame(round($cue->getStart() + 5, 3), $cue->getEnd());
     }
 
 
@@ -323,7 +325,7 @@ class SccParserTest extends TestCase
                    . self::text("TWO") . " 1c2f 1c2f 942f 942f\n";
 
         $this->assertSame(["ONE"], Subtitle::fromString($content, Format::Scc)->getCues()[0]->getLines());
-        $this->assertSame(["TWO"], (new SccParser(2))->parse($content)->getCues()[0]->getLines());
+        $this->assertSame(["TWO"], (new SccParser())->parse($content, new ReadOptions(format: new SccReadOptions(channel: 2)))->getCues()[0]->getLines());
     }
 
 
@@ -331,7 +333,7 @@ class SccParserTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new SccParser(3);
+        new SccReadOptions(3);
     }
 
 
@@ -389,7 +391,7 @@ class SccParserTest extends TestCase
     public function testInvalidFileThrowsWithTheLineNumber(string $content, ?int $lineNumber): void
     {
         try {
-            (new SccParser())->parse($content);
+            (new SccParser())->parse($content, new ReadOptions());
             $this->fail("No ParsingException");
         } catch (ParsingException $exception) {
             $this->assertSame($lineNumber, $exception->getLineNumber());

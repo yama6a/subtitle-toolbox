@@ -28,7 +28,7 @@ Format::FfMetadata->isAutoDetected();   // false
 ```
 
 - **Shared extensions**: when two formats share an extension, the earlier case owns it. So `fromPath()` returns `Format::MicroDvd` for `.sub`, `Format::Json` for `.json` and `Format::PlainText` for `.txt`.
-- **Parser and formatter classes**: the classes in `Parsers` and `Formatters` are public. Call a parser directly for its settings, for example `new MicroDvdParser(23.976)` or lenient mode.
+- **Parser and formatter classes**: the classes in `Parsers` and `Formatters` are public. `ReadOptions` holds the parser settings, for example `new ReadOptions(fps: 23.976)`. See [read-options.md](read-options.md).
 
 ## Write options
 `WriteOptions` holds the settings that every formatter reads. Its `format` field takes the options class of one format, such as `MicroDvdOptions`.
@@ -118,13 +118,14 @@ Now."
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\CsvOptions;
 use SubtitleToolbox\Parsers\CsvColumns;
-use SubtitleToolbox\Parsers\CsvParser;
+use SubtitleToolbox\Parsers\CsvReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.csv'), Format::Csv);   // headers start, end, text, ...
-$parser   = new CsvParser(new CsvColumns(start: 'Start TC', text: 'Text', speaker: 'Character', frameRate: 25));
-$subtitle = $parser->parse(file_get_contents('dubbing-script.csv'));
-$subtitle = (new CsvParser(new CsvColumns(start: 0, end: 1, text: 2, header: false), "\t"))->parse($tsv);
+$columns  = new CsvColumns(start: 'Start TC', text: 'Text', speaker: 'Character', frameRate: 25);
+$subtitle = Subtitle::fromString(file_get_contents('dubbing-script.csv'), Format::Csv, new ReadOptions(format: new CsvReadOptions($columns)));
+$subtitle = Subtitle::fromString($tsv, Format::Tsv, new ReadOptions(format: new CsvReadOptions(new CsvColumns(start: 0, end: 1, text: 2, header: false), "\t")));
 
 $csv = $english->toString(Format::Csv, new WriteOptions(format: new CsvOptions(
     delimiter: ';',                  // Excel in German and French locales
@@ -144,10 +145,10 @@ $csv = $english->toString(Format::Csv, new WriteOptions(format: new CsvOptions(
 
 - **Column mapping**: `CsvColumns` maps each role to a header name or to a 0-based column index. Header names match without case. A role without a mapping uses the header with its own name, such as `start`, when the table has one.
 - **Required columns**: a table without `start` or `text` throws `ParsingException`. So does a mapped header that the table lacks. `header: false` needs a column index for each mapped role, and at least for `start` and `text`.
-- **Delimiter**: `,`, `;` or a tab. Without the second constructor argument, the parser takes the one that occurs most often in the first line. A comma wins a tie.
+- **Delimiter**: `,`, `;` or a tab. Without `CsvReadOptions::$delimiter`, the parser takes the one that occurs most often in the first line. A comma wins a tie.
 - **Times**: seconds such as `62.5`, `00:01:02.500`, `00:01:02,500`, and `00:01:02:12` with frames. Frames need `frameRate`.
 - **Output times**: the formatter writes the format of the first parsed start time, else `hh:mm:ss.mmm`. `CsvOptions::$timeFormat` takes a case of the enum `CsvTimeFormat`, for example `CsvTimeFormat::Comma`. `CsvTimeFormat::Frames` writes `hh:mm:ss:ff` and needs `CsvOptions::$frameRate` or a parsed frame rate.
-- **No end column**: a cue without an end time ends at the next later start. The last such cue lasts 10 s, or the third constructor argument of `CsvParser`.
+- **No end column**: a cue without an end time ends at the next later start. The last such cue lasts `ReadOptions::$lastCueDuration`, 5 s by default.
 - **Layout**: a subtitle from `CsvParser` keeps its columns, header names, delimiter and time format. So an unchanged table comes out byte for byte. A subtitle from another format gets the columns `identifier` when a cue has one, `start`, `end`, `speaker` when a cue has a `<v>` tag, and `text`.
 - **Bilingual table**: `secondText` adds a column after `text`. Each row gets the cue of the second subtitle that overlaps the row most. When one second cue is the best match of several rows, only the first of them gets it.
 - **Output**: a UTF-8 BOM by default, because Excel needs it to read UTF-8. `WriteOptions(bom: false)` leaves it out. `lineEnding` ends the rows. A line break inside a cell stays LF, as Excel writes it.
@@ -160,17 +161,19 @@ EBU STL is the binary exchange format of European broadcasters, from [EBU Tech 3
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\EbuStlOptions;
-use SubtitleToolbox\Parsers\EbuStlParser;
+use SubtitleToolbox\Parsers\EbuStlReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('news.stl'));  // detects EBU STL
-$subtitle = (new EbuStlParser(true))->parse(file_get_contents('news.stl'));       // cue times minus the start of programme
+$subtitle = Subtitle::fromString(file_get_contents('news.stl'), Format::EbuStl,
+    new ReadOptions(format: new EbuStlReadOptions(subtractStartOfProgramme: true))); // cue times minus the start of programme
 $subtitle->getFormatData('stl')['gsi']['TCP'];                                    // '10000000'
 $subtitle->toString(Format::EbuStl, new WriteOptions(format: new EbuStlOptions(frameRate: 30)));  // 25 or 30
 ```
 
 - **Times**: the disk format code `STL25.01` or `STL30.01` sets the frame rate. By default, the parser keeps the time codes of the file.
-- **Start of programme**: `new EbuStlParser(true)` subtracts the TCP time code, for example `10:00:00:00`. A time before it becomes 0. The formatter adds TCP again.
+- **Start of programme**: `EbuStlReadOptions(subtractStartOfProgramme: true)` subtracts the TCP time code, for example `10:00:00:00`. A time before it becomes 0. The formatter adds TCP again.
 - **Characters**: the parser reads the character code tables 00 (ISO 6937) and 01 to 04 (ISO 8859-5, -6, -7 and -8). It needs no `mbstring` or `iconv`. The formatter writes `?` for a character outside the table.
 - **Styles**: italics, underline and the 8 teletext colours become `<i>`, `<u>` and `<font color>`, and back. White gives no tag. The formatter drops other colours.
 - **Blocks**: the parser joins the TTI blocks of one subtitle and skips user data blocks. A subtitle with the comment flag becomes a comment. The formatter splits long text into extension blocks.
@@ -206,9 +209,9 @@ LRC holds song lyrics with a time per line.
 
 ```php
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Parsers\LyricsParser;
+use SubtitleToolbox\ReadOptions;
 
-$subtitle = (new LyricsParser(lastCueDuration: 4))->parse(file_get_contents('song.lrc'));
+$subtitle = Subtitle::fromString(file_get_contents('song.lrc'), Format::Lyrics, new ReadOptions(lastCueDuration: 4));
 $subtitle->getMetadata(Subtitle::METADATA_TITLE);                          // from [ti:]
 $subtitle->getFormatData('lrc');                                           // ['idTags' => ['by' => 'Jane Doe']]
 $subtitle->toString(Format::Lyrics);                                       // ID tags first, then the lyrics
@@ -217,7 +220,7 @@ $subtitle->toString(Format::Lyrics);                                       // ID
 - **ID tags**: `[ti:]`, `[ar:]`, `[al:]` and `[au:]` become the metadata keys `title`, `artist`, `album` and `author`. The parser keeps all other ID tags in the `lrc` format data. `[#:]` lines become comments. The formatter writes ID tags at the top and each comment before its cue.
 - **Offset**: the parser subtracts `[offset:]` milliseconds from every time, so `[offset:+500]` turns `[00:12.00]` into 11.5 s. The formatter writes the shifted times and no `[offset:]` tag.
 - **Lines**: a line can hold several timestamps. Enhanced LRC word times such as `<00:12.50>` become word timestamps, and back.
-- **End times**: a cue ends at the next timestamp in time order. A timestamp without text, such as `[00:17.20]`, only ends the cue before it. The formatter writes such a line back. The last cue lasts 10 s unless you pass `lastCueDuration`.
+- **End times**: a cue ends at the next timestamp in time order. A timestamp without text, such as `[00:17.20]`, only ends the cue before it. The formatter writes such a line back. The last cue lasts `ReadOptions::$lastCueDuration`, 5 s by default.
 - **Output**: times in centiseconds. The formatter strips all tags. Text with `<`, `>` and `&` round-trips.
 
 ## MicroDVD
@@ -226,10 +229,10 @@ MicroDVD counts time in video frames, so the parser and the formatter need the f
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
-use SubtitleToolbox\Parsers\MicroDvdParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\WriteOptions;
 
-$subtitle = (new MicroDvdParser(23.976))->parse(file_get_contents('movie.sub'));
+$subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::MicroDvd, new ReadOptions(fps: 23.976));
 $subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::MicroDvd);   // reads {1}{1}23.976
 
 $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdOptions(
@@ -238,7 +241,7 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdOptio
 )));
 ```
 
-- **Frame rate**: the constructor value wins over a `{1}{1}<fps>` first line. The parser never reads that line as a cue. Without either, the parser throws `ParsingException`.
+- **Frame rate**: `ReadOptions::$fps` wins over a `{1}{1}<fps>` first line. The parser never reads that line as a cue. Without either, the parser throws `ParsingException`.
 - `$subtitle->getFormatData('sub')['frameRate']` returns the frame rate that the parser used.
 - **Control codes**: `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` become core markup. The parser reads the codes at the start of each `|`-separated line. A code later in the line stays text. A lower-case code styles one line. An upper-case code styles the whole cue. The `sub` format data keeps other control codes.
 - **Output**: the formatter writes control codes only for tags that wrap a whole line. It strips other tags. An unchanged cue keeps its original control codes.
@@ -248,10 +251,10 @@ Both formats are common in Polish subtitle downloads and use the `.txt` extensio
 
 ```php
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Parsers\TmPlayerParser;
+use SubtitleToolbox\ReadOptions;
 
-$subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('film.txt'), 'Windows-1250');   // detects MPL2 or TMPlayer
-$subtitle = (new TmPlayerParser(lastCueDuration: 3))->parse(file_get_contents('film.txt'));
+$subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('film.txt'), new ReadOptions(encoding: 'Windows-1250'));   // detects MPL2 or TMPlayer
+$subtitle = Subtitle::fromString(file_get_contents('film.txt'), Format::TmPlayer, new ReadOptions(lastCueDuration: 3));
 $subtitle->toString(Format::Mpl2);                                         // [12][45]Where are you?|/Home.
 $subtitle->toString(Format::TmPlayer);                                     // 00:00:01:Where are you?|Home.
 ```
@@ -259,13 +262,13 @@ $subtitle->toString(Format::TmPlayer);                                     // 00
 | Input | Parser result | Formatter output |
 |:--- |:--- |:--- |
 | MPL2 `[12][45]Where are you?\|/Home.` | 1.2 s to 4.5 s, `Where are you?` and `<i>Home.</i>` | the same line |
-| TMPlayer `00:00:01:Rain`, `00:00:04:` and `00:00:09:Sun` | 1 s to 4 s, and 9 s to 13 s | the same three lines |
+| TMPlayer `00:00:01:Rain`, `00:00:04:` and `00:00:09:Sun` | 1 s to 4 s, and 9 s to 14 s | the same three lines |
 | TMPlayer+ `0:00:01=Hello` | 1 s to the next line | `00:00:01:Hello` |
 | TMPlayer+ `00:00:01,1=Hello` and `00:00:01,2=world` | one cue with two lines | `00:00:01:Hello\|world` |
 
 - **MPL2 times**: tenths of a second.
 - **Italics**: the MPL2 formatter writes `/` for a line whose whole text is inside `<i>`. Both formatters strip all other tags.
-- **TMPlayer end times**: a cue ends at the next line with a time. A line without text only ends the cue before it. The last cue lasts 4 s unless you pass `lastCueDuration`.
+- **TMPlayer end times**: a cue ends at the next line with a time. A line without text only ends the cue before it. The last cue lasts `ReadOptions::$lastCueDuration`, 5 s by default.
 - **TMPlayer gaps**: TMPlayer counts whole seconds, so the formatter rounds each time to the second. A cue that ends before the next cue starts gets a line without text at its end. For a cue shorter than 1 s, that line comes 1 s after the start.
 - **`.txt` files**: see [cli.md](cli.md#formats-and-file-extensions).
 
@@ -288,20 +291,20 @@ $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubOptions(fra
 ## SAMI
 ```php
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Parsers\SamiParser;
+use SubtitleToolbox\ReadOptions;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami);   // the first class of the STYLE block
-$subtitle = (new SamiParser('FRCC'))->parse(file_get_contents('movie.smi'));      // the FRCC class
+$subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami, new ReadOptions(language: 'FRCC'));   // the FRCC class
 $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);                              // 'fr-FR', from the lang property of .FRCC
 $subtitle->getFormatData('smi');                                                  // keys style, class and samiParam
 ```
 
-- **Language class**: a SAMI file holds one CSS class per language, for example `.FRCC { Name: French; lang: fr-FR; }`. The parser reads one class. Without a STYLE block, it reads the first class that a `<P>` uses. A `<P>` without a class belongs to every class.
-- **End times**: a cue ends at the next `SYNC` that has a `<P>` of the same class, or no `<P>` at all. A `SYNC` with only `&nbsp;` ends a cue and starts none. The last cue lasts 10 s unless you pass `lastCueDuration`.
+- **Language class**: a SAMI file holds one CSS class per language, for example `.FRCC { Name: French; lang: fr-FR; }`. The parser reads the class in `ReadOptions::$language`, else the first class of the STYLE block. Without a STYLE block, it reads the first class that a `<P>` uses. A `<P>` without a class belongs to every class.
+- **End times**: a cue ends at the next `SYNC` that has a `<P>` of the same class, or no `<P>` at all. A `SYNC` with only `&nbsp;` ends a cue and starts none. The last cue lasts `ReadOptions::$lastCueDuration`, 5 s by default.
 - **Text**: a line break in the file is a space, as in HTML. Only `<br>` starts a new cue line. `<b>`, `<i>`, `<u>`, `<s>`, `<strike>` and `<font color>` become core markup. `<font color>` accepts `#rrggbb`, `rrggbb` and the 16 colour names of HTML 4. The parser drops other tags from the cue text.
 - **Formatter**: it keeps `<b>`, `<i>`, `<u>`, `<s>` and `<font>` and strips all other tags. It writes the stored `<TITLE>`, STYLE block and `<SAMIParam>`, without the rules of the other language classes. Without a stored block, it names the class after the language metadata, for example `KOKRCC` for `ko-KR`, or `SUBTTL` without a language.
 - **Timing**: the formatter writes a `&nbsp;` SYNC after each cue that has a gap before the next cue. A cue that overlaps the next cue ends where the next cue starts. An unchanged cue keeps the HTML of its `<P>`.
-- **Encoding**: the parser reads UTF-8 only. It throws `ParsingException` for other encodings. For a file in EUC-KR or CP949, pass the encoding to `Subtitle::fromString()`, see [encodings.md](encodings.md).
+- **Encoding**: the parser reads UTF-8 only. It throws `ParsingException` for other encodings. For a file in EUC-KR or CP949, pass `ReadOptions::$encoding`, see [encodings.md](encodings.md).
 
 ## SBV
 SBV is the YouTube caption format `0:00:01.500,0:00:04.000`.
@@ -315,13 +318,14 @@ US broadcast and many streaming services take closed captions as SCC. Each line 
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\SccOptions;
-use SubtitleToolbox\Parsers\SccParser;
+use SubtitleToolbox\Parsers\SccReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('show.scc'));  // detects SCC
 $subtitle->getFormatData('scc');                                                  // ['dropFrame' => true]
 $subtitle->getCues()[0]->getFormatData('scc');                                    // ['mode' => 'pop-on', 'rows' => [14, 15], 'columns' => [4, 8]]
-(new SccParser(2))->parse($content);                                              // data channel 2, CC2 or CC4
+Subtitle::fromString($content, Format::Scc, new ReadOptions(format: new SccReadOptions(channel: 2)));   // CC2 or CC4
 
 $subtitle->wrapLines(32, 4)->toString(Format::Scc);
 $subtitle->toString(Format::Scc, new WriteOptions(format: new SccOptions(dropFrame: false)));
@@ -329,7 +333,7 @@ $subtitle->toString(Format::Scc, new WriteOptions(format: new SccOptions(dropFra
 
 - **Reads**: pop-on, roll-up and paint-on captions, as the screen model of [47 CFR 15.119](https://www.govinfo.gov/content/pkg/CFR-2010-title47-vol1/xml/CFR-2010-title47-vol1-sec15-119.xml) defines them. Each change of the displayed captions starts a new cue. So a roll-up file gives one cue per screen, and a row shows in each cue until it rolls off.
 - **Writes**: pop-on captions on data channel 1, with drop-frame time codes by default.
-- **Times**: a semicolon before the frames marks drop-frame time code, a colon marks non-drop time code. A caption that no command erases ends 4 s after its start.
+- **Times**: a semicolon before the frames marks drop-frame time code, a colon marks non-drop time code. A caption that no command erases lasts `ReadOptions::$lastCueDuration`, 5 s by default.
 - **Damaged data**: the parser ignores the second copy of a doubled control code and drops a byte with a parity error. It skips data channel 2, XDS packets and text mode.
 - **Position**: rows 1 to 4 give alignment 8, and all other rows give `null`. The `scc` format data keeps the row and column of each line. The formatter writes them back when they still fit the cue. Else it places the lines by the alignment, at the bottom and centred by default.
 - **Timing of the formatter**: it loads each caption before the cue start, so the caption shows on the first frame of the cue. When the frames after the previous caption are too few for the load, the caption shows late. Of two overlapping cues, the later one replaces the earlier one.
@@ -365,7 +369,7 @@ $subtitle->toString(Format::SubViewer, new WriteOptions(format: new SubViewerOpt
 - **Header**: `[TITLE]` and `[AUTHOR]` become the metadata keys `title` and `author`. The parser keeps the other header tags and the `[COLF]` style line in the `subviewer` format data. The formatter writes them back after `[TITLE]` and `[AUTHOR]`. For a subtitle from another format, it writes the tags that Subtitle Edit writes.
 - **Delay**: the parser adds the SubViewer 1 `[DELAY]` seconds to every time, as FFmpeg does, and stores `[DELAY]` as 0. It keeps the SubViewer 2 `[DELAY]` value and does not apply it.
 - **SubViewer 2 text**: `[br]` and each text line become a cue line. The formatter writes all lines of a cue on one line, joined by `[br]`.
-- **SubViewer 1 cues**: a `[00:00:01]` line with text below starts a cue. A time line with an empty line below ends the cue before it. A cue without such an end line ends where the next cue starts. The last cue lasts 10 s unless you pass `lastCueDuration` to the parser. `|` is a line break. As in FFmpeg, the parser reads only the first text line after a time line.
+- **SubViewer 1 cues**: a `[00:00:01]` line with text below starts a cue. A time line with an empty line below ends the cue before it. A cue without such an end line ends where the next cue starts. The last cue lasts `ReadOptions::$lastCueDuration`, 5 s by default. `|` is a line break. As in FFmpeg, the parser reads only the first text line after a time line.
 - **Output**: times in centiseconds for version 2 and in seconds for version 1. The formatter strips all tags and decodes HTML entities. It skips cues without text, because an empty line ends a cue.
 
 ## TTML

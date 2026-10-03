@@ -35,5 +35,5 @@
 <font color="#ffff00">Into the</font> sea
 
 10
-00:00:10,650 --> 00:00:19,600
+00:00:10,650 --> 00:00:14,600
 <font color="#ffff00">Into the sea</font>

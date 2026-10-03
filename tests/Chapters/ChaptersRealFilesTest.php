@@ -6,7 +6,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
+use SubtitleToolbox\Parsers\ChapterReadOptions;
 use SubtitleToolbox\Parsers\YouTubeChaptersParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -150,7 +152,7 @@ class ChaptersRealFilesTest extends TestCase
     public function testMediaDurationEndsTheLastChapter(): void
     {
         $content = file_get_contents(self::DIR . "youtube/real/long_stream_chapters.txt");
-        $cues    = (new YouTubeChaptersParser(mediaDuration: 14400))->parse($content)->getCues();
+        $cues    = (new YouTubeChaptersParser())->parse($content, new ReadOptions(format: new ChapterReadOptions(mediaDuration: 14400)))->getCues();
 
         $this->assertSame([13870.0, 14400.0, "Goodbye"], $this->describe($cues[6]));
     }

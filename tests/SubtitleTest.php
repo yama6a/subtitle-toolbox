@@ -105,14 +105,6 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
-    public function testFromStringNamesVobSubParserForVobSub(): void
-    {
-        $this->expectException(InvalidParserException::class);
-        $this->expectExceptionMessage("Use VobSubParser.");
-        Subtitle::fromString("", Format::VobSub);
-    }
-
-
     public function testToStringThrowsForAFormatWithoutFormatter(): void
     {
         $this->expectException(InvalidFormatterException::class);
@@ -133,8 +125,8 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $content = file_get_contents(__DIR__ . "/files/encoding/french-windows-1252.srt");
 
         $this->assertEquals(
-            Subtitle::fromString($content, Format::SubRip, "Windows-1252"),
-            Subtitle::fromStringAutoDetectFormat($content, "Windows-1252")
+            Subtitle::fromString($content, Format::SubRip, new ReadOptions(encoding: "Windows-1252")),
+            Subtitle::fromStringAutoDetectFormat($content, new ReadOptions(encoding: "Windows-1252"))
         );
     }
 

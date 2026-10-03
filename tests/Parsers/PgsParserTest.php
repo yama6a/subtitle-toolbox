@@ -9,6 +9,7 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\FakeOcrEngine;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 
@@ -27,9 +28,9 @@ class PgsParserTest extends TestCase
     private const YELLOW_BT601 = 0xFCFF0AFF;
 
 
-    private function parseFile(string $file, ?PgsParser $parser = null): Subtitle
+    private function parseFile(string $file, ReadOptions $options = new ReadOptions()): Subtitle
     {
-        return ($parser ?? new PgsParser())->parse(file_get_contents(self::DIR . $file));
+        return (new PgsParser())->parse(file_get_contents(self::DIR . $file), $options);
     }
 
 
@@ -74,7 +75,7 @@ class PgsParserTest extends TestCase
         $content = file_get_contents(self::DIR . array_search($method, PgsFixtures::FILES, true));
 
         $this->assertSame(Format::Pgs, Format::detect($content));
-        $this->assertEquals((new PgsParser())->parse($content)->getCues(), Subtitle::fromStringAutoDetectFormat($content)->getCues());
+        $this->assertEquals((new PgsParser())->parse($content, new ReadOptions())->getCues(), Subtitle::fromStringAutoDetectFormat($content)->getCues());
     }
 
 
@@ -168,17 +169,17 @@ class PgsParserTest extends TestCase
 
     public function testLastCueDurationIsAnOption(): void
     {
-        $cues = $this->parseFile("shapes_1080p.sup", new PgsParser(1.5))->getCues();
+        $cues = $this->parseFile("shapes_1080p.sup", new ReadOptions(lastCueDuration: 1.5))->getCues();
 
         $this->assertSame(21.5, end($cues)->getEnd());
     }
 
 
-    public function testRejectsANonPositiveLastCueDuration(): void
+    public function testALastCueDurationOf0EndsTheLastCueAtItsStart(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $cues = $this->parseFile("shapes_1080p.sup", new ReadOptions(lastCueDuration: 0))->getCues();
 
-        new PgsParser(0);
+        $this->assertSame(20.0, end($cues)->getEnd());
     }
 
 
@@ -210,7 +211,7 @@ class PgsParserTest extends TestCase
             ->palette(180000, 0, 0, PgsFixtures::PALETTE)
             ->end(180000);
 
-        $cues = (new PgsParser())->parse($writer->bytes())->getCues();
+        $cues = (new PgsParser())->parse($writer->bytes(), new ReadOptions())->getCues();
 
         $this->assertCount(1, $cues);
         $this->assertSame([1.0, 2.0], [$cues[0]->getStart(), $cues[0]->getEnd()]);
@@ -227,7 +228,7 @@ class PgsParserTest extends TestCase
             ->object(0, 0, 0, 4, 2, "\1\2\3\4\1\1\1\1")
             ->end(0);
 
-        $image = CueImage::fromCue((new PgsParser())->parse($writer->bytes())->getCues()[0]);
+        $image = CueImage::fromCue((new PgsParser())->parse($writer->bytes(), new ReadOptions())->getCues()[0]);
 
         $this->assertSame([101, 500, 2, 1], [$image->x, $image->y, $image->width, $image->height]);
         $this->assertSame(self::BLACK, $this->pixelAt($image, 0, 0));
@@ -237,7 +238,7 @@ class PgsParserTest extends TestCase
 
     public function testParsesAnEmptyFile(): void
     {
-        $this->assertSame([], (new PgsParser())->parse("")->getCues());
+        $this->assertSame([], (new PgsParser())->parse("", new ReadOptions())->getCues());
     }
 
 
@@ -269,6 +270,6 @@ class PgsParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage($message);
 
-        (new PgsParser())->parse($content);
+        (new PgsParser())->parse($content, new ReadOptions());
     }
 }

@@ -13,7 +13,7 @@ class Mpl2Parser extends SubtitleParser
     private const CUE_REGEX = '/^\[(\d+)\]\[(\d+)\](.*)$/';
 
 
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);

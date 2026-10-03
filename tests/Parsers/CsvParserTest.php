@@ -8,15 +8,17 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Formatters\CsvTimeFormat;
 use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\Parsers\CsvReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\SubtitleCue;
 
 class CsvParserTest extends TestCase
 {
-    private function describe(string $csv, ?CsvParser $parser = null): array
+    private function describe(string $csv, ReadOptions $options = new ReadOptions()): array
     {
         return array_map(
             fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()],
-            array_values(($parser ?? new CsvParser())->parse($csv)->getCues())
+            array_values((new CsvParser())->parse($csv, $options)->getCues())
         );
     }
 
@@ -56,8 +58,8 @@ class CsvParserTest extends TestCase
 
     public function testTheDelimiterArgumentWinsOverDetection(): void
     {
-        $this->assertSame([[1.0, 2.0, ["a,b"]]], $this->describe("start;end;text\n1;2;a,b\n", new CsvParser(delimiter: ";")));
-        $this->assertSame([[1.0, 2.0, ["x;y"]]], $this->describe("start,end,text;more\n1,2,x;y\n", new CsvParser(new CsvColumns(text: "text;more"), ",")));
+        $this->assertSame([[1.0, 2.0, ["a,b"]]], $this->describe("start;end;text\n1;2;a,b\n", new ReadOptions(format: new CsvReadOptions(delimiter: ";"))));
+        $this->assertSame([[1.0, 2.0, ["x;y"]]], $this->describe("start,end,text;more\n1,2,x;y\n", new ReadOptions(format: new CsvReadOptions(new CsvColumns(text: "text;more"), ","))));
     }
 
 
@@ -94,7 +96,7 @@ class CsvParserTest extends TestCase
     #[DataProvider("times")]
     public function testReadsTimeFormats(string $time, float $seconds): void
     {
-        $cues = $this->describe("start,text\n$time,a\n", new CsvParser(new CsvColumns(frameRate: 25)));
+        $cues = $this->describe("start,text\n$time,a\n", new ReadOptions(format: new CsvReadOptions(new CsvColumns(frameRate: 25))));
 
         $this->assertSame($seconds, $cues[0][0]);
     }
@@ -105,7 +107,7 @@ class CsvParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The time \"00:00:01:12\" counts frames. Pass the frame rate in CsvColumns. (line 2)");
 
-        (new CsvParser())->parse("start,end,text\n00:00:01:12,00:00:02:00,a\n");
+        (new CsvParser())->parse("start,end,text\n00:00:01:12,00:00:02:00,a\n", new ReadOptions());
     }
 
 
@@ -114,18 +116,18 @@ class CsvParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("(line 4)");
 
-        (new CsvParser())->parse("start,end,text\n1,2,\"a\nb\"\nsoon,3,c\n");
+        (new CsvParser())->parse("start,end,text\n1,2,\"a\nb\"\nsoon,3,c\n", new ReadOptions());
     }
 
 
     public function testLenientModeSkipsABadRow(): void
     {
-        $parser = (new CsvParser())->setLenient();
+        $subtitle = (new CsvParser())->parse("start,end,text\nsoon,2,a\n3,4,b\n", new ReadOptions(lenient: true));
 
-        $this->assertSame([[3.0, 4.0, ["b"]]], $this->describe("start,end,text\nsoon,2,a\n3,4,b\n", $parser));
-        $this->assertCount(1, $parser->getWarnings());
-        $this->assertSame(2, $parser->getWarnings()[0]->lineNumber);
-        $this->assertSame(ParseWarning::SKIPPED, $parser->getWarnings()[0]->action);
+        $this->assertSame([[3.0, 4.0, ["b"]]], $this->describe("start,end,text\nsoon,2,a\n3,4,b\n", new ReadOptions(lenient: true)));
+        $this->assertCount(1, $subtitle->getParseWarnings());
+        $this->assertSame(2, $subtitle->getParseWarnings()[0]->lineNumber);
+        $this->assertSame(ParseWarning::SKIPPED, $subtitle->getParseWarnings()[0]->action);
     }
 
 
@@ -135,7 +137,7 @@ class CsvParserTest extends TestCase
             [1.0, 4.0, ["b"]],
             [1.0, 4.0, ["a"]],
             [4.0, 6.0, ["c"]],
-        ], $this->describe("text,start\nb,1\na,1\nc,4\n", new CsvParser(lastCueDuration: 2)));
+        ], $this->describe("text,start\nb,1\na,1\nc,4\n", new ReadOptions(lastCueDuration: 2)));
     }
 
 
@@ -153,15 +155,15 @@ class CsvParserTest extends TestCase
 
     public function testMapsColumnsByIndexWithoutAHeader(): void
     {
-        $parser = new CsvParser(new CsvColumns(start: 1, end: 2, text: 0, header: false));
+        $options = new ReadOptions(format: new CsvReadOptions(new CsvColumns(start: 1, end: 2, text: 0, header: false)));
 
-        $this->assertSame([[1.0, 2.0, ["a"]], [3.0, 4.0, ["b"]]], $this->describe("a,1,2\nb,3,4\n", $parser));
+        $this->assertSame([[1.0, 2.0, ["a"]], [3.0, 4.0, ["b"]]], $this->describe("a,1,2\nb,3,4\n", $options));
     }
 
 
     public function testKeepsOtherColumnsAndIdentifiers(): void
     {
-        $subtitle = (new CsvParser(new CsvColumns(identifier: "id")))->parse("ID,Start,End,Text,Take\nshot-1,1,2,a,3\n\n");
+        $subtitle = (new CsvParser())->parse("ID,Start,End,Text,Take\nshot-1,1,2,a,3\n\n", new ReadOptions(format: new CsvReadOptions(new CsvColumns(identifier: "id"))));
         $cue      = $subtitle->getCues()[0];
 
         $this->assertSame("shot-1", $cue->getIdentifier());
@@ -179,7 +181,7 @@ class CsvParserTest extends TestCase
 
     public function testIdentifierHeaderMapsToTheCueIdentifier(): void
     {
-        $this->assertSame("intro", (new CsvParser())->parse("identifier,start,text\nintro,1,a\n")->getCues()[0]->getIdentifier());
+        $this->assertSame("intro", (new CsvParser())->parse("identifier,start,text\nintro,1,a\n", new ReadOptions())->getCues()[0]->getIdentifier());
     }
 
 
@@ -194,7 +196,7 @@ class CsvParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The table has no column \"Character\" for speaker.");
 
-        (new CsvParser(new CsvColumns(speaker: "Character")))->parse("start,end,text\n1,2,a\n");
+        (new CsvParser())->parse("start,end,text\n1,2,a\n", new ReadOptions(format: new CsvReadOptions(new CsvColumns(speaker: "Character"))));
     }
 
 
@@ -203,7 +205,7 @@ class CsvParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The table has no column \"text\" for text.");
 
-        (new CsvParser())->parse("start,end\n1,2\n");
+        (new CsvParser())->parse("start,end\n1,2\n", new ReadOptions());
     }
 
 
@@ -212,7 +214,7 @@ class CsvParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("A quoted CSV cell has no closing quote. (line 2)");
 
-        (new CsvParser())->parse("start,end,text\n1,2,\"open\n");
+        (new CsvParser())->parse("start,end,text\n1,2,\"open\n", new ReadOptions());
     }
 
 
@@ -220,7 +222,7 @@ class CsvParserTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new CsvParser(delimiter: "|");
+        new CsvReadOptions(delimiter: "|");
     }
 
 

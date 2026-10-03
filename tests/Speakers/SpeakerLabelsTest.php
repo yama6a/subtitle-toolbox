@@ -8,6 +8,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -58,9 +59,9 @@ class SpeakerLabelsTest extends TestCase
 
     private static function whisper(string $path): Subtitle
     {
-        $parser = new WhisperJsonParser([WhisperJsonParser::OPTION_SPEAKER_VOICES => true]);
+        $parser = new WhisperJsonParser();
 
-        return $parser->parse(file_get_contents(self::FILES . $path));
+        return $parser->parse(file_get_contents(self::FILES . $path), new ReadOptions(speakerVoices: true));
     }
 
 
@@ -354,7 +355,7 @@ class SpeakerLabelsTest extends TestCase
 
     public function testWhisperSpeakerVoicesAreOffByDefault(): void
     {
-        $subtitle = (new WhisperJsonParser())->parse(file_get_contents(self::FILES . "whisper_cpp_diarize.json"));
+        $subtitle = (new WhisperJsonParser())->parse(file_get_contents(self::FILES . "whisper_cpp_diarize.json"), new ReadOptions());
 
         $this->assertSame([["Did you lock the back door?"], ["Yes, and the window."], ["Both of us checked it twice."], ["Then we can go."]],
                           self::lines($subtitle));
@@ -396,8 +397,8 @@ class SpeakerLabelsTest extends TestCase
         $json   = '{"segments": [{"start": 0, "end": 2, "text": " Hi.", "speaker": "O\'Neil & <Son>",' .
                   ' "words": [{"word": "Hi.", "start": 0.5, "end": 1}]}, {"start": 2, "end": 3, "text": "Bye.", "speaker": " "},' .
                   ' {"start": 3, "end": 4, "text": "Yes.", "speaker": 5}]}';
-        $parser = new WhisperJsonParser([WhisperJsonParser::OPTION_SPEAKER_VOICES => true, WhisperJsonParser::OPTION_WORD_TIMESTAMPS => true]);
+        $parser = new WhisperJsonParser();
 
-        $this->assertSame([["<v O'Neil &amp; &lt;Son&gt;><00:00:00.500>Hi."], ["Bye."], ["Yes."]], self::lines($parser->parse($json)));
+        $this->assertSame([["<v O'Neil &amp; &lt;Son&gt;><00:00:00.500>Hi."], ["Bye."], ["Yes."]], self::lines($parser->parse($json, new ReadOptions(speakerVoices: true, wordTimestamps: true))));
     }
 }

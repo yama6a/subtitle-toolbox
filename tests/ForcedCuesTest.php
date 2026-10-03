@@ -12,6 +12,8 @@ use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\FakeOcrEngine;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\VobSubParser;
+use SubtitleToolbox\Parsers\VobSubReadOptions;
+use SubtitleToolbox\ReadOptions;
 
 require_once __DIR__ . "/Ocr/FakeOcrEngine.php";
 
@@ -136,7 +138,7 @@ class ForcedCuesTest extends TestCase
 
     public function testPgsCuesCarryTheFlagThroughOcr(): void
     {
-        $subtitle = (new PgsParser())->parse(file_get_contents(__DIR__ . "/files/pgs/shapes_1080p.sup"));
+        $subtitle = (new PgsParser())->parse(file_get_contents(__DIR__ . "/files/pgs/shapes_1080p.sup"), new ReadOptions());
         $this->assertSame([false, false, true, true, false, false], $this->forcedFlags($subtitle));
 
         $subtitle->recognizeText(new FakeOcrEngine(["Platform 4"]), "eng");
@@ -153,7 +155,7 @@ class ForcedCuesTest extends TestCase
     public function testVobSubCuesCarryTheFlagThroughOcr(): void
     {
         $dir      = __DIR__ . "/files/vobsub/";
-        $subtitle = (new VobSubParser(file_get_contents($dir . "two-tracks-pal.idx")))->parse(file_get_contents($dir . "two-tracks-pal.sub"));
+        $subtitle = (new VobSubParser())->parse(file_get_contents($dir . "two-tracks-pal.sub"), new ReadOptions(format: new VobSubReadOptions(file_get_contents($dir . "two-tracks-pal.idx"))));
         $this->assertSame([false, true, false, false, false], $this->forcedFlags($subtitle));
 
         $subtitle->recognizeText(new FakeOcrEngine(["Exit"]), "eng");

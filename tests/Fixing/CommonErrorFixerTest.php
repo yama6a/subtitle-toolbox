@@ -11,6 +11,7 @@ use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Parsers\PgsParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -181,7 +182,7 @@ class CommonErrorFixerTest extends TestCase
             $sup = file_get_contents(self::FILES . "fixing/ocr-$language.sup");
             $this->assertSame($sup, ocrFixture($language));
 
-            $this->assertStringEqualsFile(self::FILES . "fixing/ocr-$language.ocr.srt", ocrWithErrors((new PgsParser())->parse($sup)));
+            $this->assertStringEqualsFile(self::FILES . "fixing/ocr-$language.ocr.srt", ocrWithErrors((new PgsParser())->parse($sup, new ReadOptions())));
         }
         foreach (imageFixtures() as $name => $subtitle) {
             $this->assertStringEqualsFile(self::FILES . "fixing/$name", ocrWithErrors($subtitle));
@@ -191,7 +192,7 @@ class CommonErrorFixerTest extends TestCase
 
     public function testFixesTheOcrTextOfImageCuesAndKeepsTheImages(): void
     {
-        $subtitle = (new PgsParser())->parse(file_get_contents(self::FILES . "fixing/ocr-fr.sup"));
+        $subtitle = (new PgsParser())->parse(file_get_contents(self::FILES . "fixing/ocr-fr.sup"), new ReadOptions());
         $this->assertSame([], CommonErrorFixer::apply($subtitle, new CommonErrorOptions(language: "fr"))->fixes);
 
         $subtitle->recognizeText(new GlyphOcrEngine(GlyphDatabase::latin(), ["lineContext" => false]));

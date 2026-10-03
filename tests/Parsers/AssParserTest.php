@@ -6,6 +6,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -264,7 +265,7 @@ class AssParserTest extends TestCase
 
     private function parseEvents(string $content): Subtitle
     {
-        return (new AssParser())->parse($content);
+        return (new AssParser())->parse($content, new ReadOptions());
     }
 
 

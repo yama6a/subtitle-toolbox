@@ -37,7 +37,7 @@ class AssParser extends SubtitleParser
     private int $eventIndex = 0;
 
 
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings   = [];
         $this->eventIndex = 0;

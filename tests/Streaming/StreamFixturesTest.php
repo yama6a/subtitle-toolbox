@@ -9,6 +9,7 @@ use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -60,7 +61,7 @@ class StreamFixturesTest extends TestCase
         $content = file_get_contents($path);
 
         $this->assertSameResult(
-            fn (): array => [(new SubRipParser())->parse($content)->getCues()],
+            fn (): array => [(new SubRipParser())->parse($content, new ReadOptions())->getCues()],
             fn (): array => [iterator_to_array((new SubRipStreamReader())->read($path), false)]
         );
     }
@@ -74,7 +75,7 @@ class StreamFixturesTest extends TestCase
 
         $this->assertSameResult(
             function () use ($content): array {
-                $subtitle = (new WebVttParser())->parse($content);
+                $subtitle = (new WebVttParser())->parse($content, new ReadOptions());
 
                 return [$subtitle->getCues(), $subtitle->getFormatData(WebVttParser::FORMAT)];
             },
@@ -86,7 +87,7 @@ class StreamFixturesTest extends TestCase
     #[DataProvider("validSubRipFiles")]
     public function testSubRipWriterWritesTheBytesOfSubRipFormatter(string $path): void
     {
-        $subtitle = (new SubRipParser())->parse(file_get_contents($path));
+        $subtitle = (new SubRipParser())->parse(file_get_contents($path), new ReadOptions());
 
         foreach (self::optionSets() as $name => $options) {
             $stream = fopen("php://memory", "w+b");
@@ -104,7 +105,7 @@ class StreamFixturesTest extends TestCase
     #[DataProvider("validWebVttFiles")]
     public function testWebVttWriterWritesTheBytesOfWebVttFormatter(string $path): void
     {
-        $parsed   = (new WebVttParser())->parse(file_get_contents($path));
+        $parsed   = (new WebVttParser())->parse(file_get_contents($path), new ReadOptions());
         $header   = $parsed->getFormatData(WebVttParser::FORMAT);
         $subtitle = (new Subtitle())->setFormatData(WebVttParser::FORMAT, $header);
         foreach ($parsed->getCues() as $cue) {
@@ -170,7 +171,7 @@ class StreamFixturesTest extends TestCase
     private static function parses(SubRipParser|WebVttParser $parser, string $path): bool
     {
         try {
-            $parser->parse(file_get_contents($path));
+            $parser->parse(file_get_contents($path), new ReadOptions());
         } catch (Throwable) {
             return false;
         }

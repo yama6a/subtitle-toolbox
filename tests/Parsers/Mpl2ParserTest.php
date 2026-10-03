@@ -8,6 +8,7 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -69,7 +70,7 @@ class Mpl2ParserTest extends TestCase
         $subtitle  = $this->parseFile($file, $encoding);
         $formatted = $subtitle->toString(Format::Mpl2, $options ?? new WriteOptions());
 
-        $this->assertEquals($subtitle->getCues(), (new Mpl2Parser())->parse($formatted)->getCues());
+        $this->assertEquals($subtitle->getCues(), (new Mpl2Parser())->parse($formatted, new ReadOptions())->getCues());
         if ($options !== null) {
             $original = file_get_contents(self::DIR . "real/$file");
             $this->assertSame($original, $encoding === null ? $formatted : iconv("UTF-8", $encoding, $formatted));
@@ -79,7 +80,7 @@ class Mpl2ParserTest extends TestCase
 
     public function testReadsItalicsAndLineBreaks(): void
     {
-        $cues = (new Mpl2Parser())->parse("[12][45]Where are you?|/Home.\n[50][60]/ Both| / lines\n")->getCues();
+        $cues = (new Mpl2Parser())->parse("[12][45]Where are you?|/Home.\n[50][60]/ Both| / lines\n", new ReadOptions())->getCues();
 
         $this->assertSame([1.2, 4.5, "Where are you?\n<i>Home.</i>"], $this->row($cues[0]));
         $this->assertSame([5.0, 6.0, "<i>Both</i>\n<i>lines</i>"], $this->row($cues[1]));
@@ -88,7 +89,7 @@ class Mpl2ParserTest extends TestCase
 
     public function testKeepsASlashInsideALineAsText(): void
     {
-        $cue = (new Mpl2Parser())->parse("[0][10]Either/or <b>")->getCues()[0];
+        $cue = (new Mpl2Parser())->parse("[0][10]Either/or <b>", new ReadOptions())->getCues()[0];
 
         $this->assertSame("Either/or &lt;b&gt;", $cue->getText());
     }
@@ -96,7 +97,7 @@ class Mpl2ParserTest extends TestCase
 
     public function testSortsCuesByStart(): void
     {
-        $cues = (new Mpl2Parser())->parse("[30][40]Second\n[10][20]First\n")->getCues();
+        $cues = (new Mpl2Parser())->parse("[30][40]Second\n[10][20]First\n", new ReadOptions())->getCues();
 
         $this->assertSame(["First", "Second"], [$cues[0]->getText(), $cues[1]->getText()]);
     }
@@ -105,7 +106,7 @@ class Mpl2ParserTest extends TestCase
     public function testStrictModeThrowsWithTheLineNumber(): void
     {
         try {
-            (new Mpl2Parser())->parse(file_get_contents(self::DIR . "lenient/broken.txt"));
+            (new Mpl2Parser())->parse(file_get_contents(self::DIR . "lenient/broken.txt"), new ReadOptions());
             $this->fail("The parser accepted a line without times.");
         } catch (ParsingException $exception) {
             $this->assertSame(1, $exception->getLineNumber());
@@ -116,8 +117,7 @@ class Mpl2ParserTest extends TestCase
 
     public function testLenientModeSkipsLinesWithoutTimes(): void
     {
-        $parser   = (new Mpl2Parser())->setLenient();
-        $subtitle = $parser->parse(file_get_contents(self::DIR . "lenient/broken.txt"));
+        $subtitle = (new Mpl2Parser())->parse(file_get_contents(self::DIR . "lenient/broken.txt"), new ReadOptions(lenient: true));
 
         $this->assertSame([[1.0, 3.0, "The market opens at ten."], [7.0, 9.5, "<i>Bring a basket.</i>"]], array_map($this->row(...), $subtitle->getCues()));
         $this->assertSame(
@@ -125,7 +125,7 @@ class Mpl2ParserTest extends TestCase
                 [1, 0, ParseWarning::SKIPPED, "Line 1 is not an MPL2 cue: Downloaded from a subtitle site (line 1)"],
                 [3, 2, ParseWarning::SKIPPED, "Line 3 is not an MPL2 cue: [4x][60]The stalls sell fish. (line 3)"],
             ],
-            array_map(fn (ParseWarning $warning): array => [$warning->lineNumber, $warning->blockIndex, $warning->action, $warning->message], $parser->getWarnings())
+            array_map(fn (ParseWarning $warning): array => [$warning->lineNumber, $warning->blockIndex, $warning->action, $warning->message], $subtitle->getParseWarnings())
         );
     }
 
@@ -140,7 +140,7 @@ class Mpl2ParserTest extends TestCase
 
     private function parseFile(string $file, ?string $encoding): Subtitle
     {
-        return Subtitle::fromString(file_get_contents(self::DIR . "real/$file"), Format::Mpl2, $encoding);
+        return Subtitle::fromString(file_get_contents(self::DIR . "real/$file"), Format::Mpl2, new ReadOptions(encoding: $encoding));
     }
 
 

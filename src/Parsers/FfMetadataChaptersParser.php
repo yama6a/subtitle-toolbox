@@ -22,15 +22,13 @@ class FfMetadataChaptersParser extends SubtitleParser
     private const DEFAULT_TIME_BASE = "1/1000000000";
 
 
-    /**
-     * Creates a parser that ends the last chapter without an END line at $mediaDuration seconds, or at its own start when it is null.
-     */
-    public function __construct(private readonly ?float $mediaDuration = null)
+    protected static function formatOptionsClass(): string
     {
+        return ChapterReadOptions::class;
     }
 
 
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $content        = StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle));
@@ -144,7 +142,7 @@ class FfMetadataChaptersParser extends SubtitleParser
         usort($chapters, fn (array $a, array $b): int => $a["start"] <=> $b["start"]);
         foreach ($chapters as $index => $chapter) {
             $nextStart = $chapters[$index + 1]["start"] ?? null;
-            $end       = $chapter["end"] ?? $nextStart ?? max($chapter["start"], $this->mediaDuration ?? 0);
+            $end       = $chapter["end"] ?? $nextStart ?? max($chapter["start"], $this->formatOptions()->mediaDuration ?? 0);
             $title     = $chapter["tags"]["title"] ?? "";
 
             $cue = new SubtitleCue($chapter["start"], $end, Markup::escapeText($title));

@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Streaming\SubRipStreamReader;
 use SubtitleToolbox\Streaming\WebVttStreamReader;
 use SubtitleToolbox\Subtitle;
@@ -384,11 +385,11 @@ class LenientParsingTest extends TestCase
         array $expectedCues,
         array $expectedWarnings
     ): void {
-        $parser   = (new $parserClass())->setLenient();
-        $subtitle = $parser->parse(file_get_contents(self::DIR . $file));
+        $parser   = new $parserClass();
+        $subtitle = $parser->parse(file_get_contents(self::DIR . $file), new ReadOptions(lenient: true));
 
         $this->assertEquals($expectedCues, $this->cueRows($subtitle->getCues()));
-        $this->assertSame($expectedWarnings, $this->warningRows($parser->getWarnings()));
+        $this->assertSame($expectedWarnings, $this->warningRows($subtitle->getParseWarnings()));
     }
 
 
@@ -400,31 +401,31 @@ class LenientParsingTest extends TestCase
     ): void {
         $content = file_get_contents(self::DIR . $file);
         if (is_int($strictResult)) {
-            $parser = new $parserClass();
-            $this->assertCount($strictResult, $parser->parse($content)->getCues());
-            $this->assertSame([], $parser->getWarnings());
+            $subtitle = (new $parserClass())->parse($content, new ReadOptions());
+            $this->assertCount($strictResult, $subtitle->getCues());
+            $this->assertSame([], $subtitle->getParseWarnings());
 
             return;
         }
 
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage($strictResult);
-        (new $parserClass())->parse($content);
+        (new $parserClass())->parse($content, new ReadOptions());
     }
 
 
     #[DataProvider("streamedFiles")]
     public function testStreamReaderReturnsTheCuesAndWarningsOfTheParser(string $file, string $parserClass, string $readerClass): void
     {
-        $parser   = (new $parserClass())->setLenient();
-        $subtitle = $parser->parse(file_get_contents(self::DIR . $file));
+        $parser   = new $parserClass();
+        $subtitle = $parser->parse(file_get_contents(self::DIR . $file), new ReadOptions(lenient: true));
 
         $reader = (new $readerClass())->setLenient();
         $cues   = iterator_to_array($reader->read(self::DIR . $file));
 
         $this->assertSame(array_keys($cues), range(0, count($cues) - 1));
         $this->assertSame($this->cueRows($subtitle->getCues()), $this->cueRows($cues));
-        $this->assertEquals($parser->getWarnings(), $reader->getWarnings());
+        $this->assertEquals($subtitle->getParseWarnings(), $reader->getWarnings());
     }
 
 
@@ -433,9 +434,7 @@ class LenientParsingTest extends TestCase
         $content = "1\n00:00:01,000 --> 00:00:04,000\nHello\n\n" .
                    "2\n00:00:05,000 -> 00:00:07,000\nBroken arrow\n\n" .
                    "3\n00:00:08,000 --> 00:00:10,000\nStill fine\n";
-
-        $parser   = (new SubRipParser())->setLenient();
-        $subtitle = $parser->parse($content);
+        $subtitle = (new SubRipParser())->parse($content, new ReadOptions(lenient: true));
 
         $this->assertEquals([[1, 4, "Hello"], [8, 10, "Still fine"]], $this->cueRows($subtitle->getCues()));
         $this->assertEquals(
@@ -446,7 +445,7 @@ class LenientParsingTest extends TestCase
                 ["2", "00:00:05,000 -> 00:00:07,000", "Broken arrow"],
                 ParseWarning::SKIPPED
             )],
-            $parser->getWarnings()
+            $subtitle->getParseWarnings()
         );
     }
 
@@ -460,31 +459,31 @@ class LenientParsingTest extends TestCase
 
     public function testEachParseCallStartsWithoutWarnings(): void
     {
-        $parser = (new SubRipParser())->setLenient();
-        $parser->parse(file_get_contents(self::DIR . "bad_timestamp.srt"));
-        $parser->parse(file_get_contents(self::DIR . "mixed_line_endings.srt"));
+        $parser = new SubRipParser();
+        $parser->parse(file_get_contents(self::DIR . "bad_timestamp.srt"), new ReadOptions(lenient: true));
+        $subtitle = $parser->parse(file_get_contents(self::DIR . "mixed_line_endings.srt"), new ReadOptions(lenient: true));
 
-        $this->assertSame([], $parser->getWarnings());
+        $this->assertSame([], $subtitle->getParseWarnings());
     }
 
 
-    public function testSetLenientFalseRestoresStrictMode(): void
+    public function testAStrictParseAfterALenientParseThrows(): void
     {
-        $parser = (new SbvParser())->setLenient()->setLenient(false);
+        $parser = new SbvParser();
+        $parser->parse(file_get_contents(self::DIR . "bad_timestamp.sbv"), new ReadOptions(lenient: true));
 
-        $this->assertFalse($parser->isLenient());
         $this->expectException(ParsingException::class);
-        $parser->parse(file_get_contents(self::DIR . "bad_timestamp.sbv"));
+        $parser->parse(file_get_contents(self::DIR . "bad_timestamp.sbv"), new ReadOptions());
     }
 
 
     public function testAnEmptyFileGivesNoCuesAndOneWarning(): void
     {
         foreach ([new SubRipParser(), new SbvParser()] as $parser) {
-            $subtitle = $parser->setLenient()->parse(" \n\n");
+            $subtitle = $parser->parse(" \n\n", new ReadOptions(lenient: true));
 
             $this->assertSame([], $subtitle->getCues());
-            $this->assertSame([[1, 0, self::SKIPPED, "The file has no cues."]], $this->warningRows($parser->getWarnings()));
+            $this->assertSame([[1, 0, self::SKIPPED, "The file has no cues."]], $this->warningRows($subtitle->getParseWarnings()));
         }
     }
 
@@ -493,7 +492,7 @@ class LenientParsingTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The file doesn't start with the string WEBVTT!");
-        (new WebVttParser())->setLenient()->parse("00:00:01.000 --> 00:00:02.000\ntext\n");
+        (new WebVttParser())->parse("00:00:01.000 --> 00:00:02.000\ntext\n", new ReadOptions(lenient: true));
     }
 
 
@@ -507,16 +506,15 @@ class LenientParsingTest extends TestCase
 
     public function testWebVttLineNumbersCountTheEmptyLinesBeforeTheSignature(): void
     {
-        $parser = (new WebVttParser())->setLenient();
-        $parser->parse("\n\nWEBVTT\n\nbroken\n\n00:00:01.000 --> 00:00:02.000\ntext\n");
+        $subtitle = (new WebVttParser())->parse("\n\nWEBVTT\n\nbroken\n\n00:00:01.000 --> 00:00:02.000\ntext\n", new ReadOptions(lenient: true));
 
-        $this->assertSame(5, $parser->getWarnings()[0]->lineNumber);
+        $this->assertSame(5, $subtitle->getParseWarnings()[0]->lineNumber);
     }
 
 
     public function testWebVttKeepsTheHeaderLinesBeforeTheSplit(): void
     {
-        $subtitle = (new WebVttParser())->setLenient()->parse(file_get_contents(self::DIR . "missing_empty_line.vtt"));
+        $subtitle = (new WebVttParser())->parse(file_get_contents(self::DIR . "missing_empty_line.vtt"), new ReadOptions(lenient: true));
 
         $this->assertSame(["headerLines" => ["Kind: captions", "Language: en"]], $subtitle->getFormatData("vtt"));
     }
@@ -524,16 +522,15 @@ class LenientParsingTest extends TestCase
 
     public function testSubViewerKeepsTheTextOfTheSkippedCueInTheWarning(): void
     {
-        $parser = (new SubViewerParser())->setLenient();
-        $parser->parse(file_get_contents(self::DIR . "bad_time_line.sub"));
+        $subtitle = (new SubViewerParser())->parse(file_get_contents(self::DIR . "bad_time_line.sub"), new ReadOptions(lenient: true));
 
-        $this->assertSame(["00:00:04.00,00:00:0x.00", "Apples are cheap today."], $parser->getWarnings()[1]->block);
+        $this->assertSame(["00:00:04.00,00:00:0x.00", "Apples are cheap today."], $subtitle->getParseWarnings()[1]->block);
     }
 
 
     public function testSubViewerStrictModeReadsABadTimeLineAsText(): void
     {
-        $subtitle = (new SubViewerParser())->parse("00:00:01.00,00:00:03.00\nOne\n\n00:00:04.00,00:00:0x.00\nTwo\n");
+        $subtitle = (new SubViewerParser())->parse("00:00:01.00,00:00:03.00\nOne\n\n00:00:04.00,00:00:0x.00\nTwo\n", new ReadOptions());
 
         $this->assertSame(["One", "00:00:04.00,00:00:0x.00", "Two"], $subtitle->getCues()[0]->getLines());
     }
@@ -541,30 +538,27 @@ class LenientParsingTest extends TestCase
 
     public function testSubViewer1SkipsABrokenHeaderLine(): void
     {
-        $parser   = (new SubViewerParser())->setLenient();
-        $subtitle = $parser->parse("[TITLE]\nMarket\nbroken\n" . SubViewerParser::START_SCRIPT . "\n[00:00:01]\nHello\n[00:00:02]\n");
+        $subtitle = (new SubViewerParser())->parse("[TITLE]\nMarket\nbroken\n" . SubViewerParser::START_SCRIPT . "\n[00:00:01]\nHello\n[00:00:02]\n", new ReadOptions(lenient: true));
 
         $this->assertSame("Hello", $subtitle->getCues()[0]->getText());
-        $this->assertSame([[3, 0, self::SKIPPED, "Line 3 is not a SubViewer 1 header tag: broken (line 3)"]], $this->warningRows($parser->getWarnings()));
+        $this->assertSame([[3, 0, self::SKIPPED, "Line 3 is not a SubViewer 1 header tag: broken (line 3)"]], $this->warningRows($subtitle->getParseWarnings()));
     }
 
 
     public function testMpSubSkipsABadFormatLineAndReadsTheTimesAsSeconds(): void
     {
-        $parser   = (new MpSubParser())->setLenient();
-        $subtitle = $parser->parse("FORMAT=PAL\n\n1 2\nHello\n");
+        $subtitle = (new MpSubParser())->parse("FORMAT=PAL\n\n1 2\nHello\n", new ReadOptions(lenient: true));
 
         $this->assertEquals([[1, 3, "Hello"]], $this->cueRows($subtitle->getCues()));
-        $this->assertSame([[1, 0, self::SKIPPED, "Line 1 has an unknown FORMAT value: PAL (line 1)"]], $this->warningRows($parser->getWarnings()));
+        $this->assertSame([[1, 0, self::SKIPPED, "Line 1 has an unknown FORMAT value: PAL (line 1)"]], $this->warningRows($subtitle->getParseWarnings()));
     }
 
 
     public function testSamiWarningHoldsTheLinesOfTheSkippedSync(): void
     {
-        $parser = (new SamiParser())->setLenient();
-        $parser->parse(file_get_contents(self::DIR . "bad_sync_start.smi"));
+        $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . "bad_sync_start.smi"), new ReadOptions(lenient: true));
 
-        $this->assertSame(["<SYNC Start=><P Class=ENCC>Cut the grass."], $parser->getWarnings()[0]->block);
+        $this->assertSame(["<SYNC Start=><P Class=ENCC>Cut the grass."], $subtitle->getParseWarnings()[0]->block);
     }
 
 
@@ -572,17 +566,16 @@ class LenientParsingTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The file is not well-formed XML!");
-        (new TtmlParser())->setLenient()->parse("<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><p begin=\"1s\" end=\"2s\">text</body></tt>");
+        (new TtmlParser())->parse("<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><p begin=\"1s\" end=\"2s\">text</body></tt>", new ReadOptions(lenient: true));
     }
 
 
     public function testIttParserInheritsLenientMode(): void
     {
-        $parser   = (new IttParser())->setLenient();
-        $subtitle = $parser->parse(file_get_contents(self::DIR . "bad_begin.ttml"));
+        $subtitle = (new IttParser())->parse(file_get_contents(self::DIR . "bad_begin.ttml"), new ReadOptions(lenient: true));
 
         $this->assertCount(2, $subtitle->getCues());
-        $this->assertCount(2, $parser->getWarnings());
+        $this->assertCount(2, $subtitle->getParseWarnings());
     }
 
 
@@ -590,17 +583,16 @@ class LenientParsingTest extends TestCase
     {
         $content = substr(file_get_contents(self::DIR . "bad_time_code.stl"), 0, EbuStlParser::GSI_BLOCK_SIZE + 3 * EbuStlParser::TTI_BLOCK_SIZE);
 
-        $this->assertCount(3, (new EbuStlParser())->parse($content)->getCues());
+        $this->assertCount(3, (new EbuStlParser())->parse($content, new ReadOptions())->getCues());
     }
 
 
     public function testJsonMovesTheCommentsToTheCueNumbersAfterTheSkip(): void
     {
-        $parser   = (new JsonParser())->setLenient();
-        $subtitle = $parser->parse(file_get_contents(self::DIR . "missing_end.json"));
+        $subtitle = (new JsonParser())->parse(file_get_contents(self::DIR . "missing_end.json"), new ReadOptions(lenient: true));
 
         $this->assertSame([["text" => "Platform changes", "beforeCueIndex" => 1]], $subtitle->getComments());
-        $this->assertSame(['{"start":4,"lines":["It leaves from platform two."]}'], $parser->getWarnings()[0]->block);
+        $this->assertSame(['{"start":4,"lines":["It leaves from platform two."]}'], $subtitle->getParseWarnings()[0]->block);
     }
 
 
@@ -608,7 +600,7 @@ class LenientParsingTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The field version is missing.");
-        (new JsonParser())->setLenient()->parse('{"cues": []}');
+        (new JsonParser())->parse('{"cues": []}', new ReadOptions(lenient: true));
     }
 
 
@@ -616,19 +608,17 @@ class LenientParsingTest extends TestCase
     {
         $content = '{"transcription": [{"offsets": {"from": 0, "to": 2000}, "text": " Hello"}, {"text": " Lost"},' .
                    ' {"offsets": {"from": 3000, "to": 4000}, "text": " Bye"}]}';
-
-        $parser   = (new WhisperJsonParser())->setLenient();
-        $subtitle = $parser->parse($content);
+        $subtitle = (new WhisperJsonParser())->parse($content, new ReadOptions(lenient: true));
 
         $this->assertEquals([[0, 2, "Hello"], [3, 4, "Bye"]], $this->cueRows($subtitle->getCues()));
-        $this->assertSame([[0, 1, self::SKIPPED, "The field transcription[1].offsets.from must be a number."]], $this->warningRows($parser->getWarnings()));
+        $this->assertSame([[0, 1, self::SKIPPED, "The field transcription[1].offsets.from must be a number."]], $this->warningRows($subtitle->getParseWarnings()));
     }
 
 
     public function testParsersWithoutLenientModeStillThrow(): void
     {
         $this->expectException(ParsingException::class);
-        (new SccParser())->setLenient()->parse("Scenarist_SCC V1.0\n\nbroken\n");
+        (new SccParser())->parse("Scenarist_SCC V1.0\n\nbroken\n", new ReadOptions(lenient: true));
     }
 
 

@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 class WhisperJsonRealFilesTest extends TestCase
@@ -92,9 +93,9 @@ class WhisperJsonRealFilesTest extends TestCase
 
     private static function parse(string $fileName): Subtitle
     {
-        $parser = new WhisperJsonParser([WhisperJsonParser::OPTION_WORD_TIMESTAMPS => true]);
+        $parser = new WhisperJsonParser();
 
-        return $parser->parse(file_get_contents(self::DIR . $fileName));
+        return $parser->parse(file_get_contents(self::DIR . $fileName), new ReadOptions(wordTimestamps: true));
     }
 
 
@@ -116,7 +117,7 @@ class WhisperJsonRealFilesTest extends TestCase
     public function testRealFileKeepsItsWordTimestampsThroughWebVtt(string $fileName): void
     {
         $subtitle = self::parse($fileName);
-        $vtt      = (new WebVttParser())->parse($subtitle->toString(Format::WebVtt));
+        $vtt      = (new WebVttParser())->parse($subtitle->toString(Format::WebVtt), new ReadOptions());
 
         $this->assertSame(
             array_map(fn ($cue) => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], $subtitle->getCues()),

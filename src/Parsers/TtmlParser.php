@@ -69,7 +69,7 @@ class TtmlParser extends SubtitleParser
     private int $paragraphIndex = 0;
 
 
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings       = [];
         $this->paragraphIndex = 0;

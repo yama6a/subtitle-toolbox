@@ -19,6 +19,8 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\PgsFixtures;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\VobSubParser;
+use SubtitleToolbox\Parsers\VobSubReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 require_once __DIR__ . "/../files/pgs/generator/PgsFixtures.php";
@@ -39,14 +41,14 @@ class GlyphOcrEngineTest extends TestCase
     {
         return [
             "PGS 1080p, 44 to 60 px" => [
-                fn (): Subtitle => (new PgsParser())->parse(file_get_contents(self::PGS . "text_1080p.sup")),
+                fn (): Subtitle => (new PgsParser())->parse(file_get_contents(self::PGS . "text_1080p.sup"), new ReadOptions()),
                 self::PGS . "text_1080p.ocr.srt",
                 array_column(PgsFixtures::TEXT_CUES, 2),
                 1.0,
             ],
             "VobSub 576p, 24 to 30 px" => [
-                fn (): Subtitle => (new VobSubParser(file_get_contents(self::VOBSUB . "text-pal.idx")))
-                    ->parse(file_get_contents(self::VOBSUB . "text-pal.sub")),
+                fn (): Subtitle => (new VobSubParser())
+                    ->parse(file_get_contents(self::VOBSUB . "text-pal.sub"), new ReadOptions(format: new VobSubReadOptions(file_get_contents(self::VOBSUB . "text-pal.idx")))),
                 self::VOBSUB . "text-pal.ocr.srt",
                 array_column(TEXT_CUES, 2),
                 0.97,
@@ -137,7 +139,7 @@ class GlyphOcrEngineTest extends TestCase
 
     public function testPassesTheDatabaseAndTheOptionsToTheRecognizer(): void
     {
-        $subtitle = (new PgsParser())->parse(file_get_contents(self::PGS . "text_1080p.sup"));
+        $subtitle = (new PgsParser())->parse(file_get_contents(self::PGS . "text_1080p.sup"), new ReadOptions());
         $image    = CueImage::fromCue($subtitle->getCues()[0]);
 
         $result = (new GlyphOcrEngine(new GlyphDatabase(), ["unknownText" => "#"]))->recognize($image, "eng");

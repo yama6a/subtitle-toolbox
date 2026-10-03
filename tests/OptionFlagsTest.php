@@ -4,36 +4,31 @@ namespace SubtitleToolbox;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Parsers\DeepgramParser;
-use SubtitleToolbox\Parsers\PodcastTranscriptParser;
-use SubtitleToolbox\Parsers\WhisperJsonParser;
-use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
+use SubtitleToolbox\Parsers\PodcastTranscriptReadOptions;
 
 class OptionFlagsTest extends TestCase
 {
     private const FILES = __DIR__ . "/files/";
 
 
-    public static function parserFlags(): array
+    public static function readFlags(): array
     {
         return [
-            "Whisper word timestamps" => [WhisperJsonParser::class, WhisperJsonParser::OPTION_WORD_TIMESTAMPS, "whisper/real/openai_whisper_word_timestamps.json"],
-            "Whisper speaker voices"  => [WhisperJsonParser::class, WhisperJsonParser::OPTION_SPEAKER_VOICES, "whisper/real/whisperx_diarize.json"],
-            "Deepgram speaker voices" => [DeepgramParser::class, DeepgramParser::OPTION_SPEAKER_VOICES, "deepgram/real/pool_utterances_diarize.json"],
-            "YouTube word timestamps" => [YouTubeTimedTextParser::class, YouTubeTimedTextParser::OPTION_WORD_TIMESTAMPS, "youtube/real/auto.en.json3"],
-            "podcast keep segments"   => [PodcastTranscriptParser::class, PodcastTranscriptParser::OPTION_KEEP_SEGMENTS, "podcast/real/spec_word_segments.json"],
-            "podcast word timestamps" => [PodcastTranscriptParser::class, PodcastTranscriptParser::OPTION_WORD_TIMESTAMPS, "podcast/real/spec_word_segments.json"],
+            "Whisper word timestamps" => [Format::Whisper, new ReadOptions(wordTimestamps: true), "whisper/real/openai_whisper_word_timestamps.json"],
+            "Whisper speaker voices"  => [Format::Whisper, new ReadOptions(speakerVoices: true), "whisper/real/whisperx_diarize.json"],
+            "Deepgram speaker voices" => [Format::Deepgram, new ReadOptions(speakerVoices: true), "deepgram/real/pool_utterances_diarize.json"],
+            "YouTube word timestamps" => [Format::YouTube, new ReadOptions(wordTimestamps: true), "youtube/real/auto.en.json3"],
+            "podcast keep segments"   => [Format::PodcastTranscript, new ReadOptions(format: new PodcastTranscriptReadOptions(keepSegments: true)), "podcast/real/spec_word_segments.json"],
+            "podcast word timestamps" => [Format::PodcastTranscript, new ReadOptions(wordTimestamps: true), "podcast/real/spec_word_segments.json"],
         ];
     }
 
 
-    #[DataProvider("parserFlags")]
-    public function testParserFlagWorksAsAListValue(string $parser, string $flag, string $file): void
+    #[DataProvider("readFlags")]
+    public function testReadFlagChangesTheCues(Format $format, ReadOptions $options, string $file): void
     {
         $content = file_get_contents(self::FILES . $file);
-        $key     = (new $parser([$flag => true]))->parse($content)->toArray();
 
-        $this->assertNotSame((new $parser())->parse($content)->toArray(), $key);
-        $this->assertSame($key, (new $parser([$flag]))->parse($content)->toArray());
+        $this->assertNotSame(Subtitle::fromString($content, $format)->toArray(), Subtitle::fromString($content, $format, $options)->toArray());
     }
 }

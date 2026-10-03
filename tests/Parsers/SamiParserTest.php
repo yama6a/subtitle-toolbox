@@ -7,6 +7,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Validation\ValidationRules;
 
@@ -26,7 +27,7 @@ class SamiParserTest extends TestCase
             "mantas-done formatted" => [
                 "mantas_smi_formatted.smi", 3, "en-US",
                 [9.209, 12.312, ["( bell ringing )"]],
-                [17.35, 27.35, ["we watch the fields go by"]],
+                [17.35, 22.35, ["we watch the fields go by"]],
             ],
             "multi language" => [
                 "multi_language.smi", 3, "ko-KR",
@@ -36,7 +37,7 @@ class SamiParserTest extends TestCase
             "pysubs2 source id" => [
                 "pysubs2_source_id.smi", 9, "en-US-CC",
                 [0.0, 0.01, ["Weather Desk"]],
-                [73.0, 83.0, ["End of:", "Weather Report for Tuesday"]],
+                [73.0, 78.0, ["End of:", "Weather Report for Tuesday"]],
             ],
             "subsrt sample" => [
                 "subsrt_sample.smi", 6, "kr-KR",
@@ -63,7 +64,7 @@ class SamiParserTest extends TestCase
 
     public function testLanguageClassOptionPicksTheClass(): void
     {
-        $subtitle = (new SamiParser("ENCC"))->parse(file_get_contents(self::DIR . "multi_language.smi"));
+        $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(language: "ENCC"));
         $cues     = $subtitle->getCues();
 
         $this->assertSame("en-US", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
@@ -79,7 +80,7 @@ class SamiParserTest extends TestCase
 
     public function testLanguageClassIsCaseInsensitive(): void
     {
-        $subtitle = (new SamiParser("frcc"))->parse(file_get_contents(self::DIR . "multi_language.smi"));
+        $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(language: "frcc"));
 
         $this->assertSame("fr-FR", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame("FRCC", $subtitle->getFormatData("smi")["class"]);
@@ -92,7 +93,7 @@ class SamiParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The SAMI file has no class DECC.");
 
-        (new SamiParser("DECC"))->parse(file_get_contents(self::DIR . "multi_language.smi"));
+        (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(language: "DECC"));
     }
 
 
@@ -159,8 +160,8 @@ class SamiParserTest extends TestCase
                "<SYNC Start=4000><P Class=ENCC>&nbsp;\n" .
                "</BODY></SAMI>";
 
-        $english = (new SamiParser("ENCC", 1))->parse($raw)->getCues();
-        $french  = (new SamiParser("FRCC", 1))->parse($raw)->getCues();
+        $english = (new SamiParser())->parse($raw, new ReadOptions(language: "ENCC", lastCueDuration: 1))->getCues();
+        $french  = (new SamiParser())->parse($raw, new ReadOptions(language: "FRCC", lastCueDuration: 1))->getCues();
 
         $this->assertSame([[1.0, 2.0], [3.0, 4.0]], array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd()], $english));
         $this->assertSame([[1.0, 2.0], [3.5, 4.5]], array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd()], $french));
@@ -196,17 +197,9 @@ class SamiParserTest extends TestCase
 
     public function testLastCueDurationOption(): void
     {
-        $cues = (new SamiParser(null, 2.5))->parse("<SAMI><BODY><SYNC Start=1000><P Class=ENCC>one</BODY></SAMI>")->getCues();
+        $cues = (new SamiParser())->parse("<SAMI><BODY><SYNC Start=1000><P Class=ENCC>one</BODY></SAMI>", new ReadOptions(lastCueDuration: 2.5))->getCues();
 
         $this->assertSame(3.5, $cues[0]->getEnd());
-    }
-
-
-    public function testNegativeLastCueDurationThrows(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-
-        new SamiParser(null, -1);
     }
 
 

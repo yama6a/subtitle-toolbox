@@ -6,11 +6,9 @@ use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Matroska\MatroskaTrack;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatDetector;
-use SubtitleToolbox\FormatRegistry;
 use SubtitleToolbox\ParseWarning;
-use SubtitleToolbox\Parsers\MicroDvdParser;
-use SubtitleToolbox\Parsers\SubtitleParser;
-use SubtitleToolbox\Parsers\VobSubParser;
+use SubtitleToolbox\Parsers\VobSubReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 
@@ -318,14 +316,18 @@ abstract class FileCommand extends Command
             self::fail("VobSub needs the path of the .idx file. Standard input does not work.");
         }
 
-        $parser = $this->createParser($format, $content)->setLenient($arguments->has("lenient"));
+        $options = new ReadOptions(
+            lenient: $arguments->has("lenient"),
+            fps: $this->fps,
+            wordTimestamps: $this->wordTimestamps,
+            format: $format === Format::VobSub ? new VobSubReadOptions($content) : null,
+        );
         if ($format === Format::VobSub) {
-            $subtitle = $parser->parse($this->readFile(substr($input, 0, -strlen(pathinfo($input, PATHINFO_EXTENSION))) . "sub", $console));
-        } else {
-            $subtitle = $parser->parse($content);
+            $content = $this->readFile(substr($input, 0, -strlen(pathinfo($input, PATHINFO_EXTENSION))) . "sub", $console);
         }
+        $subtitle = Subtitle::fromString($content, $format, $options);
 
-        $this->parseWarnings = $parser->getWarnings();
+        $this->parseWarnings = $subtitle->getParseWarnings();
         foreach ($this->parseWarnings as $warning) {
             $console->err(self::label($input) . ": line $warning->lineNumber: $warning->message ($warning->action)\n");
         }
@@ -455,19 +457,5 @@ abstract class FileCommand extends Command
         }
 
         return self::fail("The format is unknown." . ($this->hasFormatOptions() ? " Pass --from." : ""));
-    }
-
-
-    private function createParser(Format $format, string $content): SubtitleParser
-    {
-        $class = FormatRegistry::parserClass($format);
-
-        return match (true) {
-            $class === MicroDvdParser::class => new MicroDvdParser($this->fps),
-            $class === VobSubParser::class   => new VobSubParser($content),
-            $this->wordTimestamps && defined("$class::OPTION_WORD_TIMESTAMPS")
-                                             => new $class([$class::OPTION_WORD_TIMESTAMPS => true]),
-            default                          => new $class(),
-        };
     }
 }
