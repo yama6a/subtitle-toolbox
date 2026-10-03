@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Validation;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;

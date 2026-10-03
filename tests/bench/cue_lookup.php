@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 // Times 1,000 calls of getCuesAt() on 100, 2,000 and 20,000 cues, first alone and then each after a setEnd() call.
 // Usage: php tests/bench/cue_lookup.php
 
