@@ -76,7 +76,63 @@ $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);   // "de", from the id line
 - **Limits**: the parser reads one image per subpicture. Colour and contrast changes after the start command do not apply. The parser ignores the `org`, `scale`, `align`, `fadein/out` and `time offset` player settings.
 - **No formatter**: convert VobSub to PGS with `PgsFormatter`, or to text after OCR.
 
-## Built-in OCR
+## Choosing an engine
+`OcrEngineChooser` picks the engine in one place: Tesseract when the `tesseract` program runs, else php-glyph-ocr when the package is installed.
+
+```php
+use SubtitleToolbox\Ocr\OcrEngineChooser;
+
+$subtitle->recognizeText(OcrEngineChooser::create());                  // Tesseract in English, or php-glyph-ocr
+$subtitle->recognizeText(OcrEngineChooser::create(null, 'deu+eng'));   // Tesseract in German and English
+$subtitle->recognizeText(OcrEngineChooser::create('glyph'));           // always php-glyph-ocr
+OcrEngineChooser::choose();                                             // "tesseract" or "glyph"
+```
+
+- **Missing engines**: `choose()` and `create()` throw `InvalidArgumentException` when neither engine is installed, or when the forced engine is missing. The message holds the install commands.
+- **Program path**: the third argument of `create()` and the second of `choose()` is the path of the `tesseract` program, default `tesseract` on the `PATH`.
+
+| | Tesseract | php-glyph-ocr |
+|:--- |:--- |:--- |
+| Install | system package manager | Composer only |
+| Disk | about 22 MB with English on Ubuntu 26.04, plus 1 to 4 MB per language | about 1 MB |
+| Languages | more than 100, with Cyrillic, Greek, Arabic, CJK and Indic scripts | Latin-script fonts only |
+| PGS 1080p, English | 100% characters, 176 ms per cue | 100%, 138 ms per cue |
+| VobSub 576p, English | 100%, 168 ms per cue | 98.5%, 109 ms per cue |
+| PGS 1080p, Russian | 100%, 106 ms per cue | 20% |
+| Italic | not detected | detected, as `<i>` |
+| Memory | about 35 MB in the `tesseract` process | about 76 MB for the database |
+
+The test files are the generated fixtures in `tests/files/pgs` and `tests/files/vobsub`, read with Tesseract 5.5.0 and its fast models on an x86-64 machine. The times include the start of the engine. Real files with other fonts give lower numbers for both engines.
+
+## Tesseract
+`TesseractOcrEngine` runs the [Tesseract](https://github.com/tesseract-ocr/tesseract) program, an open-source OCR engine under Apache-2.0. PHP starts it as a separate process with `proc_open`, so it needs no PHP extension.
+
+```sh
+apt install tesseract-ocr tesseract-ocr-deu      # Debian, Ubuntu
+apk add tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-deu   # Alpine
+dnf install tesseract tesseract-langpack-deu     # Fedora
+brew install tesseract tesseract-lang            # macOS, tesseract-lang holds all languages
+winget install UB-Mannheim.TesseractOCR          # Windows, then add its folder to the PATH
+```
+
+```php
+use SubtitleToolbox\Ocr\TesseractOcrEngine;
+
+$subtitle->recognizeText(new TesseractOcrEngine());                     // English
+$subtitle->recognizeText(new TesseractOcrEngine('deu+eng'));            // German and English
+$subtitle->recognizeText(new TesseractOcrEngine(), 'rus');              // the language of recognizeText() wins
+$subtitle->recognizeText(new TesseractOcrEngine(program: 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'));
+```
+
+- **Languages**: pass [Tesseract language codes](https://tesseract-ocr.github.io/tessdoc/Data-Files-in-different-versions.html), joined with `+`. The English data comes with the program, except on Alpine. Each other language is a package, for example `tesseract-ocr-rus`.
+- **Missing program**: the first `recognize()` call checks the program and the languages. It throws `InvalidArgumentException` with the install commands, or with the list of installed languages.
+- **Images**: the engine draws each cue image on black, inverts it to dark text on white, and adds a 10-pixel white border. It writes the result to a temporary PGM file and deletes the file after the call.
+- **Options**: `pageSegmentationMode` is the `--psm` value, default 6, one block of text. `scale` from 1 to 8 scales the image up, default 2 on screens below 720 lines and 1 above. `invert` and `threshold` change the image steps. The defaults read the test files with the fewest errors: scaling DVD text by 2 and inverting fixed the errors on small text, a threshold added errors.
+- **Lines and confidence**: each Tesseract text line becomes one line. The confidence is the mean word confidence of the cue, from 0 to 1, or null for a cue without text.
+- **Italic**: Tesseract 4 and later do not report italic text, so the lines have no `<i>` tags.
+- **Speed**: each cue starts one `tesseract` process. Loading the language model takes about 110 ms of each call.
+
+## php-glyph-ocr
 `GlyphOcrEngine` reads the bitmaps of PGS and VobSub cues in pure PHP. It uses the optional package [yama6a/php-glyph-ocr](https://github.com/yama6a/php-glyph-ocr), a port of the nOCR engine of Subtitle Edit.
 
 ```sh
@@ -131,26 +187,23 @@ $subtitle->recognizeText(new GlyphOcrEngine(GlyphDatabase::fromFile('my-font.noc
 - The command line tool takes a trained database with `--ocr-database`, see [cli.md](cli.md#ocr).
 
 ## Other OCR engines
-An engine is a class that implements `OcrEngine`. This example calls the `tesseract` command:
+An engine is a class that implements `OcrEngine`. This example sends each image to an OCR web service:
 
 ```php
 use SubtitleToolbox\Ocr\OcrEngine;
 use SubtitleToolbox\Ocr\OcrResult;
 
-final class TesseractEngine implements OcrEngine
+final class WebServiceEngine implements OcrEngine
 {
     public function recognize(CueImage $image, ?string $language): OcrResult
     {
-        $file = tempnam(sys_get_temp_dir(), 'cue');
-        file_put_contents($file, $image->png);
-        $text = shell_exec('tesseract ' . escapeshellarg($file) . ' - -l ' . escapeshellarg($language ?? 'eng'));
-        unlink($file);
+        $text = $this->client->post('/ocr', ['image' => base64_encode($image->png), 'language' => $language]);
 
-        return new OcrResult(explode("\n", trim((string)$text)));
+        return new OcrResult(explode("\n", trim($text)));
     }
 }
 
-$subtitle->recognizeText(new TesseractEngine(), 'eng');
+$subtitle->recognizeText(new WebServiceEngine(), 'eng');
 ```
 
 - **Lines**: the engine returns plain text or core markup, for example `<i>` for italic text. Empty lines are dropped.

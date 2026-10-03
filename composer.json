@@ -36,7 +36,7 @@
   },
   "suggest": {
     "ext-zlib": "*, to decode PNG images, which PgsFormatter needs, to compress PNG images and to read zlib-compressed MKV tracks",
-    "yama6a/php-glyph-ocr": "^0.3, for GlyphOcrEngine, the built-in OCR of PGS and VobSub image cues"
+    "yama6a/php-glyph-ocr": "^0.3, for GlyphOcrEngine, the pure PHP OCR of PGS and VobSub image cues where Tesseract is not installed"
   },
   "config": {
     "platform": {

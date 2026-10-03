@@ -4,13 +4,15 @@ namespace SubtitleToolbox\Cli;
 
 use GlyphOcr\Exceptions\GlyphOcrException;
 use GlyphOcr\GlyphDatabase;
-use GlyphOcr\Recognizer;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Formatters\AssFormatter;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Karaoke\WordHighlight;
 use SubtitleToolbox\Karaoke\WordHighlightOptions;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
+use SubtitleToolbox\Ocr\OcrEngine;
+use SubtitleToolbox\Ocr\OcrEngineChooser;
+use SubtitleToolbox\Ocr\TesseractOcrEngine;
 use SubtitleToolbox\Profanity\MuteRange;
 use SubtitleToolbox\Profanity\ProfanityFilter;
 use SubtitleToolbox\Profanity\ProfanityOptions;
@@ -37,7 +39,11 @@ class ConvertCommand extends WriteCommand
 
     private const MUTE_OPTIONS = ["mute-edl", "mute-filter", "mute-padding"];
 
+    private ?string $ocrEngine = null;
+
     private ?GlyphDatabase $ocrDatabase = null;
+
+    private bool $warnedAboutOcrLanguage = false;
 
     private ?ProfanityOptions $profanity = null;
 
@@ -97,8 +103,10 @@ class ConvertCommand extends WriteCommand
             Option::value("karaoke-words", "WORDS", "Show only this many words around the active word with --karaoke."),
             Option::value("karaoke-tag", "TAG", "Write word timestamps as ASS karaoke tags \\k, \\kf or \\ko: k, kf or ko. Default: k."),
             Option::flag("forced-only", "Keep only the forced cues, for example the translations of signs."),
-            Option::flag("ocr", "Read the text of image cues, for example from PGS or VobSub, with GlyphOcrEngine."),
-            Option::value("ocr-database", "FILE", "The .nocr glyph database for --ocr. Default: the subtitle fonts database of php-glyph-ocr."),
+            Option::flag("ocr", "Read the text of image cues, for example from PGS or VobSub, with Tesseract when it is installed, else with php-glyph-ocr."),
+            Option::value("ocr-engine", "ENGINE", "The OCR engine for --ocr: tesseract or glyph. Default: tesseract when it is installed."),
+            Option::value("ocr-language", "CODE", "The Tesseract language for --ocr, for example deu or deu+eng. Default: eng. The glyph engine ignores it."),
+            Option::value("ocr-database", "FILE", "The .nocr glyph database for --ocr. It selects the glyph engine. Default: the subtitle fonts database of php-glyph-ocr."),
         ];
     }
 
@@ -222,9 +230,30 @@ class ConvertCommand extends WriteCommand
             }
         }
 
-        $this->ocrDatabase = $arguments->has("ocr") ? self::loadOcrDatabase($arguments->value("ocr-database")) : null;
-        if ($this->ocrDatabase === null && $arguments->has("ocr-database")) {
-            self::fail("Pass --ocr with --ocr-database.");
+        $this->ocrEngine              = null;
+        $this->ocrDatabase            = null;
+        $this->warnedAboutOcrLanguage = false;
+        foreach (["ocr-database", "ocr-engine", "ocr-language"] as $option) {
+            if ($arguments->has($option) && !$arguments->has("ocr")) {
+                self::fail("Pass --ocr with --$option.");
+            }
+        }
+        if ($arguments->has("ocr")) {
+            $engine = $arguments->value("ocr-engine");
+            if ($arguments->has("ocr-database")) {
+                if ($engine === OcrEngineChooser::ENGINE_TESSERACT) {
+                    self::fail("--ocr-database works only with the glyph engine.");
+                }
+                $engine = OcrEngineChooser::ENGINE_GLYPH;
+            }
+            try {
+                $this->ocrEngine = OcrEngineChooser::choose($engine);
+            } catch (InvalidArgumentException $exception) {
+                self::fail($exception->getMessage());
+            }
+            if ($this->ocrEngine === OcrEngineChooser::ENGINE_GLYPH) {
+                $this->ocrDatabase = self::loadOcrDatabase($arguments->value("ocr-database"));
+            }
         }
     }
 
@@ -259,13 +288,11 @@ class ConvertCommand extends WriteCommand
             $subtitle = $subtitle->forcedOnly();
         }
 
-        if ($this->ocrDatabase !== null) {
+        if ($this->ocrEngine !== null) {
             $total = count(array_filter($subtitle->getCues(),
                                         fn (SubtitleCue $cue): bool => CueImage::isImageCue($cue) && $cue->getLines() === []));
             if ($total > 0) {
-                // A new engine for each file, because the recognizer learns the glyph heights of one stream.
-                $engine = new GlyphOcrEngine($this->ocrDatabase);
-                $subtitle->recognizeText(new OcrProgress($engine, $console, self::label($input), $total));
+                $subtitle->recognizeText(new OcrProgress($this->ocrEngine($arguments, $console), $console, self::label($input), $total));
             }
         }
 
@@ -339,12 +366,23 @@ class ConvertCommand extends WriteCommand
     }
 
 
-    private static function loadOcrDatabase(?string $path): GlyphDatabase
+    private function ocrEngine(Arguments $arguments, Console $console): OcrEngine
     {
-        if (!class_exists(Recognizer::class)) {
-            self::fail("--ocr needs the package yama6a/php-glyph-ocr. Install it with: composer require yama6a/php-glyph-ocr");
+        if ($this->ocrEngine === OcrEngineChooser::ENGINE_TESSERACT) {
+            return new TesseractOcrEngine($arguments->value("ocr-language") ?? "eng");
+        }
+        if ($arguments->has("ocr-language") && !$this->warnedAboutOcrLanguage) {
+            $console->err("Warning: the glyph engine ignores --ocr-language.\n");
+            $this->warnedAboutOcrLanguage = true;
         }
 
+        // A new engine for each file, because the recognizer learns the glyph heights of one stream.
+        return new GlyphOcrEngine($this->ocrDatabase);
+    }
+
+
+    private static function loadOcrDatabase(?string $path): GlyphDatabase
+    {
         try {
             return $path === null ? GlyphDatabase::subtitleFonts() : GlyphDatabase::fromFile($path);
         } catch (GlyphOcrException $exception) {

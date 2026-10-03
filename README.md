@@ -87,6 +87,28 @@ file_put_contents('movie.vtt', $subtitle->format(WebVttFormatter::class));
 
 [docs/README.md](docs/README.md) lists all pages.
 
+## OCR
+OCR turns the bitmaps of PGS and VobSub subtitles into text. The library uses Tesseract when it is installed, and else php-glyph-ocr.
+
+| | Tesseract | php-glyph-ocr |
+|:--- |:--- |:--- |
+| Install | system package manager | `composer require yama6a/php-glyph-ocr`, about 1 MB |
+| Languages | more than 100 | Latin-script fonts only |
+| Correct characters on the test files | 100% | 98 to 100% |
+| Time per cue | 110 to 180 ms | 110 to 140 ms |
+| Memory | about 35 MB, in its own process | about 76 MB for the glyph database |
+
+```sh
+apt install tesseract-ocr tesseract-ocr-deu                          # Debian, Ubuntu
+apk add tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-deu  # Alpine
+dnf install tesseract tesseract-langpack-deu                         # Fedora
+brew install tesseract tesseract-lang                                # macOS, all languages
+winget install UB-Mannheim.TesseractOCR                              # Windows, then add it to the PATH
+docker run --rm -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:tesseract convert movie.sup movie.srt --ocr --ocr-language deu
+```
+
+Each language is one package, for example `tesseract-ocr-rus`. See [ocr.md](docs/ocr.md) for the options and the measurements.
+
 ## Command line tool
 Composer installs `vendor/bin/subtitle-toolbox`. Every [GitHub release](https://github.com/yama6a/subtitle-toolbox/releases) also ships it as a PHAR file and as the container image `ghcr.io/yama6a/subtitle-toolbox`.
 

@@ -6,6 +6,7 @@ use Composer\Autoload\ClassLoader;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\Ocr\TesseractOcrEngine;
 use SubtitleToolbox\Subtitle;
 
 class ApplicationTest extends TestCase
@@ -69,8 +70,9 @@ class ApplicationTest extends TestCase
 
 
     #[RunInSeparateProcess]
-    public function testOcrWithoutTheGlyphOcrPackageFailsWithTheInstallHint(): void
+    public function testOcrWithoutEitherEngineFailsWithBothInstallHints(): void
     {
+        putenv("PATH=" . __DIR__);
         foreach (ClassLoader::getRegisteredLoaders() as $loader) {
             $loader->unregister();
             spl_autoload_register(function (string $class) use ($loader): void {
@@ -81,7 +83,8 @@ class ApplicationTest extends TestCase
         }
 
         $this->assertSame(
-            [2, "", "Error: --ocr needs the package yama6a/php-glyph-ocr. Install it with: composer require yama6a/php-glyph-ocr\n" .
+            [2, "", "Error: Cannot run OCR - neither Tesseract nor the package yama6a/php-glyph-ocr is installed! " .
+                    TesseractOcrEngine::INSTALL_HINT . " Or install php-glyph-ocr with: composer require yama6a/php-glyph-ocr\n" .
                     "Run \"subtitle-toolbox help convert\" for the usage.\n"],
             self::runApplication(["convert", __DIR__ . "/../files/pgs/text_1080p.sup", "--to", "srt", "--output", "-", "--ocr"])
         );

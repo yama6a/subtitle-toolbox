@@ -4,6 +4,7 @@ namespace SubtitleToolbox\Cli;
 
 use GlyphOcr\GlyphDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Diff\SubtitleDiff;
@@ -17,6 +18,7 @@ use SubtitleToolbox\Formatters\JsonFormatter;
 use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\MergeShortCuesOptions;
+use SubtitleToolbox\Ocr\TesseractOcrEngine;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Profanity\MuteRange;
@@ -901,10 +903,11 @@ class BinaryTest extends TestCase
         copy(__DIR__ . "/../files/vobsub/text-pal.idx", "$this->dir/text.idx");
         copy(__DIR__ . "/../files/vobsub/text-pal.sub", "$this->dir/text.sub");
 
-        $this->assertSame([0, "text.sup -> text.srt\n", "text.sup: OCR 12/12\n"], $this->runBinary(["convert", "text.sup", "text.srt", "--ocr"]));
+        $this->assertSame([0, "text.sup -> text.srt\n", "text.sup: OCR 12/12\n"],
+                          $this->runBinary(["convert", "text.sup", "text.srt", "--ocr", "--ocr-engine", "glyph"]));
         $this->assertFileEquals(__DIR__ . "/../files/pgs/text_1080p.ocr.srt", "$this->dir/text.srt");
 
-        [$code, $stdout, $stderr] = $this->runBinary(["convert", "text.idx", "--to", "srt", "--output", "-", "--ocr"]);
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "text.idx", "--to", "srt", "--output", "-", "--ocr", "--ocr-engine", "glyph"]);
         $this->assertSame([0, "text.idx: OCR 6/6\n"], [$code, $stderr]);
         $this->assertStringEqualsFile(__DIR__ . "/../files/vobsub/text-pal.ocr.srt", $stdout);
     }
@@ -937,6 +940,105 @@ class BinaryTest extends TestCase
                                   "Run \"subtitle-toolbox help convert\" for the usage.\n"],
                           $this->runBinary(["convert", "text.sup", "text.srt", "--ocr", "--ocr-database", "broken.nocr"]));
         $this->assertFileDoesNotExist("$this->dir/text.srt");
+    }
+
+
+    /**
+     * @param list<string> $arguments
+     *
+     * @return array{int, string, string} exit code, standard output, standard error
+     */
+    private function runWithPath(string $path, array $arguments): array
+    {
+        $original = getenv("PATH");
+        putenv("PATH=$path");
+        try {
+            return $this->runBinary($arguments);
+        } finally {
+            putenv("PATH=$original");
+        }
+    }
+
+
+    /**
+     * @param list<string> $arguments
+     *
+     * @return array{int, string, string} exit code, standard output, standard error
+     */
+    private function runWithFakeTesseract(array $arguments): array
+    {
+        return $this->runWithPath(realpath(self::FILES . "ocr/fake-tesseract") . PATH_SEPARATOR . getenv("PATH"), $arguments);
+    }
+
+
+    public function testOcrPrefersTesseractAndPassesTheLanguage(): void
+    {
+        copy(self::FILES . "pgs/text_1080p.sup", "$this->dir/text.sup");
+
+        [$code, $stdout, $stderr] = $this->runWithFakeTesseract(["convert", "text.sup", "--to", "srt", "-o", "-", "--ocr",
+                                                                 "--ocr-language", "deu+eng"]);
+
+        $this->assertSame([0, "text.sup: OCR 12/12\n"], [$code, $stderr]);
+        $cues = Subtitle::parse($stdout)->getCues();
+        $this->assertCount(12, $cues);
+        $this->assertSame("deu+eng psm6", $cues[0]->getLines()[0]);
+    }
+
+
+    public function testGlyphEngineIgnoresTheOcrLanguageWithOneWarning(): void
+    {
+        copy(self::FILES . "pgs/text_1080p.sup", "$this->dir/text.sup");
+        copy(self::FILES . "pgs/text_1080p.sup", "$this->dir/again.sup");
+
+        $this->assertSame([0, "text.sup -> text.srt\nagain.sup -> again.srt\n2 files: 2 succeeded, 0 failed.\n",
+                           "Warning: the glyph engine ignores --ocr-language.\ntext.sup: OCR 12/12\nagain.sup: OCR 12/12\n"],
+                          $this->runWithFakeTesseract(["convert", "text.sup", "again.sup", "--to", "srt", "--ocr",
+                                                       "--ocr-engine", "glyph", "--ocr-language", "deu"]));
+        $this->assertFileEquals(self::FILES . "pgs/text_1080p.ocr.srt", "$this->dir/text.srt");
+    }
+
+
+    public function testOcrEngineErrors(): void
+    {
+        copy(self::FILES . "pgs/text_1080p.sup", "$this->dir/text.sup");
+        $usage = "Run \"subtitle-toolbox help convert\" for the usage.\n";
+
+        $this->assertSame([2, "", "Error: Cannot choose the OCR engine \"easyocr\" - the engines are: tesseract, glyph!\n$usage"],
+                          $this->runBinary(["convert", "text.sup", "text.srt", "--ocr", "--ocr-engine", "easyocr"]));
+        $this->assertSame([2, "", "Error: --ocr-database works only with the glyph engine.\n$usage"],
+                          $this->runBinary(["convert", "text.sup", "text.srt", "--ocr", "--ocr-engine", "tesseract",
+                                            "--ocr-database", "my.nocr"]));
+        $this->assertSame([2, "", "Error: Pass --ocr with --ocr-engine.\n$usage"],
+                          $this->runBinary(["convert", "text.sup", "text.srt", "--ocr-engine", "glyph"]));
+        $this->assertSame([2, "", "Error: Pass --ocr with --ocr-language.\n$usage"],
+                          $this->runBinary(["convert", "text.sup", "text.srt", "--ocr-language", "deu"]));
+        $this->assertSame([2, "", "Error: Cannot run OCR with Tesseract - the program \"tesseract\" is missing! " .
+                                  TesseractOcrEngine::INSTALL_HINT . "\n$usage"],
+                          $this->runWithPath($this->dir, ["convert", "text.sup", "text.srt", "--ocr", "--ocr-engine", "tesseract"]));
+        $this->assertSame([1, "", "text.sup: Cannot run OCR with Tesseract in the language \"fra\" - the language data of " .
+                                  "fra is missing! Install it, for example with apt install tesseract-ocr-fra. The " .
+                                  "installed languages are: deu, eng, osd.\n"],
+                          $this->runWithFakeTesseract(["convert", "text.sup", "text.srt", "--ocr", "--ocr-language", "fra"]));
+        $this->assertFileDoesNotExist("$this->dir/text.srt");
+    }
+
+
+    #[Group("tesseract")]
+    public function testOcrWithTesseractReadsLatinAndCyrillicText(): void
+    {
+        if (!TesseractOcrEngine::isInstalled()) {
+            $this->markTestSkipped("Tesseract is not installed.");
+        }
+        copy(self::FILES . "pgs/text_1080p.sup", "$this->dir/text.sup");
+        copy(self::FILES . "pgs/text_cyrillic_1080p.sup", "$this->dir/cyrillic.sup");
+
+        [$code, $stdout] = $this->runBinary(["convert", "text.sup", "--to", "srt", "-o", "-", "--ocr", "--ocr-engine", "tesseract"]);
+        $this->assertSame(0, $code);
+        $this->assertStringContainsString("\nThe train to Bergen leaves at 7:45.\n", $stdout);
+
+        [$code, $stdout] = $this->runBinary(["convert", "cyrillic.sup", "--to", "srt", "-o", "-", "--ocr", "--ocr-language", "rus"]);
+        $this->assertSame(0, $code);
+        $this->assertStringContainsString("\nПоезд в Берген уходит в 7:45.\n", $stdout);
     }
 
 

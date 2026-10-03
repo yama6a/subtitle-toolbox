@@ -20,16 +20,17 @@ Every release also ships the tool as a PHAR file and as a container image.
 |:--- |:--- |:--- |
 | PHAR on the [GitHub release](https://github.com/yama6a/subtitle-toolbox/releases) | PHP 8.2 or later with `ext-dom`, `ext-iconv` and `ext-zlib` | `php subtitle-toolbox.phar convert in.srt out.vtt` |
 | Image `ghcr.io/yama6a/subtitle-toolbox` | Docker or another container runtime | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:1.65.0 convert in.srt out.vtt` |
+| Image `ghcr.io/yama6a/subtitle-toolbox:tesseract` | the same, for OCR with Tesseract in every language | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:1.65.0-tesseract convert in.sup out.srt --ocr --ocr-language deu` |
 
 ```sh
 curl -fsSLO https://github.com/yama6a/subtitle-toolbox/releases/latest/download/subtitle-toolbox.phar
 php subtitle-toolbox.phar --version
 ```
 
-- **Version**: the PHAR file, the image tag, the Git tag and the Packagist version are the same string, for example `1.65.0`. The image also has the tags `1.65`, `1` and `latest`.
+- **Version**: the PHAR file, the image tag, the Git tag and the Packagist version are the same string, for example `1.65.0`. The image also has the tags `1.65`, `1` and `latest`. The Tesseract image has the tags `1.65.0-tesseract`, `1.65-tesseract`, `1-tesseract` and `tesseract`.
 - **Image**: the tool runs in `/work`, so mount your files there. `--user` makes the tool write files that you own. Without it, the tool runs as `www-data` and cannot write to most mounted folders.
 - **Platforms**: the image is for `linux/amd64` and `linux/arm64`.
-- **OCR**: `convert --ocr` works in both forms with no extra steps, because both include php-glyph-ocr.
+- **OCR**: `convert --ocr` works in every form with no extra steps, because all include php-glyph-ocr. The Tesseract image adds Tesseract with the fast models of all its languages. It is about 340 MB larger.
 - **Memory**: the image sets `memory_limit` to 512 MB. The PHAR raises a `memory_limit` of 128 MB to 512 MB when you pass `--ocr`. It keeps any other value, for example from `php -d memory_limit=1G`.
 
 ## Commands
@@ -124,7 +125,9 @@ movie.mkv
 | `--karaoke-tag TAG` | `k` (default), `kf` or `ko`, the ASS tag for word timestamps, see [formats.md](formats.md#ass-and-ssa). Needs ASS output |
 | `--forced-only` | keeps only the [forced cues](subtitle.md#forced-cues) |
 | `--ocr` | reads the text of image cues, see [OCR](#ocr) |
-| `--ocr-database FILE` | the `.nocr` glyph database for `--ocr` |
+| `--ocr-engine ENGINE` | `tesseract` or `glyph`. Default: `tesseract` when it is installed |
+| `--ocr-language CODE` | the Tesseract language, for example `deu` or `deu+eng`. Default: `eng` |
+| `--ocr-database FILE` | the `.nocr` glyph database for `--ocr`. It selects the glyph engine |
 
 ```sh
 vendor/bin/subtitle-toolbox convert song.json song.srt --karaoke --karaoke-words 5
@@ -284,15 +287,20 @@ This writes `hls/sub0.vtt` to `hls/sub899.vtt` and `hls/subs.m3u8`.
 - **Overwrite**: `hls` fails before it writes a file when a segment or the playlist exists. Pass `--force` to overwrite.
 
 ## OCR
-`convert --ocr` reads the image cues of PGS and VobSub files with [`GlyphOcrEngine`](ocr.md#built-in-ocr) before it writes the output. With Composer, it needs the package php-glyph-ocr.
+`convert --ocr` reads the image cues of PGS and VobSub files before it writes the output. It uses [Tesseract](ocr.md#tesseract) when the `tesseract` program is on the `PATH`, and else [php-glyph-ocr](ocr.md#php-glyph-ocr).
 
 ```sh
 vendor/bin/subtitle-toolbox convert movie.sup movie.srt --ocr
+vendor/bin/subtitle-toolbox convert movie.sup movie.srt --ocr --ocr-language deu
+vendor/bin/subtitle-toolbox convert movie.sup movie.srt --ocr --ocr-engine glyph
 vendor/bin/subtitle-toolbox convert movie.idx movie.srt --ocr --ocr-database my-font.nocr
 ```
 
+- **Engine**: `--ocr-engine` forces one engine. A forced engine that is not installed stops the tool with exit code 2 and an install hint.
+- **Language**: `--ocr-language` takes Tesseract language codes. A language without installed data stops the file with exit code 1 and lists the installed languages. The glyph engine ignores the option and prints a warning.
+
 - **Database**: `--ocr-database` loads a `.nocr` file in place of the subtitle fonts database. See [Training a database](ocr.md#training-a-database).
-- **Missing package**: without php-glyph-ocr, `--ocr` stops with exit code 2 and prints the `composer require` command.
+- **No engine**: without Tesseract and php-glyph-ocr, `--ocr` stops with exit code 2 and prints the install commands of both.
 - **Progress**: the tool prints `movie.sup: OCR 100/1500` to standard error after every 100 image cues and after the last one.
-- **Memory**: a 1,500-cue PGS file needs up to 170 MB, above the default `memory_limit` of 128 MB. Run `php -d memory_limit=512M vendor/bin/subtitle-toolbox convert movie.sup movie.srt --ocr` for long files.
+- **Memory**: with php-glyph-ocr, a 1,500-cue PGS file needs up to 170 MB, above the default `memory_limit` of 128 MB. Run `php -d memory_limit=512M vendor/bin/subtitle-toolbox convert movie.sup movie.srt --ocr` for long files.
 - **Info**: `info` prints `Image cues: 12, 0 with text` for a file with image cues. The JSON holds `"imageCues": {"count": 12, "withText": 0}` for every file.

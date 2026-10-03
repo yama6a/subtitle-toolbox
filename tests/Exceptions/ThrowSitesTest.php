@@ -39,7 +39,9 @@ use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Karaoke\WordHighlightOptions;
 use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
+use SubtitleToolbox\Ocr\OcrEngineChooser;
 use SubtitleToolbox\Ocr\OcrResult;
+use SubtitleToolbox\Ocr\TesseractOcrEngine;
 use SubtitleToolbox\Parsers\AssemblyAiParser;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\AwsTranscribeParser;
@@ -106,6 +108,8 @@ class ThrowSitesTest extends TestCase
                         "33fa33, 11bb11, fafa33, bbbb11, fa33fa, bb11bb, 33fafa, 11bbbb\n";
 
     private const IDX_WITH_TRACK = self::IDX . "id: en, index: 0\ntimestamp: 00:00:01:000, filepos: 000000000\n";
+
+    private const FAKE_TESSERACT = __DIR__ . "/../files/ocr/fake-tesseract/tesseract";
 
     private const TTML = '<tt xmlns="http://www.w3.org/ns/ttml"><body><div>%s</div></body></tt>';
 
@@ -357,8 +361,24 @@ class ThrowSitesTest extends TestCase
                 ->recognize(new CueImage("png", 0, 0, 1, 1, 1, 1), null), ...$invalid],
             "Ocr/GlyphOcrEngine.php: package missing"       => [fn () => (new \ReflectionMethod(GlyphOcrEngine::class, "requireClass"))
                 ->invoke(null, "GlyphOcr\\Missing"), ...$invalid],
+            "Ocr/OcrEngineChooser.php: unknown engine"      => [fn () => OcrEngineChooser::choose("easyocr"), ...$invalid],
             "Ocr/OcrResult.php: line is no string"          => [fn () => new OcrResult([5]), ...$invalid],
             "Ocr/OcrResult.php: confidence above 1"         => [fn () => new OcrResult(["text"], 2), ...$invalid],
+            "Ocr/TesseractOcrEngine.php: mode 14"           => [fn () => new TesseractOcrEngine(pageSegmentationMode: 14), ...$invalid],
+            "Ocr/TesseractOcrEngine.php: scale 0.5"         => [fn () => new TesseractOcrEngine(scale: 0.5), ...$invalid],
+            "Ocr/TesseractOcrEngine.php: threshold 0"       => [fn () => new TesseractOcrEngine(threshold: 0), ...$invalid],
+            "Ocr/TesseractOcrEngine.php: program missing"   => [fn () => (new TesseractOcrEngine(program: __DIR__ . "/none"))
+                ->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), null), ...$invalid],
+            "Ocr/TesseractOcrEngine.php: language missing"  => [fn () => (new TesseractOcrEngine(program: self::FAKE_TESSERACT))
+                ->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), "xyz"), ...$invalid],
+            "Ocr/TesseractOcrEngine.php: program fails"     => [function (): void {
+                putenv("FAKE_TESSERACT_FAIL=1");
+                try {
+                    (new TesseractOcrEngine(program: self::FAKE_TESSERACT))->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), null);
+                } finally {
+                    putenv("FAKE_TESSERACT_FAIL");
+                }
+            }, ...$invalid],
             "Parsers/AssParser.php: no events section"      => [fn () => (new AssParser())->parse("[Script Info]\nTitle: x\n"), ...$parsing],
             "Parsers/AssParser.php: too few fields"         => [fn () => (new AssParser())->parse("[Events]\nFormat: Layer, Start, End, Text\n" .
                                                                                                   "Dialogue: 0,0:00:01.00\n"), ...$parsing],
