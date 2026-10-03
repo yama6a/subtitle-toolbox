@@ -91,6 +91,7 @@ $subtitle->getFormatData('ass');                        // [] when not set
 | iTunes Timed Text (.itt) | The TTML parser with the SMPTE timing parameters in the `itt` format data | SMPTE times `hh:mm:ss:ff`, one `div`, a `top` and a `bottom` region. Needs a frame rate | Writes bold, italic, underline and text colour as `tts:` attributes on `<span>`. Strips all other tags
 | LyRiCs (.lrc)   | ID tags, `[offset:]`, several timestamps per line, enhanced LRC word timing | ID tags, `[#:]` comments, word timing as `<mm:ss.xx>` | Formatter strips all other xml tags and writes times in centiseconds. Text with `<`, `>` and `&` round-trips
 | MicroDVD (.sub) | Frame rate from the parser constructor or a `{1}{1}<fps>` first line | Needs `OPTION_FRAME_RATE` | Converts `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` to core markup. Keeps other control codes in the `sub` format data
+| MPL2 (.txt)     | `[start][end]` lines in tenths of a second, `\|` line breaks | Times in tenths of a second | Converts `/` at a line start to `<i>` and back. Formatter strips all other tags. See [MPL2 and TMPlayer](#mpl2-and-tmplayer)
 | MpSub (.mpsub)  | FORMAT=TIME and FORMAT=<fps>, header lines | FORMAT=TIME by default, FORMAT=<fps> as an option, header lines | Formatter strips all xml tags. Text with `<`, `>` and `&` round-trips
 | PGS (.sup)      | Blu-ray bitmaps as image cues, with palettes, cropping, windows and forced flags | Image cues, one display set to show and one to clear each cue | See [PGS](#pgs)
 | SAMI (.smi)     | One language class, `<TITLE>`, the `<STYLE>` block and `<SAMIParam>` | Writes them back, and a `&nbsp;` SYNC after each cue that has a gap before the next cue | Converts `<b>`, `<i>`, `<u>`, `<s>`, `<strike>` and `<font color>` to core markup. Formatter strips all xml tags except: \<b>\<i>\<u>\<s>\<font>
@@ -99,6 +100,7 @@ $subtitle->getFormatData('ass');                        // [] when not set
 | SSA (.ssa)      | SubStation Alpha v4.00 with `[V4 Styles]` and `Marked=` columns | Writes SSA back when the parsed file was SSA, legacy `\a` alignment tags | Same parser and formatter as ASS
 | SubRip (.srt)   | Reads coordinates, alignment tags and lenient timestamps | Writes standard timestamps, coordinates and alignment tags | Formatter strips all xml tags except: \<b>\<i>\<u>\<s>\<font>
 | SubViewer (.sub) | SubViewer 1 and 2, header tags, the `[COLF]` style line | SubViewer 2 by default, SubViewer 1 with `OPTION_VERSION` | Formatter strips all xml tags and decodes HTML entities. Writes times in centiseconds for version 2 and in seconds for version 1
+| TMPlayer (.txt) | `hh:mm:ss:`, `h:mm:ss=` and the `,1` line numbers of TMPlayer+ | `hh:mm:ss:` start times, an empty line where a gap follows a cue | Formatter strips all tags. See [MPL2 and TMPlayer](#mpl2-and-tmplayer)
 | TTML (.ttml, .dfxp, .xml) | TTML 1, TTML 2, IMSC and the DFXP namespace. All time expressions, `body` and `div` offsets | Media clock times, `<head>` and attributes of the input file | Converts `tts:fontWeight`, `tts:fontStyle`, `tts:textDecoration`, `tts:color` and `ttm:agent` to core markup and back
 | VobSub (.idx and .sub) | DVD bitmaps as image cues. The `size`, `palette`, `custom colors`, `id`, `delay` and `timestamp` lines of the `.idx` | Not supported | See [VobSub](#vobsub)
 | WebVTT (.vtt)   | Header, comments, cue identifiers, styles, regions and cue settings | Writes them back, numbers cues without identifier, always writes hours | Formatter strips all xml tags except: \<b>\<u>\<i>\<v>\<lang>\<c>\<ruby>\<rt> and inline timestamps
@@ -303,6 +305,8 @@ Detection ignores a UTF-8 BOM and leading blank lines. It checks the signatures 
 | 14 | `SccParser` | `Scenarist_SCC V1.0` |
 | 15 | `WhisperJsonParser` | an object with a `"segments"` or `"transcription"` list |
 | 16 | `YouTubeTimedTextParser` | a `<timedtext>` or `<transcript>` root, or an object with an `"events"` list whose events have `"tStartMs"` |
+| 17 | `Mpl2Parser` | `[12][45]` |
+| 18 | `TmPlayerParser` | `00:00:01:`, `0:00:01=` or `00:00:01,1=` |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line looks like SubRip, so it detects as SubRip.
 - **`.sub` files**: MicroDVD, MPSub and SubViewer text files all use `.sub`. SBV has three digits after the dot, SubViewer 2 has two.
@@ -1574,6 +1578,28 @@ $csv = $english->format(CsvFormatter::class, [
 - **Formula injection**: `OPTION_ESCAPE_FORMULAS => true` puts `'` before a cell that starts with `=`, `+`, `-` or `@`, so a spreadsheet does not run it as a formula. It is off by default, because dialogue lines start with `-` and the option changes them.
 - **Detection**: a CSV file has no signature, so pass `CsvParser::class`. The command line tool reads `.csv` and `.tsv` files by their extension.
 - **Lenient mode**: the parser skips a row with a bad time and records a `ParseWarning`. `blockIndex` counts the rows after the header, without empty rows.
+## MPL2 and TMPlayer
+Both formats are common in Polish subtitle downloads and use the `.txt` extension.
+
+```php
+$subtitle = Subtitle::parse(file_get_contents('film.txt'), null, 'Windows-1250');   // detects MPL2 or TMPlayer
+$subtitle = (new TmPlayerParser(lastCueDuration: 3))->parse(file_get_contents('film.txt'));
+$subtitle->format(Mpl2Formatter::class);                                         // [12][45]Where are you?|/Home.
+$subtitle->format(TmPlayerFormatter::class);                                     // 00:00:01:Where are you?|Home.
+```
+
+| Input | Parser result | Formatter output |
+|:--- |:--- |:--- |
+| MPL2 `[12][45]Where are you?\|/Home.` | 1.2 s to 4.5 s, `Where are you?` and `<i>Home.</i>` | the same line |
+| TMPlayer `00:00:01:Rain`, `00:00:04:` and `00:00:09:Sun` | 1 s to 4 s, and 9 s to 13 s | the same three lines |
+| TMPlayer+ `0:00:01=Hello` | 1 s to the next line | `00:00:01:Hello` |
+| TMPlayer+ `00:00:01,1=Hello` and `00:00:01,2=world` | one cue with two lines | `00:00:01:Hello\|world` |
+
+- **Italics**: the MPL2 formatter writes `/` for a line whose whole text is inside `<i>`. It strips all other tags.
+- **TMPlayer end times**: a cue ends at the next line with a time. A line without text only ends the cue before it. The last cue lasts 4 s unless you pass `lastCueDuration`.
+- **TMPlayer gaps**: TMPlayer counts whole seconds, so the formatter rounds each time to the second. A cue that ends before the next cue starts gets a line without text at its end. For a cue shorter than 1 s, that line comes 1 s after the start.
+- **Lenient mode**: both parsers skip a line without times and record a `ParseWarning`. `blockIndex` counts the non-empty lines.
+- **`.txt` files**: the command line tool finds both formats by format detection. An output file that ends in `.txt` gets plain text, unless the input is MPL2 or TMPlayer. Pass `--to mpl2` or `--to tmplayer` to convert other formats.
 
 ## Splitting long cues
 Speech-to-text tools such as Whisper write segments of 10 s and more. `wrapLines()` makes the lines shorter, but the cue stays too long to read. `splitLongCues()` splits such a cue into cues that fit the limits.

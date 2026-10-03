@@ -10,7 +10,9 @@ use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
+use SubtitleToolbox\Parsers\Mpl2Parser;
 use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Parsers\TmPlayerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 
 class FormatRegistryTest extends TestCase
@@ -74,6 +76,9 @@ class FormatRegistryTest extends TestCase
         $this->assertSame("microdvd", FormatRegistry::forPath("season1/Movie.SUB"));
         $this->assertSame(MicroDvdFormatter::class, FormatRegistry::formatterClass(FormatRegistry::forPath("movie.sub")));
         $this->assertSame("json", FormatRegistry::forExtension(".json"));
+        $this->assertSame("txt", FormatRegistry::forExtension("txt"));
+        $this->assertSame(["txt"], FormatRegistry::extensions("mpl2"));
+        $this->assertSame(["txt"], FormatRegistry::extensions("tmplayer"));
         $this->assertSame("ass", FormatRegistry::find("ssa"));
         $this->assertSame("srt", FormatRegistry::find("SRT"));
         $this->assertSame("ttml", FormatRegistry::find(".dfxp"));
@@ -96,6 +101,8 @@ class FormatRegistryTest extends TestCase
         $this->assertSame("ass", FormatRegistry::forParser(AssParser::class));
         $this->assertSame("json", FormatRegistry::forParser(JsonParser::class));
         $this->assertSame("microdvd", FormatRegistry::forParser(MicroDvdParser::class));
+        $this->assertSame("mpl2", FormatRegistry::forParser(Mpl2Parser::class));
+        $this->assertSame("tmplayer", FormatRegistry::forParser(TmPlayerParser::class));
         $this->assertNull(FormatRegistry::forParser(\stdClass::class));
     }
 }
