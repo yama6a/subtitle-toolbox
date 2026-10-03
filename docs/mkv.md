@@ -1,6 +1,6 @@
 # MKV and WebM subtitle tracks
 
-Media servers and subtitle managers get MKV files with embedded subtitles. `MatroskaReader` reads the subtitle tracks of MKV and WebM files in PHP, without `ffmpeg` or `mkvextract`. It reads only. The command line tool does not read MKV files.
+Media servers and subtitle managers get MKV files with embedded subtitles. `MatroskaReader` reads the subtitle tracks of MKV and WebM files in PHP, without `ffmpeg` or `mkvextract`. It reads only. In the command line tool, `info movie.mkv` lists the tracks and `convert movie.mkv out.srt --track 3` reads one. See [cli](cli.md).
 
 ```php
 use SubtitleToolbox\Container\Matroska\MatroskaReader;

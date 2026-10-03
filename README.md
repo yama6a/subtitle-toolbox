@@ -69,7 +69,7 @@ file_put_contents('movie.vtt', $subtitle->format(WebVttFormatter::class));
 | Podcasting 2.0 chapters | `podcast` | `.json` | yes | yes | |
 | FFmpeg metadata chapters | `ffmeta` | `.ffmeta` | yes | yes | |
 | OGM chapters | `ogm` | `.txt` | yes | yes | |
-| MKV and WebM tracks | | `.mkv`, `.webm` | yes | no | `MatroskaReader` reads `S_TEXT/UTF8`, ASS, SSA, WebVTT and PGS tracks. Not in the command line tool |
+| MKV and WebM tracks | | `.mkv`, `.webm` | yes | no | `MatroskaReader` reads `S_TEXT/UTF8`, ASS, SSA, WebVTT and PGS tracks. CLI: `--track` |
 
 **Name** is the format name for `--from` and `--to` in the command line tool. The details of each format are in [formats](docs/formats.md), [transcripts](docs/transcripts.md), [chapters](docs/chapters.md), [OCR](docs/ocr.md), [JSON](docs/json.md) and [MKV](docs/mkv.md).
 
