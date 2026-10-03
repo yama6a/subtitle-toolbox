@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 // Writes the MKV fixtures to tests/files/mkv/. Run: php tests/files/mkv/generator/generate.php
 
 namespace SubtitleToolbox\Container\Matroska;

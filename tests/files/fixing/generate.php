@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 // Writes the OCR fixtures to tests/files/fixing/. Run from the repository root: php tests/files/fixing/generate.php
 
 namespace SubtitleToolbox\Fixing;

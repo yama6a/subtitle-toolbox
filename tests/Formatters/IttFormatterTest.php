@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use InvalidArgumentException;
@@ -100,7 +102,7 @@ class IttFormatterTest extends TestCase
                 . "<body><div xml:id=\"d1\"><p begin=\"1s\" end=\"2s\" style=\"s1\">one</p></div>"
                 . "<div xml:id=\"d2\"><p xml:id=\"c2\" begin=\"3s\" end=\"4s\">two</p></div></body></tt>";
 
-        $output = Subtitle::fromString($ttml, Format::Ttml)->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: "30")));
+        $output = Subtitle::fromString($ttml, Format::Ttml)->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: 30)));
 
         $this->assertSame(1, substr_count($output, "<div"));
         $this->assertStringNotContainsString("monospaceSerif", $output);

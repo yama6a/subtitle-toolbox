@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Exceptions;
 
 abstract class GenericException extends \RuntimeException implements SubtitleToolboxException
