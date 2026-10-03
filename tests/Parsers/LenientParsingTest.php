@@ -233,7 +233,7 @@ class LenientParsingTest extends TestCase
             "MicroDVD with a release name and a line without frames" => [
                 "release_name.sub",
                 MicroDvdParser::class,
-                "The frame rate is unknown. Pass it to the constructor or start the file with {1}{1}<fps>.",
+                "The frame rate is unknown. Set ReadOptions::\$fps or start the file with {1}{1}<fps>.",
                 [
                     [1, 3, "The ferry leaves at noon."],
                     [5, 7, "<i>Tickets are sold on board.</i>"],
