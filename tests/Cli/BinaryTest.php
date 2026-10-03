@@ -9,6 +9,7 @@ use SubtitleToolbox\FormatRegistry;
 use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\MergeShortCuesOptions;
+use SubtitleToolbox\ResegmentOptions;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Subtitle;
 
@@ -418,6 +419,23 @@ class BinaryTest extends TestCase
         );
         $this->assertSame([0, $narrow, ""], $this->runBinary(["fix", "speech.srt", "--merge-short", "--max-cpl", "20", "--max-lines", "3"]));
         $this->assertSame(2, $this->runBinary(["fix", "speech.srt", "--merge-short", "--max-cpl", "0"])[0]);
+    }
+
+
+    public function testFixSplitLong(): void
+    {
+        copy(__DIR__ . "/../files/resegmenting/own_whisper_long_segments.json", "$this->dir/whisper.json");
+        $split = fn (ResegmentOptions $options): string =>
+            Subtitle::parse($this->file("whisper.json"))->splitLongCues($options)->format(WebVttFormatter::class);
+
+        [$code, $stdout, $stderr] = $this->runBinary(["fix", "whisper.json", "--split-long", "--to", "vtt"]);
+
+        $this->assertSame([0, $split(new ResegmentOptions()), ""], [$code, $stdout, $stderr]);
+        $this->assertGreaterThan(count(Subtitle::parse($this->file("whisper.json"))->getCues()), substr_count($stdout, " --> "));
+        $this->assertSame(
+            [0, $split(new ResegmentOptions(maxCharactersPerLine: 30, maxLines: 1)), ""],
+            $this->runBinary(["fix", "whisper.json", "--split-long", "--max-cpl", "30", "--max-lines", "1", "--to", "vtt"])
+        );
     }
 
 
