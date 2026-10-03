@@ -112,11 +112,12 @@ A podcast feed links a transcript per episode with the `<podcast:transcript>` ta
 
 ```php
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\PodcastTranscriptFormatter;
+use SubtitleToolbox\Formatters\Options\PodcastTranscriptOptions;
 use SubtitleToolbox\Parsers\PodcastTranscriptParser;
+use SubtitleToolbox\WriteOptions;
 
 $subtitle = (new WhisperJsonParser([WhisperJsonParser::OPTION_WORD_TIMESTAMPS => true]))->parse($whisperJson);
-$json     = $subtitle->toString(Format::PodcastTranscript, [PodcastTranscriptFormatter::OPTION_WORD_SEGMENTS => true]);
+$json     = $subtitle->toString(Format::PodcastTranscript, new WriteOptions(format: new PodcastTranscriptOptions(wordSegments: true)));
 $html     = $subtitle->toString(Format::HtmlTranscript);
 $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('episode.json'));   // detects a Podcasting 2.0 transcript
 $subtitle = (new PodcastTranscriptParser([PodcastTranscriptParser::OPTION_KEEP_SEGMENTS => true]))->parse($json);
@@ -126,9 +127,9 @@ $subtitle = (new PodcastTranscriptParser([PodcastTranscriptParser::OPTION_KEEP_S
 |:--- |:--- |:--- |
 | `PodcastTranscriptParser` | `OPTION_KEEP_SEGMENTS` | one cue per segment. By default, segments of one word join into a cue |
 | `PodcastTranscriptParser` | `OPTION_WORD_TIMESTAMPS` | a core word timestamp before each word of a joined cue |
-| `PodcastTranscriptFormatter` | `OPTION_WORD_SEGMENTS` | one segment per core word timestamp, for the word highlight of the apps. By default, one segment per cue |
-| `PodcastTranscriptFormatter` | `OPTION_PRETTY_PRINT` | indents with 4 spaces and ends with a newline |
-| `HtmlTranscriptFormatter` | `OPTION_PARAGRAPH_GAP` | the gap in seconds that starts a new paragraph, 2.0 by default |
+| `PodcastTranscriptOptions` | `wordSegments` | one segment per core word timestamp, for the word highlight of the apps. By default, one segment per cue |
+| `PodcastTranscriptOptions` | `prettyPrint` | indents with 4 spaces and ends with a newline |
+| `HtmlTranscriptOptions` | `paragraphGap` | the gap in seconds that starts a new paragraph, 2.0 by default |
 
 - **Speakers**: the `speaker` of a segment and the name in `<cite>` become `<v Name>`, and back. A cue with two `<v>` speakers gives one segment per speaker, both with the times of the cue.
 - **Joined words**: the parser joins a segment of one word with the next segment of the same speaker. It stops after a word that ends with `.`, `?`, `!` or the ellipsis U+2026. A segment with a space in its body stays one cue.
@@ -151,18 +152,19 @@ Home.
 
 ```php
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\PlainTextFormatter;
+use SubtitleToolbox\Formatters\Options\PlainTextOptions;
+use SubtitleToolbox\WriteOptions;
 
-$text = $subtitle->toString(Format::PlainText, [PlainTextFormatter::OPTION_WITH_TIMES => true]);
+$text = $subtitle->toString(Format::PlainText, new WriteOptions(format: new PlainTextOptions(withTimes: true)));
 ```
 
-| Option | Default | Effect |
+| `PlainTextOptions` field | Default | Effect |
 |:--- |:--- |:--- |
-| `OPTION_JOIN_LINES` | `true` | joins the lines of a cue with a space. `false` writes each line on its own line |
-| `OPTION_JOIN_CUES` | `true` | joins the cues of a paragraph with a space. `false` writes each cue on its own line |
-| `OPTION_PARAGRAPH_GAP` | `2.0` | the gap in seconds that starts a new paragraph. `INF` writes one paragraph |
-| `OPTION_WITH_TIMES` | `false` | writes the start of the paragraph as `[00:01:23] ` before it |
+| `joinLines` | `true` | joins the lines of a cue with a space. `false` writes each line on its own line |
+| `joinCues` | `true` | joins the cues of a paragraph with a space. `false` writes each cue on its own line |
+| `paragraphGap` | `2.0` | the gap in seconds that starts a new paragraph. `INF` writes one paragraph |
+| `withTimes` | `false` | writes the start of the paragraph as `[00:01:23] ` before it |
 
 - **Gap**: the start of a cue minus the latest end of the earlier cues.
-- **Cues without text**: the formatter skips them. Image cues without text need `OPTION_SKIP_IMAGE_CUES`, as in all text formatters.
+- **Cues without text**: the formatter skips them. Image cues without text need `WriteOptions(skipImageCues: true)`, as in all text formatters.
 - **No parser**: the library cannot read plain text.

@@ -5,10 +5,13 @@ namespace SubtitleToolbox\Formatters;
 use JsonException;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\JsonOptions;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class JsonFormatterTest extends TestCase
 {
@@ -40,10 +43,7 @@ class JsonFormatterTest extends TestCase
 
     public function testPrettyPrintEndsWithANewLine(): void
     {
-        $json = (new Subtitle())->toString(Format::Json, [
-            JsonFormatter::OPTION_PRETTY_PRINT => true,
-            JsonFormatter::OPTION_LINE_ENDING  => "\r\n",
-        ]);
+        $json = (new Subtitle())->toString(Format::Json, new WriteOptions(lineEnding: LineEnding::Crlf, format: new JsonOptions(prettyPrint: true)));
 
         $this->assertSame("{\r\n    \"version\": 1,\r\n    \"metadata\": {},\r\n    \"comments\": [],\r\n    \"formatData\": {},\r\n    \"cues\": []\r\n}\r\n", $json);
     }
@@ -77,7 +77,7 @@ class JsonFormatterTest extends TestCase
 
         $this->assertSame(
             '{"version":1,"metadata":{},"comments":[],"cues":[{"start":1.0,"end":2.0,"lines":["Rain"],"identifier":null,"alignment":null}]}',
-            $subtitle->toString(Format::Json, [JsonFormatter::OPTION_WITH_FORMAT_DATA => false])
+            $subtitle->toString(Format::Json, new WriteOptions(format: new JsonOptions(withFormatData: false)))
         );
     }
 

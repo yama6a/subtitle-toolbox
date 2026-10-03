@@ -6,6 +6,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class HlsWebVttJoinerTest extends TestCase
 {
@@ -53,7 +54,7 @@ class HlsWebVttJoinerTest extends TestCase
         ], $this->summarize($joined));
         $this->assertStringStartsWith("WEBVTT\n\n1\n00:00:01.000 --> 00:00:03.000 align:center line:90%\n" .
                                       "The ferry leaves at noon.\n\n2\n00:00:05.000 --> 00:00:07.500 align:center line:90%\n",
-                                      $joined->toString(Format::WebVtt, ["bom" => false]));
+                                      $joined->toString(Format::WebVtt, new WriteOptions(bom: false)));
     }
 
 

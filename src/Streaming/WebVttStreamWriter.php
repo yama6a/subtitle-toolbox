@@ -2,12 +2,11 @@
 
 namespace SubtitleToolbox\Streaming;
 
-use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\Parsers\WebVttParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class WebVttStreamWriter implements CueStreamWriter
 {
@@ -26,16 +25,15 @@ class WebVttStreamWriter implements CueStreamWriter
 
 
     /**
-     * @param resource|string $stream  a stream resource, or a file path that the writer opens and closes
-     * @param array           $header  the header, STYLE and REGION blocks, as WebVttStreamReader::getHeader() returns them
-     * @param array           $options the options of WebVttFormatter::format()
+     * @param resource|string $stream a stream resource, or a file path that the writer opens and closes
+     * @param array           $header the header, STYLE and REGION blocks, as WebVttStreamReader::getHeader() returns them
      */
-    public function __construct($stream, array $header = [], private readonly array $options = [])
+    public function __construct($stream, array $header = [], private readonly WriteOptions $options = new WriteOptions())
     {
         $this->formatter  = new WebVttFormatter();
         $headerOnly       = (new Subtitle())->setFormatData(WebVttParser::FORMAT, $header);
         $prefix           = $this->formatter->format($headerOnly, $options);
-        $this->lineEnding = $options[SubtitleFormatter::OPTION_LINE_ENDING] ?? StringHelpers::UNIX_LINE_ENDING;
+        $this->lineEnding = $options->lineEnding->value;
         $this->hasBlocks  = ($header["styles"] ?? []) !== [] || ($header["regions"] ?? []) !== [];
         $this->ownsHandle = !is_resource($stream);
         $this->handle     = Streams::open($stream, "wb");

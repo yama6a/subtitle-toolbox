@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class WebVttFormatterTest extends TestCase
 {
@@ -38,7 +39,7 @@ class WebVttFormatterTest extends TestCase
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/vtt/all_xml_tags_stripped.vtt"),
-            $subtitle->toString(Format::WebVtt, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+            $subtitle->toString(Format::WebVtt, new WriteOptions(stripTags: true))
         );
     }
 
@@ -160,7 +161,7 @@ class WebVttFormatterTest extends TestCase
         );
         $this->assertSame(
             "\xEF\xBB\xBFWEBVTT\n\n1\n00:00:01.000 --> 00:00:04.000\nOne two three\n",
-            $subtitle->toString(Format::WebVtt, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+            $subtitle->toString(Format::WebVtt, new WriteOptions(stripTags: true))
         );
     }
 

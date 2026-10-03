@@ -190,7 +190,7 @@ WordHighlight::apply($subtitle, new WordHighlightOptions(
 - **Cue data**: each word cue keeps the alignment, the forced flag and the format data. Only the first word cue keeps the identifier.
 - **Window**: `maxWordsPerCue` shows the active word in the middle of N words. At the start and the end of a cue, the window stops at the first or last word.
 - **Markup**: the style wraps the text of each word in logical order, so right-to-left text such as Hebrew works. The style closes before another tag and opens again after it, for example `<i><u>train</u></i>`.
-- **ASS karaoke**: to keep the timing as ASS karaoke tags in place of one cue per word, write ASS directly. See [formats.md](formats.md#ass-and-ssa) for `OPTION_KARAOKE_TAG`.
+- **ASS karaoke**: to keep the timing as ASS karaoke tags in place of one cue per word, write ASS directly. See [formats.md](formats.md#ass-and-ssa) for `AssOptions::$karaokeTag`.
 
 ## Fixing common errors
 OCR of PGS and VobSub cues reads `It's` as `lt's`. Files from the web have spaces before `?` and tags that never close. `CommonErrorFixer` fixes such errors in one call and lists each change for review.

@@ -8,6 +8,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class SamiFormatterTest extends TestCase
 {
@@ -118,7 +119,7 @@ class SamiFormatterTest extends TestCase
 
         $this->assertStringContainsString(
             "<SYNC Start=335453><P Class=KR>출발! 출발!\n",
-            $subtitle->toString(Format::Sami, [SamiFormatter::OPTION_STRIP_ALL_XML_TAGS])
+            $subtitle->toString(Format::Sami, new WriteOptions(stripTags: true))
         );
     }
 

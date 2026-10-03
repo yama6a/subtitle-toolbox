@@ -5,9 +5,10 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\JsonFormatter;
+use SubtitleToolbox\Formatters\Options\JsonOptions;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\WriteOptions;
 
 class JsonRealFilesTest extends TestCase
 {
@@ -56,7 +57,7 @@ class JsonRealFilesTest extends TestCase
     {
         $json = file_get_contents(self::DIR . $fileName);
 
-        $this->assertSame($json, Subtitle::fromStringAutoDetectFormat($json)->toString(Format::Json, [JsonFormatter::OPTION_PRETTY_PRINT => true]));
+        $this->assertSame($json, Subtitle::fromStringAutoDetectFormat($json)->toString(Format::Json, new WriteOptions(format: new JsonOptions(prettyPrint: true))));
     }
 
 

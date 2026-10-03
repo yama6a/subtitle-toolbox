@@ -6,11 +6,11 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\ParseWarning;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class Mpl2ParserTest extends TestCase
 {
@@ -30,7 +30,7 @@ class Mpl2ParserTest extends TestCase
                 8,
                 [1.2, 4.5, "Dzień dobry, piekarnia jest już otwarta."],
                 [360.0, 364.5, "Do zobaczenia w poniedziałek!"],
-                [SubtitleFormatter::OPTION_LINE_ENDING => StringHelpers::WINDOWS_LINE_ENDING],
+                new WriteOptions(lineEnding: LineEnding::Crlf),
             ],
             "pysubs2 shape with BOM" => [
                 "pysubs2_shape_bom.txt",
@@ -64,10 +64,10 @@ class Mpl2ParserTest extends TestCase
 
 
     #[DataProvider("realFiles")]
-    public function testRealFileSurvivesARoundTrip(string $file, ?string $encoding, int $cueCount, array $firstCue, array $lastCue, ?array $options): void
+    public function testRealFileSurvivesARoundTrip(string $file, ?string $encoding, int $cueCount, array $firstCue, array $lastCue, ?WriteOptions $options): void
     {
         $subtitle  = $this->parseFile($file, $encoding);
-        $formatted = $subtitle->toString(Format::Mpl2, $options ?? []);
+        $formatted = $subtitle->toString(Format::Mpl2, $options ?? new WriteOptions());
 
         $this->assertEquals($subtitle->getCues(), (new Mpl2Parser())->parse($formatted)->getCues());
         if ($options !== null) {

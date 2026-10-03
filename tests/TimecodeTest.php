@@ -4,9 +4,10 @@ namespace SubtitleToolbox;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\CsvFormatter;
-use SubtitleToolbox\Formatters\IttFormatter;
-use SubtitleToolbox\Formatters\MicroDvdFormatter;
+use SubtitleToolbox\Formatters\CsvTimeFormat;
+use SubtitleToolbox\Formatters\Options\CsvOptions;
+use SubtitleToolbox\Formatters\Options\IttOptions;
+use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
 use SubtitleToolbox\Parsers\CsvColumns;
 use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
@@ -95,36 +96,36 @@ class TimecodeTest extends TestCase
     public static function textFormats(): array
     {
         return [
-            "ass"                => ["ass", 0.01, [], true],
-            "csv"                => ["csv", 0.001, [], true],
-            "csv frames"         => ["csv", 1 / 25, [CsvFormatter::OPTION_TIME_FORMAT => "hh:mm:ss:ff", CsvFormatter::OPTION_FRAME_RATE => 25], true, new CsvParser(new CsvColumns(frameRate: 25))],
-            "ffmeta"             => ["ffmeta", 0.001, [], true],
-            "html"               => ["html", 1, [], false],
-            "itt"                => ["itt", 1 / 25, [IttFormatter::OPTION_FRAME_RATE => 25], true],
-            "json"               => ["json", 0.001, [], true],
-            "lrc"                => ["lrc", 0.01, [], false],
-            "microdvd"           => ["microdvd", 1 / 25, [MicroDvdFormatter::OPTION_FRAME_RATE => 25], true, new MicroDvdParser(25)],
-            "mpl2"               => ["mpl2", 0.1, [], true],
-            "mpsub"              => ["mpsub", 0.001, [], true],
-            "ogm"                => ["ogm", 0.001, [], false],
-            "podcast"            => ["podcast", 0.001, [], true],
-            "podcast-transcript" => ["podcast-transcript", 0.001, [], true, new PodcastTranscriptParser([PodcastTranscriptParser::OPTION_KEEP_SEGMENTS => true])],
-            "sami"               => ["sami", 0.001, [], true],
-            "sbv"                => ["sbv", 0.001, [], true],
-            "scc"                => ["scc", 1001 / 30000, [], true],
-            "srt"                => ["srt", 0.001, [], true],
-            "subviewer"          => ["subviewer", 0.01, [], true],
-            "tmplayer"           => ["tmplayer", 1, [], false],
-            "tsv"                => ["tsv", 0.001, [], true],
-            "ttml"               => ["ttml", 0.001, [], true],
-            "vtt"                => ["vtt", 0.001, [], true],
-            "ytchapter"          => ["ytchapter", 1, [], false],
+            "ass"                => ["ass", 0.01, new WriteOptions(), true],
+            "csv"                => ["csv", 0.001, new WriteOptions(), true],
+            "csv frames"         => ["csv", 1 / 25, new WriteOptions(format: new CsvOptions(timeFormat: CsvTimeFormat::Frames, frameRate: 25)), true, new CsvParser(new CsvColumns(frameRate: 25))],
+            "ffmeta"             => ["ffmeta", 0.001, new WriteOptions(), true],
+            "html"               => ["html", 1, new WriteOptions(), false],
+            "itt"                => ["itt", 1 / 25, new WriteOptions(format: new IttOptions(frameRate: 25)), true],
+            "json"               => ["json", 0.001, new WriteOptions(), true],
+            "lrc"                => ["lrc", 0.01, new WriteOptions(), false],
+            "microdvd"           => ["microdvd", 1 / 25, new WriteOptions(format: new MicroDvdOptions(frameRate: 25)), true, new MicroDvdParser(25)],
+            "mpl2"               => ["mpl2", 0.1, new WriteOptions(), true],
+            "mpsub"              => ["mpsub", 0.001, new WriteOptions(), true],
+            "ogm"                => ["ogm", 0.001, new WriteOptions(), false],
+            "podcast"            => ["podcast", 0.001, new WriteOptions(), true],
+            "podcast-transcript" => ["podcast-transcript", 0.001, new WriteOptions(), true, new PodcastTranscriptParser([PodcastTranscriptParser::OPTION_KEEP_SEGMENTS => true])],
+            "sami"               => ["sami", 0.001, new WriteOptions(), true],
+            "sbv"                => ["sbv", 0.001, new WriteOptions(), true],
+            "scc"                => ["scc", 1001 / 30000, new WriteOptions(), true],
+            "srt"                => ["srt", 0.001, new WriteOptions(), true],
+            "subviewer"          => ["subviewer", 0.01, new WriteOptions(), true],
+            "tmplayer"           => ["tmplayer", 1, new WriteOptions(), false],
+            "tsv"                => ["tsv", 0.001, new WriteOptions(), true],
+            "ttml"               => ["ttml", 0.001, new WriteOptions(), true],
+            "vtt"                => ["vtt", 0.001, new WriteOptions(), true],
+            "ytchapter"          => ["ytchapter", 1, new WriteOptions(), false],
         ];
     }
 
 
     #[DataProvider("textFormats")]
-    public function testCueAtTheEndOfASecondParsesBackWithinOneUnit(string $format, float $unit, array $options, bool $writesEnd, ?SubtitleParser $parser = null): void
+    public function testCueAtTheEndOfASecondParsesBackWithinOneUnit(string $format, float $unit, WriteOptions $options, bool $writesEnd, ?SubtitleParser $parser = null): void
     {
         $subtitle = new Subtitle();
         $subtitle->addCue(new SubtitleCue(1.996, 4, "One"));

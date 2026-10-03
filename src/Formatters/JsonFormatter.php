@@ -2,22 +2,23 @@
 
 namespace SubtitleToolbox\Formatters;
 
-use SubtitleToolbox\Options;
+use SubtitleToolbox\Formatters\Options\JsonOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\WriteOptions;
 
 class JsonFormatter extends SubtitleFormatter implements ImageFormatter
 {
-    public const OPTION_PRETTY_PRINT     = "prettyPrint";
-    public const OPTION_WITH_FORMAT_DATA = "withFormatData";
+    protected const FORMAT_OPTIONS = JsonOptions::class;
 
 
     /**
      * Writes Subtitle::toArray() as JSON, with each format data string that is not valid UTF-8 as {"base64": "..."}.
      */
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $array = $subtitle->toArray(Options::flag($options, self::OPTION_WITH_FORMAT_DATA) ?? true);
+        $json  = $this->formatOptions($options) ?? new JsonOptions();
+        $array = $subtitle->toArray($json->withFormatData);
 
         $array["metadata"] = (object)$array["metadata"];
         if (array_key_exists("formatData", $array)) {
@@ -30,13 +31,11 @@ class JsonFormatter extends SubtitleFormatter implements ImageFormatter
         }
 
         $flags = JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
-        if (Options::flag($options, self::OPTION_PRETTY_PRINT) ?? false) {
-            $json = json_encode($array, $flags | JSON_PRETTY_PRINT) . StringHelpers::UNIX_LINE_ENDING;
-        } else {
-            $json = json_encode($array, $flags);
-        }
+        $output = $json->prettyPrint
+            ? json_encode($array, $flags | JSON_PRETTY_PRINT) . StringHelpers::UNIX_LINE_ENDING
+            : json_encode($array, $flags);
 
-        return $this->applyOutputOptions($json, $options);
+        return $this->applyOutputOptions($output, $options);
     }
 
 

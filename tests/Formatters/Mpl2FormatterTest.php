@@ -4,8 +4,10 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class Mpl2FormatterTest extends TestCase
 {
@@ -45,7 +47,7 @@ class Mpl2FormatterTest extends TestCase
 
         $this->assertSame(
             "\xEF\xBB\xBF[0][10]Hello\r\n",
-            $subtitle->toString(Format::Mpl2, [SubtitleFormatter::OPTION_LINE_ENDING => "\r\n", SubtitleFormatter::OPTION_BOM => true])
+            $subtitle->toString(Format::Mpl2, new WriteOptions(lineEnding: LineEnding::Crlf, bom: true))
         );
     }
 }

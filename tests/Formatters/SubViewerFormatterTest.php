@@ -5,8 +5,10 @@ namespace SubtitleToolbox\Formatters;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\SubViewerOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class SubViewerFormatterTest extends TestCase
 {
@@ -38,7 +40,7 @@ class SubViewerFormatterTest extends TestCase
             "******** START SCRIPT ********\n" .
             "[00:00:02]\nFresh bread|every day\n[00:00:04]\n\n" .
             "[end]\n******** END SCRIPT ********\n",
-            $subtitle->toString(Format::SubViewer, [SubViewerFormatter::OPTION_VERSION => 1])
+            $subtitle->toString(Format::SubViewer, new WriteOptions(format: new SubViewerOptions(version: 1)))
         );
     }
 
@@ -62,7 +64,7 @@ class SubViewerFormatterTest extends TestCase
 
         $this->assertStringStartsWith(
             "[TITLE]\n[AUTHOR]\n[DELAY]\n0\n******** START SCRIPT ********\n[00:00:04]\nHello\n[00:00:05]\n",
-            $subtitle->toString(Format::SubViewer, [SubViewerFormatter::OPTION_VERSION => 1])
+            $subtitle->toString(Format::SubViewer, new WriteOptions(format: new SubViewerOptions(version: 1)))
         );
     }
 
@@ -70,8 +72,8 @@ class SubViewerFormatterTest extends TestCase
     public function testUnknownVersionThrows(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("The SubViewer version must be 1 or 2!");
+        $this->expectExceptionMessage("The SubViewer version must be 1 or 2, got 3.");
 
-        (new Subtitle())->toString(Format::SubViewer, [SubViewerFormatter::OPTION_VERSION => 3]);
+        new SubViewerOptions(version: 3);
     }
 }

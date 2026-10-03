@@ -5,10 +5,11 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\MicroDvdFormatter;
+use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Validation\ValidationRules;
+use SubtitleToolbox\WriteOptions;
 
 class ParseSpeedTest extends TestCase
 {
@@ -18,23 +19,20 @@ class ParseSpeedTest extends TestCase
     public static function formats(): array
     {
         return [
-            "SubRip"   => [Format::SubRip, []],
-            "WebVTT"   => [Format::WebVtt, []],
-            "SBV"      => [Format::Sbv, []],
-            "ASS"      => [Format::Ass, []],
-            "MicroDVD" => [Format::MicroDvd, [
-                MicroDvdFormatter::OPTION_FRAME_RATE            => 25,
-                MicroDvdFormatter::OPTION_WRITE_FRAME_RATE_LINE => true,
-            ]],
-            "TTML"     => [Format::Ttml, []],
-            "EBU STL"  => [Format::EbuStl, []],
+            "SubRip"   => [Format::SubRip, new WriteOptions()],
+            "WebVTT"   => [Format::WebVtt, new WriteOptions()],
+            "SBV"      => [Format::Sbv, new WriteOptions()],
+            "ASS"      => [Format::Ass, new WriteOptions()],
+            "MicroDVD" => [Format::MicroDvd, new WriteOptions(format: new MicroDvdOptions(frameRate: 25, writeFrameRateLine: true))],
+            "TTML"     => [Format::Ttml, new WriteOptions()],
+            "EBU STL"  => [Format::EbuStl, new WriteOptions()],
         ];
     }
 
 
     // A parser that sorts the cues after each added cue takes minutes here.
     #[DataProvider("formats")]
-    public function testParsesTwentyThousandCuesUnderTenSeconds(Format $format, array $options): void
+    public function testParsesTwentyThousandCuesUnderTenSeconds(Format $format, WriteOptions $options): void
     {
         $content = $this->repeatFixture(self::CUE_COUNT)->toString($format, $options);
 

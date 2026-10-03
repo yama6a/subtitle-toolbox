@@ -6,10 +6,11 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
 class SbvFormatter extends SubtitleFormatter
 {
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
         $blocks = [];
         foreach ($subtitle->getCues() as $cue) {

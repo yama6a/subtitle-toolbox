@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Diff\CueDifference;
 use SubtitleToolbox\Diff\SubtitleDiff;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Formatters\IttFormatter;
+use SubtitleToolbox\Formatters\Options\IttOptions;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\FakeOcrEngine;
 use SubtitleToolbox\Parsers\PgsParser;
@@ -259,12 +259,12 @@ class ForcedCuesTest extends TestCase
 
     public function testIttFormatterWritesTheFlagOnTheParagraph(): void
     {
-        $output = $this->srtWithForcedSecondCue()->toString(Format::Itt, [IttFormatter::OPTION_FRAME_RATE => 25]);
+        $output = $this->srtWithForcedSecondCue()->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: 25)));
 
         $this->assertStringContainsString('xmlns:itts="http://www.w3.org/ns/ttml/profile/imsc1#styling"', $output);
         $this->assertStringContainsString('<p begin="00:00:03:00" end="00:00:04:00" region="bottom" itts:forcedDisplay="true">EXIT</p>', $output);
         $this->assertSame([false, true, false], $this->forcedFlags(Subtitle::fromString($output, Format::Itt)));
         $this->assertStringNotContainsString("itts", Subtitle::fromString(self::SRT, Format::SubRip)
-                                                         ->toString(Format::Itt, [IttFormatter::OPTION_FRAME_RATE => 25]));
+                                                         ->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: 25))));
     }
 }

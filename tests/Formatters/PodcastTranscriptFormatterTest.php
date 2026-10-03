@@ -4,9 +4,12 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\PodcastTranscriptOptions;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class PodcastTranscriptFormatterTest extends TestCase
 {
@@ -62,10 +65,7 @@ class PodcastTranscriptFormatterTest extends TestCase
             "{\r\n    \"version\": \"1.0.1\",\r\n    \"segments\": [\r\n        {\r\n            \"startTime\": 0.0,\r\n" .
             "            \"endTime\": 1.25,\r\n            \"body\": \"Hi\",\r\n            \"confidence\": 0.9\r\n        }\r\n" .
             "    ],\r\n    \"language\": \"en\"\r\n}\r\n",
-            $subtitle->toString(Format::PodcastTranscript, [
-                PodcastTranscriptFormatter::OPTION_PRETTY_PRINT => true,
-                PodcastTranscriptFormatter::OPTION_LINE_ENDING  => "\r\n",
-            ])
+            $subtitle->toString(Format::PodcastTranscript, new WriteOptions(lineEnding: LineEnding::Crlf, format: new PodcastTranscriptOptions(prettyPrint: true)))
         );
     }
 
@@ -74,7 +74,7 @@ class PodcastTranscriptFormatterTest extends TestCase
     {
         $parser   = new WhisperJsonParser([WhisperJsonParser::OPTION_WORD_TIMESTAMPS => true]);
         $subtitle = $parser->parse(file_get_contents(self::DIR . "whisper/real/openai_whisper_word_timestamps.json"));
-        $json     = $subtitle->toString(Format::PodcastTranscript, [PodcastTranscriptFormatter::OPTION_WORD_SEGMENTS => true]);
+        $json     = $subtitle->toString(Format::PodcastTranscript, new WriteOptions(format: new PodcastTranscriptOptions(wordSegments: true)));
 
         $this->assertSame(
             ["startTime" => 0.0, "endTime" => 0.24, "body" => "The"],

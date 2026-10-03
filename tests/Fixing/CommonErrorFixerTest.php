@@ -7,12 +7,13 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 require_once __DIR__ . "/../files/fixing/generate.php";
 
@@ -150,7 +151,7 @@ class CommonErrorFixerTest extends TestCase
         $fixes = CommonErrorFixer::apply($subtitle, $options)->fixes;
 
         $this->assertStringEqualsFile(self::FILES . $golden,
-                                      $subtitle->toString(Format::SubRip, [SubtitleFormatter::OPTION_LINE_ENDING => $lineEnd]));
+                                      $subtitle->toString(Format::SubRip, new WriteOptions(lineEnding: LineEnding::from($lineEnd))));
         $this->assertNotEmpty($fixes);
         $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . $golden)), $options)->fixes);
     }

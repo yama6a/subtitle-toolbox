@@ -6,11 +6,11 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\ParseWarning;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class TmPlayerParserTest extends TestCase
 {
@@ -29,7 +29,7 @@ class TmPlayerParserTest extends TestCase
                 5,
                 [1.0, 5.0, "The train to the coast\nleaves from platform two."],
                 [3600.0, 3604.0, "We arrive on time today."],
-                [SubtitleFormatter::OPTION_LINE_ENDING => StringHelpers::WINDOWS_LINE_ENDING],
+                new WriteOptions(lineEnding: LineEnding::Crlf),
             ],
             "TMPlayer+ with equals signs" => [
                 "tmplayer_plus.txt",
@@ -61,10 +61,10 @@ class TmPlayerParserTest extends TestCase
 
 
     #[DataProvider("realFiles")]
-    public function testRealFileSurvivesARoundTrip(string $file, int $cueCount, array $firstCue, array $lastCue, ?array $options): void
+    public function testRealFileSurvivesARoundTrip(string $file, int $cueCount, array $firstCue, array $lastCue, ?WriteOptions $options): void
     {
         $subtitle  = $this->parseFile($file);
-        $formatted = $subtitle->toString(Format::TmPlayer, $options ?? []);
+        $formatted = $subtitle->toString(Format::TmPlayer, $options ?? new WriteOptions());
 
         $this->assertEquals($subtitle->getCues(), (new TmPlayerParser())->parse($formatted)->getCues());
         if ($options !== null) {

@@ -4,7 +4,6 @@ namespace SubtitleToolbox;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\FakeOcrEngine;
 
@@ -44,7 +43,7 @@ class ImageCueFormatTest extends TestCase
     {
         $subtitle = $this->makeSubtitle();
 
-        $output = $subtitle->toString(Format::WebVtt, [SubtitleFormatter::OPTION_SKIP_IMAGE_CUES => true]);
+        $output = $subtitle->toString(Format::WebVtt, new WriteOptions(skipImageCues: true));
 
         $expected = (new Subtitle())
             ->addCue(new SubtitleCue(1, 2, "First"))
@@ -80,7 +79,7 @@ class ImageCueFormatTest extends TestCase
     public function testImageFormatGetsImageCuesWithoutText(): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/files/pgs/shapes_576p.sup"), Format::Pgs);
-        $output   = $subtitle->toString(Format::Pgs, [SubtitleFormatter::OPTION_SKIP_IMAGE_CUES => true]);
+        $output   = $subtitle->toString(Format::Pgs, new WriteOptions(skipImageCues: true));
 
         $this->assertSame($subtitle->toString(Format::Pgs), $output);
         $this->assertCount(count($subtitle->getCues()), Subtitle::fromString($output, Format::Pgs)->getCues());

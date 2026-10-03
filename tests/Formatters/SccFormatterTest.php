@@ -6,9 +6,12 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\SccOptions;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\SccParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class SccFormatterTest extends TestCase
 {
@@ -183,7 +186,7 @@ class SccFormatterTest extends TestCase
         $this->assertStringContainsString("\n00:01:01;00\t942c 942c\n", $subtitle->toString(Format::Scc));
         $this->assertStringContainsString(
             "\n00:01:00:28\t942c 942c\n",
-            $subtitle->toString(Format::Scc, [SccFormatter::OPTION_DROP_FRAME => false])
+            $subtitle->toString(Format::Scc, new WriteOptions(format: new SccOptions(dropFrame: false)))
         );
     }
 
@@ -193,15 +196,7 @@ class SccFormatterTest extends TestCase
         $subtitle = Subtitle::fromString(self::HEADER . "00:00:01:00\t9420 9420 9470 9470 c8e9 942f 942f\n\n00:00:03:00\t942c 942c\n", Format::Scc);
 
         $this->assertStringContainsString("\n00:00:03:00\t942c 942c\n", $subtitle->toString(Format::Scc));
-        $this->assertStringContainsString("\n00:00:03;00\t942c 942c\n", $subtitle->toString(Format::Scc, [SccFormatter::OPTION_DROP_FRAME => true]));
-    }
-
-
-    public function testInvalidDropFrameOptionThrows(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-
-        $this->subtitle(new SubtitleCue(1.0, 2.0, "Hi"))->toString(Format::Scc, [SccFormatter::OPTION_DROP_FRAME => "yes"]);
+        $this->assertStringContainsString("\n00:00:03;00\t942c 942c\n", $subtitle->toString(Format::Scc, new WriteOptions(format: new SccOptions(dropFrame: true))));
     }
 
 
@@ -251,10 +246,7 @@ class SccFormatterTest extends TestCase
 
     public function testLineEndingAndBomOptions(): void
     {
-        $output = $this->subtitle(new SubtitleCue(1.0, 3.0, "Hi"))->toString(Format::Scc, [
-            SubtitleFormatter::OPTION_LINE_ENDING => "\r\n",
-            SubtitleFormatter::OPTION_BOM         => true,
-        ]);
+        $output = $this->subtitle(new SubtitleCue(1.0, 3.0, "Hi"))->toString(Format::Scc, new WriteOptions(lineEnding: LineEnding::Crlf, bom: true));
 
         $this->assertStringStartsWith("\xEF\xBB\xBFScenarist_SCC V1.0\r\n\r\n00:00:00;21\t", $output);
         $this->assertStringEndsWith("\r\n\r\n00:00:03;00\t942c 942c\r\n", $output);

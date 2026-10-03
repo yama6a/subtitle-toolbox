@@ -7,9 +7,9 @@ An **image cue** is a cue with a PNG image in the format data key `image`. It ha
 
 ```php
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
+use SubtitleToolbox\WriteOptions;
 
 $image = CueImage::fromCue($cue);                    // $image->png, x, y, width, height, screenWidth, screenHeight, forced
 file_put_contents('cue.png', $image->png);
@@ -17,9 +17,7 @@ file_put_contents('cue.png', $image->png);
 $subtitle->recognizeText(new GlyphOcrEngine());      // sets the lines of each image cue without text
 $subtitle->toString(Format::SubRip);
 
-$subtitle->toString(Format::SubRip, [
-    SubtitleFormatter::OPTION_SKIP_IMAGE_CUES => true,    // drops image cues without text
-]);
+$subtitle->toString(Format::SubRip, new WriteOptions(skipImageCues: true));   // drops image cues without text
 ```
 
 - **Text formats**: `toString()` throws `ImageCueWithoutTextException` for an image cue without text. So a file without OCR fails at once, and does not become a valid file with missing cues.

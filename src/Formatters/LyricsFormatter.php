@@ -8,10 +8,11 @@ use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
 class LyricsFormatter extends SubtitleFormatter
 {
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
         $output   = $this->formatIdTags($subtitle);
         $cues     = array_values($subtitle->getCues());

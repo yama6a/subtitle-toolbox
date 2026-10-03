@@ -4,8 +4,10 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class TmPlayerFormatterTest extends TestCase
 {
@@ -49,9 +51,6 @@ class TmPlayerFormatterTest extends TestCase
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(0, 1, "Hello"));
 
-        $this->assertSame("\xEF\xBB\xBF00:00:00:Hello\r\n", $subtitle->toString(Format::TmPlayer, [
-            SubtitleFormatter::OPTION_LINE_ENDING => "\r\n",
-            SubtitleFormatter::OPTION_BOM         => true,
-        ]));
+        $this->assertSame("\xEF\xBB\xBF00:00:00:Hello\r\n", $subtitle->toString(Format::TmPlayer, new WriteOptions(lineEnding: LineEnding::Crlf, bom: true)));
     }
 }

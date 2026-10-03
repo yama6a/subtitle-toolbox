@@ -5,16 +5,15 @@ namespace SubtitleToolbox;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
 
 class EncodingTest extends TestCase
 {
     private const DIR = __DIR__ . "/files/encoding/";
 
-    private const WINDOWS_OUTPUT = [
-        SubtitleFormatter::OPTION_LINE_ENDING => "\r\n",
-        SubtitleFormatter::OPTION_BOM         => false,
-    ];
+    private static function windowsOutput(): WriteOptions
+    {
+        return new WriteOptions(lineEnding: LineEnding::Crlf, bom: false);
+    }
 
 
     public static function legacyFiles(): array
@@ -55,7 +54,7 @@ class EncodingTest extends TestCase
         $this->assertCount(3, $cues);
         $this->assertSame($first, [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $this->assertSame($last, [$cues[2]->getStart(), $cues[2]->getEnd(), $cues[2]->getText()]);
-        $this->assertSame($raw, iconv("UTF-8", $encoding, $subtitle->toString($format, self::WINDOWS_OUTPUT)));
+        $this->assertSame($raw, iconv("UTF-8", $encoding, $subtitle->toString($format, self::windowsOutput())));
     }
 
 
@@ -100,9 +99,9 @@ class EncodingTest extends TestCase
         $this->assertSame("Saved with Notepad", $subtitle->getComments()[0]["text"]);
         $this->assertEquals($subtitle, Subtitle::fromString($raw, Format::WebVtt, "Windows-1252"));
 
-        $output = $subtitle->toString(Format::WebVtt, self::WINDOWS_OUTPUT);
+        $output = $subtitle->toString(Format::WebVtt, self::windowsOutput());
         $again  = Subtitle::fromString("\xFF\xFE" . iconv("UTF-8", "UTF-16LE", $output), Format::WebVtt);
-        $this->assertSame($output, $again->toString(Format::WebVtt, self::WINDOWS_OUTPUT));
+        $this->assertSame($output, $again->toString(Format::WebVtt, self::windowsOutput()));
         $this->assertSame(
             array_map(fn (SubtitleCue $cue) => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $cues),
             array_map(fn (SubtitleCue $cue) => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $again->getCues())

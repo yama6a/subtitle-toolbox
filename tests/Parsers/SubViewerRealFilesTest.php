@@ -5,12 +5,13 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
-use SubtitleToolbox\Formatters\SubViewerFormatter;
+use SubtitleToolbox\Formatters\Options\SubViewerOptions;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Validation\ValidationRules;
+use SubtitleToolbox\WriteOptions;
 
 class SubViewerRealFilesTest extends TestCase
 {
@@ -100,7 +101,7 @@ class SubViewerRealFilesTest extends TestCase
     public function testRealFileFormatsToItsOwnBytes(string $fileName): void
     {
         $content    = file_get_contents(self::DIR . $fileName);
-        $lineEnding = $this->optionsFor($fileName)[SubtitleFormatter::OPTION_LINE_ENDING];
+        $lineEnding = $this->optionsFor($fileName)->lineEnding->value;
 
         $this->assertSame(
             rtrim($content, "\r\n") . $lineEnding,
@@ -155,15 +156,15 @@ class SubViewerRealFilesTest extends TestCase
     }
 
 
-    private function optionsFor(string $fileName): array
+    private function optionsFor(string $fileName): WriteOptions
     {
         $content = file_get_contents(self::DIR . $fileName);
 
-        return [
-            SubViewerFormatter::OPTION_VERSION    => str_contains($content, SubViewerParser::START_SCRIPT) ? 1 : 2,
-            SubtitleFormatter::OPTION_LINE_ENDING => str_contains($content, "\r\n") ? "\r\n" : "\n",
-            SubtitleFormatter::OPTION_BOM         => StringHelpers::hasUtf8Bom($content),
-        ];
+        return new WriteOptions(
+            lineEnding: str_contains($content, "\r\n") ? LineEnding::Crlf : LineEnding::Lf,
+            bom: StringHelpers::hasUtf8Bom($content),
+            format: new SubViewerOptions(version: str_contains($content, SubViewerParser::START_SCRIPT) ? 1 : 2),
+        );
     }
 
 

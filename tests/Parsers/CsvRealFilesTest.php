@@ -5,9 +5,10 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class CsvRealFilesTest extends TestCase
 {
@@ -67,10 +68,10 @@ class CsvRealFilesTest extends TestCase
     {
         $content = file_get_contents(__DIR__ . "/../files/csv/real/$fileName");
 
-        $this->assertSame($content, $this->parseFile($fileName, $columns)->toString(Format::Csv, [
-            SubtitleFormatter::OPTION_LINE_ENDING => $options["lineEnding"],
-            SubtitleFormatter::OPTION_BOM         => $options["bom"],
-        ]));
+        $this->assertSame($content, $this->parseFile($fileName, $columns)->toString(Format::Csv, new WriteOptions(
+            lineEnding: LineEnding::from($options["lineEnding"]),
+            bom: $options["bom"],
+        )));
     }
 
 

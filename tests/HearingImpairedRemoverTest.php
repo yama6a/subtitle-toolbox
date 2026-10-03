@@ -51,7 +51,7 @@ class HearingImpairedRemoverTest extends \PHPUnit\Framework\TestCase
         $this->assertSame([1.0, 3.0, "[TRAIN WHISTLE BLOWS]"], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $this->assertSame([39.5, 42.0, "- # The wheels go round #\n- It stopped raining. (birds chirping)"],
                           [$cues[13]->getStart(), $cues[13]->getEnd(), $cues[13]->getText()]);
-        $this->assertSame($content, $subtitle->toString(Format::SubRip, ["lineEnding" => "\r\n", "bom" => true]));
+        $this->assertSame($content, $subtitle->toString(Format::SubRip, new WriteOptions(lineEnding: LineEnding::Crlf, bom: true)));
     }
 
 
@@ -62,7 +62,7 @@ class HearingImpairedRemoverTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals(new HearingImpairedReport(6, 3),
                             HearingImpairedRemover::apply($subtitle, new HearingImpairedOptions()));
         $this->assertSame(file_get_contents(self::FILES . "own_sdh_removed.srt"),
-                          $subtitle->toString(Format::SubRip, ["lineEnding" => "\r\n", "bom" => true]));
+                          $subtitle->toString(Format::SubRip, new WriteOptions(lineEnding: LineEnding::Crlf, bom: true)));
         $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
 

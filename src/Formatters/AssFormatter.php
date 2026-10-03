@@ -2,18 +2,18 @@
 
 namespace SubtitleToolbox\Formatters;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\Options\AssOptions;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
 class AssFormatter extends SubtitleFormatter
 {
-    public const OPTION_KARAOKE_TAG = "karaokeTag";
+    protected const FORMAT_OPTIONS = AssOptions::class;
 
     // The same header that FFmpeg writes when it converts a text subtitle to ASS.
     private const DEFAULT_SCRIPT_INFO = ["ScriptType" => "v4.00+", "PlayResX" => "384", "PlayResY" => "288", "ScaledBorderAndShadow" => "yes"];
@@ -29,18 +29,11 @@ class AssFormatter extends SubtitleFormatter
 
     private const CORE_TIMESTAMP_REGEX = '/^<(\d{2,}):(\d{2}):(\d{2}\.\d{3})>$/';
 
-    private string $karaokeTag = "k";
 
-
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $data     = $subtitle->getFormatData(AssParser::FORMAT_DATA_KEY) + $this->defaultData();
-        $stripAll = (bool) (Options::flag($options, parent::OPTION_STRIP_ALL_XML_TAGS) ?? false);
-
-        $this->karaokeTag = $options[self::OPTION_KARAOKE_TAG] ?? "k";
-        if (!in_array($this->karaokeTag, ["k", "kf", "ko"], true)) {
-            throw new InvalidArgumentException("The option " . self::OPTION_KARAOKE_TAG . " must be \"k\", \"kf\" or \"ko\".");
-        }
+        $data       = $subtitle->getFormatData(AssParser::FORMAT_DATA_KEY) + $this->defaultData();
+        $karaokeTag = ($this->formatOptions($options) ?? new AssOptions())->karaokeTag;
 
         $order = $data["sectionOrder"];
         if (!in_array("script info", array_map("strtolower", $order), true)) {
@@ -55,7 +48,7 @@ class AssFormatter extends SubtitleFormatter
             $lines = match (true) {
                 strcasecmp($section, "Script Info") === 0                => $this->scriptInfoLines($subtitle, $data),
                 strcasecmp($section, $data["stylesSection"] ?? "") === 0 => $this->styleLines($data),
-                strcasecmp($section, "Events") === 0                     => $this->eventLines($subtitle, $data, $stripAll),
+                strcasecmp($section, "Events") === 0                     => $this->eventLines($subtitle, $data, $options->stripTags, $karaokeTag),
                 default                                                  => $data["sections"][$section] ?? [],
             };
             $blocks[] = implode(StringHelpers::UNIX_LINE_ENDING, ["[$section]", ...$lines]);
@@ -110,7 +103,7 @@ class AssFormatter extends SubtitleFormatter
     }
 
 
-    private function eventLines(Subtitle $subtitle, array $data, bool $stripAll): array
+    private function eventLines(Subtitle $subtitle, array $data, bool $stripAll, string $karaokeTag): array
     {
         $format        = $data["eventFormat"] ?? AssParser::ASS_EVENT_FORMAT;
         $isSsa         = $this->isSsa($data);
@@ -129,7 +122,7 @@ class AssFormatter extends SubtitleFormatter
             }
 
             if ($cue !== null) {
-                $lines[] = $this->dialogueLine($cue, $format, $isSsa, $stripAll);
+                $lines[] = $this->dialogueLine($cue, $format, $isSsa, $stripAll, $karaokeTag);
             }
         }
 
@@ -164,7 +157,7 @@ class AssFormatter extends SubtitleFormatter
     }
 
 
-    private function dialogueLine(SubtitleCue $cue, array $format, bool $isSsa, bool $stripAll): string
+    private function dialogueLine(SubtitleCue $cue, array $format, bool $isSsa, bool $stripAll, string $karaokeTag): string
     {
         $stored = $cue->getFormatData(AssParser::FORMAT_DATA_KEY);
         $fields = $stored["fields"] ?? [];
@@ -174,7 +167,7 @@ class AssFormatter extends SubtitleFormatter
                      ($stored["alignment"] ?? null) === $cue->getAlignment();
         [$text, $name] = $unchanged
             ? [$stored["text"], $this->fieldValue($fields, "Name") ?? ""]
-            : $this->convertLines($cue, $isSsa, $stripAll);
+            : $this->convertLines($cue, $isSsa, $stripAll, $karaokeTag);
 
         $values = [];
         foreach ($format as $field) {
@@ -196,7 +189,7 @@ class AssFormatter extends SubtitleFormatter
      *
      * @return array{string, string}
      */
-    private function convertLines(SubtitleCue $cue, bool $isSsa, bool $stripAll): array
+    private function convertLines(SubtitleCue $cue, bool $isSsa, bool $stripAll, string $karaokeTag): array
     {
         $text = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines());
         $name = "";
@@ -210,7 +203,7 @@ class AssFormatter extends SubtitleFormatter
         }
 
         $tokens = $stripAll ? [Markup::stripAllTags($text)] : preg_split('/(<[^>]*>)/', $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
-        $parts  = [...$parts, ...$this->convertTokens($tokens, $cue)];
+        $parts  = [...$parts, ...$this->convertTokens($tokens, $cue, $karaokeTag)];
 
         $output = "";
         $block  = [];
@@ -236,12 +229,12 @@ class AssFormatter extends SubtitleFormatter
      *
      * @return list<array{string, string}> override tags and escaped text
      */
-    private function convertTokens(array $tokens, SubtitleCue $cue): array
+    private function convertTokens(array $tokens, SubtitleCue $cue, string $karaokeTag): array
     {
         $karaoke = $this->karaokeDurations($tokens, $cue);
         $parts   = [];
         if ($karaoke["leading"] !== null) {
-            $parts[] = ["tag", "\\" . $this->karaokeTag . $karaoke["leading"]];
+            $parts[] = ["tag", "\\" . $karaokeTag . $karaoke["leading"]];
         }
 
         $colors         = [];
@@ -263,7 +256,7 @@ class AssFormatter extends SubtitleFormatter
                     $parts[] = ["tag", $outer === [] ? "\\c" : $this->colorTag(end($outer))];
                 }
             } elseif (preg_match(self::CORE_TIMESTAMP_REGEX, $token)) {
-                $parts[] = ["tag", "\\" . $this->karaokeTag . $karaoke["durations"][$timestampIndex++]];
+                $parts[] = ["tag", "\\" . $karaokeTag . $karaoke["durations"][$timestampIndex++]];
             }
         }
 

@@ -4,14 +4,15 @@ namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Encoding\Cea608;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\Options\SccOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\SccParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
 /**
  * Writes pop-on captions for CEA-608 data channel 1, one byte pair per frame at 29.97 fps.
@@ -20,8 +21,7 @@ use SubtitleToolbox\Timecode;
  */
 class SccFormatter extends SubtitleFormatter
 {
-    /** true (default) writes drop-frame time codes such as 00:01:00;02, false writes non-drop time codes such as 00:01:00:00. */
-    public const OPTION_DROP_FRAME = "OPTION_DROP_FRAME";
+    protected const FORMAT_OPTIONS = SccOptions::class;
 
     private const MAX_LINES = 4;
 
@@ -35,12 +35,9 @@ class SccFormatter extends SubtitleFormatter
     /**
      * @throws InvalidArgumentException for a cue with more than 4 lines, a line longer than 32 characters or a character that CEA-608 lacks.
      */
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $dropFrame = Options::flag($options, self::OPTION_DROP_FRAME) ?? $subtitle->getFormatData(SccParser::FORMAT)["dropFrame"] ?? true;
-        if (!is_bool($dropFrame)) {
-            throw new InvalidArgumentException("The option " . self::OPTION_DROP_FRAME . " must be true or false.");
-        }
+        $dropFrame = $this->formatOptions($options)?->dropFrame ?? $subtitle->getFormatData(SccParser::FORMAT)["dropFrame"] ?? true;
 
         $cues = $subtitle->getCues();
         uasort($cues, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());

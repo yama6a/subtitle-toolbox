@@ -40,7 +40,7 @@ file_put_contents('movie.vtt', $subtitle->toString(Format::WebVtt));
 ## Supported formats
 | Format | Case | Name | Extensions | Read | Write | Notes |
 |:--- |:--- |:--- |:--- |:---:|:---:|:--- |
-| ASS, SSA | `Ass` | `ass` | `.ass`, `.ssa` | yes | yes | karaoke tags `\k` by default, `\kf` or `\ko` with `AssFormatter::OPTION_KARAOKE_TAG` |
+| ASS, SSA | `Ass` | `ass` | `.ass`, `.ssa` | yes | yes | karaoke tags `\k` by default, `\kf` or `\ko` with `AssOptions::$karaokeTag` |
 | CSV, TSV | `Csv`, `Tsv` | `csv`, `tsv` | `.csv`, `.tsv` | yes | yes | for spreadsheets. No detection, pass `Format::Csv` |
 | EBU STL | `EbuStl` | `stl` | `.stl` | yes | yes | binary, 25 or 30 fps |
 | iTunes Timed Text | `Itt` | `itt` | `.itt` | yes | yes | needs a frame rate to write |

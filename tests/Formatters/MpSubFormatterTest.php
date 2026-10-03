@@ -5,8 +5,10 @@ namespace SubtitleToolbox\Formatters;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\MpSubOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class MpSubFormatterTest extends TestCase
 {
@@ -27,7 +29,7 @@ class MpSubFormatterTest extends TestCase
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/mpsub/valid_25fps.mpsub"),
-            $subtitle->toString(Format::MpSub, [MpSubFormatter::OPTION_FRAME_RATE => 25])
+            $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubOptions(frameRate: 25)))
         );
     }
 
@@ -39,7 +41,7 @@ class MpSubFormatterTest extends TestCase
             $subtitle->addCue(new SubtitleCue($i * 0.06, ($i + 1) * 0.06, "Cue $i"));
         }
 
-        $output = $subtitle->toString(Format::MpSub, [MpSubFormatter::OPTION_FRAME_RATE => 25]);
+        $output = $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubOptions(frameRate: 25)));
 
         $this->assertStringContainsString("\n0 2\nCue 0\n\n0 1\nCue 1\n\n0 2\nCue 2\n\n0 1\nCue 3\n", $output);
     }
@@ -53,11 +55,11 @@ class MpSubFormatterTest extends TestCase
     }
 
 
-    public function testNonIntegerFrameRateThrowsException(): void
+    public function testFrameRateZeroThrows(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("The MPSub frame rate must be a positive integer!");
-        (new Subtitle())->toString(Format::MpSub, [MpSubFormatter::OPTION_FRAME_RATE => 23.976]);
+        $this->expectExceptionMessage("The MPSub frame rate must be a positive integer, got 0.");
+        new MpSubOptions(frameRate: 0);
     }
 
 

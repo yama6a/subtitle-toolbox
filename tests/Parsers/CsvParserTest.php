@@ -6,6 +6,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Formatters\CsvTimeFormat;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\SubtitleCue;
 
@@ -170,7 +171,7 @@ class CsvParserTest extends TestCase
             "header"     => ["ID", "Start", "End", "Text", "Take"],
             "roles"      => ["identifier" => 0, "start" => 1, "end" => 2, "text" => 3],
             "width"      => 5,
-            "timeFormat" => CsvParser::TIME_SECONDS,
+            "timeFormat" => CsvTimeFormat::Seconds->value,
             "frameRate"  => null,
         ], $subtitle->getFormatData("csv"));
     }
