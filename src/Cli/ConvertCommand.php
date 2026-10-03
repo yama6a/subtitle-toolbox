@@ -29,6 +29,8 @@ class ConvertCommand extends WriteCommand
         "none"         => ProfanityOptions::MASK_NONE,
     ];
 
+    private const CASES = ["upper", "lower", "sentence"];
+
     private const KARAOKE_OPTIONS = ["karaoke-style", "karaoke-mode", "karaoke-words"];
 
     private const KARAOKE_TAGS = ["k", "kf", "ko"];
@@ -40,6 +42,9 @@ class ConvertCommand extends WriteCommand
     private ?ProfanityOptions $profanity = null;
 
     private ?WordHighlightOptions $karaoke = null;
+
+    /** @var list<array{string, string}> */
+    private array $replacements = [];
 
     /** @var list<MuteRange> */
     private array $muteRanges = [];
@@ -76,6 +81,11 @@ class ConvertCommand extends WriteCommand
         return [
             Option::flag("strip-tags", "Remove all formatting tags, such as <i> and <font>, from the cue text."),
             Option::value("speakers", "MODE", "Convert <v> speaker tags: prefix (ANNA: Hi), dashes, colours, or from-prefix (ANNA: to <v Anna>)."),
+            new Option("replace", "Replace FROM with TO in the text between tags, for example --replace colour=color. Repeatable.", "FROM=TO", null, true),
+            Option::flag("regex", "Read each FROM of --replace as a regular expression with delimiters, such as /\\.{4,}/. TO can use \$1."),
+            Option::flag("ignore-case", "Match FROM of --replace in any case."),
+            Option::value("case", "MODE", "Change the case of the text between tags: upper, lower or sentence."),
+            Option::value("case-language", "CODE", "Language for --case. tr and az map i to İ and ı to I."),
             Option::value("mask-words", "FILE", "Mask the words of this file, one per line, as ProfanityFilter does. A * at the end matches any ending."),
             Option::value("mask", "STYLE", "How --mask-words masks a word: stars, first-letter, remove, or none to keep the text. Default: stars."),
             Option::value("mute-edl", "FILE", "Write the times of the --mask-words matches to this EDL file, for Kodi and MPlayer to mute the audio."),
@@ -126,6 +136,30 @@ class ConvertCommand extends WriteCommand
         $speakers = $arguments->value("speakers");
         if ($speakers !== null && !in_array($speakers, self::SPEAKER_MODES, true)) {
             self::fail("Unknown speaker mode \"$speakers\". Known modes: " . implode(", ", self::SPEAKER_MODES) . ".");
+        }
+
+        $this->replacements = [];
+        foreach ($arguments->values("replace") as $pair) {
+            if (!str_contains($pair, "=") || str_starts_with($pair, "=")) {
+                self::fail("The option --replace needs FROM=TO, got \"$pair\".");
+            }
+            [$from]      = explode("=", $pair, 2);
+            if ($arguments->has("regex") && @preg_match($from, "") === false) {
+                self::fail("The option --replace has an invalid regular expression: $from");
+            }
+            $this->replacements[] = explode("=", $pair, 2);
+        }
+        foreach (["regex", "ignore-case"] as $option) {
+            if ($arguments->has($option) && $this->replacements === []) {
+                self::fail("Pass --replace with --$option.");
+            }
+        }
+        $case = $arguments->value("case");
+        if ($case !== null && !in_array($case, self::CASES, true)) {
+            self::fail("Unknown case \"$case\". Known cases: " . implode(", ", self::CASES) . ".");
+        }
+        if ($arguments->has("case-language") && $case === null) {
+            self::fail("Pass --case with --case-language.");
         }
 
         $mask = $arguments->value("mask") ?? "stars";
@@ -263,6 +297,12 @@ class ConvertCommand extends WriteCommand
             "from-prefix" => SpeakerLabels::fromPrefix($subtitle),
             null          => null,
         };
+        foreach ($this->replacements as [$from, $to]) {
+            $subtitle->replaceText($from, $to, $arguments->has("regex"), !$arguments->has("ignore-case"));
+        }
+        if ($arguments->has("case")) {
+            $subtitle->changeCase($arguments->value("case"), $arguments->value("case-language"));
+        }
         if ($this->profanity !== null) {
             $this->muteRanges = ProfanityFilter::apply($subtitle, $this->profanity);
         }

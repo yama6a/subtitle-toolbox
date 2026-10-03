@@ -373,6 +373,33 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testReplaceAndCase(): void
+    {
+        copy(self::FILES . "transforms/own_cea608_caps.vtt", "$this->dir/caps.vtt");
+        copy(self::FILES . "transforms/own_multilingual_caps.srt", "$this->dir/multi.srt");
+
+        $this->assertSame([0, file_get_contents(self::FILES . "transforms/own_cea608_caps_sentence.vtt"), ""],
+                          $this->runBinary(["convert", "caps.vtt", "--to", "vtt", "-o", "-", "--case", "sentence"]));
+        $this->assertSame(
+            [0, file_get_contents(self::FILES . "transforms/own_cea608_caps_cleaned.vtt"), ""],
+            $this->runBinary(["convert", "caps.vtt", "--to", "vtt", "-o", "-", "--regex", "--replace", '/\[[^\]]*\]/=',
+                              "--replace", '/\.{4,}/=...', "--strip-tags"])
+        );
+
+        $expected = Subtitle::parse($this->file("multi.srt"))->replaceText("uhr", "Uhr", false, false)->changeCase("lower", "tr");
+        $this->assertSame([0, $expected->format(SubRipFormatter::class), ""], $this->runBinary([
+            "convert", "multi.srt", "--to", "srt", "-o", "-", "--replace", "uhr=Uhr", "--ignore-case", "--case", "lower", "--case-language", "tr",
+        ]));
+        $this->assertStringContainsString("<font color=\"#ffff00\">istasyon kap\u{131}s\u{131} \u{131}\u{15f}\u{131}kl\u{131}.</font>",
+                                          $this->runBinary(["convert", "multi.srt", "--to", "srt", "-o", "-", "--case", "lower", "--case-language", "tr"])[1]);
+
+        foreach ([["--replace", "colour"], ["--replace", "=x"], ["--regex", "--replace", "/(/=x"], ["--regex"], ["--ignore-case"],
+                  ["--case", "title"], ["--case-language", "tr"]] as $options) {
+            $this->assertSame(2, $this->runBinary(["convert", "caps.vtt", "--to", "vtt", "-o", "-", ...$options])[0], implode(" ", $options));
+        }
+    }
+
+
     public function testMaskWords(): void
     {
         $files = __DIR__ . "/../files/profanity/";

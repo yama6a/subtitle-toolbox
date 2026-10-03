@@ -103,6 +103,11 @@ movie.mkv
 |:--- |:--- |
 | `--strip-tags` | removes all formatting tags, such as `<i>` and `<font>` |
 | `--speakers MODE` | `prefix`, `dashes`, `colours` or `from-prefix`. Calls `toPrefix()`, `toDialogueDashes()`, `toColours()` or `fromPrefix()` with the default arguments, see [Speakers](text.md#speakers) |
+| `--replace FROM=TO` | [`replaceText()`](text.md#transforms) on the text between tags. Repeatable. The first `=` ends FROM |
+| `--regex` | reads each FROM as a regular expression with delimiters, for example `--replace '/\.{4,}/=...'` |
+| `--ignore-case` | matches FROM in any case |
+| `--case MODE` | `upper`, `lower` or `sentence`, with `changeCase()` |
+| `--case-language CODE` | `tr` or `az` for the Turkish rules of `i` and `ı` |
 | `--mask-words FILE` | masks the words of a word file, as [`ProfanityFilter::apply()`](text.md#profanity-filter) does |
 | `--mask STYLE` | `stars` (default), `first-letter`, `remove`, or `none`. `none` keeps the text and only finds the times for `--mute-edl` and `--mute-filter` |
 | `--mute-edl FILE` | writes the times of the matches to an EDL file with [`MuteRange::toEdl()`](text.md#profanity-filter), for Kodi and MPlayer |
@@ -124,6 +129,7 @@ vendor/bin/subtitle-toolbox convert movie.srt clean.srt --mask-words words.txt -
 ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 ```
 
+- **Order**: `convert` keeps the forced cues and runs OCR first. Then it runs `--speakers`, `--replace`, `--case`, `--mask-words`, `--strip-tags` and `--karaoke`.
 - **Mute files**: they need `--mask-words` and one input file. Without `--force`, the tool does not overwrite them.
 - **No match**: the filter file is empty. Then leave out `-af`.
 
