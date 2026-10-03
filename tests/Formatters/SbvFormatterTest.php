@@ -3,8 +3,7 @@
 namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Parsers\SbvParser;
-use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -12,33 +11,33 @@ class SbvFormatterTest extends TestCase
 {
     public function testValidFileRoundTrips(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/sbv/valid.sbv"), SbvParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sbv/valid.sbv"), Format::Sbv);
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/sbv/valid.sbv"),
-            $subtitle->format(SbvFormatter::class)
+            $subtitle->toString(Format::Sbv)
         );
     }
 
 
     public function testHoursAreWrittenWithoutLeadingZero(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/sbv/two_digit_hours.sbv"), SbvParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sbv/two_digit_hours.sbv"), Format::Sbv);
 
         $this->assertSame(
             "0:00:01.500,0:00:04.000\nHello world\n\n1:00:05.000,1:00:07.250\nSecond cue\non two lines\n",
-            $subtitle->format(SbvFormatter::class)
+            $subtitle->toString(Format::Sbv)
         );
     }
 
 
     public function testSubRipConvertsToSbvWithoutMarkup(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/valid.srt"), SubRipParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/valid.srt"), Format::SubRip);
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/sbv/from_srt.sbv"),
-            $subtitle->format(SbvFormatter::class)
+            $subtitle->toString(Format::Sbv)
         );
     }
 
@@ -50,7 +49,7 @@ class SbvFormatterTest extends TestCase
 
         $this->assertSame(
             "0:00:01.000,0:00:02.000\nTom & Jerry\n<3 café \"ok\" 'yes'\n",
-            $subtitle->format(SbvFormatter::class)
+            $subtitle->toString(Format::Sbv)
         );
     }
 
@@ -59,7 +58,7 @@ class SbvFormatterTest extends TestCase
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "I &lt;3 bread &amp; jam"));
 
-        $this->assertSame("0:00:01.000,0:00:02.000\nI <3 bread & jam\n", $subtitle->format(SbvFormatter::class));
+        $this->assertSame("0:00:01.000,0:00:02.000\nI <3 bread & jam\n", $subtitle->toString(Format::Sbv));
     }
 
 
@@ -72,7 +71,7 @@ class SbvFormatterTest extends TestCase
 
         $this->assertSame(
             "0:00:01.000,0:00:02.000\nText\n\n0:00:05.000,0:00:06.000\nLast\n",
-            $subtitle->format(SbvFormatter::class)
+            $subtitle->toString(Format::Sbv)
         );
     }
 
@@ -81,6 +80,6 @@ class SbvFormatterTest extends TestCase
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "Text"));
 
-        $this->assertStringStartsWith("0:00:01.000", $subtitle->format(SbvFormatter::class));
+        $this->assertStringStartsWith("0:00:01.000", $subtitle->toString(Format::Sbv));
     }
 }

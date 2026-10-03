@@ -4,10 +4,6 @@ namespace SubtitleToolbox;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
-use SubtitleToolbox\Parsers\SubRipParser;
-use SubtitleToolbox\Parsers\WebVttParser;
 
 class CueEditingTest extends TestCase
 {
@@ -36,7 +32,7 @@ class CueEditingTest extends TestCase
 
     private function parseHarbourTour(): Subtitle
     {
-        return Subtitle::parse(file_get_contents(self::DIR . "harbour_tour.vtt"), WebVttParser::class);
+        return Subtitle::fromString(file_get_contents(self::DIR . "harbour_tour.vtt"), Format::WebVtt);
     }
 
 
@@ -53,8 +49,8 @@ class CueEditingTest extends TestCase
 
     public function testRealFilesParse(): void
     {
-        $part1   = Subtitle::parse(file_get_contents(self::DIR . "film_part1.srt"), SubRipParser::class);
-        $part2   = Subtitle::parse(file_get_contents(self::DIR . "film_part2.srt"), SubRipParser::class);
+        $part1   = Subtitle::fromString(file_get_contents(self::DIR . "film_part1.srt"), Format::SubRip);
+        $part2   = Subtitle::fromString(file_get_contents(self::DIR . "film_part2.srt"), Format::SubRip);
         $harbour = $this->parseHarbourTour();
 
         $this->assertSame(
@@ -79,7 +75,7 @@ class CueEditingTest extends TestCase
     public function testRealFileRoundTrip(): void
     {
         $harbour  = $this->parseHarbourTour();
-        $reparsed = Subtitle::parse($harbour->format(WebVttFormatter::class), WebVttParser::class);
+        $reparsed = Subtitle::fromString($harbour->toString(Format::WebVtt), Format::WebVtt);
 
         $this->assertSame($this->describeCues($harbour), $this->describeCues($reparsed));
         $this->assertSame($harbour->getComments(), $reparsed->getComments());
@@ -89,11 +85,11 @@ class CueEditingTest extends TestCase
 
     public function testMergeFilmPartsWithOffset(): void
     {
-        $part1 = Subtitle::parse(file_get_contents(self::DIR . "film_part1.srt"), SubRipParser::class);
-        $part2 = Subtitle::parse(file_get_contents(self::DIR . "film_part2.srt"), SubRipParser::class);
+        $part1 = Subtitle::fromString(file_get_contents(self::DIR . "film_part1.srt"), Format::SubRip);
+        $part2 = Subtitle::fromString(file_get_contents(self::DIR . "film_part2.srt"), Format::SubRip);
 
         $this->assertSame($part1, $part1->merge($part2, 3130));
-        $this->assertSame(file_get_contents(self::DIR . "film_merged.srt"), $part1->format(SubRipFormatter::class));
+        $this->assertSame(file_get_contents(self::DIR . "film_merged.srt"), $part1->toString(Format::SubRip));
         $this->assertSame(1.25, $part2->getCues()[0]->getStart());
     }
 
@@ -151,13 +147,13 @@ class CueEditingTest extends TestCase
     public function testSliceRealFile(): void
     {
         $subtitle = $this->parseHarbourTour();
-        $original = $subtitle->format(WebVttFormatter::class);
+        $original = $subtitle->toString(Format::WebVtt);
 
         $slice = $subtitle->slice(6, 16, true);
 
         $this->assertNotSame($subtitle, $slice);
-        $this->assertSame(file_get_contents(self::DIR . "harbour_tour_slice.vtt"), $slice->format(WebVttFormatter::class));
-        $this->assertSame($original, $subtitle->format(WebVttFormatter::class));
+        $this->assertSame(file_get_contents(self::DIR . "harbour_tour_slice.vtt"), $slice->toString(Format::WebVtt));
+        $this->assertSame($original, $subtitle->toString(Format::WebVtt));
     }
 
 
@@ -218,7 +214,7 @@ class CueEditingTest extends TestCase
         $subtitle = $this->parseHarbourTour();
 
         $this->assertSame($subtitle, $subtitle->splitCue(2, 9.5, 1));
-        $this->assertSame(file_get_contents(self::DIR . "harbour_tour_split.vtt"), $subtitle->format(WebVttFormatter::class));
+        $this->assertSame(file_get_contents(self::DIR . "harbour_tour_split.vtt"), $subtitle->toString(Format::WebVtt));
     }
 
 
@@ -275,7 +271,7 @@ class CueEditingTest extends TestCase
         $subtitle = $this->parseHarbourTour();
 
         $this->assertSame($subtitle, $subtitle->joinCues(3, 4));
-        $this->assertSame(file_get_contents(self::DIR . "harbour_tour_joined.vtt"), $subtitle->format(WebVttFormatter::class));
+        $this->assertSame(file_get_contents(self::DIR . "harbour_tour_joined.vtt"), $subtitle->toString(Format::WebVtt));
     }
 
 
@@ -327,7 +323,7 @@ class CueEditingTest extends TestCase
         $this->assertSame($subtitle, $subtitle->removeDuplicateCues());
         $this->assertSame(
             file_get_contents(self::DIR . "harbour_tour_deduplicated.vtt"),
-            $subtitle->format(WebVttFormatter::class)
+            $subtitle->toString(Format::WebVtt)
         );
     }
 

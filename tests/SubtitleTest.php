@@ -4,10 +4,6 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
-use SubtitleToolbox\Parsers\SubtitleParser;
 
 class SubtitleTest extends \PHPUnit\Framework\TestCase
 {
@@ -87,19 +83,45 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
-    public function testParsingWithInvalidParserThrowsException()
+    public function testFromStringThrowsForAFormatWithoutParser(): void
     {
         $this->expectException(InvalidParserException::class);
-        $this->expectExceptionMessage("parser stdClass is not of type " . SubtitleParser::class);
-        Subtitle::parse("", \stdClass::class);
+        $this->expectExceptionMessage("The format txt can be written but not read.");
+        Subtitle::fromString("text", Format::PlainText);
     }
 
 
-    public function testFormattingWithInvalidFormatterThrowsException()
+    public function testFromStringNamesVobSubParserForVobSub(): void
+    {
+        $this->expectException(InvalidParserException::class);
+        $this->expectExceptionMessage("Use VobSubParser.");
+        Subtitle::fromString("", Format::VobSub);
+    }
+
+
+    public function testToStringThrowsForAFormatWithoutFormatter(): void
     {
         $this->expectException(InvalidFormatterException::class);
-        $this->expectExceptionMessage("formatter stdClass is not of type " . SubtitleFormatter::class);
-        (new Subtitle())->format(\stdClass::class);
+        $this->expectExceptionMessage("The format whisper can be read but not written.");
+        (new Subtitle())->toString(Format::Whisper);
+    }
+
+
+    public function testFromStringAutoDetectFormatSkipsFormatsThatAreNotAutoDetected(): void
+    {
+        $this->expectException(InvalidParserException::class);
+        Subtitle::fromStringAutoDetectFormat(file_get_contents(__DIR__ . "/files/chapters/ffmetadata/real/m4b_audiobook.ffmeta"));
+    }
+
+
+    public function testFromStringAutoDetectFormatConvertsTheEncoding(): void
+    {
+        $content = file_get_contents(__DIR__ . "/files/encoding/french-windows-1252.srt");
+
+        $this->assertEquals(
+            Subtitle::fromString($content, Format::SubRip, "Windows-1252"),
+            Subtitle::fromStringAutoDetectFormat($content, "Windows-1252")
+        );
     }
 
 
@@ -114,20 +136,6 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
-    public function testParsingWithUnknownClassThrowsException(): void
-    {
-        $this->expectException(InvalidParserException::class);
-        Subtitle::parse("", "SubtitleToolbox\\Parsers\\DoesNotExist");
-    }
-
-
-    public function testFormattingWithUnknownClassThrowsException(): void
-    {
-        $this->expectException(InvalidFormatterException::class);
-        (new Subtitle())->format("SubtitleToolbox\\Formatters\\DoesNotExist");
-    }
-
-
     public function testFormattersNumberCuesFromOneAfterRemovalWithoutReIndex(): void
     {
         $subtitle = new Subtitle();
@@ -137,11 +145,11 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
 
         $this->assertSame(
             "\u{feff}1\n00:00:03,000 --> 00:00:04,000\nsecond\n",
-            $subtitle->format(SubRipFormatter::class)
+            $subtitle->toString(Format::SubRip)
         );
         $this->assertSame(
             "\u{feff}WEBVTT\n\n1\n00:00:03.000 --> 00:00:04.000\nsecond\n",
-            $subtitle->format(WebVttFormatter::class)
+            $subtitle->toString(Format::WebVtt)
         );
     }
 

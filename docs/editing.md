@@ -162,8 +162,8 @@ A dual subtitle shows two languages at the same time, for example for language l
 use SubtitleToolbox\DualSubtitle;
 use SubtitleToolbox\DualSubtitleOptions;
 
-$english = Subtitle::parse(file_get_contents('movie.en.srt'));
-$german  = Subtitle::parse(file_get_contents('movie.de.srt'));
+$english = Subtitle::fromStringAutoDetectFormat(file_get_contents('movie.en.srt'));
+$german  = Subtitle::fromStringAutoDetectFormat(file_get_contents('movie.de.srt'));
 
 $dual = DualSubtitle::merge($english, $german, new DualSubtitleOptions(secondaryStyle: 'i'));
 $dual = DualSubtitle::merge($english, $german, new DualSubtitleOptions(

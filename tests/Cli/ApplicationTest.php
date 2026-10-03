@@ -5,7 +5,7 @@ namespace SubtitleToolbox\Cli;
 use Composer\Autoload\ClassLoader;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Ocr\TesseractOcrEngine;
 use SubtitleToolbox\Subtitle;
 
@@ -35,7 +35,7 @@ class ApplicationTest extends TestCase
     {
         $srt = file_get_contents(__DIR__ . "/../files/cli/trip.srt");
 
-        $this->assertSame([0, Subtitle::parse($srt)->format(WebVttFormatter::class), ""], self::runApplication(["convert", "-", "--to", "vtt"], $srt));
+        $this->assertSame([0, Subtitle::fromStringAutoDetectFormat($srt)->toString(Format::WebVtt), ""], self::runApplication(["convert", "-", "--to", "vtt"], $srt));
     }
 
 

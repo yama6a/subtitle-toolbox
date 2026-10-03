@@ -4,7 +4,7 @@ namespace SubtitleToolbox\Formatters;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Parsers\SubViewerParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -22,7 +22,7 @@ class SubViewerFormatterTest extends TestCase
             "[END INFORMATION]\n[SUBTITLE]\n" .
             "00:00:01.50,00:00:04.00\nFresh bread[br]every day\n\n" .
             "01:02:05.01,01:02:08.00\nClosed on Sunday\n",
-            $subtitle->format(SubViewerFormatter::class)
+            $subtitle->toString(Format::SubViewer)
         );
     }
 
@@ -38,7 +38,7 @@ class SubViewerFormatterTest extends TestCase
             "******** START SCRIPT ********\n" .
             "[00:00:02]\nFresh bread|every day\n[00:00:04]\n\n" .
             "[end]\n******** END SCRIPT ********\n",
-            $subtitle->format(SubViewerFormatter::class, [SubViewerFormatter::OPTION_VERSION => 1])
+            $subtitle->toString(Format::SubViewer, [SubViewerFormatter::OPTION_VERSION => 1])
         );
     }
 
@@ -51,18 +51,18 @@ class SubViewerFormatterTest extends TestCase
 
         $this->assertStringEndsWith(
             "[SUBTITLE]\n00:00:01.00,00:00:02.00\nTea & cake <3\n",
-            $subtitle->format(SubViewerFormatter::class)
+            $subtitle->toString(Format::SubViewer)
         );
     }
 
 
     public function testSubViewer1WritesDelayZeroBecauseTheParserAppliedIt(): void
     {
-        $subtitle = Subtitle::parse("[DELAY]\n3\n******** START SCRIPT ********\n[00:00:01]\nHello\n[00:00:02]\n", SubViewerParser::class);
+        $subtitle = Subtitle::fromString("[DELAY]\n3\n******** START SCRIPT ********\n[00:00:01]\nHello\n[00:00:02]\n", Format::SubViewer);
 
         $this->assertStringStartsWith(
             "[TITLE]\n[AUTHOR]\n[DELAY]\n0\n******** START SCRIPT ********\n[00:00:04]\nHello\n[00:00:05]\n",
-            $subtitle->format(SubViewerFormatter::class, [SubViewerFormatter::OPTION_VERSION => 1])
+            $subtitle->toString(Format::SubViewer, [SubViewerFormatter::OPTION_VERSION => 1])
         );
     }
 
@@ -72,6 +72,6 @@ class SubViewerFormatterTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("The SubViewer version must be 1 or 2!");
 
-        (new Subtitle())->format(SubViewerFormatter::class, [SubViewerFormatter::OPTION_VERSION => 3]);
+        (new Subtitle())->toString(Format::SubViewer, [SubViewerFormatter::OPTION_VERSION => 3]);
     }
 }

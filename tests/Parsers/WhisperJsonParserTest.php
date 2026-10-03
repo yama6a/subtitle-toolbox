@@ -36,7 +36,7 @@ class WhisperJsonParserTest extends TestCase
 
     public function testReadsTheIssueExampleOneCuePerSegment(): void
     {
-        $subtitle = Subtitle::parse(self::ISSUE_EXAMPLE);
+        $subtitle = Subtitle::fromStringAutoDetectFormat(self::ISSUE_EXAMPLE);
 
         $this->assertSame("en", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame(["task" => "transcribe", "language" => "english", "duration" => 8.47], $subtitle->getFormatData("whisper"));

@@ -5,10 +5,7 @@ namespace SubtitleToolbox\Chapters;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Formatters\FfMetadataChaptersFormatter;
-use SubtitleToolbox\Formatters\OgmChaptersFormatter;
-use SubtitleToolbox\Formatters\PodcastChaptersFormatter;
-use SubtitleToolbox\Formatters\YouTubeChaptersFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\Parsers\OgmChaptersParser;
 use SubtitleToolbox\Parsers\PodcastChaptersParser;
@@ -55,7 +52,7 @@ class ChapterFormatsTest extends TestCase
                 ]
             }
 
-            JSON, $subtitle->format(PodcastChaptersFormatter::class));
+            JSON, $subtitle->toString(Format::PodcastChapters));
     }
 
 
@@ -99,7 +96,7 @@ class ChapterFormatsTest extends TestCase
     {
         $subtitle = $this->chapters([[0, 61.5, "a=b; c#d \\ e"], [61.5, 70, "first line\nsecond line"]]);
         $subtitle->getCues()[0]->setFormatData("ffmetadata", ["timeBase" => "1/90000", "tags" => ["lang=x" => "en"]]);
-        $output = $subtitle->format(FfMetadataChaptersFormatter::class);
+        $output = $subtitle->toString(Format::FfMetadata);
 
         $this->assertSame(";FFMETADATA1\n" .
                           "[CHAPTER]\nTIMEBASE=1/90000\nSTART=0\nEND=5535000\ntitle=a\\=b\; c\\#d \\\\ e\nlang\\=x=en\n" .
@@ -116,7 +113,7 @@ class ChapterFormatsTest extends TestCase
         $subtitle->setMetadata(Subtitle::METADATA_TITLE, "New")->setMetadata(Subtitle::METADATA_ARTIST, null)
                  ->setMetadata(Subtitle::METADATA_ALBUM, "Notes");
 
-        $this->assertSame(";FFMETADATA1\nmajor_brand=isom\ntitle=New\nalbum=Notes\n", $subtitle->format(FfMetadataChaptersFormatter::class));
+        $this->assertSame(";FFMETADATA1\nmajor_brand=isom\ntitle=New\nalbum=Notes\n", $subtitle->toString(Format::FfMetadata));
     }
 
 
@@ -171,7 +168,7 @@ class ChapterFormatsTest extends TestCase
     public function testOgmFormatterNumbersWithTwoDigitsAtLeast(): void
     {
         $subtitle = $this->chapters(array_map(fn (int $i): array => [$i * 60, $i * 60 + 60, "<b>Part</b> &amp; $i"], range(0, 99)));
-        $lines    = explode("\n", $subtitle->format(OgmChaptersFormatter::class));
+        $lines    = explode("\n", $subtitle->toString(Format::OgmChapters));
 
         $this->assertSame(["CHAPTER01=00:00:00.000", "CHAPTER01NAME=Part & 0"], array_slice($lines, 0, 2));
         $this->assertSame(["CHAPTER100=01:39:00.000", "CHAPTER100NAME=Part & 99", ""], array_slice($lines, 198));
@@ -201,7 +198,7 @@ class ChapterFormatsTest extends TestCase
     {
         $subtitle = $this->chapters([[0.9, 168, "Intro"], [3599.99, 3600, "<i>Last</i> minute"], [3600, 3700, ""], [36000, 36001, "Ten hours"]]);
 
-        $this->assertSame("0:00 Intro\n59:59 Last minute\n1:00:00\n10:00:00 Ten hours\n", $subtitle->format(YouTubeChaptersFormatter::class));
+        $this->assertSame("0:00 Intro\n59:59 Last minute\n1:00:00\n10:00:00 Ten hours\n", $subtitle->toString(Format::YouTubeChapters));
     }
 
 

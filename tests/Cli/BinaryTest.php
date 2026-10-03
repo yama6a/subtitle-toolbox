@@ -11,15 +11,11 @@ use SubtitleToolbox\Diff\SubtitleDiff;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\DualSubtitle;
 use SubtitleToolbox\DualSubtitleOptions;
-use SubtitleToolbox\FormatRegistry;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Hls\HlsSegmentOptions;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
-use SubtitleToolbox\Formatters\JsonFormatter;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\Ocr\TesseractOcrEngine;
-use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Profanity\MuteRange;
 use SubtitleToolbox\Profanity\ProfanityFilter;
@@ -103,9 +99,9 @@ class BinaryTest extends TestCase
     }
 
 
-    private function tripAs(string $formatter): string
+    private function tripAs(Format $format): string
     {
-        return Subtitle::parse(file_get_contents(self::FIXTURES . "trip.srt"), SubRipParser::class)->format($formatter);
+        return Subtitle::fromString(file_get_contents(self::FIXTURES . "trip.srt"), Format::SubRip)->toString($format);
     }
 
 
@@ -206,7 +202,7 @@ class BinaryTest extends TestCase
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "trip.srt", "trip.vtt"]);
 
         $this->assertSame([0, "trip.srt -> trip.vtt\n", ""], [$code, $stdout, $stderr]);
-        $this->assertSame($this->tripAs(WebVttFormatter::class), $this->file("trip.vtt"));
+        $this->assertSame($this->tripAs(Format::WebVtt), $this->file("trip.vtt"));
     }
 
 
@@ -228,7 +224,7 @@ class BinaryTest extends TestCase
         copy(__DIR__ . "/../files/whisper/real/openai_whisper_german.json", "$this->dir/lecture.json");
 
         $this->assertSame([0, "lecture.json -> out.json\n", ""], $this->runBinary(["convert", "lecture.json", "out.json"]));
-        $this->assertSame(Subtitle::parse($this->file("lecture.json"))->format(JsonFormatter::class), $this->file("out.json"));
+        $this->assertSame(Subtitle::fromStringAutoDetectFormat($this->file("lecture.json"))->toString(Format::Json), $this->file("out.json"));
     }
 
 
@@ -241,7 +237,7 @@ class BinaryTest extends TestCase
         $this->assertSame("old", $this->file("trip.vtt"));
 
         $this->assertSame(0, $this->runBinary(["convert", "trip.srt", "trip.vtt", "--force"])[0]);
-        $this->assertSame($this->tripAs(WebVttFormatter::class), $this->file("trip.vtt"));
+        $this->assertSame($this->tripAs(Format::WebVtt), $this->file("trip.vtt"));
 
         [$code, , $stderr] = $this->runBinary(["convert", "trip.srt", "--to", "srt"]);
         $this->assertSame([1, "trip.srt: The output trip.srt is the input file. Pass --force to overwrite it.\n"], [$code, $stderr]);
@@ -265,7 +261,7 @@ class BinaryTest extends TestCase
         $this->assertSame(1, $code);
         $this->assertSame("latin1.srt -> out/latin1.vtt\ntrip.srt -> out/trip.vtt\n3 files: 2 succeeded, 1 failed.\n", $stdout);
         $this->assertSame("broken.srt: ParsingException (Error #100): Block #1 doesn't seem to have its timestamps on its second line!\n", $stderr);
-        $this->assertSame($this->tripAs(WebVttFormatter::class), $this->file("out/trip.vtt"));
+        $this->assertSame($this->tripAs(Format::WebVtt), $this->file("out/trip.vtt"));
         $this->assertFileDoesNotExist("$this->dir/out/broken.vtt");
     }
 
@@ -291,7 +287,7 @@ class BinaryTest extends TestCase
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "in", "--to", "srt", "--output-dir", "out", "--force"]);
 
         $this->assertSame([0, "in/shop.vtt -> out/shop.srt\nin/trip.srt -> out/trip.srt\n2 files: 2 succeeded, 0 failed.\n", ""], [$code, $stdout, $stderr]);
-        $this->assertSame($this->tripAs(SubRipFormatter::class), $this->file("out/trip.srt"));
+        $this->assertSame($this->tripAs(Format::SubRip), $this->file("out/trip.srt"));
     }
 
 
@@ -299,7 +295,7 @@ class BinaryTest extends TestCase
     {
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "-", "--to", "vtt"], file_get_contents(self::FIXTURES . "trip.srt"));
 
-        $this->assertSame([0, $this->tripAs(WebVttFormatter::class), ""], [$code, $stdout, $stderr]);
+        $this->assertSame([0, $this->tripAs(Format::WebVtt), ""], [$code, $stdout, $stderr]);
         $this->assertSame([0, $stdout, ""], $this->runBinary(["convert", "trip.srt", "-o", "-", "--to", "vtt"]));
         $this->assertSame([0, $stdout, ""], $this->runBinary(["convert", "-", "--from", "srt", "--to", "vtt"], $this->file("trip.srt")));
     }
@@ -309,7 +305,7 @@ class BinaryTest extends TestCase
     {
         rename("$this->dir/trip.srt", "$this->dir/trip.txt");
 
-        $this->assertSame([0, $this->tripAs(WebVttFormatter::class), ""], $this->runBinary(["convert", "trip.txt", "--to", "vtt", "-o", "-"]));
+        $this->assertSame([0, $this->tripAs(Format::WebVtt), ""], $this->runBinary(["convert", "trip.txt", "--to", "vtt", "-o", "-"]));
         $this->assertSame(
             [1, "", "notes.txt: The format is unknown. Pass --from.\n"],
             $this->runBinary(["convert", "notes.txt", "--to", "vtt"])
@@ -349,7 +345,7 @@ class BinaryTest extends TestCase
     public function testForcedOnly(): void
     {
         copy(__DIR__ . "/../files/forced/forced_signs_2398.itt", "$this->dir/signs.itt");
-        $expected = Subtitle::parse($this->file("signs.itt"))->forcedOnly()->format(SubRipFormatter::class);
+        $expected = Subtitle::fromStringAutoDetectFormat($this->file("signs.itt"))->forcedOnly()->toString(Format::SubRip);
 
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "signs.itt", "signs.srt", "--forced-only"]);
 
@@ -397,8 +393,8 @@ class BinaryTest extends TestCase
                               "--replace", '/\.{4,}/=...', "--strip-tags"])
         );
 
-        $expected = Subtitle::parse($this->file("multi.srt"))->replaceText("uhr", "Uhr", false, false)->changeCase("lower", "tr");
-        $this->assertSame([0, $expected->format(SubRipFormatter::class), ""], $this->runBinary([
+        $expected = Subtitle::fromStringAutoDetectFormat($this->file("multi.srt"))->replaceText("uhr", "Uhr", false, false)->changeCase("lower", "tr");
+        $this->assertSame([0, $expected->toString(Format::SubRip), ""], $this->runBinary([
             "convert", "multi.srt", "--to", "srt", "-o", "-", "--replace", "uhr=Uhr", "--ignore-case", "--case", "lower", "--case-language", "tr",
         ]));
         $this->assertStringContainsString("<font color=\"#ffff00\">istasyon kap\u{131}s\u{131} \u{131}\u{15f}\u{131}kl\u{131}.</font>",
@@ -417,10 +413,10 @@ class BinaryTest extends TestCase
         copy($files . "keys.srt", "$this->dir/keys.srt");
         copy($files . "words.txt", "$this->dir/words.txt");
         $masked = function (string $mask): string {
-            $subtitle = Subtitle::parse($this->file("keys.srt"));
+            $subtitle = Subtitle::fromStringAutoDetectFormat($this->file("keys.srt"));
             ProfanityFilter::apply($subtitle, new ProfanityOptions(mask: $mask, wordFile: "$this->dir/words.txt"));
 
-            return $subtitle->format(SubRipFormatter::class);
+            return $subtitle->toString(Format::SubRip);
         };
 
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "keys.srt", "--to", "srt", "-o", "-", "--mask-words", "words.txt"]);
@@ -448,14 +444,14 @@ class BinaryTest extends TestCase
     {
         copy(self::FILES . "profanity/radio.vtt", "$this->dir/radio.vtt");
         copy(self::FILES . "profanity/words.txt", "$this->dir/words.txt");
-        $subtitle = Subtitle::parse($this->file("radio.vtt"));
+        $subtitle = Subtitle::fromStringAutoDetectFormat($this->file("radio.vtt"));
         $ranges   = ProfanityFilter::apply($subtitle, new ProfanityOptions(mask: ProfanityOptions::MASK_NONE, padding: 0.1,
                                                                            wordFile: "$this->dir/words.txt"));
 
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "radio.vtt", "out.vtt", "--mask-words", "words.txt", "--mask", "none",
                                                       "--mute-edl", "radio.edl", "--mute-filter", "radio.af", "--mute-padding", "0.1"]);
         $this->assertSame([0, "radio.vtt -> out.vtt\nradio.vtt -> radio.edl\nradio.vtt -> radio.af\n", ""], [$code, $stdout, $stderr]);
-        $this->assertSame($subtitle->format(WebVttFormatter::class), $this->file("out.vtt"));
+        $this->assertSame($subtitle->toString(Format::WebVtt), $this->file("out.vtt"));
         $this->assertSame(MuteRange::toEdl($ranges), $this->file("radio.edl"));
         $this->assertSame("1.500 2.100 1\n6.200 6.800 1\n7.900 9.100 1\n", $this->file("radio.edl"));
         $this->assertSame(MuteRange::toFfmpegVolumeFilter($ranges) . "\n", $this->file("radio.af"));
@@ -522,7 +518,7 @@ class BinaryTest extends TestCase
 
     public function testShiftWritesOneInputToStandardOutput(): void
     {
-        $expected = Subtitle::parse($this->file("trip.srt"), SubRipParser::class)->shift(-1.5)->format(SubRipFormatter::class);
+        $expected = Subtitle::fromString($this->file("trip.srt"), Format::SubRip)->shift(-1.5)->toString(Format::SubRip);
 
         $this->assertSame([0, $expected, ""], $this->runBinary(["shift", "trip.srt", "--by", "-1.5"]));
         $this->assertSame([0, $expected, ""], $this->runBinary(["shift", "trip.srt", "--by=-1.5"]));
@@ -571,7 +567,7 @@ class BinaryTest extends TestCase
 
     public function testFpsAndItsAlias(): void
     {
-        $expected = Subtitle::parse($this->file("shop.vtt"))->convertFrameRate(25, 23.976)->format(WebVttFormatter::class);
+        $expected = Subtitle::fromStringAutoDetectFormat($this->file("shop.vtt"))->convertFrameRate(25, 23.976)->toString(Format::WebVtt);
 
         $this->assertSame([0, $expected, ""], $this->runBinary(["fps", "shop.vtt", "--from", "25", "--to", "23.976"]));
         $this->assertSame([0, $expected, ""], $this->runBinary(["sync-fps", "shop.vtt", "--from", "25", "--to", "23.976"]));
@@ -596,9 +592,9 @@ class BinaryTest extends TestCase
     public function testFixMergeShort(): void
     {
         copy(__DIR__ . "/../files/short-cues/own_speech_to_text.srt", "$this->dir/speech.srt");
-        $narrow = Subtitle::parse($this->file("speech.srt"))
+        $narrow = Subtitle::fromStringAutoDetectFormat($this->file("speech.srt"))
             ->mergeShortCues(new MergeShortCuesOptions(maxCharactersPerLine: 20, maxLines: 3))
-            ->format(SubRipFormatter::class);
+            ->toString(Format::SubRip);
 
         $this->assertSame(
             [0, file_get_contents(__DIR__ . "/../files/short-cues/own_speech_to_text_merged.srt"), ""],
@@ -613,12 +609,12 @@ class BinaryTest extends TestCase
     {
         copy(__DIR__ . "/../files/resegmenting/own_whisper_long_segments.json", "$this->dir/whisper.json");
         $split = fn (ResegmentOptions $options): string =>
-            Subtitle::parse($this->file("whisper.json"))->splitLongCues($options)->format(WebVttFormatter::class);
+            Subtitle::fromStringAutoDetectFormat($this->file("whisper.json"))->splitLongCues($options)->toString(Format::WebVtt);
 
         [$code, $stdout, $stderr] = $this->runBinary(["fix", "whisper.json", "--split-long", "--to", "vtt"]);
 
         $this->assertSame([0, $split(new ResegmentOptions()), ""], [$code, $stdout, $stderr]);
-        $this->assertGreaterThan(count(Subtitle::parse($this->file("whisper.json"))->getCues()), substr_count($stdout, " --> "));
+        $this->assertGreaterThan(count(Subtitle::fromStringAutoDetectFormat($this->file("whisper.json"))->getCues()), substr_count($stdout, " --> "));
         $this->assertSame(
             [0, $split(new ResegmentOptions(maxCharactersPerLine: 30, maxLines: 1)), ""],
             $this->runBinary(["fix", "whisper.json", "--split-long", "--max-cpl", "30", "--max-lines", "1", "--to", "vtt"])
@@ -659,11 +655,11 @@ class BinaryTest extends TestCase
 
         $options = new ResegmentOptions(maxCharactersPerLine: 30, maxLines: 1, maxWordGap: 0.3);
         $this->assertSame(
-            [0, $withWords()->resegmentByWords($options)->format(SubRipFormatter::class), ""],
+            [0, $withWords()->resegmentByWords($options)->toString(Format::SubRip), ""],
             $this->runBinary(["fix", "lecture.json", "--resegment", "--max-cpl", "30", "--max-lines", "1", "--max-word-gap", "0.3", "--to", "srt"])
         );
 
-        $this->assertSame([0, $withWords()->format(WebVttFormatter::class), ""],
+        $this->assertSame([0, $withWords()->toString(Format::WebVtt), ""],
                           $this->runBinary(["convert", "lecture.json", "--to", "vtt", "-o", "-", "--word-timestamps"]));
         $this->assertStringNotContainsString("<00:", $this->runBinary(["convert", "lecture.json", "--to", "vtt", "-o", "-"])[1]);
         $this->assertSame(2, $this->runBinary(["fix", "lecture.json", "--overlaps", "--max-word-gap", "1"])[0]);
@@ -833,13 +829,13 @@ class BinaryTest extends TestCase
         $mkv = MatroskaReader::open(self::FILES . "mkv/text_tracks.mkv");
 
         $this->assertSame([0, "movie.mkv -> movie.srt\n", ""], $this->runBinary(["convert", "movie.mkv", "--to", "srt", "--track", "3"]));
-        $this->assertSame($mkv->extract(3)->format(SubRipFormatter::class), $this->file("movie.srt"));
+        $this->assertSame($mkv->extract(3)->toString(Format::SubRip), $this->file("movie.srt"));
 
         [$code, $stdout] = $this->runBinary(["convert", "-", "--to", "vtt", "--track", "5"], $this->file("movie.mkv"));
-        $this->assertSame([0, $mkv->extract(5)->format(WebVttFormatter::class)], [$code, $stdout]);
+        $this->assertSame([0, $mkv->extract(5)->toString(Format::WebVtt)], [$code, $stdout]);
 
         $this->assertSame([0, "one.webm -> one.vtt\n", ""], $this->runBinary(["convert", "one.webm", "one.vtt"]));
-        $this->assertSame(MatroskaReader::open(self::FILES . "mkv/seek_head.mkv")->extract(2)->format(WebVttFormatter::class),
+        $this->assertSame(MatroskaReader::open(self::FILES . "mkv/seek_head.mkv")->extract(2)->toString(Format::WebVtt),
                           $this->file("one.vtt"));
 
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "movie.mkv", "--to", "srt", "-o", "-"]);
@@ -921,7 +917,7 @@ class BinaryTest extends TestCase
         [$code, $stdout] = $this->runBinary(["convert", "text.sup", "--to", "srt", "-o", "-", "--ocr", "--ocr-database", "empty.nocr"]);
 
         $this->assertSame(0, $code);
-        $subtitle = Subtitle::parse($stdout);
+        $subtitle = Subtitle::fromStringAutoDetectFormat($stdout);
         $this->assertCount(12, $subtitle->getCues());
         foreach ($subtitle->getCues() as $cue) {
             $this->assertMatchesRegularExpression("/^\\*+( \\*+)*$/", implode(" ", $cue->getLines()));
@@ -979,7 +975,7 @@ class BinaryTest extends TestCase
                                                                  "--ocr-language", "deu+eng"]);
 
         $this->assertSame([0, "text.sup: OCR 12/12\n"], [$code, $stderr]);
-        $cues = Subtitle::parse($stdout)->getCues();
+        $cues = Subtitle::fromStringAutoDetectFormat($stdout)->getCues();
         $this->assertCount(12, $cues);
         $this->assertSame("deu+eng psm6", $cues[0]->getLines()[0]);
     }
@@ -1045,7 +1041,7 @@ class BinaryTest extends TestCase
     public function testOcrLeavesFilesWithoutImageCuesAsTheyAre(): void
     {
         $this->assertSame([0, "trip.srt -> trip.vtt\n", ""], $this->runBinary(["convert", "trip.srt", "--to", "vtt", "--ocr"]));
-        $this->assertSame(Subtitle::parse($this->file("trip.srt"))->format(WebVttFormatter::class), $this->file("trip.vtt"));
+        $this->assertSame(Subtitle::fromStringAutoDetectFormat($this->file("trip.srt"))->toString(Format::WebVtt), $this->file("trip.vtt"));
     }
 
 
@@ -1105,11 +1101,11 @@ class BinaryTest extends TestCase
     {
         copy(self::FILES . "sync/own_target_de_25fps.srt", "$this->dir/de.srt");
         copy(self::FILES . "sync/own_ffmpeg_silencedetect.log", "$this->dir/silence.log");
-        $expected = Subtitle::parse($this->file("de.srt"));
+        $expected = Subtitle::fromStringAutoDetectFormat($this->file("de.srt"));
         ReferenceSync::sync($expected, SpeechReference::fromFfmpegSilencedetect($this->file("silence.log"), 840))->apply($expected);
 
         [$code, $stdout, $stderr] = $this->runBinary(["sync", "de.srt", "--silence-log", "silence.log", "--media-duration", "840"]);
-        $this->assertSame([0, $expected->format(SubRipFormatter::class), "de.srt: scale 1.04271, offset -2.3 s, score 0.78\n"],
+        $this->assertSame([0, $expected->toString(Format::SubRip), "de.srt: scale 1.04271, offset -2.3 s, score 0.78\n"],
                           [$code, $stdout, $stderr]);
 
         foreach ([["--silence-log", "silence.log"], ["--media-duration", "840"], ["--reference", "trip.srt", "--silence-log", "silence.log",
@@ -1132,14 +1128,14 @@ class BinaryTest extends TestCase
         $this->assertSame([0, $timed, ""], $this->runBinary(["snap", "garden.srt", "--fps", "24", "--shot-changes", "scenes.txt"]));
 
         $options  = new ShotChangeOptions(frameRate: 24, snapWindow: 6, minGapFrames: 3, chain: false, minDuration: 12);
-        $expected = ShotChangeTiming::apply(Subtitle::parse($this->file("garden.srt")), ShotChanges::fromText($this->file("scenes.txt")), $options);
-        $this->assertSame([0, $expected->format(SubRipFormatter::class), ""], $this->runBinary([
+        $expected = ShotChangeTiming::apply(Subtitle::fromStringAutoDetectFormat($this->file("garden.srt")), ShotChanges::fromText($this->file("scenes.txt")), $options);
+        $this->assertSame([0, $expected->toString(Format::SubRip), ""], $this->runBinary([
             "snap", "garden.srt", "--fps", "24", "--shot-changes", "scenes.txt", "--snap-window", "6", "--min-gap-frames", "3",
             "--no-chain", "--min-duration-frames", "12",
         ]));
 
-        $chained = ShotChangeTiming::chainGaps(Subtitle::parse($this->file("garden.srt")), new ShotChangeOptions(24));
-        $this->assertSame([0, $chained->format(SubRipFormatter::class), ""], $this->runBinary(["snap", "garden.srt", "--fps", "24"]));
+        $chained = ShotChangeTiming::chainGaps(Subtitle::fromStringAutoDetectFormat($this->file("garden.srt")), new ShotChangeOptions(24));
+        $this->assertSame([0, $chained->toString(Format::SubRip), ""], $this->runBinary(["snap", "garden.srt", "--fps", "24"]));
 
         foreach ([[], ["--fps", "24", "--no-chain"], ["--fps", "24", "--snap-window", "-1"], ["--fps", "24", "--shot-changes", "missing.txt"],
                   ["--fps", "24", "--shot-changes", "garden.srt"]] as $options) {
@@ -1152,13 +1148,13 @@ class BinaryTest extends TestCase
     {
         copy(self::FILES . "diff/own_original.srt", "$this->dir/v1.srt");
         copy(self::FILES . "diff/own_edited.srt", "$this->dir/v2.srt");
-        file_put_contents("$this->dir/v1.vtt", Subtitle::parse($this->file("v1.srt"))->format(WebVttFormatter::class));
+        file_put_contents("$this->dir/v1.vtt", Subtitle::fromStringAutoDetectFormat($this->file("v1.srt"))->toString(Format::WebVtt));
 
         $this->assertSame([1, file_get_contents(self::FILES . "diff/own_report.txt"), ""], $this->runBinary(["diff", "v1.srt", "v2.srt"]));
         $this->assertSame([0, "", ""], $this->runBinary(["diff", "v1.srt", "v1.vtt"]));
 
         $options  = new SubtitleDiffOptions(timeTolerance: 0.5, ignoreFormatting: true, textOnly: true);
-        $expected = SubtitleDiff::compare(Subtitle::parse($this->file("v1.srt")), Subtitle::parse($this->file("v2.srt")), $options);
+        $expected = SubtitleDiff::compare(Subtitle::fromStringAutoDetectFormat($this->file("v1.srt")), Subtitle::fromStringAutoDetectFormat($this->file("v2.srt")), $options);
         [$code, $stdout, $stderr] = $this->runBinary(["diff", "v1.srt", "v2.srt", "--json", "--time-tolerance", "0.5", "--ignore-formatting", "--text-only"]);
         $this->assertSame([1, ""], [$code, $stderr]);
         $json = json_decode($stdout, true);
@@ -1190,9 +1186,9 @@ class BinaryTest extends TestCase
             $this->runBinary(["dual", "en.srt", "de.srt", "--mode", "top-bottom", "--secondary-style", 'font color="#ffff00"', "--to", "ass"])
         );
 
-        $merged = DualSubtitle::merge(Subtitle::parse($this->file("en.srt")), Subtitle::parse($this->file("de.srt")),
+        $merged = DualSubtitle::merge(Subtitle::fromStringAutoDetectFormat($this->file("en.srt")), Subtitle::fromStringAutoDetectFormat($this->file("de.srt")),
                                       new DualSubtitleOptions(mode: DualSubtitleOptions::MODE_TOP_BOTTOM, snapTolerance: 0.5, secondaryAlignment: 7));
-        $this->assertSame([0, $merged->format(SubRipFormatter::class), ""], $this->runBinary([
+        $this->assertSame([0, $merged->toString(Format::SubRip), ""], $this->runBinary([
             "dual", "en.srt", "de.srt", "--mode", "top-bottom", "--snap-tolerance", "0.5", "--secondary-alignment", "7",
         ]));
 
@@ -1206,7 +1202,7 @@ class BinaryTest extends TestCase
     {
         copy(self::FILES . "hls/node-webvtt-subs1.vtt", "$this->dir/talk.vtt");
         $expected = HlsWebVttSegmenter::segment(
-            Subtitle::parse($this->file("talk.vtt")),
+            Subtitle::fromStringAutoDetectFormat($this->file("talk.vtt")),
             new HlsSegmentOptions(segmentDuration: 10, mpegts: 126000, fileNamePattern: "part%03d.vtt", mediaDuration: 150)
         );
 
@@ -1237,7 +1233,7 @@ class BinaryTest extends TestCase
         $this->assertMatchesRegularExpression('/\AName +Extensions +Read  Write\n/', $stdout);
         $this->assertMatchesRegularExpression('/^srt +\.srt +yes   yes$/m', $stdout);
         $this->assertMatchesRegularExpression('/^pgs +\.sup +yes   yes$/m', $stdout);
-        $this->assertCount(count(FormatRegistry::names()) + 1, explode("\n", trim($stdout)));
+        $this->assertCount(count(Format::cases()) + 1, explode("\n", trim($stdout)));
         $this->assertSame("", $stderr);
     }
 }

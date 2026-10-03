@@ -59,7 +59,7 @@ $subtitle->removeHearingImpaired(new HearingImpairedOptions(
 Core markup holds a speaker as `<v Anna>`. `SpeakerLabels` converts it to the forms that formats without `<v>` can show, and back.
 
 ```php
-use SubtitleToolbox\Formatters\SubRipFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Speakers\SpeakerLabels;
 
@@ -67,7 +67,7 @@ $subtitle = (new WhisperJsonParser([WhisperJsonParser::OPTION_SPEAKER_VOICES => 
 SpeakerLabels::list($subtitle);                                            // ['SPEAKER_00' => 14, 'SPEAKER_01' => 9], cues per speaker
 SpeakerLabels::rename($subtitle, ['SPEAKER_00' => 'Anna', 'SPEAKER_01' => 'Ben']);
 SpeakerLabels::toPrefix($subtitle);                                        // '<v Anna>Where were you?' becomes 'ANNA: Where were you?'
-$subtitle->format(SubRipFormatter::class);
+$subtitle->toString(Format::SubRip);
 ```
 
 | Method | Input | Output |

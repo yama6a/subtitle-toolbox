@@ -4,6 +4,7 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -30,14 +31,14 @@ class HtmlTranscriptFormatterTest extends TestCase
             "<cite>Anna:</cite>\n<time>0:04</time>\n<p>Why?</p>\n" .
             "<cite>Anna:</cite>\n<time>0:09</time>\n<p>Fish &lt;3</p>\n" .
             "<time>1:02:05</time>\n<p>No speaker.</p>\n",
-            $this->dialogue()->format(HtmlTranscriptFormatter::class)
+            $this->dialogue()->toString(Format::HtmlTranscript)
         );
     }
 
 
     public function testStartsAParagraphAtTheGapOfTheOption(): void
     {
-        $html = $this->dialogue()->format(HtmlTranscriptFormatter::class, [HtmlTranscriptFormatter::OPTION_PARAGRAPH_GAP => 0.5]);
+        $html = $this->dialogue()->toString(Format::HtmlTranscript, [HtmlTranscriptFormatter::OPTION_PARAGRAPH_GAP => 0.5]);
 
         $this->assertStringStartsWith("<cite>Anna:</cite>\n<time>0:01</time>\n<p>Hello there.</p>\n<cite>Anna:</cite>\n<time>0:02</time>\n", $html);
     }
@@ -47,7 +48,7 @@ class HtmlTranscriptFormatterTest extends TestCase
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(0, 1, "<v Tom &amp; Jerry>Hi"));
 
-        $this->assertSame("<cite>Tom &amp; Jerry:</cite>\n<time>0:00</time>\n<p>Hi</p>\n", $subtitle->format(HtmlTranscriptFormatter::class));
+        $this->assertSame("<cite>Tom &amp; Jerry:</cite>\n<time>0:00</time>\n<p>Hi</p>\n", $subtitle->toString(Format::HtmlTranscript));
     }
 
 
@@ -55,6 +56,6 @@ class HtmlTranscriptFormatterTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        $this->dialogue()->format(HtmlTranscriptFormatter::class, [HtmlTranscriptFormatter::OPTION_PARAGRAPH_GAP => "2"]);
+        $this->dialogue()->toString(Format::HtmlTranscript, [HtmlTranscriptFormatter::OPTION_PARAGRAPH_GAP => "2"]);
     }
 }

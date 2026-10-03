@@ -4,7 +4,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\CsvFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -67,7 +67,7 @@ class CsvRealFilesTest extends TestCase
     {
         $content = file_get_contents(__DIR__ . "/../files/csv/real/$fileName");
 
-        $this->assertSame($content, $this->parseFile($fileName, $columns)->format(CsvFormatter::class, [
+        $this->assertSame($content, $this->parseFile($fileName, $columns)->toString(Format::Csv, [
             SubtitleFormatter::OPTION_LINE_ENDING => $options["lineEnding"],
             SubtitleFormatter::OPTION_BOM         => $options["bom"],
         ]));
@@ -78,7 +78,7 @@ class CsvRealFilesTest extends TestCase
     public function testRealFileSurvivesARoundTripInTheDefaultLayout(string $fileName, CsvColumns $columns): void
     {
         $subtitle = $this->parseFile($fileName, $columns)->setFormatData("csv", []);
-        $fresh    = Subtitle::parse($subtitle->format(CsvFormatter::class), new CsvParser());
+        $fresh    = (new CsvParser())->parse($subtitle->toString(Format::Csv));
 
         $this->assertSame(array_map($this->describeCue(...), $subtitle->getCues()), array_map($this->describeCue(...), $fresh->getCues()));
     }
@@ -103,7 +103,7 @@ class CsvRealFilesTest extends TestCase
 
     private function parseFile(string $fileName, CsvColumns $columns): Subtitle
     {
-        return Subtitle::parse(file_get_contents(__DIR__ . "/../files/csv/real/$fileName"), new CsvParser($columns));
+        return (new CsvParser($columns))->parse(file_get_contents(__DIR__ . "/../files/csv/real/$fileName"));
     }
 
 

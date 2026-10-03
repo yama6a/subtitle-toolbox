@@ -4,7 +4,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 class YouTubeTimedTextRealFilesTest extends TestCase
@@ -73,7 +73,7 @@ class YouTubeTimedTextRealFilesTest extends TestCase
     public function testRealFileKeepsItsCuesThroughWebVtt(string $fileName): void
     {
         $subtitle = self::parse($fileName);
-        $vtt      = (new WebVttParser())->parse($subtitle->format(WebVttFormatter::class));
+        $vtt      = (new WebVttParser())->parse($subtitle->toString(Format::WebVtt));
 
         // WebVTT has no <font> tag, so its formatter drops it.
         $withoutFont = fn (array $lines): array => preg_replace('#</?font[^>]*>#', "", $lines);

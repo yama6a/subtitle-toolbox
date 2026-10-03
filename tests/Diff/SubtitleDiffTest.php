@@ -4,7 +4,7 @@ namespace SubtitleToolbox\Diff;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -12,7 +12,7 @@ class SubtitleDiffTest extends TestCase
 {
     private function load(string $name): Subtitle
     {
-        return Subtitle::parse(file_get_contents(__DIR__ . "/../files/diff/$name"), SubRipParser::class);
+        return Subtitle::fromString(file_get_contents(__DIR__ . "/../files/diff/$name"), Format::SubRip);
     }
 
 

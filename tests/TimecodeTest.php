@@ -130,8 +130,8 @@ class TimecodeTest extends TestCase
         $subtitle->addCue(new SubtitleCue(1.996, 4, "One"));
         $subtitle->addCue(new SubtitleCue(59.9996, 62, "Two"));
 
-        $output = $subtitle->format(FormatRegistry::formatterClass($format), $options);
-        $parsed = array_values(Subtitle::parse($output, $parser ?? FormatRegistry::parserClass($format))->getCues());
+        $output = $subtitle->toString(Format::from($format), $options);
+        $parsed = array_values(($parser?->parse($output) ?? Subtitle::fromString($output, Format::from($format)))->getCues());
 
         $this->assertCount(2, $parsed, $output);
         foreach ([[1.996, 4], [59.9996, 62]] as $index => [$start, $end]) {

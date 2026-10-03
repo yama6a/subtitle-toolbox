@@ -3,8 +3,6 @@
 namespace SubtitleToolbox;
 
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Parsers\SubRipParser;
-use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Validation\ValidationResult;
 use SubtitleToolbox\Validation\ValidationRules;
 
@@ -13,9 +11,9 @@ class ValidationTest extends TestCase
     private const FILES = __DIR__ . "/files";
 
 
-    private function parseFile(string $path, string $parserClass): Subtitle
+    private function parseFile(string $path, Format $format): Subtitle
     {
-        return Subtitle::parse(file_get_contents(self::FILES . "/" . $path), $parserClass);
+        return Subtitle::fromString(file_get_contents(self::FILES . "/" . $path), $format);
     }
 
 
@@ -46,7 +44,7 @@ class ValidationTest extends TestCase
 
     public function testNoRulesGiveNoResults(): void
     {
-        $subtitle = $this->parseFile("validation/own_netflix_checks.srt", SubRipParser::class);
+        $subtitle = $this->parseFile("validation/own_netflix_checks.srt", Format::SubRip);
 
         $this->assertSame([], $subtitle->validate(new ValidationRules()));
     }
@@ -54,7 +52,7 @@ class ValidationTest extends TestCase
 
     public function testNetflixEnglishPresetOnOwnFile(): void
     {
-        $subtitle = $this->parseFile("validation/own_netflix_checks.srt", SubRipParser::class);
+        $subtitle = $this->parseFile("validation/own_netflix_checks.srt", Format::SubRip);
 
         $this->assertCount(7, $subtitle->getCues());
         $this->assertSame([
@@ -72,7 +70,7 @@ class ValidationTest extends TestCase
 
     public function testNetflixEnglishPresetOnRealSubRipFile(): void
     {
-        $subtitle = $this->parseFile("srt/real/language_subtitles_dots_tester.srt", SubRipParser::class);
+        $subtitle = $this->parseFile("srt/real/language_subtitles_dots_tester.srt", Format::SubRip);
 
         $this->assertSame([
             [0, ValidationResult::RULE_MAX_CHARACTERS_PER_LINE, 62, 42],
@@ -85,7 +83,7 @@ class ValidationTest extends TestCase
 
     public function testNetflixEnglishPresetOnRealWebVttFile(): void
     {
-        $subtitle = $this->parseFile("vtt/real/w3c_comments.vtt", WebVttParser::class);
+        $subtitle = $this->parseFile("vtt/real/w3c_comments.vtt", Format::WebVtt);
 
         $this->assertSame([], $subtitle->validate(ValidationRules::netflixEnglish(24)));
         $this->assertSame(
@@ -112,7 +110,7 @@ class ValidationTest extends TestCase
 
     public function testEmptyCueRule(): void
     {
-        $subtitle = $this->parseFile("validation/own_netflix_checks.srt", SubRipParser::class);
+        $subtitle = $this->parseFile("validation/own_netflix_checks.srt", Format::SubRip);
 
         $this->assertSame(
             [[6, ValidationResult::RULE_EMPTY_CUE, 0, null]],
@@ -204,7 +202,7 @@ class ValidationTest extends TestCase
 
     public function testTextRulesOnOwnFile(): void
     {
-        $subtitle = $this->parseFile("validation/own_text_checks.vtt", WebVttParser::class);
+        $subtitle = $this->parseFile("validation/own_text_checks.vtt", Format::WebVtt);
         $rules    = new ValidationRules(
             noDoubleSpaces: true,
             noLeadingOrTrailingSpaces: true,
@@ -235,7 +233,7 @@ class ValidationTest extends TestCase
 
     public function testTextRulesAreOffByDefault(): void
     {
-        $subtitle = $this->parseFile("validation/own_text_checks.vtt", WebVttParser::class);
+        $subtitle = $this->parseFile("validation/own_text_checks.vtt", Format::WebVtt);
 
         $this->assertSame([], $subtitle->validate(new ValidationRules()));
     }
@@ -266,7 +264,7 @@ class ValidationTest extends TestCase
 
     public function testWordsMatchSubtitleStatistics(): void
     {
-        $subtitle = $this->parseFile("vtt/real/webvttpy_netflix.vtt", WebVttParser::class);
+        $subtitle = $this->parseFile("vtt/real/webvttpy_netflix.vtt", Format::WebVtt);
         $words    = 0;
         foreach ($subtitle->validate(new ValidationRules(maxWordsPerMinute: 0.001)) as $result) {
             $cue    = $subtitle->getCues()[$result->getCueIndex()];
@@ -292,7 +290,7 @@ class ValidationTest extends TestCase
 
     public function testBbcPresetOnRealWebVttFile(): void
     {
-        $subtitle = $this->parseFile("vtt/real/w3c_voices.vtt", WebVttParser::class);
+        $subtitle = $this->parseFile("vtt/real/w3c_voices.vtt", Format::WebVtt);
 
         $this->assertSame([
             [1, ValidationResult::RULE_MAX_CHARACTERS_PER_LINE, 55, 37],
@@ -319,8 +317,8 @@ class ValidationTest extends TestCase
 
     public function testSpeakersFromVoicesAndDashesOnRealWebVttFiles(): void
     {
-        $voices  = $this->parseFile("vtt/real/w3c_voices.vtt", WebVttParser::class);
-        $netflix = $this->parseFile("vtt/real/webvttpy_netflix.vtt", WebVttParser::class);
+        $voices  = $this->parseFile("vtt/real/w3c_voices.vtt", Format::WebVtt);
+        $netflix = $this->parseFile("vtt/real/webvttpy_netflix.vtt", Format::WebVtt);
 
         $this->assertSame([], $voices->validate(new ValidationRules(maxSpeakersPerCue: 1)));
         $this->assertSame(
@@ -342,7 +340,7 @@ class ValidationTest extends TestCase
 
     public function testUnbalancedTagsOnRealSubRipFile(): void
     {
-        $subtitle = $this->parseFile("srt/real/own_styled.srt", SubRipParser::class);
+        $subtitle = $this->parseFile("srt/real/own_styled.srt", Format::SubRip);
 
         $this->assertSame(
             [[7, ValidationResult::RULE_NO_UNBALANCED_TAGS, 1, null]],
@@ -419,7 +417,7 @@ class ValidationTest extends TestCase
 
     public function testAllowedCharactersAsStringAndCharacterClass(): void
     {
-        $subtitle = $this->parseFile("validation/own_text_checks.vtt", WebVttParser::class);
+        $subtitle = $this->parseFile("validation/own_text_checks.vtt", Format::WebVtt);
         // BBC Subtitle Guidelines 9.3.1, characters for broadcast.
         $broadcast = "[A-Za-z0-9!)(,.?:\\-><&@#%+*=/\u{00A3}\$\u{00A2}\u{00A5}\u{00A9}\u{00AE}\u{00BC}\u{00BD}\u{00BE}\u{2122}'\"]";
 

@@ -4,8 +4,8 @@ namespace SubtitleToolbox\Translation;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
-use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -18,7 +18,7 @@ class TranslationRunnerTest extends TestCase
 
     private static function readFile(string $path): Subtitle
     {
-        return Subtitle::parse(file_get_contents(self::FILES . $path), SubRipParser::class);
+        return Subtitle::fromString(file_get_contents(self::FILES . $path), Format::SubRip);
     }
 
 

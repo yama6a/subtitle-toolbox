@@ -5,10 +5,6 @@ namespace SubtitleToolbox;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\AssFormatter;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
-use SubtitleToolbox\Parsers\SubRipParser;
 
 class DualSubtitleTest extends TestCase
 {
@@ -37,7 +33,7 @@ class DualSubtitleTest extends TestCase
 
     private function parseFixture(string $fileName): Subtitle
     {
-        return Subtitle::parse(file_get_contents(self::DIR . $fileName), SubRipParser::class);
+        return Subtitle::fromString(file_get_contents(self::DIR . $fileName), Format::SubRip);
     }
 
 
@@ -61,7 +57,7 @@ class DualSubtitleTest extends TestCase
     {
         foreach (["station_en.srt", "station_de.srt"] as $fileName) {
             $subtitle = $this->parseFixture($fileName);
-            $again    = Subtitle::parse($subtitle->format(SubRipFormatter::class), SubRipParser::class);
+            $again    = Subtitle::fromString($subtitle->toString(Format::SubRip), Format::SubRip);
 
             $this->assertSame($this->describeCues($subtitle), $this->describeCues($again), $fileName);
         }
@@ -75,24 +71,24 @@ class DualSubtitleTest extends TestCase
                                              secondaryStyle: 'font color="#ffff00"');
 
         return [
-            "stack SubRip"          => [$stack, SubRipFormatter::class, "station_stack.srt"],
-            "stack WebVTT"          => [$stack, WebVttFormatter::class, "station_stack.vtt"],
-            "stack ASS"             => [$stack, AssFormatter::class, "station_stack.ass"],
-            "top and bottom SubRip" => [$topBottom, SubRipFormatter::class, "station_top_bottom.srt"],
-            "top and bottom WebVTT" => [$topBottom, WebVttFormatter::class, "station_top_bottom.vtt"],
-            "top and bottom ASS"    => [$topBottom, AssFormatter::class, "station_top_bottom.ass"],
+            "stack SubRip"          => [$stack, Format::SubRip, "station_stack.srt"],
+            "stack WebVTT"          => [$stack, Format::WebVtt, "station_stack.vtt"],
+            "stack ASS"             => [$stack, Format::Ass, "station_stack.ass"],
+            "top and bottom SubRip" => [$topBottom, Format::SubRip, "station_top_bottom.srt"],
+            "top and bottom WebVTT" => [$topBottom, Format::WebVtt, "station_top_bottom.vtt"],
+            "top and bottom ASS"    => [$topBottom, Format::Ass, "station_top_bottom.ass"],
         ];
     }
 
 
     #[DataProvider("provideExpectedFiles")]
-    public function testMergeFixturesMatchesExpectedFile(DualSubtitleOptions $options, string $formatter,
+    public function testMergeFixturesMatchesExpectedFile(DualSubtitleOptions $options, Format $format,
                                                          string $expectedFile): void
     {
         $dual = DualSubtitle::merge($this->parseFixture("station_en.srt"), $this->parseFixture("station_de.srt"),
                                     $options);
 
-        $this->assertSame(file_get_contents(self::DIR . $expectedFile), $dual->format($formatter));
+        $this->assertSame(file_get_contents(self::DIR . $expectedFile), $dual->toString($format));
     }
 
 

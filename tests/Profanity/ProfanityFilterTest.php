@@ -5,10 +5,7 @@ namespace SubtitleToolbox\Profanity;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
-use SubtitleToolbox\Parsers\SubRipParser;
-use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -43,9 +40,9 @@ class ProfanityFilterTest extends TestCase
 
     public function testIssueExample(): void
     {
-        $subtitle = Subtitle::parse("WEBVTT\n\n00:01:02.000 --> 00:01:04.000\n" .
+        $subtitle = Subtitle::fromString("WEBVTT\n\n00:01:02.000 --> 00:01:04.000\n" .
                                     "<00:01:02.000>What <00:01:02.300>the <00:01:02.480>hell <00:01:02.800>is this?\n",
-                                    WebVttParser::class);
+                                    Format::WebVtt);
 
         $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(
             words: ["hell", "damn*"],
@@ -173,7 +170,7 @@ class ProfanityFilterTest extends TestCase
 
     public function testRealSubRipFileMatchesTheLastCue(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FILES . "keys.srt"), SubRipParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "keys.srt"), Format::SubRip);
 
         $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(wordFile: self::FILES . "words.txt"));
 
@@ -188,9 +185,9 @@ class ProfanityFilterTest extends TestCase
 
         $expected = str_replace(["Damn it", "the hell", "to hell", "damned"], ["**** it", "the ****", "to ****", "******"],
                                 file_get_contents(self::FILES . "keys.srt"));
-        $this->assertSame($expected, $subtitle->format(SubRipFormatter::class, ["lineEnding" => "\r\n", "bom" => false]));
+        $this->assertSame($expected, $subtitle->toString(Format::SubRip, ["lineEnding" => "\r\n", "bom" => false]));
         $this->assertSame([[3.4, 5.0], [8.0, 9.1], [11.5, 13.0], [13.2, 15.6]], self::times(ProfanityFilter::apply(
-            Subtitle::parse(file_get_contents(self::FILES . "keys.srt"), SubRipParser::class),
+            Subtitle::fromString(file_get_contents(self::FILES . "keys.srt"), Format::SubRip),
             new ProfanityOptions(["damn*", "hell"], ProfanityOptions::MASK_NONE)
         )));
     }
@@ -198,7 +195,7 @@ class ProfanityFilterTest extends TestCase
 
     public function testRealSubRipFileWithPaddingJoinsTheLastRanges(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FILES . "keys.srt"), SubRipParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "keys.srt"), Format::SubRip);
 
         $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn*", "hell"], padding: 0.25));
 
@@ -209,7 +206,7 @@ class ProfanityFilterTest extends TestCase
 
     public function testRealWebVttFileWithWordTimestamps(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FILES . "radio.vtt"), WebVttParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "radio.vtt"), Format::WebVtt);
 
         $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn*", "hell"], ProfanityOptions::MASK_FIRST_LETTER));
 
@@ -224,7 +221,7 @@ class ProfanityFilterTest extends TestCase
 
         $expected = str_replace(["damn <", "hell <", "damnit."], ["d*** <", "h*** <", "d*****."],
                                 file_get_contents(self::FILES . "radio.vtt"));
-        $this->assertSame($expected, $subtitle->format(WebVttFormatter::class, ["bom" => false]));
+        $this->assertSame($expected, $subtitle->toString(Format::WebVtt, ["bom" => false]));
         $this->assertSame("volume=enable='between(t,1.600,2.000)+between(t,6.300,6.700)+between(t,8.000,9.000)':volume=0",
                           MuteRange::toFfmpegVolumeFilter($ranges));
     }

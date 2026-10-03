@@ -4,6 +4,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Formatters\SubViewerFormatter;
 use SubtitleToolbox\StringHelpers;
@@ -75,8 +76,8 @@ class SubViewerRealFilesTest extends TestCase
     public function testRealFileSurvivesARoundTrip(string $fileName): void
     {
         $subtitle  = $this->parseFile($fileName);
-        $formatted = $subtitle->format(SubViewerFormatter::class, $this->optionsFor($fileName));
-        $reparsed  = Subtitle::parse($formatted, SubViewerParser::class);
+        $formatted = $subtitle->toString(Format::SubViewer, $this->optionsFor($fileName));
+        $reparsed  = Subtitle::fromString($formatted, Format::SubViewer);
 
         $this->assertSame(
             array_map($this->describeCue(...), $subtitle->getCues()),
@@ -102,7 +103,7 @@ class SubViewerRealFilesTest extends TestCase
 
         $this->assertSame(
             rtrim($content, "\r\n") . $lineEnding,
-            $this->parseFile($fileName)->format(SubViewerFormatter::class, $this->optionsFor($fileName))
+            $this->parseFile($fileName)->toString(Format::SubViewer, $this->optionsFor($fileName))
         );
     }
 
@@ -149,7 +150,7 @@ class SubViewerRealFilesTest extends TestCase
 
     private function parseFile(string $fileName): Subtitle
     {
-        return Subtitle::parse(file_get_contents(self::DIR . $fileName), SubViewerParser::class);
+        return Subtitle::fromString(file_get_contents(self::DIR . $fileName), Format::SubViewer);
     }
 
 

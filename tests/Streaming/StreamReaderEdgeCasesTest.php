@@ -119,7 +119,7 @@ class StreamReaderEdgeCasesTest extends TestCase
         stream_filter_append($stream, "convert.iconv.UTF-16/UTF-8");
 
         $this->assertEquals(
-            Subtitle::parse(file_get_contents($path))->getCues(),
+            Subtitle::fromStringAutoDetectFormat(file_get_contents($path))->getCues(),
             iterator_to_array((new WebVttStreamReader())->read($stream), false)
         );
     }

@@ -3,11 +3,7 @@
 namespace SubtitleToolbox;
 
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\Image\CueImage;
-use SubtitleToolbox\Parsers\SubRipParser;
-use SubtitleToolbox\Parsers\WebVttParser;
 
 class ShortCueMergingTest extends TestCase
 {
@@ -42,9 +38,9 @@ class ShortCueMergingTest extends TestCase
 
     public function testIssueExample(): void
     {
-        $subtitle = Subtitle::parse("12\n00:01:02,100 --> 00:01:02,600\nWait.\n\n" .
+        $subtitle = Subtitle::fromString("12\n00:01:02,100 --> 00:01:02,600\nWait.\n\n" .
                                     "13\n00:01:02,640 --> 00:01:03,300\nWhere are you\n\n" .
-                                    "14\n00:01:03,320 --> 00:01:04,100\ngoing?\n", SubRipParser::class);
+                                    "14\n00:01:03,320 --> 00:01:04,100\ngoing?\n", Format::SubRip);
 
         $subtitle->mergeShortCues(new MergeShortCuesOptions(
             maxCharactersPerLine: 42,
@@ -59,7 +55,7 @@ class ShortCueMergingTest extends TestCase
 
     public function testRealSpeechToTextFile(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FILES . "own_speech_to_text.srt"), SubRipParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "own_speech_to_text.srt"), Format::SubRip);
         $this->assertCount(10, $subtitle->getCues());
 
         $subtitle->mergeShortCues(new MergeShortCuesOptions());
@@ -70,7 +66,7 @@ class ShortCueMergingTest extends TestCase
         $this->assertSame([4.0, 4.4, "Okay."], $cues[2]);
         $this->assertSame([10.64, 12.1, "- Is it safe?\n- Yes, it is. <i>Thanks.</i>"], $cues[5]);
         $this->assertSame([15.0, 15.4, "Bye."], $cues[6]);
-        $this->assertStringEqualsFile(self::FILES . "own_speech_to_text_merged.srt", $subtitle->format(SubRipFormatter::class));
+        $this->assertStringEqualsFile(self::FILES . "own_speech_to_text_merged.srt", $subtitle->toString(Format::SubRip));
     }
 
 
@@ -78,11 +74,11 @@ class ShortCueMergingTest extends TestCase
     {
         $content = file_get_contents(self::FILES . "own_interview.vtt");
         $this->assertSame(
-            $this->describeCues(Subtitle::parse($content, WebVttParser::class)),
-            $this->describeCues(Subtitle::parse($content, WebVttParser::class)->mergeShortCues(new MergeShortCuesOptions()))
+            $this->describeCues(Subtitle::fromString($content, Format::WebVtt)),
+            $this->describeCues(Subtitle::fromString($content, Format::WebVtt)->mergeShortCues(new MergeShortCuesOptions()))
         );
 
-        $subtitle = Subtitle::parse($content, WebVttParser::class)
+        $subtitle = Subtitle::fromString($content, Format::WebVtt)
             ->mergeShortCues(new MergeShortCuesOptions(sameSpeakerOnly: true));
 
         $cues = $this->describeCues($subtitle);
@@ -90,7 +86,7 @@ class ShortCueMergingTest extends TestCase
         $this->assertSame([3.5, 10.9, "<v Guest>In a small town near the coast, in the</v>\n" .
                                       "<v Guest>north. My parents ran a bakery there."], $cues[1]);
         $this->assertSame([13.1, 16.0, "<v Guest>Every summer."], $cues[3]);
-        $this->assertStringEqualsFile(self::FILES . "own_interview_merged.vtt", $subtitle->format(WebVttFormatter::class));
+        $this->assertStringEqualsFile(self::FILES . "own_interview_merged.vtt", $subtitle->toString(Format::WebVtt));
     }
 
 

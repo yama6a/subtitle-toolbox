@@ -5,8 +5,8 @@ namespace SubtitleToolbox\Formatters;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatRegistry;
-use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Subtitle;
 
 class UnknownOptionsTest extends TestCase
@@ -21,7 +21,7 @@ class UnknownOptionsTest extends TestCase
 
     private static function subtitle(): Subtitle
     {
-        return Subtitle::parse(file_get_contents(self::FILE), SubRipParser::class);
+        return Subtitle::fromString(file_get_contents(self::FILE), Format::SubRip);
     }
 
 
@@ -42,7 +42,7 @@ class UnknownOptionsTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("does not know the option \"lineEndings\".");
 
-        self::subtitle()->format($formatter, (self::REQUIRED[$formatter] ?? []) + ["lineEndings" => "\r\n"]);
+        (new $formatter())->format(self::subtitle(), (self::REQUIRED[$formatter] ?? []) + ["lineEndings" => "\r\n"]);
     }
 
 
@@ -52,7 +52,7 @@ class UnknownOptionsTest extends TestCase
         $this->expectExceptionMessage("SubRipFormatter does not know the option \"OPTION_FRAME_RATE\". It knows the options " .
                                       "OPTION_STRIP_ALL_XML_TAGS, lineEnding, bom, skipImageCues.");
 
-        self::subtitle()->format(SubRipFormatter::class, [MicroDvdFormatter::OPTION_FRAME_RATE => 25]);
+        self::subtitle()->toString(Format::SubRip, [MicroDvdFormatter::OPTION_FRAME_RATE => 25]);
     }
 
 
@@ -68,21 +68,21 @@ class UnknownOptionsTest extends TestCase
     {
         $subtitle = self::subtitle();
 
-        $this->assertStringStartsWith("1\r\n00:00:17,985 --> 00:00:20,521\r\n[train horn]\r\n", $subtitle->format(SubRipFormatter::class, [
+        $this->assertStringStartsWith("1\r\n00:00:17,985 --> 00:00:20,521\r\n[train horn]\r\n", $subtitle->toString(Format::SubRip, [
             SubtitleFormatter::OPTION_LINE_ENDING     => "\r\n",
             SubtitleFormatter::OPTION_BOM             => false,
             SubtitleFormatter::OPTION_SKIP_IMAGE_CUES => true,
             SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS,
         ]));
-        $this->assertStringContainsString(">[train horn]</p>", $subtitle->format(IttFormatter::class, [
+        $this->assertStringContainsString(">[train horn]</p>", $subtitle->toString(Format::Itt, [
             IttFormatter::OPTION_FRAME_RATE => 23.976,
             SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS,
         ]));
-        $this->assertStringStartsWith("{1}{1}25\n", $subtitle->format(MicroDvdFormatter::class, [
+        $this->assertStringStartsWith("{1}{1}25\n", $subtitle->toString(Format::MicroDvd, [
             MicroDvdFormatter::OPTION_FRAME_RATE            => 25,
             MicroDvdFormatter::OPTION_WRITE_FRAME_RATE_LINE => true,
         ]));
-        $this->assertStringStartsWith("start;end;text;text (de)\n17.985;20.521;[train horn];[train horn]\n", $subtitle->format(CsvFormatter::class, [
+        $this->assertStringStartsWith("start;end;text;text (de)\n17.985;20.521;[train horn];[train horn]\n", $subtitle->toString(Format::Csv, [
             CsvFormatter::OPTION_DELIMITER          => ";",
             CsvFormatter::OPTION_TIME_FORMAT        => "seconds",
             CsvFormatter::OPTION_SECOND_TEXT        => $subtitle,

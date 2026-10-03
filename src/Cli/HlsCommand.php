@@ -3,6 +3,7 @@
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Hls\HlsSegmentOptions;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\Subtitle;
@@ -99,7 +100,7 @@ class HlsCommand extends FileCommand
     }
 
 
-    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         $result    = HlsWebVttSegmenter::segment($subtitle, $this->segmentOptions);
         $directory = rtrim($this->directory, "/\\");

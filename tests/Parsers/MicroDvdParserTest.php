@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 class MicroDvdParserTest extends TestCase
@@ -45,7 +46,7 @@ class MicroDvdParserTest extends TestCase
 
     public function testFrameRateLineSetsTheFrameRate(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/microdvd/valid.sub"), MicroDvdParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/microdvd/valid.sub"), Format::MicroDvd);
         $cues     = $subtitle->getCues();
 
         $this->assertSame(4, count($cues));
@@ -57,7 +58,7 @@ class MicroDvdParserTest extends TestCase
 
     public function testControlCodesBecomeCoreMarkup(): void
     {
-        $cues = Subtitle::parse(file_get_contents(__DIR__ . "/../files/microdvd/valid.sub"), MicroDvdParser::class)->getCues();
+        $cues = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/microdvd/valid.sub"), Format::MicroDvd)->getCues();
 
         $this->assertSame(["Hello", "<i>world</i>"], $cues[0]->getLines());
         $this->assertSame(["<font color=\"#ff0000\">Red text</font>"], $cues[1]->getLines());
@@ -68,7 +69,7 @@ class MicroDvdParserTest extends TestCase
 
     public function testOtherControlCodesGoToTheFormatData(): void
     {
-        $cues = Subtitle::parse(file_get_contents(__DIR__ . "/../files/microdvd/valid.sub"), MicroDvdParser::class)->getCues();
+        $cues = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/microdvd/valid.sub"), Format::MicroDvd)->getCues();
 
         $this->assertSame("{f:Arial}{s:20}", $cues[2]->getFormatData("sub")["lines"][0]["otherCodes"]);
         $this->assertSame("", $cues[2]->getFormatData("sub")["lines"][1]["otherCodes"]);
@@ -115,7 +116,7 @@ class MicroDvdParserTest extends TestCase
 
     public function testWindowsLineEndingsBomAndEmptyLinesAreAccepted(): void
     {
-        $subtitle = Subtitle::parse("\xEF\xBB\xBF\r\n{1}{1}25\r\n\r\n{25}{50}Hello\r\n", MicroDvdParser::class);
+        $subtitle = Subtitle::fromString("\xEF\xBB\xBF\r\n{1}{1}25\r\n\r\n{25}{50}Hello\r\n", Format::MicroDvd);
 
         $this->assertSame(["Hello"], $subtitle->getCues()[0]->getLines());
     }
@@ -125,14 +126,14 @@ class MicroDvdParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The frame rate is unknown");
-        Subtitle::parse("{25}{50}Hello", MicroDvdParser::class);
+        Subtitle::fromString("{25}{50}Hello", Format::MicroDvd);
     }
 
 
     public function testZeroFrameRateThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        Subtitle::parse("{1}{1}0\n{25}{50}Hello", MicroDvdParser::class);
+        Subtitle::fromString("{1}{1}0\n{25}{50}Hello", Format::MicroDvd);
     }
 
 
@@ -140,6 +141,6 @@ class MicroDvdParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("Line 3 is not a MicroDVD cue: 00:00:01,000 --> 00:00:02,000");
-        Subtitle::parse("{1}{1}25\n{25}{50}Hello\n00:00:01,000 --> 00:00:02,000", MicroDvdParser::class);
+        Subtitle::fromString("{1}{1}25\n{25}{50}Hello\n00:00:01,000 --> 00:00:02,000", Format::MicroDvd);
     }
 }

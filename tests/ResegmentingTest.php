@@ -3,8 +3,6 @@
 namespace SubtitleToolbox;
 
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 
@@ -83,7 +81,7 @@ class ResegmentingTest extends TestCase
         $this->assertSame([20.2, 24.0, "<00:00:20.200>Any <00:00:20.520>questions <00:00:21.230>before <00:00:21.750>we " .
                                        "<00:00:22.000>start? <00:00:22.520>Then <00:00:22.910>let <00:00:23.230>us " .
                                        "<00:00:23.480>begin."], $cues[5]);
-        $this->assertStringEqualsFile(self::FILES . "own_whisper_long_segments_split.vtt", $subtitle->format(WebVttFormatter::class));
+        $this->assertStringEqualsFile(self::FILES . "own_whisper_long_segments_split.vtt", $subtitle->toString(Format::WebVtt));
     }
 
 
@@ -98,7 +96,7 @@ class ResegmentingTest extends TestCase
                           Markup::stripAllTags($cues[3][2]));
         $this->assertSame([22.52, 24.0, "<00:00:22.520>Then <00:00:22.910>let <00:00:23.230>us <00:00:23.480>begin."], $cues[5]);
         $this->assertStringEqualsFile(self::FILES . "own_whisper_long_segments_resegmented.srt",
-                                      $subtitle->format(SubRipFormatter::class));
+                                      $subtitle->toString(Format::SubRip));
     }
 
 

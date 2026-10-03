@@ -2,6 +2,7 @@
 
 namespace SubtitleToolbox\Hls;
 
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Subtitle;
 
@@ -21,7 +22,7 @@ final class HlsWebVttJoiner
         $fileData = null;
         $seen     = [];
         foreach ($segments as $content) {
-            $segment = Subtitle::parse($content, WebVttParser::class);
+            $segment = Subtitle::fromString($content, Format::WebVtt);
             // RFC 8216 section 3.5: without the header, cue time 0 maps to MPEG-2 timestamp 0.
             $map              = TimestampMap::fromSubtitle($segment) ?? new TimestampMap(0);
             $streamStartPts ??= $map->mpegts;

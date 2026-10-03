@@ -6,7 +6,7 @@ use GlyphOcr\GlyphDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Formatters\SubRipFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
@@ -142,7 +142,7 @@ class CommonErrorFixerTest extends TestCase
     public function testFixesTheFileAsTheGoldenFile(string $input, string $language, ?string $list, string $golden): void
     {
         $content  = file_get_contents(self::FILES . $input);
-        $subtitle = Subtitle::parse($content);
+        $subtitle = Subtitle::fromStringAutoDetectFormat($content);
         $options  = new CommonErrorOptions(language: $language,
                                            replaceList: $list === null ? null : OcrReplaceList::fromSubtitleEditXml(file_get_contents($list)));
         $lineEnd  = str_contains($content, "\r\n") ? "\r\n" : "\n";
@@ -150,15 +150,15 @@ class CommonErrorFixerTest extends TestCase
         $fixes = CommonErrorFixer::fix($subtitle, $options);
 
         $this->assertStringEqualsFile(self::FILES . $golden,
-                                      $subtitle->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_LINE_ENDING => $lineEnd]));
+                                      $subtitle->toString(Format::SubRip, [SubtitleFormatter::OPTION_LINE_ENDING => $lineEnd]));
         $this->assertNotEmpty($fixes);
-        $this->assertSame([], CommonErrorFixer::fix(Subtitle::parse(file_get_contents(self::FILES . $golden)), $options));
+        $this->assertSame([], CommonErrorFixer::fix(Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . $golden)), $options));
     }
 
 
     public function testListsEachFixOfTheWebFileWithTheTextBeforeAndAfter(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FILES . "fixing/web-errors.srt"));
+        $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "fixing/web-errors.srt"));
 
         $fixes = CommonErrorFixer::fix($subtitle, new CommonErrorOptions(language: "en"));
 
@@ -206,23 +206,23 @@ class CommonErrorFixerTest extends TestCase
     public function testDryRunListsTheFixesAndChangesNothing(): void
     {
         $content  = file_get_contents(self::FILES . "fixing/web-errors.srt");
-        $subtitle = Subtitle::parse($content);
-        $before   = $subtitle->format(SubRipFormatter::class);
+        $subtitle = Subtitle::fromStringAutoDetectFormat($content);
+        $before   = $subtitle->toString(Format::SubRip);
 
         $dryRun = CommonErrorFixer::fix($subtitle, new CommonErrorOptions(language: "en", dryRun: true));
 
-        $this->assertSame($before, $subtitle->format(SubRipFormatter::class));
-        $this->assertEquals(CommonErrorFixer::fix(Subtitle::parse($content), new CommonErrorOptions(language: "en")), $dryRun);
+        $this->assertSame($before, $subtitle->toString(Format::SubRip));
+        $this->assertEquals(CommonErrorFixer::fix(Subtitle::fromStringAutoDetectFormat($content), new CommonErrorOptions(language: "en")), $dryRun);
     }
 
 
     public function testAllFixesOffChangesNothing(): void
     {
         $content  = file_get_contents(self::FILES . "fixing/ocr-en.ocr.srt");
-        $subtitle = Subtitle::parse($content);
+        $subtitle = Subtitle::fromStringAutoDetectFormat($content);
 
         $this->assertSame([], CommonErrorFixer::fix($subtitle, new CommonErrorOptions("en", ...self::ALL_OFF)));
-        $this->assertSame($content, $subtitle->format(SubRipFormatter::class));
+        $this->assertSame($content, $subtitle->toString(Format::SubRip));
     }
 
 

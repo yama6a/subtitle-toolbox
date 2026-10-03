@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Cli;
 use GlyphOcr\Exceptions\GlyphOcrException;
 use GlyphOcr\GlyphDatabase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\AssFormatter;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Karaoke\WordHighlight;
@@ -282,7 +283,7 @@ class ConvertCommand extends WriteCommand
     }
 
 
-    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         if ($arguments->has("forced-only")) {
             $subtitle = $subtitle->forcedOnly();
@@ -345,13 +346,13 @@ class ConvertCommand extends WriteCommand
     }
 
 
-    protected function commandFormatterOptions(string $formatter, Arguments $arguments): array
+    protected function commandFormatterOptions(Format $outputFormat, Arguments $arguments): array
     {
         $tag = $arguments->value("karaoke-tag");
         if ($tag === null) {
             return [];
         }
-        if ($formatter !== AssFormatter::class) {
+        if ($outputFormat !== Format::Ass) {
             self::fail("--karaoke-tag needs ASS output.");
         }
 

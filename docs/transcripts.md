@@ -6,10 +6,11 @@ Speech-to-text tools, YouTube and podcast apps use their own transcript formats.
 A speech-to-text tool based on OpenAI Whisper writes a JSON transcript.
 
 ```php
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Subtitle;
 
-$subtitle = Subtitle::parse($openAiResponseBody);                          // detects WhisperJsonParser
+$subtitle = Subtitle::fromString($openAiResponseBody, Format::Whisper);
 $parser   = new WhisperJsonParser([WhisperJsonParser::OPTION_WORD_TIMESTAMPS => true]);
 $subtitle = $parser->parse(file_get_contents('lecture.json'));
 $subtitle->getCues()[0]->getText();                                          // '<00:00:00.000>The <00:00:00.240>beach <00:00:00.710>was <00:00:00.950>quiet.'
@@ -35,9 +36,10 @@ $subtitle->getCues()[0]->getFormatData('whisper')['avg_logprob'];            // 
 Amazon Transcribe, Deepgram, AssemblyAI and Google Cloud Speech-to-Text return a JSON transcript. One parser per service turns it into cues.
 
 ```php
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\DeepgramParser;
 
-$subtitle = Subtitle::parse($transcribeJson);                                // detects AwsTranscribeParser
+$subtitle = Subtitle::fromString($transcribeJson, Format::AwsTranscribe);    // format detection does not find cloud speech JSON
 $parser   = new DeepgramParser([
     DeepgramParser::OPTION_WORD_TIMESTAMPS => true,
     DeepgramParser::OPTION_SPEAKER_VOICES  => true,
@@ -69,9 +71,10 @@ $subtitle->getCues()[2]->getFormatData('deepgram')['confidence'];            // 
 yt-dlp and youtube-transcript-api download YouTube captions as json3, srv3 or the older transcript XML. json3 and srv3 keep the time of each word of automatic captions. WebVTT downloads lose it.
 
 ```php
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 
-$subtitle = Subtitle::parse(file_get_contents('video.en.json3'));          // detects YouTubeTimedTextParser
+$subtitle = Subtitle::fromString(file_get_contents('video.en.json3'), Format::YouTube);
 $parser   = new YouTubeTimedTextParser([YouTubeTimedTextParser::OPTION_WORD_TIMESTAMPS => true]);
 $subtitle = $parser->parse(file_get_contents('video.en.srv3'));
 $subtitle->getCues()[0]->getText();                                          // '<00:00:01.200>Hello <00:00:01.600>world'
@@ -108,14 +111,14 @@ A podcast feed links a transcript per episode with the `<podcast:transcript>` ta
 ```
 
 ```php
-use SubtitleToolbox\Formatters\HtmlTranscriptFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\PodcastTranscriptFormatter;
 use SubtitleToolbox\Parsers\PodcastTranscriptParser;
 
 $subtitle = (new WhisperJsonParser([WhisperJsonParser::OPTION_WORD_TIMESTAMPS => true]))->parse($whisperJson);
-$json     = $subtitle->format(PodcastTranscriptFormatter::class, [PodcastTranscriptFormatter::OPTION_WORD_SEGMENTS => true]);
-$html     = $subtitle->format(HtmlTranscriptFormatter::class);
-$subtitle = Subtitle::parse(file_get_contents('episode.json'));                  // detects PodcastTranscriptParser
+$json     = $subtitle->toString(Format::PodcastTranscript, [PodcastTranscriptFormatter::OPTION_WORD_SEGMENTS => true]);
+$html     = $subtitle->toString(Format::HtmlTranscript);
+$subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('episode.json'));   // detects a Podcasting 2.0 transcript
 $subtitle = (new PodcastTranscriptParser([PodcastTranscriptParser::OPTION_KEEP_SEGMENTS => true]))->parse($json);
 ```
 
@@ -147,9 +150,10 @@ Home.
 ```
 
 ```php
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\PlainTextFormatter;
 
-$text = $subtitle->format(PlainTextFormatter::class, [PlainTextFormatter::OPTION_WITH_TIMES => true]);
+$text = $subtitle->toString(Format::PlainText, [PlainTextFormatter::OPTION_WITH_TIMES => true]);
 ```
 
 | Option | Default | Effect |

@@ -4,8 +4,7 @@ namespace SubtitleToolbox\Sync;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -13,7 +12,7 @@ class ReferenceSyncTest extends TestCase
 {
     private function load(string $name): Subtitle
     {
-        return Subtitle::parse(file_get_contents(__DIR__ . "/../files/sync/$name"), SubRipParser::class);
+        return Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sync/$name"), Format::SubRip);
     }
 
 
@@ -80,7 +79,7 @@ class ReferenceSyncTest extends TestCase
 
         $this->assertSame($target, ReferenceSync::sync($target, $reference)->apply($target));
         $this->assertSame(file_get_contents(__DIR__ . "/../files/sync/own_target_de_synced.srt"),
-                          $target->format(SubRipFormatter::class));
+                          $target->toString(Format::SubRip));
 
         $referenceStarts = array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $reference->getCues());
         $matched         = 0;

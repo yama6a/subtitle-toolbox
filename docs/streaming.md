@@ -1,6 +1,6 @@
 # Streaming large SRT and WebVTT files
 
-`Subtitle::parse()` keeps the whole file and one object per cue in memory. An 80 MB SRT file with 400,000 cues does not fit into the default `memory_limit` of 128 MB. The stream readers and writers handle one cue at a time and use less than 1 MB of memory.
+`Subtitle::fromString()` keeps the whole file and one object per cue in memory. An 80 MB SRT file with 400,000 cues does not fit into the default `memory_limit` of 128 MB. The stream readers and writers handle one cue at a time and use less than 1 MB of memory.
 
 ```php
 use SubtitleToolbox\Streaming\SubRipStreamReader;

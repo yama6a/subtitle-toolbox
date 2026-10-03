@@ -4,29 +4,20 @@ namespace SubtitleToolbox;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\AssFormatter;
 use SubtitleToolbox\Formatters\CsvFormatter;
-use SubtitleToolbox\Formatters\EbuStlFormatter;
 use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\JsonFormatter;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
 use SubtitleToolbox\Formatters\PlainTextFormatter;
 use SubtitleToolbox\Formatters\PodcastTranscriptFormatter;
-use SubtitleToolbox\Formatters\SamiFormatter;
-use SubtitleToolbox\Formatters\SbvFormatter;
 use SubtitleToolbox\Formatters\SccFormatter;
-use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
-use SubtitleToolbox\Formatters\TtmlFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Parsers\CsvColumns;
 use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Parsers\DeepgramParser;
 use SubtitleToolbox\Parsers\PodcastTranscriptParser;
-use SubtitleToolbox\Parsers\SccParser;
-use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 
@@ -37,34 +28,34 @@ class OptionFlagsTest extends TestCase
 
     private static function styled(): Subtitle
     {
-        return Subtitle::parse(file_get_contents(self::FILES . "srt/real/own_styled.srt"), SubRipParser::class);
+        return Subtitle::fromString(file_get_contents(self::FILES . "srt/real/own_styled.srt"), Format::SubRip);
     }
 
 
     public static function stripTagsFormatters(): array
     {
         return [
-            "ASS"      => [AssFormatter::class, []],
-            "EBU STL"  => [EbuStlFormatter::class, []],
-            "iTT"      => [IttFormatter::class, [IttFormatter::OPTION_FRAME_RATE => 25]],
-            "MicroDVD" => [MicroDvdFormatter::class, [MicroDvdFormatter::OPTION_FRAME_RATE => 25]],
-            "SAMI"     => [SamiFormatter::class, []],
-            "SubRip"   => [SubRipFormatter::class, []],
-            "TTML"     => [TtmlFormatter::class, []],
-            "WebVTT"   => [WebVttFormatter::class, []],
+            "ASS"      => [Format::Ass, []],
+            "EBU STL"  => [Format::EbuStl, []],
+            "iTT"      => [Format::Itt, [IttFormatter::OPTION_FRAME_RATE => 25]],
+            "MicroDVD" => [Format::MicroDvd, [MicroDvdFormatter::OPTION_FRAME_RATE => 25]],
+            "SAMI"     => [Format::Sami, []],
+            "SubRip"   => [Format::SubRip, []],
+            "TTML"     => [Format::Ttml, []],
+            "WebVTT"   => [Format::WebVtt, []],
         ];
     }
 
 
     #[DataProvider("stripTagsFormatters")]
-    public function testStripAllXmlTagsWorksAsAKey(string $formatter, array $options): void
+    public function testStripAllXmlTagsWorksAsAKey(Format $format, array $options): void
     {
-        $default = self::styled()->format($formatter, $options);
-        $list    = self::styled()->format($formatter, $options + [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS]);
+        $default = self::styled()->toString($format, $options);
+        $list    = self::styled()->toString($format, $options + [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS]);
 
         $this->assertNotSame($default, $list);
-        $this->assertSame($list, self::styled()->format($formatter, $options + [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS => true]));
-        $this->assertSame($default, self::styled()->format($formatter, $options + [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS => false]));
+        $this->assertSame($list, self::styled()->toString($format, $options + [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS => true]));
+        $this->assertSame($default, self::styled()->toString($format, $options + [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS => false]));
     }
 
 
@@ -74,44 +65,44 @@ class OptionFlagsTest extends TestCase
             ->parse(file_get_contents(self::FILES . "csv/real/dubbing_script.csv"));
         $podcast = fn (): Subtitle => (new PodcastTranscriptParser([PodcastTranscriptParser::OPTION_WORD_TIMESTAMPS => true]))
             ->parse(file_get_contents(self::FILES . "podcast/real/spec_word_segments.json"));
-        $scc     = fn (): Subtitle => Subtitle::parse(file_get_contents(self::FILES . "scc/real/rollup_news_ndf.scc"), SccParser::class);
+        $scc     = fn (): Subtitle => Subtitle::fromString(file_get_contents(self::FILES . "scc/real/rollup_news_ndf.scc"), Format::Scc);
         $styled  = self::styled(...);
 
         return [
-            "BOM"                   => [SbvFormatter::class, SubtitleFormatter::OPTION_BOM, [], $styled],
-            "CSV escape formulas"   => [CsvFormatter::class, CsvFormatter::OPTION_ESCAPE_FORMULAS, [], $dubbing],
-            "JSON pretty print"     => [JsonFormatter::class, JsonFormatter::OPTION_PRETTY_PRINT, [], $styled],
-            "MicroDVD frame rate"   => [MicroDvdFormatter::class, MicroDvdFormatter::OPTION_WRITE_FRAME_RATE_LINE,
+            "BOM"                   => [Format::Sbv, SubtitleFormatter::OPTION_BOM, [], $styled],
+            "CSV escape formulas"   => [Format::Csv, CsvFormatter::OPTION_ESCAPE_FORMULAS, [], $dubbing],
+            "JSON pretty print"     => [Format::Json, JsonFormatter::OPTION_PRETTY_PRINT, [], $styled],
+            "MicroDVD frame rate"   => [Format::MicroDvd, MicroDvdFormatter::OPTION_WRITE_FRAME_RATE_LINE,
                                         [MicroDvdFormatter::OPTION_FRAME_RATE => 25], $styled],
-            "plain text with times" => [PlainTextFormatter::class, PlainTextFormatter::OPTION_WITH_TIMES, [], $styled],
-            "podcast pretty print"  => [PodcastTranscriptFormatter::class, PodcastTranscriptFormatter::OPTION_PRETTY_PRINT, [], $podcast],
-            "podcast word segments" => [PodcastTranscriptFormatter::class, PodcastTranscriptFormatter::OPTION_WORD_SEGMENTS, [], $podcast],
-            "SCC drop frame"        => [SccFormatter::class, SccFormatter::OPTION_DROP_FRAME, [], $scc],
+            "plain text with times" => [Format::PlainText, PlainTextFormatter::OPTION_WITH_TIMES, [], $styled],
+            "podcast pretty print"  => [Format::PodcastTranscript, PodcastTranscriptFormatter::OPTION_PRETTY_PRINT, [], $podcast],
+            "podcast word segments" => [Format::PodcastTranscript, PodcastTranscriptFormatter::OPTION_WORD_SEGMENTS, [], $podcast],
+            "SCC drop frame"        => [Format::Scc, SccFormatter::OPTION_DROP_FRAME, [], $scc],
         ];
     }
 
 
     #[DataProvider("formatterFlags")]
-    public function testFormatterFlagWorksAsAListValue(string $formatter, string $flag, array $options, \Closure $subtitle): void
+    public function testFormatterFlagWorksAsAListValue(Format $format, string $flag, array $options, \Closure $subtitle): void
     {
-        $key = $subtitle()->format($formatter, $options + [$flag => true]);
+        $key = $subtitle()->toString($format, $options + [$flag => true]);
 
-        $this->assertNotSame($subtitle()->format($formatter, $options), $key);
-        $this->assertSame($key, $subtitle()->format($formatter, $options + [$flag]));
+        $this->assertNotSame($subtitle()->toString($format, $options), $key);
+        $this->assertSame($key, $subtitle()->toString($format, $options + [$flag]));
     }
 
 
     public function testFlagsThatDefaultToTrueWorkAsAListValue(): void
     {
         foreach ([
-            JsonFormatter::class      => JsonFormatter::OPTION_WITH_FORMAT_DATA,
-            PlainTextFormatter::class => PlainTextFormatter::OPTION_JOIN_LINES,
-        ] as $formatter => $flag) {
-            $this->assertSame(self::styled()->format($formatter, [$flag => true]), self::styled()->format($formatter, [$flag]));
+            [Format::Json, JsonFormatter::OPTION_WITH_FORMAT_DATA],
+            [Format::PlainText, PlainTextFormatter::OPTION_JOIN_LINES],
+        ] as [$format, $flag]) {
+            $this->assertSame(self::styled()->toString($format, [$flag => true]), self::styled()->toString($format, [$flag]));
         }
         $this->assertSame(
-            self::styled()->format(PlainTextFormatter::class, [PlainTextFormatter::OPTION_JOIN_CUES => true]),
-            self::styled()->format(PlainTextFormatter::class, [PlainTextFormatter::OPTION_JOIN_CUES])
+            self::styled()->toString(Format::PlainText, [PlainTextFormatter::OPTION_JOIN_CUES => true]),
+            self::styled()->toString(Format::PlainText, [PlainTextFormatter::OPTION_JOIN_CUES])
         );
     }
 
@@ -122,8 +113,8 @@ class OptionFlagsTest extends TestCase
             ->toCue(new SubtitleCue(90, 91)));
 
         $this->assertSame(
-            $subtitle->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_SKIP_IMAGE_CUES => true]),
-            $subtitle->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_SKIP_IMAGE_CUES])
+            $subtitle->toString(Format::SubRip, [SubtitleFormatter::OPTION_SKIP_IMAGE_CUES => true]),
+            $subtitle->toString(Format::SubRip, [SubtitleFormatter::OPTION_SKIP_IMAGE_CUES])
         );
     }
 

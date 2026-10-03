@@ -4,7 +4,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 class WhisperJsonRealFilesTest extends TestCase
@@ -116,7 +116,7 @@ class WhisperJsonRealFilesTest extends TestCase
     public function testRealFileKeepsItsWordTimestampsThroughWebVtt(string $fileName): void
     {
         $subtitle = self::parse($fileName);
-        $vtt      = (new WebVttParser())->parse($subtitle->format(WebVttFormatter::class));
+        $vtt      = (new WebVttParser())->parse($subtitle->toString(Format::WebVtt));
 
         $this->assertSame(
             array_map(fn ($cue) => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], $subtitle->getCues()),

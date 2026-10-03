@@ -4,6 +4,8 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\FormatRegistry;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -13,39 +15,39 @@ class OutputOptionsTest extends TestCase
     public static function formatters(): array
     {
         return [
-            "ASS"      => [AssFormatter::class, [], true],
-            "FFmpeg metadata"  => [FfMetadataChaptersFormatter::class, [], false],
-            "LRC"      => [LyricsFormatter::class, [], true],
-            "MicroDVD" => [MicroDvdFormatter::class, [MicroDvdFormatter::OPTION_FRAME_RATE => 25], false],
-            "MPSub"    => [MpSubFormatter::class, [], true],
-            "OGM chapters"     => [OgmChaptersFormatter::class, [], false],
-            "Podcast chapters" => [PodcastChaptersFormatter::class, [], false],
-            "SAMI"     => [SamiFormatter::class, [], false],
-            "SBV"      => [SbvFormatter::class, [], false],
-            "SubRip"   => [SubRipFormatter::class, [], true],
-            "TTML"     => [TtmlFormatter::class, [], false],
-            "WebVTT"   => [WebVttFormatter::class, [], true],
-            "YouTube chapters" => [YouTubeChaptersFormatter::class, [], false],
+            "ASS"      => [Format::Ass, [], true],
+            "FFmpeg metadata"  => [Format::FfMetadata, [], false],
+            "LRC"      => [Format::Lyrics, [], true],
+            "MicroDVD" => [Format::MicroDvd, [MicroDvdFormatter::OPTION_FRAME_RATE => 25], false],
+            "MPSub"    => [Format::MpSub, [], true],
+            "OGM chapters"     => [Format::OgmChapters, [], false],
+            "Podcast chapters" => [Format::PodcastChapters, [], false],
+            "SAMI"     => [Format::Sami, [], false],
+            "SBV"      => [Format::Sbv, [], false],
+            "SubRip"   => [Format::SubRip, [], true],
+            "TTML"     => [Format::Ttml, [], false],
+            "WebVTT"   => [Format::WebVtt, [], true],
+            "YouTube chapters" => [Format::YouTubeChapters, [], false],
         ];
     }
 
 
     #[DataProvider("formatters")]
-    public function testDefaultsKeepLfAndTheBomOfTheFormat(string $formatter, array $options, bool $writesBom): void
+    public function testDefaultsKeepLfAndTheBomOfTheFormat(Format $format, array $options, bool $writesBom): void
     {
-        $output = self::subtitle()->format($formatter, $options);
+        $output = self::subtitle()->toString($format, $options);
 
         $this->assertSame($writesBom, StringHelpers::hasUtf8Bom($output));
         $this->assertStringNotContainsString("\r", $output);
-        $this->assertSame($output, self::subtitle()->format($formatter, $options + [SubtitleFormatter::OPTION_LINE_ENDING => "\n"]));
+        $this->assertSame($output, self::subtitle()->toString($format, $options + [SubtitleFormatter::OPTION_LINE_ENDING => "\n"]));
     }
 
 
     #[DataProvider("formatters")]
-    public function testCrLfReplacesEveryLineEnding(string $formatter, array $options): void
+    public function testCrLfReplacesEveryLineEnding(Format $format, array $options): void
     {
-        $default = self::subtitle()->format($formatter, $options);
-        $output  = self::subtitle()->format($formatter, $options + [SubtitleFormatter::OPTION_LINE_ENDING => "\r\n"]);
+        $default = self::subtitle()->toString($format, $options);
+        $output  = self::subtitle()->toString($format, $options + [SubtitleFormatter::OPTION_LINE_ENDING => "\r\n"]);
 
         $this->assertSame(str_replace("\n", "\r\n", $default), $output);
         $this->assertSame(substr_count($default, "\n"), substr_count($output, "\r\n"));
@@ -53,20 +55,20 @@ class OutputOptionsTest extends TestCase
 
 
     #[DataProvider("formatters")]
-    public function testBomOptionAddsOrRemovesTheUtf8Bom(string $formatter, array $options): void
+    public function testBomOptionAddsOrRemovesTheUtf8Bom(Format $format, array $options): void
     {
-        $default = StringHelpers::removeUtf8Bom(self::subtitle()->format($formatter, $options));
+        $default = StringHelpers::removeUtf8Bom(self::subtitle()->toString($format, $options));
 
-        $this->assertSame("\xEF\xBB\xBF" . $default, self::subtitle()->format($formatter, $options + [SubtitleFormatter::OPTION_BOM => true]));
-        $this->assertSame($default, self::subtitle()->format($formatter, $options + [SubtitleFormatter::OPTION_BOM => false]));
+        $this->assertSame("\xEF\xBB\xBF" . $default, self::subtitle()->toString($format, $options + [SubtitleFormatter::OPTION_BOM => true]));
+        $this->assertSame($default, self::subtitle()->toString($format, $options + [SubtitleFormatter::OPTION_BOM => false]));
     }
 
 
     #[DataProvider("formatters")]
-    public function testBothOptionsWorkTogether(string $formatter, array $options): void
+    public function testBothOptionsWorkTogether(Format $format, array $options): void
     {
-        $default = StringHelpers::removeUtf8Bom(self::subtitle()->format($formatter, $options));
-        $output  = self::subtitle()->format($formatter, $options + [
+        $default = StringHelpers::removeUtf8Bom(self::subtitle()->toString($format, $options));
+        $output  = self::subtitle()->toString($format, $options + [
             SubtitleFormatter::OPTION_LINE_ENDING => "\r\n",
             SubtitleFormatter::OPTION_BOM         => true,
         ]);
@@ -76,9 +78,9 @@ class OutputOptionsTest extends TestCase
 
 
     #[DataProvider("formatters")]
-    public function testFormatterCalledDirectlyAppliesTheOptions(string $formatter, array $options): void
+    public function testFormatterCalledDirectlyAppliesTheOptions(Format $format, array $options): void
     {
-        $output = (new $formatter())->format(self::subtitle(), $options + [
+        $output = (new (FormatRegistry::formatterClass($format))())->format(self::subtitle(), $options + [
             SubtitleFormatter::OPTION_LINE_ENDING => "\r\n",
             SubtitleFormatter::OPTION_BOM         => false,
         ]);
@@ -93,7 +95,7 @@ class OutputOptionsTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        self::subtitle()->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_LINE_ENDING => "\r"]);
+        self::subtitle()->toString(Format::SubRip, [SubtitleFormatter::OPTION_LINE_ENDING => "\r"]);
     }
 
 
@@ -101,7 +103,7 @@ class OutputOptionsTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        self::subtitle()->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_BOM => "yes"]);
+        self::subtitle()->toString(Format::SubRip, [SubtitleFormatter::OPTION_BOM => "yes"]);
     }
 
 

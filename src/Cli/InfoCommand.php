@@ -3,6 +3,7 @@
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Container\Matroska\MatroskaTrack;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Subtitle;
@@ -66,7 +67,7 @@ class InfoCommand extends ReportCommand
     }
 
 
-    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         $statistics = SubtitleStatistics::of($subtitle);
 
@@ -81,7 +82,7 @@ class InfoCommand extends ReportCommand
         $imageCuesWithText = count(array_filter($imageCues, fn (SubtitleCue $cue): bool => $cue->getLines() !== []));
 
         $rows = [
-            "Format" => $format,
+            "Format" => $format->value,
             "Cues"   => (string)$statistics->getCueCount(),
         ];
         if ($this->parseWarnings !== []) {
@@ -115,7 +116,7 @@ class InfoCommand extends ReportCommand
         $data["mostUsedWords"] = (object)$data["mostUsedWords"];
         $this->emit($console, ($this->succeeded > 0 ? "\n" : "") . $text, [
             "file"       => self::label($input),
-            "format"     => $format,
+            "format"     => $format->value,
             "metadata"   => (object)$subtitle->getAllMetadata(),
             "statistics" => $data,
             "imageCues"  => ["count" => count($imageCues), "withText" => $imageCuesWithText],

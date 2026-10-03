@@ -5,7 +5,7 @@
 namespace SubtitleToolbox\Fixing;
 
 use GlyphOcr\GlyphDatabase;
-use SubtitleToolbox\Formatters\SubRipFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Ocr\TextBitmap;
 use SubtitleToolbox\Parsers\PgsFixtures;
@@ -78,7 +78,7 @@ function ocrWithErrors(Subtitle $subtitle): string
 {
     $engine = new GlyphOcrEngine(GlyphDatabase::latin(), ["lineContext" => false]);
 
-    return $subtitle->recognizeText($engine)->format(SubRipFormatter::class);
+    return $subtitle->recognizeText($engine)->toString(Format::SubRip);
 }
 
 

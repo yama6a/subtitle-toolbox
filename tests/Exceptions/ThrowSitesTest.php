@@ -13,6 +13,7 @@ use SubtitleToolbox\DualSubtitleOptions;
 use SubtitleToolbox\Encoding\Cea608;
 use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Fixing\OcrReplaceList;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Formatters\AssFormatter;
 use SubtitleToolbox\Formatters\CsvFormatter;
@@ -24,7 +25,6 @@ use SubtitleToolbox\Formatters\MpSubFormatter;
 use SubtitleToolbox\Formatters\PgsFormatter;
 use SubtitleToolbox\Formatters\PlainTextFormatter;
 use SubtitleToolbox\Formatters\SccFormatter;
-use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Formatters\SubViewerFormatter;
 use SubtitleToolbox\Formatters\TtmlFormatter;
@@ -269,57 +269,57 @@ class ThrowSitesTest extends TestCase
             "Fixing/CommonErrorOptions.php: dialogue dash"  => [fn () => new CommonErrorOptions(dialogueDash: "*"), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid regex"      => [fn () => new OcrReplaceList(regularExpressions: ["/(/" => ""]), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid XML"        => [fn () => OcrReplaceList::fromSubtitleEditXml("<ReplaceList>"), ...$parsing],
-            "Formatters/AssFormatter.php: karaoke tag"      => [fn () => self::subtitle()->format(AssFormatter::class,
+            "Formatters/AssFormatter.php: karaoke tag"      => [fn () => self::subtitle()->toString(Format::Ass,
                                                                 [AssFormatter::OPTION_KARAOKE_TAG => "K"]), ...$invalid],
-            "Formatters/CsvFormatter.php: time format"      => [fn () => self::subtitle()->format(CsvFormatter::class,
+            "Formatters/CsvFormatter.php: time format"      => [fn () => self::subtitle()->toString(Format::Csv,
                                                                 [CsvFormatter::OPTION_TIME_FORMAT => "mm:ss"]), ...$invalid],
-            "Formatters/CsvFormatter.php: frames without rate" => [fn () => self::subtitle()->format(CsvFormatter::class,
+            "Formatters/CsvFormatter.php: frames without rate" => [fn () => self::subtitle()->toString(Format::Csv,
                                                                 [CsvFormatter::OPTION_TIME_FORMAT => CsvParser::TIME_FRAMES]), ...$invalid],
-            "Formatters/CsvFormatter.php: second text"      => [fn () => self::subtitle()->format(CsvFormatter::class,
+            "Formatters/CsvFormatter.php: second text"      => [fn () => self::subtitle()->toString(Format::Csv,
                                                                 [CsvFormatter::OPTION_SECOND_TEXT => "text"]), ...$invalid],
-            "Formatters/EbuStlFormatter.php: frame rate 24" => [fn () => self::subtitle()->format(EbuStlFormatter::class,
+            "Formatters/EbuStlFormatter.php: frame rate 24" => [fn () => self::subtitle()->toString(Format::EbuStl,
                 [EbuStlFormatter::OPTION_FRAME_RATE => 24]), ...$invalid],
             "Formatters/EbuStlFormatter.php: code table 09" => [fn () => self::subtitle()->setFormatData(EbuStlParser::FORMAT_DATA_KEY,
-                ["gsi" => ["CCT" => "09"]])->format(EbuStlFormatter::class), ...$invalid],
+                ["gsi" => ["CCT" => "09"]])->toString(Format::EbuStl), ...$invalid],
             "Formatters/EbuStlFormatter.php: subtitle number 65536" => [fn () => self::subtitle()->setFormatData(EbuStlParser::FORMAT_DATA_KEY,
-                ["firstSubtitleNumber" => 65536])->format(EbuStlFormatter::class), ...$invalid],
+                ["firstSubtitleNumber" => 65536])->toString(Format::EbuStl), ...$invalid],
             "Formatters/EbuStlFormatter.php: text too long" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 30000)))
-                ->format(EbuStlFormatter::class), ...$invalid],
-            "Formatters/HtmlTranscriptFormatter.php: paragraph gap" => [fn () => self::subtitle()->format(HtmlTranscriptFormatter::class,
+                ->toString(Format::EbuStl), ...$invalid],
+            "Formatters/HtmlTranscriptFormatter.php: paragraph gap" => [fn () => self::subtitle()->toString(Format::HtmlTranscript,
                 [HtmlTranscriptFormatter::OPTION_PARAGRAPH_GAP => "2"]), ...$invalid],
-            "Formatters/IttFormatter.php: no frame rate"    => [fn () => self::subtitle()->format(IttFormatter::class), ...$invalid],
-            "Formatters/IttFormatter.php: unsupported frame rate" => [fn () => self::subtitle()->format(IttFormatter::class,
+            "Formatters/IttFormatter.php: no frame rate"    => [fn () => self::subtitle()->toString(Format::Itt), ...$invalid],
+            "Formatters/IttFormatter.php: unsupported frame rate" => [fn () => self::subtitle()->toString(Format::Itt,
                 [IttFormatter::OPTION_FRAME_RATE => 50]), ...$invalid],
-            "Formatters/MicroDvdFormatter.php: no frame rate" => [fn () => self::subtitle()->format(MicroDvdFormatter::class), ...$invalid],
-            "Formatters/MpSubFormatter.php: fractional frame rate" => [fn () => self::subtitle()->format(MpSubFormatter::class,
+            "Formatters/MicroDvdFormatter.php: no frame rate" => [fn () => self::subtitle()->toString(Format::MicroDvd), ...$invalid],
+            "Formatters/MpSubFormatter.php: fractional frame rate" => [fn () => self::subtitle()->toString(Format::MpSub,
                 [MpSubFormatter::OPTION_FRAME_RATE => 25.5]), ...$invalid],
-            "Formatters/PgsFormatter.php: text cue"         => [fn () => self::subtitle()->format(PgsFormatter::class), ...$invalid],
+            "Formatters/PgsFormatter.php: text cue"         => [fn () => self::subtitle()->toString(Format::Pgs), ...$invalid],
             "Formatters/PgsFormatter.php: negative x"       => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), -1, 0, 1, 1, 9, 9))
-                ->toCue(new SubtitleCue(1, 2)))->format(PgsFormatter::class), ...$invalid],
+                ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$invalid],
             "Formatters/PgsFormatter.php: PNG size"         => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), 0, 0, 2, 1, 9, 9))
-                ->toCue(new SubtitleCue(1, 2)))->format(PgsFormatter::class), ...$invalid],
+                ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$invalid],
             "Formatters/PgsFormatter.php: negative time"    => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), 0, 0, 1, 1, 9, 9))
-                ->toCue(new SubtitleCue(-1, 2)))->format(PgsFormatter::class), ...$invalid],
-            "Formatters/PlainTextFormatter.php: paragraph gap" => [fn () => self::subtitle()->format(PlainTextFormatter::class,
+                ->toCue(new SubtitleCue(-1, 2)))->toString(Format::Pgs), ...$invalid],
+            "Formatters/PlainTextFormatter.php: paragraph gap" => [fn () => self::subtitle()->toString(Format::PlainText,
                 [PlainTextFormatter::OPTION_PARAGRAPH_GAP => "2"]), ...$invalid],
-            "Formatters/SccFormatter.php: drop frame option" => [fn () => self::subtitle()->format(SccFormatter::class,
+            "Formatters/SccFormatter.php: drop frame option" => [fn () => self::subtitle()->toString(Format::Scc,
                 [SccFormatter::OPTION_DROP_FRAME => "yes"]), ...$invalid],
             "Formatters/SccFormatter.php: 5 lines"          => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, ["1", "2", "3", "4", "5"]))
-                ->format(SccFormatter::class), ...$invalid],
+                ->toString(Format::Scc), ...$invalid],
             "Formatters/SccFormatter.php: 33 characters"    => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 33)))
-                ->format(SccFormatter::class), ...$invalid],
+                ->toString(Format::Scc), ...$invalid],
             "Formatters/SccFormatter.php: no CEA-608 character" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, "\u{20AC}"))
-                ->format(SccFormatter::class), ...$invalid],
-            "Formatters/SubViewerFormatter.php: version 3"  => [fn () => self::subtitle()->format(SubViewerFormatter::class,
+                ->toString(Format::Scc), ...$invalid],
+            "Formatters/SubViewerFormatter.php: version 3"  => [fn () => self::subtitle()->toString(Format::SubViewer,
                 [SubViewerFormatter::OPTION_VERSION => 3]), ...$invalid],
-            "Formatters/SubtitleFormatter.php: line ending" => [fn () => self::subtitle()->format(SubRipFormatter::class,
+            "Formatters/SubtitleFormatter.php: line ending" => [fn () => self::subtitle()->toString(Format::SubRip,
                 [SubtitleFormatter::OPTION_LINE_ENDING => "\r"]), ...$invalid],
-            "Formatters/SubtitleFormatter.php: bom"         => [fn () => self::subtitle()->format(SubRipFormatter::class,
+            "Formatters/SubtitleFormatter.php: bom"         => [fn () => self::subtitle()->toString(Format::SubRip,
                 [SubtitleFormatter::OPTION_BOM => "yes"]), ...$invalid],
-            "Formatters/SubtitleFormatter.php: unknown option" => [fn () => self::subtitle()->format(SubRipFormatter::class,
+            "Formatters/SubtitleFormatter.php: unknown option" => [fn () => self::subtitle()->toString(Format::SubRip,
                 ["lineEndings" => "\r\n"]), ...$invalid],
             "Formatters/TtmlFormatter.php: stored head"     => [fn () => self::subtitle()->setFormatData(TtmlParser::FORMAT, ["head" => "<p/>"])
-                ->format(TtmlFormatter::class), InvalidFormatterException::class, InvalidFormatterException::class],
+                ->toString(Format::Ttml), InvalidFormatterException::class, InvalidFormatterException::class],
             "FrameRate.php: frame rate 0"                   => [fn () => new FrameRate(0), ...$invalid],
             "HearingImpairedOptions.php: empty bracket"     => [fn () => new HearingImpairedOptions(customBrackets: [["{", ""]]), ...$invalid],
             "Hls/HlsSegmentOptions.php: segment duration 0" => [fn () => new HlsSegmentOptions(segmentDuration: 0), ...$invalid],
@@ -569,15 +569,17 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Streaming/WebVttStreamReader.php: unknown block" => [fn () => iterator_to_array((new WebVttStreamReader())->read(
                 self::stream("WEBVTT\n\ntext\nmore"))), ...$parsing],
-            "StringHelpers.php: unknown encoding"           => [fn () => Subtitle::parse("text", SubRipParser::class, "NO-SUCH-ENCODING"),
+            "StringHelpers.php: unknown encoding"           => [fn () => Subtitle::fromString("text", Format::SubRip, "NO-SUCH-ENCODING"),
                                                                 ...$parsing],
-            "Subtitle.php: unknown format"                  => [fn () => Subtitle::parse("text"),
+            "Subtitle.php: unknown format"                  => [fn () => Subtitle::fromStringAutoDetectFormat("text"),
                                                                 InvalidParserException::class, InvalidParserException::class],
-            "Subtitle.php: parser of the wrong type"        => [fn () => Subtitle::parse("text", \stdClass::class),
+            "Subtitle.php: format without a parser"         => [fn () => Subtitle::fromString("text", Format::PlainText),
                                                                 InvalidParserException::class, InvalidParserException::class],
-            "Subtitle.php: formatter of the wrong type"     => [fn () => self::subtitle()->format(\stdClass::class),
+            "Subtitle.php: VobSub without its index"        => [fn () => Subtitle::fromString("text", Format::VobSub),
+                                                                InvalidParserException::class, InvalidParserException::class],
+            "Subtitle.php: format without a formatter"      => [fn () => self::subtitle()->toString(Format::Whisper),
                                                                 InvalidFormatterException::class, InvalidFormatterException::class],
-            "Subtitle.php: image cue without text"          => [fn () => (new Subtitle())->addCue($imageCue)->format(SubRipFormatter::class),
+            "Subtitle.php: image cue without text"          => [fn () => (new Subtitle())->addCue($imageCue)->toString(Format::SubRip),
                                                                 ImageCueWithoutTextException::class, ImageCueWithoutTextException::class],
             "Subtitle.php: remove a missing cue"            => [fn () => self::subtitle()->removeCue(9),
                                                                 \RuntimeException::class, CueNotFoundException::class],

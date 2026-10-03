@@ -4,6 +4,7 @@ namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Matroska\MatroskaTrack;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatDetector;
 use SubtitleToolbox\FormatRegistry;
 use SubtitleToolbox\ParseWarning;
@@ -23,14 +24,14 @@ abstract class FileCommand extends Command
     private const EBML_MAGIC = "\x1A\x45\xDF\xA3";
 
     private const MATROSKA_FORMATS = [
-        MatroskaReader::CODEC_SUBRIP => "srt",
-        MatroskaReader::CODEC_ASS    => "ass",
-        MatroskaReader::CODEC_SSA    => "ass",
-        MatroskaReader::CODEC_WEBVTT => "vtt",
-        MatroskaReader::CODEC_PGS    => "pgs",
+        MatroskaReader::CODEC_SUBRIP => Format::SubRip,
+        MatroskaReader::CODEC_ASS    => Format::Ass,
+        MatroskaReader::CODEC_SSA    => Format::Ass,
+        MatroskaReader::CODEC_WEBVTT => Format::WebVtt,
+        MatroskaReader::CODEC_PGS    => Format::Pgs,
     ];
 
-    protected ?string $fromFormat = null;
+    protected ?Format $fromFormat = null;
 
     protected ?float $fps = null;
 
@@ -54,7 +55,7 @@ abstract class FileCommand extends Command
     abstract protected function commandOptions(): array;
 
 
-    abstract protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void;
+    abstract protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void;
 
 
     public function options(): array
@@ -208,14 +209,22 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Returns the format name for a name or an extension that the library can read.
+     * Returns the format for a format name or a file extension such as "SRT" or ".ssa".
      */
-    public static function readableFormat(string $nameOrExtension): string
+    public static function findFormat(string $nameOrExtension): Format
     {
-        $format = FormatRegistry::find($nameOrExtension)
+        $key = strtolower(ltrim($nameOrExtension, "."));
+
+        return Format::tryFrom($key) ?? Format::fromPath("file.$key")
             ?? self::fail("Unknown format \"$nameOrExtension\". Run \"" . Application::NAME . " formats\" for the list.");
-        if (FormatRegistry::parserClass($format) === null) {
-            self::fail("The format $format can be written but not read.");
+    }
+
+
+    public static function readableFormat(string $nameOrExtension): Format
+    {
+        $format = self::findFormat($nameOrExtension);
+        if (!$format->canRead()) {
+            self::fail("The format $format->value can be written but not read.");
         }
 
         return $format;
@@ -261,8 +270,8 @@ abstract class FileCommand extends Command
         $files     = [];
         foreach (scandir($directory) ?: [] as $name) {
             $path   = "$directory/$name";
-            $format = FormatRegistry::forPath($name);
-            if (!is_file($path) || $format === null || FormatRegistry::parserClass($format) === null) {
+            $format = Format::fromPath($name);
+            if (!is_file($path) || $format === null || !$format->canRead()) {
                 continue;
             }
             // The .sub file of a VobSub pair is not MicroDVD. The parser reads it through its .idx file.
@@ -280,7 +289,7 @@ abstract class FileCommand extends Command
     /**
      * Returns the subtitle and its format, or null when listTracks() handled an MKV or WebM input.
      *
-     * @return array{Subtitle, string}|null
+     * @return array{Subtitle, Format}|null
      */
     protected function read(string $input, Arguments $arguments, Console $console): ?array
     {
@@ -305,12 +314,12 @@ abstract class FileCommand extends Command
         $content = StringHelpers::convertToUtf8($raw, $arguments->value("encoding"));
         $format  = $this->inputFormat($input, $content);
 
-        if ($format === "vobsub" && $input === self::DASH) {
+        if ($format === Format::VobSub && $input === self::DASH) {
             self::fail("VobSub needs the path of the .idx file. Standard input does not work.");
         }
 
         $parser = $this->createParser($format, $content)->setLenient($arguments->has("lenient"));
-        if ($format === "vobsub") {
+        if ($format === Format::VobSub) {
             $subtitle = $parser->parse($this->readFile(substr($input, 0, -strlen(pathinfo($input, PATHINFO_EXTENSION))) . "sub", $console));
         } else {
             $subtitle = $parser->parse($content);
@@ -369,7 +378,7 @@ abstract class FileCommand extends Command
 
 
     /**
-     * @return array{Subtitle, string}|null
+     * @return array{Subtitle, Format}|null
      */
     private function readMatroska(MatroskaReader $reader, string $input, Arguments $arguments, Console $console): ?array
     {
@@ -424,25 +433,24 @@ abstract class FileCommand extends Command
     }
 
 
-    private function inputFormat(string $input, string $content): string
+    private function inputFormat(string $input, string $content): Format
     {
         if ($this->fromFormat !== null) {
             return $this->fromFormat;
         }
 
-        $byExtension     = $input === self::DASH ? null : FormatRegistry::forPath($input);
-        $extensionParser = $byExtension === null ? null : FormatRegistry::parserClass($byExtension);
-        $detectedParser  = FormatDetector::detect($content);
+        $byExtension = $input === self::DASH ? null : Format::fromPath($input);
+        $detected    = FormatDetector::detect($content);
 
-        if ($detectedParser !== null) {
-            // Detection returns TtmlParser for an iTT file. IttParser reads the same cues and keeps the iTT timing.
-            if ($extensionParser !== null && is_subclass_of($extensionParser, $detectedParser)) {
+        if ($detected !== null) {
+            // Detection returns TTML for an iTT file. IttParser reads the same cues and keeps the iTT timing.
+            if ($detected === Format::Ttml && $byExtension === Format::Itt) {
                 return $byExtension;
             }
 
-            return FormatRegistry::forParser($detectedParser) ?? self::fail("No format has the parser $detectedParser.");
+            return $detected;
         }
-        if ($extensionParser !== null) {
+        if ($byExtension?->canRead()) {
             return $byExtension;
         }
 
@@ -450,7 +458,7 @@ abstract class FileCommand extends Command
     }
 
 
-    private function createParser(string $format, string $content): SubtitleParser
+    private function createParser(Format $format, string $content): SubtitleParser
     {
         $class = FormatRegistry::parserClass($format);
 

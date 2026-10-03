@@ -5,7 +5,7 @@ namespace SubtitleToolbox\Sync;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -39,7 +39,7 @@ class SpeechReferenceTest extends TestCase
 
     public function testSyncToSpeechFindsOffsetAndScale(): void
     {
-        $target = Subtitle::parse(file_get_contents(__DIR__ . "/../files/sync/own_target_de_25fps.srt"), SubRipParser::class);
+        $target = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sync/own_target_de_25fps.srt"), Format::SubRip);
         $speech = SpeechReference::fromFfmpegSilencedetect($this->loadLog(), 840);
 
         $result = ReferenceSync::sync($target, $speech);

@@ -6,6 +6,7 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Fixing\CommonErrorFixer;
 use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Fixing\OcrReplaceList;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\ResegmentOptions;
 use SubtitleToolbox\Subtitle;
@@ -102,7 +103,7 @@ class FixCommand extends WriteCommand
     }
 
 
-    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         if ($this->commonErrors !== null) {
             foreach (CommonErrorFixer::fix($subtitle, $this->commonErrors) as $fix) {
