@@ -78,12 +78,17 @@ abstract class Command
 
     /**
      * Returns the call of $command with $arguments, where each option of $renames gets its new name.
+     * The words of $added go before the first option.
      *
      * @param list<string>          $arguments
      * @param array<string, string> $renames   old long name => new long name
+     * @param list<string>          $added
      */
-    protected static function replacementCall(string $command, array $arguments, array $renames): string
+    protected static function replacementCall(string $command, array $arguments, array $renames, array $added = []): string
     {
+        $firstOption = array_key_first(array_filter($arguments, fn (string $argument): bool => $argument !== "-" && str_starts_with($argument, "-")));
+        array_splice($arguments, $firstOption ?? count($arguments), 0, $added);
+
         $words = [Application::NAME, $command];
         foreach ($arguments as $index => $argument) {
             if ($argument === "--") {

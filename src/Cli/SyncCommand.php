@@ -160,11 +160,6 @@ class SyncCommand extends WriteCommand
     }
 
 
-    protected function transform(Subtitle $subtitle, Arguments $arguments): void
-    {
-    }
-
-
     private static function number(float $value, int $decimals): string
     {
         return rtrim(rtrim(number_format($value, $decimals, ".", ""), "0"), ".");

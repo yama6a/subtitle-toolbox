@@ -113,9 +113,4 @@ class DualCommand extends WriteCommand
 
         parent::process($input, DualSubtitle::merge($subtitle, $secondary, $this->dualOptions), $format, $arguments, $console);
     }
-
-
-    protected function transform(Subtitle $subtitle, Arguments $arguments): void
-    {
-    }
 }

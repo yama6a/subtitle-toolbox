@@ -4,16 +4,14 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\Timing\ShotChangeOptions;
-use SubtitleToolbox\Timing\ShotChanges;
-use SubtitleToolbox\Timing\ShotChangeTiming;
-
-class SnapCommand extends WriteCommand
+class SnapCommand extends RemovedCommand
 {
-    private ?ShotChangeOptions $timing = null;
+    private const RENAMES = [
+        "shot-changes"        => "snap-shot-changes",
+        "min-gap-frames"      => "snap-min-gap-frames",
+        "min-duration-frames" => "snap-min-duration-frames",
+        "no-chain"            => "snap-no-chain",
+    ];
 
 
     public function name(): string
@@ -24,7 +22,7 @@ class SnapCommand extends WriteCommand
 
     public function summary(): string
     {
-        return "Times cues to shot changes and closes small gaps, as the Netflix timing rules require.";
+        return "Removed. Use convert --snap-shot-changes FILE --video-fps RATE.";
     }
 
 
@@ -36,90 +34,17 @@ class SnapCommand extends WriteCommand
 
     protected function details(): string
     {
-        return "A start up to --snap-window frames after a shot change moves to it. An end up to --snap-window frames\n" .
-               "before a shot change ends --min-gap-frames before it. A gap shorter than --snap-window frames closes to\n" .
-               "--min-gap-frames, unless a shot change is in it. All times land on frames. Without --shot-changes, snap\n" .
-               "only closes small gaps. Without --output, --output-dir or --in-place, the result of one input file goes\n" .
-               "to standard output.";
+        return "snap exits with code 2 and prints the matching convert call. --shot-changes becomes --snap-shot-changes,\n" .
+               "and each frame option gets the prefix snap-, for example --min-gap-frames becomes --snap-min-gap-frames.\n" .
+               "--snap-window and --video-fps stay. A call without --shot-changes, --snap-window, the frame options and\n" .
+               "--no-chain gets --snap-min-gap-frames 2, the default, so convert still closes small gaps.";
     }
 
 
-    protected function fpsDescription(): string
+    protected function replacement(array $arguments): string
     {
-        return "Sets --input-fps, --output-fps and --video-fps. Each of them overrides it.";
-    }
+        $snaps = preg_grep('/^--(' . implode("|", array_keys(self::RENAMES)) . '|snap-window)(=|$)/', $arguments);
 
-
-    protected function commandOptions(): array
-    {
-        return [
-            Option::value("video-fps", "RATE", "Frame rate of the video, for the frames of the shot changes and of the other options. Required."),
-            Option::value("shot-changes", "FILE", "Shot change times, one per line in seconds or hh:mm:ss.mmm, or the log of the FFmpeg showinfo filter."),
-            Option::value("snap-window", "FRAMES", "Largest move to a shot change, and largest gap that closes. Default: half a second."),
-            Option::value("min-gap-frames", "FRAMES", "Gap between a cue and the next cue or shot change. Default: 2."),
-            Option::value("min-duration-frames", "FRAMES", "No move makes a cue shorter than this. Default: 20."),
-            Option::flag("no-chain", "Keep small gaps between cues."),
-        ];
-    }
-
-
-    protected function prepare(Arguments $arguments): void
-    {
-        parent::prepare($arguments);
-
-        $videoFps = self::rate($arguments, "video-fps") ?? self::fail("Pass --video-fps RATE.");
-        $path = $arguments->value("shot-changes");
-        if ($path === null && $arguments->has("no-chain")) {
-            self::fail("Pass --shot-changes FILE. With --no-chain and no shot changes, snap changes nothing.");
-        }
-
-        $shotChanges = $path === null ? [] : self::loadShotChanges($path);
-        try {
-            $this->timing = new ShotChangeOptions(
-                frameRate: $videoFps,
-                shotChanges: $shotChanges,
-                snapWindow: self::frames($arguments, "snap-window"),
-                minGapFrames: self::frames($arguments, "min-gap-frames") ?? 2,
-                chain: !$arguments->has("no-chain"),
-                minDuration: self::frames($arguments, "min-duration-frames") ?? 20,
-            );
-        } catch (InvalidArgumentException $exception) {
-            self::fail($exception->getMessage());
-        }
-    }
-
-
-    protected function transform(Subtitle $subtitle, Arguments $arguments): void
-    {
-        ShotChangeTiming::apply($subtitle, $this->timing);
-    }
-
-
-    private static function frames(Arguments $arguments, string $name): ?int
-    {
-        $value = $arguments->value($name);
-        if ($value !== null && !ctype_digit($value)) {
-            self::fail("The option --$name needs a whole number of frames, got \"$value\".");
-        }
-
-        return $value === null ? null : (int)$value;
-    }
-
-
-    /**
-     * @return list<float>
-     */
-    private static function loadShotChanges(string $path): array
-    {
-        $content = is_file($path) ? @file_get_contents($path) : false;
-        if ($content === false) {
-            self::fail("Cannot read the shot change file $path.");
-        }
-
-        try {
-            return str_contains($content, "pts_time:") ? ShotChanges::fromFfmpegLog($content) : ShotChanges::fromText($content);
-        } catch (ParsingException $exception) {
-            return self::fail("$path: " . $exception->getMessage());
-        }
+        return self::replacementCall("convert", $arguments, self::RENAMES, $snaps === [] ? ["--snap-min-gap-frames", "2"] : []);
     }
 }

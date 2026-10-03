@@ -31,9 +31,6 @@ abstract class WriteCommand extends FileCommand
     private WriteOptions $writeOptions;
 
 
-    abstract protected function transform(Subtitle $subtitle, Arguments $arguments): void;
-
-
     public function options(): array
     {
         return [...$this->commandOptions(), ...$this->outputOptions(), ...$this->inputOptions()];
@@ -43,6 +40,15 @@ abstract class WriteCommand extends FileCommand
     protected function allowsInPlace(): bool
     {
         return true;
+    }
+
+
+    /**
+     * Returns the subtitle to write, changed in place or new.
+     */
+    protected function transform(Subtitle $subtitle, Arguments $arguments, Console $console, string $input): Subtitle
+    {
+        return $subtitle;
     }
 
 
@@ -156,7 +162,7 @@ abstract class WriteCommand extends FileCommand
 
     protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
-        $this->transform($subtitle, $arguments);
+        $subtitle = $this->transform($subtitle, $arguments, $console, $input);
 
         $outputFormat = $this->outputFormat($format);
         $target       = $this->target($input, $format, $outputFormat, $arguments);

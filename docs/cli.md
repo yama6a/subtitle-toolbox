@@ -8,7 +8,7 @@ vendor/bin/subtitle-toolbox convert season1/ --to vtt --output-dir out/ --keep-g
 vendor/bin/subtitle-toolbox convert movie.sub movie.srt --fps 23.976
 vendor/bin/subtitle-toolbox retime movie.srt --shift -2.5 --output movie.fixed.srt
 vendor/bin/subtitle-toolbox retime *.srt --from-fps 25 --to-fps 23.976 --in-place
-vendor/bin/subtitle-toolbox fix movie.srt --overlaps --min-gap 0.083 --wrap 42 --output movie.fixed.srt
+vendor/bin/subtitle-toolbox convert movie.srt movie.fixed.srt --fix-overlaps --fix-min-gap 0.083 --fix-wrap 42
 vendor/bin/subtitle-toolbox validate movie.srt --preset netflix-en --json
 curl -s https://example.com/movie.srt | vendor/bin/subtitle-toolbox convert - --to vtt > movie.vtt
 ```
@@ -36,20 +36,17 @@ php subtitle-toolbox.phar --version
 ## Commands
 | Command | Does |
 |:--- |:--- |
-| `convert` | writes each input in the format of `--to` or of the output file extension |
+| `convert` | writes each input in the format of `--to` or of the output file extension, and runs OCR, text, structure and timing edits on the way, see [Convert](#convert) |
 | `retime` | shifts and scales all cue times, or fits them to a video with another frame rate, see [Retime](#retime) |
-| `fix` | fixes text errors, overlapping cues, short cues and long lines, see [Fix](#fix) |
-| `strip-sdh` | removes hearing-impaired annotations, as [`HearingImpairedRemover::apply()`](text.md#hearing-impaired-annotations) does |
 | `info` | prints the format, the cue count and statistics, as text or with `--json`. Lists the tracks of an MKV or WebM file |
 | `validate` | prints each broken rule, as text or with `--json`, see [Validate](#validate) |
 | `sync` | retimes a subtitle to a reference subtitle or to the speech, see [Sync](#sync) |
 | `diff` | lists the added, removed and changed cues of two files, see [Diff](#diff) |
 | `dual` | merges two languages into one file, see [Dual](#dual) |
-| `snap` | times cues to shot changes and closes small gaps, see [Snap](#snap) |
 | `hls` | cuts a subtitle into WebVTT segments and writes an HLS playlist, see [HLS](#hls) |
 | `formats` | lists the format names and extensions for `--from` and `--to` |
 
-- **Old commands**: `shift` and `scale` still run and print a deprecation warning, see [Retime](#retime). `fps` and `sync-fps` exit with code 2 and print the matching `retime` call.
+- **Old commands**: `shift` and `scale` still run and print a deprecation warning, see [Retime](#retime). `fps` and `sync-fps` exit with code 2 and print the matching `retime` call. `fix`, `strip-sdh` and `snap` exit with code 2 and print the matching `convert` call, see [Removed commands](#removed-commands).
 - **Help**: `subtitle-toolbox help convert` or `subtitle-toolbox convert --help` lists all options of a command.
 - **Version**: `subtitle-toolbox --version` prints the installed release, for example `1.65.0`, or `dev` in a Git checkout.
 - **Exit code**: 0 when all files succeed, 1 when a file fails, breaks a validation rule or differs in `diff`, 2 for invalid arguments.
@@ -64,7 +61,7 @@ php subtitle-toolbox.phar --version
 - **Output bytes**: `--line-ending lf|crlf`, `--bom` and `--no-bom`.
 - **Broken files**: `--lenient` skips or repairs broken cues and prints a warning for each, see [lenient-parsing.md](lenient-parsing.md).
 - **Frame rate**: see [Frame rates](#frame-rates).
-- **Word timestamps**: `--word-timestamps` keeps the word times of the speech-to-text JSON formats, YouTube timed text and Podcasting 2.0 transcripts. `fix --resegment`, `convert --karaoke` and `convert --karaoke-tag` turn it on.
+- **Word timestamps**: `--word-timestamps` keeps the word times of the speech-to-text JSON formats, YouTube timed text and Podcasting 2.0 transcripts. `--fix-resegment`, `--karaoke` and `--ass-karaoke-tag` turn it on.
 - **MKV and WebM**: `--track` picks a subtitle track, see [MKV and WebM](#mkv-and-webm).
 - **Image cues**: `--skip-image-cues` leaves out image cues without text in place of failing.
 
@@ -73,7 +70,7 @@ php subtitle-toolbox.phar --version
 |:--- |:--- |:--- |
 | `--input-fps RATE` | the frame rate of a MicroDVD input without a `{1}{1}<fps>` first line, as `ReadOptions::$fps` | all that read a file |
 | `--output-fps RATE` | the frame rate of MicroDVD and iTT output, as `MicroDvdOptions::$frameRate` and `IttOptions::$frameRate` | all that write a file |
-| `--video-fps RATE` | the frame rate of the video for the frame rules, see [Snap](#snap) and [Validate](#validate) | `snap`, `validate` |
+| `--video-fps RATE` | the frame rate of the video for the frame rules, see [Timing](#timing) and [Validate](#validate) | `convert`, `validate` |
 | `--fps RATE` | each of the 3 options above that the command has | all that read a file |
 
 - **Override**: a specific option wins over `--fps`. `convert movie.sub movie.srt --fps 25 --output-fps 23.976` reads at 25 fps and writes at 23.976 fps.
@@ -139,76 +136,132 @@ vendor/bin/subtitle-toolbox retime movie.sub --from-fps 25 --to-fps 23.976 --inp
 The deprecated commands print `shift is deprecated. Use: subtitle-toolbox retime movie.srt --shift 2` on standard error, then run. `fps FILE --from A --to B` fails with exit code 2 and prints `fps was removed. Use: subtitle-toolbox retime FILE --from-fps A --to-fps B`.
 
 ## Convert
+`convert` reads each input, runs the edits of its options, and writes the result in the format of `--to` or of the output file extension. One call can run OCR, fix text, strip SDH, retime and convert:
+
+```sh
+vendor/bin/subtitle-toolbox convert movie.sup movie.srt --ocr --fix-common-errors --sdh --shift -1.5
+vendor/bin/subtitle-toolbox convert lecture.json lecture.srt --fix-resegment --fix-min-duration 1
+vendor/bin/subtitle-toolbox convert song.json song.ass --ass-karaoke-tag kf
+```
+
+### Order
+`convert` always runs the edits in this order, whatever the order of the options:
+
+| Step | Options | Why here |
+|:--- |:--- |:--- |
+| 1. Read | input options | |
+| 2. OCR | `--ocr` | the later steps need text |
+| 3. Forced | `--forced-only` | |
+| 4. Text | `--fix-common-errors`, `--sdh`, `--replace`, `--strip-tags`, `--case`, `--speakers`, `--mask-words` | SDH changes the line lengths, so it runs before wrapping |
+| 5. Structure | `--fix-resegment`, `--fix-unwrap`, `--fix-merge-short`, `--fix-split-long`, `--fix-wrap`, `--fix-merge-duplicates` | |
+| 6. Timing | `--shift`, `--scale`, `--from-fps` and `--to-fps`, `--snap-shot-changes`, `--fix-overlaps`, `--fix-min-duration` | splits in step 5 create new cues |
+| 7. Karaoke | `--karaoke` | it multiplies the cues |
+| 8. Write | output options | |
+
+### OCR and forced cues
 | Option | Effect |
 |:--- |:--- |
-| `--strip-tags` | removes all formatting tags, such as `<i>` and `<font>` |
-| `--speakers MODE` | `prefix`, `dashes`, `colours` or `from-prefix`. Calls `SpeakerLabels::apply()` with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colours`, or with `from: SpeakerStyle::Prefix`, and the other options at their defaults, see [Speakers](text.md#speakers) |
+| `--ocr` | reads the text of image cues, see [OCR](#ocr) |
+| `--ocr-engine ENGINE` | `tesseract` or `glyph`. Default: `tesseract` when it is installed |
+| `--ocr-language CODE` | the Tesseract language, for example `deu` or `deu+eng`. Default: `eng` |
+| `--ocr-database FILE` | the `.nocr` glyph database for `--ocr`. It selects the glyph engine |
+| `--forced-only` | keeps only the [forced cues](subtitle.md#forced-cues) |
+
+### Text
+| Option | Effect |
+|:--- |:--- |
+| `--fix-common-errors` | [`CommonErrorFixer::apply()`](text.md#fixing-common-errors) with all default fixes |
+| `--fix-replace-list FILE` | adds a Subtitle Edit OCR replace list to `--fix-common-errors` |
+| `--fix-list` | prints each change of `--fix-common-errors` to standard error, for example `movie.srt: cue 15: ocrLowercaseL: "lt's late." -> "It's late."` |
+| `--sdh` | removes everything that [`HearingImpairedRemover::apply()`](text.md#hearing-impaired-annotations) removes by default. A cue with no text left goes |
+| `--sdh-keep-square-brackets`, `--sdh-keep-parentheses`, `--sdh-keep-speaker-labels`, `--sdh-keep-music-lines` | turns off one rule of `--sdh` |
+| `--sdh-any-case-labels` | also removes speaker labels that are not upper case, such as `Baker:` |
+| `--sdh-lyrics` | also removes text between two music symbols |
+| `--sdh-brackets PAIR` | also removes text between this pair, for example `"{}"` or `"**"`. Repeatable |
 | `--replace FROM=TO` | [`replaceText()`](text.md#transforms) on the text between tags. Repeatable. The first `=` ends FROM |
-| `--regex` | reads each FROM as a regular expression with delimiters, for example `--replace '/\.{4,}/=...'` |
-| `--ignore-case` | matches FROM in any case |
+| `--replace-regex` | reads each FROM as a regular expression with delimiters, for example `--replace '/\.{4,}/=...'` |
+| `--replace-ignore-case` | matches FROM in any case |
+| `--strip-tags` | removes all formatting tags, such as `<i>` and `<font>` |
 | `--case MODE` | `upper`, `lower` or `sentence`, with `changeCase()` |
-| `--case-language CODE` | `tr` or `az` for the Turkish rules of `i` and `ı` |
+| `--speakers MODE` | `prefix`, `dashes`, `colours` or `from-prefix`. Calls `SpeakerLabels::apply()` with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colours`, or with `from: SpeakerStyle::Prefix`, and the other options at their defaults, see [Speakers](text.md#speakers) |
+| `--language CODE` | the language of `--case` and `--fix-common-errors`, for example `en`, `de-AT` or `tr`. `tr` and `az` map `i` to `İ` and `ı` to `I`. Without it, `--fix-common-errors` takes the `language` metadata |
+
+### Masking
+| Option | Effect |
+|:--- |:--- |
 | `--mask-words FILE` | masks the words of a word file, as [`ProfanityFilter::apply()`](text.md#profanity-filter) does |
 | `--mask STYLE` | `stars` (default), `first-letter`, `remove`, or `none`. `none` keeps the text and only finds the times for `--mute-edl` and `--mute-filter` |
 | `--mute-edl FILE` | writes the times of the matches to an EDL file with [`MuteRange::toEdl()`](text.md#profanity-filter), for Kodi and MPlayer |
 | `--mute-filter FILE` | writes the FFmpeg volume filter of `MuteRange::toFfmpegVolumeFilter()` |
 | `--mute-padding SECONDS` | widens each time range on both sides, default 0 |
-| `--karaoke` | writes one cue per word with the active word styled, with [`WordHighlight::apply()`](text.md#word-highlight-and-karaoke) |
-| `--karaoke-style TAG` | `b`, `i`, `u` (default), `s` or `'font color="#ffff00"'` |
-| `--karaoke-mode MODE` | `word` (default) styles the active word, `cumulative` all words up to it |
-| `--karaoke-words N` | shows only N words around the active word |
-| `--karaoke-tag TAG` | `k` (default), `kf` or `ko`, the ASS tag for word timestamps, see [formats.md](formats.md#ass-and-ssa). Needs ASS output |
-| `--forced-only` | keeps only the [forced cues](subtitle.md#forced-cues) |
-| `--ocr` | reads the text of image cues, see [OCR](#ocr) |
-| `--ocr-engine ENGINE` | `tesseract` or `glyph`. Default: `tesseract` when it is installed |
-| `--ocr-language CODE` | the Tesseract language, for example `deu` or `deu+eng`. Default: `eng` |
-| `--ocr-database FILE` | the `.nocr` glyph database for `--ocr`. It selects the glyph engine |
 
 ```sh
-vendor/bin/subtitle-toolbox convert song.json song.srt --karaoke --karaoke-words 5
-vendor/bin/subtitle-toolbox convert song.json song.ass --karaoke-tag kf
 vendor/bin/subtitle-toolbox convert movie.srt clean.srt --mask-words words.txt --mute-filter mute.txt --mute-padding 0.1
 ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 ```
 
-- **Order**: `convert` keeps the forced cues and runs OCR first. Then it runs `--speakers`, `--replace`, `--case`, `--mask-words`, `--strip-tags` and `--karaoke`.
 - **Mute files**: they need `--mask-words` and one input file. Without `--force`, the tool does not overwrite them.
 - **No match**: the filter file is empty. Then leave out `-af`.
 
-## Fix
-Pass at least one fix. The fixes run in this order: `--common-errors`, `--resegment`, `--unwrap`, `--merge-short`, `--split-long`, `--wrap`, `--merge-duplicates`, `--overlaps`, `--min-duration`.
+### Structure
+[editing.md](editing.md) describes each method.
 
 | Option | Calls |
 |:--- |:--- |
-| `--common-errors` | [`CommonErrorFixer::apply()`](text.md#fixing-common-errors) with all default fixes. `--language` sets the language rules, default the `language` metadata. `--replace-list FILE` adds a Subtitle Edit OCR replace list. `--list-fixes` prints each change to standard error |
-| `--resegment` | `Resegmenter::apply()` with `ResegmentMode::ByWords`. `--max-cpl`, `--max-lines` and `--max-word-gap` set `maxCharactersPerLine`, `maxLines` and `maxWordGap`, default 0.6 s |
-| `--overlaps` | `fixOverlaps()` with `--min-gap` seconds, default 0 |
-| `--min-duration SECONDS` | `extendShortCues()` with `--min-gap` |
-| `--wrap CHARS` | `wrapLines()` with `--max-lines`, default 2 |
-| `--unwrap` | `unwrapLines()` |
-| `--merge-duplicates` | `removeDuplicateCues()` |
-| `--merge-short` | `mergeShortCues()` with the default options. `--max-cpl` and `--max-lines` set `maxCharactersPerLine` and `maxLines` |
-| `--split-long` | `Resegmenter::apply()` with `ResegmentMode::SplitLong` and the default options. `--max-cpl` and `--max-lines` set `maxCharactersPerLine` and `maxLines` |
+| `--fix-resegment` | `Resegmenter::apply()` with `ResegmentMode::ByWords`. `--fix-max-word-gap` sets `maxWordGap`, default 0.6 s. It turns on `--word-timestamps` |
+| `--fix-unwrap` | `unwrapLines()` |
+| `--fix-merge-short` | `mergeShortCues()` with the default options |
+| `--fix-split-long` | `Resegmenter::apply()` with `ResegmentMode::SplitLong` and the default options |
+| `--fix-wrap CHARS` | `wrapLines()` |
+| `--fix-merge-duplicates` | `removeDuplicateCues()` |
+| `--fix-max-cpl CHARS` | `maxCharactersPerLine` of `--fix-resegment`, `--fix-merge-short` and `--fix-split-long`, default 42 |
+| `--fix-max-lines LINES` | `maxLines` of `--fix-resegment`, `--fix-merge-short`, `--fix-split-long` and `--fix-wrap`, default 2 |
 
-[editing.md](editing.md) describes each method.
+### Timing
+`--shift`, `--shift-after`, `--scale`, `--from-fps` and `--to-fps` work as in [Retime](#retime).
+
+| Option | Calls |
+|:--- |:--- |
+| `--snap-shot-changes FILE` | [`ShotChangeTiming::apply()`](editing.md#shot-changes-and-gaps) with the shot changes of the file: the log of the FFmpeg `showinfo` filter, or one time per line in seconds or `hh:mm:ss.mmm` |
+| `--video-fps RATE` | `frameRate`, the frame rate of the shot changes and of the frame options. Required with the `--snap-` options |
+| `--snap-window FRAMES` | `snapWindow`, default half a second |
+| `--snap-min-gap-frames FRAMES` | `minGapFrames`, default 2 |
+| `--snap-min-duration-frames FRAMES` | `minDuration`, default 20 |
+| `--snap-no-chain` | `chain: false` |
+| `--fix-overlaps` | `fixOverlaps()` with `--fix-min-gap` seconds, default 0 |
+| `--fix-min-duration SECONDS` | `extendShortCues()` with `--fix-min-gap` |
 
 ```sh
-vendor/bin/subtitle-toolbox convert movie.sup movie.ocr.srt --ocr
-vendor/bin/subtitle-toolbox fix movie.ocr.srt --common-errors --language en --list-fixes -o movie.srt
-vendor/bin/subtitle-toolbox fix lecture.json --resegment -o lecture.srt
+ffmpeg -i movie.mp4 -vf "select='gt(scene,0.3)',showinfo" -f null - 2> scenes.log
+vendor/bin/subtitle-toolbox convert movie.srt movie.timed.srt --video-fps 24 --snap-shot-changes scenes.log
 ```
 
-`--list-fixes` prints one line per change, for example `movie.ocr.srt: cue 15: ocrLowercaseL: "lt's late." -> "It's late."`.
+- **Gaps only**: without `--snap-shot-changes`, a `--snap-` option such as `--snap-min-gap-frames 2` only closes small gaps.
+- **Frame rates**: `--input-fps` sets the frame rate of a MicroDVD input on its own.
 
-## Strip SDH
-`strip-sdh` removes everything that [`HearingImpairedRemover::apply()`](text.md#hearing-impaired-annotations) removes by default.
-
+### Karaoke and ASS output
 | Option | Effect |
 |:--- |:--- |
-| `--keep-square-brackets`, `--keep-parentheses`, `--keep-speaker-labels`, `--keep-music-lines` | turns off one rule |
-| `--any-case-labels` | also removes speaker labels that are not upper case, such as `Baker:` |
-| `--lyrics` | removes text between two music symbols |
-| `--brackets PAIR` | also removes text between this pair, for example `"{}"` or `"**"`. Repeatable |
+| `--karaoke` | writes one cue per word with the active word styled, with [`WordHighlight::apply()`](text.md#word-highlight-and-karaoke) |
+| `--karaoke-style TAG` | `b`, `i`, `u` (default), `s` or `'font color="#ffff00"'` |
+| `--ass-karaoke-tag TAG` | `k` (default), `kf` or `ko`, the ASS tag for word timestamps, see [formats.md](formats.md#ass-and-ssa). Needs ASS output. Pass only one of `--karaoke` and `--ass-karaoke-tag` |
+
+- **Library only**: the cumulative mode and the word limit of `WordHighlightOptions` have no option. Call `WordHighlight::apply()` for them.
+
+### Removed commands
+`fix`, `strip-sdh` and `snap` exit with code 2 and print the matching `convert` call, with the output options of the old call. For example, `strip-sdh movie.srt -o clean.srt` prints `strip-sdh was removed. Use: subtitle-toolbox convert movie.srt --sdh -o clean.srt`.
+
+| 1.x | 2.0 |
+|:--- |:--- |
+| `fix FILE --X` | `convert FILE --fix-X`, for example `--overlaps` becomes `--fix-overlaps` |
+| `fix --list-fixes` | `--fix-list` |
+| `fix --language`, `convert --case-language` | `--language` |
+| `strip-sdh FILE --X` | `convert FILE --sdh --sdh-X`, for example `--lyrics` becomes `--sdh-lyrics` |
+| `snap FILE --shot-changes F` | `convert FILE --snap-shot-changes F` |
+| `snap --min-gap-frames`, `--min-duration-frames`, `--no-chain` | `--snap-min-gap-frames`, `--snap-min-duration-frames`, `--snap-no-chain` |
+| `--regex`, `--ignore-case` | `--replace-regex`, `--replace-ignore-case` |
+| `--karaoke-tag` | `--ass-karaoke-tag` |
+| `--karaoke-mode`, `--karaoke-words` | none. Use `WordHighlightOptions` in PHP |
 
 ## Info
 - **Warnings**: with `--lenient`, `info` prints `Warnings: 1` for a file with one broken cue. The JSON holds a `warnings` list, empty for a file without warnings. A warning has `lineNumber`, `blockIndex`, `message` and `action`, see [lenient-parsing.md](lenient-parsing.md).
@@ -305,22 +358,6 @@ vendor/bin/subtitle-toolbox dual movie.en.srt movie.de.srt --mode top-bottom -o 
 | `--secondary-style TAG` | `secondaryStyle`, for example `i` or `'font color="#ffff00"'` |
 | `--secondary-alignment 1-9` | `secondaryAlignment` for `top-bottom`, default 8 |
 | `--snap-tolerance SECONDS` | `snapTolerance` for `top-bottom`, default 0.25 |
-
-## Snap
-`snap` runs [`ShotChangeTiming::apply()`](editing.md#shot-changes-and-gaps) with the shot changes of a file. Without `--shot-changes`, it only closes small gaps. `--video-fps` is required. It sets the frame rate of the shot changes and of the frame options. `--input-fps` sets the frame rate of a MicroDVD input on its own.
-
-```sh
-ffmpeg -i movie.mp4 -vf "select='gt(scene,0.3)',showinfo" -f null - 2> scenes.log
-vendor/bin/subtitle-toolbox snap movie.srt --video-fps 24 --shot-changes scenes.log -o movie.timed.srt
-```
-
-| Option | Sets |
-|:--- |:--- |
-| `--shot-changes FILE` | the shot changes: the log of the FFmpeg `showinfo` filter, or one time per line in seconds or `hh:mm:ss.mmm` |
-| `--snap-window FRAMES` | `snapWindow`, default half a second |
-| `--min-gap-frames FRAMES` | `minGapFrames`, default 2 |
-| `--min-duration-frames FRAMES` | `minDuration`, default 20 |
-| `--no-chain` | `chain: false` |
 
 ## HLS
 `hls` cuts one subtitle into WebVTT segments with [`HlsWebVttSegmenter`](hls.md) and writes them with the playlist into `--output-dir`.
