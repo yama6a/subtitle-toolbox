@@ -71,10 +71,10 @@ class MicroDvdParser extends SubtitleParser
                 $frames->framesToSeconds((int) $matches[1]),
                 $frames->framesToSeconds((int) $matches[2]),
                 $matches[3]
-            ));
+            ), false);
         }
 
-        return $subtitle;
+        return $subtitle->reIndexCues();
     }
 
 

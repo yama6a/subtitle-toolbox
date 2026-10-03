@@ -49,7 +49,7 @@ class WebVttParser extends SubtitleParser
             try {
                 switch (true) {
                     case str_contains($rawLines[0], "-->") || str_contains($rawLines[1] ?? "", "-->"):
-                        $subtitle->addCue($this->parseCueBlock($rawLines, $idx));
+                        $subtitle->addCue($this->parseCueBlock($rawLines, $idx), false);
                         $seenCue = true;
                         break;
                     case $this->startsWithKeyword($firstLine, "NOTE"):
@@ -75,7 +75,7 @@ class WebVttParser extends SubtitleParser
             }
         }
 
-        return $subtitle->setFormatData(self::FORMAT, $fileData);
+        return $subtitle->reIndexCues()->setFormatData(self::FORMAT, $fileData);
     }
 
 
