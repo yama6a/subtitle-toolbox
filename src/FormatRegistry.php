@@ -10,6 +10,7 @@ use SubtitleToolbox\Formatters\JsonFormatter;
 use SubtitleToolbox\Formatters\LyricsFormatter;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
 use SubtitleToolbox\Formatters\MpSubFormatter;
+use SubtitleToolbox\Formatters\PgsFormatter;
 use SubtitleToolbox\Formatters\PlainTextFormatter;
 use SubtitleToolbox\Formatters\SamiFormatter;
 use SubtitleToolbox\Formatters\SbvFormatter;
@@ -53,7 +54,7 @@ class FormatRegistry
         "lrc"       => [LyricsParser::class, LyricsFormatter::class, ["lrc"]],
         "microdvd"  => [MicroDvdParser::class, MicroDvdFormatter::class, ["sub"]],
         "mpsub"     => [MpSubParser::class, MpSubFormatter::class, ["mpsub"]],
-        "pgs"       => [PgsParser::class, null, ["sup"]],
+        "pgs"       => [PgsParser::class, PgsFormatter::class, ["sup"]],
         "sami"      => [SamiParser::class, SamiFormatter::class, ["smi", "sami"]],
         "sbv"       => [SbvParser::class, SbvFormatter::class, ["sbv"]],
         "scc"       => [SccParser::class, SccFormatter::class, ["scc"]],

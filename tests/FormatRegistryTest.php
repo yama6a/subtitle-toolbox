@@ -83,7 +83,7 @@ class FormatRegistryTest extends TestCase
         $this->assertNull(FormatRegistry::find("doc"));
         $this->assertNull(FormatRegistry::forPath("README"));
         $this->assertNull(FormatRegistry::parserClass("txt"));
-        $this->assertNull(FormatRegistry::formatterClass("pgs"));
+        $this->assertNull(FormatRegistry::formatterClass("vobsub"));
         $this->assertNull(FormatRegistry::parserClass("unknown"));
         $this->assertSame([], FormatRegistry::extensions("unknown"));
     }

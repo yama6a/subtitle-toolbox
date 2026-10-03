@@ -18,6 +18,7 @@ use SubtitleToolbox\Formatters\EbuStlFormatter;
 use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
 use SubtitleToolbox\Formatters\MpSubFormatter;
+use SubtitleToolbox\Formatters\PgsFormatter;
 use SubtitleToolbox\Formatters\PlainTextFormatter;
 use SubtitleToolbox\Formatters\SccFormatter;
 use SubtitleToolbox\Formatters\SubRipFormatter;
@@ -231,6 +232,13 @@ class ThrowSitesTest extends TestCase
             "Formatters/MicroDvdFormatter.php: no frame rate" => [fn () => self::subtitle()->format(MicroDvdFormatter::class), ...$invalid],
             "Formatters/MpSubFormatter.php: fractional frame rate" => [fn () => self::subtitle()->format(MpSubFormatter::class,
                 [MpSubFormatter::OPTION_FRAME_RATE => 25.5]), ...$invalid],
+            "Formatters/PgsFormatter.php: text cue"         => [fn () => self::subtitle()->format(PgsFormatter::class), ...$invalid],
+            "Formatters/PgsFormatter.php: negative x"       => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), -1, 0, 1, 1, 9, 9))
+                ->toCue(new SubtitleCue(1, 2)))->format(PgsFormatter::class), ...$invalid],
+            "Formatters/PgsFormatter.php: PNG size"         => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), 0, 0, 2, 1, 9, 9))
+                ->toCue(new SubtitleCue(1, 2)))->format(PgsFormatter::class), ...$invalid],
+            "Formatters/PgsFormatter.php: negative time"    => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), 0, 0, 1, 1, 9, 9))
+                ->toCue(new SubtitleCue(-1, 2)))->format(PgsFormatter::class), ...$invalid],
             "Formatters/PlainTextFormatter.php: paragraph gap" => [fn () => self::subtitle()->format(PlainTextFormatter::class,
                 [PlainTextFormatter::OPTION_PARAGRAPH_GAP => "2"]), ...$invalid],
             "Formatters/SccFormatter.php: drop frame option" => [fn () => self::subtitle()->format(SccFormatter::class,
