@@ -15,13 +15,6 @@ class FormatDetectorTest extends TestCase
 
     private const FORMATS = [
         "ass"      => Format::Ass,
-        "assemblyai" => Format::AssemblyAi,
-        "aws-transcribe" => Format::AwsTranscribe,
-        "deepgram" => Format::Deepgram,
-        "google-speech" => Format::GoogleSpeech,
-        "chapters/ffmetadata" => Format::FfMetadata,
-        "chapters/ogm"        => Format::OgmChapters,
-        "chapters/podcast"    => Format::PodcastChapters,
         "html"     => Format::HtmlTranscript,
         "json"     => Format::Json,
         "lrc"      => Format::Lyrics,
@@ -40,6 +33,9 @@ class FormatDetectorTest extends TestCase
         "whisper"  => Format::Whisper,
         "youtube"  => Format::YouTube,
     ];
+
+    // Chapters and cloud speech JSON load only with an explicit format.
+    private const NOT_DETECTED_DIRECTORIES = ["chapters", "aws-transcribe", "deepgram", "assemblyai", "google-speech"];
 
     // These fixtures break their own format on purpose, so their parser rejects them.
     private const BROKEN_FIXTURES = [
@@ -67,8 +63,7 @@ class FormatDetectorTest extends TestCase
 
     public static function realFiles(): array
     {
-        return array_filter(self::fixtures(), fn (array $fixture): bool =>
-            str_contains($fixture[0], "/real/") && $fixture[1]->isAutoDetected());
+        return array_filter(self::fixtures(), fn (array $fixture): bool => str_contains($fixture[0], "/real/"));
     }
 
 
@@ -138,22 +133,12 @@ class FormatDetectorTest extends TestCase
             "Whisper JSON"               => ["{\"text\": \" Hello\", \"segments\": [{\"id\": 0, \"start\": 0.0, \"end\": 2.0, \"text\": \" Hello\"}], \"language\": \"en\"}",
                                              Format::Whisper],
             "whisper.cpp JSON"           => ["{\n\t\"systeminfo\": \"\",\n\t\"transcription\": [\n\t]\n}\n", Format::Whisper],
-            "Amazon Transcribe"          => ["{\"jobName\": \"a\", \"results\": {\"transcripts\": [{\"transcript\": \"\"}], \"items\": []}}",
-                                             Format::AwsTranscribe],
-            "Amazon Transcribe speakers" => ["{\"results\": {\"speaker_labels\": {\"segments\": []}, \"transcripts\": []}}", Format::AwsTranscribe],
-            "Deepgram"                   => ["{\"metadata\": {\"channels\": 1}, \"results\": {\"channels\": [{\"alternatives\": []}]}}",
-                                             Format::Deepgram],
-            "Deepgram with topics"       => ["{\"results\": {\"topics\": {\"segments\": []}, \"channels\": [{\"detected_language\": \"en\", " .
-                                             "\"alternatives\": []}]}}", Format::Deepgram],
-            "AssemblyAI"                 => ["{\"id\": \"x\", \"audio_url\": \"https://example.com/a.mp3\", \"words\": null}", Format::AssemblyAi],
-            "AssemblyAI words only"      => ["{\"words\": [{\"text\": \"Hi\", \"start\": 250, \"end\": 650}]}", Format::AssemblyAi],
-            "Google V1"                  => ["{\"results\": [{\"alternatives\": [{\"transcript\": \"hi\"}], \"resultEndTime\": \"1s\"}]}",
-                                             Format::GoogleSpeech],
-            "Google V2 end first"        => ["{\"results\": [{\"resultEndOffset\": \"1s\", \"alternatives\": []}], \"metadata\": {}}",
-                                             Format::GoogleSpeech],
             "Whisper JSON with words"    => ["{\"segments\": [], \"words\": [{\"word\": \"Hi\", \"start\": 0, \"end\": 1}], " .
                                              "\"results\": [{\"x\": 1}]}", Format::Whisper],
-            "YouTube json3"              => ["{\"wireMagic\": \"pb3\", \"events\": [ {\"id\": 1}, {\"tStartMs\": 0, \"segs\": []} ]}", Format::YouTube],
+            "YouTube json3"              => ["{\"wireMagic\": \"pb3\", \"events\": [ {\"tStartMs\": 0, \"id\": 1}, {\"tStartMs\": 0, \"segs\": []} ]}",
+                                             Format::YouTube],
+            "Whisper JSON with a BOM"    => ["\xEF\xBB\xBF\r\n{\"text\": \"\", \"segments\": []}", Format::Whisper],
+            "Whisper JSON with a cues key" => ["{\"version\": \"1\", \"cues\": [], \"segments\": []}", Format::Whisper],
             "YouTube srv3"               => ["<?xml version=\"1.0\" encoding=\"utf-8\" ?><timedtext format=\"3\">\n<body>\n</body>\n</timedtext>\n",
                                              Format::YouTube],
             "YouTube srv1"               => ["<transcript><text start=\"1.2\" dur=\"2.3\">Hello</text></transcript>", Format::YouTube],
@@ -166,18 +151,13 @@ class FormatDetectorTest extends TestCase
             "TMPlayer+ with equals sign" => ["0:00:01=Hello\n", Format::TmPlayer],
             "TMPlayer+ with line numbers" => ["00:00:01,1=Hello\n00:00:01,2=world\n", Format::TmPlayer],
             "SBV next to TMPlayer"       => ["0:00:01.000,0:00:02.000\nHello\n", Format::Sbv],
-            "Podcast chapters first"     => ["{\"chapters\": [], \"version\": \"1.2.0\"}", Format::PodcastChapters],
             "JSON with a chapters list"  => ["{\"version\": 1, \"formatData\": {\"chapters\": {\"chapters\": []}}, \"cues\": []}", Format::Json],
-            "FFmpeg metadata"            => [";FFMETADATA1\ntitle=Meetup\n", Format::FfMetadata],
-            "OGM with blank line"        => ["CHAPTER00 = 00:00:00.000\r\n\r\nCHAPTER00NAME=Intro\r\n", Format::OgmChapters],
             "Podcasting 2.0 JSON"        => ["{\"version\": \"1.0.0\", \"segments\": [{\"speaker\": \"Anna\", \"startTime\": 0.5, \"body\": \"I\"}]}",
                                              Format::PodcastTranscript],
             "Podcasting 2.0 JSON body first" => ["{\"segments\":[{\"body\":\"Hi\",\"endTime\":1,\"startTime\":0}]}", Format::PodcastTranscript],
             "JSON with podcast segments" => ["{\"version\": 1, \"formatData\": {\"x\": {\"segments\": [{\"startTime\": 0, \"body\": \"\"}]}}, \"cues\": []}",
                                              Format::Json],
             "Whisper JSON with a body"   => ["{\"segments\": [{\"start\": 0.0, \"end\": 2.0, \"text\": \" Hello\", \"body\": 1}]}", Format::Whisper],
-            "Podcast chapters, not a transcript" => ["{\"version\": \"1.2.0\", \"chapters\": [{\"startTime\": 0, \"title\": \"Intro\"}]}",
-                                             Format::PodcastChapters],
             "Podcast transcript, not chapters" => ["{\"version\": \"1.0.0\", \"chapters\": [], \"segments\": [{\"startTime\": 0, \"body\": \"Hi\"}]}",
                                              Format::PodcastTranscript],
             "Podcasting 2.0 HTML"        => ["<cite>Anna:</cite>\n<time>0:00</time>\n<p>Hello</p>\n", Format::HtmlTranscript],
@@ -250,6 +230,25 @@ class FormatDetectorTest extends TestCase
             "YouTube chapters"         => ["0:00 Intro\n2:48 Hearing aids\n4:20 Progress report\n"],
             "HTML without time"        => ["<cite>Anna:</cite>\n<p>Hello</p>\n"],
             "cite and time as text"    => ["Hello <cite> and <time>\n"],
+            "invalid JSON"             => ["{\"segments\": [{\"start\": 0,"],
+            "JSON with a bad escape"   => ["{\"text\": \"\\x\", \"segments\": []}"],
+            "JSON list"                => ["[{\"tStartMs\": 0}]"],
+            "segments as an object"    => ["{\"segments\": {\"0\": {\"start\": 0}}}"],
+            "first event without tStartMs" => ["{\"wireMagic\": \"pb3\", \"events\": [{\"id\": 1}, {\"tStartMs\": 0, \"segs\": []}]}"],
+            "nested segments"          => ["{\"results\": {\"segments\": [{\"startTime\": 0, \"body\": \"Hi\"}]}}"],
+            "Amazon Transcribe"          => ["{\"jobName\": \"a\", \"results\": {\"transcripts\": [{\"transcript\": \"\"}], \"items\": []}}"],
+            "Amazon Transcribe speakers" => ["{\"results\": {\"speaker_labels\": {\"segments\": []}, \"transcripts\": []}}"],
+            "Deepgram"                   => ["{\"metadata\": {\"channels\": 1}, \"results\": {\"channels\": [{\"alternatives\": []}]}}"],
+            "Deepgram with topics"       => ["{\"results\": {\"topics\": {\"segments\": []}, \"channels\": [{\"detected_language\": \"en\", " .
+                                             "\"alternatives\": []}]}}"],
+            "AssemblyAI"                 => ["{\"id\": \"x\", \"audio_url\": \"https://example.com/a.mp3\", \"words\": null}"],
+            "AssemblyAI words only"      => ["{\"words\": [{\"text\": \"Hi\", \"start\": 250, \"end\": 650}]}"],
+            "Google V1"                  => ["{\"results\": [{\"alternatives\": [{\"transcript\": \"hi\"}], \"resultEndTime\": \"1s\"}]}"],
+            "Google V2 end first"        => ["{\"results\": [{\"resultEndOffset\": \"1s\", \"alternatives\": []}], \"metadata\": {}}"],
+            "Podcast chapters first"     => ["{\"chapters\": [], \"version\": \"1.2.0\"}"],
+            "FFmpeg metadata"            => [";FFMETADATA1\ntitle=Meetup\n"],
+            "OGM with blank line"        => ["CHAPTER00 = 00:00:00.000\r\n\r\nCHAPTER00NAME=Intro\r\n"],
+            "Podcast chapters, not a transcript" => ["{\"version\": \"1.2.0\", \"chapters\": [{\"startTime\": 0, \"title\": \"Intro\"}]}"],
         ];
     }
 
@@ -258,6 +257,62 @@ class FormatDetectorTest extends TestCase
     public function testReturnsNullForUnknownContent(string $content): void
     {
         $this->assertNull(FormatDetector::detect($content));
+    }
+
+
+    public static function notDetectedFixtures(): array
+    {
+        $fixtures = [];
+        foreach (self::NOT_DETECTED_DIRECTORIES as $directory) {
+            $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(self::DIR . $directory, \FilesystemIterator::SKIP_DOTS));
+            foreach ($iterator as $file) {
+                if ($file->getExtension() !== "md") {
+                    $name            = substr($file->getPathname(), strlen(self::DIR));
+                    $fixtures[$name] = [$name];
+                }
+            }
+        }
+        ksort($fixtures);
+
+        return $fixtures;
+    }
+
+
+    #[DataProvider("notDetectedFixtures")]
+    public function testReturnsNullForChaptersAndCloudSpeechJson(string $file): void
+    {
+        $this->assertNull(Format::detect(file_get_contents(self::DIR . $file)));
+    }
+
+
+    public function testNeverReturnsAFormatThatIsNotAutoDetected(): void
+    {
+        $contents = array_merge(array_column(self::signatures(), 0), array_column(self::unknownContent(), 0));
+        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(self::DIR, \FilesystemIterator::SKIP_DOTS));
+        foreach ($iterator as $file) {
+            $contents[] = file_get_contents($file->getPathname());
+        }
+
+        foreach ($contents as $content) {
+            $format = Format::detect($content);
+            $this->assertTrue($format === null || $format->isAutoDetected(), $format?->value ?? "");
+        }
+    }
+
+
+    public function testDetectsWhisperCppJsonWithASplitUtf8Character(): void
+    {
+        $this->assertSame(Format::Whisper, Format::detect(file_get_contents(self::DIR . "whisper/real/whisper_cpp_ojf_split_utf8.json")));
+    }
+
+
+    public function testSignaturesHoldNoJsonPattern(): void
+    {
+        $signatures = (new \ReflectionClassConstant(FormatDetector::class, "SIGNATURES"))->getValue();
+
+        foreach ($signatures as $format => $pattern) {
+            $this->assertStringNotContainsString('"', $pattern, $format);
+        }
     }
 
 

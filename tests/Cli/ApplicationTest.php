@@ -71,6 +71,24 @@ class ApplicationTest extends TestCase
     }
 
 
+    public function testChaptersAndCloudSpeechJsonNeedFrom(): void
+    {
+        $chapters = __DIR__ . "/../files/chapters/ffmetadata/real/m4b_audiobook.ffmeta";
+        $deepgram = file_get_contents(__DIR__ . "/../files/deepgram/real/pool_utterances_diarize.json");
+
+        $this->assertSame([1, "", "$chapters: The format is unknown. Pass --from.\n"], self::runApplication(["info", $chapters]));
+        $this->assertSame([1, "", "stdin: The format is unknown. Pass --from.\n"], self::runApplication(["info", "-"], $deepgram));
+
+        [$code, $stdout] = self::runApplication(["info", $chapters, "--from", "ffmeta"]);
+        $this->assertSame(0, $code);
+        $this->assertStringContainsString("ffmeta", $stdout);
+
+        [$code, $stdout] = self::runApplication(["info", "-", "--from", "deepgram"], $deepgram);
+        $this->assertSame(0, $code);
+        $this->assertStringContainsString("deepgram", $stdout);
+    }
+
+
     #[RunInSeparateProcess]
     public function testOcrWithoutEitherEngineFailsWithBothInstallHints(): void
     {
