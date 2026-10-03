@@ -1,0 +1,302 @@
+<?php
+
+namespace SubtitleToolbox\Formatters;
+
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Cli\Application;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\FormatRegistry;
+use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\Image\PngDecoder;
+use SubtitleToolbox\Image\PngEncoder;
+use SubtitleToolbox\Parsers\PgsParser;
+use SubtitleToolbox\Parsers\VobSubParser;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
+
+class PgsFormatterTest extends TestCase
+{
+    private const FILES = __DIR__ . "/../files/";
+
+
+    /**
+     * @return list<array{int, int, int, string}> PTS, DTS, segment type and data of each segment
+     */
+    private static function segments(string $sup): array
+    {
+        $segments = [];
+        for ($offset = 0; $offset < strlen($sup); $offset += 13 + $size) {
+            ["magic" => $magic, "pts" => $pts, "dts" => $dts, "type" => $type, "size" => $size] =
+                unpack("a2magic/Npts/Ndts/Ctype/nsize", $sup, $offset);
+            self::assertSame("PG", $magic);
+            $segments[] = [$pts, $dts, $type, substr($sup, $offset + 13, $size)];
+        }
+
+        return $segments;
+    }
+
+
+    private static function imageCue(float $start, float $end, int $width, int $height, array $pixels, bool $forced = false): SubtitleCue
+    {
+        $image = new CueImage(PngEncoder::encode($width, $height, $pixels), 100, 900, $width, $height, 1920, 1080, $forced);
+
+        return $image->toCue(new SubtitleCue($start, $end));
+    }
+
+
+    private static function pgsRoundTrip(Subtitle $subtitle): Subtitle
+    {
+        return (new PgsParser())->parse($subtitle->format(PgsFormatter::class));
+    }
+
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function pgsFixtures(): array
+    {
+        $files = [];
+        foreach ([...glob(self::FILES . "pgs/*.sup"), ...glob(self::FILES . "fixing/*.sup")] as $path) {
+            $files[basename(dirname($path)) . "/" . basename($path)] = [$path];
+        }
+
+        return $files;
+    }
+
+
+    #[DataProvider("pgsFixtures")]
+    public function testPgsFixturesRoundTripWithTheSamePixelsPositionsAndTimes(string $path): void
+    {
+        $original = (new PgsParser())->parse(file_get_contents($path));
+        $written  = self::pgsRoundTrip($original);
+
+        $this->assertCount(count($original), $written);
+        foreach ($original->getCues() as $index => $cue) {
+            $copy = $written->getCues()[$index];
+
+            $this->assertEqualsWithDelta($cue->getStart(), $copy->getStart(), 0.001);
+            $this->assertEqualsWithDelta($cue->getEnd(), $copy->getEnd(), 0.001);
+            $this->assertEquals(CueImage::fromCue($cue), CueImage::fromCue($copy), "cue $index");
+            $this->assertSame($cue->isForced(), $copy->isForced());
+            $this->assertSame($cue->getAlignment(), $copy->getAlignment());
+        }
+    }
+
+
+    /**
+     * The fixture generator writes one object per display set in the same segment order as PgsFormatter.
+     *
+     * @return array<string, array{string}>
+     */
+    public static function singleObjectFixtures(): array
+    {
+        return array_filter(self::pgsFixtures(), fn (string $key): bool => !str_starts_with($key, "pgs/shapes"), ARRAY_FILTER_USE_KEY);
+    }
+
+
+    #[DataProvider("singleObjectFixtures")]
+    public function testWritesSingleObjectFixturesByteForByte(string $path): void
+    {
+        $sup = file_get_contents($path);
+
+        $this->assertSame($sup, (new PgsParser())->parse($sup)->format(PgsFormatter::class));
+    }
+
+
+    /**
+     * @return array<string, array{string, int}>
+     */
+    public static function vobSubTracks(): array
+    {
+        return [
+            "two-tracks-pal en"     => ["two-tracks-pal", 0],
+            "two-tracks-pal de"     => ["two-tracks-pal", 1],
+            "custom-colors-ntsc ja" => ["custom-colors-ntsc", 0],
+            "custom-colors-ntsc fr" => ["custom-colors-ntsc", 2],
+            "text-pal en"           => ["text-pal", 0],
+        ];
+    }
+
+
+    /**
+     * Limited range YCbCr has no code for some RGB colors of a DVD palette, so a channel may change by 1.
+     */
+    #[DataProvider("vobSubTracks")]
+    public function testVobSubFixturesConvertToPgs(string $name, int $track): void
+    {
+        $original = (new VobSubParser(file_get_contents(self::FILES . "vobsub/$name.idx"), $track))
+            ->parse(file_get_contents(self::FILES . "vobsub/$name.sub"));
+        $written  = self::pgsRoundTrip($original);
+
+        $this->assertCount(count($original), $written);
+        foreach ($original->getCues() as $index => $cue) {
+            $copy   = $written->getCues()[$index];
+            $before = CueImage::fromCue($cue);
+            $after  = CueImage::fromCue($copy);
+
+            $this->assertEqualsWithDelta($cue->getStart(), $copy->getStart(), 0.001);
+            $this->assertEqualsWithDelta($cue->getEnd(), $copy->getEnd(), 0.001);
+            $this->assertSame([$before->x, $before->y, $before->width, $before->height, $before->screenWidth, $before->screenHeight, $before->forced],
+                              [$after->x, $after->y, $after->width, $after->height, $after->screenWidth, $after->screenHeight, $after->forced]);
+
+            $afterPixels = PngDecoder::decode($after->png)["pixels"];
+            $alphaErrors = 0;
+            $colorError  = 0;
+            foreach (PngDecoder::decode($before->png)["pixels"] as $pixel => $color) {
+                $alphaErrors += ($color & 0xFF) === ($afterPixels[$pixel] & 0xFF) ? 0 : 1;
+                for ($shift = 8; $shift < 32; $shift += 8) {
+                    $colorError = max($colorError, abs(($color >> $shift & 0xFF) - ($afterPixels[$pixel] >> $shift & 0xFF)));
+                }
+            }
+            $this->assertSame([0, 1], [$alphaErrors, max(1, $colorError)], "cue $index");
+        }
+    }
+
+
+    public function testWritesOneDisplaySetToShowAndOneToClearEachCue(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue(self::imageCue(2.5, 4.0, 3, 2, [0x00000000, 0xFFFFFFFF, 0xFFFFFFFF, 0x000000FF, 0x00000000, 0x00000000], true))
+            ->addCue(self::imageCue(1.0, 2.0, 2, 1, [0xFFFF00FF, 0xFFFF00FF]));
+
+        $segments = self::segments($subtitle->format(PgsFormatter::class));
+
+        $this->assertSame([[90000, 0x16], [90000, 0x17], [90000, 0x14], [90000, 0x15], [90000, 0x80],
+                           [180000, 0x16], [180000, 0x17], [180000, 0x80],
+                           [225000, 0x16], [225000, 0x17], [225000, 0x14], [225000, 0x15], [225000, 0x80],
+                           [360000, 0x16], [360000, 0x17], [360000, 0x80]],
+                          array_map(fn (array $segment): array => [$segment[0], $segment[2]], $segments));
+        $this->assertSame([0], array_unique(array_column($segments, 1)));
+
+        $this->assertSame(pack("nnCnCCCC", 1920, 1080, 0x10, 2, 0x80, 0, 0, 1) . pack("nCCnn", 0, 0, 0x40, 100, 900), $segments[8][3]);
+        $this->assertSame(pack("nnCnCCCC", 1920, 1080, 0x10, 3, 0x00, 0, 0, 0), $segments[13][3]);
+        $this->assertSame(pack("CCnnnn", 1, 0, 100, 900, 3, 2), $segments[9][3]);
+        $this->assertSame(pack("CC", 0, 0) . pack("C5", 0, 16, 128, 128, 0) . pack("C5", 1, 235, 128, 128, 255)
+                          . pack("C5", 2, 16, 128, 128, 255), $segments[10][3]);
+        $this->assertSame(pack("nCCCnnn", 0, 0, 0xC0, 0, 4 + 11, 3, 2) . "\0\1\1\1\0\0" . "\2\0\2\0\0", $segments[11][3]);
+    }
+
+
+    public function testACueThatStartsAtOrBeforeTheEndOfThePreviousCueReplacesIt(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue(self::imageCue(1.0, 3.0, 1, 1, [0xFFFFFFFF]))
+            ->addCue(self::imageCue(2.0, 4.0, 1, 1, [0x000000FF]))
+            ->addCue(self::imageCue(4.0, 5.0, 1, 1, [0xFFFFFFFF]));
+
+        $written = self::pgsRoundTrip($subtitle);
+
+        $this->assertSame([[1.0, 2.0], [2.0, 4.0], [4.0, 5.0]],
+                          array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $written->getCues()));
+        $this->assertCount(3 * 5 + 3, self::segments($subtitle->format(PgsFormatter::class)));
+    }
+
+
+    /**
+     * Each gray is a luma code that PgsParser decodes, so the pixels round-trip exactly.
+     */
+    public function testSplitsLargeObjectsIntoFragments(): void
+    {
+        $pixels = [];
+        for ($index = 0; $index < 600 * 300; $index++) {
+            $gray     = (int) round((($index * 2654435761) >> 7) % 200 * 255 / 219);
+            $pixels[] = $gray << 24 | $gray << 16 | $gray << 8 | 0xFF;
+        }
+        $subtitle = (new Subtitle())->addCue(self::imageCue(1.0, 2.0, 600, 300, $pixels));
+
+        $objects = array_values(array_filter(self::segments($subtitle->format(PgsFormatter::class)),
+                                             fn (array $segment): bool => $segment[2] === 0x15));
+
+        $this->assertGreaterThan(2, count($objects));
+        $this->assertSame([0x80, 0x00, 0x40], [ord($objects[0][3][3]), ord($objects[1][3][3]), ord(end($objects)[3][3])]);
+        $this->assertSame(0xFFFF, strlen($objects[0][3]));
+        $this->assertEquals(CueImage::fromCue($subtitle->getCues()[0]), CueImage::fromCue(self::pgsRoundTrip($subtitle)->getCues()[0]));
+    }
+
+
+    public function testReducesImagesWithMoreThan255Colors(): void
+    {
+        $pixels = [];
+        for ($index = 0; $index < 30 * 40; $index++) {
+            $pixels[] = $index % 10 === 0 ? 0x00000000 : ($index * 13 % 256) << 24 | ($index % 7 * 30) << 16 | 0x80FF;
+        }
+        $subtitle = (new Subtitle())->addCue(self::imageCue(1.0, 2.0, 30, 40, $pixels));
+
+        $palette = array_values(array_filter(self::segments($subtitle->format(PgsFormatter::class)),
+                                             fn (array $segment): bool => $segment[2] === 0x14))[0][3];
+        $written = PngDecoder::decode(CueImage::fromCue(self::pgsRoundTrip($subtitle)->getCues()[0])->png)["pixels"];
+
+        $this->assertSame(2 + 256 * 5, strlen($palette));
+        foreach ($pixels as $index => $pixel) {
+            $this->assertSame($index % 10 === 0 ? 0 : 0xFF, $written[$index] & 0xFF);
+        }
+    }
+
+
+    public function testTheForcedFlagOfTheCueSetsTheForcedFlagOfTheObject(): void
+    {
+        $subtitle = (new PgsParser())->parse(file_get_contents(self::FILES . "pgs/shapes_1080p.sup"));
+        $subtitle->getCues()[0]->setForced(true);
+        $subtitle->getCues()[2]->setForced(false);
+
+        $written = self::pgsRoundTrip($subtitle);
+
+        $this->assertSame([true, false, false, true, false, false],
+                          array_map(fn (SubtitleCue $cue): bool => $cue->isForced(), $written->getCues()));
+        $this->assertCount(2, self::pgsRoundTrip($subtitle->forcedOnly()));
+    }
+
+
+    public function testShiftedFileKeepsTheBitmaps(): void
+    {
+        $original = (new PgsParser())->parse(file_get_contents(self::FILES . "pgs/text_1080p.sup"));
+        $shifted  = (new PgsParser())->parse(file_get_contents(self::FILES . "pgs/text_1080p.sup"))->shift(-0.75);
+
+        $written = self::pgsRoundTrip($shifted);
+
+        $this->assertSame(0.25, $written->getCues()[0]->getStart());
+        $this->assertSame(37.25, $written->getCues()[11]->getEnd());
+        $this->assertSame(CueImage::fromCue($original->getCues()[5])->png, CueImage::fromCue($written->getCues()[5])->png);
+    }
+
+
+    public function testTheCommandLineToolWritesPgs(): void
+    {
+        $this->assertSame(PgsFormatter::class, FormatRegistry::formatterClass("pgs"));
+
+        $streams = [fopen("php://memory", "w+b"), fopen("php://memory", "w+b"), fopen("php://memory", "w+b")];
+        $code    = (new Application(...$streams))->run(["subtitle-toolbox", "shift", self::FILES . "pgs/shapes_576p.sup", "--by", "1"]);
+        rewind($streams[1]);
+
+        $this->assertSame(0, $code);
+        $this->assertSame([1.5, 4.0, 5.0, 10.0], array_merge(...array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()],
+                                                                     (new PgsParser())->parse(stream_get_contents($streams[1]))->getCues())));
+    }
+
+
+    /**
+     * @return array<string, array{SubtitleCue, string}>
+     */
+    public static function invalidCues(): array
+    {
+        $image = new CueImage(PngEncoder::encode(2, 2, [0, 0, 0, 0]), 0, 0, 2, 2, 720, 576);
+
+        return [
+            "text cue"     => [new SubtitleCue(1, 2, "text"), "does not render text"],
+            "size"         => [(new CueImage($image->png, 0, 0, 3, 2, 720, 576))->toCue(new SubtitleCue(1, 2)), "the PNG has 2x2 pixels"],
+            "negative x"   => [(new CueImage($image->png, -1, 0, 2, 2, 720, 576))->toCue(new SubtitleCue(1, 2)), "from 0 to 65535"],
+            "negative time" => [$image->toCue(new SubtitleCue(-0.5, 2)), "ticks of 90 kHz"],
+        ];
+    }
+
+
+    #[DataProvider("invalidCues")]
+    public function testRejectsCuesThatPgsCannotHold(SubtitleCue $cue, string $message): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage($message);
+
+        (new Subtitle())->addCue($cue)->format(PgsFormatter::class);
+    }
+}

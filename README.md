@@ -92,7 +92,7 @@ $subtitle->getFormatData('ass');                        // [] when not set
 | LyRiCs (.lrc)   | ID tags, `[offset:]`, several timestamps per line, enhanced LRC word timing | ID tags, `[#:]` comments, word timing as `<mm:ss.xx>` | Formatter strips all other xml tags and writes times in centiseconds. Text with `<`, `>` and `&` round-trips
 | MicroDVD (.sub) | Frame rate from the parser constructor or a `{1}{1}<fps>` first line | Needs `OPTION_FRAME_RATE` | Converts `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` to core markup. Keeps other control codes in the `sub` format data
 | MpSub (.mpsub)  | FORMAT=TIME and FORMAT=<fps>, header lines | FORMAT=TIME by default, FORMAT=<fps> as an option, header lines | Formatter strips all xml tags. Text with `<`, `>` and `&` round-trips
-| PGS (.sup)      | Blu-ray bitmaps as image cues, with palettes, cropping, windows and forced flags | Not supported | See [PGS](#pgs)
+| PGS (.sup)      | Blu-ray bitmaps as image cues, with palettes, cropping, windows and forced flags | Image cues, one display set to show and one to clear each cue | See [PGS](#pgs)
 | SAMI (.smi)     | One language class, `<TITLE>`, the `<STYLE>` block and `<SAMIParam>` | Writes them back, and a `&nbsp;` SYNC after each cue that has a gap before the next cue | Converts `<b>`, `<i>`, `<u>`, `<s>`, `<strike>` and `<font color>` to core markup. Formatter strips all xml tags except: \<b>\<i>\<u>\<s>\<font>
 | SBV (.sbv)      | Accepts any number of hour digits | Writes one hour digit below 10 hours, no UTF-8 BOM | Formatter strips all xml tags and decodes HTML entities. Text with `<`, `>` and `&` round-trips
 | SCC (.scc)      | Pop-on, roll-up and paint-on CEA-608 captions, drop-frame and non-drop time codes | Pop-on captions on data channel 1, drop-frame time codes by default | Converts PAC styles and mid-row codes to `<i>`, `<u>` and `<font color>` and back. Strips all other tags. Throws for more than 4 lines or 32 characters per line
@@ -669,7 +669,7 @@ $subtitle->filterCues(fn (SubtitleCue $cue) => $cue->getEnd() - $cue->getStart()
 - **No array access**: `$subtitle[3]` does not work. Use `getCues()`, `addCue()` and `removeCue()`, so the cue indexes and comments stay correct.
 
 ## PGS
-Blu-ray discs and many MKV files store subtitles as PGS bitmaps in `.sup` files. `PgsParser` reads them as image cues, so run OCR before you write a text format.
+Blu-ray discs and many MKV files store subtitles as PGS bitmaps in `.sup` files. `PgsParser` reads them as image cues, so run OCR before you write a text format. `PgsFormatter` writes them.
 
 ```php
 use SubtitleToolbox\Formatters\SubRipFormatter;
@@ -690,6 +690,25 @@ file_put_contents('movie.srt', $subtitle->format(SubRipFormatter::class));
 - **Alignment**: an image whose center is in the top third of the screen gets alignment 8. Other cues keep the default.
 - **Errors**: segments of unknown types are skipped. `parse()` throws `ParsingException` for a segment without the `PG` bytes, a cut-off segment, and a bitmap with too few pixels.
 - **Speed**: a 1,500-cue file of 640x90 images takes about 18 s on PHP 8.5. The PNG compression takes most of this time.
+
+`PgsFormatter` writes image cues back to a `.sup` file. It keeps the bitmaps, so you can retime, cut or filter a PGS file without OCR. It also converts VobSub to PGS.
+
+```php
+use SubtitleToolbox\Formatters\PgsFormatter;
+
+$subtitle = Subtitle::parse(file_get_contents('movie.sup'));
+$subtitle->shift(-1.5)->convertFrameRate(25, 23.976);
+file_put_contents('movie.synced.sup', $subtitle->format(PgsFormatter::class));
+```
+
+- **Display sets**: each cue gives an epoch start display set with one window, one palette and one object at the cue start, and a display set without objects at the cue end. `DTS` is 0.
+- **Overlaps**: the formatter writes the cues in start order. A cue that starts before the previous cue ends replaces it on screen, so the previous cue ends early.
+- **Image**: position and screen size come from the `image` format data. `isForced()` of the cue sets the forced flag of the object. A cue without an image throws `InvalidArgumentException`. The formatter does not render text.
+- **Colors**: each color becomes a limited range YCbCr palette entry, with BT.709 above 576 lines and BT.601 else. For each color the formatter picks the entry that `PgsParser` reads back as the same RGB. Some DVD colors have no such entry, so a channel can change by 1.
+- **More than 256 colors**: `PaletteReducer` reduces the image to 255 colors with median cut, plus one entry for all transparent pixels.
+- **Round trip**: a PGS file that `PgsParser` reads and `PgsFormatter` writes gives the same pixels, positions and times to 1 ms. Two cues with the same image, where the second starts at the end of the first, come back as one cue.
+- **Speed**: a 1,500-cue file of 814x77 images takes about 21 s on PHP 8.5.
+- **PNG**: `PngDecoder::decode($png)` returns the width, the height and the `0xRRGGBBAA` pixels of a PNG from `PngEncoder` or another tool. It reads all color types and bit depths without interlacing. It needs ext-zlib.
 - **Spec**: [PGS segments](http://blog.thescorpius.com/index.php/2017/07/15/presentation-graphic-stream-sup-files-bluray-subtitle-format/), the patent application [US 2009/0185789 A1](https://patents.google.com/patent/US20090185789A1/en) and the FFmpeg [decoder](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/pgssubdec.c).
 
 ## JSON, arrays and plain text transcripts
@@ -1231,7 +1250,7 @@ file_put_contents('movie.forced.itt', $forced->format(IttFormatter::class));
 |:--- |:--- |:--- |
 | TTML, IMSC, DFXP | `itts:forcedDisplay="true"` on `p`, `span`, `div`, `body`, the region or a referenced style | the same attribute on `p` |
 | iTT | as TTML | the same attribute on `p` |
-| PGS, VobSub | the forced flag of the object or unit | no writer |
+| PGS, VobSub | the forced flag of the object or unit | PGS: the forced flag of the object. VobSub: no writer |
 | JSON | `forced` | `forced` |
 | other formats | no flag | the flag is lost |
 
