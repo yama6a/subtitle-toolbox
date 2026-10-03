@@ -166,4 +166,129 @@ class MarkupTest extends TestCase
         );
         $this->assertSame([], Markup::plainLines([]));
     }
+
+
+    public function testUnescapeTextDecodesOnlyTheEntitiesOfEscapeText(): void
+    {
+        $this->assertSame("<b> & > &eacute; &amp;", Markup::unescapeText("&lt;b&gt; &amp; &gt; &eacute; &amp;amp;"));
+        $this->assertSame("1 < 2 & 3", Markup::unescapeText(Markup::escapeText("1 < 2 & 3")));
+    }
+
+
+    public function testEscapeTextLikeKeepsAmpersandsAndGreaterThanUnescapedWhereTheRawRunDoes(): void
+    {
+        $this->assertSame("Tom &amp; Jerry &gt; 2", Markup::escapeTextLike("Tom & Jerry > 2", "Tom &amp; Jerry &gt; 1"));
+        $this->assertSame("Tom & Jerry > 2", Markup::escapeTextLike("Tom & Jerry > 2", "Tom & Jerry > 1"));
+        $this->assertSame("&amp;eacute; & &lt;", Markup::escapeTextLike("&eacute; & <", "a & b"));
+    }
+
+
+    public function testSplitTagsPutsTextAtEvenAndTagsAtOddIndexes(): void
+    {
+        $this->assertSame(
+            ["", "<i>", "Hello ", "<00:00:01.000>", "world", "</i>", " &lt;3"],
+            Markup::splitTags("<i>Hello <00:00:01.000>world</i> &lt;3")
+        );
+        $this->assertSame(["a < b"], Markup::splitTags("a < b"));
+    }
+
+
+    public function testMapTextRunsMapsDecodedTextBetweenTagsAndMarksTheFirstAndLastRun(): void
+    {
+        $calls = [];
+        $lines = Markup::mapTextRuns(["<i>a &amp; b</i> c", "<b></b>d"], function (string $text, bool $first, bool $last) use (&$calls): string {
+            $calls[] = [$text, $first, $last];
+
+            return strtoupper($text) . "<";
+        });
+
+        $this->assertSame(["<i>A &amp; B&lt;</i> C&lt;", "<b></b>D&lt;"], $lines);
+        $this->assertSame([["a & b", true, false], [" c", false, true], ["d", true, true]], $calls);
+    }
+
+
+    public function testMapTextRunsKeepsUnchangedRunsAsWritten(): void
+    {
+        $this->assertSame(["<i>Tom & Jerry</i>"], Markup::mapTextRuns(["<i>Tom & Jerry</i>"], fn (string $text): string => $text));
+    }
+
+
+    public function testHasVisibleTextIgnoresTagsAndWhiteSpace(): void
+    {
+        $this->assertFalse(Markup::hasVisibleText(["<i> </i>", "", "<00:00:01.000>"]));
+        $this->assertTrue(Markup::hasVisibleText(["<i></i>", "<b>&nbsp;</b>"]));
+        $this->assertFalse(Markup::hasVisibleText([]));
+    }
+
+
+    public function testPlainTextRemovesTagsAndDecodesEntitiesWithoutTrimming(): void
+    {
+        $this->assertSame(" Tom & Jerry <3 ", Markup::plainText(" <i>Tom &amp; Jerry</i> &lt;3<00:00:01.000> "));
+    }
+
+
+    public function testCharactersSplitsUtf8OrBytesOfInvalidUtf8(): void
+    {
+        $this->assertSame(["C", "a", "f", "é"], Markup::characters("Café"));
+        $this->assertSame(["C", "a", "f", "\xE9"], Markup::characters("Caf\xE9"));
+        $this->assertSame([], Markup::characters(""));
+    }
+
+
+    public function testWordsSplitsAtWhiteSpaceAlsoInInvalidUtf8(): void
+    {
+        $this->assertSame(["Hello,", "world!", "Bye"], Markup::words(" Hello,\tworld!\nBye "));
+        $this->assertSame(["Caf\xE9", "au", "lait"], Markup::words("Caf\xE9 au  lait"));
+        $this->assertSame([], Markup::words("  "));
+    }
+
+
+    public function testToSingleLineJoinsLinesWithOneSpace(): void
+    {
+        $this->assertSame("Line one Line two", Markup::toSingleLine("  Line one  \r\n  Line two\n"));
+    }
+
+
+    public function testOpenCoreTagsTracksTheCoreTagsThatStayOpen(): void
+    {
+        $open = Markup::openCoreTags('<I>a <font color="#ff0000">b <c.x>c</c> <b>d</b>');
+
+        $this->assertSame([["name" => "i", "tag" => "<I>"], ["name" => "font", "tag" => '<font color="#ff0000">']], $open);
+        $this->assertSame([["name" => "i", "tag" => "<I>"]], Markup::openCoreTags("e</font>", $open));
+        $this->assertSame([], Markup::openCoreTags("</u>plain"));
+    }
+
+
+    public function testCloseCoreTagsClosesTheLastOpenedTagFirst(): void
+    {
+        $this->assertSame("</font></i>", Markup::closeCoreTags(Markup::openCoreTags('<i>a <font color="#ff0000">b')));
+        $this->assertSame("", Markup::closeCoreTags([]));
+    }
+
+
+    public function testWordTimestampSecondsReadsCoreWordTimestamps(): void
+    {
+        $this->assertSame(3723.5, Markup::wordTimestampSeconds("<01:02:03.500>"));
+        $this->assertSame(360000.0, Markup::wordTimestampSeconds("<100:00:00.000>"));
+        $this->assertNull(Markup::wordTimestampSeconds("<00:60:00.000>"));
+        $this->assertNull(Markup::wordTimestampSeconds("<i>"));
+        $this->assertNull(Markup::wordTimestampSeconds("x<00:00:01.000>"));
+    }
+
+
+    public function testVoiceTagEscapesTheNameAndKeepsQuotes(): void
+    {
+        $this->assertSame("<v Ann &amp; Bo>", Markup::voiceTag("Ann & Bo"));
+        $this->assertSame("<v.loud O'Neil \"Jr\" &lt;3>", Markup::voiceTag("O'Neil \"Jr\" <3", ".loud"));
+    }
+
+
+    public function testInsertWordTimestampsEscapesTextAndTimesTheWordsItFinds(): void
+    {
+        $this->assertSame(
+            "<00:00:01.000>Tom &amp; <00:00:01.500>Tom <00:00:02.250>left",
+            Markup::insertWordTimestamps("Tom & Tom left", [["Tom", 1.0], ["Tom", 1.5], ["", 2.0], ["missing", 2.1], ["left", 2.25]])
+        );
+        $this->assertSame("a &lt; b", Markup::insertWordTimestamps("a < b", [["a", null], ["b", null]]));
+    }
 }
