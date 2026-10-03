@@ -8,7 +8,7 @@ use SubtitleToolbox\Validation\ValidationRules;
 
 class ValidateCommand extends ReportCommand
 {
-    private const PRESETS = ["netflix-en"];
+    private const PRESETS = ["netflix-en", "bbc"];
 
     private const DEFAULT_FPS = 23.976;
 
@@ -25,13 +25,13 @@ class ValidateCommand extends ReportCommand
 
     public function summary(): string
     {
-        return "Checks the cues against reading speed, line length and timing rules.";
+        return "Checks the cues against reading speed, line length, timing and text rules.";
     }
 
 
     protected function usageLines(): array
     {
-        return ["<input>... --preset netflix-en [options]", "<input>... [--max-cpl CHARS] [--no-overlap] [...] [options]"];
+        return ["<input>... --preset netflix-en|bbc [options]", "<input>... [--max-cpl CHARS] [--no-overlap] [...] [options]"];
     }
 
 
@@ -40,6 +40,8 @@ class ValidateCommand extends ReportCommand
         return "Prints one line per broken rule. Cue numbers start at 1. The exit code is 1 when a file breaks a rule.\n" .
                "The netflix-en preset has the limits of the Netflix English (USA) Timed Text Style Guide: 20 characters\n" .
                "per second, 42 characters per line, 2 lines, 5/6 s to 7 s, a gap of 2 frames and no overlaps.\n" .
+               "The bbc preset has the limits of the BBC Subtitle Guidelines: 37 characters per line, 180 words per\n" .
+               "minute and 0.3 s per word.\n" .
                "A rule option overrides the value of the preset.";
     }
 
@@ -53,7 +55,7 @@ class ValidateCommand extends ReportCommand
     protected function commandOptions(): array
     {
         return [
-            Option::value("preset", "NAME", "Rule set: netflix-en."),
+            Option::value("preset", "NAME", "Rule set: netflix-en or bbc."),
             Option::value("max-cps", "CHARS", "Maximum characters per second."),
             Option::value("max-cpl", "CHARS", "Maximum characters per line."),
             Option::value("max-lines", "LINES", "Maximum lines per cue."),
@@ -62,6 +64,15 @@ class ValidateCommand extends ReportCommand
             Option::value("min-gap", "SECONDS", "Minimum gap between cues."),
             Option::flag("no-overlap", "Report overlapping cues."),
             Option::flag("no-empty-cues", "Report cues without text."),
+            Option::value("max-wpm", "WORDS", "Maximum words per minute."),
+            Option::value("min-seconds-per-word", "SECONDS", "Minimum duration of a cue per word."),
+            Option::value("max-speakers", "SPEAKERS", "Maximum speakers per cue, from dialogue dashes or <v> names."),
+            Option::value("dialogue-dash", "STYLE", "Report dialogue dashes in another style than STYLE, for example \"- \" or \"-\"."),
+            Option::value("allowed-characters", "CHARS", "Report other characters. CHARS is a list or a class such as \"[A-Za-z0-9 .,!?]\"."),
+            Option::flag("no-double-spaces", "Report two or more spaces between words."),
+            Option::flag("no-leading-or-trailing-spaces", "Report lines that start or end with a space."),
+            Option::flag("no-unbalanced-tags", "Report formatting tags without a partner tag."),
+            Option::flag("no-all-caps-lines", "Report lines in upper case only."),
         ];
     }
 
@@ -75,7 +86,11 @@ class ValidateCommand extends ReportCommand
         if ($preset !== null && !in_array($preset, self::PRESETS, true)) {
             self::fail("Unknown preset \"$preset\". Known presets: " . implode(", ", self::PRESETS) . ".");
         }
-        $base = $preset === null ? new ValidationRules() : ValidationRules::netflixEnglish($this->fps ?? self::DEFAULT_FPS);
+        $base = match ($preset) {
+            null         => new ValidationRules(),
+            "bbc"        => ValidationRules::bbc(),
+            "netflix-en" => ValidationRules::netflixEnglish($this->fps ?? self::DEFAULT_FPS),
+        };
 
         $this->rules = new ValidationRules(
             maxCharactersPerSecond: $arguments->positiveFloat("max-cps") ?? $base->maxCharactersPerSecond,
@@ -86,6 +101,15 @@ class ValidateCommand extends ReportCommand
             minGap: $arguments->positiveFloat("min-gap") ?? $base->minGap,
             noOverlap: $arguments->has("no-overlap") || $base->noOverlap,
             noEmptyCues: $arguments->has("no-empty-cues") || $base->noEmptyCues,
+            noDoubleSpaces: $arguments->has("no-double-spaces") || $base->noDoubleSpaces,
+            noLeadingOrTrailingSpaces: $arguments->has("no-leading-or-trailing-spaces") || $base->noLeadingOrTrailingSpaces,
+            noUnbalancedTags: $arguments->has("no-unbalanced-tags") || $base->noUnbalancedTags,
+            dialogueDashStyle: $arguments->value("dialogue-dash") ?? $base->dialogueDashStyle,
+            maxSpeakersPerCue: $arguments->positiveInt("max-speakers") ?? $base->maxSpeakersPerCue,
+            maxWordsPerMinute: $arguments->positiveFloat("max-wpm") ?? $base->maxWordsPerMinute,
+            minSecondsPerWord: $arguments->positiveFloat("min-seconds-per-word") ?? $base->minSecondsPerWord,
+            allowedCharacters: $arguments->value("allowed-characters") ?? $base->allowedCharacters,
+            noAllCapsLines: $arguments->has("no-all-caps-lines") || $base->noAllCapsLines,
         );
         if ($this->rules == new ValidationRules()) {
             self::fail("Pass --preset or at least one rule option.");

@@ -460,7 +460,56 @@ class BinaryTest extends TestCase
         );
         $this->assertSame([0, "shop.vtt: no problems\n", ""], $this->runBinary(["validate", "shop.vtt", "--preset", "netflix-en", "--max-cps", "30"]));
         $this->assertSame(2, $this->runBinary(["validate", "shop.vtt"])[0]);
-        $this->assertSame(2, $this->runBinary(["validate", "shop.vtt", "--preset", "bbc"])[0]);
+        $this->assertSame(2, $this->runBinary(["validate", "shop.vtt", "--preset", "nope"])[0]);
+    }
+
+
+    public function testValidateWithTheBbcPreset(): void
+    {
+        $this->assertSame([
+            1,
+            "trip.srt: cue 2: maxCharactersPerLine 57, limit 37\n" .
+            "trip.srt: cue 2: maxWordsPerMinute 336, limit 180\n" .
+            "trip.srt: cue 2: minSecondsPerWord 0.179, limit 0.3\n" .
+            "trip.srt: cue 3: maxWordsPerMinute 450, limit 180\n" .
+            "trip.srt: cue 3: minSecondsPerWord 0.133, limit 0.3\n",
+            "",
+        ], $this->runBinary(["validate", "trip.srt", "--preset", "bbc"]));
+        $this->assertSame(
+            [1, "trip.srt: cue 2: maxCharactersPerLine 57, limit 37\n", ""],
+            $this->runBinary(["validate", "trip.srt", "--preset", "bbc", "--max-wpm", "500", "--min-seconds-per-word", "0.1"])
+        );
+    }
+
+
+    public function testValidateTextRules(): void
+    {
+        $vtt = "WEBVTT\n\n" .
+               "00:00:01.000 --> 00:00:04.000\n-Where is the bus?\n- At the <i>corner.\n\n" .
+               "00:00:05.000 --> 00:00:08.000\nTHE BUS IS LATE\nWait <i> here</i>\n\n" .
+               "00:00:09.000 --> 00:00:12.000\n<v Anna>Rain today.\n<v Ben>Sun tomorrow.\n<v Cleo>Snow later.\n\n" .
+               "00:00:13.000 --> 00:00:15.000\n&nbsp;Café open.\n";
+
+        $this->assertSame([
+            1,
+            "stdin: cue 1: noUnbalancedTags 1\n" .
+            "stdin: cue 1: dialogueDashStyle 1\n" .
+            "stdin: cue 2: noDoubleSpaces 1\n" .
+            "stdin: cue 2: noAllCapsLines 1\n" .
+            "stdin: cue 3: maxSpeakersPerCue 3, limit 2\n" .
+            "stdin: cue 4: noLeadingOrTrailingSpaces 1\n" .
+            "stdin: cue 4: allowedCharacters 2\n",
+            "",
+        ], $this->runBinary([
+            "validate", "-", "--dialogue-dash", "- ", "--no-unbalanced-tags", "--no-all-caps-lines", "--no-double-spaces",
+            "--no-leading-or-trailing-spaces", "--max-speakers", "2", "--allowed-characters", "[A-Za-z0-9 .,!?<>/\\-]",
+        ], $vtt));
+        $this->assertSame(
+            [2, "", "Error: The dialogue dash style must be a hyphen, an en dash or an em dash, with or without one space after it, got \"x\".\n" .
+                    "Run \"subtitle-toolbox help validate\" for the usage.\n"],
+            $this->runBinary(["validate", "-", "--dialogue-dash", "x"], $vtt)
+        );
+        $this->assertSame(2, $this->runBinary(["validate", "-", "--allowed-characters", "[z-a]"], $vtt)[0]);
     }
 
 
