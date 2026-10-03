@@ -3,6 +3,7 @@
 namespace SubtitleToolbox\Fixing;
 
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 
 /**
@@ -108,20 +109,20 @@ final class CommonErrorFixer
             "replaceList"     => self::replaceList($lines, $options->replaceList, $continues),
             "unbalancedTags"  => self::unbalancedTags($lines),
             "emptyTags"       => array_map(fn (string $line): string => self::emptyTags($line), $lines),
-            "ocrPipe"         => self::mapRuns($lines, fn (string $text): string => self::ocrPipe($text, $language)),
-            "ocrZeroInWords"  => self::mapRuns($lines, fn (string $text, bool $first): string => self::ocrZero($text, $first)),
-            "ocrLowercaseL"   => self::mapRuns($lines, fn (string $text): string => self::ocrLowercaseL($text, $language)),
-            "ellipsis"        => self::mapRuns($lines, fn (string $text): string => self::replace(
+            "ocrPipe"         => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrPipe($text, $language)),
+            "ocrZeroInWords"  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => self::ocrZero($text, $first)),
+            "ocrLowercaseL"   => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrLowercaseL($text, $language)),
+            "ellipsis"        => Markup::mapTextRuns($lines, fn (string $text): string => self::replace(
                 '/\.(?: ?\.){2,}' . ($options->unicodeEllipsis ? '|\x{2026}' : '') . '/u',
                 $options->unicodeEllipsis ? "\u{2026}" : "...",
                 $text
             )),
             "doubleSpaces"    => self::doubleSpaces($lines),
-            "spaceBeforePunctuation"       => self::mapRuns($lines, fn (string $text): string =>
+            "spaceBeforePunctuation"       => Markup::mapTextRuns($lines, fn (string $text): string =>
                 self::spaceBeforePunctuation($text, $language)),
-            "missingSpaceAfterPunctuation" => self::mapRuns($lines, fn (string $text): string =>
+            "missingSpaceAfterPunctuation" => Markup::mapTextRuns($lines, fn (string $text): string =>
                 self::missingSpaceAfterPunctuation($text)),
-            "dialogueDashes"  => self::mapRuns($lines, fn (string $text, bool $first): string => !$first ? $text : self::replace(
+            "dialogueDashes"  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => !$first ? $text : self::replace(
                 '/^[' . self::DASHES . '](?![' . self::DASHES . '])' . self::SPACES . '*(?=[^\s\p{N}])/u',
                 $options->dialogueDash,
                 $text
@@ -135,7 +136,7 @@ final class CommonErrorFixer
      */
     private static function language(?string $code): ?string
     {
-        return match (strtolower(explode("-", str_replace("_", "-", $code ?? ""))[0])) {
+        return match (StringHelpers::primaryLanguage($code)) {
             "en", "eng"        => "en",
             "de", "deu", "ger" => "de",
             "fr", "fra", "fre" => "fr",
@@ -272,7 +273,7 @@ final class CommonErrorFixer
     {
         $previousSpace = false;
 
-        return self::mapRuns($lines, function (string $text, bool $first) use (&$previousSpace): string {
+        return Markup::mapTextRuns($lines, function (string $text, bool $first) use (&$previousSpace): string {
             $text = self::replace('/' . self::SPACES . '{2,}/u', " ", $text);
             if (!$first && $previousSpace) {
                 $text = self::replace('/^' . self::SPACES . '+/u', "", $text);
@@ -310,7 +311,7 @@ final class CommonErrorFixer
     {
         $lastLine = count($lines) - 1;
         foreach ($lines as $lineIndex => $line) {
-            $lines[$lineIndex] = self::mapRuns([$line], function (string $text, bool $first, bool $last)
+            $lines[$lineIndex] = Markup::mapTextRuns([$line], function (string $text, bool $first, bool $last)
                 use ($list, $continues, $lineIndex, $lastLine): string {
                 if ($first && $last && isset($list->wholeLines[$text])) {
                     return $list->wholeLines[$text];
@@ -435,48 +436,6 @@ final class CommonErrorFixer
     private static function firstCharacter(string $text): string
     {
         return preg_match('/^./su', $text, $match) === 1 ? $match[0] : substr($text, 0, 1);
-    }
-
-
-    /**
-     * Calls $fn (string $text, bool $first, bool $last) for each text run between tags, with &lt;, &gt; and &amp; decoded.
-     * $first and $last mark the first and the last run of the line that holds text.
-     *
-     * @param list<string> $lines
-     * @return list<string>
-     */
-    private static function mapRuns(array $lines, callable $fn): array
-    {
-        foreach ($lines as $lineIndex => $line) {
-            $tokens = preg_split('/(<[^<>]*>)/', $line, -1, PREG_SPLIT_DELIM_CAPTURE);
-            $runs   = array_keys(array_filter($tokens, fn (string $token, int $index): bool =>
-                $index % 2 === 0 && $token !== "", ARRAY_FILTER_USE_BOTH));
-            foreach ($runs as $position => $index) {
-                $text   = strtr($tokens[$index], ["&lt;" => "<", "&gt;" => ">", "&amp;" => "&"]);
-                $mapped = $fn($text, $position === 0, $position === count($runs) - 1);
-                if ($mapped !== $text) {
-                    $tokens[$index] = self::escape($mapped, $tokens[$index]);
-                }
-            }
-            $lines[$lineIndex] = implode("", $tokens);
-        }
-
-        return $lines;
-    }
-
-
-    /**
-     * Keeps & and > unescaped where $raw has them unescaped, as TextTransforms does for WebVTT text.
-     */
-    private static function escape(string $text, string $raw): string
-    {
-        $entity = '&(?=[a-zA-Z][a-zA-Z0-9]*;|#[0-9]+;|#[xX][0-9a-fA-F]+;)';
-        $text   = preg_match("/&(?!lt;|gt;|amp;)/", $raw) === 1
-            ? (preg_replace("/$entity/", "&amp;", $text) ?? str_replace("&", "&amp;", $text))
-            : str_replace("&", "&amp;", $text);
-        $text   = str_replace("<", "&lt;", $text);
-
-        return str_contains($raw, ">") ? $text : str_replace(">", "&gt;", $text);
     }
 
 

@@ -2,6 +2,8 @@
 
 namespace SubtitleToolbox\Encoding;
 
+use SubtitleToolbox\Markup;
+
 /**
  * ISO 6937 as character code table 00 of EBU Tech 3264, appendix 2. PHP has no converter for it.
  */
@@ -145,7 +147,7 @@ class Iso6937
     {
         $bytes      = array_flip(self::CHARACTERS);
         $diacritics = array_flip(self::DIACRITICS);
-        $characters = preg_split('//u', $text, -1, PREG_SPLIT_NO_EMPTY) ?: str_split($text);
+        $characters = Markup::characters($text);
 
         $encoded       = "";
         $lastCharacter = "";

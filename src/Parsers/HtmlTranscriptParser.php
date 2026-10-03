@@ -120,6 +120,6 @@ class HtmlTranscriptParser extends SubtitleParser
 
     private function text(string $html): string
     {
-        return trim(preg_replace('/[ \t\n\r]+/', " ", Markup::decodeEntities(Markup::stripAllTags($html))) ?? "");
+        return trim(preg_replace('/[ \t\n\r]+/', " ", Markup::plainText($html)) ?? "");
     }
 }

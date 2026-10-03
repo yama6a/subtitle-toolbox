@@ -220,31 +220,9 @@ trait Fixes
             $line  = implode("", array_column($openTags, "tag"));
             $line .= implode(" ", array_column(array_slice($words, $start, $end - $start), "text"));
 
-            preg_match_all('/<(\/?)([a-zA-Z]+)[^>]*>/', $line, $tags, PREG_SET_ORDER);
-            $openTags = [];
-            foreach ($tags as [$tag, $slash, $name]) {
-                $name = strtolower($name);
-                if (!in_array($name, Markup::CORE_TAGS, true)) {
-                    continue;
-                }
-
-                if ($slash === "") {
-                    $openTags[] = ["name" => $name, "tag" => $tag];
-                    continue;
-                }
-
-                for ($index = count($openTags) - 1; $index >= 0; $index--) {
-                    if ($openTags[$index]["name"] === $name) {
-                        array_splice($openTags, $index, 1);
-                        break;
-                    }
-                }
-            }
-
+            $openTags = Markup::openCoreTags($line);
             if (isset($lineStarts[$lineIndex + 1])) {
-                foreach (array_reverse($openTags) as $openTag) {
-                    $line .= "</{$openTag["name"]}>";
-                }
+                $line .= Markup::closeCoreTags($openTags);
             }
             $lines[] = $line;
         }

@@ -83,4 +83,13 @@ class StringHelpersTest extends TestCase
 
         StringHelpers::convertToUtf8("\xFF\xFEC\x00a");
     }
+
+
+    public function testPrimaryLanguageReturnsTheLowercaseFirstSubtag(): void
+    {
+        $this->assertSame("pt", StringHelpers::primaryLanguage("pt_BR"));
+        $this->assertSame("tr", StringHelpers::primaryLanguage("TR-tr"));
+        $this->assertSame("deu", StringHelpers::primaryLanguage("deu"));
+        $this->assertSame("", StringHelpers::primaryLanguage(null));
+    }
 }

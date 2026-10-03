@@ -144,7 +144,7 @@ trait HearingImpairedRemoval
                     continue;
                 }
                 if ($token[0] === "&" && strlen($token) > 1) {
-                    $visible .= strtr($token, ["&lt;" => "<", "&gt;" => ">", "&amp;" => "&"]);
+                    $visible .= Markup::unescapeText($token);
                     $map[]    = [$lineIndex, $offset, strlen($token)];
                     continue;
                 }

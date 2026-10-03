@@ -87,12 +87,6 @@ trait WordGrouping
     }
 
 
-    private static function encode(mixed $block): string
-    {
-        return json_encode($block, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
-    }
-
-
     /**
      * Splits the words into cues. Each word is an array with the keys text, start, end, speaker and data.
      *
@@ -160,11 +154,13 @@ trait WordGrouping
             return null;
         }
 
-        $markup  = $this->wordTimestamps ? $this->withWordTimestamps($text, $words) : $this->escape($text);
+        $markup  = $this->wordTimestamps
+            ? Markup::insertWordTimestamps($text, array_map(fn (array $word): array => [$word["text"], $word["start"]], $words))
+            : Markup::escapeText($text);
         $speaker = trim($speaker ?? "");
         if ($this->speakerVoices && $speaker !== "") {
             // strip_tags() in the formatters reads a quote in a tag as the start of an attribute value.
-            $markup = "<v " . str_replace(["'", "\""], ["&#39;", "&quot;"], $this->escape($speaker)) . ">" . $markup;
+            $markup = "<v " . str_replace(["'", "\""], ["&#39;", "&quot;"], Markup::escapeText($speaker)) . ">" . $markup;
         }
 
         return (new SubtitleCue($start, $end, $markup))->setFormatData(self::FORMAT_DATA_KEY, $formatData);
@@ -185,31 +181,5 @@ trait WordGrouping
         }
 
         return $result;
-    }
-
-
-    private function withWordTimestamps(string $text, array $words): string
-    {
-        $markup   = "";
-        $copied   = 0;
-        $searchAt = 0;
-        foreach ($words as $word) {
-            $position = $word["text"] === "" ? false : strpos($text, $word["text"], $searchAt);
-            if ($position === false) {
-                continue;
-            }
-
-            $markup  .= $this->escape(substr($text, $copied, $position - $copied)) . "<" . Markup::coreTimestamp($word["start"]) . ">";
-            $copied   = $position;
-            $searchAt = $position + strlen($word["text"]);
-        }
-
-        return $markup . $this->escape(substr($text, $copied));
-    }
-
-
-    private function escape(string $text): string
-    {
-        return str_replace(["&", "<", ">"], ["&amp;", "&lt;", "&gt;"], $text);
     }
 }

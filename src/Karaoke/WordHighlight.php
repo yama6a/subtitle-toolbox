@@ -8,9 +8,6 @@ use SubtitleToolbox\SubtitleCue;
 
 final class WordHighlight
 {
-    private const TIMESTAMP_REGEX = '/^<(\d{2,}):([0-5]\d):([0-5]\d\.\d{3})>$/';
-
-
     /**
      * Returns a new subtitle with one cue per timed word, in which the style marks the active word.
      */
@@ -92,8 +89,9 @@ final class WordHighlight
             $items  = [];
             $tokens = preg_split('/(<[^>]*>)/', $line, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
             foreach ($tokens as $token) {
-                if (preg_match(self::TIMESTAMP_REGEX, $token, $matches)) {
-                    $times[] = $matches[1] * 3600 + $matches[2] * 60 + (float) $matches[3];
+                $time = Markup::wordTimestampSeconds($token);
+                if ($time !== null) {
+                    $times[] = $time;
                 } elseif (str_starts_with($token, "<")) {
                     $items[] = ["tag", $token, count($times) - 1];
                 } else {

@@ -158,7 +158,7 @@ final class SubtitleDiff
     private static function normalize(string $text, SubtitleDiffOptions $options): string
     {
         if ($options->ignoreFormatting) {
-            $text = Markup::decodeEntities(Markup::stripAllTags($text));
+            $text = Markup::plainText($text);
         }
         if ($options->ignoreWhitespace) {
             $text = preg_replace("/[ \t\n\r\f\v]+/", "", $text);

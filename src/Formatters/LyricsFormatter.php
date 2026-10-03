@@ -43,7 +43,7 @@ class LyricsFormatter extends SubtitleFormatter
 
         $output = "";
         foreach ($tags as $tag => $value) {
-            $output .= "[" . $tag . ":" . $this->toSingleLine($value) . "]" . StringHelpers::UNIX_LINE_ENDING;
+            $output .= "[" . $tag . ":" . Markup::toSingleLine($value) . "]" . StringHelpers::UNIX_LINE_ENDING;
         }
 
         return $output;
@@ -58,7 +58,7 @@ class LyricsFormatter extends SubtitleFormatter
         $output = "";
         foreach ($comments as $comment) {
             if ($comment["beforeCueIndex"] >= $fromCueIndex && $comment["beforeCueIndex"] <= $toCueIndex) {
-                $output .= "[#:" . $this->toSingleLine($comment["text"]) . "]" . StringHelpers::UNIX_LINE_ENDING;
+                $output .= "[#:" . Markup::toSingleLine($comment["text"]) . "]" . StringHelpers::UNIX_LINE_ENDING;
             }
         }
 
@@ -73,7 +73,7 @@ class LyricsFormatter extends SubtitleFormatter
         $parts = preg_split(Markup::WORD_TIMESTAMP_REGEX, implode(" ", $cue->getLines()), -1, PREG_SPLIT_DELIM_CAPTURE);
         $lines = "";
         foreach ($parts as $idx => $part) {
-            $lines .= $idx % 2 === 1 ? $this->formatWordTimestamp($part) : Markup::decodeEntities(Markup::stripAllTags($part));
+            $lines .= $idx % 2 === 1 ? $this->formatWordTimestamp($part) : Markup::plainText($part);
         }
 
         return $timestamp . " " . $lines;
@@ -82,15 +82,7 @@ class LyricsFormatter extends SubtitleFormatter
 
     private function formatWordTimestamp(string $coreTimestamp): string
     {
-        [$hours, $minutes, $seconds] = explode(":", trim($coreTimestamp, "<>"));
-
-        return "<" . trim($this->formatTimeToString($hours * 3600 + $minutes * 60 + (float) $seconds), "[]") . ">";
-    }
-
-
-    private function toSingleLine(string $text): string
-    {
-        return preg_replace("/\s*\n\s*/", " ", trim($text));
+        return "<" . trim($this->formatTimeToString(Markup::wordTimestampSeconds($coreTimestamp)), "[]") . ">";
     }
 
 

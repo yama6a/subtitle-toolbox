@@ -75,7 +75,7 @@ class AwsTranscribeParser extends SubtitleParser
                 $start = $this->seconds($item["start_time"] ?? null, "$path.start_time");
                 $end   = $this->seconds($item["end_time"] ?? null, "$path.end_time");
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [self::encode($item)]);
+                $this->fail($exception, 0, $index, [RawJson::encode($item)]);
                 continue;
             }
 
@@ -112,7 +112,7 @@ class AwsTranscribeParser extends SubtitleParser
                 $end   = $this->seconds($segment["end_time"] ?? null, "$path.end_time");
                 $text  = $this->text($segment, "transcript", $path);
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [self::encode($segment)]);
+                $this->fail($exception, 0, $index, [RawJson::encode($segment)]);
                 continue;
             }
 

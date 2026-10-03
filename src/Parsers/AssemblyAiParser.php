@@ -63,7 +63,7 @@ class AssemblyAiParser extends SubtitleParser
                 $text  = $this->text($utterance, "text", $path);
                 $words = $this->readWords(self::listOrEmpty($utterance["words"] ?? null), "$path.words");
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [self::encode($utterance)]);
+                $this->fail($exception, 0, $index, [RawJson::encode($utterance)]);
                 continue;
             }
 
@@ -87,7 +87,7 @@ class AssemblyAiParser extends SubtitleParser
                 $start = $this->seconds($word["start"] ?? null, "{$path}[$index].start", self::MILLISECONDS);
                 $end   = $this->seconds($word["end"] ?? null, "{$path}[$index].end", self::MILLISECONDS);
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [self::encode($word)]);
+                $this->fail($exception, 0, $index, [RawJson::encode($word)]);
                 continue;
             }
 

@@ -25,7 +25,7 @@ final class TextChecks
      */
     public static function check(int $cueIndex, SubtitleCue $cue, float $duration, ValidationRules $rules): array
     {
-        $lines   = array_map(fn (string $line): string => Markup::decodeEntities(Markup::stripAllTags($line)), $cue->getLines());
+        $lines   = array_map(fn (string $line): string => Markup::plainText($line), $cue->getLines());
         $visible = array_values(array_filter($lines, fn (string $line): bool => trim($line) !== ""));
         $counts  = [];
 
@@ -62,7 +62,7 @@ final class TextChecks
             }
         }
 
-        $words = self::countWords(implode("\n", $lines));
+        $words = count(Markup::words(implode("\n", $lines)));
         if ($rules->maxWordsPerMinute !== null && $words > 0) {
             $wordsPerMinute = $duration > 0 ? $words / $duration * 60 : INF;
             if ($wordsPerMinute > $rules->maxWordsPerMinute) {
@@ -98,19 +98,6 @@ final class TextChecks
         }
 
         return $results;
-    }
-
-
-    /**
-     * Counts the words of text without tags as SubtitleStatistics does: runs of characters between white space.
-     */
-    public static function countWords(string $text): int
-    {
-        $words = preg_split('/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY);
-        // Invalid UTF-8, such as the Latin-1 bytes that MicroDVD keeps, makes the /u pattern fail.
-        $words = $words === false ? preg_split('/\s+/', $text, -1, PREG_SPLIT_NO_EMPTY) : $words;
-
-        return count($words);
     }
 
 
@@ -191,7 +178,7 @@ final class TextChecks
     private static function disallowedCharacters(string $line, string $allowed): int
     {
         $isUtf8     = preg_match('//u', $line) === 1;
-        $characters = $isUtf8 ? preg_split('//u', $line, -1, PREG_SPLIT_NO_EMPTY) : str_split($line);
+        $characters = Markup::characters($line);
 
         if (self::isCharacterClass($allowed)) {
             $pattern = self::characterClassPattern($allowed) . ($isUtf8 ? "u" : "");
@@ -200,7 +187,7 @@ final class TextChecks
                 $character !== " " && preg_match($pattern, $character) !== 1));
         }
 
-        $set = array_flip(preg_split('//u', $allowed, -1, PREG_SPLIT_NO_EMPTY) ?: str_split($allowed));
+        $set = array_flip(Markup::characters($allowed));
 
         return count(array_filter($characters, fn (string $character): bool =>
             $character !== " " && !isset($set[$character])));

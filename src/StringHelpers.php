@@ -138,4 +138,13 @@ class StringHelpers
         // CR CR LF comes from a CR LF file that went through a text-mode conversion a second time.
         return preg_replace('/\r+\n|\r/', static::UNIX_LINE_ENDING, $str);
     }
+
+
+    /**
+     * Returns the lowercase primary language subtag of a language code, for example "pt" for "pt_BR" and "" for null.
+     */
+    public static function primaryLanguage(?string $code): string
+    {
+        return strtolower(explode("-", str_replace("_", "-", $code ?? ""))[0]);
+    }
 }

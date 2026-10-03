@@ -83,7 +83,7 @@ class PodcastTranscriptFormatter extends SubtitleFormatter
             $speaker   = null;
             $start     = $cue->getStart();
             $text      = "";
-            $tokens    = preg_split('/(<[^<>]*>)/', implode(" ", $cue->getLines()), -1, PREG_SPLIT_DELIM_CAPTURE);
+            $tokens    = Markup::splitTags(implode(" ", $cue->getLines()));
             foreach ($tokens as $position => $token) {
                 if ($position % 2 === 0) {
                     $text .= $token;

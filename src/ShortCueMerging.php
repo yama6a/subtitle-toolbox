@@ -68,7 +68,7 @@ trait ShortCueMerging
             return null;
         }
 
-        $firstText = rtrim(Markup::decodeEntities(Markup::stripAllTags($first->getText())));
+        $firstText = rtrim(Markup::plainText($first->getText()));
         if ($options->keepSentenceEnds && preg_match('/[.?!]$/', $firstText) === 1) {
             return null;
         }
@@ -80,7 +80,8 @@ trait ShortCueMerging
         }
 
         $lines = self::shortCueMergingWrap(self::shortCueMergingOneVoiceTag($first, $second, $speakers)
-                                           ?? [...$first->getLines(), ...$second->getLines()], $options);
+                                           ?? [...$first->getLines(), ...$second->getLines()],
+                                           $options->maxCharactersPerLine, $options->maxLines);
         if ($lines === null || $options->maxCharactersPerSecond === null) {
             return $lines;
         }
@@ -101,7 +102,7 @@ trait ShortCueMerging
      *
      * @return ?list<string> null when the text does not fit
      */
-    private static function shortCueMergingWrap(array $lines, MergeShortCuesOptions $options): ?array
+    private static function shortCueMergingWrap(array $lines, int $maxCharactersPerLine, int $maxLines): ?array
     {
         $segments = [];
         foreach ($lines as $line) {
@@ -120,7 +121,7 @@ trait ShortCueMerging
 
         if (count($segments) <= 1) {
             $words      = $segments[0] ?? [];
-            $lineStarts = self::fixesFindBreaks($words, $options->maxCharactersPerLine, $options->maxLines);
+            $lineStarts = self::fixesFindBreaks($words, $maxCharactersPerLine, $maxLines);
             $segments   = [];
             foreach ($lineStarts as $lineIndex => $start) {
                 $segments[] = array_slice($words, $start, ($lineStarts[$lineIndex + 1] ?? count($words)) - $start);
@@ -130,11 +131,11 @@ trait ShortCueMerging
             $joined = array_map(fn (array $words): string => implode(" ", array_column($words, "text")), $segments);
         }
 
-        if (count($segments) > $options->maxLines) {
+        if (count($segments) > $maxLines) {
             return null;
         }
         foreach ($segments as $words) {
-            if (self::fixesLineLength($words) > $options->maxCharactersPerLine) {
+            if (self::fixesLineLength($words) > $maxCharactersPerLine) {
                 return null;
             }
         }

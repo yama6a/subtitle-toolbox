@@ -190,10 +190,8 @@ class SubtitleStatistics
             return;
         }
 
-        $text  = Markup::decodeEntities(Markup::stripAllTags(implode("\n", $cue->getLines())));
-        $words = preg_split('/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY);
-        // Invalid UTF-8, such as the Latin-1 bytes that MicroDVD keeps, makes the /u pattern fail.
-        $words = $words === false ? preg_split('/\s+/', $text, -1, PREG_SPLIT_NO_EMPTY) : $words;
+        $text  = Markup::plainText(implode("\n", $cue->getLines()));
+        $words = Markup::words($text);
 
         $this->characterCount += $characters;
         $this->wordCount      += count($words);

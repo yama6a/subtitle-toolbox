@@ -84,7 +84,7 @@ class AssFormatter extends SubtitleFormatter
         $lines = $data["scriptInfoComments"] ?? [];
         $title = $subtitle->getMetadata(Subtitle::METADATA_TITLE);
         if ($title !== null) {
-            $lines[] = "Title: " . $this->toSingleLine($title);
+            $lines[] = "Title: " . Markup::toSingleLine($title);
         }
         foreach ($data["scriptInfo"] ?? [] as $key => $value) {
             $lines[] = "$key: $value";
@@ -308,12 +308,6 @@ class AssFormatter extends SubtitleFormatter
     private function escapeText(string $text): string
     {
         return str_replace([StringHelpers::UNIX_LINE_ENDING, "\u{00A0}"], ["\\N", "\\h"], $text);
-    }
-
-
-    private function toSingleLine(string $text): string
-    {
-        return preg_replace('/\s*\n\s*/', " ", trim($text));
     }
 
 
