@@ -27,7 +27,7 @@ class SbvParser extends SubtitleParser
             $parts = $this->repairMissingEmptyLines($rawLines, $lineNumber, $idx, $this->isTimingLine(...), false);
             foreach ($parts as $offset => $part) {
                 try {
-                    $subtitle->addCue($this->parseCueBlock($part, $idx));
+                    $subtitle->addCue($this->parseCueBlock($part, $idx), false);
                 } catch (ParsingException $exception) {
                     $this->fail($exception, $lineNumber + $offset, $idx, $part);
                 }
@@ -35,7 +35,7 @@ class SbvParser extends SubtitleParser
             $idx++;
         }
 
-        return $subtitle;
+        return $subtitle->reIndexCues();
     }
 
 

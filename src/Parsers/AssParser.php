@@ -92,7 +92,7 @@ class AssParser extends SubtitleParser
         $data["eventFormat"] ??= $this->isSsa($data) ? self::SSA_EVENT_FORMAT : self::ASS_EVENT_FORMAT;
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, $data);
 
-        return $subtitle;
+        return $subtitle->reIndexCues();
     }
 
 
@@ -193,7 +193,7 @@ class AssParser extends SubtitleParser
             "lines"     => $cue->getLines(),
             "alignment" => $alignment,
         ]);
-        $subtitle->addCue($cue);
+        $subtitle->addCue($cue, false);
     }
 
 
