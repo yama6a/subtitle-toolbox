@@ -1011,6 +1011,7 @@ curl -s https://example.com/movie.srt | vendor/bin/subtitle-toolbox convert - --
 - **Overwrite**: the tool never overwrites a file without `--force` or `--in-place`.
 - **Batch**: the tool prints one line per file and a summary. It stops at the first failed file, unless you pass `--keep-going`.
 - **Forced cues**: `convert --forced-only` keeps only the forced cues, as `forcedOnly()` does. See [Forced cues](#forced-cues).
+- **Speakers**: `convert --speakers` takes `prefix`, `dashes`, `colours` or `from-prefix`. It calls `toPrefix()`, `toDialogueDashes()`, `toColours()` or `fromPrefix()` with the default arguments. See [Speakers](#speakers).
 - **Short cues**: `fix --merge-short` calls `mergeShortCues()` with the default options. `--max-cpl` and `--max-lines` set `maxCharactersPerLine` and `maxLines`. See [Merging short cues](#merging-short-cues).
 - **Long cues**: `fix --split-long` calls `splitLongCues()` with the default options. `--max-cpl` and `--max-lines` set `maxCharactersPerLine` and `maxLines`. See [Splitting long cues](#splitting-long-cues).
 - **Validate**: `--preset` takes `netflix-en` or `bbc`, see [Validation](#validation). A rule option overrides the value of the preset. The table below gives the rule of each option.

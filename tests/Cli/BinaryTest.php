@@ -313,6 +313,30 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testSpeakers(): void
+    {
+        $files = __DIR__ . "/../files/speakers/";
+        copy($files . "voices.vtt", "$this->dir/voices.vtt");
+        copy($files . "sdh_labels.srt", "$this->dir/labels.srt");
+
+        foreach (["prefix", "dashes", "colours"] as $mode) {
+            $this->assertSame(
+                [0, file_get_contents($files . "voices_$mode.srt"), ""],
+                $this->runBinary(["convert", "voices.vtt", "--to", "srt", "-o", "-", "--no-bom", "--speakers", $mode])
+            );
+        }
+        $this->assertSame(
+            [0, file_get_contents($files . "sdh_labels_voices.vtt"), ""],
+            $this->runBinary(["convert", "labels.srt", "--to", "vtt", "-o", "-", "--no-bom", "--speakers", "from-prefix"])
+        );
+        $this->assertSame(
+            [2, "", "Error: Unknown speaker mode \"names\". Known modes: prefix, dashes, colours, from-prefix.\n" .
+                    "Run \"subtitle-toolbox help convert\" for the usage.\n"],
+            $this->runBinary(["convert", "voices.vtt", "--to", "srt", "--speakers", "names"])
+        );
+    }
+
+
     public function testMicroDvdNeedsTheFrameRate(): void
     {
         [$code, , $stderr] = $this->runBinary(["convert", "frames.sub", "--to", "srt", "-o", "-"]);

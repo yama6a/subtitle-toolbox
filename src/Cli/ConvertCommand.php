@@ -7,11 +7,14 @@ use GlyphOcr\GlyphDatabase;
 use GlyphOcr\Recognizer;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
+use SubtitleToolbox\Speakers\SpeakerLabels;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
 class ConvertCommand extends WriteCommand
 {
+    private const SPEAKER_MODES = ["prefix", "dashes", "colours", "from-prefix"];
+
     private ?GlyphDatabase $ocrDatabase = null;
 
 
@@ -45,6 +48,7 @@ class ConvertCommand extends WriteCommand
     {
         return [
             Option::flag("strip-tags", "Remove all formatting tags, such as <i> and <font>, from the cue text."),
+            Option::value("speakers", "MODE", "Convert <v> speaker tags: prefix (ANNA: Hi), dashes, colours, or from-prefix (ANNA: to <v Anna>)."),
             Option::flag("forced-only", "Keep only the forced cues, for example the translations of signs."),
             Option::flag("ocr", "Read the text of image cues, for example from PGS or VobSub, with GlyphOcrEngine."),
             Option::value("ocr-database", "FILE", "The .nocr glyph database for --ocr. Default: the Latin database of php-glyph-ocr."),
@@ -80,6 +84,11 @@ class ConvertCommand extends WriteCommand
 
         if ($this->toFormat === null && ($this->output === null || $this->output === self::DASH)) {
             self::fail("Pass --to FORMAT or an output file.");
+        }
+
+        $speakers = $arguments->value("speakers");
+        if ($speakers !== null && !in_array($speakers, self::SPEAKER_MODES, true)) {
+            self::fail("Unknown speaker mode \"$speakers\". Known modes: " . implode(", ", self::SPEAKER_MODES) . ".");
         }
 
         $this->ocrDatabase = $arguments->has("ocr") ? self::loadOcrDatabase($arguments->value("ocr-database")) : null;
@@ -119,6 +128,13 @@ class ConvertCommand extends WriteCommand
 
     protected function transform(Subtitle $subtitle, Arguments $arguments): void
     {
+        match ($arguments->value("speakers")) {
+            "prefix"      => SpeakerLabels::toPrefix($subtitle),
+            "dashes"      => SpeakerLabels::toDialogueDashes($subtitle),
+            "colours"     => SpeakerLabels::toColours($subtitle),
+            "from-prefix" => SpeakerLabels::fromPrefix($subtitle),
+            null          => null,
+        };
         if ($arguments->has("strip-tags")) {
             $subtitle->stripFormatting();
         }
