@@ -58,6 +58,12 @@ abstract class WriteCommand extends FileCommand
     }
 
 
+    protected function fpsDescription(): string
+    {
+        return "Frame rate of the video, for MicroDVD input without a {1}{1}<fps> first line, and for MicroDVD and iTT output.";
+    }
+
+
     /**
      * @return list<Option>
      */

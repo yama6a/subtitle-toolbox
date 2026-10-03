@@ -68,8 +68,8 @@ abstract class FileCommand extends Command
 
         return [
             ...$options,
-            Option::value("encoding", "NAME", "Encoding of the input, for example Windows-1252. Default: UTF-8, or the encoding of a UTF-16 or UTF-32 BOM."),
-            Option::flag("lenient", "Skip or repair broken cues in SubRip, WebVTT and SBV input, and print a warning for each."),
+            Option::value("encoding", "NAME", "Encoding of the input, for example Windows-1252. Default: UTF-8. A BOM in the input overrides it."),
+            Option::flag("lenient", "Skip or repair broken cues and print a warning for each. SCC, PGS, VobSub and chapter input ignore it."),
             Option::value("fps", "RATE", $this->fpsDescription()),
             Option::flag("keep-going", "Go on with the next file after a file fails. Default: stop at the first failure."),
         ];

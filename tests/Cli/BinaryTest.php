@@ -143,6 +143,22 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testHelpTextsDescribeWhatTheOptionsDo(): void
+    {
+        $convert = $this->runBinary(["convert", "--help"])[1];
+        $this->assertMatchesRegularExpression('/^  --lenient +Skip or repair broken cues and print a warning for each\. ' .
+                                              'SCC, PGS, VobSub and chapter input ignore it\.$/m', $convert);
+        $this->assertMatchesRegularExpression('/^  --encoding NAME +.*A BOM in the input overrides it\.$/m', $convert);
+        $this->assertMatchesRegularExpression('/^  --fps RATE +.*for MicroDVD and iTT output\.$/m', $convert);
+        $this->assertStringNotContainsString("SubRip, WebVTT and SBV", $convert);
+
+        $fix = $this->runBinary(["fix", "--help"])[1];
+        $this->assertMatchesRegularExpression('/^  --split-long +.*at sentence ends, clause ends or spaces\.$/m', $fix);
+        $this->assertMatchesRegularExpression('/^  --merge-short +.*at most 0\.25 s away.*$/m', $fix);
+        $this->assertDoesNotMatchRegularExpression('/MicroDVD and iTT output/', $this->runBinary(["info", "--help"])[1]);
+    }
+
+
     public function testUnknownCommandAndOptionAreUsageErrors(): void
     {
         $this->assertSame([2, "", "Error: Unknown command \"merge\".\nRun \"subtitle-toolbox help\" for the usage.\n"], $this->runBinary(["merge"]));

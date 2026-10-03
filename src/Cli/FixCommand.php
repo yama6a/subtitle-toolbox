@@ -47,8 +47,8 @@ class FixCommand extends WriteCommand
             Option::value("max-lines", "LINES", "Maximum number of lines per cue for --wrap, --merge-short and --split-long. Default: 2."),
             Option::flag("unwrap", "Join the lines of each cue with a space."),
             Option::flag("merge-duplicates", "Join touching cues with the same text."),
-            Option::flag("merge-short", "Join cues shorter than 1 s with a neighbour, where the joined cue fits --max-cpl and --max-lines."),
-            Option::flag("split-long", "Split cues longer than 7 s, or longer than --max-lines lines of --max-cpl characters, at sentence ends."),
+            Option::flag("merge-short", "Join cues shorter than 1 s with a neighbour at most 0.25 s away, where the joined cue fits 7 s, --max-cpl and --max-lines."),
+            Option::flag("split-long", "Split cues longer than 7 s, or longer than --max-lines lines of --max-cpl characters, at sentence ends, clause ends or spaces."),
             Option::value("max-cpl", "CHARS", "Maximum characters per line for --merge-short and --split-long. Default: 42."),
         ];
     }
