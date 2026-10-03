@@ -195,7 +195,7 @@ class IttFormatterTest extends TestCase
     }
 
 
-    public function testFrameRateOfTheParsedFileWinsOverTheOption(): void
+    public function testOptionWinsOverTheFrameRateOfTheParsedFile(): void
     {
         $ttml     = "<tt xmlns=\"http://www.w3.org/ns/ttml\" xmlns:ttp=\"http://www.w3.org/ns/ttml#parameter\""
                     . " ttp:timeBase=\"smpte\" ttp:frameRate=\"24\" ttp:frameRateMultiplier=\"1000 1001\">"
@@ -203,8 +203,32 @@ class IttFormatterTest extends TestCase
         $subtitle = Subtitle::parse($ttml, IttParser::class);
         $output   = $subtitle->format(IttFormatter::class, [IttFormatter::OPTION_FRAME_RATE => 25]);
 
+        $this->assertStringContainsString(" ttp:frameRate=\"25\" ttp:frameRateMultiplier=\"1 1\" ", $output);
+        $this->assertSame(["<p begin=\"00:00:01:13\" end=\"00:00:02:00\" region=\"bottom\">a</p>"], $this->paragraphs($output));
+    }
+
+
+    public function testOptionWinsOverTheFrameRateOfARealFile(): void
+    {
+        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/itt/real/fcp_23976_styles.itt"), IttParser::class);
+        $output   = $subtitle->format(IttFormatter::class, [IttFormatter::OPTION_FRAME_RATE => 25]);
+
+        $this->assertStringContainsString(" ttp:frameRate=\"25\" ttp:frameRateMultiplier=\"1 1\" ", $output);
+        $this->assertStringStartsWith("<p begin=\"00:00:01:13\" end=\"00:00:04:00\" ", $this->paragraphs($output)[0]);
+        $this->assertSame(
+            $subtitle->format(IttFormatter::class),
+            $subtitle->format(IttFormatter::class, [IttFormatter::OPTION_FRAME_RATE => 23.976])
+        );
+    }
+
+
+    public function testOptionWithTheParsedFrameRateKeepsTheParsedMultiplier(): void
+    {
+        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/itt/real/avscript_testing.itt"), IttParser::class);
+        $output   = $subtitle->format(IttFormatter::class, [IttFormatter::OPTION_FRAME_RATE => 23.976]);
+
         $this->assertStringContainsString(" ttp:frameRate=\"24\" ttp:frameRateMultiplier=\"1000 1001\" ", $output);
-        $this->assertSame(["<p begin=\"00:00:01:12\" end=\"00:00:02:00\" region=\"bottom\">a</p>"], $this->paragraphs($output));
+        $this->assertSame($subtitle->format(IttFormatter::class), $output);
     }
 
 
