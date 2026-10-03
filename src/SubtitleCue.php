@@ -24,12 +24,25 @@ class SubtitleCue
     /** @var array<string, array> */
     protected array $formatData = [];
 
+    private static int $timeEdits = 0;
+
 
     public function __construct(float $start = 0, float $end = 0, $lines = "")
     {
         $this->setStart($start);
         $this->setEnd($end);
         $this->setLines($lines);
+    }
+
+
+    /**
+     * Returns how often setStart() and setEnd() ran on any cue, so a cache of cue times can tell when it is stale.
+     *
+     * @internal
+     */
+    public static function timeEditCount(): int
+    {
+        return self::$timeEdits;
     }
 
 
@@ -42,6 +55,7 @@ class SubtitleCue
     public function setStart(float $start): self
     {
         $this->start = round($start, 3);
+        self::$timeEdits++;
 
         return $this;
     }
@@ -56,6 +70,7 @@ class SubtitleCue
     public function setEnd(float $end): self
     {
         $this->end = round($end, 3);
+        self::$timeEdits++;
 
         return $this;
     }

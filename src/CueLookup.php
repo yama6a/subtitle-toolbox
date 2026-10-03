@@ -3,15 +3,12 @@
 namespace SubtitleToolbox;
 
 use ArrayIterator;
-use Closure;
 use Iterator;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use WeakMap;
 
 trait CueLookup
 {
-    /** @var WeakMap<Subtitle, array>|null */
-    private static ?WeakMap $cueLookupIndexes = null;
+    private ?array $cueLookupIndex = null;
 
 
     /**
@@ -130,22 +127,23 @@ trait CueLookup
 
 
     /**
-     * Returns the cached start and end times, and in start order a tree whose node holds the latest end of its cues.
+     * Returns the cues in start order as a tree whose node holds the latest end of its cues.
+     * A time setter of any cue or a change of the cue list makes the next call rebuild the tree.
      */
     private function getCueLookupIndex(): array
     {
-        self::$cueLookupIndexes ??= new WeakMap();
-
-        // array_column runs in C and needs the SubtitleCue scope to read the protected times.
-        [$starts, $ends] = Closure::bind(
-            static fn (array $cues): array => [array_column($cues, "start"), array_column($cues, "end")],
-            null,
-            SubtitleCue::class
-        )($this->cues);
-
-        $index = self::$cueLookupIndexes[$this] ?? null;
-        if ($index !== null && $index["cues"] === $this->cues && $index["starts"] === $starts && $index["ends"] === $ends) {
+        $timeEdits = SubtitleCue::timeEditCount();
+        $index     = $this->cueLookupIndex;
+        // The cached list shares its storage with $this->cues until either changes, so this check costs O(1).
+        if ($index !== null && $index["timeEdits"] === $timeEdits && $index["cues"] === $this->cues) {
             return $index;
+        }
+
+        $starts = [];
+        $ends   = [];
+        foreach ($this->cues as $cue) {
+            $starts[] = $cue->getStart();
+            $ends[]   = $cue->getEnd();
         }
 
         $count  = count($starts);
@@ -172,10 +170,10 @@ trait CueLookup
             }
         }
 
-        return self::$cueLookupIndexes[$this] = [
+        return $this->cueLookupIndex = [
             "cues"      => $this->cues,
+            "timeEdits" => $timeEdits,
             "starts"    => $starts,
-            "ends"      => $ends,
             "keys"      => array_keys($this->cues),
             "maxEnds"   => $maxEnds,
             "leafCount" => $leafCount,

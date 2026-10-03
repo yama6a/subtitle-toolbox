@@ -183,6 +183,57 @@ class CueLookupTest extends TestCase
     }
 
 
+    public function testLookupSeesSetStartAfterLookup(): void
+    {
+        $subtitle = $this->parseHarbourTour();
+        $this->assertSame(0, $subtitle->getCueIndexAt(2));
+        $this->assertSame([0, 1], array_keys($subtitle->getCuesBetween(1, 5)));
+
+        $subtitle->getCues()[0]->setStart(2.5);
+
+        $this->assertNull($subtitle->getCueIndexAt(2));
+        $this->assertSame(0, $subtitle->getCueIndexAt(2.5));
+        $this->assertSame([], $subtitle->getCuesBetween(1, 2.5));
+        $this->assertSame([0], array_keys($subtitle->getCuesBetween(1, 2.6)));
+    }
+
+
+    public function testLookupSeesSetStartOnLargeSubtitle(): void
+    {
+        $subtitle = $this->makeLargeSubtitle();
+        $this->assertSame(["background", "line 4000", "sign 4000"], $this->getTexts($subtitle->getCuesAt(10001.5)));
+
+        $sign = array_key_first($subtitle->findCues(fn (SubtitleCue $cue): bool => $cue->getText() === "sign 4000"));
+        $subtitle->getCues()[$sign]->setStart(10001.6);
+
+        $this->assertSame(["background", "line 4000"], $this->getTexts($subtitle->getCuesAt(10001.5)));
+        $this->assertSame(["background", "line 4000", "sign 4000"], $this->getTexts($subtitle->getCuesAt(10001.6)));
+    }
+
+
+    public function testLookupSeesCueAddedAfterLookup(): void
+    {
+        $subtitle = $this->parseHarbourTour();
+        $this->assertNull($subtitle->getCueIndexAt(30));
+
+        $subtitle->addCue(new SubtitleCue(29, 31, "late"), false);
+
+        $this->assertSame(6, $subtitle->getCueIndexAt(30));
+    }
+
+
+    public function testLookupSeesCueRemovedAfterLookup(): void
+    {
+        $subtitle = $this->parseHarbourTour();
+        $this->assertSame(0, $subtitle->getCueIndexAt(2));
+
+        $subtitle->removeCue(0, false);
+
+        $this->assertNull($subtitle->getCueIndexAt(2));
+        $this->assertSame(1, $subtitle->getCueIndexAt(5));
+    }
+
+
     public function testLookupOnLargeSubtitleMatchesLinearScan(): void
     {
         $subtitle = $this->makeLargeSubtitle();
