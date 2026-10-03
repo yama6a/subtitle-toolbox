@@ -315,6 +315,8 @@ class ThrowSitesTest extends TestCase
                 [SubtitleFormatter::OPTION_LINE_ENDING => "\r"]), ...$invalid],
             "Formatters/SubtitleFormatter.php: bom"         => [fn () => self::subtitle()->format(SubRipFormatter::class,
                 [SubtitleFormatter::OPTION_BOM => "yes"]), ...$invalid],
+            "Formatters/SubtitleFormatter.php: unknown option" => [fn () => self::subtitle()->format(SubRipFormatter::class,
+                ["lineEndings" => "\r\n"]), ...$invalid],
             "Formatters/TtmlFormatter.php: stored head"     => [fn () => self::subtitle()->setFormatData(TtmlParser::FORMAT, ["head" => "<p/>"])
                 ->format(TtmlFormatter::class), InvalidFormatterException::class, InvalidFormatterException::class],
             "FrameRate.php: frame rate 0"                   => [fn () => new FrameRate(0), ...$invalid],

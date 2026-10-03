@@ -30,6 +30,7 @@ class CsvFormatter extends SubtitleFormatter
      */
     public function format(Subtitle $subtitle, array $options = []): string
     {
+        $this->rejectUnknownOptions($options);
         $data      = $subtitle->getFormatData(CsvParser::FORMAT_DATA_KEY);
         $delimiter = $options[self::OPTION_DELIMITER] ?? $data["delimiter"] ?? ",";
         CsvParser::checkDelimiter($delimiter);

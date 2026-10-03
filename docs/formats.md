@@ -26,6 +26,7 @@ $subtitle->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_STRIP_ALL_X
 - **Strip all tags**: ASS, EBU STL, iTT, MicroDVD, SAMI, SubRip, TTML and WebVTT read `OPTION_STRIP_ALL_XML_TAGS`.
 - **True-or-false options**: each one works as a list value such as `[OPTION_STRIP_ALL_XML_TAGS]` or as a key such as `[OPTION_STRIP_ALL_XML_TAGS => true]`. This holds for the options of the formatters and of the speech-to-text and transcript parsers.
 - **Image cues**: see [ocr.md](ocr.md#image-cues).
+- **Unknown keys**: a string key that the formatter does not read throws `InvalidArgumentException`. So a misspelled key such as `lineEndings` fails, and so does a key of another formatter, such as `OPTION_FRAME_RATE` for SubRip.
 
 ## ASS and SSA
 `AssParser` reads ASS v4.00+ and SSA v4.00. `AssFormatter` writes the version that the parser read, or ASS for cues from other formats.

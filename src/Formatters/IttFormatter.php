@@ -59,7 +59,7 @@ class IttFormatter extends SubtitleFormatter
         $fps                      = (float) $frameRate * $this->multiplierFactor($multiplier);
 
         $ttml = $this->toTtmlSubtitle($subtitle);
-        $xml  = (new TtmlFormatter())->format($ttml, array_diff_key($options, [self::OPTION_LINE_ENDING => 0, self::OPTION_BOM => 0]));
+        $xml  = (new TtmlFormatter())->format($ttml, array_diff_key($options, [self::OPTION_LINE_ENDING => 0, self::OPTION_BOM => 0, self::OPTION_FRAME_RATE => 0]));
 
         $document = new DOMDocument();
         $document->loadXML($xml, LIBXML_NONET);
