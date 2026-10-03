@@ -3,6 +3,7 @@
 namespace SubtitleToolbox\Sync;
 
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 
 final class ReferenceSync
 {
@@ -12,14 +13,76 @@ final class ReferenceSync
 
 
     /**
-     * Finds the scale and offset that make the cue times of $target match those of $reference, without a change to $target.
+     * Finds the scale and offset that make the cue times of $target match those of the reference in $options, and
+     * retimes $target with them.
      */
-    public static function sync(Subtitle $target, Subtitle $reference, ?ReferenceSyncOptions $options = null): SyncResult
+    public static function apply(Subtitle $target, ReferenceSyncOptions $options): SyncResult
     {
-        $options ??= new ReferenceSyncOptions();
+        $result   = self::find($target, $options);
+        $segments = $result->getSegments();
+        if (count($segments) > 1) {
+            self::retimeSegments($target, $result->getScale(), $segments);
 
+            return $result;
+        }
+
+        if ($result->getScale() != 1) {
+            $target->scale($result->getScale());
+        }
+        if ($result->getOffset() != 0) {
+            $target->shift($result->getOffset());
+        }
+
+        return $result;
+    }
+
+
+    /**
+     * Scales and then shifts each cue with the segment that holds its start. An earlier cue ends before a later part starts.
+     *
+     * @param list<array{from: float, to: float, scale: float, offset: float}> $segments
+     */
+    private static function retimeSegments(Subtitle $target, float $scale, array $segments): void
+    {
+        $parts = array_fill(0, count($segments), []);
+        foreach ($target->getCues() as $cue) {
+            $index = count($segments) - 1;
+            while ($index > 0 && $cue->getStart() < $segments[$index]["from"]) {
+                $index--;
+            }
+            $parts[$index][] = $cue;
+        }
+
+        foreach ($parts as $index => $cues) {
+            foreach ($cues as $cue) {
+                $cue->setStart(max(0, $cue->getStart() * $scale + $segments[$index]["offset"]))
+                    ->setEnd(max(0, $cue->getEnd() * $scale + $segments[$index]["offset"]));
+            }
+        }
+
+        for ($index = 1; $index < count($parts); $index++) {
+            if ($parts[$index] === []) {
+                continue;
+            }
+
+            $laterStart = min(array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $parts[$index]));
+            for ($earlier = 0; $earlier < $index; $earlier++) {
+                foreach ($parts[$earlier] as $cue) {
+                    if ($cue->getStart() < $laterStart && $cue->getEnd() > $laterStart - 0.001) {
+                        $cue->setEnd(max($cue->getStart(), $laterStart - 0.001));
+                    }
+                }
+            }
+        }
+
+        $target->reIndexCues();
+    }
+
+
+    private static function find(Subtitle $target, ReferenceSyncOptions $options): SyncResult
+    {
         $targetSpans    = self::toSpans($target);
-        $referenceSpans = self::toSpans($reference);
+        $referenceSpans = self::toSpans($options->reference);
         if ($targetSpans === [] || $referenceSpans === []) {
             return new SyncResult(0, 1, 0);
         }

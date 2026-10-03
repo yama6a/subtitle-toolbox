@@ -3,6 +3,7 @@
 namespace SubtitleToolbox;
 
 use InvalidArgumentException;
+use SubtitleToolbox\Validation\ValidationRules;
 
 class FixesTest extends \PHPUnit\Framework\TestCase
 {
@@ -47,7 +48,7 @@ class FixesTest extends \PHPUnit\Framework\TestCase
 
         $this->assertSame(file_get_contents(__DIR__ . "/files/fixes/own_overlaps_and_short_cues_fixed.srt"),
                           $subtitle->toString(Format::SubRip));
-        $this->assertSame([], $subtitle->getErrors());
+        $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
 
 

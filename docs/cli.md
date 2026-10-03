@@ -41,7 +41,7 @@ php subtitle-toolbox.phar --version
 | `scale` | multiplies all cue times by `--factor` |
 | `fps` | retimes a subtitle `--from` one frame rate `--to` another. `sync-fps` is another name for it |
 | `fix` | fixes text errors, overlapping cues, short cues and long lines, see [Fix](#fix) |
-| `strip-sdh` | removes hearing-impaired annotations, as [`removeHearingImpaired()`](text.md#hearing-impaired-annotations) does |
+| `strip-sdh` | removes hearing-impaired annotations, as [`HearingImpairedRemover::apply()`](text.md#hearing-impaired-annotations) does |
 | `info` | prints the format, the cue count and statistics, as text or with `--json`. Lists the tracks of an MKV or WebM file |
 | `validate` | prints each broken rule, as text or with `--json`, see [Validate](#validate) |
 | `sync` | retimes a subtitle to a reference subtitle or to the speech, see [Sync](#sync) |
@@ -107,7 +107,7 @@ movie.mkv
 | Option | Effect |
 |:--- |:--- |
 | `--strip-tags` | removes all formatting tags, such as `<i>` and `<font>` |
-| `--speakers MODE` | `prefix`, `dashes`, `colours` or `from-prefix`. Calls `toPrefix()`, `toDialogueDashes()`, `toColours()` or `fromPrefix()` with the default arguments, see [Speakers](text.md#speakers) |
+| `--speakers MODE` | `prefix`, `dashes`, `colours` or `from-prefix`. Calls `SpeakerLabels::apply()` with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colours`, or with `from: SpeakerStyle::Prefix`, and the other options at their defaults, see [Speakers](text.md#speakers) |
 | `--replace FROM=TO` | [`replaceText()`](text.md#transforms) on the text between tags. Repeatable. The first `=` ends FROM |
 | `--regex` | reads each FROM as a regular expression with delimiters, for example `--replace '/\.{4,}/=...'` |
 | `--ignore-case` | matches FROM in any case |
@@ -118,7 +118,7 @@ movie.mkv
 | `--mute-edl FILE` | writes the times of the matches to an EDL file with [`MuteRange::toEdl()`](text.md#profanity-filter), for Kodi and MPlayer |
 | `--mute-filter FILE` | writes the FFmpeg volume filter of `MuteRange::toFfmpegVolumeFilter()` |
 | `--mute-padding SECONDS` | widens each time range on both sides, default 0 |
-| `--karaoke` | writes one cue per word with the active word styled, with [`WordHighlight::expand()`](text.md#word-highlight-and-karaoke) |
+| `--karaoke` | writes one cue per word with the active word styled, with [`WordHighlight::apply()`](text.md#word-highlight-and-karaoke) |
 | `--karaoke-style TAG` | `b`, `i`, `u` (default), `s` or `'font color="#ffff00"'` |
 | `--karaoke-mode MODE` | `word` (default) styles the active word, `cumulative` all words up to it |
 | `--karaoke-words N` | shows only N words around the active word |
@@ -145,15 +145,15 @@ Pass at least one fix. The fixes run in this order: `--common-errors`, `--resegm
 
 | Option | Calls |
 |:--- |:--- |
-| `--common-errors` | [`CommonErrorFixer::fix()`](text.md#fixing-common-errors) with all default fixes. `--language` sets the language rules, default the `language` metadata. `--replace-list FILE` adds a Subtitle Edit OCR replace list. `--list-fixes` prints each change to standard error |
-| `--resegment` | `resegmentByWords()`. `--max-cpl`, `--max-lines` and `--max-word-gap` set `maxCharactersPerLine`, `maxLines` and `maxWordGap`, default 0.6 s |
+| `--common-errors` | [`CommonErrorFixer::apply()`](text.md#fixing-common-errors) with all default fixes. `--language` sets the language rules, default the `language` metadata. `--replace-list FILE` adds a Subtitle Edit OCR replace list. `--list-fixes` prints each change to standard error |
+| `--resegment` | `Resegmenter::apply()` with `ResegmentMode::ByWords`. `--max-cpl`, `--max-lines` and `--max-word-gap` set `maxCharactersPerLine`, `maxLines` and `maxWordGap`, default 0.6 s |
 | `--overlaps` | `fixOverlaps()` with `--min-gap` seconds, default 0 |
 | `--min-duration SECONDS` | `extendShortCues()` with `--min-gap` |
 | `--wrap CHARS` | `wrapLines()` with `--max-lines`, default 2 |
 | `--unwrap` | `unwrapLines()` |
 | `--merge-duplicates` | `removeDuplicateCues()` |
 | `--merge-short` | `mergeShortCues()` with the default options. `--max-cpl` and `--max-lines` set `maxCharactersPerLine` and `maxLines` |
-| `--split-long` | `splitLongCues()` with the default options. `--max-cpl` and `--max-lines` set `maxCharactersPerLine` and `maxLines` |
+| `--split-long` | `Resegmenter::apply()` with `ResegmentMode::SplitLong` and the default options. `--max-cpl` and `--max-lines` set `maxCharactersPerLine` and `maxLines` |
 
 [editing.md](editing.md) describes each method.
 
@@ -166,7 +166,7 @@ vendor/bin/subtitle-toolbox fix lecture.json --resegment -o lecture.srt
 `--list-fixes` prints one line per change, for example `movie.ocr.srt: cue 15: ocrLowercaseL: "lt's late." -> "It's late."`.
 
 ## Strip SDH
-`strip-sdh` removes everything that [`removeHearingImpaired()`](text.md#hearing-impaired-annotations) removes by default.
+`strip-sdh` removes everything that [`HearingImpairedRemover::apply()`](text.md#hearing-impaired-annotations) removes by default.
 
 | Option | Effect |
 |:--- |:--- |
@@ -250,7 +250,7 @@ vendor/bin/subtitle-toolbox dual movie.en.srt movie.de.srt --mode top-bottom -o 
 | `--snap-tolerance SECONDS` | `snapTolerance` for `top-bottom`, default 0.25 |
 
 ## Snap
-`snap` runs [`ShotChangeTiming::apply()`](editing.md#shot-changes-and-gaps) with the shot changes of a file. Without `--shot-changes`, it runs `chainGaps()`. `--fps` is required.
+`snap` runs [`ShotChangeTiming::apply()`](editing.md#shot-changes-and-gaps) with the shot changes of a file. Without `--shot-changes`, it only closes small gaps. `--fps` is required.
 
 ```sh
 ffmpeg -i movie.mp4 -vf "select='gt(scene,0.3)',showinfo" -f null - 2> scenes.log

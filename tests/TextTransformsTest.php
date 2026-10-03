@@ -3,6 +3,7 @@
 namespace SubtitleToolbox;
 
 use InvalidArgumentException;
+use SubtitleToolbox\Validation\ValidationRules;
 
 class TextTransformsTest extends \PHPUnit\Framework\TestCase
 {
@@ -74,7 +75,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
 
         $this->assertSame(file_get_contents(self::FILES . "own_cea608_caps_cleaned.vtt"),
                           $subtitle->toString(Format::WebVtt));
-        $this->assertSame([], $subtitle->getErrors());
+        $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
 
 
@@ -305,6 +306,6 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
             ["text" => "before door", "beforeCueIndex" => 1],
             ["text" => "before last", "beforeCueIndex" => 1],
         ], $subtitle->getComments());
-        $this->assertSame([], $subtitle->getErrors());
+        $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
 }

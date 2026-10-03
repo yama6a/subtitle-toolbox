@@ -8,6 +8,8 @@ use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Fixing\OcrReplaceList;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\MergeShortCuesOptions;
+use SubtitleToolbox\ResegmentMode;
+use SubtitleToolbox\Resegmenter;
 use SubtitleToolbox\ResegmentOptions;
 use SubtitleToolbox\Subtitle;
 
@@ -106,7 +108,7 @@ class FixCommand extends WriteCommand
     protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         if ($this->commonErrors !== null) {
-            foreach (CommonErrorFixer::fix($subtitle, $this->commonErrors) as $fix) {
+            foreach (CommonErrorFixer::apply($subtitle, $this->commonErrors)->fixes as $fix) {
                 if ($arguments->has("list-fixes")) {
                     $console->err(self::label($input) . ": cue " . ($fix->cueIndex + 1) . ": $fix->rule: " .
                                   json_encode($fix->before, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . " -> " .
@@ -124,7 +126,8 @@ class FixCommand extends WriteCommand
         $minGap = $arguments->float("min-gap") ?? 0;
 
         if ($arguments->has("resegment")) {
-            $subtitle->resegmentByWords(new ResegmentOptions(
+            Resegmenter::apply($subtitle, new ResegmentOptions(
+                mode: ResegmentMode::ByWords,
                 maxCharactersPerLine: $arguments->positiveInt("max-cpl") ?? 42,
                 maxLines: $arguments->positiveInt("max-lines") ?? 2,
                 maxWordGap: $arguments->positiveFloat("max-word-gap") ?? 0.6,
@@ -140,7 +143,8 @@ class FixCommand extends WriteCommand
             ));
         }
         if ($arguments->has("split-long")) {
-            $subtitle->splitLongCues(new ResegmentOptions(
+            Resegmenter::apply($subtitle, new ResegmentOptions(
+                mode: ResegmentMode::SplitLong,
                 maxCharactersPerLine: $arguments->positiveInt("max-cpl") ?? 42,
                 maxLines: $arguments->positiveInt("max-lines") ?? 2,
             ));

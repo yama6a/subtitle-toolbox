@@ -23,9 +23,14 @@ final class ValidationResult
     public const RULE_ALLOWED_CHARACTERS            = "allowedCharacters";
     public const RULE_NO_ALL_CAPS_LINES             = "noAllCapsLines";
 
+    public const RULE_REQUIRE_CUES        = "requireCues";
+    public const RULE_UNSORTED_CUES       = "noUnsortedCues";
+    public const RULE_NEGATIVE_DURATION   = "noNegativeDuration";
+    public const RULE_INDEX_GAP           = "noIndexGaps";
+
 
     public function __construct(
-        private readonly int $cueIndex,
+        private readonly ?int $cueIndex,
         private readonly string $rule,
         private readonly int|float $value,
         private readonly int|float|null $limit,
@@ -33,7 +38,10 @@ final class ValidationResult
     }
 
 
-    public function getCueIndex(): int
+    /**
+     * Returns the index of the cue that breaks the rule, or null for a rule about the whole subtitle such as requireCues.
+     */
+    public function getCueIndex(): ?int
     {
         return $this->cueIndex;
     }

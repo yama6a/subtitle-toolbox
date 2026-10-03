@@ -3,6 +3,7 @@
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\HearingImpairedOptions;
+use SubtitleToolbox\HearingImpairedRemover;
 use SubtitleToolbox\Subtitle;
 
 class StripSdhCommand extends WriteCommand
@@ -76,6 +77,6 @@ class StripSdhCommand extends WriteCommand
 
     protected function transform(Subtitle $subtitle, Arguments $arguments): void
     {
-        $subtitle->removeHearingImpaired($this->removal);
+        HearingImpairedRemover::apply($subtitle, $this->removal);
     }
 }

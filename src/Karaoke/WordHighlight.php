@@ -2,6 +2,7 @@
 
 namespace SubtitleToolbox\Karaoke;
 
+use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -9,28 +10,29 @@ use SubtitleToolbox\SubtitleCue;
 final class WordHighlight
 {
     /**
-     * Returns a new subtitle with one cue per timed word, in which the style marks the active word.
+     * Replaces each cue with one cue per timed word, in which the style marks the active word.
      */
-    public static function expand(Subtitle $subtitle, WordHighlightOptions $options): Subtitle
+    public static function apply(Subtitle $subtitle, WordHighlightOptions $options): WordHighlightReport
     {
-        $groups = [];
-        foreach ($subtitle->getCues() as $index => $cue) {
-            $groups[$index] = self::expandCue($cue, $options);
+        $anchors  = CommentAnchors::of($subtitle->getCues(), $subtitle->getComments());
+        $firstNew = new \SplObjectStorage();
+        $groups   = [];
+        foreach ($subtitle->getCues() as $cue) {
+            $group          = self::expandCue($cue, $options);
+            $groups[]       = $group;
+            $firstNew[$cue] = $group[0];
         }
 
-        $cues = array_merge([], ...array_values($groups));
+        $cues = array_merge([], ...$groups);
         usort($cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
 
-        // A slice that keeps no cue is a copy of the metadata and format data without cues and comments.
-        $result = $subtitle->slice(INF, INF);
-        foreach ($cues as $cue) {
-            $result->addCue($cue, false);
-        }
-        foreach ($subtitle->getComments() as $comment) {
-            $result->addComment($comment["text"], self::findNewIndex($groups, $cues, $comment["beforeCueIndex"]));
-        }
+        $cuesBefore = count($subtitle->getCues());
+        $subtitle->replaceCues(
+            $cues,
+            array_map(fn (?SubtitleCue $anchor): ?SubtitleCue => $anchor === null ? null : $firstNew[$anchor], $anchors)
+        );
 
-        return $result;
+        return new WordHighlightReport($cuesBefore, count($cues));
     }
 
 
@@ -190,23 +192,5 @@ final class WordHighlight
         } while ($count > 0);
 
         return preg_replace(['/^((?:<[^\/][^>]*>)*)\s+/', '/\s+((?:<\/[^>]*>)*)$/'], '$1', $line);
-    }
-
-
-    /**
-     * Returns the new index of the first cue that comes from the original cue at or after $beforeCueIndex.
-     *
-     * @param array<int, list<SubtitleCue>> $groups original cue index => its new cues
-     * @param list<SubtitleCue> $cues
-     */
-    private static function findNewIndex(array $groups, array $cues, int $beforeCueIndex): int
-    {
-        foreach ($groups as $index => $group) {
-            if ($index >= $beforeCueIndex) {
-                return array_search($group[0], $cues, true);
-            }
-        }
-
-        return count($cues);
     }
 }

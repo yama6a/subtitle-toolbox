@@ -7,7 +7,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 final class HearingImpairedOptions
 {
     /**
-     * Creates the removal settings, see the README section "Removing hearing-impaired annotations".
+     * Creates the settings for HearingImpairedRemover::apply().
      *
      * @param list<array{0: string, 1: string}> $customBrackets
      */
@@ -27,18 +27,5 @@ final class HearingImpairedOptions
                                                    "for example [\"{\", \"}\"].");
             }
         }
-    }
-
-
-    /**
-     * Returns true when removeHearingImpaired() with these options changes or removes $line.
-     */
-    public function isHearingImpaired(string $line): bool
-    {
-        $cue      = new SubtitleCue(0, 1, $line);
-        $before   = $cue->getLines();
-        $subtitle = (new Subtitle())->addCue($cue)->removeHearingImpaired($this);
-
-        return $subtitle->getCues() === [] || $cue->getLines() !== $before;
     }
 }

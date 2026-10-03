@@ -2,6 +2,18 @@
 
 A `Subtitle` holds a sorted list of `SubtitleCue` objects plus the data of the file: metadata, comments and format data.
 
+## Call shapes
+Every edit has one of 3 shapes:
+
+| Shape | Example | Returns |
+|:--- |:--- |:--- |
+| method on `Subtitle` | `$subtitle->shift(2)->wrapLines(42)` | `$this`, so calls chain |
+| method on `Subtitle` that starts with `to`, `with` or `only`, and `slice()` | `$subtitle->onlyForced()`, `$subtitle->slice(10, 20)` | a new `Subtitle`. The original stays unchanged. |
+| service with `apply()` | `HearingImpairedRemover::apply($subtitle, new HearingImpairedOptions())` | a report. The service changes `$subtitle`. |
+
+- **Service**: a feature with many settings is a class with one static `apply(Subtitle $subtitle, XOptions $options): XReport`. The services are `Resegmenter`, `HearingImpairedRemover`, `ReferenceSync`, `ShotChangeTiming`, `CommonErrorFixer`, `WordHighlight`, `ProfanityFilter` and `SpeakerLabels`.
+- **Keep the original**: `clone` copies the cues too. Pass `clone $subtitle` to a service or to a method that changes the subtitle, and the original stays unchanged.
+
 ## Metadata, comments and cue identifiers
 Parsers fill these fields where their format has them, and formatters write them back. [formats.md](formats.md) lists what each format keeps.
 
@@ -52,7 +64,7 @@ $subtitle->filterCues(fn (SubtitleCue $cue) => $cue->getEnd() - $cue->getStart()
 - **Keys**: `getCuesAt()`, `getCuesBetween()` and `findCues()` keep the cue index as the array key.
 - **Filter**: `filterCues()` moves a comment before a removed cue to the next kept cue, and then calls `reIndexCues()`.
 - **No array access**: `$subtitle[3]` does not work. Use `getCues()`, `addCue()` and `removeCue()`, so the cue indexes and comments stay correct.
-- **Structure check**: `getErrors()` returns one message per problem. It reports a subtitle without cues, a cue that starts before the previous cue ends, a cue that ends before it starts, and a gap in the cue indexes. For reading and timing rules, use [validation](validation.md).
+- **Structure check**: `validate(ValidationRules::structure())` returns one result per problem. It reports a subtitle without cues, a cue that starts before the previous cue starts, a cue that ends before it starts, and a gap in the cue indexes. See [validation](validation.md).
 
 ## Forced cues
 A **forced cue** shows also when the viewer has turned subtitles off, for example the translation of a sign. Apple and Netflix take a full subtitle file and a separate file with only the forced cues.
@@ -63,7 +75,7 @@ use SubtitleToolbox\Format;
 $subtitle = Subtitle::fromString(file_get_contents('movie.itt'), Format::Itt);   // <p itts:forcedDisplay="true">Sector 7 ahead</p>
 $subtitle->getCues()[3]->isForced();                                             // true
 $subtitle->getCues()[4]->setForced(true);
-$forced = $subtitle->forcedOnly();                              // a new Subtitle with copies of the forced cues
+$forced = $subtitle->onlyForced();                              // a new Subtitle with copies of the forced cues
 file_put_contents('movie.forced.itt', $forced->toString(Format::Itt));
 ```
 
@@ -78,7 +90,7 @@ file_put_contents('movie.forced.itt', $forced->toString(Format::Itt));
 
 - **Default**: a cue is not forced.
 - **TTML spans**: one forced `span` makes the whole cue forced. The formatter then writes the flag on the `p`, so the whole paragraph becomes forced.
-- **`forcedOnly()`**: works as `slice()`. The copy keeps the metadata, the format data and the comments before the forced cues. The original stays unchanged.
+- **`onlyForced()`**: works as `slice()`. The copy keeps the metadata, the format data and the comments before the forced cues. The original stays unchanged.
 - **OCR**: OCR keeps the flag of an image cue.
 
 ## Statistics

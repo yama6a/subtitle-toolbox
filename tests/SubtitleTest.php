@@ -4,6 +4,8 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
+use SubtitleToolbox\Validation\ValidationResult;
+use SubtitleToolbox\Validation\ValidationRules;
 
 class SubtitleTest extends \PHPUnit\Framework\TestCase
 {
@@ -58,28 +60,33 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
-    public function testGetErrors()
+    public function testValidateWithTheStructureRulesFindsEachStructureProblem(): void
     {
+        $rules    = ValidationRules::structure();
+        $problems = fn (Subtitle $subtitle): array => array_map(
+            fn (ValidationResult $result): array => [$result->getCueIndex(), $result->getRule(), $result->getValue()],
+            $subtitle->validate($rules)
+        );
+
         $subtitle = new Subtitle();
-        $this->assertStringContainsString("subtitle contains no cues", $subtitle->getErrors()[0]);
+        $this->assertSame([[null, ValidationResult::RULE_REQUIRE_CUES, 0]], $problems($subtitle));
 
-        $subtitle->addCue($cue1 = new SubtitleCue(1, 2, "text1"), false);
-        $subtitle->addCue($cue2 = new SubtitleCue(5, 6, "text2"), false);
-        $subtitle->addCue($cue3 = new SubtitleCue(3, 4, "text3"), false);
-
-        $this->assertStringContainsString("before its predecessor's end-time", $subtitle->getErrors()[0]);
+        $subtitle->addCue(new SubtitleCue(1, 2, "text1"), false);
+        $subtitle->addCue(new SubtitleCue(5, 6, "text2"), false);
+        $subtitle->addCue(new SubtitleCue(3, 4, "text3"), false);
+        $this->assertSame([[2, ValidationResult::RULE_UNSORTED_CUES, 2.0]], $problems($subtitle));
 
         $subtitle->reIndexCues();
-        $this->assertEmpty($subtitle->getErrors());
+        $this->assertSame([], $problems($subtitle));
 
         $subtitle->removeCue(1, false);
-        $this->assertStringContainsString("we expected it to be", $subtitle->getErrors()[0]);
+        $this->assertSame([[2, ValidationResult::RULE_INDEX_GAP, 1]], $problems($subtitle));
 
         $subtitle->addCue(new SubtitleCue(9, 1, "text4"));
-        $this->assertStringContainsString("is after its own end-time", $subtitle->getErrors()[0]);
+        $this->assertSame([[2, ValidationResult::RULE_NEGATIVE_DURATION, -8.0]], $problems($subtitle));
 
         $subtitle->removeCue(2);
-        $this->assertEmpty($subtitle->getErrors());
+        $this->assertSame([], $problems($subtitle));
     }
 
 

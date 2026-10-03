@@ -3,7 +3,7 @@
 | File | Source | License |
 |:--- |:--- |:--- |
 | `hebrew.lrc` | Written for this repository. Enhanced LRC in Hebrew with word timestamps, a UTF-8 BOM and LF line endings, in the shape that `LyricsFormatter` writes. | MIT |
-| `hebrew_word.srt` | Written for this repository. Expected `SubRipFormatter` output of `WordHighlight::expand()` on `hebrew.lrc` with the default options. | MIT |
+| `hebrew_word.srt` | Written for this repository. Expected `SubRipFormatter` output of `WordHighlight::apply()` on `hebrew.lrc` with the default options. | MIT |
 | `whisper_word.srt` | Written for this repository. Expected output on `../whisper/real/openai_whisper_word_timestamps.json` with the default options. | MIT |
 | `whisper_one_word.vtt` | Written for this repository. Expected `WebVttFormatter` output on the same file with style `b` and 1 word per cue. | MIT |
 | `whisper_kf.ass` | Written for this repository. Expected `AssFormatter` output of the same file with `OPTION_KARAOKE_TAG` `kf`. | MIT |

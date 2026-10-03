@@ -6,16 +6,6 @@ use PHPUnit\Framework\TestCase;
 
 class SubtitleTraitsTest extends TestCase
 {
-    // Calls that still cross traits. Each entry is "caller trait -> private method".
-    private const OPEN_CALLS = [
-        "HearingImpairedRemoval -> textTransformsMapCues",
-        "Resegmenting -> fixesCuesInStartOrder",
-        "Resegmenting -> shortCueMergingSpeakers",
-        "ShortCueMerging -> fixesCuesInStartOrder",
-        "ShortCueMerging -> joinGroup",
-    ];
-
-
     public function testNoTraitCallsAPrivateMethodOfAnotherTrait(): void
     {
         $traits = (new \ReflectionClass(Subtitle::class))->getTraits();
@@ -35,8 +25,7 @@ class SubtitleTraitsTest extends TestCase
                 }
             }
         }
-        sort($calls);
 
-        $this->assertSame(self::OPEN_CALLS, $calls);
+        $this->assertSame([], $calls);
     }
 }

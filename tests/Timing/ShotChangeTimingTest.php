@@ -50,27 +50,25 @@ class ShotChangeTimingTest extends TestCase
         $this->assertSame([90.5, 91.208, "Rain at four."], [$cues[10]->getStart(), $cues[10]->getEnd(), $cues[10]->getText()]);
 
         $shotChanges = ShotChanges::fromFfmpegLog(file_get_contents(self::FILES . "own_ffmpeg_showinfo.log"));
-        $result      = ShotChangeTiming::apply($subtitle, $shotChanges, new ShotChangeOptions(frameRate: 24));
+        $report      = ShotChangeTiming::apply($subtitle, new ShotChangeOptions(frameRate: 24, shotChanges: $shotChanges));
 
-        $this->assertSame($subtitle, $result);
+        $this->assertEquals(new ShotChangeReport(3, 5), $report);
         $this->assertSame(file_get_contents(self::FILES . "own_garden_24fps_timed.srt"), $subtitle->toString(Format::SubRip));
     }
 
 
     public function testNetflixExamplesAt24Fps(): void
     {
-        $options = new ShotChangeOptions(frameRate: 24);
-
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(62.708, 65));
-        ShotChangeTiming::apply($subtitle, [62.5], $options);
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [62.5]));
         $this->assertSame(62.5, $subtitle->getCues()[0]->getStart());
 
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(67, 69.75));
-        ShotChangeTiming::apply($subtitle, [70.0], $options);
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [70.0]));
         $this->assertSame(69.917, $subtitle->getCues()[0]->getEnd());
 
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(8, 10))->addCue(new SubtitleCue(10.292, 12));
-        ShotChangeTiming::apply($subtitle, [], $options);
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24));
         $this->assertSame(10.208, $subtitle->getCues()[0]->getEnd());
     }
 
@@ -80,7 +78,7 @@ class ShotChangeTimingTest extends TestCase
     {
         $subtitle = $this->makeSubtitle($fps, [[1505, 1560]]);
 
-        ShotChangeTiming::apply($subtitle, [1500 / $fps], new ShotChangeOptions($fps));
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions($fps, shotChanges: [1500 / $fps]));
 
         $this->assertSame([[1500, 1560]], $this->getFrames($subtitle, $fps));
     }
@@ -91,7 +89,7 @@ class ShotChangeTimingTest extends TestCase
     {
         $subtitle = $this->makeSubtitle($fps, [[1620, 1674], [1700, 1760]]);
 
-        ShotChangeTiming::apply($subtitle, [1680 / $fps], new ShotChangeOptions($fps));
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions($fps, shotChanges: [1680 / $fps]));
 
         $this->assertSame([[1620, 1678], [1700, 1760]], $this->getFrames($subtitle, $fps));
     }
@@ -102,7 +100,7 @@ class ShotChangeTimingTest extends TestCase
     {
         $subtitle = $this->makeSubtitle($fps, [[200, 240], [247, 300]]);
 
-        ShotChangeTiming::apply($subtitle, [], new ShotChangeOptions($fps));
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions($fps));
 
         $this->assertSame([[200, 245], [247, 300]], $this->getFrames($subtitle, $fps));
     }
@@ -115,7 +113,7 @@ class ShotChangeTimingTest extends TestCase
         $subtitle = $this->makeSubtitle($fps, [[100, 140], [142, 180], [183, 220], [220 + $window - 1, 300],
                                                [300 + $window, 400]]);
 
-        ShotChangeTiming::chainGaps($subtitle, new ShotChangeOptions($fps));
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions($fps));
 
         $this->assertSame([[100, 140], [142, 181], [183, 218 + $window - 1], [220 + $window - 1, 300],
                            [300 + $window, 400]], $this->getFrames($subtitle, $fps));
@@ -134,7 +132,7 @@ class ShotChangeTimingTest extends TestCase
     {
         $subtitle = $this->makeSubtitle(24, [[513, 560], [600, 627]]);
 
-        ShotChangeTiming::apply($subtitle, [500 / 24, 640 / 24], new ShotChangeOptions(24));
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [500 / 24, 640 / 24]));
 
         $this->assertSame([[513, 560], [600, 627]], $this->getFrames($subtitle, 24));
     }
@@ -144,7 +142,7 @@ class ShotChangeTimingTest extends TestCase
     {
         $subtitle = $this->makeSubtitle(29.97, [[515, 560], [1016, 1060]]);
 
-        ShotChangeTiming::apply($subtitle, [500 / 29.97, 1000 / 29.97], new ShotChangeOptions(29.97));
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(29.97, shotChanges: [500 / 29.97, 1000 / 29.97]));
 
         $this->assertSame([[500, 560], [1016, 1060]], $this->getFrames($subtitle, 29.97));
     }
@@ -154,7 +152,7 @@ class ShotChangeTimingTest extends TestCase
     {
         $subtitle = $this->makeSubtitle(24, [[110, 160]]);
 
-        ShotChangeTiming::apply($subtitle, [104 / 24, 100 / 24, 112 / 24], new ShotChangeOptions(24));
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [104 / 24, 100 / 24, 112 / 24]));
 
         $this->assertSame([[104, 160]], $this->getFrames($subtitle, 24));
     }
@@ -164,7 +162,7 @@ class ShotChangeTimingTest extends TestCase
     {
         $subtitle = $this->makeSubtitle(24, [[100, 119], [200, 215]]);
 
-        ShotChangeTiming::apply($subtitle, [120 / 24, 198 / 24], new ShotChangeOptions(24));
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [120 / 24, 198 / 24]));
 
         $this->assertSame([[100, 119], [198, 215]], $this->getFrames($subtitle, 24));
     }
@@ -174,7 +172,7 @@ class ShotChangeTimingTest extends TestCase
     {
         $subtitle = $this->makeSubtitle(24, [[100, 119]]);
 
-        ShotChangeTiming::apply($subtitle, [120 / 24], new ShotChangeOptions(24, minDuration: 10));
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [120 / 24], minDuration: 10));
 
         $this->assertSame([[100, 118]], $this->getFrames($subtitle, 24));
     }
@@ -184,7 +182,7 @@ class ShotChangeTimingTest extends TestCase
     {
         $subtitle = $this->makeSubtitle(24, [[100, 150], [153, 229], [230, 260]]);
 
-        ShotChangeTiming::apply($subtitle, [158 / 24, 228 / 24], new ShotChangeOptions(24, chain: false));
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [158 / 24, 228 / 24], chain: false));
 
         $this->assertSame([[100, 150], [153, 229], [230, 260]], $this->getFrames($subtitle, 24));
     }
@@ -194,7 +192,7 @@ class ShotChangeTimingTest extends TestCase
     {
         $subtitle = $this->makeSubtitle(24, [[140, 152], [158, 200]]);
 
-        ShotChangeTiming::apply($subtitle, [153 / 24], new ShotChangeOptions(24));
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [153 / 24]));
 
         $this->assertSame([[140, 152], [158, 200]], $this->getFrames($subtitle, 24));
     }
@@ -204,7 +202,7 @@ class ShotChangeTimingTest extends TestCase
     {
         $subtitle = $this->makeSubtitle(24, [[200, 240], [247, 300]]);
 
-        ShotChangeTiming::apply($subtitle, [], new ShotChangeOptions(24, chain: false));
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, chain: false));
 
         $this->assertSame([[200, 240], [247, 300]], $this->getFrames($subtitle, 24));
     }
@@ -214,7 +212,7 @@ class ShotChangeTimingTest extends TestCase
     {
         $subtitle = $this->makeSubtitle(24, [[200, 240], [247, 300], [400, 450]]);
 
-        ShotChangeTiming::apply($subtitle, [455 / 24], new ShotChangeOptions(24, minGapFrames: 3));
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [455 / 24], minGapFrames: 3));
 
         $this->assertSame([[200, 244], [247, 300], [400, 452]], $this->getFrames($subtitle, 24));
     }
@@ -234,7 +232,7 @@ class ShotChangeTimingTest extends TestCase
             $subtitle->addCue(new SubtitleCue($start, $time, "cue $index"), false);
         }
 
-        ShotChangeTiming::apply($subtitle, $shots, new ShotChangeOptions($fps));
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions($fps, shotChanges: $shots));
 
         $previousEnd = 0.0;
         foreach ($subtitle->getCues() as $cue) {
@@ -253,7 +251,7 @@ class ShotChangeTimingTest extends TestCase
         $subtitle = new Subtitle();
         $subtitle->addCue(new SubtitleCue(10.292, 12), false)->addCue(new SubtitleCue(8, 10), false);
 
-        ShotChangeTiming::chainGaps($subtitle, new ShotChangeOptions(24));
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24));
 
         $this->assertSame([10.292, 12.0, 8.0, 10.208], [$subtitle->getCues()[0]->getStart(), $subtitle->getCues()[0]->getEnd(),
                                                         $subtitle->getCues()[1]->getStart(), $subtitle->getCues()[1]->getEnd()]);

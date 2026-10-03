@@ -21,11 +21,9 @@ class Subtitle implements \IteratorAggregate, \Countable
     use CueEditing;
     use Fixes;
     use TextTransforms;
-    use HearingImpairedRemoval;
     use CueLookup;
     use ArrayConversion;
     use ShortCueMerging;
-    use Resegmenting;
 
     /** @var array|SubtitleCue[] */
     protected $cues;
@@ -171,39 +169,6 @@ class Subtitle implements \IteratorAggregate, \Countable
         $this->sortComments();
 
         return $this;
-    }
-
-
-    public function getErrors(): array
-    {
-        $errors = [];
-
-        if (count($this->cues) === 0) {
-            $errors[] = "This subtitle contains no cues!";
-        }
-
-        $previousCueEnd   = 0;
-        $previousCueIndex = -1;
-        foreach ($this->cues as $cueIndex => $cue) {
-            if ($cue->getStart() < $previousCueEnd) {
-                $errors[] = "The start-time ({$cue->getStart()}) of cue #$cueIndex is " .
-                            "before its predecessor's end-time ($previousCueEnd)! " .
-                            "Try running reIndexCues() on the subtitle to fix it.";
-            }
-            $previousCueEnd = $cue->getEnd();
-
-            if ($cueIndex !== ++$previousCueIndex) {
-                $errors[] = "The cue-index of cue #$cueIndex is $cueIndex " .
-                            "but we expected it to be $previousCueIndex! " .
-                            "Try running reIndexCues() on the subtitle to fix it.";
-            }
-
-            if ($cue->getStart() > $cue->getEnd()) {
-                $errors[] = "The start-time of cue #$cueIndex is after its own end-time!";
-            }
-        }
-
-        return $errors;
     }
 
 

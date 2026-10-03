@@ -12,7 +12,7 @@ trait ShortCueMerging
     public function mergeShortCues(MergeShortCuesOptions $options): self
     {
         $anchors = CommentAnchors::of($this->cues, $this->comments);
-        $cues    = $this->fixesCuesInStartOrder();
+        $cues    = CueList::inStartOrder($this->cues);
         $index   = 0;
         while ($index < count($cues)) {
             if (!$options->sameSpeakerOnly && !self::shortCueMergingIsShort($cues[$index], $options)) {
@@ -34,7 +34,7 @@ trait ShortCueMerging
                 continue;
             }
 
-            $anchors = $this->joinGroup([$cues[$first], $cues[$first + 1]], $anchors, false);
+            [$this->cues, $anchors] = CueList::join($this->cues, [$cues[$first], $cues[$first + 1]], $anchors, false);
             $cues[$first]->setLinesByArray($lines);
             array_splice($cues, $first + 1, 1);
             $index = $first;
@@ -59,11 +59,11 @@ trait ShortCueMerging
      */
     private static function shortCueMergingJoinLines(SubtitleCue $first, SubtitleCue $second, MergeShortCuesOptions $options): ?array
     {
-        $speakers = self::shortCueMergingSpeakers($first);
+        $speakers = CueList::speakers($first);
         if (CueImage::isImageCue($first) || CueImage::isImageCue($second)
             || ($first->getAlignment() ?? 2) !== ($second->getAlignment() ?? 2)
             || $first->isForced() !== $second->isForced()
-            || $speakers !== self::shortCueMergingSpeakers($second)
+            || $speakers !== CueList::speakers($second)
             || ($options->sameSpeakerOnly && $speakers === [])) {
             return null;
         }
@@ -117,18 +117,5 @@ trait ShortCueMerging
         }
 
         return $lines;
-    }
-
-
-    /**
-     * @return list<string> the sorted names of the <v> speakers in the cue
-     */
-    private static function shortCueMergingSpeakers(SubtitleCue $cue): array
-    {
-        preg_match_all('/<v(?:\.[^\s>]*)?\s+([^>]*)>/i', $cue->getText(), $matches);
-        $speakers = array_unique(array_map("trim", $matches[1]));
-        sort($speakers);
-
-        return $speakers;
     }
 }

@@ -8,6 +8,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\MpSubFormatter;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Validation\ValidationRules;
 
 class MpSubParserTest extends TestCase
 {
@@ -29,7 +30,7 @@ class MpSubParserTest extends TestCase
         $this->assertSame(27.0, $cues[7]->getStart());
         $this->assertSame(29.0, $cues[7]->getEnd());
         $this->assertSame(["Let's go."], $cues[7]->getLines());
-        $this->assertSame([], $subtitle->getErrors());
+        $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
 
 

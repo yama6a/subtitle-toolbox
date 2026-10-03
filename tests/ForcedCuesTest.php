@@ -101,7 +101,7 @@ class ForcedCuesTest extends TestCase
         $subtitle->addComment("before cue 2", 1);
         $subtitle->addComment("at the end", 3);
 
-        $forced = $subtitle->forcedOnly();
+        $forced = $subtitle->onlyForced();
 
         $this->assertCount(1, $forced->getCues());
         $this->assertSame([3.0, 4.0, "EXIT", true], [$forced->getCues()[0]->getStart(), $forced->getCues()[0]->getEnd(),
@@ -111,7 +111,7 @@ class ForcedCuesTest extends TestCase
         $this->assertSame("en", $forced->getMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertCount(3, $subtitle->getCues());
         $this->assertCount(3, $subtitle->getComments());
-        $this->assertSame([], (new Subtitle())->forcedOnly()->getCues());
+        $this->assertSame([], (new Subtitle())->onlyForced()->getCues());
     }
 
 
@@ -121,7 +121,7 @@ class ForcedCuesTest extends TestCase
         $subtitle->getCues()[2]->setForced(true);
         $subtitle->addComment("at the end", 3);
 
-        $this->assertSame([["text" => "at the end", "beforeCueIndex" => 1]], $subtitle->forcedOnly()->getComments());
+        $this->assertSame([["text" => "at the end", "beforeCueIndex" => 1]], $subtitle->onlyForced()->getComments());
     }
 
 
@@ -144,9 +144,9 @@ class ForcedCuesTest extends TestCase
         $this->assertSame([false, false, true, true, false, false], $this->forcedFlags($subtitle));
         $this->assertSame([8.0, 9.5, "Platform 4"], [$subtitle->getCues()[2]->getStart(), $subtitle->getCues()[2]->getEnd(),
                                                     $subtitle->getCues()[2]->getText()]);
-        $this->assertCount(2, $subtitle->forcedOnly()->getCues());
+        $this->assertCount(2, $subtitle->onlyForced()->getCues());
         $this->assertStringStartsWith("1\n00:00:08,000 --> 00:00:09,500\n{\\an8}Platform 4\n\n",
-                                      StringHelpers::removeUtf8Bom($subtitle->forcedOnly()->toString(Format::SubRip)));
+                                      StringHelpers::removeUtf8Bom($subtitle->onlyForced()->toString(Format::SubRip)));
     }
 
 

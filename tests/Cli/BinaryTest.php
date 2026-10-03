@@ -20,9 +20,12 @@ use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Profanity\MuteRange;
 use SubtitleToolbox\Profanity\ProfanityFilter;
 use SubtitleToolbox\Profanity\ProfanityOptions;
+use SubtitleToolbox\ResegmentMode;
+use SubtitleToolbox\Resegmenter;
 use SubtitleToolbox\ResegmentOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Sync\ReferenceSync;
+use SubtitleToolbox\Sync\ReferenceSyncOptions;
 use SubtitleToolbox\Sync\SpeechReference;
 use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\Timing\ShotChanges;
@@ -345,7 +348,7 @@ class BinaryTest extends TestCase
     public function testForcedOnly(): void
     {
         copy(__DIR__ . "/../files/forced/forced_signs_2398.itt", "$this->dir/signs.itt");
-        $expected = Subtitle::fromStringAutoDetectFormat($this->file("signs.itt"))->forcedOnly()->toString(Format::SubRip);
+        $expected = Subtitle::fromStringAutoDetectFormat($this->file("signs.itt"))->onlyForced()->toString(Format::SubRip);
 
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "signs.itt", "signs.srt", "--forced-only"]);
 
@@ -446,7 +449,7 @@ class BinaryTest extends TestCase
         copy(self::FILES . "profanity/words.txt", "$this->dir/words.txt");
         $subtitle = Subtitle::fromStringAutoDetectFormat($this->file("radio.vtt"));
         $ranges   = ProfanityFilter::apply($subtitle, new ProfanityOptions(mask: ProfanityOptions::MASK_NONE, padding: 0.1,
-                                                                           wordFile: "$this->dir/words.txt"));
+                                                                           wordFile: "$this->dir/words.txt"))->muteRanges;
 
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "radio.vtt", "out.vtt", "--mask-words", "words.txt", "--mask", "none",
                                                       "--mute-edl", "radio.edl", "--mute-filter", "radio.af", "--mute-padding", "0.1"]);
@@ -608,15 +611,19 @@ class BinaryTest extends TestCase
     public function testFixSplitLong(): void
     {
         copy(__DIR__ . "/../files/resegmenting/own_whisper_long_segments.json", "$this->dir/whisper.json");
-        $split = fn (ResegmentOptions $options): string =>
-            Subtitle::fromStringAutoDetectFormat($this->file("whisper.json"))->splitLongCues($options)->toString(Format::WebVtt);
+        $split = function (ResegmentOptions $options): string {
+            $subtitle = Subtitle::fromStringAutoDetectFormat($this->file("whisper.json"));
+            Resegmenter::apply($subtitle, $options);
+
+            return $subtitle->toString(Format::WebVtt);
+        };
 
         [$code, $stdout, $stderr] = $this->runBinary(["fix", "whisper.json", "--split-long", "--to", "vtt"]);
 
-        $this->assertSame([0, $split(new ResegmentOptions()), ""], [$code, $stdout, $stderr]);
+        $this->assertSame([0, $split(new ResegmentOptions(ResegmentMode::SplitLong)), ""], [$code, $stdout, $stderr]);
         $this->assertGreaterThan(count(Subtitle::fromStringAutoDetectFormat($this->file("whisper.json"))->getCues()), substr_count($stdout, " --> "));
         $this->assertSame(
-            [0, $split(new ResegmentOptions(maxCharactersPerLine: 30, maxLines: 1)), ""],
+            [0, $split(new ResegmentOptions(ResegmentMode::SplitLong, maxCharactersPerLine: 30, maxLines: 1)), ""],
             $this->runBinary(["fix", "whisper.json", "--split-long", "--max-cpl", "30", "--max-lines", "1", "--to", "vtt"])
         );
     }
@@ -653,9 +660,10 @@ class BinaryTest extends TestCase
         $this->assertSame([0, "lecture.json -> lecture.srt\n", ""], [$code, $stdout, $stderr]);
         $this->assertFileEquals(self::FILES . "resegmenting/own_whisper_long_segments_resegmented.srt", "$this->dir/lecture.srt");
 
-        $options = new ResegmentOptions(maxCharactersPerLine: 30, maxLines: 1, maxWordGap: 0.3);
+        $resegmented = $withWords();
+        Resegmenter::apply($resegmented, new ResegmentOptions(ResegmentMode::ByWords, maxCharactersPerLine: 30, maxLines: 1, maxWordGap: 0.3));
         $this->assertSame(
-            [0, $withWords()->resegmentByWords($options)->toString(Format::SubRip), ""],
+            [0, $resegmented->toString(Format::SubRip), ""],
             $this->runBinary(["fix", "lecture.json", "--resegment", "--max-cpl", "30", "--max-lines", "1", "--max-word-gap", "0.3", "--to", "srt"])
         );
 
@@ -1102,7 +1110,7 @@ class BinaryTest extends TestCase
         copy(self::FILES . "sync/own_target_de_25fps.srt", "$this->dir/de.srt");
         copy(self::FILES . "sync/own_ffmpeg_silencedetect.log", "$this->dir/silence.log");
         $expected = Subtitle::fromStringAutoDetectFormat($this->file("de.srt"));
-        ReferenceSync::sync($expected, SpeechReference::fromFfmpegSilencedetect($this->file("silence.log"), 840))->apply($expected);
+        ReferenceSync::apply($expected, new ReferenceSyncOptions(SpeechReference::fromFfmpegSilencedetect($this->file("silence.log"), 840)));
 
         [$code, $stdout, $stderr] = $this->runBinary(["sync", "de.srt", "--silence-log", "silence.log", "--media-duration", "840"]);
         $this->assertSame([0, $expected->toString(Format::SubRip), "de.srt: scale 1.04271, offset -2.3 s, score 0.78\n"],
@@ -1127,14 +1135,16 @@ class BinaryTest extends TestCase
         $this->assertSame([0, $timed, ""], $this->runBinary(["snap", "garden.srt", "--fps", "24", "--shot-changes", "scenes.log"]));
         $this->assertSame([0, $timed, ""], $this->runBinary(["snap", "garden.srt", "--fps", "24", "--shot-changes", "scenes.txt"]));
 
-        $options  = new ShotChangeOptions(frameRate: 24, snapWindow: 6, minGapFrames: 3, chain: false, minDuration: 12);
-        $expected = ShotChangeTiming::apply(Subtitle::fromStringAutoDetectFormat($this->file("garden.srt")), ShotChanges::fromText($this->file("scenes.txt")), $options);
+        $expected = Subtitle::fromStringAutoDetectFormat($this->file("garden.srt"));
+        ShotChangeTiming::apply($expected, new ShotChangeOptions(frameRate: 24, shotChanges: ShotChanges::fromText($this->file("scenes.txt")),
+                                                                 snapWindow: 6, minGapFrames: 3, chain: false, minDuration: 12));
         $this->assertSame([0, $expected->toString(Format::SubRip), ""], $this->runBinary([
             "snap", "garden.srt", "--fps", "24", "--shot-changes", "scenes.txt", "--snap-window", "6", "--min-gap-frames", "3",
             "--no-chain", "--min-duration-frames", "12",
         ]));
 
-        $chained = ShotChangeTiming::chainGaps(Subtitle::fromStringAutoDetectFormat($this->file("garden.srt")), new ShotChangeOptions(24));
+        $chained = Subtitle::fromStringAutoDetectFormat($this->file("garden.srt"));
+        ShotChangeTiming::apply($chained, new ShotChangeOptions(24));
         $this->assertSame([0, $chained->toString(Format::SubRip), ""], $this->runBinary(["snap", "garden.srt", "--fps", "24"]));
 
         foreach ([[], ["--fps", "24", "--no-chain"], ["--fps", "24", "--snap-window", "-1"], ["--fps", "24", "--shot-changes", "missing.txt"],

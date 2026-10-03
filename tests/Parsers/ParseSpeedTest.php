@@ -8,6 +8,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Validation\ValidationRules;
 
 class ParseSpeedTest extends TestCase
 {
@@ -42,7 +43,7 @@ class ParseSpeedTest extends TestCase
 
         $this->assertLessThan(10, microtime(true) - $start);
         $this->assertCount(self::CUE_COUNT, $subtitle->getCues());
-        $this->assertSame([], $subtitle->getErrors());
+        $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
 
 

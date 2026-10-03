@@ -1,48 +1,62 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Image\CueImage;
 
-trait Resegmenting
+final class Resegmenter
 {
-    private const RESEGMENTING_CLOSERS      = '["\'\)\]\x{2019}\x{201D}\x{3009}\x{300B}\x{300D}\x{300F}\x{3011}\x{FF09}\x{FF3D}\x{FF5D}]*';
-    private const RESEGMENTING_CJK_BREAKS   = '[\x{3001}\x{3002}\x{FF01}\x{FF0C}\x{FF1A}\x{FF1B}\x{FF1F}\x{FF61}\x{FF64}]';
-    private const RESEGMENTING_SENTENCE_END = '[.?!\x{2026}\x{3002}\x{FF01}\x{FF1F}\x{FF61}]+';
-    private const RESEGMENTING_CLAUSE_END   = '(?:[,;:\x{2013}\x{2014}\x{3001}\x{FF0C}\x{FF1A}\x{FF1B}\x{FF64}]|--|^-)';
+    private const CLOSERS      = '["\'\)\]\x{2019}\x{201D}\x{3009}\x{300B}\x{300D}\x{300F}\x{3011}\x{FF09}\x{FF3D}\x{FF5D}]*';
+    private const CJK_BREAKS   = '[\x{3001}\x{3002}\x{FF01}\x{FF0C}\x{FF1A}\x{FF1B}\x{FF1F}\x{FF61}\x{FF64}]';
+    private const SENTENCE_END = '[.?!\x{2026}\x{3002}\x{FF01}\x{FF1F}\x{FF61}]+';
+    private const CLAUSE_END   = '(?:[,;:\x{2013}\x{2014}\x{3001}\x{FF0C}\x{FF1A}\x{FF1B}\x{FF64}]|--|^-)';
+
+
+    /**
+     * Splits long cues or builds new cues from the word timestamps, as the mode of $options selects.
+     */
+    public static function apply(Subtitle $subtitle, ResegmentOptions $options): ResegmentReport
+    {
+        $cuesBefore = count($subtitle->getCues());
+        match ($options->mode) {
+            ResegmentMode::SplitLong => self::splitLong($subtitle, $options),
+            ResegmentMode::ByWords   => self::byWords($subtitle, $options),
+        };
+
+        return new ResegmentReport($cuesBefore, count($subtitle->getCues()));
+    }
 
 
     /**
      * Splits each cue that breaks a limit of $options at sentence ends, then at clause ends, then at the space closest to the middle.
      */
-    public function splitLongCues(ResegmentOptions $options): self
+    private static function splitLong(Subtitle $subtitle, ResegmentOptions $options): void
     {
-        $anchors = CommentAnchors::of($this->cues, $this->comments);
+        $anchors = CommentAnchors::of($subtitle->getCues(), $subtitle->getComments());
         $cues    = [];
-        foreach ($this->cues as $cue) {
-            $cues = [...$cues, ...self::resegmentingSplitCue($cue, $options)];
+        foreach ($subtitle->getCues() as $cue) {
+            $cues = [...$cues, ...self::splitCue($cue, $options)];
         }
 
-        $this->cues = $cues;
-        $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
-
-        return $this;
+        $subtitle->replaceCues($cues, $anchors);
     }
 
 
     /**
      * Drops the cue boundaries and builds new cues from the word timestamps, one sentence per cue within the limits of $options.
      */
-    public function resegmentByWords(ResegmentOptions $options): self
+    private static function byWords(Subtitle $subtitle, ResegmentOptions $options): void
     {
-        $anchors = CommentAnchors::of($this->cues, $this->comments);
+        $anchors = CommentAnchors::of($subtitle->getCues(), $subtitle->getComments());
         $newCues = new \SplObjectStorage();
         $result  = [];
         $group   = [];
-        foreach ($this->fixesCuesInStartOrder() as $cue) {
-            $words = CueImage::isImageCue($cue) ? [] : self::resegmentingWords($cue);
+        foreach (CueList::inStartOrder($subtitle->getCues()) as $cue) {
+            $words = CueImage::isImageCue($cue) ? [] : self::words($cue);
             if ($words === []) {
-                $result        = [...$result, ...self::resegmentingFlush($group, $newCues, $options)];
+                $result        = [...$result, ...self::flush($group, $newCues, $options)];
                 $group         = [];
                 $result[]      = $cue;
                 $newCues[$cue] = $cue;
@@ -51,46 +65,42 @@ trait Resegmenting
 
             foreach ($words as $word) {
                 $last = end($group) ?: null;
-                if ($last !== null && (!self::resegmentingSameSource($last["cue"], $cue)
+                if ($last !== null && (!self::sameSource($last["cue"], $cue)
                     || round($word["start"] - $last["end"], 3) >= round($options->maxWordGap, 3)
-                    || !self::resegmentingGroupFits([...$group, $word], $options))) {
-                    $result = [...$result, ...self::resegmentingFlush($group, $newCues, $options)];
+                    || !self::groupFits([...$group, $word], $options))) {
+                    $result = [...$result, ...self::flush($group, $newCues, $options)];
                     $group  = [];
                 }
 
                 $group[] = $word;
                 if ($word["endsSentence"]) {
-                    $result = [...$result, ...self::resegmentingFlush($group, $newCues, $options)];
+                    $result = [...$result, ...self::flush($group, $newCues, $options)];
                     $group  = [];
                 }
             }
         }
-        $result = [...$result, ...self::resegmentingFlush($group, $newCues, $options)];
+        $result = [...$result, ...self::flush($group, $newCues, $options)];
 
-        $this->cues = $result;
-        $this->comments = CommentAnchors::comments(
-            $this->cues,
-            $this->comments,
+        $subtitle->replaceCues(
+            $result,
             array_map(fn (?SubtitleCue $anchor): ?SubtitleCue => $anchor === null ? null : $newCues[$anchor], $anchors)
         );
-
-        return $this;
     }
 
 
     /**
      * @return list<SubtitleCue> $cue itself first, then the new cues
      */
-    private static function resegmentingSplitCue(SubtitleCue $cue, ResegmentOptions $options): array
+    private static function splitCue(SubtitleCue $cue, ResegmentOptions $options): array
     {
-        $pieces = CueImage::isImageCue($cue) ? [] : self::resegmentingPieces($cue);
+        $pieces = CueImage::isImageCue($cue) ? [] : self::pieces($cue);
         if ($pieces === []) {
             return [$cue];
         }
 
-        $positions = self::resegmentingPositions($pieces);
-        $times     = self::resegmentingTimes($pieces, $positions, $cue->getStart(), $cue->getEnd());
-        $breaks    = self::resegmentingFindBreaks($pieces, $positions, $times, 0, count($pieces), $options);
+        $positions = self::positions($pieces);
+        $times     = self::times($pieces, $positions, $cue->getStart(), $cue->getEnd());
+        $breaks    = self::findBreaks($pieces, $positions, $times, 0, count($pieces), $options);
         if ($breaks === []) {
             return [$cue];
         }
@@ -100,8 +110,8 @@ trait Resegmenting
             $parts[] = [$partIndex === 0 ? $cue : (clone $cue)->setIdentifier(null), $first, $breaks[$partIndex] ?? count($pieces)];
         }
         foreach ($parts as [$part, $first, $end]) {
-            $lines = explode("\n", self::resegmentingText($pieces, $first, $end));
-            $part->setStart($times[$first])->setEnd($times[$end])->setLinesByArray(self::resegmentingWrap($lines, $options));
+            $lines = explode("\n", self::text($pieces, $first, $end));
+            $part->setStart($times[$first])->setEnd($times[$end])->setLinesByArray(self::wrap($lines, $options));
         }
 
         return array_column($parts, 0);
@@ -117,7 +127,7 @@ trait Resegmenting
      *
      * @return list<int>
      */
-    private static function resegmentingFindBreaks(
+    private static function findBreaks(
         array $pieces,
         array $positions,
         array $times,
@@ -126,14 +136,14 @@ trait Resegmenting
         ResegmentOptions $options
     ): array
     {
-        $lines = explode("\n", self::resegmentingText($pieces, $first, $end));
-        if (self::resegmentingFits($lines, $times[$first], $times[$end], $options)) {
+        $lines = explode("\n", self::text($pieces, $first, $end));
+        if (self::fits($lines, $times[$first], $times[$end], $options)) {
             return [];
         }
 
         $best = null;
         for ($index = $first + 1; $index < $end; $index++) {
-            $rank = self::resegmentingBreakRank($pieces, $index);
+            $rank = self::breakRank($pieces, $index);
             if ($rank === null
                 || round($times[$index] - $times[$first], 3) < round($options->minDuration, 3)
                 || round($times[$end] - $times[$index], 3) < round($options->minDuration, 3)) {
@@ -150,9 +160,9 @@ trait Resegmenting
         }
 
         return [
-            ...self::resegmentingFindBreaks($pieces, $positions, $times, $first, $best[2], $options),
+            ...self::findBreaks($pieces, $positions, $times, $first, $best[2], $options),
             $best[2],
-            ...self::resegmentingFindBreaks($pieces, $positions, $times, $best[2], $end, $options),
+            ...self::findBreaks($pieces, $positions, $times, $best[2], $end, $options),
         ];
     }
 
@@ -162,14 +172,14 @@ trait Resegmenting
      *
      * @param list<array> $pieces
      */
-    private static function resegmentingBreakRank(array $pieces, int $index): ?int
+    private static function breakRank(array $pieces, int $index): ?int
     {
-        if (self::resegmentingEndsSentence($pieces, $index - 1)) {
+        if (self::endsSentence($pieces, $index - 1)) {
             return 0;
         }
 
         $before = Markup::plainText($pieces[$index - 1]["text"]);
-        if (preg_match('/' . self::RESEGMENTING_CLAUSE_END . self::RESEGMENTING_CLOSERS . '$/u', $before) === 1) {
+        if (preg_match('/' . self::CLAUSE_END . self::CLOSERS . '$/u', $before) === 1) {
             return 1;
         }
 
@@ -182,10 +192,10 @@ trait Resegmenting
      *
      * @param list<array> $pieces
      */
-    private static function resegmentingEndsSentence(array $pieces, int $index): bool
+    private static function endsSentence(array $pieces, int $index): bool
     {
         $text = Markup::plainText($pieces[$index]["text"]);
-        if (preg_match('/' . self::RESEGMENTING_SENTENCE_END . self::RESEGMENTING_CLOSERS . '$/u', $text) !== 1) {
+        if (preg_match('/' . self::SENTENCE_END . self::CLOSERS . '$/u', $text) !== 1) {
             return false;
         }
 
@@ -198,7 +208,7 @@ trait Resegmenting
     /**
      * @param list<string> $lines
      */
-    private static function resegmentingFits(array $lines, float $start, float $end, ResegmentOptions $options): bool
+    private static function fits(array $lines, float $start, float $end, ResegmentOptions $options): bool
     {
         $duration = round($end - $start, 3);
         if ($duration > round($options->maxDuration, 3)
@@ -222,7 +232,7 @@ trait Resegmenting
      *
      * @return list<string>
      */
-    private static function resegmentingWrap(array $lines, ResegmentOptions $options): array
+    private static function wrap(array $lines, ResegmentOptions $options): array
     {
         return LineWrapper::wrapToFit($lines, $options->maxCharactersPerLine, $options->maxLines)
             ?? LineWrapper::wrap($lines, $options->maxCharactersPerLine, $options->maxLines);
@@ -234,14 +244,14 @@ trait Resegmenting
      *
      * @return list<array{text: string, length: int, separator: string, time: ?float, openBefore: list<array>, openAfter: list<array>}>
      */
-    private static function resegmentingPieces(SubtitleCue $cue): array
+    private static function pieces(SubtitleCue $cue): array
     {
         $pieces = [];
         $prefix = "";
         foreach ($cue->getLines() as $line) {
             foreach (LineWrapper::words($line) as $wordIndex => $word) {
                 $separator = $wordIndex > 0 ? " " : ($pieces === [] ? "" : "\n");
-                foreach (self::resegmentingSplitWord($word["text"]) as $partIndex => $text) {
+                foreach (self::splitWord($word["text"]) as $partIndex => $text) {
                     $piece = ["text"      => $text,
                               "length"    => LineWrapper::length(LineWrapper::words($text)),
                               "separator" => $partIndex === 0 ? $separator : ""];
@@ -278,7 +288,7 @@ trait Resegmenting
     /**
      * @return list<string>
      */
-    private static function resegmentingSplitWord(string $word): array
+    private static function splitWord(string $word): array
     {
         $parts        = [""];
         $hasText      = false;
@@ -295,7 +305,7 @@ trait Resegmenting
                 continue;
             }
 
-            $chunks = preg_match_all('/.*?' . self::RESEGMENTING_CJK_BREAKS . '+' . self::RESEGMENTING_CLOSERS . '|.+/su', $token, $matches)
+            $chunks = preg_match_all('/.*?' . self::CJK_BREAKS . '+' . self::CLOSERS . '|.+/su', $token, $matches)
                 ? $matches[0]
                 : [$token];
             foreach ($chunks as $chunk) {
@@ -304,7 +314,7 @@ trait Resegmenting
                 }
                 $parts[count($parts) - 1] .= $chunk;
                 $hasText      = true;
-                $isAfterBreak = preg_match('/' . self::RESEGMENTING_CJK_BREAKS . self::RESEGMENTING_CLOSERS . '$/u', $chunk) === 1;
+                $isAfterBreak = preg_match('/' . self::CJK_BREAKS . self::CLOSERS . '$/u', $chunk) === 1;
             }
         }
 
@@ -317,7 +327,7 @@ trait Resegmenting
      *
      * @param list<array> $pieces
      */
-    private static function resegmentingText(array $pieces, int $first, int $end): string
+    private static function text(array $pieces, int $first, int $end): string
     {
         $text = implode("", array_column($pieces[$first]["openBefore"], "tag"));
         for ($index = $first; $index < $end; $index++) {
@@ -337,7 +347,7 @@ trait Resegmenting
      *
      * @return list<int> the visible characters before each piece, then the visible characters of the whole text
      */
-    private static function resegmentingPositions(array $pieces): array
+    private static function positions(array $pieces): array
     {
         $positions = [0];
         foreach ($pieces as $index => $piece) {
@@ -358,7 +368,7 @@ trait Resegmenting
      *
      * @return list<float>
      */
-    private static function resegmentingTimes(array $pieces, array $positions, float $start, float $end): array
+    private static function times(array $pieces, array $positions, float $start, float $end): array
     {
         $anchors = [0 => $start];
         foreach ($pieces as $index => $piece) {
@@ -389,9 +399,9 @@ trait Resegmenting
      *
      * @return list<array{cue: SubtitleCue, pieces: list<array>, index: int, start: float, end: float, endsSentence: bool}>
      */
-    private static function resegmentingWords(SubtitleCue $cue): array
+    private static function words(SubtitleCue $cue): array
     {
-        $pieces = self::resegmentingPieces($cue);
+        $pieces = self::pieces($cue);
         if (array_filter(array_column($pieces, "time"), fn (?float $time): bool => $time !== null) === []) {
             return [];
         }
@@ -412,7 +422,7 @@ trait Resegmenting
                 "index"        => $index,
                 "start"        => $starts[$index],
                 "end"          => $starts[$index + 1] ?? max($cue->getEnd(), $starts[$index]),
-                "endsSentence" => self::resegmentingEndsSentence($pieces, $index),
+                "endsSentence" => self::endsSentence($pieces, $index),
             ];
         }
 
@@ -420,12 +430,12 @@ trait Resegmenting
     }
 
 
-    private static function resegmentingSameSource(SubtitleCue $first, SubtitleCue $second): bool
+    private static function sameSource(SubtitleCue $first, SubtitleCue $second): bool
     {
         return $first === $second
             || (($first->getAlignment() ?? 2) === ($second->getAlignment() ?? 2)
                 && $first->isForced() === $second->isForced()
-                && self::shortCueMergingSpeakers($first) === self::shortCueMergingSpeakers($second));
+                && CueList::speakers($first) === CueList::speakers($second));
     }
 
 
@@ -434,14 +444,14 @@ trait Resegmenting
      *
      * @return list<string>
      */
-    private static function resegmentingGroupLines(array $group): array
+    private static function groupLines(array $group): array
     {
         $texts = [];
         $first = 0;
         foreach ($group as $number => $word) {
             $next = $group[$number + 1] ?? null;
             if ($next === null || $next["cue"] !== $word["cue"]) {
-                $texts[] = self::resegmentingText($word["pieces"], $group[$first]["index"], $word["index"] + 1);
+                $texts[] = self::text($word["pieces"], $group[$first]["index"], $word["index"] + 1);
                 $first   = $number + 1;
             }
         }
@@ -453,9 +463,9 @@ trait Resegmenting
     /**
      * @param list<array> $group
      */
-    private static function resegmentingGroupFits(array $group, ResegmentOptions $options): bool
+    private static function groupFits(array $group, ResegmentOptions $options): bool
     {
-        return self::resegmentingFits(self::resegmentingGroupLines($group), $group[0]["start"], end($group)["end"], $options);
+        return self::fits(self::groupLines($group), $group[0]["start"], end($group)["end"], $options);
     }
 
 
@@ -467,7 +477,7 @@ trait Resegmenting
      *
      * @return list<SubtitleCue>
      */
-    private static function resegmentingFlush(array $group, \SplObjectStorage $newCues, ResegmentOptions $options): array
+    private static function flush(array $group, \SplObjectStorage $newCues, ResegmentOptions $options): array
     {
         if ($group === []) {
             return [];
@@ -478,7 +488,7 @@ trait Resegmenting
             ->setIdentifier($first["index"] === 0 ? $first["cue"]->getIdentifier() : null)
             ->setStart($first["start"])
             ->setEnd(end($group)["end"])
-            ->setLinesByArray(self::resegmentingWrap(self::resegmentingGroupLines($group), $options));
+            ->setLinesByArray(self::wrap(self::groupLines($group), $options));
 
         foreach ($group as $word) {
             if ($word["index"] === 0) {

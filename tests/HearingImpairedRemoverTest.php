@@ -3,8 +3,9 @@
 namespace SubtitleToolbox;
 
 use InvalidArgumentException;
+use SubtitleToolbox\Validation\ValidationRules;
 
-class HearingImpairedRemovalTest extends \PHPUnit\Framework\TestCase
+class HearingImpairedRemoverTest extends \PHPUnit\Framework\TestCase
 {
     private const FILES = __DIR__ . "/files/hearing-impaired/";
 
@@ -26,9 +27,17 @@ class HearingImpairedRemovalTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    private static function apply(Subtitle $subtitle, ?HearingImpairedOptions $options = null): Subtitle
+    {
+        HearingImpairedRemover::apply($subtitle, $options ?? new HearingImpairedOptions());
+
+        return $subtitle;
+    }
+
+
     private function remove(string $text, ?HearingImpairedOptions $options = null): array
     {
-        return $this->getTexts($this->makeSubtitle($text)->removeHearingImpaired($options));
+        return $this->getTexts(self::apply($this->makeSubtitle($text), $options));
     }
 
 
@@ -50,21 +59,22 @@ class HearingImpairedRemovalTest extends \PHPUnit\Framework\TestCase
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "own_sdh.srt"), Format::SubRip);
 
-        $this->assertSame($subtitle, $subtitle->removeHearingImpaired());
+        $this->assertEquals(new HearingImpairedReport(6, 3),
+                            HearingImpairedRemover::apply($subtitle, new HearingImpairedOptions()));
         $this->assertSame(file_get_contents(self::FILES . "own_sdh_removed.srt"),
                           $subtitle->toString(Format::SubRip, ["lineEnding" => "\r\n", "bom" => true]));
-        $this->assertSame([], $subtitle->getErrors());
+        $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
 
 
     public function testRealSubRipFileWithAllOptions(): void
     {
-        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "own_sdh.srt"), Format::SubRip)
-            ->removeHearingImpaired(new HearingImpairedOptions(
-                speakerLabelsUpperCaseOnly: false,
-                customBrackets: [["{", "}"]],
-                lyrics: true,
-            ));
+        $subtitle = self::apply(Subtitle::fromString(file_get_contents(self::FILES . "own_sdh.srt"), Format::SubRip),
+                                new HearingImpairedOptions(
+                                    speakerLabelsUpperCaseOnly: false,
+                                    customBrackets: [["{", "}"]],
+                                    lyrics: true,
+                                ));
 
         $this->assertSame(file_get_contents(self::FILES . "own_sdh_removed_all_options.srt"),
                           $subtitle->toString(Format::SubRip));
@@ -89,11 +99,10 @@ class HearingImpairedRemovalTest extends \PHPUnit\Framework\TestCase
 
     public function testRealWebVttFileWithDefaultOptions(): void
     {
-        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "own_sdh.vtt"), Format::WebVtt)
-            ->removeHearingImpaired();
+        $subtitle = self::apply(Subtitle::fromString(file_get_contents(self::FILES . "own_sdh.vtt"), Format::WebVtt));
 
         $this->assertSame(file_get_contents(self::FILES . "own_sdh_removed.vtt"), $subtitle->toString(Format::WebVtt));
-        $this->assertSame([], $subtitle->getErrors());
+        $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
 
 
@@ -158,10 +167,9 @@ class HearingImpairedRemovalTest extends \PHPUnit\Framework\TestCase
         $this->assertSame([], $this->remove("♪ ♪"));
         $this->assertSame([], $this->remove("- #"));
         $this->assertSame(["Hi."], $this->remove("♫\nHi."));
-        $this->assertSame(["♪ la la ♪", "#1 fan"], $this->getTexts($this->makeSubtitle("♪ la la ♪", "#1 fan")
-            ->removeHearingImpaired()));
-        $this->assertSame(["#1 fan"], $this->getTexts($this->makeSubtitle("♪ la la ♪", "#1 fan")
-            ->removeHearingImpaired(new HearingImpairedOptions(lyrics: true))));
+        $this->assertSame(["♪ la la ♪", "#1 fan"], $this->getTexts(self::apply($this->makeSubtitle("♪ la la ♪", "#1 fan"))));
+        $this->assertSame(["#1 fan"], $this->getTexts(self::apply($this->makeSubtitle("♪ la la ♪", "#1 fan"),
+                                                                       new HearingImpairedOptions(lyrics: true))));
         $this->assertSame(["Hi."], $this->remove("♪ The rain\nkeeps falling ♪\nHi.", new HearingImpairedOptions(lyrics: true)));
         $this->assertSame(["♪ ♪"], $this->remove("♪ ♪", new HearingImpairedOptions(musicOnlyLines: false)));
     }
@@ -199,7 +207,8 @@ class HearingImpairedRemovalTest extends \PHPUnit\Framework\TestCase
         $subtitle->addCue(new SubtitleCue(10, 11, ""));
         $subtitle->addComment("before music", 1)->addComment("before door", 2)->addComment("before last", 3);
 
-        $subtitle->removeHearingImpaired();
+        $this->assertEquals(new HearingImpairedReport(3, 2),
+                            HearingImpairedRemover::apply($subtitle, new HearingImpairedOptions()));
 
         $this->assertSame(["first", "last", ""], $this->getTexts($subtitle));
         $this->assertSame([
@@ -207,7 +216,7 @@ class HearingImpairedRemovalTest extends \PHPUnit\Framework\TestCase
             ["text" => "before door", "beforeCueIndex" => 1],
             ["text" => "before last", "beforeCueIndex" => 1],
         ], $subtitle->getComments());
-        $this->assertSame([], $subtitle->getErrors());
+        $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
 
 
@@ -217,15 +226,24 @@ class HearingImpairedRemovalTest extends \PHPUnit\Framework\TestCase
     }
 
 
-    public function testIsHearingImpaired(): void
+    public function testIsAnnotation(): void
     {
         $options = new HearingImpairedOptions();
 
-        $this->assertTrue($options->isHearingImpaired("[DOOR SLAMS]"));
-        $this->assertTrue($options->isHearingImpaired("JOHN: Hi."));
-        $this->assertTrue($options->isHearingImpaired("♪ ♪"));
-        $this->assertFalse($options->isHearingImpaired("Note: this stays."));
-        $this->assertFalse($options->isHearingImpaired("♪ la la ♪"));
-        $this->assertTrue((new HearingImpairedOptions(lyrics: true))->isHearingImpaired("♪ la la ♪"));
+        $this->assertTrue(HearingImpairedRemover::isAnnotation("[DOOR SLAMS]", $options));
+        $this->assertTrue(HearingImpairedRemover::isAnnotation("JOHN: Hi.", $options));
+        $this->assertTrue(HearingImpairedRemover::isAnnotation("♪ ♪", $options));
+        $this->assertFalse(HearingImpairedRemover::isAnnotation("Note: this stays.", $options));
+        $this->assertFalse(HearingImpairedRemover::isAnnotation("♪ la la ♪", $options));
+        $this->assertTrue(HearingImpairedRemover::isAnnotation("♪ la la ♪", new HearingImpairedOptions(lyrics: true)));
+    }
+
+
+    public function testHearingImpairedOptionsBuildsNoSubtitle(): void
+    {
+        $this->assertSame(["__construct"], array_map(
+            fn (\ReflectionMethod $method): string => $method->getName(),
+            (new \ReflectionClass(HearingImpairedOptions::class))->getMethods()
+        ));
     }
 }

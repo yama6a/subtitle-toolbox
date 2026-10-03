@@ -21,7 +21,7 @@ class ProfanityFilterTest extends TestCase
     private static function filterLines(array $lines, ProfanityOptions $options): array
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, $lines));
-        $ranges   = ProfanityFilter::apply($subtitle, $options);
+        $ranges   = ProfanityFilter::apply($subtitle, $options)->muteRanges;
         $cues     = $subtitle->getCues();
 
         return [$cues === [] ? [] : array_values($cues[0]->getLines()), self::times($ranges)];
@@ -48,7 +48,7 @@ class ProfanityFilterTest extends TestCase
             words: ["hell", "damn*"],
             mask: ProfanityOptions::MASK_FIRST_LETTER,
             padding: 0.1,
-        ));
+        ))->muteRanges;
 
         $this->assertSame(["<00:01:02.000>What <00:01:02.300>the <00:01:02.480>h*** <00:01:02.800>is this?"],
                           $subtitle->getCues()[0]->getLines());
@@ -112,7 +112,7 @@ class ProfanityFilterTest extends TestCase
             ->addCue(new SubtitleCue(1, 2, "<i>Damn</i>"))
             ->addCue(new SubtitleCue(3, 4, "Fine."));
 
-        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn"], ProfanityOptions::MASK_REMOVE));
+        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn"], ProfanityOptions::MASK_REMOVE))->muteRanges;
 
         $this->assertSame([[1.0, 2.0]], self::times($ranges));
         $this->assertSame([0], array_keys($subtitle->getCues()));
@@ -128,7 +128,7 @@ class ProfanityFilterTest extends TestCase
         ]);
         $subtitle = (new Subtitle())->addCue($cue);
 
-        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn", "hell", "hot"]));
+        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn", "hell", "hot"]))->muteRanges;
 
         $this->assertSame([[10.0, 10.5], [11.0, 12.0], [12.5, 14.0]], self::times($ranges));
     }
@@ -144,7 +144,7 @@ class ProfanityFilterTest extends TestCase
             ->addCue(new SubtitleCue(6.3, 7, "hell"));
 
         $this->assertSame([[1.0, 4.0], [5.0, 6.0], [6.3, 7.0]],
-                          self::times(ProfanityFilter::apply($subtitle, new ProfanityOptions(["hell"]))));
+                          self::times(ProfanityFilter::apply($subtitle, new ProfanityOptions(["hell"]))->muteRanges));
     }
 
 
@@ -154,7 +154,7 @@ class ProfanityFilterTest extends TestCase
             ->addCue(new SubtitleCue(0.1, 1, "hell"))
             ->addCue(new SubtitleCue(1.3, 2, "hell"));
 
-        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(["hell"], padding: 0.2));
+        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(["hell"], padding: 0.2))->muteRanges;
 
         $this->assertSame([[0.0, 2.2]], self::times($ranges));
     }
@@ -164,7 +164,7 @@ class ProfanityFilterTest extends TestCase
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, []));
 
-        $this->assertSame([], ProfanityFilter::apply($subtitle, new ProfanityOptions(["hell"])));
+        $this->assertSame([], ProfanityFilter::apply($subtitle, new ProfanityOptions(["hell"]))->muteRanges);
     }
 
 
@@ -172,7 +172,7 @@ class ProfanityFilterTest extends TestCase
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "keys.srt"), Format::SubRip);
 
-        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(wordFile: self::FILES . "words.txt"));
+        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(wordFile: self::FILES . "words.txt"))->muteRanges;
 
         $this->assertCount(7, $subtitle->getCues());
         $this->assertSame([[3.4, 5.0], [8.0, 9.1], [11.5, 13.0], [13.2, 15.6]], self::times($ranges));
@@ -189,7 +189,7 @@ class ProfanityFilterTest extends TestCase
         $this->assertSame([[3.4, 5.0], [8.0, 9.1], [11.5, 13.0], [13.2, 15.6]], self::times(ProfanityFilter::apply(
             Subtitle::fromString(file_get_contents(self::FILES . "keys.srt"), Format::SubRip),
             new ProfanityOptions(["damn*", "hell"], ProfanityOptions::MASK_NONE)
-        )));
+        )->muteRanges));
     }
 
 
@@ -197,7 +197,7 @@ class ProfanityFilterTest extends TestCase
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "keys.srt"), Format::SubRip);
 
-        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn*", "hell"], padding: 0.25));
+        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn*", "hell"], padding: 0.25))->muteRanges;
 
         $this->assertSame([[3.15, 5.25], [7.75, 9.35], [11.25, 15.85]], self::times($ranges));
         $this->assertSame("3.150 5.250 1\n7.750 9.350 1\n11.250 15.850 1\n", MuteRange::toEdl($ranges));
@@ -208,7 +208,7 @@ class ProfanityFilterTest extends TestCase
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "radio.vtt"), Format::WebVtt);
 
-        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn*", "hell"], ProfanityOptions::MASK_FIRST_LETTER));
+        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn*", "hell"], ProfanityOptions::MASK_FIRST_LETTER))->muteRanges;
 
         $cues = array_values($subtitle->getCues());
         $this->assertCount(4, $cues);

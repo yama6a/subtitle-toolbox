@@ -63,12 +63,12 @@ class ReferenceSyncTest extends TestCase
         $target    = $this->load("own_target_de_25fps.srt");
         $before    = $this->getTimes($target);
 
-        $result = ReferenceSync::sync($target, $reference);
+        $result = ReferenceSync::apply($target, new ReferenceSyncOptions($reference));
 
         $this->assertEqualsWithDelta(-2.3, $result->getOffset(), 0.02);
         $this->assertEqualsWithDelta(25 / 23.976, $result->getScale(), 0.00001);
         $this->assertGreaterThan(0.8, $result->getScore());
-        $this->assertSame($before, $this->getTimes($target));
+        $this->assertNotSame($before, $this->getTimes($target));
     }
 
 
@@ -77,7 +77,7 @@ class ReferenceSyncTest extends TestCase
         $reference = $this->load("own_reference_en.srt");
         $target    = $this->load("own_target_de_25fps.srt");
 
-        $this->assertSame($target, ReferenceSync::sync($target, $reference)->apply($target));
+        ReferenceSync::apply($target, new ReferenceSyncOptions($reference));
         $this->assertSame(file_get_contents(__DIR__ . "/../files/sync/own_target_de_synced.srt"),
                           $target->toString(Format::SubRip));
 
@@ -96,7 +96,7 @@ class ReferenceSyncTest extends TestCase
 
     public function testUnrelatedFilesScoreBelowHalf(): void
     {
-        $result = ReferenceSync::sync($this->makeRandomSubtitle(300, 1), $this->makeRandomSubtitle(300, 2));
+        $result = ReferenceSync::apply($this->makeRandomSubtitle(300, 1), new ReferenceSyncOptions($this->makeRandomSubtitle(300, 2)));
 
         $this->assertLessThan(0.5, $result->getScore());
     }
@@ -107,7 +107,7 @@ class ReferenceSyncTest extends TestCase
         $reference = $this->load("own_reference_en.srt");
         $target    = $this->load("own_target_de_25fps.srt");
 
-        $result = ReferenceSync::sync($target, $reference, new ReferenceSyncOptions(searchScale: false));
+        $result = ReferenceSync::apply($target, new ReferenceSyncOptions($reference, searchScale: false));
 
         $this->assertSame(1.0, $result->getScale());
         $this->assertLessThan(0.5, $result->getScore());
@@ -119,9 +119,9 @@ class ReferenceSyncTest extends TestCase
         $reference = $this->makeRandomSubtitle(200, 3);
         $target    = $this->makeRandomSubtitle(200, 3)->shift(75);
 
-        $this->assertGreaterThanOrEqual(-60, ReferenceSync::sync($target, $reference)->getOffset());
+        $this->assertGreaterThanOrEqual(-60, ReferenceSync::apply(clone $target, new ReferenceSyncOptions($reference))->getOffset());
 
-        $result = ReferenceSync::sync($target, $reference, new ReferenceSyncOptions(-90, -60));
+        $result = ReferenceSync::apply($target, new ReferenceSyncOptions($reference, -90, -60));
         $this->assertSame(-75.0, $result->getOffset());
         $this->assertSame(1.0, $result->getScale());
         $this->assertEqualsWithDelta(1, $result->getScore(), 0.000001);
@@ -130,19 +130,20 @@ class ReferenceSyncTest extends TestCase
 
     public function testEmptySubtitleScoresZero(): void
     {
-        $result = ReferenceSync::sync(new Subtitle(), $this->makeRandomSubtitle(10, 4));
+        $result = ReferenceSync::apply(new Subtitle(), new ReferenceSyncOptions($this->makeRandomSubtitle(10, 4)));
 
         $this->assertSame([0.0, 1.0, 0.0], [$result->getOffset(), $result->getScale(), $result->getScore()]);
     }
 
 
-    public function testApplyWithoutChangeKeepsTimes(): void
+    public function testSyncToAnIdenticalCopyKeepsTimes(): void
     {
         $subtitle = $this->makeRandomSubtitle(20, 5);
         $before   = $this->getTimes($subtitle);
 
-        (new SyncResult(0, 1, 1))->apply($subtitle);
+        $result = ReferenceSync::apply($subtitle, new ReferenceSyncOptions(clone $subtitle));
 
+        $this->assertSame([0.0, 1.0], [$result->getOffset(), $result->getScale()]);
         $this->assertSame($before, $this->getTimes($subtitle));
     }
 
@@ -150,7 +151,7 @@ class ReferenceSyncTest extends TestCase
     public function testInvalidRangeThrows(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        new ReferenceSyncOptions(10, -10);
+        new ReferenceSyncOptions(new Subtitle(), 10, -10);
     }
 
 
@@ -160,7 +161,7 @@ class ReferenceSyncTest extends TestCase
         $target    = $this->makeRandomSubtitle(2000, 6)->scale(23.976 / 25)->shift(12.4);
 
         $start  = microtime(true);
-        $result = ReferenceSync::sync($target, $reference);
+        $result = ReferenceSync::apply($target, new ReferenceSyncOptions($reference));
 
         $this->assertLessThan(2, microtime(true) - $start);
         $this->assertEqualsWithDelta(25 / 23.976, $result->getScale(), 0.00001);

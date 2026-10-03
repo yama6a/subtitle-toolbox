@@ -70,7 +70,7 @@ trait CueEditing
     /**
      * Returns a copy with copies of the forced cues and the comments before these cues.
      */
-    public function forcedOnly(): self
+    public function onlyForced(): self
     {
         $copies = new \SplObjectStorage();
         foreach ($this->cues as $cue) {
@@ -173,7 +173,7 @@ trait CueEditing
             ARRAY_FILTER_USE_KEY
         );
 
-        $anchors = $this->joinGroup(array_values($group), $anchors, true);
+        [$this->cues, $anchors] = CueList::join($this->cues, $group, $anchors, true);
         $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
         return $this;
@@ -203,7 +203,7 @@ trait CueEditing
 
         foreach ($groups as $group) {
             if (count($group) > 1) {
-                $anchors = $this->joinGroup($group, $anchors, false);
+                [$this->cues, $anchors] = CueList::join($this->cues, $group, $anchors, false);
             }
         }
         $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
@@ -213,31 +213,20 @@ trait CueEditing
 
 
     /**
-     * @param SubtitleCue[] $group
-     * @param array<int, ?SubtitleCue> $anchors
+     * Sets the cue list to $cues. Each comment moves to the cue that $anchors holds at its position, or after the last
+     * cue for null. CommentAnchors::of() returns the anchors.
      *
-     * @return array<int, ?SubtitleCue>
+     * @internal For the services that change the cue list, such as Resegmenter.
+     *
+     * @param SubtitleCue[]            $cues
+     * @param array<int, ?SubtitleCue> $anchors
      */
-    private function joinGroup(array $group, array $anchors, bool $joinLines): array
+    public function replaceCues(array $cues, array $anchors): self
     {
-        $joined = $group[0];
-        $lines  = $joined->getLines();
-        $end    = $joined->getEnd();
-        foreach (array_slice($group, 1) as $cue) {
-            if ($joinLines) {
-                $lines = array_merge($lines, $cue->getLines());
-            }
-            $end     = max($end, $cue->getEnd());
-            $anchors = CommentAnchors::move($anchors, $cue, $joined);
-        }
-        $joined->setEnd($end)->setLinesByArray($lines);
+        $this->cues     = array_values($cues);
+        $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
-        $this->cues = array_values(array_filter(
-            $this->cues,
-            fn (SubtitleCue $cue): bool => $cue === $joined || !in_array($cue, $group, true)
-        ));
-
-        return $anchors;
+        return $this;
     }
 
 

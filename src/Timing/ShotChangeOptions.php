@@ -8,6 +8,9 @@ final class ShotChangeOptions
 {
     public readonly float $frameRate;
 
+    /** @var list<float> */
+    public readonly array $shotChanges;
+
     public readonly int $snapWindow;
 
     public readonly int $minGapFrames;
@@ -18,10 +21,14 @@ final class ShotChangeOptions
 
 
     /**
-     * Creates the timing rules in frames of $frameRate, where a null $snapWindow means half a second.
+     * Creates the timing rules in frames of $frameRate, where a null $snapWindow means half a second. $shotChanges
+     * holds the shot change times in seconds. Without them, ShotChangeTiming::apply() only closes small gaps.
+     *
+     * @param list<float> $shotChanges
      */
     public function __construct(
         float $frameRate,
+        array $shotChanges = [],
         ?int $snapWindow = null,
         int $minGapFrames = 2,
         bool $chain = true,
@@ -46,6 +53,7 @@ final class ShotChangeOptions
         }
 
         $this->frameRate    = $frameRate;
+        $this->shotChanges  = array_values($shotChanges);
         $this->snapWindow   = $snapWindow;
         $this->minGapFrames = $minGapFrames;
         $this->chain        = $chain;

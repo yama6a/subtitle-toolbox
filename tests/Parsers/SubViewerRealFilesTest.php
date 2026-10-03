@@ -10,6 +10,7 @@ use SubtitleToolbox\Formatters\SubViewerFormatter;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Validation\ValidationRules;
 
 class SubViewerRealFilesTest extends TestCase
 {
@@ -68,7 +69,7 @@ class SubViewerRealFilesTest extends TestCase
         $this->assertSame($firstCue, [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $last = $cues[count($cues) - 1];
         $this->assertSame($lastCue, [$last->getStart(), $last->getEnd(), $last->getText()]);
-        $this->assertSame([], $subtitle->getErrors());
+        $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
 
 
