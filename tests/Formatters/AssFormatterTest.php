@@ -111,6 +111,7 @@ class AssFormatterTest extends TestCase
         return [
             "underline and strike"    => [["<u>a</u> <s>b</s>"], "{\\u1}a{\\u0} {\\s1}b{\\s0}"],
             "colour as BGR"           => [["<font color=\"#FF8000\">a</font>"], "{\\c&H0080FF&}a{\\c}"],
+            "single quoted colour"    => [["<font color='#FF8000'>a</font>"], "{\\c&H0080FF&}a{\\c}"],
             "inner colour restores"   => [["<font color=\"#ff0000\">a<font color=\"#00ff00\">b</font>c</font>"], "{\\c&H0000FF&}a{\\c&H00FF00&}b{\\c&H0000FF&}c{\\c}"],
             "font without colour"     => [["<font face=\"Arial\">a</font>"], "a"],
             "last tag of a kind wins" => [["<b>a</b><b>b</b>"], "{\\b1}a{\\b1}b{\\b0}"],

@@ -35,6 +35,14 @@ class TtmlFormatterTest extends TestCase
     }
 
 
+    public function testSingleQuotedColourBecomesAColourSpan(): void
+    {
+        $output = (new Subtitle())->addCue(new SubtitleCue(1, 2, "<font color='#ff0000'>red</font>"))->format(TtmlFormatter::class);
+
+        $this->assertStringContainsString("<p begin=\"00:00:01.000\" end=\"00:00:02.000\" region=\"bottomCenter\"><span tts:color=\"#ff0000\">red</span></p>", $output);
+    }
+
+
     public function testSubtitleFromAnotherFormatGetsRegionsAgentsAndSpans(): void
     {
         $srt      = "1\n00:00:01,000 --> 00:00:02,000\n{\\an8}<v Fred>Hi & <b>bold <i>both</i></b>\n<font color=\"#ff0000\">red</font> <u>u</u> <s>s</s>\n\n"

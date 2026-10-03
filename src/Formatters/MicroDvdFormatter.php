@@ -88,10 +88,10 @@ class MicroDvdFormatter extends SubtitleFormatter
                 $tags[] = $matches[1];
                 $line   = $matches[2];
             } elseif ($color === null &&
-                      preg_match('/^<font color="(#[0-9a-fA-F]{6})">(.*)<\/font>$/s', $line, $matches) &&
-                      !preg_match('/<\/?font\b/', $matches[2])) {
-                $color = strtolower($matches[1]);
-                $line  = $matches[2];
+                      preg_match('/^<font color=(["\']?)(#[0-9a-fA-F]{6})\1>(.*)<\/font>$/s', $line, $matches) &&
+                      !preg_match('/<\/?font\b/', $matches[3])) {
+                $color = strtolower($matches[2]);
+                $line  = $matches[3];
             } else {
                 break;
             }
