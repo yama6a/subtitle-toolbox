@@ -26,6 +26,8 @@ abstract class WriteCommand extends FileCommand
 
     protected bool $dataOnStdout = false;
 
+    protected ?float $outputFps = null;
+
     private WriteOptions $writeOptions;
 
 
@@ -61,7 +63,7 @@ abstract class WriteCommand extends FileCommand
 
     protected function fpsDescription(): string
     {
-        return "Frame rate of the video, for MicroDVD input without a {1}{1}<fps> first line, and for MicroDVD and iTT output.";
+        return "Sets --input-fps and --output-fps. Each of them overrides it.";
     }
 
 
@@ -70,10 +72,7 @@ abstract class WriteCommand extends FileCommand
      */
     protected function outputOptions(): array
     {
-        $options = [];
-        if ($this->hasFormatOptions()) {
-            $options[] = Option::value("to", "FORMAT", "Output format. Default: the format of the --output extension, else the input format.");
-        }
+        $options   = [Option::value("to", "FORMAT", "Output format. Default: the format of the --output extension, else the input format.")];
         $options[] = Option::value("output", "PATH", "Output file, or - for standard output. Takes one input file.", "o");
         $options[] = Option::value("output-dir", "DIR", "Write each output file into this directory. Creates it when it is missing.");
         if ($this->allowsInPlace()) {
@@ -83,6 +82,7 @@ abstract class WriteCommand extends FileCommand
         return [
             ...$options,
             Option::flag("force", "Overwrite output files that exist."),
+            Option::value("output-fps", "RATE", "Frame rate of MicroDVD and iTT output. Default: the frame rate of a MicroDVD or iTT input."),
             Option::value("line-ending", "lf|crlf", "Line ending of the output. Default: lf."),
             Option::flag("bom", "Start the output with a UTF-8 BOM."),
             Option::flag("no-bom", "Write no UTF-8 BOM. Default: the BOM rule of the output format."),
@@ -95,9 +95,10 @@ abstract class WriteCommand extends FileCommand
     {
         parent::prepare($arguments);
 
-        $to             = $this->hasFormatOptions() ? $arguments->value("to") : null;
-        $this->toFormat = $to === null ? null : self::writableFormat($to);
-        $this->output   = $this->explicitOutput($arguments);
+        $to              = $arguments->value("to");
+        $this->toFormat  = $to === null ? null : self::writableFormat($to);
+        $this->output    = $this->explicitOutput($arguments);
+        $this->outputFps = self::rate($arguments, "output-fps");
 
         $targets = array_filter([$this->output !== null, $arguments->has("output-dir"), $arguments->has("in-place")]);
         if (count($targets) > 1) {
@@ -206,8 +207,7 @@ abstract class WriteCommand extends FileCommand
             return $inputFormat;
         }
 
-        return self::fail("The format $inputFormat->value can be read but not written." .
-                          ($this->hasFormatOptions() ? " Pass --to with another format." : ""));
+        return self::fail("The format $inputFormat->value can be read but not written. Pass --to with another format.");
     }
 
 
@@ -259,9 +259,9 @@ abstract class WriteCommand extends FileCommand
     private function formatterOptions(Format $outputFormat, Arguments $arguments): WriteOptions
     {
         $format = match (true) {
-            $this->fps !== null && $outputFormat === Format::MicroDvd => new MicroDvdOptions(frameRate: $this->fps),
-            $this->fps !== null && $outputFormat === Format::Itt      => new IttOptions(frameRate: $this->fps),
-            default                                                   => $this->commandFormatterOptions($outputFormat, $arguments),
+            $this->outputFps !== null && $outputFormat === Format::MicroDvd => new MicroDvdOptions(frameRate: $this->outputFps),
+            $this->outputFps !== null && $outputFormat === Format::Itt      => new IttOptions(frameRate: $this->outputFps),
+            default                                                         => $this->commandFormatterOptions($outputFormat, $arguments),
         };
 
         return new WriteOptions(

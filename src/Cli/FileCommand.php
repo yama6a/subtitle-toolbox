@@ -19,7 +19,7 @@ abstract class FileCommand extends Command
 
     protected ?Format $fromFormat = null;
 
-    protected ?float $fps = null;
+    protected ?float $inputFps = null;
 
     protected int $succeeded = 0;
 
@@ -48,15 +48,6 @@ abstract class FileCommand extends Command
     }
 
 
-    /**
-     * Returns false for a command that uses --from and --to for something other than formats.
-     */
-    protected function hasFormatOptions(): bool
-    {
-        return true;
-    }
-
-
     protected function needsWordTimestamps(Arguments $arguments): bool
     {
         return $arguments->has("word-timestamps");
@@ -65,7 +56,7 @@ abstract class FileCommand extends Command
 
     protected function fpsDescription(): string
     {
-        return "Frame rate of the video. MicroDVD files without a {1}{1}<fps> first line need it.";
+        return "Same as --input-fps.";
     }
 
 
@@ -74,15 +65,11 @@ abstract class FileCommand extends Command
      */
     protected function inputOptions(): array
     {
-        $options = [];
-        if ($this->hasFormatOptions()) {
-            $options[] = Option::value("from", "FORMAT", "Input format. Default: detected from the content, else taken from the file extension. Chapters and cloud speech JSON need it.");
-        }
-
         return [
-            ...$options,
+            Option::value("from", "FORMAT", "Input format. Default: detected from the content, else taken from the file extension. Chapters and cloud speech JSON need it."),
             Option::value("encoding", "NAME", "Encoding of the input, for example Windows-1252. Default: UTF-8. A BOM in the input overrides it."),
             Option::flag("lenient", "Skip or repair broken cues and print a warning for each. SCC, PGS, VobSub and chapter input ignore it."),
+            Option::value("input-fps", "RATE", "Frame rate of a MicroDVD input without a {1}{1}<fps> first line."),
             Option::value("fps", "RATE", $this->fpsDescription()),
             Option::flag("word-timestamps", "Keep the word times of speech-to-text JSON, YouTube timed text and podcast transcript input."),
             Option::value("track", "NUMBER", "Subtitle track of an MKV or WebM input. Needed when the file has several. \"info\" lists them."),
@@ -95,22 +82,32 @@ abstract class FileCommand extends Command
     {
         $this->succeeded = 0;
         $this->failed    = 0;
-        $this->fps       = $arguments->positiveFloat("fps");
+        $this->inputFps  = self::rate($arguments, "input-fps");
+        $arguments->positiveFloat("fps");
         $arguments->positiveInt("track");
 
-        $from             = $this->hasFormatOptions() ? $arguments->value("from") : null;
+        $from             = $arguments->value("from");
         $this->fromFormat = $from === null ? null : self::readableFormat($from);
 
         try {
             $this->readOptions = new ReadOptions(
                 encoding: $arguments->value("encoding"),
                 lenient: $arguments->has("lenient"),
-                fps: $this->fps,
+                fps: $this->inputFps,
                 wordTimestamps: $this->needsWordTimestamps($arguments),
             );
         } catch (SubtitleToolboxException $exception) {
             self::fail($exception->getMessage());
         }
+    }
+
+
+    /**
+     * Returns the frame rate of the option $name, else of --fps, which sets all frame rates.
+     */
+    protected static function rate(Arguments $arguments, string $name): ?float
+    {
+        return $arguments->positiveFloat($name) ?? $arguments->positiveFloat("fps");
     }
 
 

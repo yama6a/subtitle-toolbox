@@ -53,13 +53,50 @@ class ApplicationTest extends TestCase
     public function testUsageErrorsExitWith2(): void
     {
         $this->assertSame(
-            [2, "", "Error: Pass --by SECONDS.\nRun \"subtitle-toolbox help shift\" for the usage.\n"],
+            [2, "", "Error: Pass --shift SECONDS, --scale FACTOR, or --from-fps RATE and --to-fps RATE.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            self::runApplication(["retime", "-"])
+        );
+        $this->assertSame(
+            [2, "", "Error: Pass --from-fps and --to-fps together.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            self::runApplication(["retime", "-", "--from-fps", "25"])
+        );
+        $this->assertSame(
+            [2, "", "Error: --shift-after needs --shift.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            self::runApplication(["retime", "-", "--scale", "2", "--shift-after", "1"])
+        );
+        $this->assertSame(
+            [2, "", "shift is deprecated. Use: subtitle-toolbox retime -\n" .
+                    "Error: Pass --by SECONDS.\nRun \"subtitle-toolbox help shift\" for the usage.\n"],
             self::runApplication(["shift", "-"])
         );
         $this->assertSame(
-            [2, "", "Error: Pass --from RATE.\nRun \"subtitle-toolbox help fps\" for the usage.\n"],
+            [2, "", "fps was removed. Use: subtitle-toolbox retime - --to-fps 25\n"],
             self::runApplication(["sync-fps", "-", "--to", "25"])
         );
+    }
+
+
+    public function testRetimeHelpMatchesItsOptions(): void
+    {
+        [$code, $stdout, $stderr] = self::runApplication(["retime", "--help"]);
+
+        $this->assertSame([0, ""], [$code, $stderr]);
+        $this->assertStringStartsWith(
+            "Usage: subtitle-toolbox retime <input>... [--shift SECONDS] [--scale FACTOR] [--from-fps RATE --to-fps RATE] [options]\n\n" .
+            "Shifts and scales all cue times, or fits them to a video with another frame rate.\n\n" .
+            "Pass one or more edits. retime applies them in this order: --shift, --scale, --from-fps and --to-fps.\n",
+            $stdout
+        );
+        preg_match_all('/^  (?:-\w, )?--([\w-]+)/m', $stdout, $matches);
+        $this->assertSame([
+            "shift", "shift-after", "scale", "from-fps", "to-fps", "to", "output", "output-dir", "in-place", "force", "output-fps",
+            "line-ending", "bom", "no-bom", "skip-image-cues", "from", "encoding", "lenient", "input-fps", "fps", "word-timestamps",
+            "track", "keep-going", "help",
+        ], $matches[1]);
+        $this->assertMatchesRegularExpression('/^  --shift-after SECONDS +Shift only the cues that start at this time or later\.$/m', $stdout);
+        $this->assertMatchesRegularExpression('/^  --from-fps RATE +Frame rate of the video that the subtitle fits now\. Needs --to-fps\.$/m', $stdout);
+        $this->assertMatchesRegularExpression('/^  --fps RATE +Sets --input-fps and --output-fps\. Each of them overrides it\.$/m', $stdout);
+        $this->assertSame(array_map(fn (Option $option): string => $option->name, (new RetimeCommand())->options()), array_slice($matches[1], 0, -1));
     }
 
 
