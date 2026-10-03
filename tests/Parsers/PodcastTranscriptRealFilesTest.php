@@ -1,0 +1,98 @@
+<?php
+
+namespace SubtitleToolbox\Parsers;
+
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Formatters\PodcastTranscriptFormatter;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
+
+class PodcastTranscriptRealFilesTest extends TestCase
+{
+    private const DIR = __DIR__ . "/../files/podcast/real/";
+
+
+    public static function realFiles(): array
+    {
+        return [
+            "spec example shape with word segments" => [
+                "spec_word_segments.json",
+                4,
+                [0.5, 3.0, "<v Marta>The bakery opens at seven."],
+                [8.25, 11.5, "<v Marta>The rest of the year it closes."],
+            ],
+            "podcast-transcript-convert from SRT" => [
+                "podcast_transcript_convert_from_srt.json",
+                6,
+                [0.0, 2.76, "<v Marta>This week we look at how to keep"],
+                [25.8, 28.125, "<v Marta>No. The fridge makes it stale faster \u{2013} use a bread box."],
+            ],
+            "podcast-transcript-convert from HTML, without end times" => [
+                "podcast_transcript_convert_from_html.json",
+                4,
+                [0.0, 7.0, "<v Speaker 1>The library opens a new reading room on Friday."],
+                [19.0, 29.0, "<v Speaker 2>That sounds good. Thank you."],
+            ],
+        ];
+    }
+
+
+    private static function parse(string $fileName): Subtitle
+    {
+        return (new PodcastTranscriptParser())->parse(file_get_contents(self::DIR . $fileName));
+    }
+
+
+    private static function cues(Subtitle $subtitle): array
+    {
+        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $subtitle->getCues());
+    }
+
+
+    #[DataProvider("realFiles")]
+    public function testRealFileParses(string $fileName, int $cueCount, array $firstCue, array $lastCue): void
+    {
+        $cues = self::cues(self::parse($fileName));
+
+        $this->assertCount($cueCount, $cues);
+        $this->assertSame($firstCue, $cues[0]);
+        $this->assertSame($lastCue, $cues[count($cues) - 1]);
+    }
+
+
+    #[DataProvider("realFiles")]
+    public function testRealFileRoundTripsThroughTheFormatter(string $fileName): void
+    {
+        $subtitle = self::parse($fileName);
+        $json     = $subtitle->format(PodcastTranscriptFormatter::class, [PodcastTranscriptFormatter::OPTION_PRETTY_PRINT => true]);
+        $again    = (new PodcastTranscriptParser())->parse($json);
+
+        $this->assertSame(self::cues($subtitle), self::cues($again));
+        $this->assertSame($subtitle->getFormatData("podcast"), $again->getFormatData("podcast"));
+    }
+
+
+    public function testWordSegmentsRoundTripWithTheirStartTimes(): void
+    {
+        $content  = file_get_contents(self::DIR . "spec_word_segments.json");
+        $parser   = new PodcastTranscriptParser([PodcastTranscriptParser::OPTION_WORD_TIMESTAMPS => true]);
+        $original = json_decode($content, true)["segments"];
+        $json     = $parser->parse($content)->format(PodcastTranscriptFormatter::class, [PodcastTranscriptFormatter::OPTION_WORD_SEGMENTS => true]);
+        $written  = json_decode($json, true)["segments"];
+
+        $this->assertSame(
+            array_map(fn (array $segment): array => [$segment["speaker"], (float)$segment["startTime"], trim($segment["body"])], $original),
+            array_map(fn (array $segment): array => [$segment["speaker"], $segment["startTime"], $segment["body"]], $written)
+        );
+        $this->assertSame([1.0, 3.0], [$written[0]["endTime"], $written[4]["endTime"]]);
+    }
+
+
+    public function testHtmlConverterFileKeepsItsMetadata(): void
+    {
+        $subtitle = self::parse("podcast_transcript_convert_from_html.json");
+
+        $this->assertSame(["version" => "1.0.0", "metadata" => ["title" => "Library news", "episode" => 4]], $subtitle->getFormatData("podcast"));
+    }
+}

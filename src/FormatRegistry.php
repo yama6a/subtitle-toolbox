@@ -6,6 +6,7 @@ use SubtitleToolbox\Formatters\AssFormatter;
 use SubtitleToolbox\Formatters\CsvFormatter;
 use SubtitleToolbox\Formatters\EbuStlFormatter;
 use SubtitleToolbox\Formatters\FfMetadataChaptersFormatter;
+use SubtitleToolbox\Formatters\HtmlTranscriptFormatter;
 use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\JsonFormatter;
 use SubtitleToolbox\Formatters\LyricsFormatter;
@@ -16,6 +17,7 @@ use SubtitleToolbox\Formatters\OgmChaptersFormatter;
 use SubtitleToolbox\Formatters\PgsFormatter;
 use SubtitleToolbox\Formatters\PlainTextFormatter;
 use SubtitleToolbox\Formatters\PodcastChaptersFormatter;
+use SubtitleToolbox\Formatters\PodcastTranscriptFormatter;
 use SubtitleToolbox\Formatters\SamiFormatter;
 use SubtitleToolbox\Formatters\SbvFormatter;
 use SubtitleToolbox\Formatters\SccFormatter;
@@ -33,6 +35,7 @@ use SubtitleToolbox\Parsers\DeepgramParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\Parsers\GoogleSpeechParser;
+use SubtitleToolbox\Parsers\HtmlTranscriptParser;
 use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
@@ -42,6 +45,7 @@ use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\OgmChaptersParser;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\PodcastChaptersParser;
+use SubtitleToolbox\Parsers\PodcastTranscriptParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SccParser;
@@ -66,6 +70,7 @@ class FormatRegistry
         "ass"       => [AssParser::class, AssFormatter::class, ["ass", "ssa"]],
         "csv"       => [CsvParser::class, CsvFormatter::class, ["csv"]],
         "ffmeta"    => [FfMetadataChaptersParser::class, FfMetadataChaptersFormatter::class, ["ffmeta"]],
+        "html"      => [HtmlTranscriptParser::class, HtmlTranscriptFormatter::class, ["html", "htm"]],
         "itt"       => [IttParser::class, IttFormatter::class, ["itt"]],
         "json"      => [JsonParser::class, JsonFormatter::class, ["json"]],
         "assemblyai" => [AssemblyAiParser::class, null, ["json"]],
@@ -93,6 +98,7 @@ class FormatRegistry
         "youtube"   => [YouTubeTimedTextParser::class, null, ["json3", "srv3", "srv1"]],
         "ogm"       => [OgmChaptersParser::class, OgmChaptersFormatter::class, ["txt"]],
         "podcast"   => [PodcastChaptersParser::class, PodcastChaptersFormatter::class, ["json"]],
+        "podcast-transcript" => [PodcastTranscriptParser::class, PodcastTranscriptFormatter::class, ["json"]],
         "ytchapter" => [YouTubeChaptersParser::class, YouTubeChaptersFormatter::class, ["txt"]],
     ];
 

@@ -13,6 +13,7 @@ use SubtitleToolbox\Parsers\DeepgramParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\Parsers\GoogleSpeechParser;
+use SubtitleToolbox\Parsers\HtmlTranscriptParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
@@ -20,6 +21,7 @@ use SubtitleToolbox\Parsers\Mpl2Parser;
 use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\OgmChaptersParser;
 use SubtitleToolbox\Parsers\PodcastChaptersParser;
+use SubtitleToolbox\Parsers\PodcastTranscriptParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SubRipParser;
@@ -43,11 +45,13 @@ class FormatDetectorTest extends TestCase
         "chapters/ffmetadata" => FfMetadataChaptersParser::class,
         "chapters/ogm"        => OgmChaptersParser::class,
         "chapters/podcast"    => PodcastChaptersParser::class,
+        "html"     => HtmlTranscriptParser::class,
         "json"     => JsonParser::class,
         "lrc"      => LyricsParser::class,
         "microdvd" => MicroDvdParser::class,
         "mpl2"     => Mpl2Parser::class,
         "mpsub"    => MpSubParser::class,
+        "podcast"  => PodcastTranscriptParser::class,
         "sami"     => SamiParser::class,
         "sbv"      => SbvParser::class,
         "srt"      => SubRipParser::class,
@@ -188,6 +192,18 @@ class FormatDetectorTest extends TestCase
             "JSON with a chapters list"  => ["{\"version\": 1, \"formatData\": {\"chapters\": {\"chapters\": []}}, \"cues\": []}", JsonParser::class],
             "FFmpeg metadata"            => [";FFMETADATA1\ntitle=Meetup\n", FfMetadataChaptersParser::class],
             "OGM with blank line"        => ["CHAPTER00 = 00:00:00.000\r\n\r\nCHAPTER00NAME=Intro\r\n", OgmChaptersParser::class],
+            "Podcasting 2.0 JSON"        => ["{\"version\": \"1.0.0\", \"segments\": [{\"speaker\": \"Anna\", \"startTime\": 0.5, \"body\": \"I\"}]}",
+                                             PodcastTranscriptParser::class],
+            "Podcasting 2.0 JSON body first" => ["{\"segments\":[{\"body\":\"Hi\",\"endTime\":1,\"startTime\":0}]}", PodcastTranscriptParser::class],
+            "JSON with podcast segments" => ["{\"version\": 1, \"formatData\": {\"x\": {\"segments\": [{\"startTime\": 0, \"body\": \"\"}]}}, \"cues\": []}",
+                                             JsonParser::class],
+            "Whisper JSON with a body"   => ["{\"segments\": [{\"start\": 0.0, \"end\": 2.0, \"text\": \" Hello\", \"body\": 1}]}", WhisperJsonParser::class],
+            "Podcast chapters, not a transcript" => ["{\"version\": \"1.2.0\", \"chapters\": [{\"startTime\": 0, \"title\": \"Intro\"}]}",
+                                             PodcastChaptersParser::class],
+            "Podcast transcript, not chapters" => ["{\"version\": \"1.0.0\", \"chapters\": [], \"segments\": [{\"startTime\": 0, \"body\": \"Hi\"}]}",
+                                             PodcastTranscriptParser::class],
+            "Podcasting 2.0 HTML"        => ["<cite>Anna:</cite>\n<time>0:00</time>\n<p>Hello</p>\n", HtmlTranscriptParser::class],
+            "HTML document with time"    => ["<!DOCTYPE html>\n<html><body>\n<CITE>Anna:</CITE>\n<TIME>0:00</TIME><p>Hi</p></body></html>", HtmlTranscriptParser::class],
         ];
     }
 
@@ -254,6 +270,8 @@ class FormatDetectorTest extends TestCase
             "chapters as text"         => ["{\"version\": \"1\", \"text\": \"\\\"chapters\\\": [\"}"],
             "OGM without name line"    => ["CHAPTER01=00:00:00.000\nCHAPTER02=00:01:00.000\n"],
             "YouTube chapters"         => ["0:00 Intro\n2:48 Hearing aids\n4:20 Progress report\n"],
+            "HTML without time"        => ["<cite>Anna:</cite>\n<p>Hello</p>\n"],
+            "cite and time as text"    => ["Hello <cite> and <time>\n"],
         ];
     }
 
