@@ -17,14 +17,14 @@ trait Resegmenting
      */
     public function splitLongCues(ResegmentOptions $options): self
     {
-        $anchors = $this->getCommentAnchors();
+        $anchors = CommentAnchors::of($this->cues, $this->comments);
         $cues    = [];
         foreach ($this->cues as $cue) {
             $cues = [...$cues, ...self::resegmentingSplitCue($cue, $options)];
         }
 
         $this->cues = $cues;
-        $this->setCommentsByAnchors($this->comments, $anchors);
+        $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
         return $this;
     }
@@ -35,7 +35,7 @@ trait Resegmenting
      */
     public function resegmentByWords(ResegmentOptions $options): self
     {
-        $anchors = $this->getCommentAnchors();
+        $anchors = CommentAnchors::of($this->cues, $this->comments);
         $newCues = new \SplObjectStorage();
         $result  = [];
         $group   = [];
@@ -68,7 +68,8 @@ trait Resegmenting
         $result = [...$result, ...self::resegmentingFlush($group, $newCues, $options)];
 
         $this->cues = $result;
-        $this->setCommentsByAnchors(
+        $this->comments = CommentAnchors::comments(
+            $this->cues,
             $this->comments,
             array_map(fn (?SubtitleCue $anchor): ?SubtitleCue => $anchor === null ? null : $newCues[$anchor], $anchors)
         );
@@ -201,14 +202,14 @@ trait Resegmenting
     {
         $duration = round($end - $start, 3);
         if ($duration > round($options->maxDuration, 3)
-            || self::shortCueMergingWrap($lines, $options->maxCharactersPerLine, $options->maxLines) === null) {
+            || LineWrapper::wrapToFit($lines, $options->maxCharactersPerLine, $options->maxLines) === null) {
             return false;
         }
         if ($options->maxCharactersPerSecond === null) {
             return true;
         }
 
-        $characters = self::shortCueMergingCharacters($lines);
+        $characters = LineWrapper::characters($lines);
 
         return $characters === 0 || ($duration > 0 ? $characters / $duration : INF) <= $options->maxCharactersPerSecond;
     }
@@ -223,14 +224,8 @@ trait Resegmenting
      */
     private static function resegmentingWrap(array $lines, ResegmentOptions $options): array
     {
-        $wrapped = self::shortCueMergingWrap($lines, $options->maxCharactersPerLine, $options->maxLines);
-        if ($wrapped !== null) {
-            return $wrapped;
-        }
-
-        $words = self::fixesSplitIntoWords(implode(" ", $lines));
-
-        return self::fixesJoinLines($words, self::fixesFindBreaks($words, $options->maxCharactersPerLine, $options->maxLines));
+        return LineWrapper::wrapToFit($lines, $options->maxCharactersPerLine, $options->maxLines)
+            ?? LineWrapper::wrap($lines, $options->maxCharactersPerLine, $options->maxLines);
     }
 
 
@@ -244,11 +239,11 @@ trait Resegmenting
         $pieces = [];
         $prefix = "";
         foreach ($cue->getLines() as $line) {
-            foreach (self::fixesSplitIntoWords($line) as $wordIndex => $word) {
+            foreach (LineWrapper::words($line) as $wordIndex => $word) {
                 $separator = $wordIndex > 0 ? " " : ($pieces === [] ? "" : "\n");
                 foreach (self::resegmentingSplitWord($word["text"]) as $partIndex => $text) {
                     $piece = ["text"      => $text,
-                              "length"    => self::fixesLineLength(self::fixesSplitIntoWords($text)),
+                              "length"    => LineWrapper::length(LineWrapper::words($text)),
                               "separator" => $partIndex === 0 ? $separator : ""];
 
                     // A word of tags only, such as "</i>" after a space, joins its neighbour, so that no cue holds only tags.
