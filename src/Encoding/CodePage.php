@@ -2,6 +2,8 @@
 
 namespace SubtitleToolbox\Encoding;
 
+use SubtitleToolbox\Markup;
+
 /**
  * Single-byte code pages for EBU STL without ext-mbstring or ext-iconv. Bytes below 0x80 are ASCII.
  * The ISO 8859 tables are the 1987 and 1988 editions in EBU Tech 3264, appendix 2.
@@ -298,7 +300,7 @@ class CodePage
     public static function encode(string $text, array $table): string
     {
         $bytes      = array_flip($table);
-        $characters = preg_split('//u', $text, -1, PREG_SPLIT_NO_EMPTY) ?: str_split($text);
+        $characters = Markup::characters($text);
 
         $encoded = "";
         foreach ($characters as $character) {

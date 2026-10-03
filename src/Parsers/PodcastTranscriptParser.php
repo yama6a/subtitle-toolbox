@@ -94,7 +94,7 @@ class PodcastTranscriptParser extends SubtitleParser
             try {
                 $result[] = $this->readSegment($segment, "segments[$index]");
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [$this->encode($segment)]);
+                $this->fail($exception, 0, $index, [RawJson::encode($segment)]);
             }
         }
 
@@ -164,11 +164,5 @@ class PodcastTranscriptParser extends SubtitleParser
         }
 
         return $groups;
-    }
-
-
-    private function encode(mixed $segment): string
-    {
-        return json_encode($segment, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
     }
 }

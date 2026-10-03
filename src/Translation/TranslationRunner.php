@@ -118,7 +118,7 @@ final class TranslationRunner
 
     private static function visibleText(SubtitleCue $cue): string
     {
-        return trim(Markup::decodeEntities(Markup::stripAllTags(implode(" ", $cue->getLines()))));
+        return trim(Markup::plainText(implode(" ", $cue->getLines())));
     }
 
 
@@ -305,7 +305,7 @@ final class TranslationRunner
         $characters = [];
         foreach ($tokens as [$type, $value]) {
             if ($type === "text") {
-                array_push($characters, ...self::characters($value));
+                array_push($characters, ...Markup::characters($value));
             }
         }
 
@@ -319,7 +319,7 @@ final class TranslationRunner
                 continue;
             }
 
-            $parts = $type === "text" ? self::characters($value) : [null];
+            $parts = $type === "text" ? Markup::characters($value) : [null];
             foreach ($parts as $character) {
                 while (isset($cuts[$piece]) && $offset >= $cuts[$piece]) {
                     $piece++;
@@ -404,16 +404,6 @@ final class TranslationRunner
         }
 
         return $cuts;
-    }
-
-
-    /**
-     * @return list<string>
-     */
-    private static function characters(string $text): array
-    {
-        // preg_split() fails on invalid UTF-8, such as the Latin-1 bytes that MicroDVD keeps. Bytes are the fallback.
-        return preg_split('//u', $text, -1, PREG_SPLIT_NO_EMPTY) ?: str_split($text);
     }
 
 

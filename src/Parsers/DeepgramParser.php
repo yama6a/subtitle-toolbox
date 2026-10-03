@@ -64,7 +64,7 @@ class DeepgramParser extends SubtitleParser
                 $text  = $this->text($utterance, "transcript", $path);
                 $words = $this->readWords(self::listOrEmpty($utterance["words"] ?? null), "$path.words");
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [self::encode($utterance)]);
+                $this->fail($exception, 0, $index, [RawJson::encode($utterance)]);
                 continue;
             }
 
@@ -106,7 +106,7 @@ class DeepgramParser extends SubtitleParser
                         $end   = $this->seconds($sentence["end"] ?? null, "$sentencePath.end");
                         $text  = $this->text($sentence, "text", $sentencePath);
                     } catch (ParsingException $exception) {
-                        $this->fail($exception, 0, $sentenceIndex, [self::encode($sentence)]);
+                        $this->fail($exception, 0, $sentenceIndex, [RawJson::encode($sentence)]);
                         continue;
                     }
 
@@ -134,7 +134,7 @@ class DeepgramParser extends SubtitleParser
                 $start = $this->seconds($word["start"] ?? null, "{$path}[$index].start");
                 $end   = $this->seconds($word["end"] ?? null, "{$path}[$index].end");
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [self::encode($word)]);
+                $this->fail($exception, 0, $index, [RawJson::encode($word)]);
                 continue;
             }
 

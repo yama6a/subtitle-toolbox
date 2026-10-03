@@ -38,7 +38,7 @@ class JsonParser extends SubtitleParser
                     try {
                         $data["cues"][$index]["formatData"] = $this->decodeBinary($cue["formatData"], "cues[$index].formatData");
                     } catch (ParsingException $exception) {
-                        $this->fail($exception, 0, $index, [$this->encode($cue)]);
+                        $this->fail($exception, 0, $index, [RawJson::encode($cue)]);
                         $data["cues"][$index] = self::PLACEHOLDER_CUE;
                         $skipped[$index]      = true;
                     }
@@ -67,7 +67,7 @@ class JsonParser extends SubtitleParser
                 }
 
                 $index = (int) $matches[1];
-                $this->fail($exception, 0, $index, [$this->encode($data["cues"][$index])]);
+                $this->fail($exception, 0, $index, [RawJson::encode($data["cues"][$index])]);
                 $data["cues"][$index] = self::PLACEHOLDER_CUE;
                 $skipped[$index]      = true;
             }
@@ -83,12 +83,6 @@ class JsonParser extends SubtitleParser
         }
 
         return Subtitle::fromArray($data);
-    }
-
-
-    private function encode(mixed $cue): string
-    {
-        return json_encode($cue, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
     }
 
 

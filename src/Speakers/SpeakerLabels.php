@@ -13,7 +13,6 @@ final class SpeakerLabels
     /** White, yellow, cyan and green, the speaker colours of the BBC Subtitle Guidelines, in their order of use. */
     public const BBC_COLOURS = ["#ffffff", "#ffff00", "#00ffff", "#00ff00"];
 
-    private const TAG         = '/(<[^<>]*>)/';
     private const VOICE       = '/^<v(\.[^\s>]*)?(?:\s+([^>]*))?>$/';
     private const VOICE_END   = '/^<\/v\s*>$/';
     private const OPEN_STYLE  = '/^<([a-zA-Z][a-zA-Z0-9]*)(?:[\s.][^>]*)?>$/';
@@ -55,7 +54,7 @@ final class SpeakerLabels
                 function (array $match) use ($names): string {
                     $name = Markup::decodeEntities(trim($match[2]));
 
-                    return isset($names[$name]) ? self::voiceTag((string)$names[$name], $match[1]) : $match[0];
+                    return isset($names[$name]) ? Markup::voiceTag((string)$names[$name], $match[1]) : $match[0];
                 },
                 $line
             ), $cue->getLines()));
@@ -152,7 +151,7 @@ final class SpeakerLabels
                     continue;
                 }
 
-                $tag = self::voiceTag($name);
+                $tag = Markup::voiceTag($name);
                 if (self::visibleText($rest) === "") {
                     $isLast   = $index === count($lines) - 1;
                     $pending  = $isLast ? null : $tag . $rest;
@@ -205,7 +204,7 @@ final class SpeakerLabels
         $split   = false;
         foreach ($lines as $line) {
             $current = "";
-            foreach (preg_split(self::TAG, $line, -1, PREG_SPLIT_DELIM_CAPTURE) as $index => $token) {
+            foreach (Markup::splitTags($line) as $index => $token) {
                 if ($index % 2 === 0) {
                     $current .= $split && self::visibleText($current) === "" ? ltrim($token) : $token;
                     continue;
@@ -318,14 +317,8 @@ final class SpeakerLabels
     }
 
 
-    private static function voiceTag(string $name, string $class = ""): string
-    {
-        return "<v$class " . Markup::escapeText($name) . ">";
-    }
-
-
     private static function visibleText(string $line): string
     {
-        return trim(Markup::decodeEntities(Markup::stripAllTags($line)));
+        return trim(Markup::plainText($line));
     }
 }

@@ -57,7 +57,7 @@ class PlainTextFormatter extends SubtitleFormatter
 
     private function plainLine(string $line): string
     {
-        return trim(preg_replace('/[ \t]+/', " ", Markup::decodeEntities(Markup::stripAllTags($line))));
+        return trim(preg_replace('/[ \t]+/', " ", Markup::plainText($line)));
     }
 
 

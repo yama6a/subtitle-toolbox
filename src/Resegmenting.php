@@ -167,7 +167,7 @@ trait Resegmenting
             return 0;
         }
 
-        $before = Markup::decodeEntities(Markup::stripAllTags($pieces[$index - 1]["text"]));
+        $before = Markup::plainText($pieces[$index - 1]["text"]);
         if (preg_match('/' . self::RESEGMENTING_CLAUSE_END . self::RESEGMENTING_CLOSERS . '$/u', $before) === 1) {
             return 1;
         }
@@ -183,12 +183,12 @@ trait Resegmenting
      */
     private static function resegmentingEndsSentence(array $pieces, int $index): bool
     {
-        $text = Markup::decodeEntities(Markup::stripAllTags($pieces[$index]["text"]));
+        $text = Markup::plainText($pieces[$index]["text"]);
         if (preg_match('/' . self::RESEGMENTING_SENTENCE_END . self::RESEGMENTING_CLOSERS . '$/u', $text) !== 1) {
             return false;
         }
 
-        $next = isset($pieces[$index + 1]) ? Markup::decodeEntities(Markup::stripAllTags($pieces[$index + 1]["text"])) : "";
+        $next = isset($pieces[$index + 1]) ? Markup::plainText($pieces[$index + 1]["text"]) : "";
 
         return preg_match('/^\p{Ll}/u', $next) !== 1;
     }
@@ -201,7 +201,7 @@ trait Resegmenting
     {
         $duration = round($end - $start, 3);
         if ($duration > round($options->maxDuration, 3)
-            || self::shortCueMergingWrap($lines, self::resegmentingMergeOptions($options)) === null) {
+            || self::shortCueMergingWrap($lines, $options->maxCharactersPerLine, $options->maxLines) === null) {
             return false;
         }
         if ($options->maxCharactersPerSecond === null) {
@@ -223,7 +223,7 @@ trait Resegmenting
      */
     private static function resegmentingWrap(array $lines, ResegmentOptions $options): array
     {
-        $wrapped = self::shortCueMergingWrap($lines, self::resegmentingMergeOptions($options));
+        $wrapped = self::shortCueMergingWrap($lines, $options->maxCharactersPerLine, $options->maxLines);
         if ($wrapped !== null) {
             return $wrapped;
         }
@@ -231,12 +231,6 @@ trait Resegmenting
         $words = self::fixesSplitIntoWords(implode(" ", $lines));
 
         return self::fixesJoinLines($words, self::fixesFindBreaks($words, $options->maxCharactersPerLine, $options->maxLines));
-    }
-
-
-    private static function resegmentingMergeOptions(ResegmentOptions $options): MergeShortCuesOptions
-    {
-        return new MergeShortCuesOptions(maxCharactersPerLine: $options->maxCharactersPerLine, maxLines: $options->maxLines);
     }
 
 
@@ -274,11 +268,11 @@ trait Resegmenting
         $openTags = [];
         foreach ($pieces as $index => $piece) {
             $pieces[$index]["openBefore"] = $openTags;
-            $openTags                     = self::resegmentingOpenTags($openTags, $piece["text"]);
+            $openTags                     = Markup::openCoreTags($piece["text"], $openTags);
             $pieces[$index]["openAfter"]  = $openTags;
             $pieces[$index]["time"]       = null;
-            if (preg_match('/^(?:<[^>\d][^>]*>)*<(\d{2,}):([0-5]\d):([0-5]\d\.\d{3})>/', $piece["text"], $matches) === 1) {
-                $pieces[$index]["time"] = round($matches[1] * 3600 + $matches[2] * 60 + (float) $matches[3], 3);
+            if (preg_match('/^(?:<[^>\d][^>]*>)*(<\d{2,}:[0-5]\d:[0-5]\d\.\d{3}>)/', $piece["text"], $matches) === 1) {
+                $pieces[$index]["time"] = round(Markup::wordTimestampSeconds($matches[1]), 3);
             }
         }
 
@@ -324,37 +318,6 @@ trait Resegmenting
 
 
     /**
-     * @param list<array{name: string, tag: string}> $openTags
-     *
-     * @return list<array{name: string, tag: string}> the core markup tags that are open after $text
-     */
-    private static function resegmentingOpenTags(array $openTags, string $text): array
-    {
-        preg_match_all('/<(\/?)([a-zA-Z]+)[^>]*>/', $text, $tags, PREG_SET_ORDER);
-        foreach ($tags as [$tag, $slash, $name]) {
-            $name = strtolower($name);
-            if (!in_array($name, Markup::CORE_TAGS, true)) {
-                continue;
-            }
-
-            if ($slash === "") {
-                $openTags[] = ["name" => $name, "tag" => $tag];
-                continue;
-            }
-
-            for ($index = count($openTags) - 1; $index >= 0; $index--) {
-                if ($openTags[$index]["name"] === $name) {
-                    array_splice($openTags, $index, 1);
-                    break;
-                }
-            }
-        }
-
-        return $openTags;
-    }
-
-
-    /**
      * Joins the pieces from $first to $end - 1, opens the core markup tags that are open before them and closes the tags open after them.
      *
      * @param list<array> $pieces
@@ -367,9 +330,7 @@ trait Resegmenting
         }
 
         if ($end < count($pieces)) {
-            foreach (array_reverse($pieces[$end - 1]["openAfter"]) as $openTag) {
-                $text .= "</{$openTag["name"]}>";
-            }
+            $text .= Markup::closeCoreTags($pieces[$end - 1]["openAfter"]);
         }
 
         return $text;

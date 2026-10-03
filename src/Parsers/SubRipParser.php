@@ -4,6 +4,7 @@ namespace SubtitleToolbox\Parsers;
 
 use Generator;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -130,13 +131,13 @@ class SubRipParser extends SubtitleParser
     }
 
 
-    // Players show &amp; as typed, so every & is text. str_replace keeps bytes of files that are not UTF-8.
+    // Players show &amp; as typed, so every & is text.
     private function escapeText(string $line): string
     {
         $parts = preg_split('#(</?[a-zA-Z][a-zA-Z0-9]*(?:\s[^<>]*)?>)#', $line, -1, PREG_SPLIT_DELIM_CAPTURE);
         foreach ($parts as $index => $part) {
             if ($index % 2 === 0) {
-                $parts[$index] = str_replace(["&", "<", ">"], ["&amp;", "&lt;", "&gt;"], $part);
+                $parts[$index] = Markup::escapeText($part);
             }
         }
 

@@ -39,7 +39,7 @@ class Mpl2Formatter extends SubtitleFormatter
                 }
             }
 
-            $text = trim(Markup::decodeEntities(Markup::stripAllTags($line)));
+            $text = trim(Markup::plainText($line));
             if ($text !== "") {
                 $result[] = ($allItalic ? "/" : "") . $text;
             }

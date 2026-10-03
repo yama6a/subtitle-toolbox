@@ -88,7 +88,7 @@ trait TextTransforms
      */
     public function changeCase(string $mode, ?string $language = null): self
     {
-        $turkic = in_array(strtolower(explode("-", str_replace("_", "-", $language ?? ""))[0]), ["tr", "az"], true);
+        $turkic = in_array(StringHelpers::primaryLanguage($language), ["tr", "az"], true);
 
         return match ($mode) {
             "upper"    => $this->textTransformsMapRuns(fn (string $text): string => self::textTransformsUpper($text, $turkic)),
@@ -118,7 +118,7 @@ trait TextTransforms
                 }
 
                 $result = "";
-                foreach (self::textTransformsCharacters(self::textTransformsLower($text, $turkic)) as $char) {
+                foreach (Markup::characters(self::textTransformsLower($text, $turkic)) as $char) {
                     if (preg_match('/^[\p{L}\p{N}]$/u', $char) === 1 || (strlen($char) === 1 && ctype_alnum($char))) {
                         if ($capitalizeNext) {
                             $char = self::textTransformsTitle($char, $turkic);
@@ -144,28 +144,10 @@ trait TextTransforms
      */
     private function textTransformsMapRuns(callable $fn): self
     {
-        return $this->textTransformsMapCues(function (SubtitleCue $cue) use ($fn): array {
-            $lines = [];
-            foreach ($cue->getLines() as $line) {
-                $tokens = preg_split('/(<[^<>]*>)/', $line, -1, PREG_SPLIT_DELIM_CAPTURE);
-                $first  = true;
-                foreach ($tokens as $index => $token) {
-                    if ($index % 2 === 1 || $token === "") {
-                        continue;
-                    }
-
-                    $text   = strtr($token, ["&lt;" => "<", "&gt;" => ">", "&amp;" => "&"]);
-                    $mapped = $fn($text, $cue, $first);
-                    $first  = false;
-                    if ($mapped !== $text) {
-                        $tokens[$index] = self::textTransformsEscape($mapped, $token);
-                    }
-                }
-                $lines[] = implode("", $tokens);
-            }
-
-            return $lines;
-        });
+        return $this->textTransformsMapCues(fn (SubtitleCue $cue): array => Markup::mapTextRuns(
+            $cue->getLines(),
+            fn (string $text, bool $first): string => $fn($text, $cue, $first)
+        ));
     }
 
 
@@ -178,10 +160,10 @@ trait TextTransforms
     {
         $removed = false;
         foreach ($this->cues as $index => $cue) {
-            $hadText = self::textTransformsHasVisibleText($cue->getLines());
+            $hadText = Markup::hasVisibleText($cue->getLines());
             $cue->setLinesByArray($fn($cue));
 
-            if ($hadText && !self::textTransformsHasVisibleText($cue->getLines())) {
+            if ($hadText && !Markup::hasVisibleText($cue->getLines())) {
                 $this->removeCue($index, false);
                 $removed = true;
             }
@@ -192,36 +174,6 @@ trait TextTransforms
         }
 
         return $this;
-    }
-
-
-    /**
-     * Keeps & and > unescaped where $raw has them unescaped, as WebVTT text does. An & before an entity name gets escaped.
-     */
-    private static function textTransformsEscape(string $text, string $raw): string
-    {
-        $entity = '&(?=[a-zA-Z][a-zA-Z0-9]*;|#[0-9]+;|#[xX][0-9a-fA-F]+;)';
-        $text   = preg_match("/&(?!lt;|gt;|amp;)/", $raw) === 1
-            ? (preg_replace("/$entity/", "&amp;", $text) ?? str_replace("&", "&amp;", $text))
-            : str_replace("&", "&amp;", $text);
-        $text   = str_replace("<", "&lt;", $text);
-
-        return str_contains($raw, ">") ? $text : str_replace(">", "&gt;", $text);
-    }
-
-
-    /**
-     * @param list<string> $lines
-     */
-    private static function textTransformsHasVisibleText(array $lines): bool
-    {
-        foreach ($lines as $line) {
-            if (trim(preg_replace('/<[^<>]*>/', "", $line)) !== "") {
-                return true;
-            }
-        }
-
-        return false;
     }
 
 
@@ -261,16 +213,5 @@ trait TextTransforms
         }
 
         return mb_convert_case($turkic && $char === "i" ? "İ" : $char, MB_CASE_TITLE, "UTF-8");
-    }
-
-
-    /**
-     * @return list<string> UTF-8 characters, or bytes when $text is not valid UTF-8
-     */
-    private static function textTransformsCharacters(string $text): array
-    {
-        $chars = preg_split('//u', $text, -1, PREG_SPLIT_NO_EMPTY);
-
-        return $chars === false ? str_split($text) : $chars;
     }
 }

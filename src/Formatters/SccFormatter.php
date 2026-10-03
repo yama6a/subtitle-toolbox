@@ -186,7 +186,7 @@ class SccFormatter extends SubtitleFormatter
             }
 
             $text = str_replace(["\u{A0}", "\t"], " ", Markup::decodeEntities($part));
-            foreach (preg_split("//u", $text, -1, PREG_SPLIT_NO_EMPTY) ?: str_split($text) as $character) {
+            foreach (Markup::characters($text) as $character) {
                 $characters[] = [
                     "char"      => $character,
                     "color"     => end($colors) ?: Cea608::WHITE,

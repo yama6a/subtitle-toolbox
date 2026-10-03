@@ -94,7 +94,7 @@ class YouTubeTimedTextParser extends SubtitleParser
                     $extras[]   = is_array($seg) ? array_diff_key($seg, ["utf8" => true, "tOffsetMs" => true]) : [];
                 }
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [json_encode($event, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]);
+                $this->fail($exception, 0, $index, [RawJson::encode($event)]);
                 continue;
             }
 

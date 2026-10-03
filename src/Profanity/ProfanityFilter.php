@@ -2,13 +2,13 @@
 
 namespace SubtitleToolbox\Profanity;
 
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
 final class ProfanityFilter
 {
     private const WORD_CHARACTER = '[\p{L}\p{M}\p{N}_]';
-    private const TIMESTAMP      = '/^<(\d{2,}):([0-5]\d):([0-5]\d\.\d{3})>$/';
 
 
     /**
@@ -33,9 +33,9 @@ final class ProfanityFilter
                 continue;
             }
 
-            $hadText = self::hasVisibleText($lines);
+            $hadText = Markup::hasVisibleText($lines);
             $cue->setLinesByArray($changed);
-            if ($hadText && !self::hasVisibleText($cue->getLines())) {
+            if ($hadText && !Markup::hasVisibleText($cue->getLines())) {
                 $subtitle->removeCue($index, false);
                 $removed = true;
             }
@@ -76,12 +76,12 @@ final class ProfanityFilter
     private static function filterCue(SubtitleCue $cue, array $lines, string $pattern, ProfanityOptions $options,
                                       array &$ranges): ?array
     {
-        $tokens = array_map(fn (string $line): array => preg_split('/(<[^<>]*>)/', $line, -1, PREG_SPLIT_DELIM_CAPTURE), $lines);
+        $tokens = array_map(fn (string $line): array => Markup::splitTags($line), $lines);
         $starts = [];
         $time   = null;
         foreach ($tokens as $lineIndex => $lineTokens) {
             foreach ($lineTokens as $tokenIndex => $token) {
-                $time = self::timestamp($token) ?? $time;
+                $time = Markup::wordTimestampSeconds($token) ?? $time;
                 $starts[$lineIndex][$tokenIndex] = $time;
             }
         }
@@ -90,7 +90,7 @@ final class ProfanityFilter
         foreach (array_reverse($tokens, true) as $lineIndex => $lineTokens) {
             foreach (array_reverse($lineTokens, true) as $tokenIndex => $token) {
                 $ends[$lineIndex][$tokenIndex] = $time;
-                $time = self::timestamp($token) ?? $time;
+                $time = Markup::wordTimestampSeconds($token) ?? $time;
             }
         }
 
@@ -101,7 +101,7 @@ final class ProfanityFilter
                     continue;
                 }
 
-                $text   = strtr($token, ["&lt;" => "<", "&gt;" => ">", "&amp;" => "&"]);
+                $text   = Markup::unescapeText($token);
                 $masked = preg_replace_callback($pattern, fn (array $match): string => self::mask($match[0], $options->mask), $text, -1, $count);
                 if ($masked === null || $count === 0) {
                     continue;
@@ -109,23 +109,13 @@ final class ProfanityFilter
 
                 $ranges[] = [$starts[$lineIndex][$tokenIndex] ?? $cue->getStart(), $ends[$lineIndex][$tokenIndex] ?? $cue->getEnd()];
                 if ($masked !== $text) {
-                    $tokens[$lineIndex][$tokenIndex] = self::escape($masked, $token);
+                    $tokens[$lineIndex][$tokenIndex] = Markup::escapeTextLike($masked, $token);
                     $changed = true;
                 }
             }
         }
 
         return $changed ? array_map(fn (array $lineTokens): string => implode("", $lineTokens), $tokens) : null;
-    }
-
-
-    private static function timestamp(string $token): ?float
-    {
-        if (preg_match(self::TIMESTAMP, $token, $match) !== 1) {
-            return null;
-        }
-
-        return (int) $match[1] * 3600 + (int) $match[2] * 60 + (float) $match[3];
     }
 
 
@@ -144,36 +134,6 @@ final class ProfanityFilter
             ProfanityOptions::MASK_REMOVE       => "",
             ProfanityOptions::MASK_NONE         => $word,
         };
-    }
-
-
-    /**
-     * Keeps & and > unescaped where $raw has them unescaped, as TextTransforms does for WebVTT text.
-     */
-    private static function escape(string $text, string $raw): string
-    {
-        $entity = '&(?=[a-zA-Z][a-zA-Z0-9]*;|#[0-9]+;|#[xX][0-9a-fA-F]+;)';
-        $text   = preg_match("/&(?!lt;|gt;|amp;)/", $raw) === 1
-            ? (preg_replace("/$entity/", "&amp;", $text) ?? str_replace("&", "&amp;", $text))
-            : str_replace("&", "&amp;", $text);
-        $text   = str_replace("<", "&lt;", $text);
-
-        return str_contains($raw, ">") ? $text : str_replace(">", "&gt;", $text);
-    }
-
-
-    /**
-     * @param list<string> $lines
-     */
-    private static function hasVisibleText(array $lines): bool
-    {
-        foreach ($lines as $line) {
-            if (trim(preg_replace('/<[^<>]*>/', "", $line)) !== "") {
-                return true;
-            }
-        }
-
-        return false;
     }
 
 

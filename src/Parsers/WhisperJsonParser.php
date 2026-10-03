@@ -96,10 +96,10 @@ class WhisperJsonParser extends SubtitleParser
                 continue;
             }
 
-            $markup  = $this->wordTimestamps ? $this->withWordTimestamps($text, $words) : $this->escape($text);
+            $markup  = $this->wordTimestamps ? Markup::insertWordTimestamps($text, $words) : Markup::escapeText($text);
             $speaker = is_string($formatData["speaker"] ?? null) ? trim($formatData["speaker"]) : "";
             if ($this->speakerVoices && $speaker !== "") {
-                $markup = "<v " . $this->escape($speaker) . ">" . $markup;
+                $markup = Markup::voiceTag($speaker) . $markup;
             }
 
             $cue = new SubtitleCue($start, $end, $markup);
@@ -124,7 +124,7 @@ class WhisperJsonParser extends SubtitleParser
                 $end   = $this->seconds($segment, "end", $path);
                 $text  = $this->text($segment, $path);
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [$this->encode($segment)]);
+                $this->fail($exception, 0, $index, [RawJson::encode($segment)]);
                 continue;
             }
             $words = is_array($segment["words"] ?? null) ? $segment["words"] : [];
@@ -164,7 +164,7 @@ class WhisperJsonParser extends SubtitleParser
                 $end   = round($this->seconds($offsets, "to", "$path.offsets") / 1000, 3);
                 $text  = $this->text($segment, $path);
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [$this->encode($segment)]);
+                $this->fail($exception, 0, $index, [RawJson::encode($segment)]);
                 continue;
             }
 
@@ -217,43 +217,11 @@ class WhisperJsonParser extends SubtitleParser
     }
 
 
-    private function encode(mixed $segment): string
-    {
-        return json_encode($segment, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
-    }
-
-
     private function middle(mixed $word): float
     {
         $start = $word["start"] ?? null;
         $end   = $word["end"] ?? $start;
 
         return is_numeric($start) && is_numeric($end) ? ($start + $end) / 2 : -INF;
-    }
-
-
-    private function withWordTimestamps(string $text, array $words): string
-    {
-        $markup   = "";
-        $copied   = 0;
-        $searchAt = 0;
-        foreach ($words as [$word, $start]) {
-            $position = $word === "" || $start === null ? false : strpos($text, $word, $searchAt);
-            if ($position === false) {
-                continue;
-            }
-
-            $markup  .= $this->escape(substr($text, $copied, $position - $copied)) . "<" . Markup::coreTimestamp($start) . ">";
-            $copied   = $position;
-            $searchAt = $position + strlen($word);
-        }
-
-        return $markup . $this->escape(substr($text, $copied));
-    }
-
-
-    private function escape(string $text): string
-    {
-        return str_replace(["&", "<", ">"], ["&amp;", "&lt;", "&gt;"], $text);
     }
 }

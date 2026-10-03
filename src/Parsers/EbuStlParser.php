@@ -143,7 +143,7 @@ class EbuStlParser extends SubtitleParser
             $hexes  = array_map("bin2hex", $blocks);
             if (ord($header[15]) === 1) {
                 $lines = array_filter(array_map("trim", $lines), fn (string $line): bool => $line !== "");
-                $text  = Markup::decodeEntities(Markup::stripAllTags(implode("\n", $lines)));
+                $text  = Markup::plainText(implode("\n", $lines));
                 $subtitle->addComment($text, count($subtitle->getCues()));
                 $comments[] = ["text" => $text, "blocks" => $hexes];
                 continue;

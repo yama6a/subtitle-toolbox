@@ -35,7 +35,7 @@ class MpSubFormatter extends SubtitleFormatter
             $output .= $frameRate === null
                 ? $this->getTimestamp($cue, $previousEnd)
                 : $this->getFrameTimestamp($cue, $previousEnd, $frameRate);
-            $output .= Markup::decodeEntities(Markup::stripAllTags(implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines())));
+            $output .= Markup::plainText(implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines()));
             $output .= StringHelpers::UNIX_LINE_ENDING;
 
             $previousEnd = $cue->getEnd();
