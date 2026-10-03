@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 class YouTubeTimedTextRealFilesTest extends TestCase
@@ -51,9 +54,9 @@ class YouTubeTimedTextRealFilesTest extends TestCase
 
     private static function parse(string $fileName): Subtitle
     {
-        $parser = new YouTubeTimedTextParser([YouTubeTimedTextParser::OPTION_WORD_TIMESTAMPS => true]);
+        $parser = new YouTubeTimedTextParser();
 
-        return $parser->parse(file_get_contents(self::DIR . $fileName));
+        return $parser->parse(file_get_contents(self::DIR . $fileName), new ReadOptions(wordTimestamps: true));
     }
 
 
@@ -73,7 +76,7 @@ class YouTubeTimedTextRealFilesTest extends TestCase
     public function testRealFileKeepsItsCuesThroughWebVtt(string $fileName): void
     {
         $subtitle = self::parse($fileName);
-        $vtt      = (new WebVttParser())->parse($subtitle->format(WebVttFormatter::class));
+        $vtt      = (new WebVttParser())->parse($subtitle->toString(Format::WebVtt), new ReadOptions());
 
         // WebVTT has no <font> tag, so its formatter drops it.
         $withoutFont = fn (array $lines): array => preg_replace('#</?font[^>]*>#', "", $lines);

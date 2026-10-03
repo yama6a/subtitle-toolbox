@@ -1,19 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\Formatters\Options\PodcastTranscriptOptions;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\PodcastTranscriptParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class PodcastTranscriptFormatter extends SubtitleFormatter
 {
-    /** Writes one segment per word timestamp, which apps use to highlight the spoken word. */
-    public const OPTION_WORD_SEGMENTS = "wordSegments";
-    public const OPTION_PRETTY_PRINT  = "prettyPrint";
+    protected const FORMAT_OPTIONS = PodcastTranscriptOptions::class;
 
     private const VERSION = "1.0.0";
 
@@ -24,9 +25,10 @@ class PodcastTranscriptFormatter extends SubtitleFormatter
     /**
      * Writes the Podcasting 2.0 JSON transcript, one segment per cue and speaker.
      */
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $wordSegments = (bool)(Options::flag($options, self::OPTION_WORD_SEGMENTS) ?? false);
+        $podcast      = $this->formatOptions($options) ?? new PodcastTranscriptOptions();
+        $wordSegments = $podcast->wordSegments;
         $fileData     = $subtitle->getFormatData(PodcastTranscriptParser::FORMAT_DATA_KEY);
         $cues         = $subtitle->getCues();
         $pieces       = $this->pieces($subtitle, $wordSegments);
@@ -43,11 +45,9 @@ class PodcastTranscriptFormatter extends SubtitleFormatter
 
         $document = ["version" => $fileData["version"] ?? self::VERSION, "segments" => $segments] + $fileData;
         $flags    = JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
-        if (Options::flag($options, self::OPTION_PRETTY_PRINT) ?? false) {
-            $json = json_encode($document, $flags | JSON_PRETTY_PRINT) . StringHelpers::UNIX_LINE_ENDING;
-        } else {
-            $json = json_encode($document, $flags);
-        }
+        $json     = $podcast->prettyPrint
+            ? json_encode($document, $flags | JSON_PRETTY_PRINT) . StringHelpers::UNIX_LINE_ENDING
+            : json_encode($document, $flags);
 
         return $this->applyOutputOptions($json, $options);
     }
@@ -105,7 +105,7 @@ class PodcastTranscriptFormatter extends SubtitleFormatter
 
                 $cuePieces = $this->addPiece($cuePieces, $index, $speaker, $start, $text);
                 $speaker   = $name;
-                $start     = $isTimestamp ? $this->timestampInCue($token, $cue) : $start;
+                $start     = $isTimestamp ? $this->wordStartInCue($token, $cue) : $start;
                 $text      = "";
             }
             $cuePieces = $this->addPiece($cuePieces, $index, $speaker, $start, $text);
@@ -131,7 +131,7 @@ class PodcastTranscriptFormatter extends SubtitleFormatter
     }
 
 
-    private function timestampInCue(string $token, SubtitleCue $cue): float
+    private function wordStartInCue(string $token, SubtitleCue $cue): float
     {
         [$hours, $minutes, $seconds] = explode(":", trim($token, "<>"));
         $time = (int)$hours * 3600 + (int)$minutes * 60 + (float)$seconds;

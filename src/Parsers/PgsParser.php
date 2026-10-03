@@ -1,8 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
@@ -22,8 +23,6 @@ use SubtitleToolbox\SubtitleCue;
  */
 class PgsParser extends SubtitleParser
 {
-    public const DEFAULT_LAST_CUE_DURATION = 5.0;
-
     private const MAGIC          = "PG";
     private const HEADER_LENGTH  = 13;
     private const PTS_PER_SECOND = 90000;
@@ -46,8 +45,6 @@ class PgsParser extends SubtitleParser
     private const MATRIX_BT709 = [0.2126, 0.0722];
     private const MATRIX_BT601 = [0.299, 0.114];
 
-    protected float $lastCueDuration;
-
     /** @var array<int, array<int, array{int, int, int, int}>> palette id => entry id => [Y, Cr, Cb, alpha] */
     private array $palettes = [];
 
@@ -65,20 +62,7 @@ class PgsParser extends SubtitleParser
     private Subtitle $subtitle;
 
 
-    /**
-     * Gives the last cue, which no later display set ends, a duration of $lastCueDuration seconds.
-     */
-    public function __construct(float $lastCueDuration = self::DEFAULT_LAST_CUE_DURATION)
-    {
-        if ($lastCueDuration <= 0) {
-            throw new InvalidArgumentException("The last cue duration must be greater than 0, got $lastCueDuration.");
-        }
-
-        $this->lastCueDuration = $lastCueDuration;
-    }
-
-
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->subtitle     = new Subtitle();
         $this->palettes     = [];
@@ -117,7 +101,7 @@ class PgsParser extends SubtitleParser
 
         $this->endDisplaySet();
         if ($this->shownImage !== null) {
-            $this->addCue($this->shownImage["start"] + $this->lastCueDuration);
+            $this->addCue($this->shownImage["start"] + $this->options->lastCueDuration);
         }
 
         return $this->subtitle->reIndexCues();

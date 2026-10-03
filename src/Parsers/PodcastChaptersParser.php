@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use JsonException;
@@ -15,15 +17,13 @@ class PodcastChaptersParser extends SubtitleParser
     public const FORMAT_DATA_KEY = "chapters";
 
 
-    /**
-     * Creates a parser that ends the last chapter at $mediaDuration seconds, or at its own start when it is null.
-     */
-    public function __construct(private readonly ?float $mediaDuration = null)
+    protected static function formatOptionsClass(): string
     {
+        return ChapterReadOptions::class;
     }
 
 
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         try {
@@ -54,7 +54,7 @@ class PodcastChaptersParser extends SubtitleParser
         $subtitle = new Subtitle();
         foreach ($chapters as $index => [$cue, $end]) {
             $next = $chapters[$index + 1][0] ?? null;
-            $cue->setEnd($end ?? $next?->getStart() ?? max($cue->getStart(), $this->mediaDuration ?? 0));
+            $cue->setEnd($end ?? $next?->getStart() ?? max($cue->getStart(), $this->formatOptions()->mediaDuration ?? 0));
             $subtitle->addCue($cue, false);
         }
 

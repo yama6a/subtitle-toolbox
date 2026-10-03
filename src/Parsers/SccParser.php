@@ -1,9 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Encoding\Cea608;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
@@ -26,9 +27,6 @@ class SccParser extends SubtitleParser
     public const MODE_ROLL_UP  = "roll-up";
     public const MODE_PAINT_ON = "paint-on";
     private const MODE_TEXT    = "text";
-
-    // pycaption ends a caption that no command erases 4 seconds after its start, in SCCReader._fix_last_captions_without_ending().
-    private const LAST_CAPTION_DURATION = 4.0;
 
     private const DEFAULT_ATTRIBUTES = ["color" => Cea608::WHITE, "italic" => false, "underline" => false];
 
@@ -61,25 +59,19 @@ class SccParser extends SubtitleParser
     private ?string $displayChange = null;
 
 
-    /**
-     * @param int $channel 1 reads CC1 and CC3, 2 reads CC2 and CC4.
-     */
-    public function __construct(int $channel = 1)
+    protected static function formatOptionsClass(): string
     {
-        if ($channel !== 1 && $channel !== 2) {
-            throw new InvalidArgumentException("The SCC data channel must be 1 or 2, got $channel.");
-        }
-
-        $this->channel = $channel;
+        return SccReadOptions::class;
     }
 
 
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $rawSubtitle = StringHelpers::removeUtf8Bom($rawSubtitle);
         $rawLines    = explode(StringHelpers::UNIX_LINE_ENDING, StringHelpers::normalizeEOLs($rawSubtitle));
 
-        $codeLines = $this->readCodeLines($rawLines, $dropFrame);
+        $this->channel = $this->formatOptions()->channel;
+        $codeLines     = $this->readCodeLines($rawLines, $dropFrame);
         $this->resetDecoder();
 
         $states = [];
@@ -109,7 +101,7 @@ class SccParser extends SubtitleParser
             }
 
             $start = $this->frameToSeconds($state["frame"]);
-            $end   = isset($states[$idx + 1]) ? $this->frameToSeconds($states[$idx + 1]["frame"]) : $start + self::LAST_CAPTION_DURATION;
+            $end   = isset($states[$idx + 1]) ? $this->frameToSeconds($states[$idx + 1]["frame"]) : $start + $this->options->lastCueDuration;
             if ($end <= $start) {
                 continue;
             }

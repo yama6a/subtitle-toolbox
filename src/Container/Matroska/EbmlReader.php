@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Container\Matroska;
 
 use SubtitleToolbox\Exceptions\ParsingException;

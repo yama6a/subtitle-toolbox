@@ -1,16 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
 class SubRipFormatter extends SubtitleFormatter
 {
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
         $output = "";
         foreach (array_values($subtitle->getCues()) as $cueIndex => $cue) {
@@ -24,15 +27,15 @@ class SubRipFormatter extends SubtitleFormatter
     /**
      * Returns what format() writes for the cue at $cueIndex, in the line ending of $options, without a BOM.
      */
-    public function formatCueBlock(SubtitleCue $cue, int $cueIndex, array $options = []): string
+    public function formatCueBlock(SubtitleCue $cue, int $cueIndex, WriteOptions $options = new WriteOptions()): string
     {
         $block = $this->formatNumberedCue($cue, $cueIndex, $options);
 
-        return $this->applyOutputOptions($block, [...$options, parent::OPTION_BOM => null]);
+        return $this->applyOutputOptions($block, new WriteOptions($options->lineEnding, format: $options->format));
     }
 
 
-    private function formatNumberedCue(SubtitleCue $cue, int $cueIndex, array $options): string
+    private function formatNumberedCue(SubtitleCue $cue, int $cueIndex, WriteOptions $options): string
     {
         $output = "";
         if ($cueIndex > 0) {
@@ -46,24 +49,13 @@ class SubRipFormatter extends SubtitleFormatter
     }
 
 
-    private function formatCue(SubtitleCue $cue, array $options): string
+    private function formatCue(SubtitleCue $cue, WriteOptions $options): string
     {
-        $startHour   = str_pad(floor($cue->getStart() / 3600), 2, "0", STR_PAD_LEFT);
-        $startMinute = str_pad(floor($cue->getStart() / 60) % 60, 2, "0", STR_PAD_LEFT);
-        $startSecond = str_pad(floor($cue->getStart()) % 60, 2, "0", STR_PAD_LEFT);
-        $startMillis = str_pad(round(($cue->getStart() - floor($cue->getStart())) * 1000), 3, "0", STR_PAD_LEFT);
-
-        $endHour   = str_pad(floor($cue->getEnd() / 3600), 2, "0", STR_PAD_LEFT);
-        $endMinute = str_pad(floor($cue->getEnd() / 60) % 60, 2, "0", STR_PAD_LEFT);
-        $endSecond = str_pad(floor($cue->getEnd()) % 60, 2, "0", STR_PAD_LEFT);
-        $endMillis = str_pad(round(($cue->getEnd() - floor($cue->getEnd())) * 1000), 3, "0", STR_PAD_LEFT);
-
-        $time  = "$startHour:$startMinute:$startSecond,$startMillis --> $endHour:$endMinute:$endSecond,$endMillis";
+        $time  = sprintf("%02d:%02d:%02d,%03d --> %02d:%02d:%02d,%03d", ...Timecode::milliseconds($cue->getStart()), ...Timecode::milliseconds($cue->getEnd()));
         $time .= $this->formatCoordinates($cue);
         $lines = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines());
 
-        // strip xml tags depending on option settings
-        $lines = (bool) (Options::flag($options, parent::OPTION_STRIP_ALL_XML_TAGS) ?? false)
+        $lines = $options->stripTags
             ? Markup::stripAllTags($lines)
             : Markup::keepTags($lines, ["b", "u", "i", "s", "font"]);
         $lines = Markup::decodeEntities($lines);

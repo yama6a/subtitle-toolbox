@@ -1,35 +1,35 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class MicroDvdFormatter extends SubtitleFormatter
 {
-    public const OPTION_FRAME_RATE            = "OPTION_FRAME_RATE";
-    public const OPTION_WRITE_FRAME_RATE_LINE = "OPTION_WRITE_FRAME_RATE_LINE";
+    protected const FORMAT_OPTIONS = MicroDvdOptions::class;
 
     private const STYLE_TAGS = ["b", "i", "u", "s"];
 
 
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        if (!isset($options[self::OPTION_FRAME_RATE])) {
-            throw new InvalidArgumentException("The MicroDVD formatter needs the option " . self::OPTION_FRAME_RATE . ".");
-        }
-
-        $frameRate = new FrameRate((float) $options[self::OPTION_FRAME_RATE]);
-        $stripAll  = (bool) (Options::flag($options, parent::OPTION_STRIP_ALL_XML_TAGS) ?? false);
+        $microDvd  = $this->formatOptions($options)
+                     ?? throw new InvalidArgumentException("The MicroDVD formatter needs MicroDvdOptions with a frame rate.");
+        $frameRate = new FrameRate($microDvd->frameRate);
+        $stripAll  = $options->stripTags;
 
         $output = "";
-        if (!empty(Options::flag($options, self::OPTION_WRITE_FRAME_RATE_LINE))) {
+        if ($microDvd->writeFrameRateLine) {
             $output .= "{1}{1}" . $frameRate->getFps() . StringHelpers::UNIX_LINE_ENDING;
         }
 

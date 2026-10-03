@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Parsers\MicroDvdParser;
-use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\ReadOptions;
 
 class SubtitleStatisticsTest extends TestCase
 {
@@ -25,7 +27,7 @@ class SubtitleStatisticsTest extends TestCase
 
     public function testOwnFile(): void
     {
-        $subtitle   = Subtitle::parse(file_get_contents(self::FILES . "/statistics/own_bakery.srt"), SubRipParser::class);
+        $subtitle   = Subtitle::fromString(file_get_contents(self::FILES . "/statistics/own_bakery.srt"), Format::SubRip);
         $statistics = SubtitleStatistics::of($subtitle);
 
         $this->assertSame(4, $statistics->getCueCount());
@@ -45,7 +47,7 @@ class SubtitleStatisticsTest extends TestCase
 
     public function testToArrayEncodesAsJson(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FILES . "/statistics/own_bakery.srt"), SubRipParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "/statistics/own_bakery.srt"), Format::SubRip);
         $array    = SubtitleStatistics::of($subtitle)->toArray();
 
         $this->assertSame(["cueCount", "wordCount", "characterCount", "totalDisplayTime", "span", "charactersPerSecond",
@@ -134,7 +136,7 @@ class SubtitleStatisticsTest extends TestCase
     public function testCountsInvalidUtf8ByBytes(): void
     {
         $content    = "{1}{1}25.000\n{25}{75}Caf\xe9 au lait\n";
-        $statistics = SubtitleStatistics::of((new MicroDvdParser())->parse($content));
+        $statistics = SubtitleStatistics::of((new MicroDvdParser())->parse($content, new ReadOptions()));
 
         $this->assertSame(1, $statistics->getCueCount());
         $this->assertSame(3, $statistics->getWordCount());

@@ -86,38 +86,43 @@ $subtitle->mergeShortCues(new MergeShortCuesOptions(
 - **Text**: the lines are joined with a space and wrapped as `wrapLines()` does. A line that starts with a dialogue dash stays on its own line, and then each such line must fit on one line. When both cues start with a `<v>` tag of the same speaker, the joined text keeps only the first tag.
 
 ## Long cues
-Speech-to-text tools such as Whisper write segments of 10 s and more. `wrapLines()` makes the lines shorter, but the cue stays too long to read. `splitLongCues()` splits such a cue into cues that fit the limits.
+Speech-to-text tools such as Whisper write segments of 10 s and more. `wrapLines()` makes the lines shorter, but the cue stays too long to read. `Resegmenter` with `ResegmentMode::SplitLong` splits such a cue into cues that fit the limits.
 
 ```php
+use SubtitleToolbox\ResegmentMode;
+use SubtitleToolbox\Resegmenter;
 use SubtitleToolbox\ResegmentOptions;
 
 // 00:00:00,000 --> 00:00:11,050  The tensor operators are optimized heavily for Apple silicon CPUs. Depending on
 //                                the computation size, Arm Neon SIMD instrisics or CBLAS Accelerate framework routines are used.
-$subtitle->splitLongCues(new ResegmentOptions(maxCharactersPerLine: 42, maxLines: 2));
+$report = Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::SplitLong, maxCharactersPerLine: 42, maxLines: 2));
 // 00:00:00,000 --> 00:00:04,231  The tensor operators are optimized heavily for Apple silicon CPUs.
 // 00:00:04,231 --> 00:00:06,441  Depending on the computation size,
 // 00:00:06,441 --> 00:00:11,050  Arm Neon SIMD instrisics or CBLAS Accelerate framework routines are used.
+$report->cuesBefore;   // 1
+$report->cuesAfter;    // 3
 
-$subtitle->resegmentByWords(new ResegmentOptions(maxWordGap: 0.6));
+Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::ByWords, maxWordGap: 0.6));
 ```
 
-`resegmentByWords()` drops the cue boundaries and builds new cues from the word timestamps, for example from `WhisperJsonParser::OPTION_WORD_TIMESTAMPS`. Each cue then holds one sentence, or as much of it as fits.
+`ResegmentMode::ByWords` drops the cue boundaries and builds new cues from the word timestamps, for example from Whisper JSON read with `ReadOptions::$wordTimestamps`. Each cue then holds one sentence, or as much of it as fits.
 
 | Option | Default | Meaning |
 |:--- |:--- |:--- |
+| `mode` | required | `ResegmentMode::SplitLong` or `ResegmentMode::ByWords` |
 | `maxCharactersPerLine` | 42 | the line length of a cue |
 | `maxLines` | 2 | the line count of a cue |
 | `maxDuration` | 7 | seconds from the start to the end of a cue |
-| `minDuration` | 1 | `splitLongCues()` never makes a cue shorter than this many seconds |
+| `minDuration` | 1 | `SplitLong` never makes a cue shorter than this many seconds |
 | `maxCharactersPerSecond` | null | the reading speed of a cue. Null turns the rule off |
-| `maxWordGap` | 0.6 | `resegmentByWords()` ends a cue at a pause of this many seconds or more |
+| `maxWordGap` | 0.6 | `ByWords` ends a cue at a pause of this many seconds or more |
 
 - **Limits**: a cue breaks the limits when its text does not fit `maxLines` lines of `maxCharactersPerLine` characters, as `wrapLines()` wraps it. It also breaks them above `maxDuration` or `maxCharactersPerSecond`.
 - **Break points**, best first: a sentence end, a clause end, then the space closest to the middle. Among break points of the same kind, the one closest to the middle wins. A full stop before a word in lower case, as in "e.g. this", is no sentence end.
-- **Splitting**: `splitLongCues()` splits a cue in two at the best break point. It splits each part again while the part breaks a limit. A cue stays unchanged when no break point keeps both parts at `minDuration` or longer.
+- **Splitting**: `SplitLong` splits a cue in two at the best break point. It splits each part again while the part breaks a limit. A cue stays unchanged when no break point keeps both parts at `minDuration` or longer.
 - **Times**: a new cue starts at the word timestamp of its first word. Without one, the time splits in proportion to the visible characters.
 - **Text without spaces**, such as Japanese, splits after CJK punctuation and at word timestamps.
-- **Regrouping**: `resegmentByWords()` ends a cue after a sentence end, before a pause of `maxWordGap` seconds, and before a word that would break a limit. It never joins words of cues with different `<v>` speakers, alignments or forced flags. Cues without word timestamps stay unchanged.
+- **Regrouping**: `ByWords` ends a cue after a sentence end, before a pause of `maxWordGap` seconds, and before a word that would break a limit. It never joins words of cues with different `<v>` speakers, alignments or forced flags. Cues without word timestamps stay unchanged.
 - **Tags**: a core markup tag that is open at a break closes at the end of the first cue and opens again in the next cue.
 - **Unchanged**: image cues and cues of one word.
 - **Cue data**: a new cue keeps the alignment, forced flag and format data of its source cue. Only the cue with the first word of a source cue keeps its identifier.
@@ -134,14 +139,16 @@ use SubtitleToolbox\Timing\ShotChangeTiming;
 $shotChanges = ShotChanges::fromFfmpegLog(file_get_contents('scenes.log'));   // [12.5, 62.5, 70.0]
 $shotChanges = ShotChanges::fromText("12.5\n00:01:02.500\n70\n");               // the same times
 
-ShotChangeTiming::apply($subtitle, $shotChanges, new ShotChangeOptions(
+$report = ShotChangeTiming::apply($subtitle, new ShotChangeOptions(
     frameRate: 24,
+    shotChanges: $shotChanges,   // seconds. Without shot changes, apply() only closes small gaps.
     snapWindow: 12,        // frames, default half a second: 12 at 23.976, 24 and 25 fps, 15 at 29.97 fps
     minGapFrames: 2,       // frames between a cue and the next cue or shot change, default 2
     chain: true,           // true (default) closes small gaps, false keeps them
     minDuration: 20,       // frames, default 20
 ));
-ShotChangeTiming::chainGaps($subtitle, new ShotChangeOptions(frameRate: 24));   // only closes small gaps
+$report->movedStarts;   // the cue starts that moved by one frame or more
+$report->movedEnds;     // the cue ends that moved by one frame or more
 ```
 
 | Rule | Before, at 24 fps | After |
@@ -152,7 +159,7 @@ ShotChangeTiming::chainGaps($subtitle, new ShotChangeOptions(frameRate: 24));   
 
 - **Frames**: all cue times of the result fall on frames of `frameRate`, rounded to milliseconds.
 - **Blocked moves**: a move does not happen when it makes a cue shorter than `minDuration`. It also does not happen when it brings the cue closer than `minGapFrames` to the cue before or after it. A move that makes a short cue longer still happens.
-- **Chaining across a cut**: `apply()` does not chain a gap that holds a shot change. `chainGaps()` knows no shot changes and chains every small gap.
+- **Chaining across a cut**: `apply()` does not chain a gap that holds a shot change. Without `shotChanges`, it chains every small gap.
 - **Input**: `fromFfmpegLog()` reads the `pts_time:` values. `fromText()` reads one time per line, in seconds or as `hh:mm:ss.mmm`, and skips empty lines. Both return the times sorted, without duplicates.
 
 ## Dual subtitles
@@ -162,8 +169,8 @@ A dual subtitle shows two languages at the same time, for example for language l
 use SubtitleToolbox\DualSubtitle;
 use SubtitleToolbox\DualSubtitleOptions;
 
-$english = Subtitle::parse(file_get_contents('movie.en.srt'));
-$german  = Subtitle::parse(file_get_contents('movie.de.srt'));
+$english = Subtitle::fromStringAutoDetectFormat(file_get_contents('movie.en.srt'));
+$german  = Subtitle::fromStringAutoDetectFormat(file_get_contents('movie.de.srt'));
 
 $dual = DualSubtitle::merge($english, $german, new DualSubtitleOptions(secondaryStyle: 'i'));
 $dual = DualSubtitle::merge($english, $german, new DualSubtitleOptions(

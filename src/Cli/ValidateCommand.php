@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Cli;
 
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Validation\ValidationResult;
 use SubtitleToolbox\Validation\ValidationRules;
@@ -31,7 +34,7 @@ class ValidateCommand extends ReportCommand
 
     protected function usageLines(): array
     {
-        return ["<input>... --preset netflix-en|bbc [options]", "<input>... [--max-cpl CHARS] [--no-overlap] [...] [options]"];
+        return ["<input>... --preset netflix-en|bbc [options]", "<input>... [--max-cpl CHARS] [--check-overlap] [...] [options]"];
     }
 
 
@@ -48,7 +51,7 @@ class ValidateCommand extends ReportCommand
 
     protected function fpsDescription(): string
     {
-        return "Frame rate of the video, for the 2-frame gap of netflix-en and for MicroDVD input. Default: 23.976.";
+        return "Sets --input-fps and --video-fps. Each of them overrides it.";
     }
 
 
@@ -56,23 +59,24 @@ class ValidateCommand extends ReportCommand
     {
         return [
             Option::value("preset", "NAME", "Rule set: netflix-en or bbc."),
+            Option::value("video-fps", "RATE", "Frame rate of the video, for the 2-frame gap of netflix-en. Default: 23.976."),
             Option::value("max-cps", "CHARS", "Maximum characters per second."),
             Option::value("max-cpl", "CHARS", "Maximum characters per line."),
             Option::value("max-lines", "LINES", "Maximum lines per cue."),
             Option::value("min-duration", "SECONDS", "Minimum duration of a cue."),
             Option::value("max-duration", "SECONDS", "Maximum duration of a cue."),
             Option::value("min-gap", "SECONDS", "Minimum gap between cues."),
-            Option::flag("no-overlap", "Report overlapping cues."),
-            Option::flag("no-empty-cues", "Report cues without text."),
+            Option::flag("check-overlap", "Report overlapping cues."),
+            Option::flag("check-empty-cues", "Report cues without text."),
             Option::value("max-wpm", "WORDS", "Maximum words per minute."),
             Option::value("min-seconds-per-word", "SECONDS", "Minimum duration of a cue per word."),
             Option::value("max-speakers", "SPEAKERS", "Maximum speakers per cue, from dialogue dashes or <v> names."),
             Option::value("dialogue-dash", "STYLE", "Report dialogue dashes in another style than STYLE, for example \"- \" or \"-\"."),
             Option::value("allowed-characters", "CHARS", "Report other characters. CHARS is a list or a class such as \"[A-Za-z0-9 .,!?]\"."),
-            Option::flag("no-double-spaces", "Report two or more spaces between words."),
-            Option::flag("no-leading-or-trailing-spaces", "Report lines that start or end with a space."),
-            Option::flag("no-unbalanced-tags", "Report formatting tags without a partner tag."),
-            Option::flag("no-all-caps-lines", "Report lines in upper case only."),
+            Option::flag("check-double-spaces", "Report two or more spaces between words."),
+            Option::flag("check-leading-or-trailing-spaces", "Report lines that start or end with a space."),
+            Option::flag("check-unbalanced-tags", "Report formatting tags without a partner tag."),
+            Option::flag("check-all-caps-lines", "Report lines in upper case only."),
         ];
     }
 
@@ -89,7 +93,7 @@ class ValidateCommand extends ReportCommand
         $base = match ($preset) {
             null         => new ValidationRules(),
             "bbc"        => ValidationRules::bbc(),
-            "netflix-en" => ValidationRules::netflixEnglish($this->fps ?? self::DEFAULT_FPS),
+            "netflix-en" => ValidationRules::netflixEnglish(self::rate($arguments, "video-fps") ?? self::DEFAULT_FPS),
         };
 
         $this->rules = new ValidationRules(
@@ -99,17 +103,17 @@ class ValidateCommand extends ReportCommand
             minDuration: $arguments->positiveFloat("min-duration") ?? $base->minDuration,
             maxDuration: $arguments->positiveFloat("max-duration") ?? $base->maxDuration,
             minGap: $arguments->positiveFloat("min-gap") ?? $base->minGap,
-            noOverlap: $arguments->has("no-overlap") || $base->noOverlap,
-            noEmptyCues: $arguments->has("no-empty-cues") || $base->noEmptyCues,
-            noDoubleSpaces: $arguments->has("no-double-spaces") || $base->noDoubleSpaces,
-            noLeadingOrTrailingSpaces: $arguments->has("no-leading-or-trailing-spaces") || $base->noLeadingOrTrailingSpaces,
-            noUnbalancedTags: $arguments->has("no-unbalanced-tags") || $base->noUnbalancedTags,
+            noOverlap: $arguments->has("check-overlap") || $base->noOverlap,
+            noEmptyCues: $arguments->has("check-empty-cues") || $base->noEmptyCues,
+            noDoubleSpaces: $arguments->has("check-double-spaces") || $base->noDoubleSpaces,
+            noLeadingOrTrailingSpaces: $arguments->has("check-leading-or-trailing-spaces") || $base->noLeadingOrTrailingSpaces,
+            noUnbalancedTags: $arguments->has("check-unbalanced-tags") || $base->noUnbalancedTags,
             dialogueDashStyle: $arguments->value("dialogue-dash") ?? $base->dialogueDashStyle,
             maxSpeakersPerCue: $arguments->positiveInt("max-speakers") ?? $base->maxSpeakersPerCue,
             maxWordsPerMinute: $arguments->positiveFloat("max-wpm") ?? $base->maxWordsPerMinute,
             minSecondsPerWord: $arguments->positiveFloat("min-seconds-per-word") ?? $base->minSecondsPerWord,
             allowedCharacters: $arguments->value("allowed-characters") ?? $base->allowedCharacters,
-            noAllCapsLines: $arguments->has("no-all-caps-lines") || $base->noAllCapsLines,
+            noAllCapsLines: $arguments->has("check-all-caps-lines") || $base->noAllCapsLines,
         );
         if ($this->rules == new ValidationRules()) {
             self::fail("Pass --preset or at least one rule option.");
@@ -117,7 +121,7 @@ class ValidateCommand extends ReportCommand
     }
 
 
-    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         $results = $subtitle->validate($this->rules);
         if ($results !== []) {
@@ -134,7 +138,7 @@ class ValidateCommand extends ReportCommand
 
         $this->emit($console, $text, [
             "file"    => $label,
-            "format"  => $format,
+            "format"  => $format->value,
             "valid"   => $results === [],
             "results" => array_map(fn (ValidationResult $result): array => [
                 "cueIndex"  => $result->getCueIndex(),

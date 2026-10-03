@@ -1,13 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
 class WebVttFormatter extends SubtitleFormatter
 {
@@ -19,7 +22,7 @@ class WebVttFormatter extends SubtitleFormatter
     private const ALIGNMENT_COLUMNS = [1 => "align:left", 2 => "", 3 => "align:right"];
 
 
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
         $fileData = $subtitle->getFormatData(WebVttParser::FORMAT);
         $header   = "WEBVTT";
@@ -62,15 +65,15 @@ class WebVttFormatter extends SubtitleFormatter
     /**
      * Returns the cue block format() writes for the cue at $cueIndex, in the line ending of $options, without a BOM.
      */
-    public function formatCueBlock(SubtitleCue $cue, int $cueIndex, array $options = []): string
+    public function formatCueBlock(SubtitleCue $cue, int $cueIndex, WriteOptions $options = new WriteOptions()): string
     {
         $block = $this->formatIdentifiedCue($cue, $cueIndex, $options);
 
-        return $this->applyOutputOptions($block, [...$options, parent::OPTION_BOM => null]);
+        return $this->applyOutputOptions($block, new WriteOptions($options->lineEnding, format: $options->format));
     }
 
 
-    private function formatIdentifiedCue(SubtitleCue $cue, int $cueIndex, array $options): string
+    private function formatIdentifiedCue(SubtitleCue $cue, int $cueIndex, WriteOptions $options): string
     {
         return $this->formatIdentifier($cue->getIdentifier(), $cueIndex) . StringHelpers::UNIX_LINE_ENDING
                . $this->formatCue($cue, $options);
@@ -115,16 +118,16 @@ class WebVttFormatter extends SubtitleFormatter
     }
 
 
-    private function formatCue(SubtitleCue $cue, array $options): string
+    private function formatCue(SubtitleCue $cue, WriteOptions $options): string
     {
-        $timeStamps = $this->formatTimeToString($cue->getStart()) . " --> " . $this->formatTimeToString($cue->getEnd());
+        $timeStamps = sprintf("%02d:%02d:%02d.%03d --> %02d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getStart()), ...Timecode::milliseconds($cue->getEnd()));
         $settings   = $this->formatSettings($cue);
         if ($settings !== "") {
             $timeStamps .= " " . $settings;
         }
 
         $lines = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines());
-        $lines = (bool) (Options::flag($options, parent::OPTION_STRIP_ALL_XML_TAGS) ?? false)
+        $lines = $options->stripTags
             ? Markup::stripAllTags($lines)
             : $this->keepVttTags($lines);
 
@@ -176,16 +179,5 @@ class WebVttFormatter extends SubtitleFormatter
         $namesWithClasses = array_map(fn (string $name): string => rtrim($name, "/"), $matches[1]);
 
         return array_values(array_unique([...self::SPAN_TAGS, ...$namesWithClasses]));
-    }
-
-
-    private function formatTimeToString(float $timeInSeconds): string
-    {
-        $hour   = str_pad(floor($timeInSeconds / 3600), 2, "0", STR_PAD_LEFT);
-        $minute = str_pad(floor($timeInSeconds / 60) % 60, 2, "0", STR_PAD_LEFT);
-        $second = str_pad(floor($timeInSeconds) % 60, 2, "0", STR_PAD_LEFT);
-        $millis = str_pad(round(($timeInSeconds - floor($timeInSeconds)) * 1000), 3, "0", STR_PAD_LEFT);
-
-        return $hour . ":" . $minute . ":" . $second . "." . $millis;
     }
 }

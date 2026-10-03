@@ -4,12 +4,11 @@ Every exception of the library implements `SubtitleToolbox\Exceptions\SubtitleTo
 
 ```php
 use SubtitleToolbox\Exceptions\SubtitleToolboxException;
-use SubtitleToolbox\Formatters\WebVttFormatter;
-use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 try {
-    $vtt = Subtitle::parse($upload, SubRipParser::class)->format(WebVttFormatter::class);
+    $vtt = Subtitle::fromString($upload, Format::SubRip)->toString(Format::WebVtt);
 } catch (SubtitleToolboxException $e) {
     return response($e->getMessage(), 422);
 }
@@ -18,14 +17,16 @@ try {
 | Exception | Extends | `getCode()` | Thrown for |
 |:--- |:--- |:--- |:--- |
 | `ParsingException` | `\RuntimeException` | 100 | content that a parser or `fromArray()` cannot read, or an unknown source encoding |
-| `InvalidFormatterException` | `\RuntimeException` | 101 | a formatter class that is not a `SubtitleFormatter`, or a stored TTML head that is not valid XML |
-| `InvalidParserException` | `\RuntimeException` | 102 | a parser class that is not a `SubtitleParser`, or content that format detection does not know |
-| `ImageCueWithoutTextException` | `\RuntimeException` | 103 | an image cue without text in `format()` with a text formatter |
-| `InvalidArgumentException` | `\InvalidArgumentException` | 104 | an invalid argument or option, for example alignment 10, frame rate 0 or a missing `OPTION_FRAME_RATE` |
+| `InvalidFormatterException` | `\RuntimeException` | 101 | `toString()` with a format that the library cannot write, or a stored TTML head that is not valid XML |
+| `InvalidParserException` | `\RuntimeException` | 102 | `fromString()` with a format that the library cannot read, or an MKV or WebM file in `load()` or `fromString()` |
+| `ImageCueWithoutTextException` | `\RuntimeException` | 103 | an image cue without text in `toString()` with a text format |
+| `InvalidArgumentException` | `\InvalidArgumentException` | 104 | an invalid argument or option, for example alignment 10, frame rate 0, a missing MicroDVD frame rate or the options class of another format |
 | `CueNotFoundException` | `\RuntimeException` | 105 | `removeCue()` with an index that has no cue |
+| `UnknownFormatException` | `InvalidParserException` | 106 | `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()` when detection finds no format |
+| `TranslationException` | `\RuntimeException` | 107 | a translation engine without `ext-curl`, a request that gets no response, an HTTP error of DeepL or Google, or an answer that the engine cannot read |
 
 - **SPL classes**: each class extends an SPL class, so `catch (\InvalidArgumentException $e)` and `catch (\RuntimeException $e)` also work.
-- **Messages**: the first four classes start the message with the class name and the code, for example `ParsingException (Error #100): `. The last two keep the plain message.
+- **Messages**: `InvalidArgumentException`, `CueNotFoundException` and `TranslationException` keep the plain message. The other classes start it with the class name and the code, for example `ParsingException (Error #100): `.
 - **Line number**: `ParsingException::getLineNumber()` returns the 1-based input line when the parser knows it, and null otherwise. Then the message ends with ` (line 12)`.
 
 These readers set the line number:

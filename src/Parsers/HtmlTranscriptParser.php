@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
@@ -16,17 +18,9 @@ class HtmlTranscriptParser extends SubtitleParser
 
 
     /**
-     * Creates a parser that ends each paragraph at the next <time>, and the last paragraph after $lastCueDuration seconds.
-     */
-    public function __construct(private readonly float $lastCueDuration = 10)
-    {
-    }
-
-
-    /**
      * Reads the Podcasting 2.0 HTML transcript, one cue per <time> with the <p> paragraphs up to the next <time>.
      */
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $content        = StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle));
@@ -79,7 +73,7 @@ class HtmlTranscriptParser extends SubtitleParser
                 $lines[0] = Markup::voiceTag($speaker) . $lines[0];
             }
 
-            $subtitle->addCue(new SubtitleCue($start, $cues[$next][0] ?? round($start + $this->lastCueDuration, 3), $lines), false);
+            $subtitle->addCue(new SubtitleCue($start, $cues[$next][0] ?? round($start + $this->options->lastCueDuration, 3), $lines), false);
         }
 
         return $subtitle->reIndexCues();

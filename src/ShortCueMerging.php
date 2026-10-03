@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Image\CueImage;
@@ -11,8 +13,8 @@ trait ShortCueMerging
      */
     public function mergeShortCues(MergeShortCuesOptions $options): self
     {
-        $anchors = $this->getCommentAnchors();
-        $cues    = $this->fixesCuesInStartOrder();
+        $anchors = CommentAnchors::of($this->cues, $this->comments);
+        $cues    = CueList::inStartOrder($this->cues);
         $index   = 0;
         while ($index < count($cues)) {
             if (!$options->sameSpeakerOnly && !self::shortCueMergingIsShort($cues[$index], $options)) {
@@ -34,12 +36,12 @@ trait ShortCueMerging
                 continue;
             }
 
-            $anchors = $this->joinGroup([$cues[$first], $cues[$first + 1]], $anchors, false);
+            [$this->cues, $anchors] = CueList::join($this->cues, [$cues[$first], $cues[$first + 1]], $anchors, false);
             $cues[$first]->setLinesByArray($lines);
             array_splice($cues, $first + 1, 1);
             $index = $first;
         }
-        $this->setCommentsByAnchors($this->comments, $anchors);
+        $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
         return $this;
     }
@@ -48,7 +50,7 @@ trait ShortCueMerging
     private static function shortCueMergingIsShort(SubtitleCue $cue, MergeShortCuesOptions $options): bool
     {
         return round($cue->getEnd() - $cue->getStart(), 3) < round($options->minDuration, 3)
-            || ($options->minCharacters !== null && self::shortCueMergingCharacters($cue->getLines()) < $options->minCharacters);
+            || ($options->minCharacters !== null && LineWrapper::characters($cue->getLines()) < $options->minCharacters);
     }
 
 
@@ -59,11 +61,11 @@ trait ShortCueMerging
      */
     private static function shortCueMergingJoinLines(SubtitleCue $first, SubtitleCue $second, MergeShortCuesOptions $options): ?array
     {
-        $speakers = self::shortCueMergingSpeakers($first);
+        $speakers = CueList::speakers($first);
         if (CueImage::isImageCue($first) || CueImage::isImageCue($second)
             || ($first->getAlignment() ?? 2) !== ($second->getAlignment() ?? 2)
             || $first->isForced() !== $second->isForced()
-            || $speakers !== self::shortCueMergingSpeakers($second)
+            || $speakers !== CueList::speakers($second)
             || ($options->sameSpeakerOnly && $speakers === [])) {
             return null;
         }
@@ -79,68 +81,19 @@ trait ShortCueMerging
             return null;
         }
 
-        $lines = self::shortCueMergingWrap(self::shortCueMergingOneVoiceTag($first, $second, $speakers)
-                                           ?? [...$first->getLines(), ...$second->getLines()],
-                                           $options->maxCharactersPerLine, $options->maxLines);
+        $lines = LineWrapper::wrapToFit(self::shortCueMergingOneVoiceTag($first, $second, $speakers)
+                                        ?? [...$first->getLines(), ...$second->getLines()],
+                                        $options->maxCharactersPerLine, $options->maxLines);
         if ($lines === null || $options->maxCharactersPerSecond === null) {
             return $lines;
         }
 
-        $characters = self::shortCueMergingCharacters($lines);
+        $characters = LineWrapper::characters($lines);
         if ($characters > 0 && ($duration > 0 ? $characters / $duration : INF) > $options->maxCharactersPerSecond) {
             return null;
         }
 
         return $lines;
-    }
-
-
-    /**
-     * Joins the lines with a space, but starts a new line at each dialogue dash, and wraps them as wrapLines() does.
-     *
-     * @param list<string> $lines
-     *
-     * @return ?list<string> null when the text does not fit
-     */
-    private static function shortCueMergingWrap(array $lines, int $maxCharactersPerLine, int $maxLines): ?array
-    {
-        $segments = [];
-        foreach ($lines as $line) {
-            $words = self::fixesSplitIntoWords($line);
-            if ($words === []) {
-                continue;
-            }
-
-            $startsWithDash = preg_match('/^(?:\s|<[^>]*>)*[-\x{2010}\x{2013}\x{2014}]/u', $line) === 1;
-            if ($segments === [] || $startsWithDash) {
-                $segments[] = $words;
-            } else {
-                $segments[count($segments) - 1] = [...$segments[count($segments) - 1], ...$words];
-            }
-        }
-
-        if (count($segments) <= 1) {
-            $words      = $segments[0] ?? [];
-            $lineStarts = self::fixesFindBreaks($words, $maxCharactersPerLine, $maxLines);
-            $segments   = [];
-            foreach ($lineStarts as $lineIndex => $start) {
-                $segments[] = array_slice($words, $start, ($lineStarts[$lineIndex + 1] ?? count($words)) - $start);
-            }
-            $joined = self::fixesJoinLines($words, $lineStarts);
-        } else {
-            $joined = array_map(fn (array $words): string => implode(" ", array_column($words, "text")), $segments);
-        }
-
-        if (count($segments) > $maxLines) {
-            return null;
-        }
-        foreach ($segments as $words) {
-            if (self::fixesLineLength($words) > $maxCharactersPerLine) {
-                return null;
-            }
-        }
-
-        return $joined;
     }
 
 
@@ -166,27 +119,5 @@ trait ShortCueMerging
         }
 
         return $lines;
-    }
-
-
-    /**
-     * @return list<string> the sorted names of the <v> speakers in the cue
-     */
-    private static function shortCueMergingSpeakers(SubtitleCue $cue): array
-    {
-        preg_match_all('/<v(?:\.[^\s>]*)?\s+([^>]*)>/i', $cue->getText(), $matches);
-        $speakers = array_unique(array_map("trim", $matches[1]));
-        sort($speakers);
-
-        return $speakers;
-    }
-
-
-    /**
-     * @param array<string> $lines
-     */
-    private static function shortCueMergingCharacters(array $lines): int
-    {
-        return array_sum(array_map(fn (string $line): int => Markup::visibleLength($line), $lines));
     }
 }

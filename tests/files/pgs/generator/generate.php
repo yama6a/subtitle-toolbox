@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 // Writes the PGS fixtures to tests/files/pgs/. Run: php tests/files/pgs/generator/generate.php
 
 namespace SubtitleToolbox\Parsers;

@@ -1,12 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\JsonFormatter;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\JsonOptions;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\WriteOptions;
 
 class JsonRealFilesTest extends TestCase
 {
@@ -41,7 +45,7 @@ class JsonRealFilesTest extends TestCase
     #[DataProvider("realFiles")]
     public function testRealFileParses(string $fileName, int $cueCount, array $firstCue, array $lastCue): void
     {
-        $cues = Subtitle::parse(file_get_contents(self::DIR . $fileName), JsonParser::class)->getCues();
+        $cues = Subtitle::fromString(file_get_contents(self::DIR . $fileName), Format::Json)->getCues();
 
         $this->assertSame($cueCount, count($cues));
         $this->assertSame($firstCue, [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
@@ -55,16 +59,16 @@ class JsonRealFilesTest extends TestCase
     {
         $json = file_get_contents(self::DIR . $fileName);
 
-        $this->assertSame($json, Subtitle::parse($json)->format(JsonFormatter::class, [JsonFormatter::OPTION_PRETTY_PRINT => true]));
+        $this->assertSame($json, Subtitle::fromStringAutoDetectFormat($json)->toString(Format::Json, new WriteOptions(format: new JsonOptions(prettyPrint: true))));
     }
 
 
     public function testAegisubFileKeepsMetadataCommentsAndFormatData(): void
     {
-        $json     = Subtitle::parse(file_get_contents(self::DIR . "own_aegisub.json"));
-        $original = Subtitle::parse(file_get_contents(__DIR__ . "/../files/ass/real/own_aegisub.ass"));
+        $json     = Subtitle::fromStringAutoDetectFormat(file_get_contents(self::DIR . "own_aegisub.json"));
+        $original = Subtitle::fromStringAutoDetectFormat(file_get_contents(__DIR__ . "/../files/ass/real/own_aegisub.ass"));
 
-        $this->assertEquals($original, $json);
+        $this->assertEquals($original->toArray(), $json->toArray());
         $this->assertSame("Morning train to the coast", $json->getMetadata(Subtitle::METADATA_TITLE));
         $this->assertCount(3, $json->getComments());
         $this->assertSame("V4+ Styles", $json->getFormatData("ass")["stylesSection"]);
@@ -73,7 +77,7 @@ class JsonRealFilesTest extends TestCase
 
     public function testImageCueFileHoldsThePngBytes(): void
     {
-        $image = CueImage::fromCue(Subtitle::parse(file_get_contents(self::DIR . "own_image_cues.json"))->getCues()[0]);
+        $image = CueImage::fromCue(Subtitle::fromStringAutoDetectFormat(file_get_contents(self::DIR . "own_image_cues.json"))->getCues()[0]);
 
         $this->assertStringStartsWith("\x89PNG\r\n\x1a\n", $image->png);
         $this->assertSame([640, 940, 2, 1, 1920, 1080, true],

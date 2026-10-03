@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Formatters\CsvTimeFormat;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
@@ -15,29 +18,7 @@ class CsvParser extends SubtitleParser
     public const FORMAT_DATA_KEY = "csv";
     public const DELIMITERS      = [",", ";", "\t"];
 
-    public const TIME_SECONDS = "seconds";
-    public const TIME_DOT     = "hh:mm:ss.mmm";
-    public const TIME_COMMA   = "hh:mm:ss,mmm";
-    public const TIME_FRAMES  = "hh:mm:ss:ff";
-    public const TIME_FORMATS = [self::TIME_SECONDS, self::TIME_DOT, self::TIME_COMMA, self::TIME_FRAMES];
-
     private CsvColumns $columns;
-
-
-    /**
-     * Reads an RFC 4180 table. A null delimiter is detected from the first line. A cue without an end time ends at
-     * the next start, and the last such cue lasts $lastCueDuration seconds.
-     */
-    public function __construct(
-        ?CsvColumns $columns = null,
-        private readonly ?string $delimiter = null,
-        private readonly float $lastCueDuration = 10,
-    ) {
-        $this->columns = $columns ?? new CsvColumns();
-        if ($delimiter !== null) {
-            self::checkDelimiter($delimiter);
-        }
-    }
 
 
     public static function checkDelimiter(mixed $delimiter): void
@@ -48,12 +29,18 @@ class CsvParser extends SubtitleParser
     }
 
 
-    public function parse(string $rawSubtitle): Subtitle
+    protected static function formatOptionsClass(): string
     {
-        $this->warnings = [];
-        $content        = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $delimiter      = $this->delimiter ?? self::detectDelimiter($content);
-        $records        = array_filter(
+        return CsvReadOptions::class;
+    }
+
+
+    protected function read(string $rawSubtitle): Subtitle
+    {
+        $this->columns = $this->formatOptions()->columns ?? new CsvColumns();
+        $content       = StringHelpers::removeUtf8Bom($rawSubtitle);
+        $delimiter     = $this->formatOptions()->delimiter ?? self::detectDelimiter($content);
+        $records       = array_filter(
             self::records($content, $delimiter),
             fn (array $record): bool => array_filter($record[1], fn (string $cell): bool => trim($cell) !== "") !== []
         );
@@ -105,7 +92,7 @@ class CsvParser extends SubtitleParser
             "header"     => $header,
             "roles"      => $roles,
             "width"      => max([count($header ?? []), ...array_map("count", array_column($records, 1))]),
-            "timeFormat" => $timeFormat ?? self::TIME_DOT,
+            "timeFormat" => $timeFormat ?? CsvTimeFormat::Dot->value,
             "frameRate"  => $this->columns->frameRate,
         ]);
 
@@ -224,10 +211,10 @@ class CsvParser extends SubtitleParser
     private static function timeFormatOf(string $time): string
     {
         return match (true) {
-            str_contains($time, ",")       => self::TIME_COMMA,
-            substr_count($time, ":") === 3 => self::TIME_FRAMES,
-            str_contains($time, ":")       => self::TIME_DOT,
-            default                        => self::TIME_SECONDS,
+            str_contains($time, ",")       => CsvTimeFormat::Comma->value,
+            substr_count($time, ":") === 3 => CsvTimeFormat::Frames->value,
+            str_contains($time, ":")       => CsvTimeFormat::Dot->value,
+            default                        => CsvTimeFormat::Seconds->value,
         };
     }
 
@@ -295,7 +282,7 @@ class CsvParser extends SubtitleParser
                     break;
                 }
             }
-            $cue->setEnd($next ?? $cue->getStart() + $this->lastCueDuration);
+            $cue->setEnd($next ?? $cue->getStart() + $this->options->lastCueDuration);
         }
     }
 }

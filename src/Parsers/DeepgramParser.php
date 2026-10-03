@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
@@ -11,17 +13,12 @@ class DeepgramParser extends SubtitleParser
 
     public const FORMAT_DATA_KEY = "deepgram";
 
-    public const OPTION_WORD_TIMESTAMPS = "OPTION_WORD_TIMESTAMPS";
-
-    /** Writes the speaker of each cue as a <v> tag at the start of its cue, for example <v 0>. */
-    public const OPTION_SPEAKER_VOICES = "OPTION_SPEAKER_VOICES";
-
 
     /**
      * Reads the JSON response of the Deepgram pre-recorded audio API, one cue per utterance, else per paragraph
      * sentence, else cues grouped from the words.
      */
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $data           = $this->decodeObject($rawSubtitle);

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
@@ -37,7 +39,7 @@ class AssParser extends SubtitleParser
     private int $eventIndex = 0;
 
 
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings   = [];
         $this->eventIndex = 0;

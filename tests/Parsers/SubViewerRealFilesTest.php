@@ -1,14 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
-use SubtitleToolbox\Formatters\SubViewerFormatter;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\SubViewerOptions;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Validation\ValidationRules;
+use SubtitleToolbox\WriteOptions;
 
 class SubViewerRealFilesTest extends TestCase
 {
@@ -50,7 +55,7 @@ class SubViewerRealFilesTest extends TestCase
                 "subviewer1_delay.sub",
                 4,
                 [3.0, 6.0, "Sunny in the north\nand cloudy in the south."],
-                [17.0, 27.0, "Back at eight with the news."],
+                [17.0, 22.0, "Back at eight with the news."],
                 false,
             ],
         ];
@@ -67,7 +72,7 @@ class SubViewerRealFilesTest extends TestCase
         $this->assertSame($firstCue, [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $last = $cues[count($cues) - 1];
         $this->assertSame($lastCue, [$last->getStart(), $last->getEnd(), $last->getText()]);
-        $this->assertSame([], $subtitle->getErrors());
+        $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
 
 
@@ -75,8 +80,8 @@ class SubViewerRealFilesTest extends TestCase
     public function testRealFileSurvivesARoundTrip(string $fileName): void
     {
         $subtitle  = $this->parseFile($fileName);
-        $formatted = $subtitle->format(SubViewerFormatter::class, $this->optionsFor($fileName));
-        $reparsed  = Subtitle::parse($formatted, SubViewerParser::class);
+        $formatted = $subtitle->toString(Format::SubViewer, $this->optionsFor($fileName));
+        $reparsed  = Subtitle::fromString($formatted, Format::SubViewer);
 
         $this->assertSame(
             array_map($this->describeCue(...), $subtitle->getCues()),
@@ -98,11 +103,11 @@ class SubViewerRealFilesTest extends TestCase
     public function testRealFileFormatsToItsOwnBytes(string $fileName): void
     {
         $content    = file_get_contents(self::DIR . $fileName);
-        $lineEnding = $this->optionsFor($fileName)[SubtitleFormatter::OPTION_LINE_ENDING];
+        $lineEnding = $this->optionsFor($fileName)->lineEnding->value;
 
         $this->assertSame(
             rtrim($content, "\r\n") . $lineEnding,
-            $this->parseFile($fileName)->format(SubViewerFormatter::class, $this->optionsFor($fileName))
+            $this->parseFile($fileName)->toString(Format::SubViewer, $this->optionsFor($fileName))
         );
     }
 
@@ -139,7 +144,7 @@ class SubViewerRealFilesTest extends TestCase
         $subtitle = $this->parseFile("subviewer1_delay.sub");
 
         $this->assertSame(
-            [[3.0, 6.0], [8.0, 11.0], [11.0, 14.0], [17.0, 27.0]],
+            [[3.0, 6.0], [8.0, 11.0], [11.0, 14.0], [17.0, 22.0]],
             array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues())
         );
         $this->assertSame(["version" => 1, "header" => ["DELAY" => "0"]], $subtitle->getFormatData("subviewer"));
@@ -149,19 +154,19 @@ class SubViewerRealFilesTest extends TestCase
 
     private function parseFile(string $fileName): Subtitle
     {
-        return Subtitle::parse(file_get_contents(self::DIR . $fileName), SubViewerParser::class);
+        return Subtitle::fromString(file_get_contents(self::DIR . $fileName), Format::SubViewer);
     }
 
 
-    private function optionsFor(string $fileName): array
+    private function optionsFor(string $fileName): WriteOptions
     {
         $content = file_get_contents(self::DIR . $fileName);
 
-        return [
-            SubViewerFormatter::OPTION_VERSION    => str_contains($content, SubViewerParser::START_SCRIPT) ? 1 : 2,
-            SubtitleFormatter::OPTION_LINE_ENDING => str_contains($content, "\r\n") ? "\r\n" : "\n",
-            SubtitleFormatter::OPTION_BOM         => StringHelpers::hasUtf8Bom($content),
-        ];
+        return new WriteOptions(
+            lineEnding: str_contains($content, "\r\n") ? LineEnding::Crlf : LineEnding::Lf,
+            bom: StringHelpers::hasUtf8Bom($content),
+            format: new SubViewerOptions(version: str_contains($content, SubViewerParser::START_SCRIPT) ? 1 : 2),
+        );
     }
 
 

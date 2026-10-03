@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
@@ -11,18 +13,13 @@ class AssemblyAiParser extends SubtitleParser
 
     public const FORMAT_DATA_KEY = "assemblyai";
 
-    public const OPTION_WORD_TIMESTAMPS = "OPTION_WORD_TIMESTAMPS";
-
-    /** Writes the speaker of each cue as a <v> tag at the start of its cue, for example <v A>. */
-    public const OPTION_SPEAKER_VOICES = "OPTION_SPEAKER_VOICES";
-
     private const MILLISECONDS = 0.001;
 
 
     /**
      * Reads the JSON of an AssemblyAI transcript, one cue per utterance, else cues grouped from the words.
      */
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $data           = $this->decodeObject($rawSubtitle);

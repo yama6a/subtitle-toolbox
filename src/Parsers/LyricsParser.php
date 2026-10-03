@@ -1,8 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
@@ -14,8 +15,6 @@ class LyricsParser extends SubtitleParser
     public const REGEX = "/^\[(\d{2,3}):([0-5]\d).(\d\d)\](.+)$/";
 
     public const FORMAT = "lrc";
-
-    public const DEFAULT_LAST_CUE_DURATION = 10;
 
     /** Maps LRC ID tags to the shared metadata keys of Subtitle. */
     public const METADATA_TAGS = [
@@ -30,23 +29,8 @@ class LyricsParser extends SubtitleParser
     private const ID_TAG_REGEX         = "/^\[([A-Za-z][A-Za-z0-9_]*|#):(.*)\]$/";
     private const OFFSET_REGEX         = "/^[+-]?\d+$/";
 
-    private float $lastCueDuration;
 
-
-    /**
-     * Creates a parser that ends the last cue the given number of seconds after its start.
-     */
-    public function __construct(float $lastCueDuration = self::DEFAULT_LAST_CUE_DURATION)
-    {
-        if ($lastCueDuration < 0) {
-            throw new InvalidArgumentException("The last cue duration must not be negative!");
-        }
-
-        $this->lastCueDuration = $lastCueDuration;
-    }
-
-
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
@@ -170,7 +154,7 @@ class LyricsParser extends SubtitleParser
 
             $next = $timeline[$idx + 1] ?? null;
             if ($next === null) {
-                $entry["cue"]->setEnd($entry["time"] + $this->lastCueDuration);
+                $entry["cue"]->setEnd($entry["time"] + $this->options->lastCueDuration);
                 continue;
             }
 

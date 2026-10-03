@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Profanity;
 
 use SubtitleToolbox\Markup;
@@ -12,11 +14,9 @@ final class ProfanityFilter
 
 
     /**
-     * Masks the words of the options in the cue text and returns the time ranges of the matches, sorted and joined.
-     *
-     * @return list<MuteRange>
+     * Masks the words of the options in the cue text and reports the time ranges of the matches, sorted and joined.
      */
-    public static function apply(Subtitle $subtitle, ProfanityOptions $options): array
+    public static function apply(Subtitle $subtitle, ProfanityOptions $options): ProfanityReport
     {
         $pattern = self::pattern($options->words);
         $ranges  = [];
@@ -45,7 +45,7 @@ final class ProfanityFilter
             $subtitle->reIndexCues();
         }
 
-        return self::join($ranges, $options->padding);
+        return new ProfanityReport(self::join($ranges, $options->padding));
     }
 
 

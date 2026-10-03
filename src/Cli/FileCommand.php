@@ -1,16 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\Container\Matroska\MatroskaReader;
-use SubtitleToolbox\Container\Matroska\MatroskaTrack;
-use SubtitleToolbox\FormatDetector;
-use SubtitleToolbox\FormatRegistry;
+use SubtitleToolbox\Exceptions\SubtitleToolboxException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\ParseWarning;
-use SubtitleToolbox\Parsers\MicroDvdParser;
-use SubtitleToolbox\Parsers\SubtitleParser;
-use SubtitleToolbox\Parsers\VobSubParser;
-use SubtitleToolbox\StringHelpers;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 /**
@@ -20,19 +17,11 @@ abstract class FileCommand extends Command
 {
     public const DASH = "-";
 
-    private const EBML_MAGIC = "\x1A\x45\xDF\xA3";
+    protected ?Format $fromFormat = null;
 
-    private const MATROSKA_FORMATS = [
-        MatroskaReader::CODEC_SUBRIP => "srt",
-        MatroskaReader::CODEC_ASS    => "ass",
-        MatroskaReader::CODEC_SSA    => "ass",
-        MatroskaReader::CODEC_WEBVTT => "vtt",
-        MatroskaReader::CODEC_PGS    => "pgs",
-    ];
+    protected ?Format $secondFormat = null;
 
-    protected ?string $fromFormat = null;
-
-    protected ?float $fps = null;
+    protected ?float $inputFps = null;
 
     protected int $succeeded = 0;
 
@@ -40,12 +29,10 @@ abstract class FileCommand extends Command
 
     protected bool $fromContainer = false;
 
-    protected bool $wordTimestamps = false;
+    protected ReadOptions $readOptions;
 
     /** @var list<ParseWarning> */
     protected array $parseWarnings = [];
-
-    private bool $readingSecondFile = false;
 
 
     /**
@@ -54,21 +41,12 @@ abstract class FileCommand extends Command
     abstract protected function commandOptions(): array;
 
 
-    abstract protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void;
+    abstract protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void;
 
 
     public function options(): array
     {
         return [...$this->commandOptions(), ...$this->inputOptions()];
-    }
-
-
-    /**
-     * Returns false for a command that uses --from and --to for something other than formats.
-     */
-    protected function hasFormatOptions(): bool
-    {
-        return true;
     }
 
 
@@ -80,7 +58,7 @@ abstract class FileCommand extends Command
 
     protected function fpsDescription(): string
     {
-        return "Frame rate of the video. MicroDVD files without a {1}{1}<fps> first line need it.";
+        return "Same as --input-fps.";
     }
 
 
@@ -89,15 +67,11 @@ abstract class FileCommand extends Command
      */
     protected function inputOptions(): array
     {
-        $options = [];
-        if ($this->hasFormatOptions()) {
-            $options[] = Option::value("from", "FORMAT", "Input format. Default: detected from the content, else taken from the file extension.");
-        }
-
         return [
-            ...$options,
+            Option::value("from", "FORMAT", "Input format. Default: detected from the content, else taken from the file extension. Chapters and cloud speech JSON need it."),
             Option::value("encoding", "NAME", "Encoding of the input, for example Windows-1252. Default: UTF-8. A BOM in the input overrides it."),
             Option::flag("lenient", "Skip or repair broken cues and print a warning for each. SCC, PGS, VobSub and chapter input ignore it."),
+            Option::value("input-fps", "RATE", "Frame rate of a MicroDVD input without a {1}{1}<fps> first line."),
             Option::value("fps", "RATE", $this->fpsDescription()),
             Option::flag("word-timestamps", "Keep the word times of speech-to-text JSON, YouTube timed text and podcast transcript input."),
             Option::value("track", "NUMBER", "Subtitle track of an MKV or WebM input. Needed when the file has several. \"info\" lists them."),
@@ -106,16 +80,53 @@ abstract class FileCommand extends Command
     }
 
 
+    /**
+     * Returns --from2 and --track2, for a command that reads a second file.
+     *
+     * @return list<Option>
+     */
+    protected static function secondFileOptions(string $file): array
+    {
+        return [
+            Option::value("from2", "FORMAT", "Format of the $file file. Default: detected from the content, else taken from the file extension."),
+            Option::value("track2", "NUMBER", "Subtitle track of an MKV or WebM $file file. Needed when the file has several."),
+        ];
+    }
+
+
     protected function prepare(Arguments $arguments): void
     {
         $this->succeeded = 0;
         $this->failed    = 0;
-        $this->fps       = $arguments->positiveFloat("fps");
+        $this->inputFps  = self::rate($arguments, "input-fps");
+        $arguments->positiveFloat("fps");
         $arguments->positiveInt("track");
-        $this->wordTimestamps = $this->needsWordTimestamps($arguments);
+        $arguments->positiveInt("track2");
 
-        $from             = $this->hasFormatOptions() ? $arguments->value("from") : null;
-        $this->fromFormat = $from === null ? null : self::readableFormat($from);
+        $from               = $arguments->value("from");
+        $this->fromFormat   = $from === null ? null : self::readableFormat($from);
+        $from2              = $arguments->value("from2");
+        $this->secondFormat = $from2 === null ? null : self::readableFormat($from2);
+
+        try {
+            $this->readOptions = new ReadOptions(
+                encoding: $arguments->value("encoding"),
+                lenient: $arguments->has("lenient"),
+                fps: $this->inputFps,
+                wordTimestamps: $this->needsWordTimestamps($arguments),
+            );
+        } catch (SubtitleToolboxException $exception) {
+            self::fail($exception->getMessage());
+        }
+    }
+
+
+    /**
+     * Returns the frame rate of the option $name, else of --fps, which sets all frame rates.
+     */
+    protected static function rate(Arguments $arguments, string $name): ?float
+    {
+        return $arguments->positiveFloat($name) ?? $arguments->positiveFloat("fps");
     }
 
 
@@ -208,14 +219,22 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Returns the format name for a name or an extension that the library can read.
+     * Returns the format for a format name or a file extension such as "SRT" or ".ssa".
      */
-    public static function readableFormat(string $nameOrExtension): string
+    public static function findFormat(string $nameOrExtension): Format
     {
-        $format = FormatRegistry::find($nameOrExtension)
+        $key = strtolower(ltrim($nameOrExtension, "."));
+
+        return Format::tryFrom($key) ?? Format::fromPath("file.$key")
             ?? self::fail("Unknown format \"$nameOrExtension\". Run \"" . Application::NAME . " formats\" for the list.");
-        if (FormatRegistry::parserClass($format) === null) {
-            self::fail("The format $format can be written but not read.");
+    }
+
+
+    public static function readableFormat(string $nameOrExtension): Format
+    {
+        $format = self::findFormat($nameOrExtension);
+        if (!$format->canRead()) {
+            self::fail("The format $format->value can be written but not read.");
         }
 
         return $format;
@@ -261,8 +280,8 @@ abstract class FileCommand extends Command
         $files     = [];
         foreach (scandir($directory) ?: [] as $name) {
             $path   = "$directory/$name";
-            $format = FormatRegistry::forPath($name);
-            if (!is_file($path) || $format === null || FormatRegistry::parserClass($format) === null) {
+            $format = Format::fromPath($name);
+            if (!is_file($path) || $format === null || !$format->canRead()) {
                 continue;
             }
             // The .sub file of a VobSub pair is not MicroDVD. The parser reads it through its .idx file.
@@ -280,186 +299,98 @@ abstract class FileCommand extends Command
     /**
      * Returns the subtitle and its format, or null when listTracks() handled an MKV or WebM input.
      *
-     * @return array{Subtitle, string}|null
+     * @return array{Subtitle, Format}|null
      */
     protected function read(string $input, Arguments $arguments, Console $console): ?array
     {
-        $this->fromContainer = false;
         $this->parseWarnings = [];
-        if ($input !== self::DASH && is_file($input) && self::isMatroskaFile($input)) {
-            return $this->readMatroska(MatroskaReader::open($input), $input, $arguments, $console);
-        }
-
-        $raw = $this->readFile($input, $console);
-        if (str_starts_with($raw, self::EBML_MAGIC)) {
-            $stream = fopen("php://temp", "w+b");
-            fwrite($stream, $raw);
-            rewind($stream);
-
-            return $this->readMatroska(MatroskaReader::open($stream), $input, $arguments, $console);
-        }
-        if ($arguments->has("track") && !$this->readingSecondFile) {
-            self::fail("--track needs an MKV or WebM input.");
-        }
-
-        $content = StringHelpers::convertToUtf8($raw, $arguments->value("encoding"));
-        $format  = $this->inputFormat($input, $content);
-
-        if ($format === "vobsub" && $input === self::DASH) {
-            self::fail("VobSub needs the path of the .idx file. Standard input does not work.");
-        }
-
-        $parser = $this->createParser($format, $content)->setLenient($arguments->has("lenient"));
-        if ($format === "vobsub") {
-            $subtitle = $parser->parse($this->readFile(substr($input, 0, -strlen(pathinfo($input, PATHINFO_EXTENSION))) . "sub", $console));
+        $track               = $arguments->positiveInt("track");
+        if ($input === self::DASH) {
+            $subtitle = $this->readStdin($track, $console);
         } else {
-            $subtitle = $parser->parse($content);
+            if (!is_file($input)) {
+                self::fail("The file does not exist.");
+            }
+            if ($track === null && $this->listTracks($input, $console)) {
+                return null;
+            }
+            $subtitle = match (true) {
+                $track !== null            => Subtitle::loadTrack($input, $track, $this->readOptions),
+                $this->fromFormat !== null => Subtitle::load($input, $this->fromFormat, $this->readOptions),
+                default                    => Subtitle::loadAutoDetectFormat($input, $this->readOptions),
+            };
         }
+        // An MKV or WebM input has an extension of no subtitle format, so the output gets the extension of its format.
+        $this->fromContainer = $track !== null || ($input !== self::DASH && Format::fromPath($input) === null);
 
-        $this->parseWarnings = $parser->getWarnings();
+        $this->parseWarnings = $subtitle->getParseWarnings();
         foreach ($this->parseWarnings as $warning) {
             $console->err(self::label($input) . ": line $warning->lineNumber: $warning->message ($warning->action)\n");
         }
 
-        return [$subtitle, $format];
+        return [$subtitle, $subtitle->getFormat()];
     }
 
 
     /**
-     * Reads a file other than the input, such as a reference, with format detection and without --from and --track.
+     * Reads a file other than the input, such as a reference, without --from and --track. Detects the format unless
+     * $format or $track is given.
      */
-    protected function readSecondFile(string $path, Arguments $arguments, Console $console): Subtitle
+    protected function loadOtherFile(string $path, ?Format $format = null, ?int $track = null): Subtitle
     {
-        $state                   = [$this->fromFormat, $this->fromContainer];
-        $this->fromFormat        = null;
-        $this->readingSecondFile = true;
+        if (!is_file($path)) {
+            self::fail("$path: The file does not exist.");
+        }
 
         try {
-            return $this->read($path, $arguments, $console)[0];
-        } catch (\Exception $exception) {
+            return match (true) {
+                $track !== null  => Subtitle::loadTrack($path, $track, $this->readOptions),
+                $format !== null => Subtitle::load($path, $format, $this->readOptions),
+                default          => Subtitle::loadAutoDetectFormat($path, $this->readOptions),
+            };
+        } catch (SubtitleToolboxException $exception) {
             return self::fail("$path: " . $exception->getMessage());
-        } finally {
-            [$this->fromFormat, $this->fromContainer] = $state;
-            $this->readingSecondFile                  = false;
         }
+    }
+
+
+    /**
+     * Reads the second file of diff and dual with --from2 and --track2.
+     */
+    protected function loadSecondFile(string $path, Arguments $arguments): Subtitle
+    {
+        return $this->loadOtherFile($path, $this->secondFormat, $arguments->positiveInt("track2"));
     }
 
 
     /**
      * Handles an MKV or WebM input without --track. Returns false to read its only subtitle track.
-     *
-     * @param list<MatroskaTrack> $tracks
      */
-    protected function listTracks(string $input, array $tracks, Console $console): bool
+    protected function listTracks(string $input, Console $console): bool
     {
         return false;
     }
 
 
-    public static function describeTrack(MatroskaTrack $track): string
+    private function readStdin(?int $track, Console $console): Subtitle
     {
-        return implode(", ", array_filter([
-            $track->codecId,
-            $track->language,
-            $track->name === null ? null : json_encode($track->name, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            $track->default ? "default" : null,
-            $track->forced ? "forced" : null,
-        ]));
-    }
+        $content = $console->readStdin();
+        if ($track !== null) {
+            $path = tempnam(sys_get_temp_dir(), Application::NAME . "-");
+            try {
+                file_put_contents($path, $content);
 
-
-    /**
-     * @return array{Subtitle, string}|null
-     */
-    private function readMatroska(MatroskaReader $reader, string $input, Arguments $arguments, Console $console): ?array
-    {
-        $tracks = $reader->getSubtitleTracks();
-        $number = $this->readingSecondFile ? null : $arguments->positiveInt("track");
-        if ($number === null) {
-            if (!$this->readingSecondFile && $this->listTracks($input, $tracks, $console)) {
-                return null;
+                return Subtitle::loadTrack($path, $track, $this->readOptions);
+            } finally {
+                @unlink($path);
             }
-            if (count($tracks) !== 1) {
-                self::fail($tracks === [] ? "The file has no subtitle track." : "The file has " . count($tracks) .
-                           " subtitle tracks. Pass --track with one of them:\n" . implode("\n", array_map(
-                               fn (MatroskaTrack $track): string => "  $track->number: " . self::describeTrack($track),
-                               $tracks
-                           )));
-            }
-            $number = $tracks[0]->number;
+        }
+        if ($this->fromFormat === Format::VobSub) {
+            self::fail("VobSub needs the path of the .idx file. Standard input does not work.");
         }
 
-        $subtitle            = $reader->extract($number);
-        $this->fromContainer = true;
-        $codecs              = array_column(array_map(get_object_vars(...), $tracks), "codecId", "number");
-
-        return [$subtitle, self::MATROSKA_FORMATS[$codecs[$number]]];
-    }
-
-
-    private static function isMatroskaFile(string $path): bool
-    {
-        $handle = @fopen($path, "rb");
-        if ($handle === false) {
-            return false;
-        }
-        $magic = fread($handle, 4);
-        fclose($handle);
-
-        return $magic === self::EBML_MAGIC;
-    }
-
-
-    protected function readFile(string $path, Console $console): string
-    {
-        if ($path === self::DASH) {
-            return $console->readStdin();
-        }
-        if (!is_file($path)) {
-            self::fail("The file does not exist.");
-        }
-        $content = @file_get_contents($path);
-
-        return $content === false ? self::fail("Cannot read the file.") : $content;
-    }
-
-
-    private function inputFormat(string $input, string $content): string
-    {
-        if ($this->fromFormat !== null) {
-            return $this->fromFormat;
-        }
-
-        $byExtension     = $input === self::DASH ? null : FormatRegistry::forPath($input);
-        $extensionParser = $byExtension === null ? null : FormatRegistry::parserClass($byExtension);
-        $detectedParser  = FormatDetector::detect($content);
-
-        if ($detectedParser !== null) {
-            // Detection returns TtmlParser for an iTT file. IttParser reads the same cues and keeps the iTT timing.
-            if ($extensionParser !== null && is_subclass_of($extensionParser, $detectedParser)) {
-                return $byExtension;
-            }
-
-            return FormatRegistry::forParser($detectedParser) ?? self::fail("No format has the parser $detectedParser.");
-        }
-        if ($extensionParser !== null) {
-            return $byExtension;
-        }
-
-        return self::fail("The format is unknown." . ($this->hasFormatOptions() ? " Pass --from." : ""));
-    }
-
-
-    private function createParser(string $format, string $content): SubtitleParser
-    {
-        $class = FormatRegistry::parserClass($format);
-
-        return match (true) {
-            $class === MicroDvdParser::class => new MicroDvdParser($this->fps),
-            $class === VobSubParser::class   => new VobSubParser($content),
-            $this->wordTimestamps && defined("$class::OPTION_WORD_TIMESTAMPS")
-                                             => new $class([$class::OPTION_WORD_TIMESTAMPS => true]),
-            default                          => new $class(),
-        };
+        return $this->fromFormat === null
+            ? Subtitle::fromStringAutoDetectFormat($content, $this->readOptions)
+            : Subtitle::fromString($content, $this->fromFormat, $this->readOptions);
     }
 }

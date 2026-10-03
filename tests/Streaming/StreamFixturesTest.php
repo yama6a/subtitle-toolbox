@@ -1,26 +1,36 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Streaming;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 use Throwable;
 
 class StreamFixturesTest extends TestCase
 {
-    private const OPTION_SETS = [
-        "default"    => [],
-        "CRLF"       => [SubtitleFormatter::OPTION_LINE_ENDING => "\r\n"],
-        "no BOM"     => [SubtitleFormatter::OPTION_BOM => false],
-        "strip tags" => [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS],
-    ];
+    /**
+     * @return array<string, WriteOptions>
+     */
+    private static function optionSets(): array
+    {
+        return [
+            "default"    => new WriteOptions(),
+            "CRLF"       => new WriteOptions(lineEnding: LineEnding::Crlf),
+            "no BOM"     => new WriteOptions(bom: false),
+            "strip tags" => new WriteOptions(stripTags: true),
+        ];
+    }
 
 
     public static function subRipFiles(): array
@@ -53,7 +63,7 @@ class StreamFixturesTest extends TestCase
         $content = file_get_contents($path);
 
         $this->assertSameResult(
-            fn (): array => [(new SubRipParser())->parse($content)->getCues()],
+            fn (): array => [(new SubRipParser())->parse($content, new ReadOptions())->getCues()],
             fn (): array => [iterator_to_array((new SubRipStreamReader())->read($path), false)]
         );
     }
@@ -67,7 +77,7 @@ class StreamFixturesTest extends TestCase
 
         $this->assertSameResult(
             function () use ($content): array {
-                $subtitle = (new WebVttParser())->parse($content);
+                $subtitle = (new WebVttParser())->parse($content, new ReadOptions());
 
                 return [$subtitle->getCues(), $subtitle->getFormatData(WebVttParser::FORMAT)];
             },
@@ -79,9 +89,9 @@ class StreamFixturesTest extends TestCase
     #[DataProvider("validSubRipFiles")]
     public function testSubRipWriterWritesTheBytesOfSubRipFormatter(string $path): void
     {
-        $subtitle = (new SubRipParser())->parse(file_get_contents($path));
+        $subtitle = (new SubRipParser())->parse(file_get_contents($path), new ReadOptions());
 
-        foreach (self::OPTION_SETS as $name => $options) {
+        foreach (self::optionSets() as $name => $options) {
             $stream = fopen("php://memory", "w+b");
             $writer = new SubRipStreamWriter($stream, $options);
             foreach ($subtitle->getCues() as $cue) {
@@ -97,14 +107,14 @@ class StreamFixturesTest extends TestCase
     #[DataProvider("validWebVttFiles")]
     public function testWebVttWriterWritesTheBytesOfWebVttFormatter(string $path): void
     {
-        $parsed   = (new WebVttParser())->parse(file_get_contents($path));
+        $parsed   = (new WebVttParser())->parse(file_get_contents($path), new ReadOptions());
         $header   = $parsed->getFormatData(WebVttParser::FORMAT);
         $subtitle = (new Subtitle())->setFormatData(WebVttParser::FORMAT, $header);
         foreach ($parsed->getCues() as $cue) {
             $subtitle->addCue($cue, false);
         }
 
-        foreach (self::OPTION_SETS as $name => $options) {
+        foreach (self::optionSets() as $name => $options) {
             $stream = fopen("php://memory", "w+b");
             $writer = new WebVttStreamWriter($stream, $header, $options);
             foreach ($subtitle->getCues() as $cue) {
@@ -163,7 +173,7 @@ class StreamFixturesTest extends TestCase
     private static function parses(SubRipParser|WebVttParser $parser, string $path): bool
     {
         try {
-            $parser->parse(file_get_contents($path));
+            $parser->parse(file_get_contents($path), new ReadOptions());
         } catch (Throwable) {
             return false;
         }

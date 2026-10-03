@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\DualSubtitle;
 use SubtitleToolbox\DualSubtitleOptions;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 class DualCommand extends WriteCommand
@@ -37,8 +40,8 @@ class DualCommand extends WriteCommand
         return "stack joins each secondary cue with the primary cue that it overlaps most, below its lines.\n" .
                "top-bottom keeps both cues and moves the secondary one to the top. SubRip, WebVTT, ASS and TTML write\n" .
                "the position. The output takes the format of the primary file unless --to or the --output extension sets\n" .
-               "it. Without --output or --output-dir, the result goes to standard output. --from and --track apply to the\n" .
-               "primary file.";
+               "it. Without --output, --output-dir or --in-place, the result goes to standard output. --from and --track\n" .
+               "apply to the primary file, --from2 and --track2 to the secondary file. --in-place overwrites the primary file.";
     }
 
 
@@ -53,15 +56,9 @@ class DualCommand extends WriteCommand
     }
 
 
-    protected function allowsInPlace(): bool
-    {
-        return false;
-    }
-
-
     protected function inputOptions(): array
     {
-        return array_values(array_filter(parent::inputOptions(), fn (Option $option): bool => $option->name !== "keep-going"));
+        return [...parent::inputOptions(), ...self::secondFileOptions("secondary")];
     }
 
 
@@ -72,6 +69,12 @@ class DualCommand extends WriteCommand
         }
 
         return [$arguments->positionals[0]];
+    }
+
+
+    protected function readPaths(array $inputs, Arguments $arguments): array
+    {
+        return [...$inputs, $arguments->positionals[1]];
     }
 
 
@@ -104,15 +107,10 @@ class DualCommand extends WriteCommand
     }
 
 
-    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
-        $secondary = $this->readSecondFile($arguments->positionals[1], $arguments, $console);
+        $secondary = $this->loadSecondFile($arguments->positionals[1], $arguments);
 
         parent::process($input, DualSubtitle::merge($subtitle, $secondary, $this->dualOptions), $format, $arguments, $console);
-    }
-
-
-    protected function transform(Subtitle $subtitle, Arguments $arguments): void
-    {
     }
 }

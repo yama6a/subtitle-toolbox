@@ -1,18 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\PodcastChaptersParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\WriteOptions;
 
 class PodcastChaptersFormatter extends SubtitleFormatter
 {
     private const VERSION = "1.2.0";
 
 
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
         $stored = $subtitle->getFormatData(PodcastChaptersParser::FORMAT_DATA_KEY);
         $data   = ["version" => $stored["version"] ?? self::VERSION];

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Ocr;
 
 require_once __DIR__ . "/TrueTypeFont.php";

@@ -1,18 +1,22 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Fixing;
 
 use GlyphOcr\GlyphDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Parsers\PgsParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 require_once __DIR__ . "/../files/fixing/generate.php";
 
@@ -41,7 +45,7 @@ class CommonErrorFixerTest extends TestCase
     private static function fixLines(array $lines, ?CommonErrorOptions $options = null): array
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, $lines));
-        $fixes    = CommonErrorFixer::fix($subtitle, $options ?? new CommonErrorOptions(language: "en"));
+        $fixes    = CommonErrorFixer::apply($subtitle, $options ?? new CommonErrorOptions(language: "en"))->fixes;
 
         return [array_values($subtitle->getCues()[0]->getLines()), $fixes];
     }
@@ -142,25 +146,25 @@ class CommonErrorFixerTest extends TestCase
     public function testFixesTheFileAsTheGoldenFile(string $input, string $language, ?string $list, string $golden): void
     {
         $content  = file_get_contents(self::FILES . $input);
-        $subtitle = Subtitle::parse($content);
+        $subtitle = Subtitle::fromStringAutoDetectFormat($content);
         $options  = new CommonErrorOptions(language: $language,
                                            replaceList: $list === null ? null : OcrReplaceList::fromSubtitleEditXml(file_get_contents($list)));
         $lineEnd  = str_contains($content, "\r\n") ? "\r\n" : "\n";
 
-        $fixes = CommonErrorFixer::fix($subtitle, $options);
+        $fixes = CommonErrorFixer::apply($subtitle, $options)->fixes;
 
         $this->assertStringEqualsFile(self::FILES . $golden,
-                                      $subtitle->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_LINE_ENDING => $lineEnd]));
+                                      $subtitle->toString(Format::SubRip, new WriteOptions(lineEnding: LineEnding::from($lineEnd))));
         $this->assertNotEmpty($fixes);
-        $this->assertSame([], CommonErrorFixer::fix(Subtitle::parse(file_get_contents(self::FILES . $golden)), $options));
+        $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . $golden)), $options)->fixes);
     }
 
 
     public function testListsEachFixOfTheWebFileWithTheTextBeforeAndAfter(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FILES . "fixing/web-errors.srt"));
+        $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "fixing/web-errors.srt"));
 
-        $fixes = CommonErrorFixer::fix($subtitle, new CommonErrorOptions(language: "en"));
+        $fixes = CommonErrorFixer::apply($subtitle, new CommonErrorOptions(language: "en"))->fixes;
 
         $this->assertSame([
             [0, "doubleSpaces"], [0, "spaceBeforePunctuation"], [1, "missingSpaceAfterPunctuation"], [2, "unbalancedTags"],
@@ -180,7 +184,7 @@ class CommonErrorFixerTest extends TestCase
             $sup = file_get_contents(self::FILES . "fixing/ocr-$language.sup");
             $this->assertSame($sup, ocrFixture($language));
 
-            $this->assertStringEqualsFile(self::FILES . "fixing/ocr-$language.ocr.srt", ocrWithErrors((new PgsParser())->parse($sup)));
+            $this->assertStringEqualsFile(self::FILES . "fixing/ocr-$language.ocr.srt", ocrWithErrors((new PgsParser())->parse($sup, new ReadOptions())));
         }
         foreach (imageFixtures() as $name => $subtitle) {
             $this->assertStringEqualsFile(self::FILES . "fixing/$name", ocrWithErrors($subtitle));
@@ -190,11 +194,11 @@ class CommonErrorFixerTest extends TestCase
 
     public function testFixesTheOcrTextOfImageCuesAndKeepsTheImages(): void
     {
-        $subtitle = (new PgsParser())->parse(file_get_contents(self::FILES . "fixing/ocr-fr.sup"));
-        $this->assertSame([], CommonErrorFixer::fix($subtitle, new CommonErrorOptions(language: "fr")));
+        $subtitle = (new PgsParser())->parse(file_get_contents(self::FILES . "fixing/ocr-fr.sup"), new ReadOptions());
+        $this->assertSame([], CommonErrorFixer::apply($subtitle, new CommonErrorOptions(language: "fr"))->fixes);
 
         $subtitle->recognizeText(new GlyphOcrEngine(GlyphDatabase::latin(), ["lineContext" => false]));
-        $fixes = CommonErrorFixer::fix($subtitle, new CommonErrorOptions(language: "fr"));
+        $fixes = CommonErrorFixer::apply($subtitle, new CommonErrorOptions(language: "fr"))->fixes;
 
         $this->assertSame(["ll pleut. lls restent à la maison.", "Il pleut. Ils restent à la maison."],
                           [$fixes[0]->before, $fixes[0]->after]);
@@ -206,23 +210,23 @@ class CommonErrorFixerTest extends TestCase
     public function testDryRunListsTheFixesAndChangesNothing(): void
     {
         $content  = file_get_contents(self::FILES . "fixing/web-errors.srt");
-        $subtitle = Subtitle::parse($content);
-        $before   = $subtitle->format(SubRipFormatter::class);
+        $subtitle = Subtitle::fromStringAutoDetectFormat($content);
+        $before   = $subtitle->toString(Format::SubRip);
 
-        $dryRun = CommonErrorFixer::fix($subtitle, new CommonErrorOptions(language: "en", dryRun: true));
+        $dryRun = CommonErrorFixer::apply($subtitle, new CommonErrorOptions(language: "en", dryRun: true))->fixes;
 
-        $this->assertSame($before, $subtitle->format(SubRipFormatter::class));
-        $this->assertEquals(CommonErrorFixer::fix(Subtitle::parse($content), new CommonErrorOptions(language: "en")), $dryRun);
+        $this->assertSame($before, $subtitle->toString(Format::SubRip));
+        $this->assertEquals(CommonErrorFixer::apply(Subtitle::fromStringAutoDetectFormat($content), new CommonErrorOptions(language: "en"))->fixes, $dryRun);
     }
 
 
     public function testAllFixesOffChangesNothing(): void
     {
         $content  = file_get_contents(self::FILES . "fixing/ocr-en.ocr.srt");
-        $subtitle = Subtitle::parse($content);
+        $subtitle = Subtitle::fromStringAutoDetectFormat($content);
 
-        $this->assertSame([], CommonErrorFixer::fix($subtitle, new CommonErrorOptions("en", ...self::ALL_OFF)));
-        $this->assertSame($content, $subtitle->format(SubRipFormatter::class));
+        $this->assertSame([], CommonErrorFixer::apply($subtitle, new CommonErrorOptions("en", ...self::ALL_OFF))->fixes);
+        $this->assertSame($content, $subtitle->toString(Format::SubRip));
     }
 
 
@@ -230,7 +234,7 @@ class CommonErrorFixerTest extends TestCase
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "lt is l."))->setMetadata(Subtitle::METADATA_LANGUAGE, "en-GB");
 
-        CommonErrorFixer::fix($subtitle);
+        CommonErrorFixer::apply($subtitle, new CommonErrorOptions());
 
         $this->assertSame("It is I.", $subtitle->getCues()[0]->getText());
         $this->assertSame([], self::fixLines(["lt is l."], new CommonErrorOptions(language: "nl"))[1]);
@@ -267,7 +271,7 @@ class CommonErrorFixerTest extends TestCase
                                     ->addCue(new SubtitleCue(5, 6, "lt's me"));
         $options  = new CommonErrorOptions(language: "en", replaceList: new OcrReplaceList(wholeLines: ["Subtitles by Jane" => ""]));
 
-        $fixes = CommonErrorFixer::fix($subtitle, $options);
+        $fixes = CommonErrorFixer::apply($subtitle, $options)->fixes;
 
         $this->assertSame([[1, "replaceList", "<i></i>"], [1, "emptyTags", ""], [2, "ocrLowercaseL", "It's me"]],
                           array_map(fn (AppliedFix $fix): array => [$fix->cueIndex, $fix->rule, $fix->after], $fixes));
@@ -322,7 +326,7 @@ class CommonErrorFixerTest extends TestCase
                                     ->addCue(new SubtitleCue(5, 6, "Ask mothen"));
         $options  = new CommonErrorOptions(language: "en", replaceList: new OcrReplaceList(endLines: [" mothen" => " mother."]));
 
-        CommonErrorFixer::fix($subtitle, $options);
+        CommonErrorFixer::apply($subtitle, $options);
 
         $this->assertSame(["I asked mothen", "<i>and</i> she said", "Ask mother."],
                           array_map(fn (SubtitleCue $cue): string => $cue->getText(), $subtitle->getCues()));
@@ -333,7 +337,7 @@ class CommonErrorFixerTest extends TestCase
     {
         $subtitle = (new Subtitle())->addCue((new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(1, 2)));
 
-        $this->assertSame([], CommonErrorFixer::fix($subtitle));
+        $this->assertSame([], CommonErrorFixer::apply($subtitle, new CommonErrorOptions())->fixes);
         $this->assertCount(1, $subtitle->getCues());
     }
 }

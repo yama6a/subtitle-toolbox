@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Formatters\AssFormatter;
@@ -59,10 +61,13 @@ use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Parsers\YouTubeChaptersParser;
 use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 
+/**
+ * @internal The table behind Format. Use Format in place of it.
+ */
 class FormatRegistry
 {
     /**
-     * Format name => parser class, formatter class and file extensions. Null means that the library cannot read or
+     * Format value => parser class, formatter class and file extensions. Null means that the library cannot read or
      * write the format. The first extension is the one for new files. When two formats list an extension, the
      * earlier format owns it, so `.sub` is MicroDVD, `.json` is the library JSON and `.txt` is plain text.
      */
@@ -103,32 +108,12 @@ class FormatRegistry
     ];
 
 
-    /**
-     * @return list<string>
-     */
-    public static function names(): array
-    {
-        return array_keys(self::FORMATS);
-    }
-
-
-    /**
-     * Returns the format name for a name or a file extension such as "SRT" or ".ssa", or null for an unknown one.
-     */
-    public static function find(string $nameOrExtension): ?string
-    {
-        $key = strtolower(ltrim($nameOrExtension, "."));
-
-        return isset(self::FORMATS[$key]) ? $key : self::forExtension($key);
-    }
-
-
-    public static function forExtension(string $extension): ?string
+    public static function forExtension(string $extension): ?Format
     {
         $extension = strtolower(ltrim($extension, "."));
         foreach (self::FORMATS as $name => [, , $extensions]) {
             if (in_array($extension, $extensions, true)) {
-                return $name;
+                return Format::from($name);
             }
         }
 
@@ -136,7 +121,7 @@ class FormatRegistry
     }
 
 
-    public static function forPath(string $path): ?string
+    public static function forPath(string $path): ?Format
     {
         $extension = pathinfo($path, PATHINFO_EXTENSION);
 
@@ -144,42 +129,30 @@ class FormatRegistry
     }
 
 
-    public static function forParser(string $parserClass): ?string
-    {
-        foreach (self::FORMATS as $name => [$parser]) {
-            if ($parser === $parserClass) {
-                return $name;
-            }
-        }
-
-        return null;
-    }
-
-
     /**
      * @return class-string<Parsers\SubtitleParser>|null
      */
-    public static function parserClass(string $name): ?string
+    public static function parserClass(Format $format): ?string
     {
-        return self::FORMATS[$name][0] ?? null;
+        return self::FORMATS[$format->value][0];
     }
 
 
     /**
      * @return class-string<Formatters\SubtitleFormatter>|null
      */
-    public static function formatterClass(string $name): ?string
+    public static function formatterClass(Format $format): ?string
     {
-        return self::FORMATS[$name][1] ?? null;
+        return self::FORMATS[$format->value][1];
     }
 
 
     /**
      * @return list<string>
      */
-    public static function extensions(string $name): array
+    public static function extensions(Format $format): array
     {
-        return self::FORMATS[$name][2] ?? [];
+        return self::FORMATS[$format->value][2];
     }
 
 

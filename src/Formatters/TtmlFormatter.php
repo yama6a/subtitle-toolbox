@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use DOMDocument;
@@ -7,11 +9,12 @@ use DOMElement;
 use DOMNode;
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
 class TtmlFormatter extends SubtitleFormatter
 {
@@ -52,7 +55,7 @@ class TtmlFormatter extends SubtitleFormatter
     private array $forcedRegions;
 
 
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
         $fileData        = $subtitle->getFormatData(TtmlParser::FORMAT);
         $this->namespace = ($fileData["namespace"] ?? "") ?: TtmlParser::NAMESPACE_TTML;
@@ -189,15 +192,15 @@ class TtmlFormatter extends SubtitleFormatter
     }
 
 
-    private function formatParagraph(SubtitleCue $cue, array $options, bool $isForeignSubtitle): string
+    private function formatParagraph(SubtitleCue $cue, WriteOptions $options, bool $isForeignSubtitle): string
     {
         $attributes = "";
         $identifier = $cue->getIdentifier();
         if ($identifier !== null && preg_match("/^[A-Za-z_][\w.-]*$/", $identifier)) {
             $attributes .= $this->formatAttribute("xml:id", $identifier);
         }
-        $attributes .= $this->formatAttribute("begin", $this->formatTime($cue->getStart()));
-        $attributes .= $this->formatAttribute("end", $this->formatTime($cue->getEnd()));
+        $attributes .= $this->formatAttribute("begin", sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getStart())));
+        $attributes .= $this->formatAttribute("end", sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getEnd())));
 
         $cueData     = $cue->getFormatData(TtmlParser::FORMAT);
         $stored      = $cueData["attributes"] ?? [];
@@ -217,7 +220,7 @@ class TtmlFormatter extends SubtitleFormatter
         }
 
         $text = implode(self::NL, $cue->getLines());
-        if ((bool) (Options::flag($options, parent::OPTION_STRIP_ALL_XML_TAGS) ?? false)) {
+        if ($options->stripTags) {
             return "<p$attributes>" . $this->formatText(Markup::stripAllTags($text)) . "</p>";
         }
 
@@ -516,19 +519,5 @@ class TtmlFormatter extends SubtitleFormatter
     private function formatAttribute(string $name, string $value): string
     {
         return " $name=\"" . htmlspecialchars($value, ENT_XML1 | ENT_COMPAT, "UTF-8") . "\"";
-    }
-
-
-    private function formatTime(float $seconds): string
-    {
-        $millis = (int) round($seconds * 1000);
-
-        return sprintf(
-            "%02d:%02d:%02d.%03d",
-            intdiv($millis, 3600000),
-            intdiv($millis, 60000) % 60,
-            intdiv($millis, 1000) % 60,
-            $millis % 1000
-        );
     }
 }

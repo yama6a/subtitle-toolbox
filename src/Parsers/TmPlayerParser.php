@@ -1,8 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
@@ -11,27 +12,10 @@ use SubtitleToolbox\SubtitleCue;
 
 class TmPlayerParser extends SubtitleParser
 {
-    public const DEFAULT_LAST_CUE_DURATION = 4;
-
     private const LINE_REGEX = '/^(\d+):([0-5]\d):([0-5]\d)(?:,(\d+))?[:=](.*)$/';
 
-    private float $lastCueDuration;
 
-
-    /**
-     * Creates a parser that ends the last cue the given number of seconds after its start.
-     */
-    public function __construct(float $lastCueDuration = self::DEFAULT_LAST_CUE_DURATION)
-    {
-        if ($lastCueDuration < 0) {
-            throw new InvalidArgumentException("The last cue duration must not be negative!");
-        }
-
-        $this->lastCueDuration = $lastCueDuration;
-    }
-
-
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
@@ -71,7 +55,7 @@ class TmPlayerParser extends SubtitleParser
                 continue;
             }
 
-            $end = isset($entries[$index + 1]) ? $entries[$index + 1]["time"] : $entry["time"] + $this->lastCueDuration;
+            $end = isset($entries[$index + 1]) ? $entries[$index + 1]["time"] : $entry["time"] + $this->options->lastCueDuration;
             $subtitle->addCue(new SubtitleCue($entry["time"], max($end, $entry["time"]), $entry["lines"]), false);
         }
 

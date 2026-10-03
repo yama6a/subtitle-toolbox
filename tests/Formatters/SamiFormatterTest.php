@@ -1,12 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\SamiParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class SamiFormatterTest extends TestCase
 {
@@ -30,19 +35,19 @@ class SamiFormatterTest extends TestCase
     #[DataProvider("realFiles")]
     public function testRealFileRoundTrips(string $file, ?string $class): void
     {
-        $subtitle = (new SamiParser($class))->parse(file_get_contents(self::DIR . $file));
-        $output   = $subtitle->format(SamiFormatter::class);
-        $reparsed = Subtitle::parse($output, SamiParser::class);
+        $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . $file), new ReadOptions(language: $class));
+        $output   = $subtitle->toString(Format::Sami);
+        $reparsed = Subtitle::fromString($output, Format::Sami);
 
         $this->assertSame($this->describe($subtitle), $this->describe($reparsed));
         $this->assertSame($subtitle->getAllMetadata(), $reparsed->getAllMetadata());
-        $this->assertSame($output, $reparsed->format(SamiFormatter::class));
+        $this->assertSame($output, $reparsed->toString(Format::Sami));
     }
 
 
     public function testWritesTheChosenClassOnly(): void
     {
-        $output = (new SamiParser("FRCC"))->parse(file_get_contents(self::DIR . "multi_language.smi"))->format(SamiFormatter::class);
+        $output = (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(language: "FRCC"))->toString(Format::Sami);
 
         $this->assertSame(
             "<SAMI>\n<HEAD>\n<TITLE>Bakery Tour</TITLE>\n<STYLE TYPE=\"text/css\">\n<!--\n" .
@@ -75,7 +80,7 @@ class SamiFormatterTest extends TestCase
             "<SYNC Start=5000><P Class=SUBTTL>&nbsp;\n" .
             "<SYNC Start=6000><P Class=SUBTTL>&nbsp;\n" .
             "</BODY>\n</SAMI>\n",
-            $subtitle->format(SamiFormatter::class)
+            $subtitle->toString(Format::Sami)
         );
     }
 
@@ -87,37 +92,37 @@ class SamiFormatterTest extends TestCase
             ->setMetadata(Subtitle::METADATA_TITLE, "Rain & <Sun>")
             ->addCue(new SubtitleCue(0, 1, "비가 옵니다"));
 
-        $output = $subtitle->format(SamiFormatter::class);
+        $output = $subtitle->toString(Format::Sami);
 
         $this->assertStringContainsString("<TITLE>Rain &amp; &lt;Sun&gt;</TITLE>\n", $output);
         $this->assertStringContainsString("\n.KOKRCC { Name: ko-KR; lang: ko-KR; }\n", $output);
         $this->assertStringContainsString("<SYNC Start=0><P Class=KOKRCC>비가 옵니다\n", $output);
 
-        $reparsed = Subtitle::parse($output, SamiParser::class);
+        $reparsed = Subtitle::fromString($output, Format::Sami);
         $this->assertSame(["title" => "Rain & <Sun>", "language" => "ko-KR"], $reparsed->getAllMetadata());
     }
 
 
     public function testChangedCueIsWrittenFromCoreMarkup(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "pysubs2_source_id.smi"), SamiParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "pysubs2_source_id.smi"), Format::Sami);
         $cues     = $subtitle->getCues();
         end($cues)->setLines(["<i>End</i> of the report"]);
 
         $this->assertStringContainsString(
-            "<SYNC Start=73000><P Class=ENUSCC><i>End</i> of the report\n<SYNC Start=83000><P Class=ENUSCC>&nbsp;\n",
-            $subtitle->format(SamiFormatter::class)
+            "<SYNC Start=73000><P Class=ENUSCC><i>End</i> of the report\n<SYNC Start=78000><P Class=ENUSCC>&nbsp;\n",
+            $subtitle->toString(Format::Sami)
         );
     }
 
 
     public function testStripAllXmlTagsOption(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "subsrt_sample.smi"), SamiParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "subsrt_sample.smi"), Format::Sami);
 
         $this->assertStringContainsString(
             "<SYNC Start=335453><P Class=KR>출발! 출발!\n",
-            $subtitle->format(SamiFormatter::class, [SamiFormatter::OPTION_STRIP_ALL_XML_TAGS])
+            $subtitle->toString(Format::Sami, new WriteOptions(stripTags: true))
         );
     }
 
@@ -129,7 +134,7 @@ class SamiFormatterTest extends TestCase
         $this->assertSame(
             "<SAMI>\n<HEAD>\n<STYLE TYPE=\"text/css\"><!-- P { color: white; } --></STYLE>\n</HEAD>\n<BODY>\n" .
             "<SYNC Start=0><P>one\n<SYNC Start=900><P>&nbsp;\n</BODY>\n</SAMI>\n",
-            Subtitle::parse($raw, SamiParser::class)->format(SamiFormatter::class)
+            Subtitle::fromString($raw, Format::Sami)->toString(Format::Sami)
         );
     }
 

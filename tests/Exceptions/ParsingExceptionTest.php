@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Exceptions;
 
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -9,6 +11,7 @@ use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\SubtitleParser;
 use SubtitleToolbox\Parsers\SubViewerParser;
+use SubtitleToolbox\ReadOptions;
 
 class ParsingExceptionTest extends TestCase
 {
@@ -51,7 +54,7 @@ class ParsingExceptionTest extends TestCase
     public static function parsersThatKnowTheLine(): array
     {
         return [
-            "MicroDVD line without frames" => [new MicroDvdParser(25), "{0}{25}first\n\nsecond\n", 3],
+            "MicroDVD line without frames" => [new MicroDvdParser(), "{0}{25}first\n\nsecond\n", 3, new ReadOptions(fps: 25)],
             "ASS event with few fields"    => [new AssParser(), "[Events]\nFormat: Layer, Start, End, Text\n\nDialogue: 0\n", 4],
             "ASS event format without End" => [new AssParser(), "[Events]\nFormat: Start, Text\nDialogue: 0:00:01.00,text\n", 3],
             "MPSub unknown line"           => [new MpSubParser(), "FORMAT=TIME\n\n0 1\nfirst\n\nsecond\n", 6],
@@ -66,10 +69,10 @@ class ParsingExceptionTest extends TestCase
 
 
     #[DataProvider("parsersThatKnowTheLine")]
-    public function testParsersPassTheLineNumber(SubtitleParser $parser, string $content, int $lineNumber): void
+    public function testParsersPassTheLineNumber(SubtitleParser $parser, string $content, int $lineNumber, ReadOptions $options = new ReadOptions()): void
     {
         try {
-            $parser->parse($content);
+            $parser->parse($content, $options);
             $this->fail("The parser did not throw.");
         } catch (ParsingException $exception) {
             $this->assertSame($lineNumber, $exception->getLineNumber());

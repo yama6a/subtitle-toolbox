@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
@@ -11,16 +13,11 @@ class AwsTranscribeParser extends SubtitleParser
 
     public const FORMAT_DATA_KEY = "aws-transcribe";
 
-    public const OPTION_WORD_TIMESTAMPS = "OPTION_WORD_TIMESTAMPS";
-
-    /** Writes the speaker_label of each cue as a <v> tag at the start of its cue, for example <v spk_0>. */
-    public const OPTION_SPEAKER_VOICES = "OPTION_SPEAKER_VOICES";
-
 
     /**
      * Reads the JSON transcript of an Amazon Transcribe batch job, one cue per audio segment, else cues grouped from the words.
      */
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $data           = $this->decodeObject($rawSubtitle);

@@ -1,15 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Sync;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Subtitle;
 
 final class ReferenceSyncOptions
 {
     /**
-     * Creates the search settings: the offset range in seconds, the frame-rate scale search, and the split search.
+     * Creates the search settings: the reference whose cue times the target gets, the offset range in seconds, the
+     * frame-rate scale search, and the split search.
      */
     public function __construct(
+        public readonly Subtitle $reference,
         public readonly float $minOffset = -60,
         public readonly float $maxOffset = 60,
         public readonly bool $searchScale = true,

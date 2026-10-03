@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
@@ -11,17 +13,12 @@ class GoogleSpeechParser extends SubtitleParser
 
     public const FORMAT_DATA_KEY = "google-speech";
 
-    public const OPTION_WORD_TIMESTAMPS = "OPTION_WORD_TIMESTAMPS";
-
-    /** Writes the speakerLabel or speakerTag of each cue as a <v> tag at the start of its cue, for example <v 1>. */
-    public const OPTION_SPEAKER_VOICES = "OPTION_SPEAKER_VOICES";
-
 
     /**
      * Reads the JSON response of Google Cloud Speech-to-Text V1 and V2, one cue per result. With speaker
      * diarization, it groups the words of the last result into cues.
      */
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $data           = $this->decodeObject($rawSubtitle);

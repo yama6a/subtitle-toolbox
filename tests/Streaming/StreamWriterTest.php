@@ -1,11 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Streaming;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
+use SubtitleToolbox\Formatters\Options\CsvOptions;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class StreamWriterTest extends TestCase
 {
@@ -63,10 +67,7 @@ class StreamWriterTest extends TestCase
 
     public function testWritesCrlfWithoutBom(): void
     {
-        $writer = new SubRipStreamWriter($this->path, [
-            SubtitleFormatter::OPTION_LINE_ENDING => "\r\n",
-            SubtitleFormatter::OPTION_BOM         => false,
-        ]);
+        $writer = new SubRipStreamWriter($this->path, new WriteOptions(lineEnding: LineEnding::Crlf, bom: false));
         $writer->write(new SubtitleCue(1, 2, "A"));
         $writer->write(new SubtitleCue(3, 4.5, "B"));
         $writer->close();
@@ -99,10 +100,10 @@ class StreamWriterTest extends TestCase
     }
 
 
-    public function testRejectsAnInvalidOptionBeforeItWrites(): void
+    public function testRejectsOptionsOfAnotherFormatBeforeItWrites(): void
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new SubRipStreamWriter($this->path, [SubtitleFormatter::OPTION_LINE_ENDING => "\r"]);
+        new SubRipStreamWriter($this->path, new WriteOptions(format: new CsvOptions()));
     }
 }

@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Speakers;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\HearingImpairedOptions;
+use SubtitleToolbox\HearingImpairedRemover;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -42,11 +44,37 @@ final class SpeakerLabels
 
 
     /**
-     * Renames the speakers of the <v> tags, for example ["SPEAKER_00" => "Anna"]. Other speakers stay.
-     *
+     * Turns speaker labels into <v> tags, renames the speakers and then writes them in the style of $options, in this
+     * order. Each step runs only when $options asks for it.
+     */
+    public static function apply(Subtitle $subtitle, SpeakerLabelOptions $options): SpeakerLabelReport
+    {
+        $before = array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $subtitle->getCues());
+
+        if ($options->from === SpeakerStyle::Prefix) {
+            self::fromPrefix($subtitle, $options->upperCaseOnly);
+        }
+        if ($options->rename !== []) {
+            self::rename($subtitle, $options->rename);
+        }
+        match ($options->to) {
+            SpeakerStyle::Prefix         => self::toPrefix($subtitle, $options->upperCase, $options->separator),
+            SpeakerStyle::DialogueDashes => self::toDialogueDashes($subtitle, $options->dash),
+            SpeakerStyle::Colours        => self::toColours($subtitle, $options->colours),
+            null                         => null,
+        };
+
+        $changed = array_filter($subtitle->getCues(), fn (SubtitleCue $cue, int $index): bool =>
+            $cue->getLines() !== ($before[$index] ?? null), ARRAY_FILTER_USE_BOTH);
+
+        return new SpeakerLabelReport(count($changed));
+    }
+
+
+    /**
      * @param array<string, string> $names
      */
-    public static function rename(Subtitle $subtitle, array $names): Subtitle
+    private static function rename(Subtitle $subtitle, array $names): void
     {
         foreach ($subtitle->getCues() as $cue) {
             $cue->setLinesByArray(array_map(fn (string $line): string => preg_replace_callback(
@@ -59,17 +87,15 @@ final class SpeakerLabels
                 $line
             ), $cue->getLines()));
         }
-
-        return $subtitle;
     }
 
 
     /**
      * Replaces each <v> tag with the speaker name and $separator before the first line of the speaker.
      */
-    public static function toPrefix(Subtitle $subtitle, bool $upperCase = true, string $separator = ": "): Subtitle
+    private static function toPrefix(Subtitle $subtitle, bool $upperCase, string $separator): void
     {
-        return self::convert($subtitle, function (array $lines) use ($upperCase, $separator): array {
+        self::convert($subtitle, function (array $lines) use ($upperCase, $separator): array {
             $result = [];
             foreach ($lines as [$speaker, $line, $startsSpeaker]) {
                 $name     = $speaker === null ? "" : Markup::escapeText($upperCase ? self::changeCase($speaker, "upper") : $speaker);
@@ -84,9 +110,9 @@ final class SpeakerLabels
     /**
      * Replaces the <v> tags with $dash before the first line of each speaker, in cues with two or more speakers.
      */
-    public static function toDialogueDashes(Subtitle $subtitle, string $dash = "- "): Subtitle
+    private static function toDialogueDashes(Subtitle $subtitle, string $dash): void
     {
-        return self::convert($subtitle, function (array $lines) use ($dash): array {
+        self::convert($subtitle, function (array $lines) use ($dash): array {
             $speakers = count(array_filter(array_column($lines, 2)));
             $result   = [];
             foreach ($lines as [, $line, $startsSpeaker]) {
@@ -105,21 +131,14 @@ final class SpeakerLabels
      *
      * @param list<string> $colours
      */
-    public static function toColours(Subtitle $subtitle, array $colours = self::BBC_COLOURS): Subtitle
+    private static function toColours(Subtitle $subtitle, array $colours): void
     {
-        $colours = array_values($colours);
-        $valid   = array_filter($colours, fn (mixed $colour): bool =>
-            is_string($colour) && preg_match('/^#[0-9a-fA-F]{6}$/', $colour) === 1);
-        if ($colours === [] || count($valid) !== count($colours)) {
-            throw new InvalidArgumentException("The speaker colours must be a non-empty list of colours such as \"#ffff00\".");
-        }
-
         $assigned = [];
         foreach (array_keys(self::list($subtitle)) as $index => $speaker) {
             $assigned[$speaker] = strtolower($colours[$index % count($colours)]);
         }
 
-        return self::convert($subtitle, fn (array $lines): array => array_map(
+        self::convert($subtitle, fn (array $lines): array => array_map(
             fn (array $line): string => $line[0] === null ? $line[1] : "<font color=\"{$assigned[$line[0]]}\">$line[1]</font>",
             $lines
         ));
@@ -130,7 +149,7 @@ final class SpeakerLabels
      * Replaces a speaker label such as "JOHN: " at the start of a line, or after its dialogue dash, with <v John>.
      * The label rule is the speakerLabels rule of HearingImpairedOptions.
      */
-    public static function fromPrefix(Subtitle $subtitle, bool $upperCaseOnly = true): Subtitle
+    private static function fromPrefix(Subtitle $subtitle, bool $upperCaseOnly): void
     {
         $options = new HearingImpairedOptions(
             squareBrackets: false,
@@ -167,8 +186,6 @@ final class SpeakerLabels
                 $cue->setLinesByArray($result);
             }
         }
-
-        return $subtitle;
     }
 
 
@@ -177,15 +194,13 @@ final class SpeakerLabels
      *
      * @param callable(list<array{?string, string, bool}>): list<string> $fn
      */
-    private static function convert(Subtitle $subtitle, callable $fn): Subtitle
+    private static function convert(Subtitle $subtitle, callable $fn): void
     {
         foreach ($subtitle->getCues() as $cue) {
             if (preg_grep('/<\/?v[\s.>]/', $cue->getLines()) !== []) {
                 $cue->setLinesByArray($fn(self::speakerLines($cue->getLines())));
             }
         }
-
-        return $subtitle;
     }
 
 
@@ -276,7 +291,7 @@ final class SpeakerLabels
     private static function removeLabel(string $line, HearingImpairedOptions $options): array
     {
         $cue = new SubtitleCue(0, 1, $line);
-        (new Subtitle())->addCue($cue)->removeHearingImpaired($options);
+        HearingImpairedRemover::apply((new Subtitle())->addCue($cue), $options);
         $rest = $cue->getText();
         if ($rest === $line) {
             return [null, $line];

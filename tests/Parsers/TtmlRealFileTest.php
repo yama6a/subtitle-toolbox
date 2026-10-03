@@ -1,10 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\TtmlFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -53,7 +55,7 @@ class TtmlRealFileTest extends TestCase
         string $lastText,
         ?int $lastAlignment
     ): void {
-        $cues = array_values(Subtitle::parse(file_get_contents(self::DIR . $file), TtmlParser::class)->getCues());
+        $cues = array_values(Subtitle::fromString(file_get_contents(self::DIR . $file), Format::Ttml)->getCues());
 
         $this->assertCount($cueCount, $cues);
         $this->assertSame([$firstStart, $firstEnd, $firstText, $firstAlignment], $this->describeCue($cues[0]));
@@ -64,22 +66,22 @@ class TtmlRealFileTest extends TestCase
     #[DataProvider("realFileProvider")]
     public function testRealFileRoundTripKeepsCues(string $file): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . $file), TtmlParser::class);
-        $output   = $subtitle->format(TtmlFormatter::class);
-        $reparsed = Subtitle::parse($output, TtmlParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . $file), Format::Ttml);
+        $output   = $subtitle->toString(Format::Ttml);
+        $reparsed = Subtitle::fromString($output, Format::Ttml);
 
         $this->assertSame(
             array_map($this->describeCue(...), $subtitle->getCues()),
             array_map($this->describeCue(...), $reparsed->getCues())
         );
         $this->assertSame($subtitle->getAllMetadata(), $reparsed->getAllMetadata());
-        $this->assertSame($output, $reparsed->format(TtmlFormatter::class));
+        $this->assertSame($output, $reparsed->toString(Format::Ttml));
     }
 
 
     public function testRealFileSmpteDropFrameTimes(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "smpte_drop_ntsc.ttml"), TtmlParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "smpte_drop_ntsc.ttml"), Format::Ttml);
 
         $this->assertSame(
             [[57.391, 60.027], [60.06, 63.497], [597.997, 599.999], [599.999, 602.669], [3599.996, 3602.999]],
@@ -90,7 +92,7 @@ class TtmlRealFileTest extends TestCase
 
     public function testRealFileEbuTtDAgentsTitleAndNestedSpans(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "bbc_ebu_tt_d.ttml"), TtmlParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "bbc_ebu_tt_d.ttml"), Format::Ttml);
         $cues     = array_values($subtitle->getCues());
 
         $this->assertSame("Harbour weather", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
@@ -105,7 +107,7 @@ class TtmlRealFileTest extends TestCase
 
     public function testRealFileTicksAndPreservedSpace(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "mantas_netflix_ticks.dfxp"), TtmlParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "mantas_netflix_ticks.dfxp"), Format::Ttml);
 
         $this->assertSame(["region" => "bottomCenter"], $subtitle->getCues()[0]->getFormatData("ttml")["attributes"]);
         $this->assertSame(["xml:space" => "preserve"], $subtitle->getCues()[0]->getFormatData("ttml")["div"]);
@@ -114,8 +116,8 @@ class TtmlRealFileTest extends TestCase
 
     public function testRealFileDfxpNamespaceIsWrittenBack(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "w3c_dfxp_timing.dfxp"), TtmlParser::class);
-        $output   = $subtitle->format(TtmlFormatter::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "w3c_dfxp_timing.dfxp"), Format::Ttml);
+        $output   = $subtitle->toString(Format::Ttml);
 
         $this->assertStringContainsString("<tt xmlns=\"http://www.w3.org/2006/10/ttaf1\"", $output);
         $this->assertStringContainsString("<body tts:extent=\"640px 480px\" xml:id=\"b1\">", $output);
@@ -124,8 +126,8 @@ class TtmlRealFileTest extends TestCase
 
     public function testRealFileWithoutNamespaceWritesNoInvalidIdentifier(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "astisub_breaklines.ttml"), TtmlParser::class);
-        $output   = $subtitle->format(TtmlFormatter::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "astisub_breaklines.ttml"), Format::Ttml);
+        $output   = $subtitle->toString(Format::Ttml);
 
         $this->assertSame("1", $subtitle->getCues()[0]->getIdentifier());
         $this->assertStringContainsString("<p begin=\"00:00:00.000\" end=\"00:00:01.000\">First line<br/>Second line</p>", $output);

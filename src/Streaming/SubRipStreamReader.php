@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Streaming;
 
 use Generator;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\ReadOptions;
 
 class SubRipStreamReader implements CueStreamReader
 {
@@ -43,7 +46,7 @@ class SubRipStreamReader implements CueStreamReader
 
     public function read($stream): Generator
     {
-        $this->parser = (new SubRipParser())->setLenient($this->lenient);
+        $this->parser = (new SubRipParser())->useOptions(new ReadOptions(lenient: $this->lenient));
         $index        = 0;
         foreach ($this->parser->splitIntoBlocks(Streams::lines($stream)) as $lineNumber => $rawLines) {
             foreach ($this->parser->parseBlock($rawLines, $index++, $lineNumber) as $cue) {

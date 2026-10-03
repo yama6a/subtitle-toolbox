@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Timing;
 
 use SubtitleToolbox\Subtitle;
@@ -8,17 +10,16 @@ use SubtitleToolbox\SubtitleCue;
 final class ShotChangeTiming
 {
     /**
-     * Moves cue times to the shot changes in $shotChanges (seconds), closes small gaps and returns $subtitle.
-     *
-     * @param list<float> $shotChanges
+     * Moves cue times to the shot changes of $options, closes small gaps and puts all times on frames.
      */
-    public static function apply(Subtitle $subtitle, array $shotChanges, ShotChangeOptions $options): Subtitle
+    public static function apply(Subtitle $subtitle, ShotChangeOptions $options): ShotChangeReport
     {
-        $shots = array_map(fn (float $time): int => self::toFrame($time, $options), $shotChanges);
+        $shots = array_map(fn (float $time): int => self::toFrame($time, $options), $options->shotChanges);
         $shots = array_values(array_unique($shots));
         sort($shots);
 
         [$cues, $starts, $ends] = self::toFrames($subtitle, $options);
+        [$originalStarts, $originalEnds] = [$starts, $ends];
         $count = count($cues);
 
         for ($i = 0; $i < $count; $i++) {
@@ -45,19 +46,10 @@ final class ShotChangeTiming
 
         self::write($cues, $starts, $ends, $options);
 
-        return $subtitle;
-    }
-
-
-    /**
-     * Closes each gap of more than minGapFrames and less than snapWindow frames to minGapFrames, and returns $subtitle.
-     */
-    public static function chainGaps(Subtitle $subtitle, ShotChangeOptions $options): Subtitle
-    {
-        [$cues, $starts, $ends] = self::toFrames($subtitle, $options);
-        self::write($cues, $starts, self::chain($starts, $ends, [], $options), $options);
-
-        return $subtitle;
+        return new ShotChangeReport(
+            count(array_diff_assoc($starts, $originalStarts)),
+            count(array_diff_assoc($ends, $originalEnds)),
+        );
     }
 
 

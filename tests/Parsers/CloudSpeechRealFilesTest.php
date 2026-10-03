@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -94,9 +97,7 @@ class CloudSpeechRealFilesTest extends TestCase
 
     private static function parse(string $parserClass, string $file, bool $wordTimestamps = false): Subtitle
     {
-        $parser = new $parserClass([$parserClass::OPTION_SPEAKER_VOICES => true, $parserClass::OPTION_WORD_TIMESTAMPS => $wordTimestamps]);
-
-        return $parser->parse(file_get_contents(self::DIR . $file));
+        return (new $parserClass())->parse(file_get_contents(self::DIR . $file), new ReadOptions(wordTimestamps: $wordTimestamps, speakerVoices: true));
     }
 
 
@@ -106,7 +107,7 @@ class CloudSpeechRealFilesTest extends TestCase
         $subtitle = self::parse($parserClass, $file);
         $cues     = $subtitle->getCues();
 
-        $this->assertSame($parserClass, Subtitle::detectParser(file_get_contents(self::DIR . $file)));
+        $this->assertNull(Format::detect(file_get_contents(self::DIR . $file)));
         $this->assertSame($language, $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertCount($cueCount, $cues);
         $this->assertSame($firstCue, [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
@@ -119,7 +120,7 @@ class CloudSpeechRealFilesTest extends TestCase
     public function testRealFileKeepsItsWordTimestampsAndSpeakersThroughWebVtt(string $parserClass, string $file): void
     {
         $subtitle = self::parse($parserClass, $file, true);
-        $vtt      = (new WebVttParser())->parse($subtitle->format(WebVttFormatter::class));
+        $vtt      = (new WebVttParser())->parse($subtitle->toString(Format::WebVtt), new ReadOptions());
         $cueData  = fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()];
 
         $this->assertStringContainsString("<00:00:0", $subtitle->getCues()[0]->getText());

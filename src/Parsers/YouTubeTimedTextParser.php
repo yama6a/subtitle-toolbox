@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use DOMDocument;
@@ -8,7 +10,6 @@ use DOMText;
 use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -17,27 +18,14 @@ class YouTubeTimedTextParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = "youtube";
 
-    public const OPTION_WORD_TIMESTAMPS = "OPTION_WORD_TIMESTAMPS";
-
     // A window anchor point runs from 0, top left, to 8, bottom right, row by row.
     private const ALIGNMENTS = [7, 8, 9, 4, 5, 6, 1, 2, 3];
-
-    private bool $wordTimestamps;
-
-
-    /**
-     * Creates a parser that writes the word times of json3 and srv3 into the cue lines as core markup when OPTION_WORD_TIMESTAMPS is true.
-     */
-    public function __construct(array $options = [])
-    {
-        $this->wordTimestamps = !empty(Options::flag($options, self::OPTION_WORD_TIMESTAMPS));
-    }
 
 
     /**
      * Reads the YouTube timed text formats json3, srv3, srv2 and srv1, which is also the transcript XML.
      */
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $content        = ltrim(StringHelpers::removeUtf8Bom($rawSubtitle));
@@ -355,7 +343,7 @@ class YouTubeTimedTextParser extends SubtitleParser
 
     private function markup(array $segments, float $start): string
     {
-        $timed  = $this->wordTimestamps && array_filter(array_column($segments, 1), fn (?float $offset): bool => $offset !== null) !== [];
+        $timed  = $this->options->wordTimestamps && array_filter(array_column($segments, 1), fn (?float $offset): bool => $offset !== null) !== [];
         $markup = "";
         foreach ($segments as [$text, $offset, $style]) {
             if (!$timed) {

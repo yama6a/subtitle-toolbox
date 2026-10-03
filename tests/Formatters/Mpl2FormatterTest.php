@@ -1,10 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class Mpl2FormatterTest extends TestCase
 {
@@ -12,7 +17,7 @@ class Mpl2FormatterTest extends TestCase
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1.24, 4.46, ["Where are you?", "Home."]));
 
-        $this->assertSame("[12][45]Where are you?|Home.\n", $subtitle->format(Mpl2Formatter::class));
+        $this->assertSame("[12][45]Where are you?|Home.\n", $subtitle->toString(Format::Mpl2));
     }
 
 
@@ -25,7 +30,7 @@ class Mpl2FormatterTest extends TestCase
 
         $this->assertSame(
             "[10][20]/One|Two\n[30][40]/Three|/Four\n[50][60]/Five|Six and seven\n",
-            $subtitle->format(Mpl2Formatter::class)
+            $subtitle->toString(Format::Mpl2)
         );
     }
 
@@ -34,7 +39,7 @@ class Mpl2FormatterTest extends TestCase
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(0, 1, ["<font color=\"#ff0000\">Red</font> &amp; <v Anna>blue", "<b> </b>"]));
 
-        $this->assertSame("[0][10]Red & blue\n", $subtitle->format(Mpl2Formatter::class));
+        $this->assertSame("[0][10]Red & blue\n", $subtitle->toString(Format::Mpl2));
     }
 
 
@@ -44,7 +49,7 @@ class Mpl2FormatterTest extends TestCase
 
         $this->assertSame(
             "\xEF\xBB\xBF[0][10]Hello\r\n",
-            $subtitle->format(Mpl2Formatter::class, [SubtitleFormatter::OPTION_LINE_ENDING => "\r\n", SubtitleFormatter::OPTION_BOM => true])
+            $subtitle->toString(Format::Mpl2, new WriteOptions(lineEnding: LineEnding::Crlf, bom: true))
         );
     }
 }

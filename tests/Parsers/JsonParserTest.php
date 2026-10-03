@@ -1,10 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -12,7 +16,7 @@ class JsonParserTest extends TestCase
 {
     public function testReadsTheIssueExample(): void
     {
-        $subtitle = Subtitle::parse(<<<'JSON'
+        $subtitle = Subtitle::fromString(<<<'JSON'
             {
               "version": 1,
               "metadata": {"title": "Big Buck Bunny", "language": "en"},
@@ -22,7 +26,7 @@ class JsonParserTest extends TestCase
                 {"start": 1.5, "end": 4.0, "lines": ["Hello", "<i>world</i>"], "identifier": "intro", "alignment": 8, "formatData": {}}
               ]
             }
-            JSON, JsonParser::class);
+            JSON, Format::Json);
 
         $this->assertSame(["title" => "Big Buck Bunny", "language" => "en"], $subtitle->getAllMetadata());
         $this->assertSame([["text" => "Translated by Jane Doe", "beforeCueIndex" => 0]], $subtitle->getComments());
@@ -36,7 +40,7 @@ class JsonParserTest extends TestCase
     public function testDecodesBase64ObjectsInFormatData(): void
     {
         $subtitle = (new JsonParser())->parse("\xEF\xBB\xBF" . '{"version": 1, "formatData": {"x": {"list": [{"base64": "AAE="}]}}, ' .
-                                              '"cues": [{"start": 1, "end": 2, "lines": [], "formatData": {"image": {"png": {"base64": "iVBORw=="}}}}]}');
+                                              '"cues": [{"start": 1, "end": 2, "lines": [], "formatData": {"image": {"png": {"base64": "iVBORw=="}}}}]}', new ReadOptions());
 
         $this->assertSame(["list" => ["\x00\x01"]], $subtitle->getFormatData("x"));
         $this->assertSame(["png" => "\x89PNG"], $subtitle->getCues()[0]->getFormatData("image"));
@@ -45,7 +49,7 @@ class JsonParserTest extends TestCase
 
     public function testKeepsObjectsWithMoreKeysThanBase64(): void
     {
-        $subtitle = (new JsonParser())->parse('{"version": 1, "formatData": {"x": {"base64": "AAE=", "note": "y"}}, "cues": []}');
+        $subtitle = (new JsonParser())->parse('{"version": 1, "formatData": {"x": {"base64": "AAE=", "note": "y"}}, "cues": []}', new ReadOptions());
 
         $this->assertSame(["base64" => "AAE=", "note" => "y"], $subtitle->getFormatData("x"));
     }
@@ -73,6 +77,6 @@ class JsonParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage($message);
 
-        (new JsonParser())->parse($json);
+        (new JsonParser())->parse($json, new ReadOptions());
     }
 }

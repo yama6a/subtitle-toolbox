@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Fixing;
 
 use SubtitleToolbox\Markup;
@@ -43,13 +45,10 @@ final class CommonErrorFixer
 
 
     /**
-     * Fixes common text and OCR errors in the cue text and returns each change. It changes nothing with dryRun.
-     *
-     * @return list<AppliedFix>
+     * Fixes common text and OCR errors in the cue text and reports each change. It changes nothing with dryRun.
      */
-    public static function fix(Subtitle $subtitle, ?CommonErrorOptions $options = null): array
+    public static function apply(Subtitle $subtitle, CommonErrorOptions $options): CommonErrorReport
     {
-        $options  ??= new CommonErrorOptions();
         $language   = self::language($options->language ?? $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
         $cues       = $subtitle->getCues();
         $indexes    = array_keys($cues);
@@ -89,7 +88,7 @@ final class CommonErrorFixer
             $subtitle->reIndexCues();
         }
 
-        return $fixes;
+        return new CommonErrorReport($fixes);
     }
 
 

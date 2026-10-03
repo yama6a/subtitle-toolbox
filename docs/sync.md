@@ -9,19 +9,20 @@ A German SRT for the 25 fps release is late and drifts against a 23.976 fps vide
 use SubtitleToolbox\Sync\ReferenceSync;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
 
-$result = ReferenceSync::sync($german, $english);   // $german stays unchanged
+$result = ReferenceSync::apply($german, new ReferenceSyncOptions($english));   // calls scale() and then shift() on $german
 $result->getScale();                                // 1.04271 (25 / 23.976)
 $result->getOffset();                               // -2.3, added after the scale
 $result->getScore();                                // 0.89
-$result->apply($german);                            // calls scale() and then shift()
 
-ReferenceSync::sync($german, $english, new ReferenceSyncOptions(
+ReferenceSync::apply($german, new ReferenceSyncOptions(
+    reference: $english,
     minOffset: -120,       // seconds, default -60
     maxOffset: 120,        // seconds, default 60
     searchScale: false,    // true (default) tries the frame-rate factors, false keeps the scale at 1
 ));
 ```
 
+- **Target**: `apply()` changes the target. Pass `clone $german` to keep the original and only read the result.
 - **Matching**: only the cue times count, not the text. The idea comes from [alass](https://github.com/kaegi/alass).
 - **Scale factors**: 1, 24/23.976, 25/24 and 25/23.976 and their inverses. Other factors are not found. One scale applies to the whole file.
 - **Offsets**: the search finds offsets between `minOffset` and `maxOffset`, to 0.01 s.
@@ -32,7 +33,8 @@ ReferenceSync::sync($german, $english, new ReferenceSyncOptions(
 A TV recording has a 2:30 ad break at 6:30. The German SRT of the streaming release has none. A **split** is a point where the offset jumps. With `maxSplits`, each part between two splits gets its own offset. All parts share one scale.
 
 ```php
-$result = ReferenceSync::sync($german, $englishTv, new ReferenceSyncOptions(
+$result = ReferenceSync::apply($german, new ReferenceSyncOptions(
+    reference: $englishTv,
     minOffset: -180,
     maxOffset: 180,        // the part after the break needs 147.7 s
     maxSplits: 2,          // default 0, no split search
@@ -40,8 +42,7 @@ $result = ReferenceSync::sync($german, $englishTv, new ReferenceSyncOptions(
 ));
 $result->getSegments();    // [['from' => 0.0, 'to' => 414.32, 'scale' => 1.04271, 'offset' => -2.31],
                            //  ['from' => 414.32, 'to' => INF, 'scale' => 1.04271, 'offset' => 147.7]]
-$result->getOffset();      // -2.31, the offset of the first part
-$result->apply($german);   // shifts each part with its own offset
+$result->getOffset();      // -2.31, the offset of the first part. apply() shifted each part with its own offset.
 ```
 
 - **Segments**: `from` and `to` are target cue start times before the sync. A cue goes to the part that holds its start. Without a split, `getSegments()` returns one part from 0 to `INF`.
@@ -54,17 +55,18 @@ $result->apply($german);   // shifts each part with its own offset
 Without a reference subtitle, the speech in the audio is the reference. FFmpeg finds the silences, and `SpeechReference` turns the speech between them into cues without text.
 
 ```php
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Sync\SpeechReference;
 
 // ffmpeg -i movie.mkv -af silencedetect=noise=-30dB:d=0.4 -f null - 2> silence.log
 $speech = SpeechReference::fromFfmpegSilencedetect(file_get_contents('silence.log'), mediaDuration: 840);
-ReferenceSync::sync($german, $speech)->apply($german);
+ReferenceSync::apply($german, new ReferenceSyncOptions($speech));
 
 $speech = SpeechReference::fromIntervals([[1.2, 3.4], [5.0, 7.75]]);   // seconds, from any voice activity detector
 
-$transcript = Subtitle::parse(file_get_contents('whisper.json'));       // a Whisper JSON transcript of the audio
-ReferenceSync::sync($german, $transcript)->apply($german);
+$transcript = Subtitle::fromString(file_get_contents('whisper.json'), Format::Whisper);   // a Whisper JSON transcript of the audio
+ReferenceSync::apply($german, new ReferenceSyncOptions($transcript));
 ```
 
 - **Log**: the reader takes the `silence_start` and `silence_end` lines of the FFmpeg `silencedetect` filter. Speech fills the time between the silences from 0 to `mediaDuration`. A silence without an end runs to `mediaDuration`.

@@ -1,11 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -13,11 +14,6 @@ use SubtitleToolbox\SubtitleCue;
 class WhisperJsonParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = "whisper";
-
-    public const OPTION_WORD_TIMESTAMPS = "OPTION_WORD_TIMESTAMPS";
-
-    /** Writes the "speaker" field of each segment as a <v> tag at the start of its cue, for example <v SPEAKER_00>. */
-    public const OPTION_SPEAKER_VOICES = "OPTION_SPEAKER_VOICES";
 
     // TO_LANGUAGE_CODE of openai/whisper, whisper/tokenizer.py. The OpenAI API returns these names in verbose_json.
     private const LANGUAGE_CODES = [
@@ -45,25 +41,11 @@ class WhisperJsonParser extends SubtitleParser
         "castilian" => "es", "mandarin" => "zh",
     ];
 
-    private bool $wordTimestamps;
-    private bool $speakerVoices;
-
-
-    /**
-     * Creates a parser that writes word timestamps and speakers as core markup when OPTION_WORD_TIMESTAMPS and
-     * OPTION_SPEAKER_VOICES are true.
-     */
-    public function __construct(array $options = [])
-    {
-        $this->wordTimestamps = !empty(Options::flag($options, self::OPTION_WORD_TIMESTAMPS));
-        $this->speakerVoices  = !empty(Options::flag($options, self::OPTION_SPEAKER_VOICES));
-    }
-
 
     /**
      * Reads the JSON of the OpenAI transcription API, openai-whisper, faster-whisper, WhisperX and whisper.cpp, one cue per segment.
      */
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         try {
@@ -97,9 +79,9 @@ class WhisperJsonParser extends SubtitleParser
                 continue;
             }
 
-            $markup  = $this->wordTimestamps ? Markup::insertWordTimestamps($text, $words) : Markup::escapeText($text);
+            $markup  = $this->options->wordTimestamps ? Markup::insertWordTimestamps($text, $words) : Markup::escapeText($text);
             $speaker = is_string($formatData["speaker"] ?? null) ? trim($formatData["speaker"]) : "";
-            if ($this->speakerVoices && $speaker !== "") {
+            if ($this->options->speakerVoices && $speaker !== "") {
                 $markup = Markup::voiceTag($speaker) . $markup;
             }
 

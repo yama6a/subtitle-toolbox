@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 class IttParserTest extends TestCase
@@ -26,7 +29,7 @@ class IttParserTest extends TestCase
 
     public function testIssueExample(): void
     {
-        $subtitle = Subtitle::parse(self::ISSUE_EXAMPLE, IttParser::class);
+        $subtitle = Subtitle::fromString(self::ISSUE_EXAMPLE, Format::Itt);
         $cue      = $subtitle->getCues()[0];
 
         $this->assertSame(1.502, $cue->getStart());
@@ -40,8 +43,8 @@ class IttParserTest extends TestCase
 
     public function testKeepsTheTtmlFormatData(): void
     {
-        $ttml = Subtitle::parse(self::ISSUE_EXAMPLE, TtmlParser::class);
-        $itt  = Subtitle::parse(self::ISSUE_EXAMPLE, IttParser::class);
+        $ttml = Subtitle::fromString(self::ISSUE_EXAMPLE, Format::Ttml);
+        $itt  = Subtitle::fromString(self::ISSUE_EXAMPLE, Format::Itt);
 
         $this->assertSame($ttml->getFormatData(TtmlParser::FORMAT), $itt->getFormatData(TtmlParser::FORMAT));
         $this->assertSame([], $ttml->getFormatData(IttParser::FORMAT));
@@ -50,11 +53,10 @@ class IttParserTest extends TestCase
 
     public function testReadsParametersWithAnotherPrefix(): void
     {
-        $subtitle = Subtitle::parse(
+        $subtitle = Subtitle::fromString(
             "<tt xmlns=\"http://www.w3.org/ns/ttml\" xmlns:p=\"http://www.w3.org/ns/ttml#parameter\" xmlns:x=\"urn:example\""
             . " p:timeBase=\"smpte\" p:frameRate=\"25\" x:frameRate=\"50\"><body><div><p begin=\"00:00:01:05\" end=\"00:00:02:00\">a</p></div></body></tt>",
-            IttParser::class
-        );
+            Format::Itt);
 
         $this->assertSame(["timeBase" => "smpte", "frameRate" => "25"], $subtitle->getFormatData(IttParser::FORMAT));
         $this->assertSame(1.2, $subtitle->getCues()[0]->getStart());
@@ -63,10 +65,9 @@ class IttParserTest extends TestCase
 
     public function testFileWithoutTimingParametersHasNoFormatData(): void
     {
-        $subtitle = Subtitle::parse(
+        $subtitle = Subtitle::fromString(
             "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div><p begin=\"1s\" end=\"2s\">a</p></div></body></tt>",
-            IttParser::class
-        );
+            Format::Itt);
 
         $this->assertSame([], $subtitle->getFormatData(IttParser::FORMAT));
     }

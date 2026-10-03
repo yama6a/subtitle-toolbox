@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Container\Matroska;
 
 /**
@@ -18,5 +20,20 @@ final class MatroskaTrack
         public readonly bool $default,
         public readonly bool $forced,
     ) {
+    }
+
+
+    /**
+     * Returns the codec, the language, the name and the flags, for example `S_TEXT/UTF8, de, "Deutsch", default`.
+     */
+    public function describe(): string
+    {
+        return implode(", ", array_filter([
+            $this->codecId,
+            $this->language,
+            $this->name === null ? null : json_encode($this->name, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            $this->default ? "default" : null,
+            $this->forced ? "forced" : null,
+        ]));
     }
 }

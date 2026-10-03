@@ -1,10 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Hls;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -91,7 +93,7 @@ class HlsWebVttSegmenterTest extends TestCase
 
     public function testEverySegmentOfARealFileParsesAndThePlaylistKeepsTheRules(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FILES . "node-webvtt-subs1.vtt"), WebVttParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "node-webvtt-subs1.vtt"), Format::WebVtt);
         $cues     = $subtitle->getCues();
         $this->assertCount(30, $cues);
         $this->assertSame([1.8, 5.16, "0"], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
@@ -108,7 +110,7 @@ class HlsWebVttSegmenterTest extends TestCase
 
         $segmentStart = 0;
         foreach ($hls->getSegments() as $name => $vtt) {
-            $segment = Subtitle::parse($vtt, WebVttParser::class);
+            $segment = Subtitle::fromString($vtt, Format::WebVtt);
             $this->assertSame(900000, TimestampMap::fromSubtitle($segment)->mpegts);
             foreach ($segment->getCues() as $cue) {
                 $this->assertLessThan($segmentStart + $durations[$name], $cue->getStart(), $name);
@@ -117,10 +119,10 @@ class HlsWebVttSegmenterTest extends TestCase
             $segmentStart += $durations[$name];
         }
         $texts = fn (string $name): array => array_map(fn (SubtitleCue $cue): string => $cue->getText(),
-                                                       Subtitle::parse($hls->getSegments()[$name], WebVttParser::class)->getCues());
+                                                       Subtitle::fromString($hls->getSegments()[$name], Format::WebVtt)->getCues());
         $this->assertSame(["8", "9", "10", "11"], $texts("sub2.vtt"));
         $this->assertSame(["11", "12", "13", "14", "15", "16"], $texts("sub3.vtt"));
-        $this->assertSame([], Subtitle::parse($hls->getSegments()["sub13.vtt"], WebVttParser::class)->getCues());
+        $this->assertSame([], Subtitle::fromString($hls->getSegments()["sub13.vtt"], Format::WebVtt)->getCues());
     }
 
 
@@ -182,9 +184,9 @@ class HlsWebVttSegmenterTest extends TestCase
 
     public function testSegmentsKeepTheFileDataAndReplaceAnOldMap(): void
     {
-        $subtitle = Subtitle::parse("WEBVTT Ferry\nX-TIMESTAMP-MAP=LOCAL:00:00:00.000,MPEGTS:0\nKind: captions\n\n" .
+        $subtitle = Subtitle::fromString("WEBVTT Ferry\nX-TIMESTAMP-MAP=LOCAL:00:00:00.000,MPEGTS:0\nKind: captions\n\n" .
                                     "STYLE\n::cue { color: yellow }\n\nintro\n00:00:01.000 --> 00:00:02.000 line:0\n" .
-                                    "<i>Welcome aboard.</i>\n", WebVttParser::class);
+                                    "<i>Welcome aboard.</i>\n", Format::WebVtt);
 
         $this->assertSame("WEBVTT Ferry\n" . self::MAP . "\nKind: captions\n\nSTYLE\n::cue { color: yellow }\n\n" .
                           "intro\n00:00:01.000 --> 00:00:02.000 line:0\n<i>Welcome aboard.</i>\n",

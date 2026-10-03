@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
@@ -7,9 +9,10 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 final class ResegmentOptions
 {
     /**
-     * Creates the settings for Subtitle::splitLongCues() and Subtitle::resegmentByWords(), see the README section "Splitting long cues".
+     * Creates the settings for Resegmenter::apply(). $maxWordGap applies to ResegmentMode::ByWords only.
      */
     public function __construct(
+        public readonly ResegmentMode $mode,
         public readonly int $maxCharactersPerLine = 42,
         public readonly int $maxLines = 2,
         public readonly float $maxDuration = 7,

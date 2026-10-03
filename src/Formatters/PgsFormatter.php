@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
@@ -8,6 +10,7 @@ use SubtitleToolbox\Image\PaletteReducer;
 use SubtitleToolbox\Image\PngDecoder;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 /**
  * Writes image cues as a Blu-ray PGS (.sup) file, the inverse of PgsParser. See PgsParser for the specs.
@@ -50,9 +53,9 @@ class PgsFormatter extends SubtitleFormatter implements ImageFormatter
     private array $ycrcb = [];
 
 
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $this->rejectUnknownOptions($options);
+        $this->formatOptions($options);
         $cues = array_values($subtitle->getCues());
         usort($cues, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());
 

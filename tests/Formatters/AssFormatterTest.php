@@ -1,13 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Parsers\AssParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class AssFormatterTest extends TestCase
 {
@@ -42,8 +45,8 @@ class AssFormatterTest extends TestCase
     public function testRealFileSurvivesARoundTrip(string $file): void
     {
         $subtitle  = $this->parseFile($file);
-        $formatted = $subtitle->format(AssFormatter::class);
-        $reparsed  = Subtitle::parse($formatted, AssParser::class);
+        $formatted = $subtitle->toString(Format::Ass);
+        $reparsed  = Subtitle::fromString($formatted, Format::Ass);
 
         $this->assertSame(
             array_map($this->describeCue(...), $subtitle->getCues()),
@@ -52,7 +55,7 @@ class AssFormatterTest extends TestCase
         $this->assertSame($subtitle->getComments(), $reparsed->getComments());
         $this->assertSame($subtitle->getAllMetadata(), $reparsed->getAllMetadata());
         $this->assertSame($subtitle->getFormatData("ass"), $reparsed->getFormatData("ass"));
-        $this->assertSame($formatted, $reparsed->format(AssFormatter::class));
+        $this->assertSame($formatted, $reparsed->toString(Format::Ass));
     }
 
 
@@ -73,14 +76,14 @@ class AssFormatterTest extends TestCase
 
         $this->assertSame(
             StringHelpers::addUtf8Bom(StringHelpers::normalizeEOLs($raw)),
-            $this->parseFile($file)->format(AssFormatter::class)
+            $this->parseFile($file)->toString(Format::Ass)
         );
     }
 
 
     public function testUnsortedEventsAreWrittenInTimeOrder(): void
     {
-        $formatted = $this->parseFile("own_signs_crlf.ass")->format(AssFormatter::class);
+        $formatted = $this->parseFile("own_signs_crlf.ass")->toString(Format::Ass);
 
         $this->assertStringContainsString(
             "Dialogue: 0,0:00:04.50,0:00:07.50,Default,Reporter,0,0,0,,Clouds move in from the west\\nduring the night.\n" .
@@ -101,7 +104,7 @@ class AssFormatterTest extends TestCase
             self::DEFAULT_HEADER .
             "Dialogue: 0,0:00:01.00,0:00:02.50,Default,,0,0,0,,{\\i1}Hello{\\i0}\\Nworld\n" .
             "Dialogue: 0,0:00:03.00,0:00:05.00,Default,,0,0,0,,{\\an8}Top\n",
-            $subtitle->format(AssFormatter::class)
+            $subtitle->toString(Format::Ass)
         );
     }
 
@@ -129,7 +132,7 @@ class AssFormatterTest extends TestCase
 
         $this->assertSame(
             self::DEFAULT_HEADER . "Dialogue: 0,0:00:01.00,0:00:02.00,Default,$name,0,0,0,,$text\n",
-            $subtitle->format(AssFormatter::class)
+            $subtitle->toString(Format::Ass)
         );
     }
 
@@ -152,7 +155,7 @@ class AssFormatterTest extends TestCase
 
         $this->assertSame(
             self::DEFAULT_HEADER . "Dialogue: 0,0:00:10.00,0:00:12.00,Default,,0,0,0,,$text\n",
-            $subtitle->format(AssFormatter::class)
+            $subtitle->toString(Format::Ass)
         );
     }
 
@@ -164,7 +167,7 @@ class AssFormatterTest extends TestCase
 
         $this->assertStringContainsString(
             "Dialogue: 0,0:00:06.00,0:00:10.00,Sign,,0,0,0,,{\\an7\\pos(40,40)\\p1\\bord0\\c&HFFFFFF&}m 0 0 l 200 0 200 60 0 60{\\p0}\n",
-            $subtitle->format(AssFormatter::class)
+            $subtitle->toString(Format::Ass)
         );
     }
 
@@ -176,7 +179,7 @@ class AssFormatterTest extends TestCase
         $cues[2]->setLines(["<v Guard>Is it <i>late</i> today?"]);
         $cues[3]->setAlignment(7);
 
-        $formatted = $subtitle->format(AssFormatter::class);
+        $formatted = $subtitle->toString(Format::Ass);
 
         $this->assertStringContainsString("Dialogue: 0,0:00:06.30,0:00:08.00,Default,Guard,0,0,0,,Is it {\\i1}late{\\i0} today?\n", $formatted);
         $this->assertStringContainsString("Dialogue: 0,0:00:08.10,0:00:10.90,Top,,0,0,0,,{\\an7}Platform 4: {\\c&H00D7FF&}Coast Express{\\c}\n", $formatted);
@@ -190,7 +193,7 @@ class AssFormatterTest extends TestCase
 
         $this->assertStringContainsString(
             "Dialogue: Marked=0,0:00:05.50,0:00:08.00,Notice,,0000,0000,0000,,{\\a9}Next ferry: 9:00\n",
-            $subtitle->format(AssFormatter::class)
+            $subtitle->toString(Format::Ass)
         );
     }
 
@@ -199,7 +202,7 @@ class AssFormatterTest extends TestCase
     {
         $subtitle = $this->parseFile("own_aegisub.ass");
 
-        $formatted = $subtitle->format(AssFormatter::class, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS]);
+        $formatted = $subtitle->toString(Format::Ass, new WriteOptions(stripTags: true));
 
         $this->assertStringContainsString("Dialogue: 0,0:00:06.30,0:00:08.00,Default,Passenger,0,0,0,,Is it on time today?\n", $formatted);
         $this->assertStringContainsString("Dialogue: 0,0:00:08.10,0:00:10.90,Top,,0,0,0,,{\\an8}Platform 4: Coast Express\n", $formatted);
@@ -214,7 +217,7 @@ class AssFormatterTest extends TestCase
             ->addComment("first", 0)
             ->addComment("last\nline", 1);
 
-        $formatted = $subtitle->format(AssFormatter::class);
+        $formatted = $subtitle->toString(Format::Ass);
 
         $this->assertStringStartsWith("\xEF\xBB\xBF[Script Info]\nTitle: Bakery news\nScriptType: v4.00+\n", $formatted);
         $this->assertStringEndsWith(
@@ -232,14 +235,14 @@ class AssFormatterTest extends TestCase
 
         $this->assertStringEndsWith(
             "Dialogue: 0,1:00:00.00,10:00:00.00,Default,,0,0,0,,a\n",
-            $subtitle->format(AssFormatter::class)
+            $subtitle->toString(Format::Ass)
         );
     }
 
 
     private function parseFile(string $file): Subtitle
     {
-        return Subtitle::parse(file_get_contents(__DIR__ . "/../files/ass/real/$file"), AssParser::class);
+        return Subtitle::fromString(file_get_contents(__DIR__ . "/../files/ass/real/$file"), Format::Ass);
     }
 
 

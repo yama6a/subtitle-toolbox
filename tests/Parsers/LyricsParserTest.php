@@ -1,43 +1,45 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\LyricsParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 class LyricsParserTest extends TestCase
 {
     public function testValidLrcFileParses()
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/lrc/valid.lrc"), LyricsParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/lrc/valid.lrc"), Format::Lyrics);
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/lrc/valid.lrc"),
-            $subtitle->format(LyricsFormatter::class)
+            $subtitle->toString(Format::Lyrics)
         );
     }
 
 
     public function testKeepsIdTags()
     {
-        $subtitle = Subtitle::parse(
-            file_get_contents(__DIR__ . "/../files/lrc/with_id_tags.lrc"), LyricsParser::class
-        );
+        $subtitle = Subtitle::fromString(
+            file_get_contents(__DIR__ . "/../files/lrc/with_id_tags.lrc"), Format::Lyrics);
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/lrc/with_id_tags_formatted.lrc"),
-            $subtitle->format(LyricsFormatter::class)
+            $subtitle->toString(Format::Lyrics)
         );
     }
 
 
     public function testExceededMinutesIgnoredCue()
     {
-        $subtitle = Subtitle::parse(
-            file_get_contents(__DIR__ . "/../files/lrc/exceeded_minutes.lrc"), LyricsParser::class
-        );
+        $subtitle = Subtitle::fromString(
+            file_get_contents(__DIR__ . "/../files/lrc/exceeded_minutes.lrc"), Format::Lyrics);
 
         $this->assertSame("First Text", $subtitle->getCues()[0]->getLines()[0]);
         $this->assertSame("Second Text", $subtitle->getCues()[1]->getLines()[0]);
@@ -47,9 +49,8 @@ class LyricsParserTest extends TestCase
 
     public function testExceededSecondsIgnoresCue()
     {
-        $subtitle = Subtitle::parse(
-            file_get_contents(__DIR__ . "/../files/lrc/exceeded_seconds.lrc"), LyricsParser::class
-        );
+        $subtitle = Subtitle::fromString(
+            file_get_contents(__DIR__ . "/../files/lrc/exceeded_seconds.lrc"), Format::Lyrics);
 
         $this->assertSame("First Text", $subtitle->getCues()[0]->getLines()[0]);
         $this->assertSame("Third Text", $subtitle->getCues()[1]->getLines()[0]);
@@ -59,9 +60,8 @@ class LyricsParserTest extends TestCase
 
     public function testExceededMilliSecondAccuracyIgnoresCue()
     {
-        $subtitle = Subtitle::parse(
-            file_get_contents(__DIR__ . "/../files/lrc/exceeded_centi_accuracy.lrc"), LyricsParser::class
-        );
+        $subtitle = Subtitle::fromString(
+            file_get_contents(__DIR__ . "/../files/lrc/exceeded_centi_accuracy.lrc"), Format::Lyrics);
 
         $this->assertSame("First Text", $subtitle->getCues()[0]->getLines()[0]);
         $this->assertSame("Third Text", $subtitle->getCues()[1]->getLines()[0]);
@@ -71,7 +71,7 @@ class LyricsParserTest extends TestCase
 
     public function testMissingTextIgnoresCue()
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/lrc/missing_text.lrc"), LyricsParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/lrc/missing_text.lrc"), Format::Lyrics);
 
         $this->assertSame("First Text", $subtitle->getCues()[0]->getLines()[0]);
         $this->assertSame("Third Text", $subtitle->getCues()[1]->getLines()[0]);
@@ -81,9 +81,8 @@ class LyricsParserTest extends TestCase
 
     public function testMissingTimestampIgnoresCue()
     {
-        $subtitle = Subtitle::parse(
-            file_get_contents(__DIR__ . "/../files/lrc/missing_timestamps.lrc"), LyricsParser::class
-        );
+        $subtitle = Subtitle::fromString(
+            file_get_contents(__DIR__ . "/../files/lrc/missing_timestamps.lrc"), Format::Lyrics);
 
         $this->assertSame("First Text", $subtitle->getCues()[0]->getLines()[0]);
         $this->assertSame("Third Text", $subtitle->getCues()[1]->getLines()[0]);
@@ -93,7 +92,7 @@ class LyricsParserTest extends TestCase
 
     public function testEndTimeIsNextCueStartIncludingCentiseconds(): void
     {
-        $subtitle = Subtitle::parse("[00:01.00] First\n[00:02.75] Second\n", LyricsParser::class);
+        $subtitle = Subtitle::fromString("[00:01.00] First\n[00:02.75] Second\n", Format::Lyrics);
 
         $this->assertSame(2.75, $subtitle->getCues()[0]->getEnd());
     }
@@ -101,9 +100,8 @@ class LyricsParserTest extends TestCase
 
     public function testIdTagsBecomeMetadataOrLrcFormatData(): void
     {
-        $subtitle = Subtitle::parse(
-            file_get_contents(__DIR__ . "/../files/lrc/with_id_tags.lrc"), LyricsParser::class
-        );
+        $subtitle = Subtitle::fromString(
+            file_get_contents(__DIR__ . "/../files/lrc/with_id_tags.lrc"), Format::Lyrics);
 
         $this->assertSame(
             [
@@ -122,10 +120,10 @@ class LyricsParserTest extends TestCase
 
     public function testIdTagKeysAreCaseInsensitiveAndValuesAreTrimmed(): void
     {
-        $subtitle = Subtitle::parse("[TI: Morning Train ]
+        $subtitle = Subtitle::fromString("[TI: Morning Train ]
 [Ar:Station Choir]
 [00:01.00] Text
-", LyricsParser::class);
+", Format::Lyrics);
 
         $this->assertSame("Morning Train", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
         $this->assertSame("Station Choir", $subtitle->getMetadata(Subtitle::METADATA_ARTIST));
@@ -134,13 +132,12 @@ class LyricsParserTest extends TestCase
 
     public function testCommentTagsBecomeComments(): void
     {
-        $subtitle = Subtitle::parse(
+        $subtitle = Subtitle::fromString(
             "[#:Header note]
 [00:01.00] First
 [#:Before second]
 [00:02.00] Second
-", LyricsParser::class
-        );
+", Format::Lyrics);
 
         $this->assertSame(
             [
@@ -154,12 +151,11 @@ class LyricsParserTest extends TestCase
 
     public function testOffsetMakesLyricsShowEarlier(): void
     {
-        $subtitle = Subtitle::parse(
+        $subtitle = Subtitle::fromString(
             "[00:12.00] First
 [offset:+500]
 [00:17.20] Second <00:18.00>word
-", LyricsParser::class
-        );
+", Format::Lyrics);
 
         $this->assertSame(11.5, $subtitle->getCues()[0]->getStart());
         $this->assertSame(16.7, $subtitle->getCues()[0]->getEnd());
@@ -171,9 +167,9 @@ class LyricsParserTest extends TestCase
 
     public function testNegativeOffsetMakesLyricsShowLater(): void
     {
-        $subtitle = Subtitle::parse("[offset:-250]
+        $subtitle = Subtitle::fromString("[offset:-250]
 [00:12.00] First
-", LyricsParser::class);
+", Format::Lyrics);
 
         $this->assertSame(12.25, $subtitle->getCues()[0]->getStart());
     }
@@ -181,9 +177,9 @@ class LyricsParserTest extends TestCase
 
     public function testOffsetDoesNotMakeTimesNegative(): void
     {
-        $subtitle = Subtitle::parse("[offset:1000]
+        $subtitle = Subtitle::fromString("[offset:1000]
 [00:00.50] First
-", LyricsParser::class);
+", Format::Lyrics);
 
         $this->assertSame(0.0, $subtitle->getCues()[0]->getStart());
     }
@@ -191,9 +187,9 @@ class LyricsParserTest extends TestCase
 
     public function testInvalidOffsetIsKeptAsFormatData(): void
     {
-        $subtitle = Subtitle::parse("[offset:soon]
+        $subtitle = Subtitle::fromString("[offset:soon]
 [00:12.00] First
-", LyricsParser::class);
+", Format::Lyrics);
 
         $this->assertSame(12.0, $subtitle->getCues()[0]->getStart());
         $this->assertSame(["idTags" => ["offset" => "soon"]], $subtitle->getFormatData(LyricsParser::FORMAT));
@@ -202,25 +198,23 @@ class LyricsParserTest extends TestCase
 
     public function testLineWithSeveralTimestampsBecomesOneCuePerTimestamp(): void
     {
-        $subtitle = Subtitle::parse(
+        $subtitle = Subtitle::fromString(
             "[00:12.00][01:15.30]Chorus
 [00:17.20]Verse
-", LyricsParser::class
-        );
+", Format::Lyrics);
         $cues     = $subtitle->getCues();
 
         $this->assertCount(3, $cues);
         $this->assertSame([12.0, 17.2, "Chorus"], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $this->assertSame([17.2, 75.3, "Verse"], [$cues[1]->getStart(), $cues[1]->getEnd(), $cues[1]->getText()]);
-        $this->assertSame([75.3, 85.3, "Chorus"], [$cues[2]->getStart(), $cues[2]->getEnd(), $cues[2]->getText()]);
+        $this->assertSame([75.3, 80.3, "Chorus"], [$cues[2]->getStart(), $cues[2]->getEnd(), $cues[2]->getText()]);
     }
 
 
     public function testTimestampWithoutTextEndsThePreviousCue(): void
     {
-        $subtitle = Subtitle::parse(
-            file_get_contents(__DIR__ . "/../files/lrc/missing_text.lrc"), LyricsParser::class
-        );
+        $subtitle = Subtitle::fromString(
+            file_get_contents(__DIR__ . "/../files/lrc/missing_text.lrc"), Format::Lyrics);
 
         $this->assertSame(154.56, $subtitle->getCues()[0]->getEnd());
         $this->assertSame(225.67, $subtitle->getCues()[1]->getStart());
@@ -229,9 +223,9 @@ class LyricsParserTest extends TestCase
 
     public function testTimestampWithoutTextEndsTheLastCue(): void
     {
-        $subtitle = Subtitle::parse("[00:01.00] First
+        $subtitle = Subtitle::fromString("[00:01.00] First
 [00:03.50]
-", LyricsParser::class);
+", Format::Lyrics);
 
         $this->assertCount(1, $subtitle->getCues());
         $this->assertSame(3.5, $subtitle->getCues()[0]->getEnd());
@@ -240,9 +234,9 @@ class LyricsParserTest extends TestCase
 
     public function testAcceptsTimestampsWithoutFractionAndWithMilliseconds(): void
     {
-        $subtitle = Subtitle::parse("[00:01] First
+        $subtitle = Subtitle::fromString("[00:01] First
 [00:02.345] Second
-", LyricsParser::class);
+", Format::Lyrics);
 
         $this->assertSame(1.0, $subtitle->getCues()[0]->getStart());
         $this->assertSame(2.345, $subtitle->getCues()[1]->getStart());
@@ -251,45 +245,37 @@ class LyricsParserTest extends TestCase
 
     public function testTimestampNeedsADotBeforeTheFraction(): void
     {
-        $subtitle = Subtitle::parse("[00:12x00] Wrong
+        $subtitle = Subtitle::fromString("[00:12x00] Wrong
 [00:13.00] Right
-", LyricsParser::class);
+", Format::Lyrics);
 
         $this->assertCount(1, $subtitle->getCues());
         $this->assertSame("Right", $subtitle->getCues()[0]->getText());
     }
 
 
-    public function testLastCueLastsTenSecondsByDefault(): void
+    public function testLastCueLastsFiveSecondsByDefault(): void
     {
-        $subtitle = Subtitle::parse("[00:01.00] First
-", LyricsParser::class);
+        $subtitle = Subtitle::fromString("[00:01.00] First
+", Format::Lyrics);
 
-        $this->assertSame(11.0, $subtitle->getCues()[0]->getEnd());
+        $this->assertSame(6.0, $subtitle->getCues()[0]->getEnd());
     }
 
 
     public function testLastCueDurationIsAnOption(): void
     {
-        $subtitle = (new LyricsParser(2.5))->parse("[00:01.00] First
-");
+        $subtitle = (new LyricsParser())->parse("[00:01.00] First
+", new ReadOptions(lastCueDuration: 2.5));
 
         $this->assertSame(3.5, $subtitle->getCues()[0]->getEnd());
     }
 
 
-    public function testNegativeLastCueDurationThrows(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-
-        new LyricsParser(-1);
-    }
-
-
     public function testWordTimestampsBecomeCoreMarkup(): void
     {
-        $subtitle = Subtitle::parse("[00:21.10]<00:21.10>Bread <00:21.60>is <61:01.905>warm
-", LyricsParser::class);
+        $subtitle = Subtitle::fromString("[00:21.10]<00:21.10>Bread <00:21.60>is <61:01.905>warm
+", Format::Lyrics);
 
         $this->assertSame(
             "<00:00:21.100>Bread <00:00:21.600>is <01:01:01.905>warm",
@@ -300,7 +286,7 @@ class LyricsParserTest extends TestCase
 
     public function testPlainTextIsEscaped(): void
     {
-        $subtitle = Subtitle::parse("[00:01.00]I <3 bread & jam\n", LyricsParser::class);
+        $subtitle = Subtitle::fromString("[00:01.00]I <3 bread & jam\n", Format::Lyrics);
 
         $this->assertSame("I &lt;3 bread &amp; jam", $subtitle->getCues()[0]->getText());
     }
@@ -308,7 +294,7 @@ class LyricsParserTest extends TestCase
 
     public function testTextAroundWordTimestampsIsEscaped(): void
     {
-        $subtitle = Subtitle::parse("[00:01.00]<00:01>Fish & <00:01.50>chips <3 <1:2>\n", LyricsParser::class);
+        $subtitle = Subtitle::fromString("[00:01.00]<00:01>Fish & <00:01.50>chips <3 <1:2>\n", Format::Lyrics);
 
         $this->assertSame(
             "<00:00:01.000>Fish &amp; <00:00:01.500>chips &lt;3 &lt;1:2&gt;",
@@ -319,19 +305,18 @@ class LyricsParserTest extends TestCase
 
     public function testTextThatIsNotUtf8KeepsItsBytes(): void
     {
-        $subtitle = Subtitle::parse("[00:01.00]caf\xE9 & tea\n", LyricsParser::class);
+        $subtitle = Subtitle::fromString("[00:01.00]caf\xE9 & tea\n", Format::Lyrics);
 
         $this->assertSame("caf\xE9 &amp; tea", $subtitle->getCues()[0]->getText());
-        $this->assertSame("\u{feff}[00:01.00] caf\xE9 & tea\n", $subtitle->format(LyricsFormatter::class));
+        $this->assertSame("\u{feff}[00:01.00] caf\xE9 & tea\n", $subtitle->toString(Format::Lyrics));
     }
 
 
     public function testIdTagsAndCommentsAreNotEscaped(): void
     {
-        $subtitle = Subtitle::parse(
+        $subtitle = Subtitle::fromString(
             "[ti:Fish & Chips]\n[re:<Editor>]\n[#:a < b & c]\n[00:01.00]Text\n",
-            LyricsParser::class
-        );
+            Format::Lyrics);
 
         $this->assertSame("Fish & Chips", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
         $this->assertSame(["idTags" => ["re" => "<Editor>"]], $subtitle->getFormatData(LyricsParser::FORMAT));
@@ -346,7 +331,7 @@ class LyricsParserTest extends TestCase
     {
         return [
             "justan-1"             => [
-                "justan-1.lrc", 42, [0.0, 1.0, "火车七点出发"], [202.98, 212.98, "烤箱闻起来很香"],
+                "justan-1.lrc", 42, [0.0, 1.0, "火车七点出发"], [202.98, 207.98, "烤箱闻起来很香"],
             ],
             "justan-4"             => [
                 "justan-4.lrc", 34, [0.0, 4.0, "火车七点出发"], [202.0, 207.0, "天气准时到站　站台下了一整天"],
@@ -355,22 +340,22 @@ class LyricsParserTest extends TestCase
                 "lrc-maker-nami.lrc", 39, [0.0, 1.0, "電車は七時に出る：example"], [235.536, 243.353, "——天気は晴れです、駅は少し混む。"],
             ],
             "mantas-done-lrc"      => [
-                "mantas-done-lrc.lrc", 5, [8.62, 9.64, "Trains run early"], [22.63, 32.63, "Rain comes later"],
+                "mantas-done-lrc.lrc", 5, [8.62, 9.64, "Trains run early"], [22.63, 27.63, "Rain comes later"],
             ],
             "subsrt-sample"        => [
-                "subsrt-sample.lrc", 6, [12.0, 17.2, "Line 1 about the train"], [29.02, 39.02, "Line 6 about the bread"],
+                "subsrt-sample.lrc", 6, [12.0, 17.2, "Line 1 about the train"], [29.02, 34.02, "Line 6 about the bread"],
             ],
             "handwritten-core"     => [
                 "handwritten-core.lrc",
                 5,
                 [5.0, 9.4, "The train leaves at seven"],
-                [32.8, 42.8, "Ring the bell, ring the bell"],
+                [32.8, 37.8, "Ring the bell, ring the bell"],
             ],
             "handwritten-enhanced" => [
                 "handwritten-enhanced.lrc",
                 3,
                 [3.0, 5.9, "<00:00:03.000> Slow <00:00:03.550> river <00:00:04.400> runs"],
-                [9.6, 19.6, "<00:00:09.600> Into <00:00:10.100> the <00:00:10.650> sea"],
+                [9.6, 14.6, "<00:00:09.600> Into <00:00:10.100> the <00:00:10.650> sea"],
             ],
         ];
     }
@@ -379,7 +364,7 @@ class LyricsParserTest extends TestCase
     #[DataProvider("realFiles")]
     public function testRealFileParses(string $file, int $cueCount, array $firstCue, array $lastCue): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/lrc/real/" . $file), LyricsParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/lrc/real/" . $file), Format::Lyrics);
         $cues     = $subtitle->getCues();
         $last     = $cues[count($cues) - 1];
 
@@ -392,10 +377,9 @@ class LyricsParserTest extends TestCase
     #[DataProvider("realFiles")]
     public function testRealFileSurvivesRoundTrip(string $file): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/lrc/real/" . $file), LyricsParser::class);
-        $again    = Subtitle::parse(
-            $subtitle->format(LyricsFormatter::class), LyricsParser::class
-        );
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/lrc/real/" . $file), Format::Lyrics);
+        $again    = Subtitle::fromString(
+            $subtitle->toString(Format::Lyrics), Format::Lyrics);
 
         $this->assertSame($this->describe($subtitle), $this->describe($again));
     }
@@ -403,9 +387,8 @@ class LyricsParserTest extends TestCase
 
     public function testRealFileMetadata(): void
     {
-        $subtitle = Subtitle::parse(
-            file_get_contents(__DIR__ . "/../files/lrc/real/subsrt-sample.lrc"), LyricsParser::class
-        );
+        $subtitle = Subtitle::fromString(
+            file_get_contents(__DIR__ . "/../files/lrc/real/subsrt-sample.lrc"), Format::Lyrics);
 
         $this->assertSame("Weather (morning) report", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
         $this->assertSame("Station choir", $subtitle->getMetadata(Subtitle::METADATA_ARTIST));

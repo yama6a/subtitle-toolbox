@@ -1,12 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 use InvalidArgumentException;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
-use SubtitleToolbox\Parsers\SubRipParser;
-use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\Validation\ValidationRules;
 
 class TextTransformsTest extends \PHPUnit\Framework\TestCase
 {
@@ -32,13 +31,13 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
 
     private function parseCaptions(): Subtitle
     {
-        return Subtitle::parse(file_get_contents(self::FILES . "own_cea608_caps.vtt"), WebVttParser::class);
+        return Subtitle::fromString(file_get_contents(self::FILES . "own_cea608_caps.vtt"), Format::WebVtt);
     }
 
 
     private function parseMultilingual(): Subtitle
     {
-        return Subtitle::parse(file_get_contents(self::FILES . "own_multilingual_caps.srt"), SubRipParser::class);
+        return Subtitle::fromString(file_get_contents(self::FILES . "own_multilingual_caps.srt"), Format::SubRip);
     }
 
 
@@ -53,7 +52,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
         $this->assertSame([10.177, 12.846, "THE BAKERY CAFÉ ON PLATFORM 2\nIS OPEN. ÄPFEL, STRASSE?"],
                           [$cues[4]->getStart(), $cues[4]->getEnd(), $cues[4]->getText()]);
 
-        $again = Subtitle::parse($subtitle->format(WebVttFormatter::class), WebVttParser::class);
+        $again = Subtitle::fromString($subtitle->toString(Format::WebVtt), Format::WebVtt);
         $this->assertSame($this->getTexts($subtitle), $this->getTexts($again));
         $this->assertSame($subtitle->getComments(), $again->getComments());
     }
@@ -65,7 +64,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
 
         $this->assertSame($subtitle, $subtitle->changeCase("sentence"));
         $this->assertSame(file_get_contents(self::FILES . "own_cea608_caps_sentence.vtt"),
-                          $subtitle->format(WebVttFormatter::class));
+                          $subtitle->toString(Format::WebVtt));
     }
 
 
@@ -77,8 +76,8 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
             ->stripFormatting();
 
         $this->assertSame(file_get_contents(self::FILES . "own_cea608_caps_cleaned.vtt"),
-                          $subtitle->format(WebVttFormatter::class));
-        $this->assertSame([], $subtitle->getErrors());
+                          $subtitle->toString(Format::WebVtt));
+        $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
 
 
@@ -91,7 +90,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
         $this->assertSame([1.0, 3.5, "<b>ΟΔΟΣ ΣΤΑΘΜΟΥ 4</b>"], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $this->assertSame([8.5, 10.0, "<i>RAIN &lt;3 &amp; SNOW</i>"], [$cues[3]->getStart(), $cues[3]->getEnd(), $cues[3]->getText()]);
 
-        $again = Subtitle::parse($subtitle->format(SubRipFormatter::class), SubRipParser::class);
+        $again = Subtitle::fromString($subtitle->toString(Format::SubRip), Format::SubRip);
         $this->assertSame($this->getTexts($subtitle), $this->getTexts($again));
     }
 
@@ -309,6 +308,6 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
             ["text" => "before door", "beforeCueIndex" => 1],
             ["text" => "before last", "beforeCueIndex" => 1],
         ], $subtitle->getComments());
-        $this->assertSame([], $subtitle->getErrors());
+        $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
 }

@@ -1,10 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Parsers\EbuStlReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 class EbuStlParserTest extends TestCase
@@ -24,7 +28,7 @@ class EbuStlParserTest extends TestCase
 
     public function testReadsTheExampleTextFieldOfTheIssue(): void
     {
-        $subtitle = (new EbuStlParser())->parse(self::gsi() . self::tti(1, "\x80Caf\xC2e\x81\x8A"));
+        $subtitle = (new EbuStlParser())->parse(self::gsi() . self::tti(1, "\x80Caf\xC2e\x81\x8A"), new ReadOptions());
         $cue      = $subtitle->getCues()[0];
 
         $this->assertSame(["<i>Café</i>"], $cue->getLines());
@@ -41,7 +45,7 @@ class EbuStlParserTest extends TestCase
             self::tti(1, "e and more", 0xFE) .
             self::tti(1, "e end", 0x01) .
             self::tti(1, "", 0xFF) .
-            self::tti(2, "Next"));
+            self::tti(2, "Next"), new ReadOptions());
 
         $this->assertCount(2, $subtitle->getCues());
         $this->assertSame(str_repeat("a", 111) . "é end", $subtitle->getCues()[0]->getText());
@@ -52,7 +56,7 @@ class EbuStlParserTest extends TestCase
     public function testSkipsCommentBlocksAndKeepsThemAsComments(): void
     {
         $subtitle = (new EbuStlParser())->parse(self::gsi() .
-            self::tti(1, "First") . self::tti(2, "\x80Note\x81\x8Asecond row", comment: 1) . self::tti(3, "Second"));
+            self::tti(1, "First") . self::tti(2, "\x80Note\x81\x8Asecond row", comment: 1) . self::tti(3, "Second"), new ReadOptions());
 
         $this->assertSame(["First", "Second"], array_map(fn ($cue) => $cue->getText(), $subtitle->getCues()));
         $this->assertSame([["text" => "Note\nsecond row", "beforeCueIndex" => 1]], $subtitle->getComments());
@@ -78,7 +82,7 @@ class EbuStlParserTest extends TestCase
     #[DataProvider("textFields")]
     public function testConvertsTextFieldCodesToCoreMarkup(string $textField, array $lines): void
     {
-        $this->assertSame($lines, (new EbuStlParser())->parse(self::gsi() . self::tti(1, $textField))->getCues()[0]->getLines());
+        $this->assertSame($lines, (new EbuStlParser())->parse(self::gsi() . self::tti(1, $textField), new ReadOptions())->getCues()[0]->getLines());
     }
 
 
@@ -99,7 +103,7 @@ class EbuStlParserTest extends TestCase
     public function testMapsPositionAndJustificationToAlignment(string $displayStandard, int $vertical, int $justification, int $alignment): void
     {
         $subtitle = (new EbuStlParser())->parse(self::gsi(displayStandard: $displayStandard) .
-            self::tti(1, "Text", vertical: $vertical, justification: $justification));
+            self::tti(1, "Text", vertical: $vertical, justification: $justification), new ReadOptions());
 
         $this->assertSame($alignment, $subtitle->getCues()[0]->getAlignment());
         $this->assertSame($vertical, $subtitle->getCues()[0]->getFormatData("stl")["verticalPosition"]);
@@ -109,7 +113,7 @@ class EbuStlParserTest extends TestCase
 
     public function testReadsThirtyFramesPerSecond(): void
     {
-        $cue = (new EbuStlParser())->parse(self::gsi(diskFormat: "STL30.01") . self::tti(1, "Text"))->getCues()[0];
+        $cue = (new EbuStlParser())->parse(self::gsi(diskFormat: "STL30.01") . self::tti(1, "Text"), new ReadOptions())->getCues()[0];
 
         $this->assertSame([1.167, 2.333], [$cue->getStart(), $cue->getEnd()]);
     }
@@ -118,7 +122,7 @@ class EbuStlParserTest extends TestCase
     public function testSubtractedStartOfProgrammeDoesNotGoBelowZero(): void
     {
         $gsi = substr_replace(self::gsi(), "00000200", 256, 8);
-        $cue = (new EbuStlParser(true))->parse($gsi . self::tti(1, "Text"))->getCues()[0];
+        $cue = (new EbuStlParser())->parse($gsi . self::tti(1, "Text"), new ReadOptions(format: new EbuStlReadOptions(subtractStartOfProgramme: true)))->getCues()[0];
 
         $this->assertSame([0.0, 0.4], [$cue->getStart(), $cue->getEnd()]);
     }
@@ -141,13 +145,13 @@ class EbuStlParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage($message);
 
-        (new EbuStlParser())->parse($content);
+        (new EbuStlParser())->parse($content, new ReadOptions());
     }
 
 
     public function testAFileWithoutTtiBlocksHasNoCues(): void
     {
-        $subtitle = (new EbuStlParser())->parse(self::gsi());
+        $subtitle = (new EbuStlParser())->parse(self::gsi(), new ReadOptions());
 
         $this->assertSame([], $subtitle->getCues());
         $this->assertSame(0, $subtitle->getFormatData("stl")["counts"]["TNB"]);

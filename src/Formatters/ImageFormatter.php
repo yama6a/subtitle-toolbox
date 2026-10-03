@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 /**
- * Marks a formatter that writes image cues, so Subtitle::format() passes it image cues without text.
+ * Marks a formatter that writes image cues, so Subtitle::toString() passes it image cues without text.
  */
 interface ImageFormatter
 {

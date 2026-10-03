@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Streaming;
 
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -8,6 +10,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use Throwable;
@@ -51,7 +54,7 @@ class StreamReaderEdgeCasesTest extends TestCase
     public function testSubRipReaderMatchesSubRipParser(string $content): void
     {
         $this->assertSameOutcome(
-            fn (): array => (new SubRipParser())->parse($content)->getCues(),
+            fn (): array => (new SubRipParser())->parse($content, new ReadOptions())->getCues(),
             fn (): array => iterator_to_array((new SubRipStreamReader())->read($this->stream($content)), false)
         );
     }
@@ -63,7 +66,7 @@ class StreamReaderEdgeCasesTest extends TestCase
         $reader = new WebVttStreamReader();
         $this->assertSameOutcome(
             function () use ($content): array {
-                $subtitle = (new WebVttParser())->parse($content);
+                $subtitle = (new WebVttParser())->parse($content, new ReadOptions());
 
                 return [$subtitle->getCues(), $subtitle->getFormatData(WebVttParser::FORMAT)];
             },
@@ -119,7 +122,7 @@ class StreamReaderEdgeCasesTest extends TestCase
         stream_filter_append($stream, "convert.iconv.UTF-16/UTF-8");
 
         $this->assertEquals(
-            Subtitle::parse(file_get_contents($path))->getCues(),
+            Subtitle::fromStringAutoDetectFormat(file_get_contents($path))->getCues(),
             iterator_to_array((new WebVttStreamReader())->read($stream), false)
         );
     }

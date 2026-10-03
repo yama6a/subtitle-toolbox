@@ -1,25 +1,28 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Speakers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\TtmlFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
-use SubtitleToolbox\Parsers\SubRipParser;
-use SubtitleToolbox\Parsers\TtmlParser;
-use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class SpeakerLabelsTest extends TestCase
 {
     private const FILES = __DIR__ . "/../files/speakers/";
 
-    private const NO_BOM = ["bom" => false];
+    private static function noBom(): WriteOptions
+    {
+        return new WriteOptions(bom: false);
+    }
 
 
     private static function subtitle(string ...$texts): Subtitle
@@ -42,17 +45,25 @@ class SpeakerLabelsTest extends TestCase
     }
 
 
+    private static function apply(Subtitle $subtitle, SpeakerLabelOptions $options): Subtitle
+    {
+        SpeakerLabels::apply($subtitle, $options);
+
+        return $subtitle;
+    }
+
+
     private static function voices(): Subtitle
     {
-        return Subtitle::parse(file_get_contents(self::FILES . "voices.vtt"), WebVttParser::class);
+        return Subtitle::fromString(file_get_contents(self::FILES . "voices.vtt"), Format::WebVtt);
     }
 
 
     private static function whisper(string $path): Subtitle
     {
-        $parser = new WhisperJsonParser([WhisperJsonParser::OPTION_SPEAKER_VOICES => true]);
+        $parser = new WhisperJsonParser();
 
-        return $parser->parse(file_get_contents(self::FILES . $path));
+        return $parser->parse(file_get_contents(self::FILES . $path), new ReadOptions(speakerVoices: true));
     }
 
 
@@ -66,20 +77,20 @@ class SpeakerLabelsTest extends TestCase
                           [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $this->assertSame([15.2, 17.4, "<v Clara>We meet again next week.</v>"],
                           [$cues[6]->getStart(), $cues[6]->getEnd(), $cues[6]->getText()]);
-        $this->assertSame(file_get_contents(self::FILES . "voices.vtt"), $subtitle->format(WebVttFormatter::class, self::NO_BOM));
+        $this->assertSame(file_get_contents(self::FILES . "voices.vtt"), $subtitle->toString(Format::WebVtt, self::noBom()));
     }
 
 
     public function testSdhLabelsFileParsesAndRoundTrips(): void
     {
         $content  = file_get_contents(self::FILES . "sdh_labels.srt");
-        $subtitle = Subtitle::parse($content, SubRipParser::class);
+        $subtitle = Subtitle::fromString($content, Format::SubRip);
         $cues     = array_values($subtitle->getCues());
 
         $this->assertCount(7, $cues);
         $this->assertSame([1.0, 3.0, "JOHN: The gate opens at nine."], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $this->assertSame([14.2, 16.0, "MARY: Next time,\nCHLOÉ: drives."], [$cues[6]->getStart(), $cues[6]->getEnd(), $cues[6]->getText()]);
-        $this->assertSame($content, $subtitle->format(SubRipFormatter::class, self::NO_BOM + ["lineEnding" => "\r\n"]));
+        $this->assertSame($content, $subtitle->toString(Format::SubRip, new WriteOptions(lineEnding: LineEnding::Crlf, bom: false)));
     }
 
 
@@ -102,7 +113,14 @@ class SpeakerLabelsTest extends TestCase
     {
         $subtitle = self::subtitle("<v SPEAKER_00>Where?", "<v.loud SPEAKER_01>Home.</v>", "<v SPEAKER_02>Here.");
 
-        $this->assertSame($subtitle, SpeakerLabels::rename($subtitle, ["SPEAKER_00" => "Anna", "SPEAKER_01" => "O'Neil & Son", "SPEAKER_02" => "Sam \"Ace\" Reed"]));
+        $report = SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(rename: [
+            "SPEAKER_00" => "Anna",
+            "SPEAKER_01" => "O'Neil & Son",
+            "SPEAKER_02" => "Sam \"Ace\" Reed",
+            "SPEAKER_03" => "Nobody",
+        ]));
+
+        $this->assertEquals(new SpeakerLabelReport(3), $report);
         $this->assertSame([["<v Anna>Where?"], ["<v.loud O'Neil &amp; Son>Home.</v>"], ["<v Sam \"Ace\" Reed>Here."]],
                           self::lines($subtitle));
     }
@@ -111,9 +129,10 @@ class SpeakerLabelsTest extends TestCase
     public function testToPrefixFile(): void
     {
         $subtitle = self::voices();
+        $report   = SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Prefix));
 
-        $this->assertSame($subtitle, SpeakerLabels::toPrefix($subtitle));
-        $this->assertSame(file_get_contents(self::FILES . "voices_prefix.srt"), $subtitle->format(SubRipFormatter::class, self::NO_BOM));
+        $this->assertEquals(new SpeakerLabelReport(6), $report);
+        $this->assertSame(file_get_contents(self::FILES . "voices_prefix.srt"), $subtitle->toString(Format::SubRip, self::noBom()));
     }
 
 
@@ -146,7 +165,11 @@ class SpeakerLabelsTest extends TestCase
     #[DataProvider("prefixCases")]
     public function testToPrefix(string $text, bool $upperCase, string $separator, array $expected): void
     {
-        $this->assertSame([$expected], self::lines(SpeakerLabels::toPrefix(self::subtitle($text), $upperCase, $separator)));
+        $this->assertSame([$expected], self::lines(self::apply(self::subtitle($text), new SpeakerLabelOptions(
+            to: SpeakerStyle::Prefix,
+            upperCase: $upperCase,
+            separator: $separator,
+        ))));
     }
 
 
@@ -154,8 +177,8 @@ class SpeakerLabelsTest extends TestCase
     {
         $subtitle = self::voices();
 
-        $this->assertSame($subtitle, SpeakerLabels::toDialogueDashes($subtitle));
-        $this->assertSame(file_get_contents(self::FILES . "voices_dashes.srt"), $subtitle->format(SubRipFormatter::class, self::NO_BOM));
+        SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes));
+        $this->assertSame(file_get_contents(self::FILES . "voices_dashes.srt"), $subtitle->toString(Format::SubRip, self::noBom()));
     }
 
 
@@ -182,7 +205,7 @@ class SpeakerLabelsTest extends TestCase
     #[DataProvider("dashCases")]
     public function testToDialogueDashes(string $text, string $dash, array $expected): void
     {
-        $this->assertSame([$expected], self::lines(SpeakerLabels::toDialogueDashes(self::subtitle($text), $dash)));
+        $this->assertSame([$expected], self::lines(self::apply(self::subtitle($text), new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes, dash: $dash))));
     }
 
 
@@ -190,8 +213,8 @@ class SpeakerLabelsTest extends TestCase
     {
         $subtitle = self::voices();
 
-        $this->assertSame($subtitle, SpeakerLabels::toColours($subtitle));
-        $this->assertSame(file_get_contents(self::FILES . "voices_colours.srt"), $subtitle->format(SubRipFormatter::class, self::NO_BOM));
+        SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Colours));
+        $this->assertSame(file_get_contents(self::FILES . "voices_colours.srt"), $subtitle->toString(Format::SubRip, self::noBom()));
     }
 
 
@@ -206,7 +229,7 @@ class SpeakerLabelsTest extends TestCase
             ['<font color="#00ff00">4</font>'],
             ['<font color="#ffffff">5</font>'],
             ['<font color="#ffffff">6</font>', '<font color="#ffff00">7</font>'],
-        ], self::lines(SpeakerLabels::toColours($subtitle)));
+        ], self::lines(self::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Colours))));
     }
 
 
@@ -216,7 +239,7 @@ class SpeakerLabelsTest extends TestCase
 
         $this->assertSame([['<font color="#ff0000">Hi.</font>', '<font color="#ff0000">there</font>'], ["No speaker."],
                            ['<font color="#00ff00">Bye.</font>']],
-                          self::lines(SpeakerLabels::toColours($subtitle, ["#FF0000", "#00ff00"])));
+                          self::lines(self::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Colours, colours: ["#FF0000", "#00ff00"]))));
     }
 
 
@@ -235,20 +258,28 @@ class SpeakerLabelsTest extends TestCase
 
 
     #[DataProvider("invalidColours")]
-    public function testToColoursRejectsInvalidColours(array $colours): void
+    public function testOptionsRejectInvalidColours(array $colours): void
     {
         $this->expectException(InvalidArgumentException::class);
 
-        SpeakerLabels::toColours(self::subtitle("<v A>Hi."), $colours);
+        new SpeakerLabelOptions(to: SpeakerStyle::Colours, colours: $colours);
+    }
+
+
+    public function testOptionsReadLabelsOnlyFromPrefixes(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new SpeakerLabelOptions(from: SpeakerStyle::DialogueDashes);
     }
 
 
     public function testFromPrefixFile(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FILES . "sdh_labels.srt"), SubRipParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "sdh_labels.srt"), Format::SubRip);
 
-        $this->assertSame($subtitle, SpeakerLabels::fromPrefix($subtitle));
-        $this->assertSame(file_get_contents(self::FILES . "sdh_labels_voices.vtt"), $subtitle->format(WebVttFormatter::class, self::NO_BOM));
+        SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(from: SpeakerStyle::Prefix));
+        $this->assertSame(file_get_contents(self::FILES . "sdh_labels_voices.vtt"), $subtitle->toString(Format::WebVtt, self::noBom()));
     }
 
 
@@ -282,7 +313,10 @@ class SpeakerLabelsTest extends TestCase
     #[DataProvider("fromPrefixCases")]
     public function testFromPrefix(string $text, bool $upperCaseOnly, array $expected): void
     {
-        $this->assertSame([$expected], self::lines(SpeakerLabels::fromPrefix(self::subtitle($text), $upperCaseOnly)));
+        $this->assertSame([$expected], self::lines(self::apply(self::subtitle($text), new SpeakerLabelOptions(
+            from: SpeakerStyle::Prefix,
+            upperCaseOnly: $upperCaseOnly,
+        ))));
     }
 
 
@@ -290,7 +324,7 @@ class SpeakerLabelsTest extends TestCase
     {
         $subtitle = self::subtitle("JOHN: Hi.", "DR. O'NEIL: Yes.\nMARY: No.");
 
-        SpeakerLabels::toPrefix(SpeakerLabels::fromPrefix($subtitle));
+        SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(from: SpeakerStyle::Prefix, to: SpeakerStyle::Prefix));
 
         $this->assertSame([["JOHN: Hi."], ["DR. O'NEIL: Yes.", "MARY: No."]], self::lines($subtitle));
     }
@@ -298,10 +332,10 @@ class SpeakerLabelsTest extends TestCase
 
     public function testVoicesSurviveWebVttAndTtml(): void
     {
-        $subtitle = SpeakerLabels::fromPrefix(self::subtitle("DR. O'NEIL: Yes.\nMARY: No."));
+        $subtitle = self::apply(self::subtitle("DR. O'NEIL: Yes.\nMARY: No."), new SpeakerLabelOptions(from: SpeakerStyle::Prefix));
 
-        $vtt  = Subtitle::parse($subtitle->format(WebVttFormatter::class), WebVttParser::class);
-        $ttml = Subtitle::parse($subtitle->format(TtmlFormatter::class), TtmlParser::class);
+        $vtt  = Subtitle::fromString($subtitle->toString(Format::WebVtt), Format::WebVtt);
+        $ttml = Subtitle::fromString($subtitle->toString(Format::Ttml), Format::Ttml);
 
         $this->assertSame(["Dr. O'Neil" => 1, "Mary" => 1], SpeakerLabels::list($vtt));
         $this->assertSame(["Dr. O'Neil" => 1, "Mary" => 1], SpeakerLabels::list($ttml));
@@ -313,9 +347,9 @@ class SpeakerLabelsTest extends TestCase
         $subtitle = self::subtitle("<i>Hi</i>  there");
         $before   = self::lines($subtitle);
 
-        SpeakerLabels::toPrefix($subtitle);
-        SpeakerLabels::toDialogueDashes($subtitle);
-        SpeakerLabels::toColours($subtitle);
+        foreach (SpeakerStyle::cases() as $style) {
+            $this->assertEquals(new SpeakerLabelReport(0), SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: $style)));
+        }
 
         $this->assertSame($before, self::lines($subtitle));
     }
@@ -323,7 +357,7 @@ class SpeakerLabelsTest extends TestCase
 
     public function testWhisperSpeakerVoicesAreOffByDefault(): void
     {
-        $subtitle = (new WhisperJsonParser())->parse(file_get_contents(self::FILES . "whisper_cpp_diarize.json"));
+        $subtitle = (new WhisperJsonParser())->parse(file_get_contents(self::FILES . "whisper_cpp_diarize.json"), new ReadOptions());
 
         $this->assertSame([["Did you lock the back door?"], ["Yes, and the window."], ["Both of us checked it twice."], ["Then we can go."]],
                           self::lines($subtitle));
@@ -341,7 +375,7 @@ class SpeakerLabelsTest extends TestCase
         $this->assertSame([6.3, 8.0, "<v 0>Then we can go."], [$cues[3]->getStart(), $cues[3]->getEnd(), $cues[3]->getText()]);
         $this->assertSame("?", $cues[2]->getFormatData("whisper")["speaker"]);
         $this->assertSame([0 => 2, 1 => 1, "?" => 1], SpeakerLabels::list($subtitle));
-        $this->assertSame(file_get_contents(self::FILES . "whisper_cpp_diarize.vtt"), $subtitle->format(WebVttFormatter::class, self::NO_BOM));
+        $this->assertSame(file_get_contents(self::FILES . "whisper_cpp_diarize.vtt"), $subtitle->toString(Format::WebVtt, self::noBom()));
     }
 
 
@@ -352,11 +386,11 @@ class SpeakerLabelsTest extends TestCase
         $this->assertSame("<v SPEAKER_00>The market opens on Saturday.", $subtitle->getCues()[0]->getText());
         $this->assertSame("SPEAKER_00", $subtitle->getCues()[0]->getFormatData("whisper")["speaker"]);
 
-        SpeakerLabels::rename($subtitle, ["SPEAKER_00" => "Anna", "SPEAKER_01" => "Ben"]);
+        SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(rename: ["SPEAKER_00" => "Anna", "SPEAKER_01" => "Ben"]));
         $this->assertSame(["Anna" => 1, "Ben" => 2], SpeakerLabels::list($subtitle));
 
-        SpeakerLabels::toPrefix($subtitle);
-        $this->assertSame(file_get_contents(self::FILES . "whisperx_diarize_prefix.srt"), $subtitle->format(SubRipFormatter::class, self::NO_BOM));
+        SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Prefix));
+        $this->assertSame(file_get_contents(self::FILES . "whisperx_diarize_prefix.srt"), $subtitle->toString(Format::SubRip, self::noBom()));
     }
 
 
@@ -365,8 +399,8 @@ class SpeakerLabelsTest extends TestCase
         $json   = '{"segments": [{"start": 0, "end": 2, "text": " Hi.", "speaker": "O\'Neil & <Son>",' .
                   ' "words": [{"word": "Hi.", "start": 0.5, "end": 1}]}, {"start": 2, "end": 3, "text": "Bye.", "speaker": " "},' .
                   ' {"start": 3, "end": 4, "text": "Yes.", "speaker": 5}]}';
-        $parser = new WhisperJsonParser([WhisperJsonParser::OPTION_SPEAKER_VOICES => true, WhisperJsonParser::OPTION_WORD_TIMESTAMPS => true]);
+        $parser = new WhisperJsonParser();
 
-        $this->assertSame([["<v O'Neil &amp; &lt;Son&gt;><00:00:00.500>Hi."], ["Bye."], ["Yes."]], self::lines($parser->parse($json)));
+        $this->assertSame([["<v O'Neil &amp; &lt;Son&gt;><00:00:00.500>Hi."], ["Bye."], ["Yes."]], self::lines($parser->parse($json, new ReadOptions(speakerVoices: true, wordTimestamps: true))));
     }
 }

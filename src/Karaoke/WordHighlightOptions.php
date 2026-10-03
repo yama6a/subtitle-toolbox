@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Karaoke;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
@@ -14,7 +16,7 @@ final class WordHighlightOptions
 
 
     /**
-     * Creates the options for WordHighlight::expand(), for example new WordHighlightOptions(style: "b").
+     * Creates the options for WordHighlight::apply(), for example new WordHighlightOptions(style: "b").
      */
     public function __construct(
         public readonly string $style = "u",

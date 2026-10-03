@@ -1,23 +1,27 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Encoding\CodePage;
 use SubtitleToolbox\Encoding\Iso6937;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\Options\EbuStlOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\EbuStlParser as Stl;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
 /**
  * Writes EBU STL files as defined in EBU Tech 3264: https://tech.ebu.ch/docs/tech/tech3264.pdf
  */
 class EbuStlFormatter extends SubtitleFormatter
 {
-    public const OPTION_FRAME_RATE = "OPTION_FRAME_RATE";
+    protected const FORMAT_OPTIONS = EbuStlOptions::class;
 
     // The values of a new GSI block. EBU Tech 3264 section 4.2.5 fills unused bytes with spaces.
     private const DEFAULT_GSI = [
@@ -28,43 +32,29 @@ class EbuStlFormatter extends SubtitleFormatter
     private const FIRST_SUBTITLE_NUMBER = 1;
     private const MAX_EXTENSION_BLOCKS  = 0xF0;
 
-    private FrameRate $frameRate;
 
-    private float $offset;
-
-    private string $characterCodeTable;
-
-    private int $maxRow;
-
-    private bool $teletext;
-
-    private bool $stripAll;
-
-
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $this->rejectUnknownOptions($options);
         $data = $subtitle->getFormatData(Stl::FORMAT_DATA_KEY);
         $gsi  = ($data["gsi"] ?? []) + self::DEFAULT_GSI;
-
-        $fps = (int) ($options[self::OPTION_FRAME_RATE] ?? Stl::FRAME_RATES[$gsi["DFC"] ?? ""] ?? 25);
-        if (!in_array($fps, Stl::FRAME_RATES, true)) {
-            throw new InvalidArgumentException("The EBU STL formatter writes 25 or 30 fps, got $fps.");
-        }
+        $fps  = $this->formatOptions($options)?->frameRate ?? Stl::FRAME_RATES[$gsi["DFC"] ?? ""] ?? 25;
 
         if (!array_key_exists($gsi["CCT"], Stl::CHARACTER_CODE_TABLES)) {
             throw new InvalidArgumentException("The character code table \"{$gsi["CCT"]}\" is not 00, 01, 02, 03 or 04.");
         }
 
-        $gsi["DFC"]               = array_search($fps, Stl::FRAME_RATES, true);
-        $this->frameRate          = new FrameRate($fps);
-        $this->offset             = empty($data["startOfProgrammeSubtracted"]) ? 0.0 : Stl::timeCodeToSeconds($gsi["TCP"], $this->frameRate);
-        $this->characterCodeTable = $gsi["CCT"];
-        $this->maxRow             = Stl::maxRow($gsi);
-        $this->teletext           = in_array($gsi["DSC"], ["1", "2"], true);
-        $this->stripAll           = (bool) (Options::flag($options, parent::OPTION_STRIP_ALL_XML_TAGS) ?? false);
+        $gsi["DFC"] = array_search($fps, Stl::FRAME_RATES, true);
+        $frameRate  = new FrameRate($fps);
+        $context    = new EbuStlContext(
+            frameRate: $frameRate,
+            offset: empty($data["startOfProgrammeSubtracted"]) ? 0.0 : Stl::timeCodeToSeconds($gsi["TCP"], $frameRate),
+            characterCodeTable: $gsi["CCT"],
+            maxRow: Stl::maxRow($gsi),
+            teletext: in_array($gsi["DSC"], ["1", "2"], true),
+            stripAll: $options->stripTags,
+        );
 
-        $sets = $this->subtitleSets($subtitle, $data["comments"] ?? []);
+        $sets = $this->subtitleSets($context, $subtitle, $data["comments"] ?? []);
 
         $number = $data["firstSubtitleNumber"] ?? self::FIRST_SUBTITLE_NUMBER;
         $blocks = "";
@@ -86,19 +76,19 @@ class EbuStlFormatter extends SubtitleFormatter
     /**
      * @return list<array{blocks: list<string>, comment: bool}>
      */
-    private function subtitleSets(Subtitle $subtitle, array $storedComments): array
+    private function subtitleSets(EbuStlContext $context, Subtitle $subtitle, array $storedComments): array
     {
         $cues     = array_values($subtitle->getCues());
         $comments = $subtitle->getComments();
         $sets     = [];
         foreach ([...array_keys($cues), count($cues)] as $index) {
             while ($comments !== [] && $comments[0]["beforeCueIndex"] <= $index) {
-                $timeCode = $this->timeCode(isset($cues[$index]) ? $cues[$index]->getStart() : (end($cues) ?: new SubtitleCue())->getEnd());
-                $sets[]   = ["blocks" => $this->commentBlocks(array_shift($comments)["text"], $storedComments, $timeCode), "comment" => true];
+                $timeCode = $this->smpteBytes($context, isset($cues[$index]) ? $cues[$index]->getStart() : (end($cues) ?: new SubtitleCue())->getEnd());
+                $sets[]   = ["blocks" => $this->commentBlocks($context, array_shift($comments)["text"], $storedComments, $timeCode), "comment" => true];
             }
 
             if (isset($cues[$index])) {
-                $sets[] = ["blocks" => $this->cueBlocks($cues[$index]), "comment" => false];
+                $sets[] = ["blocks" => $this->cueBlocks($context, $cues[$index]), "comment" => false];
             }
         }
 
@@ -111,7 +101,7 @@ class EbuStlFormatter extends SubtitleFormatter
      *
      * @return list<string>
      */
-    private function commentBlocks(string $text, array &$storedComments, string $timeCode): array
+    private function commentBlocks(EbuStlContext $context, string $text, array &$storedComments, string $smpteBytes): array
     {
         foreach ($storedComments as $index => $stored) {
             if ($stored["text"] === $text) {
@@ -121,10 +111,10 @@ class EbuStlFormatter extends SubtitleFormatter
             }
         }
 
-        $bytes = implode(chr(Stl::NEW_LINE), array_map($this->encodeCharacters(...), explode("\n", $text)));
-        [$verticalPosition, $justificationCode] = $this->position(2, count(explode("\n", $text)));
+        $bytes = implode(chr(Stl::NEW_LINE), array_map(fn (string $line): string => $this->encodeCharacters($context, $line), explode("\n", $text)));
+        [$verticalPosition, $justificationCode] = $this->position($context, 2, count(explode("\n", $text)));
 
-        return $this->textBlocks($bytes, $this->header(0, 0, $timeCode, $timeCode, $verticalPosition, $justificationCode, 1));
+        return $this->textBlocks($context, $bytes, $this->header(0, 0, $smpteBytes, $smpteBytes, $verticalPosition, $justificationCode, 1));
     }
 
 
@@ -133,28 +123,28 @@ class EbuStlFormatter extends SubtitleFormatter
      *
      * @return list<string>
      */
-    private function cueBlocks(SubtitleCue $cue): array
+    private function cueBlocks(EbuStlContext $context, SubtitleCue $cue): array
     {
         $stored    = $cue->getFormatData(Stl::FORMAT_DATA_KEY);
         $alignment = $cue->getAlignment() ?? 2;
-        $timeIn    = $this->timeCode($cue->getStart());
-        $timeOut   = $this->timeCode($cue->getEnd());
+        $timeIn    = $this->smpteBytes($context, $cue->getStart());
+        $timeOut   = $this->smpteBytes($context, $cue->getEnd());
 
         $position = [$stored["verticalPosition"] ?? -1, $stored["justificationCode"] ?? -1];
         if (!isset($stored["verticalPosition"], $stored["justificationCode"]) ||
-            Stl::alignment($position[0], $position[1], $this->maxRow) !== $alignment) {
-            $position = $this->position($alignment, max(1, count($cue->getLines())));
+            Stl::alignment($position[0], $position[1], $context->maxRow) !== $alignment) {
+            $position = $this->position($context, $alignment, max(1, count($cue->getLines())));
         }
 
         $header = $this->header($stored["subtitleGroupNumber"] ?? 0, $stored["cumulativeStatus"] ?? 0, $timeIn, $timeOut, ...$position);
         $blocks = array_map("hex2bin", $stored["blocks"] ?? []);
-        if ($blocks !== [] && !$this->stripAll && ($stored["text"] ?? null) === $cue->getText()) {
+        if ($blocks !== [] && !$context->stripAll && ($stored["text"] ?? null) === $cue->getText()) {
             return $this->patchHeaders($blocks, $header);
         }
 
         $userData = array_filter($blocks, fn (string $block): bool => ord($block[3]) === Stl::USER_DATA_BLOCK);
 
-        return [...$this->patchHeaders(array_values($userData), $header), ...$this->textBlocks($this->encodeText($cue), $header)];
+        return [...$this->patchHeaders(array_values($userData), $header), ...$this->textBlocks($context, $this->encodeText($context, $cue), $header)];
     }
 
 
@@ -197,12 +187,12 @@ class EbuStlFormatter extends SubtitleFormatter
      *
      * @return list<string>
      */
-    private function textBlocks(string $bytes, string $header): array
+    private function textBlocks(EbuStlContext $context, string $bytes, string $header): array
     {
         $fields = [];
         while (strlen($bytes) >= Stl::TEXT_FIELD_SIZE) {
             $length = Stl::TEXT_FIELD_SIZE;
-            if ($this->characterCodeTable === "00" && isset(Iso6937::DIACRITICS[ord($bytes[$length - 1])])) {
+            if ($context->characterCodeTable === "00" && isset(Iso6937::DIACRITICS[ord($bytes[$length - 1])])) {
                 $length--;
             }
 
@@ -228,9 +218,9 @@ class EbuStlFormatter extends SubtitleFormatter
     /**
      * Returns the 16 header bytes of a TTI block, EBU Tech 3264 table 2. The formatter writes the subtitle number later.
      */
-    private function header(int $group, int $cumulativeStatus, string $timeIn, string $timeOut, int $verticalPosition, int $justificationCode, int $commentFlag = 0): string
+    private function header(int $group, int $cumulativeStatus, string $tci, string $tco, int $verticalPosition, int $justificationCode, int $commentFlag = 0): string
     {
-        return chr($group) . "\0\0" . chr(Stl::LAST_BLOCK) . chr($cumulativeStatus) . $timeIn . $timeOut .
+        return chr($group) . "\0\0" . chr(Stl::LAST_BLOCK) . chr($cumulativeStatus) . $tci . $tco .
                chr($verticalPosition) . chr($justificationCode) . chr($commentFlag);
     }
 
@@ -241,10 +231,10 @@ class EbuStlFormatter extends SubtitleFormatter
      *
      * @return array{int, int}
      */
-    private function position(int $alignment, int $lineCount): array
+    private function position(EbuStlContext $context, int $alignment, int $lineCount): array
     {
-        $firstRow = $this->teletext ? 1 : 0;
-        $lastRow  = max($firstRow, $this->maxRow - $lineCount + 1);
+        $firstRow = $context->teletext ? 1 : 0;
+        $lastRow  = max($firstRow, $context->maxRow - $lineCount + 1);
 
         $verticalPosition = match (intdiv($alignment - 1, 3)) {
             2       => $firstRow,
@@ -259,13 +249,11 @@ class EbuStlFormatter extends SubtitleFormatter
     /**
      * Returns the 4 time code bytes hours, minutes, seconds and frames, EBU Tech 3264 section 4.3.2.
      */
-    private function timeCode(float $seconds): string
+    private function smpteBytes(EbuStlContext $context, float $seconds): string
     {
-        $frames = $this->frameRate->secondsToFrames(max(0.0, $seconds + $this->offset));
-        $fps    = (int) $this->frameRate->getFps();
+        [$hours, $minutes, $wholeSeconds, $frames] = Timecode::frames(max(0.0, $seconds + $context->offset), $context->frameRate);
 
-        return chr(min(intdiv($frames, 3600 * $fps), 0xFF)) . chr(intdiv($frames, 60 * $fps) % 60) .
-               chr(intdiv($frames, $fps) % 60) . chr($frames % $fps);
+        return chr(min($hours, 0xFF)) . chr($minutes) . chr($wholeSeconds) . chr($frames);
     }
 
 
@@ -273,7 +261,7 @@ class EbuStlFormatter extends SubtitleFormatter
      * Converts the core markup of the cue lines to text field codes: 80h to 83h for italics and underline,
      * and the teletext alpha colours for the eight colours of EBU Tech 3264 appendix 2.
      */
-    private function encodeText(SubtitleCue $cue): string
+    private function encodeText(EbuStlContext $context, SubtitleCue $cue): string
     {
         $rows = [];
         foreach ($cue->getLines() as $line) {
@@ -283,11 +271,11 @@ class EbuStlFormatter extends SubtitleFormatter
             $colours = [];
             foreach (preg_split('/(<[^>]*>)/', $line, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY) as $token) {
                 if ($token[0] !== "<") {
-                    $bytes .= $this->encodeCharacters(Markup::decodeEntities($token));
+                    $bytes .= $this->encodeCharacters($context, Markup::decodeEntities($token));
                     continue;
                 }
 
-                if ($this->stripAll) {
+                if ($context->stripAll) {
                     continue;
                 }
 
@@ -331,9 +319,9 @@ class EbuStlFormatter extends SubtitleFormatter
     }
 
 
-    private function encodeCharacters(string $text): string
+    private function encodeCharacters(EbuStlContext $context, string $text): string
     {
-        $table = Stl::CHARACTER_CODE_TABLES[$this->characterCodeTable];
+        $table = Stl::CHARACTER_CODE_TABLES[$context->characterCodeTable];
 
         return $table === null ? Iso6937::encode($text) : CodePage::encode($text, $table);
     }

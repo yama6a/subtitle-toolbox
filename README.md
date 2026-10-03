@@ -15,63 +15,66 @@ composer require ymakhloufi/subtitle-toolbox
 | PHP 8.2 or later | everything |
 | `ext-dom`, `ext-iconv` | everything. Composer checks them |
 | `ext-mbstring`, optional | full Unicode upper and lower case. Without it, only A to Z change case |
+| `ext-curl`, optional | the DeepL and Google translation engines and the `translate` command |
 | `ext-zlib`, optional | writing PGS, compressed PNG images, zlib-compressed MKV tracks |
 | [`yama6a/php-glyph-ocr`](https://github.com/yama6a/php-glyph-ocr), optional | the built-in OCR of PGS and VobSub bitmaps |
 
+Upgrading from 1.x: [docs/upgrade-2.0.md](docs/upgrade-2.0.md) maps each 1.x call to its 2.0 call.
+
 ## Quick start
 ```php
-use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
-$subtitle = Subtitle::parse(file_get_contents('movie.srt'));   // detects the format from the content
+$subtitle = Subtitle::load('movie.srt', Format::SubRip);
 
 $subtitle->shift(-2.5);                                         // all cues 2.5 s earlier
 $subtitle->convertFrameRate(25, 23.976);                        // subtitle for a 25 fps video, video is 23.976 fps
 $subtitle->fixOverlaps(0.083);                                  // end each cue at least 0.083 s before the next one
 $subtitle->wrapLines(42);                                       // at most 42 characters per line, at most 2 lines
 
-file_put_contents('movie.vtt', $subtitle->format(WebVttFormatter::class));
+$subtitle->save('movie.vtt');                                   // WebVTT, from the extension
 ```
 
-- **Parser class**: `Subtitle::parse($content, SubRipParser::class)` skips the detection. Formats without a signature, such as CSV, need it. See [detection](docs/detection.md).
-- **Encoding**: `Subtitle::parse($content, null, 'Windows-1252')` converts the input to UTF-8. See [encodings](docs/encodings.md).
+- **Format**: the enum `Format` names each format, for example `Format::SubRip`. `Subtitle::loadAutoDetectFormat('movie.srt')` detects the format from the content. See [load and save](docs/formats.md#load-and-save) and [detection](docs/detection.md).
+- **Read options**: `Subtitle::fromString($content, Format::SubRip, new ReadOptions(encoding: 'Windows-1252'))` converts the input to UTF-8. `ReadOptions` holds every parser setting. See [read options](docs/read-options.md) and [encodings](docs/encodings.md).
 - **Errors**: every exception implements `SubtitleToolboxException`. See [errors](docs/errors.md).
 
 ## Supported formats
-| Format | Name | Extensions | Read | Write | Notes |
-|:--- |:--- |:--- |:---:|:---:|:--- |
-| ASS, SSA | `ass` | `.ass`, `.ssa` | yes | yes | karaoke tags `\k` by default, `\kf` or `\ko` with `AssFormatter::OPTION_KARAOKE_TAG` |
-| CSV, TSV | `csv`, `tsv` | `.csv`, `.tsv` | yes | yes | for spreadsheets. No detection, pass `CsvParser::class` |
-| EBU STL | `stl` | `.stl` | yes | yes | binary, 25 or 30 fps |
-| iTunes Timed Text | `itt` | `.itt` | yes | yes | needs a frame rate to write |
-| LRC | `lrc` | `.lrc` | yes | yes | with enhanced LRC word times |
-| MicroDVD | `microdvd` | `.sub` | yes | yes | needs the frame rate of the video |
-| MPL2 | `mpl2` | `.txt` | yes | yes | |
-| MPSub | `mpsub` | `.mpsub` | yes | yes | |
-| SAMI | `sami` | `.smi`, `.sami` | yes | yes | one language class per parse |
-| SBV | `sbv` | `.sbv` | yes | yes | |
-| SCC | `scc` | `.scc` | yes | yes | CEA-608 closed captions |
-| SubRip | `srt` | `.srt` | yes | yes | |
-| SubViewer 1 and 2 | `subviewer` | `.sub` | yes | yes | |
-| TMPlayer | `tmplayer` | `.txt` | yes | yes | |
-| TTML, IMSC, DFXP | `ttml` | `.ttml`, `.dfxp`, `.xml` | yes | yes | |
-| WebVTT | `vtt` | `.vtt` | yes | yes | also chapters |
-| PGS | `pgs` | `.sup` | yes | yes | Blu-ray bitmaps as image cues |
-| VobSub | `vobsub` | `.idx` with `.sub` | yes | no | DVD bitmaps as image cues |
-| JSON of this library | `json` | `.json` | yes | yes | |
-| Plain text | `txt` | `.txt` | no | yes | transcript |
-| Whisper JSON | `whisper` | `.json` | yes | no | OpenAI API, openai-whisper, faster-whisper, WhisperX, whisper.cpp |
-| Cloud speech-to-text JSON | `aws-transcribe`, `deepgram`, `assemblyai`, `google-speech` | `.json` | yes | no | Amazon Transcribe, Deepgram, AssemblyAI, Google Cloud Speech-to-Text |
-| YouTube timed text | `youtube` | `.json3`, `.srv3`, `.srv1` | yes | no | json3, srv1, srv2, srv3 and transcript XML |
-| Podcasting 2.0 transcript JSON | `podcast-transcript` | `.json` | yes | yes | |
-| HTML transcript | `html` | `.html`, `.htm` | yes | yes | the Podcasting 2.0 HTML format |
-| YouTube chapters | `ytchapter` | `.txt` | yes | yes | chapter list in a video description |
-| Podcasting 2.0 chapters | `podcast` | `.json` | yes | yes | |
-| FFmpeg metadata chapters | `ffmeta` | `.ffmeta` | yes | yes | |
-| OGM chapters | `ogm` | `.txt` | yes | yes | |
-| MKV and WebM tracks | | `.mkv`, `.webm` | yes | no | `MatroskaReader` reads `S_TEXT/UTF8`, ASS, SSA, WebVTT and PGS tracks. CLI: `--track` |
+| Format | Case | Name | Extensions | Read | Write | Notes |
+|:--- |:--- |:--- |:--- |:---:|:---:|:--- |
+| ASS, SSA | `Ass` | `ass` | `.ass`, `.ssa` | yes | yes | karaoke tags `\k` by default, `\kf` or `\ko` with `AssOptions::$karaokeTag` |
+| CSV, TSV | `Csv`, `Tsv` | `csv`, `tsv` | `.csv`, `.tsv` | yes | yes | for spreadsheets. No detection, pass `Format::Csv` |
+| EBU STL | `EbuStl` | `stl` | `.stl` | yes | yes | binary, 25 or 30 fps |
+| iTunes Timed Text | `Itt` | `itt` | `.itt` | yes | yes | needs a frame rate to write |
+| LRC | `Lyrics` | `lrc` | `.lrc` | yes | yes | with enhanced LRC word times |
+| MicroDVD | `MicroDvd` | `microdvd` | `.sub` | yes | yes | needs the frame rate of the video |
+| MPL2 | `Mpl2` | `mpl2` | `.txt` | yes | yes | |
+| MPSub | `MpSub` | `mpsub` | `.mpsub` | yes | yes | |
+| SAMI | `Sami` | `sami` | `.smi`, `.sami` | yes | yes | one language class per parse |
+| SBV | `Sbv` | `sbv` | `.sbv` | yes | yes | |
+| SCC | `Scc` | `scc` | `.scc` | yes | yes | CEA-608 closed captions |
+| SubRip | `SubRip` | `srt` | `.srt` | yes | yes | |
+| SubViewer 1 and 2 | `SubViewer` | `subviewer` | `.sub` | yes | yes | |
+| TMPlayer | `TmPlayer` | `tmplayer` | `.txt` | yes | yes | |
+| TTML, IMSC, DFXP | `Ttml` | `ttml` | `.ttml`, `.dfxp`, `.xml` | yes | yes | |
+| WebVTT | `WebVtt` | `vtt` | `.vtt` | yes | yes | also chapters |
+| PGS | `Pgs` | `pgs` | `.sup` | yes | yes | Blu-ray bitmaps as image cues |
+| VobSub | `VobSub` | `vobsub` | `.idx` with `.sub` | yes | no | DVD bitmaps as image cues |
+| JSON of this library | `Json` | `json` | `.json` | yes | yes | |
+| Plain text | `PlainText` | `txt` | `.txt` | no | yes | transcript |
+| Whisper JSON | `Whisper` | `whisper` | `.json` | yes | no | OpenAI API, openai-whisper, faster-whisper, WhisperX, whisper.cpp |
+| Cloud speech-to-text JSON | `AwsTranscribe`, `Deepgram`, `AssemblyAi`, `GoogleSpeech` | `aws-transcribe`, `deepgram`, `assemblyai`, `google-speech` | `.json` | yes | no | Amazon Transcribe, Deepgram, AssemblyAI, Google Cloud Speech-to-Text. Not detected |
+| YouTube timed text | `YouTube` | `youtube` | `.json3`, `.srv3`, `.srv1` | yes | no | json3, srv1, srv2, srv3 and transcript XML |
+| Podcasting 2.0 transcript JSON | `PodcastTranscript` | `podcast-transcript` | `.json` | yes | yes | |
+| HTML transcript | `HtmlTranscript` | `html` | `.html`, `.htm` | yes | yes | the Podcasting 2.0 HTML format |
+| YouTube chapters | `YouTubeChapters` | `ytchapter` | `.txt` | yes | yes | chapter list in a video description. Not detected |
+| Podcasting 2.0 chapters | `PodcastChapters` | `podcast` | `.json` | yes | yes | not detected |
+| FFmpeg metadata chapters | `FfMetadata` | `ffmeta` | `.ffmeta` | yes | yes | not detected |
+| OGM chapters | `OgmChapters` | `ogm` | `.txt` | yes | yes | not detected |
+| MKV and WebM tracks | | | `.mkv`, `.webm` | yes | no | `Subtitle::loadTrack()` reads `S_TEXT/UTF8`, ASS, SSA, WebVTT and PGS tracks. CLI: `--track` |
 
-**Name** is the format name for `--from` and `--to` in the command line tool. The details of each format are in [formats](docs/formats.md), [transcripts](docs/transcripts.md), [chapters](docs/chapters.md), [OCR](docs/ocr.md), [JSON](docs/json.md) and [MKV](docs/mkv.md).
+**Case** is the case of the enum `Format`, for example `Format::SubRip`. **Name** is its value, and the format name for `--from` and `--to` in the command line tool. The details of each format are in [formats](docs/formats.md), [transcripts](docs/transcripts.md), [chapters](docs/chapters.md), [OCR](docs/ocr.md), [JSON](docs/json.md) and [MKV](docs/mkv.md).
 
 ## Features
 - **Cues and metadata**: comments, alignment, format data, lookup by time, forced cues, statistics. See [subtitle.md](docs/subtitle.md) and [markup.md](docs/markup.md).
@@ -80,7 +83,7 @@ file_put_contents('movie.vtt', $subtitle->format(WebVttFormatter::class));
 - **Validation**: reading speed, line length and timing rules, with Netflix and BBC presets. See [validation.md](docs/validation.md).
 - **Sync**: find the offset and frame rate from a reference subtitle or from the speech in the audio. See [sync.md](docs/sync.md).
 - **OCR**: turn PGS and VobSub bitmaps into text in pure PHP, or with your own engine. See [ocr.md](docs/ocr.md).
-- **Translation**: send the cues to a machine translation engine and keep the tags. See [translation.md](docs/translation.md).
+- **Translation**: translate the cues with the built-in DeepL and Google engines or your own engine, and keep the tags. See [translation.md](docs/translation.md).
 - **Compare**: list the cues that changed between two versions. See [compare.md](docs/compare.md).
 - **Large files and streaming**: stream SRT and WebVTT cue by cue, cut WebVTT into HLS segments. See [streaming.md](docs/streaming.md) and [hls.md](docs/hls.md).
 - **Broken files**: skip broken cues with a warning in place of an exception. See [lenient-parsing.md](docs/lenient-parsing.md).
@@ -114,7 +117,7 @@ Composer installs `vendor/bin/subtitle-toolbox`. Every [GitHub release](https://
 
 ```sh
 vendor/bin/subtitle-toolbox convert movie.srt movie.vtt
-vendor/bin/subtitle-toolbox fps season1/ --from 25 --to 23.976 --in-place
+vendor/bin/subtitle-toolbox retime season1/ --from-fps 25 --to-fps 23.976 --in-place
 vendor/bin/subtitle-toolbox convert movie.mkv movie.srt --track 3 --ocr
 
 curl -fsSLO https://github.com/yama6a/subtitle-toolbox/releases/latest/download/subtitle-toolbox.phar

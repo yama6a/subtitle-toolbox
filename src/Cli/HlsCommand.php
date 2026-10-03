@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Hls\HlsSegmentOptions;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\Subtitle;
@@ -56,12 +59,6 @@ class HlsCommand extends FileCommand
     }
 
 
-    protected function inputOptions(): array
-    {
-        return array_values(array_filter(parent::inputOptions(), fn (Option $option): bool => $option->name !== "keep-going"));
-    }
-
-
     protected function prepare(Arguments $arguments): void
     {
         parent::prepare($arguments);
@@ -99,7 +96,7 @@ class HlsCommand extends FileCommand
     }
 
 
-    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         $result    = HlsWebVttSegmenter::segment($subtitle, $this->segmentOptions);
         $directory = rtrim($this->directory, "/\\");

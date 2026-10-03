@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Encoding\CodePage;
@@ -85,19 +87,14 @@ class EbuStlParser extends SubtitleParser
 
     private const WHITE = 7;
 
-    private bool $subtractStartOfProgramme;
 
-
-    /**
-     * Subtracts the start-of-programme time code of the GSI block from all cue times when $subtractStartOfProgramme is true.
-     */
-    public function __construct(bool $subtractStartOfProgramme = false)
+    protected static function formatOptionsClass(): string
     {
-        $this->subtractStartOfProgramme = $subtractStartOfProgramme;
+        return EbuStlReadOptions::class;
     }
 
 
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         if (strlen($rawSubtitle) < self::GSI_BLOCK_SIZE) {
@@ -123,7 +120,7 @@ class EbuStlParser extends SubtitleParser
         }
 
         $frameRate = new FrameRate(self::FRAME_RATES[$gsi["DFC"]]);
-        $offset    = $this->subtractStartOfProgramme ? self::timeCodeToSeconds($gsi["TCP"], $frameRate) : 0.0;
+        $offset    = $this->formatOptions()->subtractStartOfProgramme ? self::timeCodeToSeconds($gsi["TCP"], $frameRate) : 0.0;
         $sets      = self::readSubtitleSets(substr($rawSubtitle, self::GSI_BLOCK_SIZE));
         $maxRow    = self::maxRow($gsi);
 
@@ -182,7 +179,7 @@ class EbuStlParser extends SubtitleParser
 
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, [
             "gsi"                        => $gsi,
-            "startOfProgrammeSubtracted" => $this->subtractStartOfProgramme,
+            "startOfProgrammeSubtracted" => $this->formatOptions()->subtractStartOfProgramme,
             "firstSubtitleNumber"        => $sets === [] ? null : unpack("v", $sets[0][0], 1)[1],
             "comments"                   => $comments,
             "counts"                     => [

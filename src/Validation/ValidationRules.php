@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Validation;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
@@ -28,6 +30,10 @@ final class ValidationRules
         public readonly ?float $minSecondsPerWord = null,
         public readonly ?string $allowedCharacters = null,
         public readonly bool $noAllCapsLines = false,
+        public readonly bool $requireCues = false,
+        public readonly bool $noUnsortedCues = false,
+        public readonly bool $noNegativeDuration = false,
+        public readonly bool $noIndexGaps = false,
     ) {
         if ($dialogueDashStyle !== null && preg_match("/^[-\x{2010}\x{2013}\x{2014}] ?$/u", $dialogueDashStyle) !== 1) {
             throw new InvalidArgumentException("The dialogue dash style must be a hyphen, an en dash or an em dash, " .
@@ -38,6 +44,22 @@ final class ValidationRules
             throw new InvalidArgumentException("The allowed characters \"$allowedCharacters\" are no valid regular " .
                                                "expression character class.");
         }
+    }
+
+
+    /**
+     * Returns the checks of a well-formed cue list: at least one cue, cues in start order, no cue that ends before it
+     * starts, and cue indexes from 0 without a gap.
+     */
+    public static function structure(): self
+    {
+        return new self(
+            requireCues: true,
+            noUnsortedCues: true,
+            noNegativeDuration: true,
+            noIndexGaps: true,
+            noOverlap: true,
+        );
     }
 
 

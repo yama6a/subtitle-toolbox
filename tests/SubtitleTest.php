@@ -1,13 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
-use SubtitleToolbox\Parsers\SubtitleParser;
+use SubtitleToolbox\Validation\ValidationResult;
+use SubtitleToolbox\Validation\ValidationRules;
 
 class SubtitleTest extends \PHPUnit\Framework\TestCase
 {
@@ -62,44 +62,74 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
-    public function testGetErrors()
+    public function testValidateWithTheStructureRulesFindsEachStructureProblem(): void
     {
+        $rules    = ValidationRules::structure();
+        $problems = fn (Subtitle $subtitle): array => array_map(
+            fn (ValidationResult $result): array => [$result->getCueIndex(), $result->getRule(), $result->getValue()],
+            $subtitle->validate($rules)
+        );
+
         $subtitle = new Subtitle();
-        $this->assertStringContainsString("subtitle contains no cues", $subtitle->getErrors()[0]);
+        $this->assertSame([[null, ValidationResult::RULE_REQUIRE_CUES, 0]], $problems($subtitle));
 
-        $subtitle->addCue($cue1 = new SubtitleCue(1, 2, "text1"), false);
-        $subtitle->addCue($cue2 = new SubtitleCue(5, 6, "text2"), false);
-        $subtitle->addCue($cue3 = new SubtitleCue(3, 4, "text3"), false);
-
-        $this->assertStringContainsString("before its predecessor's end-time", $subtitle->getErrors()[0]);
+        $subtitle->addCue(new SubtitleCue(1, 2, "text1"), false);
+        $subtitle->addCue(new SubtitleCue(5, 6, "text2"), false);
+        $subtitle->addCue(new SubtitleCue(3, 4, "text3"), false);
+        $this->assertSame([
+            [2, ValidationResult::RULE_UNSORTED_CUES, 2.0],
+            [2, ValidationResult::RULE_OVERLAP, 3.0],
+        ], $problems($subtitle));
 
         $subtitle->reIndexCues();
-        $this->assertEmpty($subtitle->getErrors());
+        $this->assertSame([], $problems($subtitle));
+
+        $subtitle->getCues()[1]->setEnd(5.5);
+        $this->assertSame([[2, ValidationResult::RULE_OVERLAP, 0.5]], $problems($subtitle));
+        $subtitle->getCues()[1]->setEnd(4);
 
         $subtitle->removeCue(1, false);
-        $this->assertStringContainsString("we expected it to be", $subtitle->getErrors()[0]);
+        $this->assertSame([[2, ValidationResult::RULE_INDEX_GAP, 1]], $problems($subtitle));
 
         $subtitle->addCue(new SubtitleCue(9, 1, "text4"));
-        $this->assertStringContainsString("is after its own end-time", $subtitle->getErrors()[0]);
+        $this->assertSame([[2, ValidationResult::RULE_NEGATIVE_DURATION, -8.0]], $problems($subtitle));
 
         $subtitle->removeCue(2);
-        $this->assertEmpty($subtitle->getErrors());
+        $this->assertSame([], $problems($subtitle));
     }
 
 
-    public function testParsingWithInvalidParserThrowsException()
+    public function testFromStringThrowsForAFormatWithoutParser(): void
     {
         $this->expectException(InvalidParserException::class);
-        $this->expectExceptionMessage("parser stdClass is not of type " . SubtitleParser::class);
-        Subtitle::parse("", \stdClass::class);
+        $this->expectExceptionMessage("The format txt can be written but not read.");
+        Subtitle::fromString("text", Format::PlainText);
     }
 
 
-    public function testFormattingWithInvalidFormatterThrowsException()
+    public function testToStringThrowsForAFormatWithoutFormatter(): void
     {
         $this->expectException(InvalidFormatterException::class);
-        $this->expectExceptionMessage("formatter stdClass is not of type " . SubtitleFormatter::class);
-        (new Subtitle())->format(\stdClass::class);
+        $this->expectExceptionMessage("The format whisper can be read but not written.");
+        (new Subtitle())->toString(Format::Whisper);
+    }
+
+
+    public function testFromStringAutoDetectFormatSkipsFormatsThatAreNotAutoDetected(): void
+    {
+        $this->expectException(InvalidParserException::class);
+        Subtitle::fromStringAutoDetectFormat(file_get_contents(__DIR__ . "/files/chapters/ffmetadata/real/m4b_audiobook.ffmeta"));
+    }
+
+
+    public function testFromStringAutoDetectFormatConvertsTheEncoding(): void
+    {
+        $content = file_get_contents(__DIR__ . "/files/encoding/french-windows-1252.srt");
+
+        $this->assertEquals(
+            Subtitle::fromString($content, Format::SubRip, new ReadOptions(encoding: "Windows-1252")),
+            Subtitle::fromStringAutoDetectFormat($content, new ReadOptions(encoding: "Windows-1252"))
+        );
     }
 
 
@@ -114,20 +144,6 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
-    public function testParsingWithUnknownClassThrowsException(): void
-    {
-        $this->expectException(InvalidParserException::class);
-        Subtitle::parse("", "SubtitleToolbox\\Parsers\\DoesNotExist");
-    }
-
-
-    public function testFormattingWithUnknownClassThrowsException(): void
-    {
-        $this->expectException(InvalidFormatterException::class);
-        (new Subtitle())->format("SubtitleToolbox\\Formatters\\DoesNotExist");
-    }
-
-
     public function testFormattersNumberCuesFromOneAfterRemovalWithoutReIndex(): void
     {
         $subtitle = new Subtitle();
@@ -137,11 +153,11 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
 
         $this->assertSame(
             "\u{feff}1\n00:00:03,000 --> 00:00:04,000\nsecond\n",
-            $subtitle->format(SubRipFormatter::class)
+            $subtitle->toString(Format::SubRip)
         );
         $this->assertSame(
             "\u{feff}WEBVTT\n\n1\n00:00:03.000 --> 00:00:04.000\nsecond\n",
-            $subtitle->format(WebVttFormatter::class)
+            $subtitle->toString(Format::WebVtt)
         );
     }
 

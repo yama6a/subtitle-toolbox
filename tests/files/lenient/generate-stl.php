@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 // Writes bad_time_code.stl byte by byte, without the library code.
 // Run it with: php tests/files/lenient/generate-stl.php
 

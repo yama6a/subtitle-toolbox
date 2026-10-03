@@ -1,23 +1,28 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Cli\Edits\RetimeEdit;
 
-class ScaleCommand extends WriteCommand
+class ScaleCommand extends RetimeCommand
 {
-    private float $factor = 1;
-
-
     public function name(): string
     {
         return "scale";
     }
 
 
+    public function listed(): bool
+    {
+        return false;
+    }
+
+
     public function summary(): string
     {
-        return "Multiplies all cue times by a factor.";
+        return "Deprecated. Use retime --scale.";
     }
 
 
@@ -29,8 +34,8 @@ class ScaleCommand extends WriteCommand
 
     protected function details(): string
     {
-        return "For example, --factor 1.001 fixes a subtitle that drifts 3.6 s per hour. Without --output, --output-dir or\n" .
-               "--in-place, the result of one input file goes to standard output.";
+        return "scale runs retime with --factor as --scale, and prints a deprecation warning on standard error.\n" .
+               "It takes the other options of retime.";
     }
 
 
@@ -40,16 +45,16 @@ class ScaleCommand extends WriteCommand
     }
 
 
-    protected function prepare(Arguments $arguments): void
+    public function run(array $arguments, Console $console): int
     {
-        parent::prepare($arguments);
+        $console->err("scale is deprecated. Use: " . self::replacementCall("retime", $arguments, ["factor" => "scale"]) . "\n");
 
-        $this->factor = $arguments->positiveFloat("factor") ?? self::fail("Pass --factor FACTOR.");
+        return parent::run($arguments, $console);
     }
 
 
-    protected function transform(Subtitle $subtitle, Arguments $arguments): void
+    protected function readEdit(Arguments $arguments): RetimeEdit
     {
-        $subtitle->scale($this->factor);
+        return new RetimeEdit(scale: $arguments->positiveFloat("factor") ?? self::fail("Pass --factor FACTOR."));
     }
 }

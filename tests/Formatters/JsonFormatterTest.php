@@ -1,13 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use JsonException;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\JsonOptions;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class JsonFormatterTest extends TestCase
 {
@@ -21,7 +27,7 @@ class JsonFormatterTest extends TestCase
             '{"version":1,"metadata":{"title":"Big Buck Bunny","language":"en"},' .
             '"comments":[{"text":"Translated by Jane Doe","beforeCueIndex":0}],"formatData":{},' .
             '"cues":[{"start":1.5,"end":4.0,"lines":["Hello","<i>world</i>"],"identifier":"intro","alignment":8,"formatData":{}}]}',
-            $subtitle->format(JsonFormatter::class)
+            $subtitle->toString(Format::Json)
         );
     }
 
@@ -32,17 +38,14 @@ class JsonFormatterTest extends TestCase
 
         $this->assertSame(
             '{"version":1,"metadata":{"0":"zero"},"comments":[],"formatData":{"sub":{"0":"a","1":"b"}},"cues":[]}',
-            $subtitle->format(JsonFormatter::class)
+            $subtitle->toString(Format::Json)
         );
     }
 
 
     public function testPrettyPrintEndsWithANewLine(): void
     {
-        $json = (new Subtitle())->format(JsonFormatter::class, [
-            JsonFormatter::OPTION_PRETTY_PRINT => true,
-            JsonFormatter::OPTION_LINE_ENDING  => "\r\n",
-        ]);
+        $json = (new Subtitle())->toString(Format::Json, new WriteOptions(lineEnding: LineEnding::Crlf, format: new JsonOptions(prettyPrint: true)));
 
         $this->assertSame("{\r\n    \"version\": 1,\r\n    \"metadata\": {},\r\n    \"comments\": [],\r\n    \"formatData\": {},\r\n    \"cues\": []\r\n}\r\n", $json);
     }
@@ -54,7 +57,7 @@ class JsonFormatterTest extends TestCase
         $subtitle = new Subtitle();
         $subtitle->addCue((new CueImage($png, 1, 2, 1, 1, 720, 576))->toCue(new SubtitleCue(1, 2)));
 
-        $json = json_decode($subtitle->format(JsonFormatter::class), true);
+        $json = json_decode($subtitle->toString(Format::Json), true);
 
         $this->assertSame(["base64" => base64_encode($png)], $json["cues"][0]["formatData"]["image"]["png"]);
         $this->assertSame(720, $json["cues"][0]["formatData"]["image"]["screenWidth"]);
@@ -65,7 +68,7 @@ class JsonFormatterTest extends TestCase
     {
         $subtitle = (new Subtitle())->setFormatData("ass", ["title" => "Bäckerei", "png" => "png"]);
 
-        $this->assertStringContainsString('"ass":{"title":"Bäckerei","png":"png"}', $subtitle->format(JsonFormatter::class));
+        $this->assertStringContainsString('"ass":{"title":"Bäckerei","png":"png"}', $subtitle->toString(Format::Json));
     }
 
 
@@ -76,7 +79,7 @@ class JsonFormatterTest extends TestCase
 
         $this->assertSame(
             '{"version":1,"metadata":{},"comments":[],"cues":[{"start":1.0,"end":2.0,"lines":["Rain"],"identifier":null,"alignment":null}]}',
-            $subtitle->format(JsonFormatter::class, [JsonFormatter::OPTION_WITH_FORMAT_DATA => false])
+            $subtitle->toString(Format::Json, new WriteOptions(format: new JsonOptions(withFormatData: false)))
         );
     }
 
@@ -88,6 +91,6 @@ class JsonFormatterTest extends TestCase
 
         $this->expectException(JsonException::class);
 
-        $subtitle->format(JsonFormatter::class);
+        $subtitle->toString(Format::Json);
     }
 }
