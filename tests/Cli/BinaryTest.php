@@ -8,7 +8,11 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\FormatRegistry;
 use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Profanity\ProfanityFilter;
+use SubtitleToolbox\Profanity\ProfanityOptions;
+use SubtitleToolbox\ResegmentOptions;
 use SubtitleToolbox\Subtitle;
 
 /**
@@ -170,6 +174,19 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testConvertToTsvWritesTabs(): void
+    {
+        $this->assertSame([0, "trip.srt -> trip.tsv\n", ""], $this->runBinary(["convert", "trip.srt", "trip.tsv"]));
+        $tsv = $this->file("trip.tsv");
+        $this->assertStringStartsWith(self::BOM . "start\tend\ttext\n00:00:01.000\t", $tsv);
+        $this->assertSame(0, substr_count($tsv, ","));
+
+        $this->assertSame([0, "trip.tsv -> trip.csv\n", ""], $this->runBinary(["convert", "trip.tsv", "trip.csv"]));
+        $this->assertStringStartsWith(self::BOM . "start,end,text\n00:00:01.000,", $this->file("trip.csv"));
+        $this->assertSame(0, substr_count($this->file("trip.csv"), "\t"));
+    }
+
+
     public function testConvertNeverOverwritesWithoutForce(): void
     {
         file_put_contents("$this->dir/trip.vtt", "old");
@@ -284,6 +301,77 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testForcedOnly(): void
+    {
+        copy(__DIR__ . "/../files/forced/forced_signs_2398.itt", "$this->dir/signs.itt");
+        $expected = Subtitle::parse($this->file("signs.itt"))->forcedOnly()->format(SubRipFormatter::class);
+
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "signs.itt", "signs.srt", "--forced-only"]);
+
+        $this->assertSame([0, "signs.itt -> signs.srt\n", ""], [$code, $stdout, $stderr]);
+        $this->assertSame($expected, $this->file("signs.srt"));
+        $this->assertSame(3, substr_count($expected, " --> "));
+        $this->assertSame(6, substr_count($this->runBinary(["convert", "signs.itt", "--to", "srt", "-o", "-"])[1], " --> "));
+    }
+
+
+    public function testSpeakers(): void
+    {
+        $files = __DIR__ . "/../files/speakers/";
+        copy($files . "voices.vtt", "$this->dir/voices.vtt");
+        copy($files . "sdh_labels.srt", "$this->dir/labels.srt");
+
+        foreach (["prefix", "dashes", "colours"] as $mode) {
+            $this->assertSame(
+                [0, file_get_contents($files . "voices_$mode.srt"), ""],
+                $this->runBinary(["convert", "voices.vtt", "--to", "srt", "-o", "-", "--no-bom", "--speakers", $mode])
+            );
+        }
+        $this->assertSame(
+            [0, file_get_contents($files . "sdh_labels_voices.vtt"), ""],
+            $this->runBinary(["convert", "labels.srt", "--to", "vtt", "-o", "-", "--no-bom", "--speakers", "from-prefix"])
+        );
+        $this->assertSame(
+            [2, "", "Error: Unknown speaker mode \"names\". Known modes: prefix, dashes, colours, from-prefix.\n" .
+                    "Run \"subtitle-toolbox help convert\" for the usage.\n"],
+            $this->runBinary(["convert", "voices.vtt", "--to", "srt", "--speakers", "names"])
+        );
+    }
+
+
+    public function testMaskWords(): void
+    {
+        $files = __DIR__ . "/../files/profanity/";
+        copy($files . "keys.srt", "$this->dir/keys.srt");
+        copy($files . "words.txt", "$this->dir/words.txt");
+        $masked = function (string $mask): string {
+            $subtitle = Subtitle::parse($this->file("keys.srt"));
+            ProfanityFilter::apply($subtitle, new ProfanityOptions(mask: $mask, wordFile: "$this->dir/words.txt"));
+
+            return $subtitle->format(SubRipFormatter::class);
+        };
+
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "keys.srt", "--to", "srt", "-o", "-", "--mask-words", "words.txt"]);
+        $this->assertSame([0, $masked(ProfanityOptions::MASK_STARS), ""], [$code, $stdout, $stderr]);
+        $this->assertStringContainsString("- Go to ****.\n", $stdout);
+
+        $this->assertSame(
+            [0, $masked(ProfanityOptions::MASK_FIRST_LETTER), ""],
+            $this->runBinary(["convert", "keys.srt", "--to", "srt", "-o", "-", "--mask-words", "words.txt", "--mask", "first-letter"])
+        );
+        $this->assertSame(
+            [0, $masked(ProfanityOptions::MASK_REMOVE), ""],
+            $this->runBinary(["convert", "keys.srt", "--to", "srt", "-o", "-", "--mask-words", "words.txt", "--mask", "remove"])
+        );
+        $this->assertSame(2, $this->runBinary(["convert", "keys.srt", "--to", "srt", "--mask-words", "words.txt", "--mask", "beep"])[0]);
+        $this->assertSame(2, $this->runBinary(["convert", "keys.srt", "--to", "srt", "--mask", "stars"])[0]);
+        $this->assertSame(
+            [2, "", "Error: Cannot read the word file missing.txt.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            $this->runBinary(["convert", "keys.srt", "--to", "srt", "--mask-words", "missing.txt"])
+        );
+    }
+
+
     public function testMicroDvdNeedsTheFrameRate(): void
     {
         [$code, , $stderr] = $this->runBinary(["convert", "frames.sub", "--to", "srt", "-o", "-"]);
@@ -377,6 +465,39 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testFixMergeShort(): void
+    {
+        copy(__DIR__ . "/../files/short-cues/own_speech_to_text.srt", "$this->dir/speech.srt");
+        $narrow = Subtitle::parse($this->file("speech.srt"))
+            ->mergeShortCues(new MergeShortCuesOptions(maxCharactersPerLine: 20, maxLines: 3))
+            ->format(SubRipFormatter::class);
+
+        $this->assertSame(
+            [0, file_get_contents(__DIR__ . "/../files/short-cues/own_speech_to_text_merged.srt"), ""],
+            $this->runBinary(["fix", "speech.srt", "--merge-short"])
+        );
+        $this->assertSame([0, $narrow, ""], $this->runBinary(["fix", "speech.srt", "--merge-short", "--max-cpl", "20", "--max-lines", "3"]));
+        $this->assertSame(2, $this->runBinary(["fix", "speech.srt", "--merge-short", "--max-cpl", "0"])[0]);
+    }
+
+
+    public function testFixSplitLong(): void
+    {
+        copy(__DIR__ . "/../files/resegmenting/own_whisper_long_segments.json", "$this->dir/whisper.json");
+        $split = fn (ResegmentOptions $options): string =>
+            Subtitle::parse($this->file("whisper.json"))->splitLongCues($options)->format(WebVttFormatter::class);
+
+        [$code, $stdout, $stderr] = $this->runBinary(["fix", "whisper.json", "--split-long", "--to", "vtt"]);
+
+        $this->assertSame([0, $split(new ResegmentOptions()), ""], [$code, $stdout, $stderr]);
+        $this->assertGreaterThan(count(Subtitle::parse($this->file("whisper.json"))->getCues()), substr_count($stdout, " --> "));
+        $this->assertSame(
+            [0, $split(new ResegmentOptions(maxCharactersPerLine: 30, maxLines: 1)), ""],
+            $this->runBinary(["fix", "whisper.json", "--split-long", "--max-cpl", "30", "--max-lines", "1", "--to", "vtt"])
+        );
+    }
+
+
     public function testStripSdh(): void
     {
         [$code, $stdout] = $this->runBinary(["strip-sdh", "trip.srt", "--to", "vtt"]);
@@ -447,7 +568,56 @@ class BinaryTest extends TestCase
         );
         $this->assertSame([0, "shop.vtt: no problems\n", ""], $this->runBinary(["validate", "shop.vtt", "--preset", "netflix-en", "--max-cps", "30"]));
         $this->assertSame(2, $this->runBinary(["validate", "shop.vtt"])[0]);
-        $this->assertSame(2, $this->runBinary(["validate", "shop.vtt", "--preset", "bbc"])[0]);
+        $this->assertSame(2, $this->runBinary(["validate", "shop.vtt", "--preset", "nope"])[0]);
+    }
+
+
+    public function testValidateWithTheBbcPreset(): void
+    {
+        $this->assertSame([
+            1,
+            "trip.srt: cue 2: maxCharactersPerLine 57, limit 37\n" .
+            "trip.srt: cue 2: maxWordsPerMinute 336, limit 180\n" .
+            "trip.srt: cue 2: minSecondsPerWord 0.179, limit 0.3\n" .
+            "trip.srt: cue 3: maxWordsPerMinute 450, limit 180\n" .
+            "trip.srt: cue 3: minSecondsPerWord 0.133, limit 0.3\n",
+            "",
+        ], $this->runBinary(["validate", "trip.srt", "--preset", "bbc"]));
+        $this->assertSame(
+            [1, "trip.srt: cue 2: maxCharactersPerLine 57, limit 37\n", ""],
+            $this->runBinary(["validate", "trip.srt", "--preset", "bbc", "--max-wpm", "500", "--min-seconds-per-word", "0.1"])
+        );
+    }
+
+
+    public function testValidateTextRules(): void
+    {
+        $vtt = "WEBVTT\n\n" .
+               "00:00:01.000 --> 00:00:04.000\n-Where is the bus?\n- At the <i>corner.\n\n" .
+               "00:00:05.000 --> 00:00:08.000\nTHE BUS IS LATE\nWait <i> here</i>\n\n" .
+               "00:00:09.000 --> 00:00:12.000\n<v Anna>Rain today.\n<v Ben>Sun tomorrow.\n<v Cleo>Snow later.\n\n" .
+               "00:00:13.000 --> 00:00:15.000\n&nbsp;Café open.\n";
+
+        $this->assertSame([
+            1,
+            "stdin: cue 1: noUnbalancedTags 1\n" .
+            "stdin: cue 1: dialogueDashStyle 1\n" .
+            "stdin: cue 2: noDoubleSpaces 1\n" .
+            "stdin: cue 2: noAllCapsLines 1\n" .
+            "stdin: cue 3: maxSpeakersPerCue 3, limit 2\n" .
+            "stdin: cue 4: noLeadingOrTrailingSpaces 1\n" .
+            "stdin: cue 4: allowedCharacters 2\n",
+            "",
+        ], $this->runBinary([
+            "validate", "-", "--dialogue-dash", "- ", "--no-unbalanced-tags", "--no-all-caps-lines", "--no-double-spaces",
+            "--no-leading-or-trailing-spaces", "--max-speakers", "2", "--allowed-characters", "[A-Za-z0-9 .,!?<>/\\-]",
+        ], $vtt));
+        $this->assertSame(
+            [2, "", "Error: The dialogue dash style must be a hyphen, an en dash or an em dash, with or without one space after it, got \"x\".\n" .
+                    "Run \"subtitle-toolbox help validate\" for the usage.\n"],
+            $this->runBinary(["validate", "-", "--dialogue-dash", "x"], $vtt)
+        );
+        $this->assertSame(2, $this->runBinary(["validate", "-", "--allowed-characters", "[z-a]"], $vtt)[0]);
     }
 
 

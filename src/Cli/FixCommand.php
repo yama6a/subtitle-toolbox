@@ -2,11 +2,13 @@
 
 namespace SubtitleToolbox\Cli;
 
+use SubtitleToolbox\MergeShortCuesOptions;
+use SubtitleToolbox\ResegmentOptions;
 use SubtitleToolbox\Subtitle;
 
 class FixCommand extends WriteCommand
 {
-    private const FIXES = ["overlaps", "min-duration", "wrap", "unwrap", "merge-duplicates"];
+    private const FIXES = ["overlaps", "min-duration", "wrap", "unwrap", "merge-duplicates", "merge-short", "split-long"];
 
 
     public function name(): string
@@ -23,15 +25,15 @@ class FixCommand extends WriteCommand
 
     protected function usageLines(): array
     {
-        return ["<input>... [--overlaps] [--min-duration SECONDS] [--wrap CHARS] [--unwrap] [--merge-duplicates] [options]"];
+        return ["<input>... [--overlaps] [--min-duration SECONDS] [--wrap CHARS] [--unwrap] [--merge-duplicates] [--merge-short] [--split-long] [options]"];
     }
 
 
     protected function details(): string
     {
-        return "Pass at least one fix. The fixes run in this order: --unwrap, --wrap, --merge-duplicates, --overlaps,\n" .
-               "--min-duration. The timing fixes move only end times. Without --output, --output-dir or --in-place, the\n" .
-               "result of one input file goes to standard output.";
+        return "Pass at least one fix. The fixes run in this order: --unwrap, --merge-short, --split-long, --wrap,\n" .
+               "--merge-duplicates, --overlaps, --min-duration. The timing fixes move only end times. Without --output, --output-dir or\n" .
+               "--in-place, the result of one input file goes to standard output.";
     }
 
 
@@ -42,9 +44,12 @@ class FixCommand extends WriteCommand
             Option::value("min-duration", "SECONDS", "Show each cue for at least this time where the next cue allows it."),
             Option::value("min-gap", "SECONDS", "Gap between cues for --overlaps and --min-duration. Default: 0."),
             Option::value("wrap", "CHARS", "Break lines longer than this number of characters."),
-            Option::value("max-lines", "LINES", "Maximum number of lines per cue for --wrap. Default: 2."),
+            Option::value("max-lines", "LINES", "Maximum number of lines per cue for --wrap, --merge-short and --split-long. Default: 2."),
             Option::flag("unwrap", "Join the lines of each cue with a space."),
             Option::flag("merge-duplicates", "Join touching cues with the same text."),
+            Option::flag("merge-short", "Join cues shorter than 1 s with a neighbour, where the joined cue fits --max-cpl and --max-lines."),
+            Option::flag("split-long", "Split cues longer than 7 s, or longer than --max-lines lines of --max-cpl characters, at sentence ends."),
+            Option::value("max-cpl", "CHARS", "Maximum characters per line for --merge-short and --split-long. Default: 42."),
         ];
     }
 
@@ -59,6 +64,7 @@ class FixCommand extends WriteCommand
         $arguments->positiveFloat("min-duration");
         $arguments->positiveInt("wrap");
         $arguments->positiveInt("max-lines");
+        $arguments->positiveInt("max-cpl");
         if (($arguments->float("min-gap") ?? 0) < 0) {
             self::fail("The option --min-gap must not be negative.");
         }
@@ -71,6 +77,18 @@ class FixCommand extends WriteCommand
 
         if ($arguments->has("unwrap")) {
             $subtitle->unwrapLines();
+        }
+        if ($arguments->has("merge-short")) {
+            $subtitle->mergeShortCues(new MergeShortCuesOptions(
+                maxCharactersPerLine: $arguments->positiveInt("max-cpl") ?? 42,
+                maxLines: $arguments->positiveInt("max-lines") ?? 2,
+            ));
+        }
+        if ($arguments->has("split-long")) {
+            $subtitle->splitLongCues(new ResegmentOptions(
+                maxCharactersPerLine: $arguments->positiveInt("max-cpl") ?? 42,
+                maxLines: $arguments->positiveInt("max-lines") ?? 2,
+            ));
         }
         if ($arguments->has("wrap")) {
             $subtitle->wrapLines($arguments->positiveInt("wrap"), $arguments->positiveInt("max-lines") ?? 2);

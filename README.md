@@ -989,6 +989,7 @@ vendor/bin/subtitle-toolbox convert movie.sub movie.srt --fps 23.976
 vendor/bin/subtitle-toolbox shift movie.srt --by -2.5 --output movie.fixed.srt
 vendor/bin/subtitle-toolbox fps *.srt --from 25 --to 23.976 --in-place
 vendor/bin/subtitle-toolbox validate movie.srt --preset netflix-en --json
+vendor/bin/subtitle-toolbox validate movie.srt --preset bbc --no-unbalanced-tags --dialogue-dash '- '
 curl -s https://example.com/movie.srt | vendor/bin/subtitle-toolbox convert - --to vtt > movie.vtt
 ```
 
@@ -996,7 +997,7 @@ curl -s https://example.com/movie.srt | vendor/bin/subtitle-toolbox convert - --
 |:--- |:--- |
 | `convert` | writes each input in the format of `--to` or of the output file extension |
 | `shift`, `scale`, `fps` | call `shift()`, `scale()` and `convertFrameRate()`. `sync-fps` is another name for `fps` |
-| `fix` | calls `fixOverlaps()`, `extendShortCues()`, `wrapLines()`, `unwrapLines()` and `removeDuplicateCues()` |
+| `fix` | calls `fixOverlaps()`, `extendShortCues()`, `wrapLines()`, `unwrapLines()`, `removeDuplicateCues()`, `mergeShortCues()` and `splitLongCues()` |
 | `strip-sdh` | calls `removeHearingImpaired()` |
 | `info` | prints the format and the statistics, as text or with `--json` |
 | `validate` | prints each broken rule, as text or with `--json` |
@@ -1006,10 +1007,26 @@ curl -s https://example.com/movie.srt | vendor/bin/subtitle-toolbox convert - --
 - **Inputs**: a file, a directory, a glob such as `"season1/*.srt"`, or `-` for standard input. A directory gives its files with a known extension.
 - **Input format**: `--from`, else format detection on the content, else the file extension. `.sub` is MicroDVD.
 - **Output**: `--output` for one file, `--output-dir`, or `--in-place`. `--output -` writes standard output. Without these, `convert` writes next to the input with the new extension, and the other commands write standard output.
+- **CSV and TSV**: TSV output has tabs between the cells. CSV output from a TSV input has commas. Other CSV output keeps the delimiter of the input table.
 - **Overwrite**: the tool never overwrites a file without `--force` or `--in-place`.
 - **Batch**: the tool prints one line per file and a summary. It stops at the first failed file, unless you pass `--keep-going`.
+- **Forced cues**: `convert --forced-only` keeps only the forced cues, as `forcedOnly()` does. See [Forced cues](#forced-cues).
+- **Speakers**: `convert --speakers` takes `prefix`, `dashes`, `colours` or `from-prefix`. It calls `toPrefix()`, `toDialogueDashes()`, `toColours()` or `fromPrefix()` with the default arguments. See [Speakers](#speakers).
+- **Masking words**: `convert --mask-words FILE` masks the words of a word file, as `ProfanityFilter::apply()` does. `--mask` takes `stars`, `first-letter` or `remove`. See [Profanity filter](#profanity-filter).
+- **Short cues**: `fix --merge-short` calls `mergeShortCues()` with the default options. `--max-cpl` and `--max-lines` set `maxCharactersPerLine` and `maxLines`. See [Merging short cues](#merging-short-cues).
+- **Long cues**: `fix --split-long` calls `splitLongCues()` with the default options. `--max-cpl` and `--max-lines` set `maxCharactersPerLine` and `maxLines`. See [Splitting long cues](#splitting-long-cues).
+- **Validate**: `--preset` takes `netflix-en` or `bbc`, see [Validation](#validation). A rule option overrides the value of the preset. The table below gives the rule of each option.
 - **Exit code**: 0 when all files succeed, 1 when a file fails or breaks a validation rule, 2 for invalid arguments.
 - **Version**: `subtitle-toolbox --version` prints the installed release, for example `1.40.0`, or `dev` in a Git checkout.
+
+| Option | Rule |
+|:--- |:--- |
+| `--max-cps`, `--max-cpl`, `--max-lines` | `maxCharactersPerSecond`, `maxCharactersPerLine`, `maxLinesPerCue` |
+| `--min-duration`, `--max-duration`, `--min-gap` | `minDuration`, `maxDuration`, `minGap` |
+| `--max-wpm`, `--min-seconds-per-word` | `maxWordsPerMinute`, `minSecondsPerWord` |
+| `--max-speakers`, `--dialogue-dash STYLE`, `--allowed-characters CHARS` | `maxSpeakersPerCue`, `dialogueDashStyle`, `allowedCharacters` |
+| `--no-overlap`, `--no-empty-cues`, `--no-double-spaces` | `noOverlap`, `noEmptyCues`, `noDoubleSpaces` |
+| `--no-leading-or-trailing-spaces`, `--no-unbalanced-tags`, `--no-all-caps-lines` | `noLeadingOrTrailingSpaces`, `noUnbalancedTags`, `noAllCapsLines` |
 
 ## Built-in OCR
 `GlyphOcrEngine` reads the bitmaps of PGS and VobSub cues in pure PHP. It uses the optional package [yama6a/php-glyph-ocr](https://github.com/yama6a/php-glyph-ocr), a port of the nOCR engine of Subtitle Edit.
