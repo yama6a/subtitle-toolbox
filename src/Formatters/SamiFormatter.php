@@ -3,11 +3,11 @@
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class SamiFormatter extends SubtitleFormatter
 {
@@ -18,9 +18,9 @@ class SamiFormatter extends SubtitleFormatter
     private const NBSP = "\u{00A0}";
 
 
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $stripAll = (bool) (Options::flag($options, parent::OPTION_STRIP_ALL_XML_TAGS) ?? false);
+        $stripAll = $options->stripTags;
         $data     = $subtitle->getFormatData(SamiParser::FORMAT_DATA_KEY);
         $language = $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);
         $class    = isset($data["style"]) || isset($data["class"]) ? ($data["class"] ?? null) : $this->classFor($language);

@@ -4,10 +4,10 @@ namespace SubtitleToolbox\Hls;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 final class HlsWebVttSegmenter
 {
@@ -54,7 +54,7 @@ final class HlsWebVttSegmenter
 
             $name             = $options->fileName($index);
             $segments[$name]  = $segment->shift($options->local)
-                                        ->toString(Format::WebVtt, [SubtitleFormatter::OPTION_BOM => false]);
+                                        ->toString(Format::WebVtt, new WriteOptions(bom: false));
             $durations[$name] = ($endMillis - $startMillis) / 1000.0;
         }
 

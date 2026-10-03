@@ -5,16 +5,20 @@ namespace SubtitleToolbox\Chapters;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\YouTubeChaptersParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class ChaptersRealFilesTest extends TestCase
 {
     private const DIR = __DIR__ . "/../files/chapters/";
 
-    private const BYTES = [SubtitleFormatter::OPTION_LINE_ENDING => "\n"];
+    private static function bytes(): WriteOptions
+    {
+        return new WriteOptions(lineEnding: LineEnding::Lf);
+    }
 
 
     public static function realFiles(): array
@@ -34,11 +38,11 @@ class ChaptersRealFilesTest extends TestCase
             ],
             "FFmpeg MP4 export" => [
                 "ffmetadata/real/ffmpeg_mp4_export.ffmeta", Format::FfMetadata,
-                4, [0.0, 184.52, "Welcome and agenda"], [2210.48, 2405.007, "Wrap-up"], self::BYTES,
+                4, [0.0, 184.52, "Welcome and agenda"], [2210.48, 2405.007, "Wrap-up"], self::bytes(),
             ],
             "FFmpeg M4B audiobook" => [
                 "ffmetadata/real/m4b_audiobook.ffmeta", Format::FfMetadata,
-                3, [0.0, 30.0, "Opening credits"], [940.0, 2236.0, "Chapter 2=Starters"], self::BYTES,
+                3, [0.0, 30.0, "Opening credits"], [940.0, 2236.0, "Chapter 2=Starters"], self::bytes(),
             ],
             "FFmpeg hand-written CR LF" => [
                 "ffmetadata/real/hand_written_crlf.ffmeta", Format::FfMetadata,
@@ -46,12 +50,12 @@ class ChaptersRealFilesTest extends TestCase
             ],
             "OGM from mkvextract" => [
                 "ogm/real/mkvextract_simple.txt", Format::OgmChapters,
-                5, [0.0, 92.48, "Opening"], [3130.04, 3130.04, "End credits"], self::BYTES,
+                5, [0.0, 92.48, "Opening"], [3130.04, 3130.04, "End credits"], self::bytes(),
             ],
             "OGM with BOM and CR LF" => [
                 "ogm/real/windows_tool_crlf_bom.txt", Format::OgmChapters,
                 6, [0.0, 300.0, "Chapter 01"], [1500.0, 1500.0, "Chapter 06"],
-                [SubtitleFormatter::OPTION_LINE_ENDING => "\r\n", SubtitleFormatter::OPTION_BOM => true],
+                new WriteOptions(lineEnding: LineEnding::Crlf, bom: true),
             ],
             "YouTube video description" => [
                 "youtube/real/video_description.txt", Format::YouTubeChapters,
@@ -95,7 +99,7 @@ class ChaptersRealFilesTest extends TestCase
 
 
     #[DataProvider("byteExactFiles")]
-    public function testRealFileFormatsToItsOwnBytes(string $file, Format $format, int $count, array $first, array $last, array $options): void
+    public function testRealFileFormatsToItsOwnBytes(string $file, Format $format, int $count, array $first, array $last, WriteOptions $options): void
     {
         $content = file_get_contents(self::DIR . $file);
 

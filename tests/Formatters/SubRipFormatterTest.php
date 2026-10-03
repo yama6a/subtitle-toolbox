@@ -6,6 +6,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class SubRipFormatterTest extends TestCase
 {
@@ -37,7 +38,7 @@ class SubRipFormatterTest extends TestCase
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/srt/all_tags_stripped.srt"),
-            $subtitle->toString(Format::SubRip, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+            $subtitle->toString(Format::SubRip, new WriteOptions(stripTags: true))
         );
     }
 
@@ -52,7 +53,7 @@ class SubRipFormatterTest extends TestCase
         );
         $this->assertSame(
             "\u{feff}1\n00:00:01,000 --> 00:00:02,000\nstruck plain\n",
-            $subtitle->toString(Format::SubRip, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+            $subtitle->toString(Format::SubRip, new WriteOptions(stripTags: true))
         );
     }
 
@@ -87,7 +88,7 @@ class SubRipFormatterTest extends TestCase
         );
         $this->assertSame(
             "\u{feff}1\n00:00:01,000 --> 00:00:04,000\n{\\an8}The train leaves\nsoon\n",
-            $subtitle->toString(Format::SubRip, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+            $subtitle->toString(Format::SubRip, new WriteOptions(stripTags: true))
         );
     }
 
@@ -126,7 +127,7 @@ class SubRipFormatterTest extends TestCase
         );
         $this->assertSame(
             "\u{feff}1\n00:00:01,000 --> 00:00:02,000\nI <3 bread & jam\nSalt & pepper 2 > 1\n",
-            $subtitle->toString(Format::SubRip, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+            $subtitle->toString(Format::SubRip, new WriteOptions(stripTags: true))
         );
     }
 

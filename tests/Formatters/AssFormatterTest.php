@@ -8,6 +8,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class AssFormatterTest extends TestCase
 {
@@ -199,7 +200,7 @@ class AssFormatterTest extends TestCase
     {
         $subtitle = $this->parseFile("own_aegisub.ass");
 
-        $formatted = $subtitle->toString(Format::Ass, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS]);
+        $formatted = $subtitle->toString(Format::Ass, new WriteOptions(stripTags: true));
 
         $this->assertStringContainsString("Dialogue: 0,0:00:06.30,0:00:08.00,Default,Passenger,0,0,0,,Is it on time today?\n", $formatted);
         $this->assertStringContainsString("Dialogue: 0,0:00:08.10,0:00:10.90,Top,,0,0,0,,{\\an8}Platform 4: Coast Express\n", $formatted);

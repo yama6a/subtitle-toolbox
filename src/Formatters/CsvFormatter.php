@@ -3,25 +3,18 @@
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\Options\CsvOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
 class CsvFormatter extends SubtitleFormatter
 {
-    public const OPTION_DELIMITER          = "delimiter";
-    public const OPTION_TIME_FORMAT        = "timeFormat";
-    public const OPTION_FRAME_RATE         = "OPTION_FRAME_RATE";
-    public const OPTION_SECOND_TEXT        = "secondText";
-    public const OPTION_SECOND_TEXT_HEADER = "secondTextHeader";
-    public const OPTION_ESCAPE_FORMULAS    = "escapeFormulas";
-
-    // The old key of OPTION_FRAME_RATE. Callers that pass it as a string keep working.
-    private const OPTION_FRAME_RATE_OLD_KEY = "frameRate";
+    protected const FORMAT_OPTIONS = CsvOptions::class;
 
     private const SPEAKER_REGEX = '/^<v(?:\.[^\s>]*)?\s+([^>]*)>/';
 
@@ -29,27 +22,19 @@ class CsvFormatter extends SubtitleFormatter
     /**
      * Writes one row per cue. A subtitle from CsvParser keeps its columns, header names, delimiter and time format.
      */
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $this->rejectUnknownOptions($options);
+        $csv       = $this->formatOptions($options) ?? new CsvOptions();
         $data      = $subtitle->getFormatData(CsvParser::FORMAT_DATA_KEY);
-        $delimiter = $options[self::OPTION_DELIMITER] ?? $data["delimiter"] ?? ",";
+        $delimiter = $csv->delimiter ?? $data["delimiter"] ?? ",";
         CsvParser::checkDelimiter($delimiter);
-        $timeFormat = $options[self::OPTION_TIME_FORMAT] ?? $data["timeFormat"] ?? CsvParser::TIME_DOT;
-        if (!in_array($timeFormat, CsvParser::TIME_FORMATS, true)) {
-            throw new InvalidArgumentException("The option " . self::OPTION_TIME_FORMAT . " must be one of " .
-                                               implode(", ", CsvParser::TIME_FORMATS) . ".");
+        $timeFormat = $csv->timeFormat ?? CsvTimeFormat::tryFrom($data["timeFormat"] ?? "") ?? CsvTimeFormat::Dot;
+        $fps        = $csv->frameRate ?? $data["frameRate"] ?? null;
+        $frameRate  = $fps === null ? null : new FrameRate($fps);
+        if ($timeFormat === CsvTimeFormat::Frames && $frameRate === null) {
+            throw new InvalidArgumentException("The time format " . CsvTimeFormat::Frames->value . " needs CsvOptions::\$frameRate.");
         }
-        $fps       = $options[self::OPTION_FRAME_RATE] ?? $options[self::OPTION_FRAME_RATE_OLD_KEY] ?? $data["frameRate"] ?? null;
-        $frameRate = $fps === null ? null : new FrameRate($fps);
-        if ($timeFormat === CsvParser::TIME_FRAMES && $frameRate === null) {
-            throw new InvalidArgumentException("The time format " . CsvParser::TIME_FRAMES . " needs the option " . self::OPTION_FRAME_RATE . ".");
-        }
-        $second = $options[self::OPTION_SECOND_TEXT] ?? null;
-        if ($second !== null && !$second instanceof Subtitle) {
-            throw new InvalidArgumentException("The option " . self::OPTION_SECOND_TEXT . " must be a Subtitle.");
-        }
-        $escapeFormulas = Options::flag($options, self::OPTION_ESCAPE_FORMULAS) ?? false;
+        $second = $csv->secondText;
 
         $cues               = array_values($subtitle->getCues());
         $rows               = array_map($this->splitSpeaker(...), $cues);
@@ -57,7 +42,7 @@ class CsvFormatter extends SubtitleFormatter
         if ($second !== null) {
             $position = array_search(["text", null], $columns, true) + 1;
             array_splice($columns, $position, 0, [["second", null]]);
-            array_splice($header, $position, 0, [$options[self::OPTION_SECOND_TEXT_HEADER] ?? "text2"]);
+            array_splice($header, $position, 0, [$csv->secondTextHeader]);
             $secondTexts = $this->secondTexts($cues, array_values($second->getCues()));
         }
 
@@ -75,17 +60,14 @@ class CsvFormatter extends SubtitleFormatter
             }, $columns);
         }
 
-        $lineEnding = $options[self::OPTION_LINE_ENDING] ?? "\n";
-        // Validates the line ending. In-cell line breaks stay LF, as in Excel, so the records get the line ending here.
-        $this->applyOutputOptions("", [self::OPTION_LINE_ENDING => $lineEnding]);
-        $lines = array_map(fn (array $record): string => implode($delimiter, array_map(
-            fn (string $cell): string => $this->quote($escapeFormulas ? $this->escapeFormula($cell) : $cell, $delimiter),
+        // In-cell line breaks stay LF, as in Excel, so the records get the line ending here.
+        $lineEnding = $options->lineEnding->value;
+        $lines      = array_map(fn (array $record): string => implode($delimiter, array_map(
+            fn (string $cell): string => $this->quote($csv->escapeFormulas ? $this->escapeFormula($cell) : $cell, $delimiter),
             $record
         )), $records);
 
-        return $this->applyOutputOptions(implode($lineEnding, $lines) . $lineEnding, [
-            self::OPTION_BOM => $options[self::OPTION_BOM] ?? true,
-        ]);
+        return $this->applyOutputOptions(implode($lineEnding, $lines) . $lineEnding, new WriteOptions(bom: $options->bom ?? true, format: $csv));
     }
 
 
@@ -186,16 +168,16 @@ class CsvFormatter extends SubtitleFormatter
     }
 
 
-    private function secondsCell(float $seconds, string $layout, ?FrameRate $frameRate): string
+    private function secondsCell(float $seconds, CsvTimeFormat $layout, ?FrameRate $frameRate): string
     {
         $seconds      = max(0, $seconds);
         $milliseconds = Timecode::totalMilliseconds($seconds);
 
         return match ($layout) {
-            CsvParser::TIME_SECONDS => rtrim(rtrim(sprintf("%d.%03d", intdiv($milliseconds, 1000), $milliseconds % 1000), "0"), "."),
-            CsvParser::TIME_DOT     => sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($seconds)),
-            CsvParser::TIME_COMMA   => sprintf("%02d:%02d:%02d,%03d", ...Timecode::milliseconds($seconds)),
-            CsvParser::TIME_FRAMES  => sprintf("%02d:%02d:%02d:%02d", ...Timecode::clockSecondsAndFrames($seconds, $frameRate)),
+            CsvTimeFormat::Seconds => rtrim(rtrim(sprintf("%d.%03d", intdiv($milliseconds, 1000), $milliseconds % 1000), "0"), "."),
+            CsvTimeFormat::Dot     => sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($seconds)),
+            CsvTimeFormat::Comma   => sprintf("%02d:%02d:%02d,%03d", ...Timecode::milliseconds($seconds)),
+            CsvTimeFormat::Frames  => sprintf("%02d:%02d:%02d:%02d", ...Timecode::clockSecondsAndFrames($seconds, $frameRate)),
         };
     }
 

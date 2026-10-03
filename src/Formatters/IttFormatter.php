@@ -4,6 +4,7 @@ namespace SubtitleToolbox\Formatters;
 
 use DOMDocument;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\Options\IttOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\IttParser;
@@ -11,13 +12,14 @@ use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
 /**
  * @see https://help.apple.com/itc/videoaudioassetguide/en.lproj/static.html
  */
 class IttFormatter extends SubtitleFormatter
 {
-    public const OPTION_FRAME_RATE = "OPTION_FRAME_RATE";
+    protected const FORMAT_OPTIONS = IttOptions::class;
 
     /** frames per second => [ttp:frameRate, ttp:frameRateMultiplier] */
     private const FRAME_RATES = [
@@ -51,17 +53,18 @@ class IttFormatter extends SubtitleFormatter
     /**
      * Writes an Apple iTunes Timed Text file with SMPTE times, one div, and a top and a bottom region.
      *
-     * OPTION_FRAME_RATE wins over the frame rate of the `itt` format data.
+     * IttOptions::$frameRate wins over the frame rate of the `itt` format data.
      *
-     * @throws InvalidArgumentException when neither OPTION_FRAME_RATE nor the `itt` format data gives a supported frame rate.
+     * @throws InvalidArgumentException when neither IttOptions nor the `itt` format data gives a supported frame rate.
      */
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        [$frameRate, $multiplier] = $this->frameRateParameters($subtitle->getFormatData(IttParser::FORMAT), $options);
+        $fps                      = $this->formatOptions($options)?->frameRate;
+        [$frameRate, $multiplier] = $this->frameRateParameters($subtitle->getFormatData(IttParser::FORMAT), $fps);
         $rate                     = new FrameRate((float) $frameRate * $this->multiplierFactor($multiplier));
 
         $ttml = $this->toTtmlSubtitle($subtitle);
-        $xml  = (new TtmlFormatter())->format($ttml, array_diff_key($options, [self::OPTION_LINE_ENDING => 0, self::OPTION_BOM => 0, self::OPTION_FRAME_RATE => 0]));
+        $xml  = (new TtmlFormatter())->format($ttml, new WriteOptions(stripTags: $options->stripTags));
 
         $document = new DOMDocument();
         $document->loadXML($xml, LIBXML_NONET);
@@ -87,7 +90,7 @@ class IttFormatter extends SubtitleFormatter
     /**
      * @return array{string, string} ttp:frameRate and ttp:frameRateMultiplier
      */
-    private function frameRateParameters(array $ittData, array $options): array
+    private function frameRateParameters(array $ittData, ?float $fps): array
     {
         $stored = null;
         if (isset($ittData["frameRate"])) {
@@ -98,15 +101,10 @@ class IttFormatter extends SubtitleFormatter
             }
         }
 
-        if (!isset($options[self::OPTION_FRAME_RATE])) {
-            return $stored[1] ?? throw new InvalidArgumentException("The ITT formatter needs the option " . self::OPTION_FRAME_RATE . ".");
+        if ($fps === null) {
+            return $stored[1] ?? throw new InvalidArgumentException("The ITT formatter needs IttOptions with a frame rate.");
         }
-        $option = $this->supportedFrameRate((float) $options[self::OPTION_FRAME_RATE]);
-        if ($option === null) {
-            throw new InvalidArgumentException(
-                "The ITT formatter accepts the frame rates 23.976, 24, 25, 29.97 and 30, got {$options[self::OPTION_FRAME_RATE]}."
-            );
-        }
+        $option = $this->supportedFrameRate($fps);
 
         // Keeps a parsed multiplier such as "1000 1001" when the option names the same frame rate.
         return $stored !== null && $stored[0] === $option ? $stored[1] : self::FRAME_RATES[$option];
@@ -115,13 +113,9 @@ class IttFormatter extends SubtitleFormatter
 
     private function supportedFrameRate(float $fps): ?string
     {
-        foreach (array_keys(self::FRAME_RATES) as $supported) {
-            if (abs($fps - (float) $supported) < 0.01) {
-                return (string) $supported;
-            }
-        }
+        $supported = IttOptions::supportedFrameRate($fps);
 
-        return null;
+        return $supported === null ? null : (string) $supported;
     }
 
 

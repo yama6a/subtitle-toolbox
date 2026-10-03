@@ -8,7 +8,6 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Formatters\ImageFormatter;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\OcrEngine;
 use SubtitleToolbox\Ocr\OcrRunner;
@@ -91,7 +90,7 @@ class Subtitle implements \IteratorAggregate, \Countable
     /**
      * Writes the subtitle in $format and throws on an image cue without text, unless the format writes images.
      */
-    public function toString(Format $format, array $options = []): string
+    public function toString(Format $format, WriteOptions $options = new WriteOptions()): string
     {
         $formatterClass = FormatRegistry::formatterClass($format)
             ?? throw new InvalidFormatterException("The format {$format->value} can be read but not written.");
@@ -101,10 +100,9 @@ class Subtitle implements \IteratorAggregate, \Countable
             $imageCueIndexes = array_keys(array_filter($this->cues, fn (SubtitleCue $cue): bool =>
                 CueImage::isImageCue($cue) && $cue->getLines() === []));
 
-            if ($imageCueIndexes !== [] && !(Options::flag($options, SubtitleFormatter::OPTION_SKIP_IMAGE_CUES) ?? false)) {
+            if ($imageCueIndexes !== [] && !$options->skipImageCues) {
                 throw new ImageCueWithoutTextException("Cue #{$imageCueIndexes[0]} holds an image but no text. " .
-                                                       "Run recognizeText() first, or pass the option " .
-                                                       "SubtitleFormatter::OPTION_SKIP_IMAGE_CUES.");
+                                                       "Run recognizeText() first, or pass WriteOptions(skipImageCues: true).");
             }
             if ($imageCueIndexes !== []) {
                 $subtitle = $this->withoutCues($imageCueIndexes);

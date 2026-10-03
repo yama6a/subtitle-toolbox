@@ -2,27 +2,25 @@
 
 namespace SubtitleToolbox\Formatters;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\Options\HtmlTranscriptOptions;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
 class HtmlTranscriptFormatter extends SubtitleFormatter
 {
-    public const OPTION_PARAGRAPH_GAP = "paragraphGap";
+    protected const FORMAT_OPTIONS = HtmlTranscriptOptions::class;
 
 
     /**
      * Writes the Podcasting 2.0 HTML transcript, a <cite>, <time> and <p> per paragraph. A speaker change or a gap of
-     * OPTION_PARAGRAPH_GAP seconds starts a new paragraph.
+     * HtmlTranscriptOptions::$paragraphGap seconds starts a new paragraph.
      */
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $paragraphGap = $options[self::OPTION_PARAGRAPH_GAP] ?? 2.0;
-        if (!is_int($paragraphGap) && !is_float($paragraphGap)) {
-            throw new InvalidArgumentException("The option " . self::OPTION_PARAGRAPH_GAP . " must be a number of seconds.");
-        }
+        $paragraphGap = ($this->formatOptions($options) ?? new HtmlTranscriptOptions())->paragraphGap;
 
         $paragraphs = [];
         $latestEnd  = null;

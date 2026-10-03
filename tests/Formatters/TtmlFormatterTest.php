@@ -6,6 +6,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class TtmlFormatterTest extends TestCase
 {
@@ -96,7 +97,7 @@ class TtmlFormatterTest extends TestCase
 
         $this->assertStringContainsString(
             "<p begin=\"00:00:01.500\" end=\"00:00:04.000\">Hello<br/>world</p>",
-            $subtitle->toString(Format::Ttml, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+            $subtitle->toString(Format::Ttml, new WriteOptions(stripTags: true))
         );
     }
 

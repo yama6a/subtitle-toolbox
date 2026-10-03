@@ -2,30 +2,26 @@
 
 namespace SubtitleToolbox\Formatters;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\Options\SubViewerOptions;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
 class SubViewerFormatter extends SubtitleFormatter
 {
-    /** Formatter option that selects SubViewer 1 or 2. The default is 2. */
-    public const OPTION_VERSION = "OPTION_VERSION";
+    protected const FORMAT_OPTIONS = SubViewerOptions::class;
 
     private const VERSION_1_DEFAULT_HEADER = ["SOURCE" => "", "PRG" => "", "FILEPATH" => "", "DELAY" => "0", "CD TRACK" => "0", "BEGIN" => ""];
     private const VERSION_2_DEFAULT_HEADER = ["SOURCE" => "", "PRG" => "", "FILEPATH" => "", "DELAY" => "0", "CD TRACK" => "0", "COMMENT" => ""];
 
 
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $version = $options[self::OPTION_VERSION] ?? 2;
-        if ($version !== 1 && $version !== 2) {
-            throw new InvalidArgumentException("The SubViewer version must be 1 or 2!");
-        }
-
-        $output = $version === 1 ? $this->formatVersion1($subtitle) : $this->formatVersion2($subtitle);
+        $version = ($this->formatOptions($options) ?? new SubViewerOptions())->version;
+        $output  = $version === 1 ? $this->formatVersion1($subtitle) : $this->formatVersion2($subtitle);
 
         return $this->applyOutputOptions($output, $options);
     }

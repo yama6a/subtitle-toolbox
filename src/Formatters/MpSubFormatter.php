@@ -2,12 +2,13 @@
 
 namespace SubtitleToolbox\Formatters;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\Options\MpSubOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
 class MpSubFormatter extends SubtitleFormatter
 {
@@ -18,16 +19,16 @@ class MpSubFormatter extends SubtitleFormatter
                                 "NOTE=Created with the PHP Subtitle Toolbox (https://github.com/yama6a/subtitle-toolbox)" .
                                 StringHelpers::UNIX_LINE_ENDING;
 
-    /** Formatter option that sets a whole frame rate, for example 25, and makes the formatter write frames. */
-    public const OPTION_FRAME_RATE = "OPTION_FRAME_RATE";
+    protected const FORMAT_OPTIONS = MpSubOptions::class;
 
     private const DEFAULT_TYPE = "VIDEO";
     private const DEFAULT_NOTE = "Created with the PHP Subtitle Toolbox (https://github.com/yama6a/subtitle-toolbox)";
 
 
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $frameRate   = $this->frameRateFromOptions($options);
+        $fps         = $this->formatOptions($options)?->frameRate;
+        $frameRate   = $fps === null ? null : new FrameRate($fps);
         $output      = $this->getHeader($subtitle, $frameRate);
         $previousEnd = 0;
         foreach ($subtitle->getCues() as $cue) {
@@ -47,22 +48,6 @@ class MpSubFormatter extends SubtitleFormatter
         }
 
         return $this->applyOutputOptions(StringHelpers::addUtf8Bom($output), $options);
-    }
-
-
-    private function frameRateFromOptions(array $options): ?FrameRate
-    {
-        if (!array_key_exists(self::OPTION_FRAME_RATE, $options)) {
-            return null;
-        }
-
-        $fps = $options[self::OPTION_FRAME_RATE];
-        // MPlayer and FFmpeg read FORMAT=<fps> as an integer.
-        if (!is_int($fps) || $fps <= 0) {
-            throw new InvalidArgumentException("The MPSub frame rate must be a positive integer!");
-        }
-
-        return new FrameRate($fps);
     }
 
 

@@ -11,6 +11,7 @@ use SubtitleToolbox\Parsers\PgsFixtures;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 require_once __DIR__ . "/../../files/mkv/generator/MkvFixtures.php";
 
@@ -77,7 +78,7 @@ class MatroskaReaderTest extends TestCase
             "Dialogue: 0,0:00:01.00,0:00:04.00,Default,Guard,0,0,0,,The train to the coast leaves at eight.\n" .
             "Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,The bakery on the corner\\Nis open {\\i1}every{\\i0} day.\n" .
             "Dialogue: 0,0:00:11.00,0:00:13.50,Default,Guard,0,0,0,,Bring an umbrella, it may rain later.\n",
-            $subtitle->toString(Format::Ass, ["bom" => false]),
+            $subtitle->toString(Format::Ass, new WriteOptions(bom: false)),
         );
         $this->assertSame(8, $subtitle->getCues()[0]->getAlignment());
         $this->assertFalse($subtitle->getCues()[0]->isForced());
@@ -112,7 +113,7 @@ class MatroskaReaderTest extends TestCase
             "NOTE Deuxième annonce\n\n" .
             "2\n00:00:06.000 --> 00:00:08.500\nLa boulangerie ouvre à six heures.\nLe pain est <00:00:07.500>encore chaud.\n\n" .
             "3\n00:00:12.000 --> 00:00:14.000\nDemain, il fera beau.\n",
-            $subtitle->toString(Format::WebVtt, ["bom" => false]),
+            $subtitle->toString(Format::WebVtt, new WriteOptions(bom: false)),
         );
     }
 

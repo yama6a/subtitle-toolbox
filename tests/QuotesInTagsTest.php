@@ -6,9 +6,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Diff\SubtitleDiff;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
-use SubtitleToolbox\Formatters\IttFormatter;
-use SubtitleToolbox\Formatters\MicroDvdFormatter;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
+use SubtitleToolbox\Formatters\FormatWriteOptions;
+use SubtitleToolbox\Formatters\Options\IttOptions;
+use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
 use SubtitleToolbox\Validation\ValidationResult;
 use SubtitleToolbox\Validation\ValidationRules;
 
@@ -69,27 +69,27 @@ class QuotesInTagsTest extends TestCase
     public static function formatterProvider(): array
     {
         return [
-            "itt"       => [Format::Itt, [IttFormatter::OPTION_FRAME_RATE => 25]],
-            "lrc"       => [Format::Lyrics, []],
-            "microdvd"  => [Format::MicroDvd, [MicroDvdFormatter::OPTION_FRAME_RATE => 25]],
-            "mpsub"     => [Format::MpSub, []],
-            "sami"      => [Format::Sami, []],
-            "sbv"       => [Format::Sbv, []],
-            "srt"       => [Format::SubRip, []],
-            "subviewer" => [Format::SubViewer, []],
-            "txt"       => [Format::PlainText, []],
-            "vtt"       => [Format::WebVtt, []],
+            "itt"       => [Format::Itt, new IttOptions(frameRate: 25)],
+            "lrc"       => [Format::Lyrics, null],
+            "microdvd"  => [Format::MicroDvd, new MicroDvdOptions(frameRate: 25)],
+            "mpsub"     => [Format::MpSub, null],
+            "sami"      => [Format::Sami, null],
+            "sbv"       => [Format::Sbv, null],
+            "srt"       => [Format::SubRip, null],
+            "subviewer" => [Format::SubViewer, null],
+            "txt"       => [Format::PlainText, null],
+            "vtt"       => [Format::WebVtt, null],
         ];
     }
 
 
     #[DataProvider("formatterProvider")]
-    public function testFormatterKeepsTextAfterQuotesInTags(Format $format, array $options): void
+    public function testFormatterKeepsTextAfterQuotesInTags(Format $format, ?FormatWriteOptions $options): void
     {
         $subtitle = $this->makeSubtitle("<v O'Neil>We're out of rye.", '<v Mo "Baker>Two rolls.');
 
-        foreach ([[], [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS]] as $extra) {
-            $output = $subtitle->toString($format, [...$options, ...$extra]);
+        foreach ([false, true] as $stripTags) {
+            $output = $subtitle->toString($format, new WriteOptions(stripTags: $stripTags, format: $options));
 
             $this->assertStringContainsString("We're out of rye.", $output);
             $this->assertStringContainsString("Two rolls.", $output);

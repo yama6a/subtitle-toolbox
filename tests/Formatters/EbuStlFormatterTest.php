@@ -6,9 +6,11 @@ use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\EbuStlOptions;
 use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class EbuStlFormatterTest extends TestCase
 {
@@ -51,7 +53,7 @@ class EbuStlFormatterTest extends TestCase
     public function testWritesThirtyFramesPerSecond(): void
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1.5, 2.967, "Hello"));
-        $stl      = $subtitle->toString(Format::EbuStl, [EbuStlFormatter::OPTION_FRAME_RATE => 30]);
+        $stl      = $subtitle->toString(Format::EbuStl, new WriteOptions(format: new EbuStlOptions(frameRate: 30)));
 
         $this->assertSame("STL30.01", substr($stl, 3, 8));
         $this->assertSame("\x00\x00\x01\x0F\x00\x00\x02\x1D", substr(self::ttiBlocks($stl)[0], 5, 8));
@@ -63,7 +65,7 @@ class EbuStlFormatterTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("25 or 30 fps");
 
-        (new Subtitle())->toString(Format::EbuStl, [EbuStlFormatter::OPTION_FRAME_RATE => 24]);
+        (new Subtitle())->toString(Format::EbuStl, new WriteOptions(format: new EbuStlOptions(frameRate: 24)));
     }
 
 
@@ -121,7 +123,7 @@ class EbuStlFormatterTest extends TestCase
     public function testStripAllOptionWritesNoStyleCodes(): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "bakery_teletext_25fps.stl"), Format::EbuStl);
-        $stl      = $subtitle->toString(Format::EbuStl, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS]);
+        $stl      = $subtitle->toString(Format::EbuStl, new WriteOptions(stripTags: true));
 
         $this->assertSame("Fresh rolls are warm today.", Subtitle::fromStringAutoDetectFormat($stl)->getCues()[1]->getText());
     }

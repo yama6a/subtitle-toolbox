@@ -5,12 +5,12 @@ namespace SubtitleToolbox\Karaoke;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\AssFormatter;
-use SubtitleToolbox\Formatters\SubRipFormatter;
+use SubtitleToolbox\Formatters\Options\AssOptions;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class WordHighlightTest extends TestCase
 {
@@ -64,7 +64,7 @@ class WordHighlightTest extends TestCase
             "2\n00:00:00,240 --> 00:00:00,710\nThe <u>beach</u> was quiet.\n\n" .
             "3\n00:00:00,710 --> 00:00:00,950\nThe beach <u>was</u> quiet.\n\n" .
             "4\n00:00:00,950 --> 00:00:01,600\nThe beach was <u>quiet.</u>\n",
-            $karaoke->toString(Format::SubRip, [SubRipFormatter::OPTION_BOM => false])
+            $karaoke->toString(Format::SubRip, new WriteOptions(bom: false))
         );
     }
 
@@ -330,12 +330,12 @@ class WordHighlightTest extends TestCase
     {
         $this->assertSame(
             file_get_contents(self::FILES . "karaoke/whisper_kf.ass"),
-            self::whisper()->toString(Format::Ass, [AssFormatter::OPTION_KARAOKE_TAG => "kf"])
+            self::whisper()->toString(Format::Ass, new WriteOptions(format: new AssOptions(karaokeTag: "kf")))
         );
 
         $subtitle = self::subtitle(new SubtitleCue(0, 1.6, "Oh <00:00:00.500>the <00:00:01.000>sea"));
         $this->assertStringContainsString("{\\ko50}Oh {\\ko50}the {\\ko60}sea",
-                                          $subtitle->toString(Format::Ass, [AssFormatter::OPTION_KARAOKE_TAG => "ko"]));
+                                          $subtitle->toString(Format::Ass, new WriteOptions(format: new AssOptions(karaokeTag: "ko"))));
         $this->assertStringContainsString("{\\k50}Oh {\\k50}the {\\k60}sea", $subtitle->toString(Format::Ass));
     }
 
@@ -345,7 +345,7 @@ class WordHighlightTest extends TestCase
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "ass/real/own_aegisub.ass"), Format::Ass);
 
         $this->assertStringContainsString("{\\k40}The {\\k35}train {\\k50}leaves {\\kf60}at {\\ko45}noon",
-                                          $subtitle->toString(Format::Ass, [AssFormatter::OPTION_KARAOKE_TAG => "kf"]));
+                                          $subtitle->toString(Format::Ass, new WriteOptions(format: new AssOptions(karaokeTag: "kf"))));
     }
 
 }

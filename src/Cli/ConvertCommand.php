@@ -6,7 +6,8 @@ use GlyphOcr\Exceptions\GlyphOcrException;
 use GlyphOcr\GlyphDatabase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\AssFormatter;
+use SubtitleToolbox\Formatters\FormatWriteOptions;
+use SubtitleToolbox\Formatters\Options\AssOptions;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Karaoke\WordHighlight;
 use SubtitleToolbox\Karaoke\WordHighlightOptions;
@@ -348,17 +349,17 @@ class ConvertCommand extends WriteCommand
     }
 
 
-    protected function commandFormatterOptions(Format $outputFormat, Arguments $arguments): array
+    protected function commandFormatterOptions(Format $outputFormat, Arguments $arguments): ?FormatWriteOptions
     {
         $tag = $arguments->value("karaoke-tag");
         if ($tag === null) {
-            return [];
+            return null;
         }
         if ($outputFormat !== Format::Ass) {
             self::fail("--karaoke-tag needs ASS output.");
         }
 
-        return [AssFormatter::OPTION_KARAOKE_TAG => $tag];
+        return new AssOptions($tag);
     }
 
 

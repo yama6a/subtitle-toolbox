@@ -6,8 +6,10 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class ProfanityFilterTest extends TestCase
 {
@@ -185,7 +187,7 @@ class ProfanityFilterTest extends TestCase
 
         $expected = str_replace(["Damn it", "the hell", "to hell", "damned"], ["**** it", "the ****", "to ****", "******"],
                                 file_get_contents(self::FILES . "keys.srt"));
-        $this->assertSame($expected, $subtitle->toString(Format::SubRip, ["lineEnding" => "\r\n", "bom" => false]));
+        $this->assertSame($expected, $subtitle->toString(Format::SubRip, new WriteOptions(lineEnding: LineEnding::Crlf, bom: false)));
         $this->assertSame([[3.4, 5.0], [8.0, 9.1], [11.5, 13.0], [13.2, 15.6]], self::times(ProfanityFilter::apply(
             Subtitle::fromString(file_get_contents(self::FILES . "keys.srt"), Format::SubRip),
             new ProfanityOptions(["damn*", "hell"], ProfanityOptions::MASK_NONE)
@@ -221,7 +223,7 @@ class ProfanityFilterTest extends TestCase
 
         $expected = str_replace(["damn <", "hell <", "damnit."], ["d*** <", "h*** <", "d*****."],
                                 file_get_contents(self::FILES . "radio.vtt"));
-        $this->assertSame($expected, $subtitle->toString(Format::WebVtt, ["bom" => false]));
+        $this->assertSame($expected, $subtitle->toString(Format::WebVtt, new WriteOptions(bom: false)));
         $this->assertSame("volume=enable='between(t,1.600,2.000)+between(t,6.300,6.700)+between(t,8.000,9.000)':volume=0",
                           MuteRange::toFfmpegVolumeFilter($ranges));
     }

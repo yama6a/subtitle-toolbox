@@ -4,20 +4,21 @@ namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\CsvFormatter;
-use SubtitleToolbox\Formatters\IttFormatter;
-use SubtitleToolbox\Formatters\MicroDvdFormatter;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
+use SubtitleToolbox\Formatters\FormatWriteOptions;
+use SubtitleToolbox\Formatters\Options\CsvOptions;
+use SubtitleToolbox\Formatters\Options\IttOptions;
+use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\MicroDvdParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\WriteOptions;
 
 /**
  * Changes each input subtitle with transform() and writes it to a file or to standard output.
  */
 abstract class WriteCommand extends FileCommand
 {
-    private const LINE_ENDINGS = ["lf" => StringHelpers::UNIX_LINE_ENDING, "crlf" => StringHelpers::WINDOWS_LINE_ENDING];
+    private const LINE_ENDINGS = ["lf" => LineEnding::Lf, "crlf" => LineEnding::Crlf];
 
     protected ?Format $toFormat = null;
 
@@ -25,7 +26,7 @@ abstract class WriteCommand extends FileCommand
 
     protected bool $dataOnStdout = false;
 
-    private array $formatterOptions = [];
+    private WriteOptions $writeOptions;
 
 
     abstract protected function transform(Subtitle $subtitle, Arguments $arguments): void;
@@ -106,18 +107,13 @@ abstract class WriteCommand extends FileCommand
             self::fail("Pass only one of --bom and --no-bom.");
         }
 
-        $this->formatterOptions = [];
-        $lineEnding             = $arguments->value("line-ending");
-        if ($lineEnding !== null) {
-            $this->formatterOptions[SubtitleFormatter::OPTION_LINE_ENDING] = self::LINE_ENDINGS[strtolower($lineEnding)]
-                ?? self::fail("The option --line-ending must be lf or crlf, got \"$lineEnding\".");
-        }
-        if ($arguments->has("bom") || $arguments->has("no-bom")) {
-            $this->formatterOptions[SubtitleFormatter::OPTION_BOM] = $arguments->has("bom");
-        }
-        if ($arguments->has("skip-image-cues")) {
-            $this->formatterOptions[SubtitleFormatter::OPTION_SKIP_IMAGE_CUES] = true;
-        }
+        $lineEnding         = $arguments->value("line-ending") ?? "lf";
+        $this->writeOptions = new WriteOptions(
+            lineEnding: self::LINE_ENDINGS[strtolower($lineEnding)]
+                ?? self::fail("The option --line-ending must be lf or crlf, got \"$lineEnding\"."),
+            bom: $arguments->has("bom") || $arguments->has("no-bom") ? $arguments->has("bom") : null,
+            skipImageCues: $arguments->has("skip-image-cues"),
+        );
     }
 
 
@@ -184,9 +180,9 @@ abstract class WriteCommand extends FileCommand
     /**
      * Returns formatter options of the command for the output format.
      */
-    protected function commandFormatterOptions(Format $outputFormat, Arguments $arguments): array
+    protected function commandFormatterOptions(Format $outputFormat, Arguments $arguments): ?FormatWriteOptions
     {
-        return [];
+        return null;
     }
 
 
@@ -260,29 +256,32 @@ abstract class WriteCommand extends FileCommand
     }
 
 
-    private function formatterOptions(Subtitle $subtitle, Format $inputFormat, Format $outputFormat, Arguments $arguments): array
+    private function formatterOptions(Subtitle $subtitle, Format $inputFormat, Format $outputFormat, Arguments $arguments): WriteOptions
     {
-        $options = $this->formatterOptions + $this->commandFormatterOptions($outputFormat, $arguments);
+        $format = $this->commandFormatterOptions($outputFormat, $arguments);
         // CsvFormatter writes the delimiter of the parsed table, so a TSV input would give a CSV file with tabs.
         if ($outputFormat === Format::Tsv) {
-            $options[CsvFormatter::OPTION_DELIMITER] = "\t";
+            $format = new CsvOptions(delimiter: "\t");
         } elseif ($outputFormat === Format::Csv && $inputFormat === Format::Tsv) {
-            $options[CsvFormatter::OPTION_DELIMITER] = ",";
+            $format = new CsvOptions(delimiter: ",");
         }
         if ($outputFormat === Format::MicroDvd) {
-            $options[MicroDvdFormatter::OPTION_FRAME_RATE] = $this->fps
+            $format = new MicroDvdOptions(frameRate: $this->fps
                 ?? $subtitle->getFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
-                ?? self::fail("MicroDVD output needs the frame rate of the video. Pass --fps.");
+                ?? self::fail("MicroDVD output needs the frame rate of the video. Pass --fps."));
         }
         if ($outputFormat === Format::Itt) {
             if ($this->fps === null && !isset($subtitle->getFormatData("itt")["frameRate"])) {
                 self::fail("iTT output needs the frame rate of the video. Pass --fps.");
             }
-            if ($this->fps !== null) {
-                $options[IttFormatter::OPTION_FRAME_RATE] = $this->fps;
-            }
+            $format = new IttOptions(frameRate: $this->fps);
         }
 
-        return $options;
+        return new WriteOptions(
+            lineEnding: $this->writeOptions->lineEnding,
+            bom: $this->writeOptions->bom,
+            skipImageCues: $this->writeOptions->skipImageCues,
+            format: $format,
+        );
     }
 }

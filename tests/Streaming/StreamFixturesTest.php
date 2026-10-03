@@ -5,22 +5,29 @@ namespace SubtitleToolbox\Streaming;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 use Throwable;
 
 class StreamFixturesTest extends TestCase
 {
-    private const OPTION_SETS = [
-        "default"    => [],
-        "CRLF"       => [SubtitleFormatter::OPTION_LINE_ENDING => "\r\n"],
-        "no BOM"     => [SubtitleFormatter::OPTION_BOM => false],
-        "strip tags" => [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS],
-    ];
+    /**
+     * @return array<string, WriteOptions>
+     */
+    private static function optionSets(): array
+    {
+        return [
+            "default"    => new WriteOptions(),
+            "CRLF"       => new WriteOptions(lineEnding: LineEnding::Crlf),
+            "no BOM"     => new WriteOptions(bom: false),
+            "strip tags" => new WriteOptions(stripTags: true),
+        ];
+    }
 
 
     public static function subRipFiles(): array
@@ -81,7 +88,7 @@ class StreamFixturesTest extends TestCase
     {
         $subtitle = (new SubRipParser())->parse(file_get_contents($path));
 
-        foreach (self::OPTION_SETS as $name => $options) {
+        foreach (self::optionSets() as $name => $options) {
             $stream = fopen("php://memory", "w+b");
             $writer = new SubRipStreamWriter($stream, $options);
             foreach ($subtitle->getCues() as $cue) {
@@ -104,7 +111,7 @@ class StreamFixturesTest extends TestCase
             $subtitle->addCue($cue, false);
         }
 
-        foreach (self::OPTION_SETS as $name => $options) {
+        foreach (self::optionSets() as $name => $options) {
             $stream = fopen("php://memory", "w+b");
             $writer = new WebVttStreamWriter($stream, $header, $options);
             foreach ($subtitle->getCues() as $cue) {

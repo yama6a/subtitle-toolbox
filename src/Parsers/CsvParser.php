@@ -4,6 +4,7 @@ namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Formatters\CsvTimeFormat;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
@@ -14,12 +15,6 @@ class CsvParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = "csv";
     public const DELIMITERS      = [",", ";", "\t"];
-
-    public const TIME_SECONDS = "seconds";
-    public const TIME_DOT     = "hh:mm:ss.mmm";
-    public const TIME_COMMA   = "hh:mm:ss,mmm";
-    public const TIME_FRAMES  = "hh:mm:ss:ff";
-    public const TIME_FORMATS = [self::TIME_SECONDS, self::TIME_DOT, self::TIME_COMMA, self::TIME_FRAMES];
 
     private CsvColumns $columns;
 
@@ -105,7 +100,7 @@ class CsvParser extends SubtitleParser
             "header"     => $header,
             "roles"      => $roles,
             "width"      => max([count($header ?? []), ...array_map("count", array_column($records, 1))]),
-            "timeFormat" => $timeFormat ?? self::TIME_DOT,
+            "timeFormat" => $timeFormat ?? CsvTimeFormat::Dot->value,
             "frameRate"  => $this->columns->frameRate,
         ]);
 
@@ -224,10 +219,10 @@ class CsvParser extends SubtitleParser
     private static function timeFormatOf(string $time): string
     {
         return match (true) {
-            str_contains($time, ",")       => self::TIME_COMMA,
-            substr_count($time, ":") === 3 => self::TIME_FRAMES,
-            str_contains($time, ":")       => self::TIME_DOT,
-            default                        => self::TIME_SECONDS,
+            str_contains($time, ",")       => CsvTimeFormat::Comma->value,
+            substr_count($time, ":") === 3 => CsvTimeFormat::Frames->value,
+            str_contains($time, ":")       => CsvTimeFormat::Dot->value,
+            default                        => CsvTimeFormat::Seconds->value,
         };
     }
 

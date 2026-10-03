@@ -6,8 +6,11 @@ use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\IttOptions;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class IttFormatterTest extends TestCase
 {
@@ -59,7 +62,7 @@ class IttFormatterTest extends TestCase
     public function testSingleQuotedColourBecomesAColourSpan(): void
     {
         $output = (new Subtitle())->addCue(new SubtitleCue(1, 2, "<font color='#ff0000'>red</font>"))
-                                  ->toString(Format::Itt, [IttFormatter::OPTION_FRAME_RATE => 25]);
+                                  ->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: 25)));
 
         $this->assertSame(["<p begin=\"00:00:01:00\" end=\"00:00:02:00\" region=\"bottom\"><span tts:color=\"#ff0000\">red</span></p>"],
                           $this->paragraphs($output));
@@ -73,7 +76,7 @@ class IttFormatterTest extends TestCase
                . "2\n00:00:03,000 --> 00:00:04,000\n{\\an4}<font color=\"Yellow\">left</font>\n\n"
                . "3\n00:00:05,000 --> 00:00:06,000\n{\\an9}top right\n";
 
-        $output = Subtitle::fromString($srt, Format::SubRip)->toString(Format::Itt, [IttFormatter::OPTION_FRAME_RATE => 25]);
+        $output = Subtitle::fromString($srt, Format::SubRip)->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: 25)));
 
         $this->assertStringContainsString(" ttp:timeBase=\"smpte\" ttp:frameRate=\"25\" ttp:frameRateMultiplier=\"1 1\" ttp:dropMode=\"nonDrop\">", $output);
         $this->assertSame(
@@ -97,7 +100,7 @@ class IttFormatterTest extends TestCase
                 . "<body><div xml:id=\"d1\"><p begin=\"1s\" end=\"2s\" style=\"s1\">one</p></div>"
                 . "<div xml:id=\"d2\"><p xml:id=\"c2\" begin=\"3s\" end=\"4s\">two</p></div></body></tt>";
 
-        $output = Subtitle::fromString($ttml, Format::Ttml)->toString(Format::Itt, [IttFormatter::OPTION_FRAME_RATE => "30"]);
+        $output = Subtitle::fromString($ttml, Format::Ttml)->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: "30")));
 
         $this->assertSame(1, substr_count($output, "<div"));
         $this->assertStringNotContainsString("monospaceSerif", $output);
@@ -134,7 +137,7 @@ class IttFormatterTest extends TestCase
 
         $this->assertSame(
             ["<p begin=\"$begin\" end=\"$expectedEnd\" region=\"bottom\">a</p>"],
-            $this->paragraphs($subtitle->toString(Format::Itt, [IttFormatter::OPTION_FRAME_RATE => $fps]))
+            $this->paragraphs($subtitle->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: $fps))))
         );
     }
 
@@ -152,7 +155,7 @@ class IttFormatterTest extends TestCase
     public function testRoundTripAtOneAndTwoHours(float $fps, array $labels): void
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(3600, 3700, "a"))->addCue(new SubtitleCue(7200, 7300, "b"));
-        $output   = $subtitle->toString(Format::Itt, [IttFormatter::OPTION_FRAME_RATE => $fps]);
+        $output   = $subtitle->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: $fps)));
 
         $this->assertSame(
             [
@@ -186,7 +189,7 @@ class IttFormatterTest extends TestCase
     #[DataProvider("frameRateProvider")]
     public function testWritesTheFrameRateParameters(float $fps, string $frameRate, string $multiplier): void
     {
-        $output = (new Subtitle())->toString(Format::Itt, [IttFormatter::OPTION_FRAME_RATE => $fps]);
+        $output = (new Subtitle())->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: $fps)));
 
         $this->assertStringContainsString(" ttp:frameRate=\"$frameRate\" ttp:frameRateMultiplier=\"$multiplier\" ", $output);
         $this->assertStringContainsString("<div/>", $output);
@@ -199,7 +202,7 @@ class IttFormatterTest extends TestCase
                     . " ttp:timeBase=\"smpte\" ttp:frameRate=\"24\" ttp:frameRateMultiplier=\"1000 1001\">"
                     . "<body><div><p begin=\"00:00:01:12\" end=\"00:00:02:00\">a</p></div></body></tt>";
         $subtitle = Subtitle::fromString($ttml, Format::Itt);
-        $output   = $subtitle->toString(Format::Itt, [IttFormatter::OPTION_FRAME_RATE => 25]);
+        $output   = $subtitle->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: 25)));
 
         $this->assertStringContainsString(" ttp:frameRate=\"25\" ttp:frameRateMultiplier=\"1 1\" ", $output);
         $this->assertSame(["<p begin=\"00:00:01:13\" end=\"00:00:02:00\" region=\"bottom\">a</p>"], $this->paragraphs($output));
@@ -209,13 +212,13 @@ class IttFormatterTest extends TestCase
     public function testOptionWinsOverTheFrameRateOfARealFile(): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/itt/real/fcp_23976_styles.itt"), Format::Itt);
-        $output   = $subtitle->toString(Format::Itt, [IttFormatter::OPTION_FRAME_RATE => 25]);
+        $output   = $subtitle->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: 25)));
 
         $this->assertStringContainsString(" ttp:frameRate=\"25\" ttp:frameRateMultiplier=\"1 1\" ", $output);
         $this->assertStringStartsWith("<p begin=\"00:00:01:13\" end=\"00:00:04:00\" ", $this->paragraphs($output)[0]);
         $this->assertSame(
             $subtitle->toString(Format::Itt),
-            $subtitle->toString(Format::Itt, [IttFormatter::OPTION_FRAME_RATE => 23.976])
+            $subtitle->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: 23.976)))
         );
     }
 
@@ -223,7 +226,7 @@ class IttFormatterTest extends TestCase
     public function testOptionWithTheParsedFrameRateKeepsTheParsedMultiplier(): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/itt/real/avscript_testing.itt"), Format::Itt);
-        $output   = $subtitle->toString(Format::Itt, [IttFormatter::OPTION_FRAME_RATE => 23.976]);
+        $output   = $subtitle->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: 23.976)));
 
         $this->assertStringContainsString(" ttp:frameRate=\"24\" ttp:frameRateMultiplier=\"1000 1001\" ", $output);
         $this->assertSame($subtitle->toString(Format::Itt), $output);
@@ -238,7 +241,7 @@ class IttFormatterTest extends TestCase
 
         $this->assertStringContainsString(
             "<p begin=\"00:00:01:10\" end=\"00:00:02:00\" region=\"bottom\">a</p>",
-            $subtitle->toString(Format::Itt, [IttFormatter::OPTION_FRAME_RATE => 25])
+            $subtitle->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: 25)))
         );
         $this->expectException(InvalidArgumentException::class);
         $subtitle->toString(Format::Itt);
@@ -248,7 +251,7 @@ class IttFormatterTest extends TestCase
     public function testWithoutFrameRateThrows(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("The ITT formatter needs the option OPTION_FRAME_RATE.");
+        $this->expectExceptionMessage("The ITT formatter needs IttOptions with a frame rate.");
 
         (new Subtitle())->toString(Format::Itt);
     }
@@ -259,7 +262,7 @@ class IttFormatterTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("The ITT formatter accepts the frame rates 23.976, 24, 25, 29.97 and 30, got 50.");
 
-        (new Subtitle())->toString(Format::Itt, [IttFormatter::OPTION_FRAME_RATE => 50]);
+        (new Subtitle())->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: 50)));
     }
 
 
@@ -268,7 +271,7 @@ class IttFormatterTest extends TestCase
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "<b>bold</b> &amp; <i>more</i>"));
         $output   = $subtitle->toString(
             Format::Itt,
-            [IttFormatter::OPTION_FRAME_RATE => 25, SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS]
+            new WriteOptions(stripTags: true, format: new IttOptions(frameRate: 25))
         );
 
         $this->assertSame(["<p begin=\"00:00:01:00\" end=\"00:00:02:00\" region=\"bottom\">bold &amp; more</p>"], $this->paragraphs($output));
@@ -278,7 +281,7 @@ class IttFormatterTest extends TestCase
     public function testTitleAndLanguageAreWritten(): void
     {
         $subtitle = (new Subtitle())->setMetadata(Subtitle::METADATA_TITLE, "Bakery")->setMetadata(Subtitle::METADATA_LANGUAGE, "fr");
-        $output   = $subtitle->toString(Format::Itt, [IttFormatter::OPTION_FRAME_RATE => 25]);
+        $output   = $subtitle->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: 25)));
 
         $this->assertStringContainsString(" xml:lang=\"fr\" ", $output);
         $this->assertStringContainsString("<head>\n    <ttm:title>Bakery</ttm:title>\n    <styling>", $output);
@@ -300,11 +303,7 @@ class IttFormatterTest extends TestCase
     public function testLineEndingAndBomOptions(): void
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "a\nb"));
-        $output   = $subtitle->toString(Format::Itt, [
-            IttFormatter::OPTION_FRAME_RATE       => 25,
-            SubtitleFormatter::OPTION_LINE_ENDING => "\r\n",
-            SubtitleFormatter::OPTION_BOM         => true,
-        ]);
+        $output   = $subtitle->toString(Format::Itt, new WriteOptions(lineEnding: LineEnding::Crlf, bom: true, format: new IttOptions(frameRate: 25)));
 
         $this->assertStringStartsWith("\xEF\xBB\xBF<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<tt ", $output);
         $this->assertStringNotContainsString("\n", str_replace("\r\n", "", $output));

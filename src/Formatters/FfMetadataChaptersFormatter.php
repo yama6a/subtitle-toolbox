@@ -6,13 +6,14 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\WriteOptions;
 
 class FfMetadataChaptersFormatter extends SubtitleFormatter
 {
     private const DEFAULT_TIME_BASE = "1/1000";
 
 
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
         $stored = $subtitle->getFormatData(FfMetadataChaptersParser::FORMAT_DATA_KEY);
         $output = ";FFMETADATA1\n" . $this->tags($this->globalTags($subtitle, $stored["tags"] ?? []));

@@ -7,12 +7,12 @@ use DOMElement;
 use DOMNode;
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
 class TtmlFormatter extends SubtitleFormatter
 {
@@ -53,7 +53,7 @@ class TtmlFormatter extends SubtitleFormatter
     private array $forcedRegions;
 
 
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
         $fileData        = $subtitle->getFormatData(TtmlParser::FORMAT);
         $this->namespace = ($fileData["namespace"] ?? "") ?: TtmlParser::NAMESPACE_TTML;
@@ -190,7 +190,7 @@ class TtmlFormatter extends SubtitleFormatter
     }
 
 
-    private function formatParagraph(SubtitleCue $cue, array $options, bool $isForeignSubtitle): string
+    private function formatParagraph(SubtitleCue $cue, WriteOptions $options, bool $isForeignSubtitle): string
     {
         $attributes = "";
         $identifier = $cue->getIdentifier();
@@ -218,7 +218,7 @@ class TtmlFormatter extends SubtitleFormatter
         }
 
         $text = implode(self::NL, $cue->getLines());
-        if ((bool) (Options::flag($options, parent::OPTION_STRIP_ALL_XML_TAGS) ?? false)) {
+        if ($options->stripTags) {
             return "<p$attributes>" . $this->formatText(Markup::stripAllTags($text)) . "</p>";
         }
 
