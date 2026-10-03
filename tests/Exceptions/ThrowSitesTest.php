@@ -53,6 +53,7 @@ use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SccParser;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\SubViewerParser;
+use SubtitleToolbox\Parsers\TmPlayerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\VobSubParser;
 use SubtitleToolbox\Parsers\WebVttParser;
@@ -418,6 +419,7 @@ class ThrowSitesTest extends TestCase
             "Parsers/SubViewerParser.php: negative duration" => [fn () => new SubViewerParser(-1), ...$invalid],
             "Parsers/SubViewerParser.php: version 1 header" => [fn () => (new SubViewerParser())->parse("text\n" . SubViewerParser::START_SCRIPT . "\n"), ...$parsing],
             "Parsers/SubViewerParser.php: version 2 header" => [fn () => (new SubViewerParser())->parse("text\n"), ...$parsing],
+            "Parsers/TmPlayerParser.php: negative duration" => [fn () => new TmPlayerParser(-1), ...$invalid],
             "Parsers/TtmlParser.php: no tt root"            => [fn () => (new TtmlParser())->parse("<html/>"), ...$parsing],
             "Parsers/TtmlParser.php: invalid time"          => [fn () => (new TtmlParser())->parse(sprintf(self::TTML,
                 '<p begin="soon" end="2s">text</p>')), ...$parsing],

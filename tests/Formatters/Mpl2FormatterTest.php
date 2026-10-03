@@ -1,0 +1,50 @@
+<?php
+
+namespace SubtitleToolbox\Formatters;
+
+use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
+
+class Mpl2FormatterTest extends TestCase
+{
+    public function testWritesTenthsOfASecondAndLineBreaks(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1.24, 4.46, ["Where are you?", "Home."]));
+
+        $this->assertSame("[12][45]Where are you?|Home.\n", $subtitle->format(Mpl2Formatter::class));
+    }
+
+
+    public function testWritesAnItalicLineWithASlash(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue(new SubtitleCue(1, 2, ["<i>One</i>", "Two"]))
+            ->addCue(new SubtitleCue(3, 4, ["<i>Three", "Four</i>"]))
+            ->addCue(new SubtitleCue(5, 6, ["<b><i>Five</i></b>", "<i>Six</i> and seven"]));
+
+        $this->assertSame(
+            "[10][20]/One|Two\n[30][40]/Three|/Four\n[50][60]/Five|Six and seven\n",
+            $subtitle->format(Mpl2Formatter::class)
+        );
+    }
+
+
+    public function testStripsOtherTagsAndDecodesEntities(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(0, 1, ["<font color=\"#ff0000\">Red</font> &amp; <v Anna>blue", "<b> </b>"]));
+
+        $this->assertSame("[0][10]Red & blue\n", $subtitle->format(Mpl2Formatter::class));
+    }
+
+
+    public function testAppliesTheOutputOptions(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(0, 1, "Hello"));
+
+        $this->assertSame(
+            "\xEF\xBB\xBF[0][10]Hello\r\n",
+            $subtitle->format(Mpl2Formatter::class, [SubtitleFormatter::OPTION_LINE_ENDING => "\r\n", SubtitleFormatter::OPTION_BOM => true])
+        );
+    }
+}

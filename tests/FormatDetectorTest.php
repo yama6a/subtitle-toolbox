@@ -11,11 +11,13 @@ use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
+use SubtitleToolbox\Parsers\Mpl2Parser;
 use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\SubViewerParser;
+use SubtitleToolbox\Parsers\TmPlayerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
@@ -30,12 +32,14 @@ class FormatDetectorTest extends TestCase
         "json"     => JsonParser::class,
         "lrc"      => LyricsParser::class,
         "microdvd" => MicroDvdParser::class,
+        "mpl2"     => Mpl2Parser::class,
         "mpsub"    => MpSubParser::class,
         "sami"     => SamiParser::class,
         "sbv"      => SbvParser::class,
         "srt"      => SubRipParser::class,
         "subviewer" => SubViewerParser::class,
         "stl"      => EbuStlParser::class,
+        "tmplayer" => TmPlayerParser::class,
         "ttml"     => TtmlParser::class,
         "vtt"      => WebVttParser::class,
         "whisper"  => WhisperJsonParser::class,
@@ -143,6 +147,14 @@ class FormatDetectorTest extends TestCase
                                              YouTubeTimedTextParser::class],
             "YouTube srv1"               => ["<transcript><text start=\"1.2\" dur=\"2.3\">Hello</text></transcript>", YouTubeTimedTextParser::class],
             "JSON with an events list"   => ["{\"version\": 1, \"formatData\": {\"x\": {\"events\": [{\"tStartMs\": 0}]}}, \"cues\": []}", JsonParser::class],
+            "MPL2"                       => ["[10][25]Hello|/world\n", Mpl2Parser::class],
+            "MicroDVD next to MPL2"      => ["{10}{25}Hello|world\n", MicroDvdParser::class],
+            "LRC next to MPL2"           => ["[00:01.00]Hello\n[00:02.50]world\n", LyricsParser::class],
+            "LRC with minutes only"      => ["[00:01]Hello\n", LyricsParser::class],
+            "TMPlayer"                   => ["00:00:01:Hello|world\n", TmPlayerParser::class],
+            "TMPlayer+ with equals sign" => ["0:00:01=Hello\n", TmPlayerParser::class],
+            "TMPlayer+ with line numbers" => ["00:00:01,1=Hello\n00:00:01,2=world\n", TmPlayerParser::class],
+            "SBV next to TMPlayer"       => ["0:00:01.000,0:00:02.000\nHello\n", SbvParser::class],
         ];
     }
 
@@ -203,6 +215,8 @@ class FormatDetectorTest extends TestCase
             "events without tStartMs"  => ["{\"events\": [{\"start\": 1}]}"],
             "events as text"           => ["{\"text\": \"\\\"events\\\": [{\\\"tStartMs\\\": 1}]\"}"],
             "timedtext inside a word"  => ["<timedtextx/>"],
+            "MPL2 with a letter"       => ["[1a][25]Hello\n"],
+            "clock time in text"       => ["10:30 is the time.\n"],
         ];
     }
 

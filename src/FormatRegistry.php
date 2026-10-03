@@ -9,6 +9,7 @@ use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\JsonFormatter;
 use SubtitleToolbox\Formatters\LyricsFormatter;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
+use SubtitleToolbox\Formatters\Mpl2Formatter;
 use SubtitleToolbox\Formatters\MpSubFormatter;
 use SubtitleToolbox\Formatters\PgsFormatter;
 use SubtitleToolbox\Formatters\PlainTextFormatter;
@@ -17,6 +18,7 @@ use SubtitleToolbox\Formatters\SbvFormatter;
 use SubtitleToolbox\Formatters\SccFormatter;
 use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\SubViewerFormatter;
+use SubtitleToolbox\Formatters\TmPlayerFormatter;
 use SubtitleToolbox\Formatters\TtmlFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\Parsers\AssParser;
@@ -26,6 +28,7 @@ use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
+use SubtitleToolbox\Parsers\Mpl2Parser;
 use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\SamiParser;
@@ -33,6 +36,7 @@ use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SccParser;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\SubViewerParser;
+use SubtitleToolbox\Parsers\TmPlayerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\VobSubParser;
 use SubtitleToolbox\Parsers\WebVttParser;
@@ -44,7 +48,7 @@ class FormatRegistry
     /**
      * Format name => parser class, formatter class and file extensions. Null means that the library cannot read or
      * write the format. The first extension is the one for new files. When two formats list an extension, the
-     * earlier format owns it, so `.sub` is MicroDVD and `.json` is the library JSON.
+     * earlier format owns it, so `.sub` is MicroDVD, `.json` is the library JSON and `.txt` is plain text.
      */
     private const FORMATS = [
         "ass"       => [AssParser::class, AssFormatter::class, ["ass", "ssa"]],
@@ -64,6 +68,8 @@ class FormatRegistry
         "ttml"      => [TtmlParser::class, TtmlFormatter::class, ["ttml", "dfxp", "xml"]],
         "tsv"       => [CsvParser::class, CsvFormatter::class, ["tsv"]],
         "txt"       => [null, PlainTextFormatter::class, ["txt"]],
+        "mpl2"      => [Mpl2Parser::class, Mpl2Formatter::class, ["txt"]],
+        "tmplayer"  => [TmPlayerParser::class, TmPlayerFormatter::class, ["txt"]],
         "vobsub"    => [VobSubParser::class, null, ["idx"]],
         "vtt"       => [WebVttParser::class, WebVttFormatter::class, ["vtt"]],
         "whisper"   => [WhisperJsonParser::class, null, ["json"]],

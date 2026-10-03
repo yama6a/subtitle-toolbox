@@ -7,6 +7,7 @@ use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
+use SubtitleToolbox\Parsers\Mpl2Parser;
 use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\SamiParser;
@@ -14,6 +15,7 @@ use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SccParser;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\SubViewerParser;
+use SubtitleToolbox\Parsers\TmPlayerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
@@ -51,6 +53,9 @@ class FormatDetector
      * 15. Whisper JSON: an object with a "segments" or "transcription" list. It comes after JSON, whose format data can hold such a key.
      * 16. YouTube timed text: a `<timedtext>` or `<transcript>` root after an optional XML declaration, or an object with an
      *     "events" list whose events have a "tStartMs" key. It comes after JSON and Whisper JSON, which can hold such a list.
+     * 17. MPL2: a `[start][end]` first line in tenths of a second. No earlier signature matches it: LRC needs a colon
+     *     inside the brackets, and MicroDVD needs braces.
+     * 18. TMPlayer: a first line such as `00:00:01:`, `0:00:01=` or `00:00:01,1=`. SBV and SubViewer 2 need a dot after the seconds.
      */
     private const SIGNATURES = [
         WebVttParser::class   => '/\AWEBVTT(?:[ \t\n]|\z)/',
@@ -73,6 +78,8 @@ class FormatDetector
         YouTubeTimedTextParser::class => '/\A(?:' . self::XML_PROLOG . '<(?:timedtext|transcript)[\s>\/]' .
                                          '|\{(?=(?:[^"]++|"(?!events"\s*+:))*+"events"\s*+:\s*+\[\s*+\{' .
                                          '(?:[^"]++|"(?!tStartMs"\s*+:))*+"tStartMs"\s*+:))/s',
+        Mpl2Parser::class     => '/\A\[\d+\]\[\d+\]/',
+        TmPlayerParser::class => '/\A\d+:[0-5]\d:[0-5]\d(?:,\d+)?[:=]/',
     ];
 
 
