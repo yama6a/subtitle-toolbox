@@ -1,0 +1,69 @@
+<?php
+
+namespace SubtitleToolbox\Parsers;
+
+use JsonException;
+use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Markup;
+use SubtitleToolbox\StringHelpers;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
+
+// Spec: https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/examples/chapters/jsonChapters.md
+class PodcastChaptersParser extends SubtitleParser
+{
+    public const FORMAT_DATA_KEY = "chapters";
+
+
+    /**
+     * Creates a parser that ends the last chapter at $mediaDuration seconds, or at its own start when it is null.
+     */
+    public function __construct(private readonly ?float $mediaDuration = null)
+    {
+    }
+
+
+    public function parse(string $rawSubtitle): Subtitle
+    {
+        $this->warnings = [];
+        try {
+            $data = json_decode(StringHelpers::removeUtf8Bom($rawSubtitle), true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $exception) {
+            throw new ParsingException("The content is not valid JSON: {$exception->getMessage()}.");
+        }
+
+        if (!is_array($data) || !is_array($data["chapters"] ?? null) || !array_is_list($data["chapters"])) {
+            throw new ParsingException("The JSON has no \"chapters\" list.");
+        }
+
+        $chapters = [];
+        foreach ($data["chapters"] as $index => $chapter) {
+            $start = is_array($chapter) ? $chapter["startTime"] ?? null : null;
+            if (!is_int($start) && !is_float($start)) {
+                throw new ParsingException("The field chapters[$index].startTime must be a number.");
+            }
+            $end   = $chapter["endTime"] ?? null;
+            $title = $chapter["title"] ?? null;
+
+            $cue = new SubtitleCue($start, $start, is_string($title) ? Markup::escapeText($title) : "");
+            $cue->setFormatData(self::FORMAT_DATA_KEY, array_diff_key($chapter, array_flip(["startTime", "endTime", "title"])));
+            $chapters[] = [$cue, is_int($end) || is_float($end) ? (float) $end : null];
+        }
+        usort($chapters, fn (array $a, array $b): int => $a[0]->getStart() <=> $b[0]->getStart());
+
+        $subtitle = new Subtitle();
+        foreach ($chapters as $index => [$cue, $end]) {
+            $next = $chapters[$index + 1][0] ?? null;
+            $cue->setEnd($end ?? $next?->getStart() ?? max($cue->getStart(), $this->mediaDuration ?? 0));
+            $subtitle->addCue($cue, false);
+        }
+
+        foreach (["title" => Subtitle::METADATA_TITLE, "author" => Subtitle::METADATA_AUTHOR] as $field => $key) {
+            if (is_string($data[$field] ?? null)) {
+                $subtitle->setMetadata($key, $data[$field]);
+            }
+        }
+
+        return $subtitle->setFormatData(self::FORMAT_DATA_KEY, array_diff_key($data, array_flip(["chapters", "title", "author"])));
+    }
+}

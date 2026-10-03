@@ -5,14 +5,17 @@ namespace SubtitleToolbox;
 use SubtitleToolbox\Formatters\AssFormatter;
 use SubtitleToolbox\Formatters\CsvFormatter;
 use SubtitleToolbox\Formatters\EbuStlFormatter;
+use SubtitleToolbox\Formatters\FfMetadataChaptersFormatter;
 use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\JsonFormatter;
 use SubtitleToolbox\Formatters\LyricsFormatter;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
 use SubtitleToolbox\Formatters\Mpl2Formatter;
 use SubtitleToolbox\Formatters\MpSubFormatter;
+use SubtitleToolbox\Formatters\OgmChaptersFormatter;
 use SubtitleToolbox\Formatters\PgsFormatter;
 use SubtitleToolbox\Formatters\PlainTextFormatter;
+use SubtitleToolbox\Formatters\PodcastChaptersFormatter;
 use SubtitleToolbox\Formatters\SamiFormatter;
 use SubtitleToolbox\Formatters\SbvFormatter;
 use SubtitleToolbox\Formatters\SccFormatter;
@@ -21,12 +24,14 @@ use SubtitleToolbox\Formatters\SubViewerFormatter;
 use SubtitleToolbox\Formatters\TmPlayerFormatter;
 use SubtitleToolbox\Formatters\TtmlFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\Formatters\YouTubeChaptersFormatter;
 use SubtitleToolbox\Parsers\AssemblyAiParser;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\AwsTranscribeParser;
 use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Parsers\DeepgramParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
+use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\Parsers\GoogleSpeechParser;
 use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\JsonParser;
@@ -34,7 +39,9 @@ use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\Mpl2Parser;
 use SubtitleToolbox\Parsers\MpSubParser;
+use SubtitleToolbox\Parsers\OgmChaptersParser;
 use SubtitleToolbox\Parsers\PgsParser;
+use SubtitleToolbox\Parsers\PodcastChaptersParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SccParser;
@@ -45,6 +52,7 @@ use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\VobSubParser;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
+use SubtitleToolbox\Parsers\YouTubeChaptersParser;
 use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 
 class FormatRegistry
@@ -57,6 +65,7 @@ class FormatRegistry
     private const FORMATS = [
         "ass"       => [AssParser::class, AssFormatter::class, ["ass", "ssa"]],
         "csv"       => [CsvParser::class, CsvFormatter::class, ["csv"]],
+        "ffmeta"    => [FfMetadataChaptersParser::class, FfMetadataChaptersFormatter::class, ["ffmeta"]],
         "itt"       => [IttParser::class, IttFormatter::class, ["itt"]],
         "json"      => [JsonParser::class, JsonFormatter::class, ["json"]],
         "assemblyai" => [AssemblyAiParser::class, null, ["json"]],
@@ -82,6 +91,9 @@ class FormatRegistry
         "vtt"       => [WebVttParser::class, WebVttFormatter::class, ["vtt"]],
         "whisper"   => [WhisperJsonParser::class, null, ["json"]],
         "youtube"   => [YouTubeTimedTextParser::class, null, ["json3", "srv3", "srv1"]],
+        "ogm"       => [OgmChaptersParser::class, OgmChaptersFormatter::class, ["txt"]],
+        "podcast"   => [PodcastChaptersParser::class, PodcastChaptersFormatter::class, ["json"]],
+        "ytchapter" => [YouTubeChaptersParser::class, YouTubeChaptersFormatter::class, ["txt"]],
     ];
 
 

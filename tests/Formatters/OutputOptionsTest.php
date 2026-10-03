@@ -14,14 +14,18 @@ class OutputOptionsTest extends TestCase
     {
         return [
             "ASS"      => [AssFormatter::class, [], true],
+            "FFmpeg metadata"  => [FfMetadataChaptersFormatter::class, [], false],
             "LRC"      => [LyricsFormatter::class, [], true],
             "MicroDVD" => [MicroDvdFormatter::class, [MicroDvdFormatter::OPTION_FRAME_RATE => 25], false],
             "MPSub"    => [MpSubFormatter::class, [], true],
+            "OGM chapters"     => [OgmChaptersFormatter::class, [], false],
+            "Podcast chapters" => [PodcastChaptersFormatter::class, [], false],
             "SAMI"     => [SamiFormatter::class, [], false],
             "SBV"      => [SbvFormatter::class, [], false],
             "SubRip"   => [SubRipFormatter::class, [], true],
             "TTML"     => [TtmlFormatter::class, [], false],
             "WebVTT"   => [WebVttFormatter::class, [], true],
+            "YouTube chapters" => [YouTubeChaptersFormatter::class, [], false],
         ];
     }
 

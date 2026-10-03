@@ -7,13 +7,16 @@ use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\AwsTranscribeParser;
 use SubtitleToolbox\Parsers\DeepgramParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
+use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\Parsers\GoogleSpeechParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\Mpl2Parser;
 use SubtitleToolbox\Parsers\MpSubParser;
+use SubtitleToolbox\Parsers\OgmChaptersParser;
 use SubtitleToolbox\Parsers\PgsParser;
+use SubtitleToolbox\Parsers\PodcastChaptersParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SccParser;
@@ -66,6 +69,10 @@ class FormatDetector
      * 21. MPL2: a `[start][end]` first line in tenths of a second. No earlier signature matches it: LRC needs a colon
      *     inside the brackets, and MicroDVD needs braces.
      * 22. TMPlayer: a first line such as `00:00:01:`, `0:00:01=` or `00:00:01,1=`. SBV and SubViewer 2 need a dot after the seconds.
+     * 23. Podcasting 2.0 JSON chapters: an object with a "version" key and a "chapters" list. It comes after the other JSON
+     *     formats, whose format data can hold such keys.
+     * 24. FFmpeg metadata: the `;FFMETADATA` header.
+     * 25. OGM chapters: a `CHAPTER01=` line with a time, then a `CHAPTER01NAME=` line, as mkvmerge probes them.
      */
     private const SIGNATURES = [
         WebVttParser::class   => '/\AWEBVTT(?:[ \t\n]|\z)/',
@@ -97,6 +104,9 @@ class FormatDetector
                                          '(?:[^"]++|"(?!tStartMs"\s*+:))*+"tStartMs"\s*+:))/s',
         Mpl2Parser::class     => '/\A\[\d+\]\[\d+\]/',
         TmPlayerParser::class => '/\A\d+:[0-5]\d:[0-5]\d(?:,\d+)?[:=]/',
+        PodcastChaptersParser::class => '/\A\{(?=(?:[^"]++|"(?!version"\s*+:))*+"version"\s*+:)(?=(?:[^"]++|"(?!chapters"\s*+:))*+"chapters"\s*+:\s*+\[)/',
+        FfMetadataChaptersParser::class => '/\A;FFMETADATA/',
+        OgmChaptersParser::class => '/\ACHAPTER\d+[ \t]*=[ \t]*\d+[ \t]*:.*\n\s*CHAPTER\d+NAME[ \t]*=/',
     ];
 
 

@@ -85,6 +85,12 @@ class FormatRegistryTest extends TestCase
         $this->assertSame("tsv", FormatRegistry::forPath("script.TSV"));
         $this->assertSame(Parsers\CsvParser::class, FormatRegistry::parserClass("tsv"));
         $this->assertSame("csv", FormatRegistry::forParser(Parsers\CsvParser::class));
+        $this->assertSame("ffmeta", FormatRegistry::forPath("chapters.ffmeta"));
+        $this->assertSame("txt", FormatRegistry::forExtension("txt"));
+        $this->assertSame("json", FormatRegistry::forPath("chapters.json"));
+        $this->assertSame(Parsers\PodcastChaptersParser::class, FormatRegistry::parserClass("podcast"));
+        $this->assertSame(Formatters\YouTubeChaptersFormatter::class, FormatRegistry::formatterClass(FormatRegistry::find("ytchapter")));
+        $this->assertSame(["txt"], FormatRegistry::extensions("ogm"));
         $this->assertNull(FormatRegistry::find("doc"));
         $this->assertNull(FormatRegistry::forPath("README"));
         $this->assertNull(FormatRegistry::parserClass("txt"));

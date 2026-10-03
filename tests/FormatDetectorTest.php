@@ -11,12 +11,15 @@ use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\AwsTranscribeParser;
 use SubtitleToolbox\Parsers\DeepgramParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
+use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\Parsers\GoogleSpeechParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\Mpl2Parser;
 use SubtitleToolbox\Parsers\MpSubParser;
+use SubtitleToolbox\Parsers\OgmChaptersParser;
+use SubtitleToolbox\Parsers\PodcastChaptersParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SubRipParser;
@@ -37,6 +40,9 @@ class FormatDetectorTest extends TestCase
         "aws-transcribe" => AwsTranscribeParser::class,
         "deepgram" => DeepgramParser::class,
         "google-speech" => GoogleSpeechParser::class,
+        "chapters/ffmetadata" => FfMetadataChaptersParser::class,
+        "chapters/ogm"        => OgmChaptersParser::class,
+        "chapters/podcast"    => PodcastChaptersParser::class,
         "json"     => JsonParser::class,
         "lrc"      => LyricsParser::class,
         "microdvd" => MicroDvdParser::class,
@@ -178,6 +184,10 @@ class FormatDetectorTest extends TestCase
             "TMPlayer+ with equals sign" => ["0:00:01=Hello\n", TmPlayerParser::class],
             "TMPlayer+ with line numbers" => ["00:00:01,1=Hello\n00:00:01,2=world\n", TmPlayerParser::class],
             "SBV next to TMPlayer"       => ["0:00:01.000,0:00:02.000\nHello\n", SbvParser::class],
+            "Podcast chapters first"     => ["{\"chapters\": [], \"version\": \"1.2.0\"}", PodcastChaptersParser::class],
+            "JSON with a chapters list"  => ["{\"version\": 1, \"formatData\": {\"chapters\": {\"chapters\": []}}, \"cues\": []}", JsonParser::class],
+            "FFmpeg metadata"            => [";FFMETADATA1\ntitle=Meetup\n", FfMetadataChaptersParser::class],
+            "OGM with blank line"        => ["CHAPTER00 = 00:00:00.000\r\n\r\nCHAPTER00NAME=Intro\r\n", OgmChaptersParser::class],
         ];
     }
 
@@ -240,6 +250,10 @@ class FormatDetectorTest extends TestCase
             "timedtext inside a word"  => ["<timedtextx/>"],
             "MPL2 with a letter"       => ["[1a][25]Hello\n"],
             "clock time in text"       => ["10:30 is the time.\n"],
+            "chapters without version" => ["{\"chapters\": [{\"startTime\": 0}]}"],
+            "chapters as text"         => ["{\"version\": \"1\", \"text\": \"\\\"chapters\\\": [\"}"],
+            "OGM without name line"    => ["CHAPTER01=00:00:00.000\nCHAPTER02=00:01:00.000\n"],
+            "YouTube chapters"         => ["0:00 Intro\n2:48 Hearing aids\n4:20 Progress report\n"],
         ];
     }
 
