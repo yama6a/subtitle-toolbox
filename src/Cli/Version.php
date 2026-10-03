@@ -8,7 +8,7 @@ final class Version
 {
     public const PACKAGE = "ymakhloufi/subtitle-toolbox";
 
-    // Box replaces this placeholder with the release tag when it builds the PHAR. See "git-version" in box.json.
+    // Box replaces this placeholder with the release version when it builds the PHAR. See .build/build-phar.sh.
     private const BUILD_VERSION = "@package_version@";
 
 
