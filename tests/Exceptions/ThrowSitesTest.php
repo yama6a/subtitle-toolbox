@@ -29,6 +29,8 @@ use SubtitleToolbox\Hls\HlsSegmentOptions;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\Hls\TimestampMap;
 use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\Image\PaletteReducer;
+use SubtitleToolbox\Image\PngDecoder;
 use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Karaoke\WordHighlightOptions;
 use SubtitleToolbox\MergeShortCuesOptions;
@@ -94,6 +96,24 @@ class ThrowSitesTest extends TestCase
     private static function pgsSegment(int $type, string $data): string
     {
         return "PG" . pack("NNCn", 0, 0, $type, strlen($data)) . $data;
+    }
+
+
+    private static function png(): string
+    {
+        return PngEncoder::encode(1, 1, [0xFFFFFFFF]);
+    }
+
+
+    private static function pngChunk(string $type, string $data): string
+    {
+        return pack("N", strlen($data)) . $type . $data . pack("N", crc32($type . $data));
+    }
+
+
+    private static function pngWithIhdr(int $interlace): string
+    {
+        return "\x89PNG\r\n\x1a\n" . self::pngChunk("IHDR", pack("NNCCCCC", 1, 1, 8, 6, 0, 0, $interlace));
     }
 
 
@@ -248,6 +268,18 @@ class ThrowSitesTest extends TestCase
                                                             "screenWidth" => 1, "screenHeight" => 1])), ...$invalid],
             "Image/PngEncoder.php: width 0"                 => [fn () => PngEncoder::encode(0, 1, []), ...$invalid],
             "Image/PngEncoder.php: pixel count"             => [fn () => PngEncoder::encode(1, 1, []), ...$invalid],
+            "Image/PaletteReducer.php: 257 colors"          => [fn () => PaletteReducer::reduce([0], 257), ...$invalid],
+            "Image/PngDecoder.php: no signature"            => [fn () => PngDecoder::decode("GIF89a"), ...$invalid],
+            "Image/PngDecoder.php: cut off chunk"           => [fn () => PngDecoder::decode(substr(self::png(), 0, 20)), ...$invalid],
+            "Image/PngDecoder.php: no IHDR"                 => [fn () => PngDecoder::decode("\x89PNG\r\n\x1a\n"), ...$invalid],
+            "Image/PngDecoder.php: interlaced"              => [fn () => PngDecoder::decode(self::pngWithIhdr(1) . self::pngChunk("IDAT", "")), ...$invalid],
+            "Image/PngDecoder.php: invalid zlib data"       => [fn () => PngDecoder::decode(self::pngWithIhdr(0) . self::pngChunk("IDAT", "nope")), ...$invalid],
+            "Image/PngDecoder.php: too few rows"            => [fn () => PngDecoder::decode(self::pngWithIhdr(0) . self::pngChunk("IDAT", gzcompress(""))),
+                                                                ...$invalid],
+            "Image/PngDecoder.php: filter type 5"           => [fn () => PngDecoder::decode(self::pngWithIhdr(0) . self::pngChunk("IDAT", gzcompress("\5\0\0\0\0"))),
+                                                                ...$invalid],
+            "Image/PngDecoder.php: zlib missing"            => [fn () => (new \ReflectionMethod(PngDecoder::class, "requireFunction"))
+                ->invoke(null, "gzuncompress_missing"), ...$invalid],
             "Karaoke/WordHighlightOptions.php: speaker style" => [fn () => new WordHighlightOptions(style: "v Ann"), ...$invalid],
             "Karaoke/WordHighlightOptions.php: unknown mode"  => [fn () => new WordHighlightOptions(mode: "line"), ...$invalid],
             "Karaoke/WordHighlightOptions.php: 0 words"       => [fn () => new WordHighlightOptions(maxWordsPerCue: 0), ...$invalid],
