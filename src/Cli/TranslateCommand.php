@@ -48,7 +48,7 @@ class TranslateCommand extends WriteCommand
     {
         return "The API key comes from --api-key, else from DEEPL_API_KEY for deepl or GOOGLE_TRANSLATE_API_KEY for google.\n" .
                "The engines need the PHP extension curl. Without --output, --output-dir or --in-place, the result of one\n" .
-               "input file goes to standard output.";
+               "input file goes to standard output, and the results of several go next to their input files.";
     }
 
 

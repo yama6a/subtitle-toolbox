@@ -112,6 +112,44 @@ class ApplicationTest extends TestCase
     }
 
 
+    /**
+     * Each option whose name holds a no- word, with what it turns off.
+     */
+    private const OFF_SWITCHES = [
+        "no-bom"        => "the UTF-8 BOM of the output format",
+        "no-scale"      => "the scale search of sync",
+        "snap-no-chain" => "the closing of small gaps between cues",
+    ];
+
+
+    public function testOptionNamesFollowTheNamingRules(): void
+    {
+        $commands = (new \ReflectionProperty(Application::class, "commands"))->getValue(new Application());
+        $names    = [];
+        foreach ($commands as $command) {
+            foreach ($command->options() as $option) {
+                $where   = $command->name() . " --$option->name";
+                $names[] = $option->name;
+                if (preg_match('/(^|-)no-/', $option->name) === 1) {
+                    $this->assertArrayHasKey($option->name, self::OFF_SWITCHES, "$where does not turn something off.");
+                    $this->assertFalse($option->takesValue(), "$where takes a value.");
+                    $this->assertStringStartsNotWith("Report", $option->description, "$where reports something.");
+                }
+                if (str_ends_with($option->name, "-frames") || $option->valueName === "FRAMES") {
+                    $this->assertSame("FRAMES", $option->valueName, "$where must count frames.");
+                    $this->assertStringEndsWith("-frames", $option->name, "$where counts frames.");
+                }
+                if ($option->valueName === "SECONDS") {
+                    $this->assertStringEndsNotWith("-frames", $option->name, "$where is in seconds.");
+                }
+            }
+        }
+        $this->assertContains("check-overlap", $names);
+        $this->assertContains("snap-window-frames", $names);
+        $this->assertEqualsCanonicalizing(array_keys(self::OFF_SWITCHES), array_values(array_unique(preg_grep('/(^|-)no-/', $names))));
+    }
+
+
     public function testConvertsStandardInput(): void
     {
         $srt = file_get_contents(__DIR__ . "/../files/cli/trip.srt");
@@ -317,7 +355,7 @@ class ApplicationTest extends TestCase
         );
         $this->assertSame([2, "", "strip-sdh was removed. Use: subtitle-toolbox convert - --sdh\n"], self::runApplication(["strip-sdh", "-"]));
         $this->assertSame(
-            [2, "", "snap was removed. Use: subtitle-toolbox convert movie.srt --video-fps 24 --snap-shot-changes scenes.log --snap-window 6 " .
+            [2, "", "snap was removed. Use: subtitle-toolbox convert movie.srt --video-fps 24 --snap-shot-changes scenes.log --snap-window-frames 6 " .
                     "--snap-min-gap-frames 2 --snap-min-duration-frames 12 --snap-no-chain\n"],
             self::runApplication(["snap", "movie.srt", "--video-fps", "24", "--shot-changes", "scenes.log", "--snap-window", "6",
                                   "--min-gap-frames", "2", "--min-duration-frames", "12", "--no-chain"])

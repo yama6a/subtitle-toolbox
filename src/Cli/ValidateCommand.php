@@ -34,7 +34,7 @@ class ValidateCommand extends ReportCommand
 
     protected function usageLines(): array
     {
-        return ["<input>... --preset netflix-en|bbc [options]", "<input>... [--max-cpl CHARS] [--no-overlap] [...] [options]"];
+        return ["<input>... --preset netflix-en|bbc [options]", "<input>... [--max-cpl CHARS] [--check-overlap] [...] [options]"];
     }
 
 
@@ -66,17 +66,17 @@ class ValidateCommand extends ReportCommand
             Option::value("min-duration", "SECONDS", "Minimum duration of a cue."),
             Option::value("max-duration", "SECONDS", "Maximum duration of a cue."),
             Option::value("min-gap", "SECONDS", "Minimum gap between cues."),
-            Option::flag("no-overlap", "Report overlapping cues."),
-            Option::flag("no-empty-cues", "Report cues without text."),
+            Option::flag("check-overlap", "Report overlapping cues."),
+            Option::flag("check-empty-cues", "Report cues without text."),
             Option::value("max-wpm", "WORDS", "Maximum words per minute."),
             Option::value("min-seconds-per-word", "SECONDS", "Minimum duration of a cue per word."),
             Option::value("max-speakers", "SPEAKERS", "Maximum speakers per cue, from dialogue dashes or <v> names."),
             Option::value("dialogue-dash", "STYLE", "Report dialogue dashes in another style than STYLE, for example \"- \" or \"-\"."),
             Option::value("allowed-characters", "CHARS", "Report other characters. CHARS is a list or a class such as \"[A-Za-z0-9 .,!?]\"."),
-            Option::flag("no-double-spaces", "Report two or more spaces between words."),
-            Option::flag("no-leading-or-trailing-spaces", "Report lines that start or end with a space."),
-            Option::flag("no-unbalanced-tags", "Report formatting tags without a partner tag."),
-            Option::flag("no-all-caps-lines", "Report lines in upper case only."),
+            Option::flag("check-double-spaces", "Report two or more spaces between words."),
+            Option::flag("check-leading-or-trailing-spaces", "Report lines that start or end with a space."),
+            Option::flag("check-unbalanced-tags", "Report formatting tags without a partner tag."),
+            Option::flag("check-all-caps-lines", "Report lines in upper case only."),
         ];
     }
 
@@ -103,17 +103,17 @@ class ValidateCommand extends ReportCommand
             minDuration: $arguments->positiveFloat("min-duration") ?? $base->minDuration,
             maxDuration: $arguments->positiveFloat("max-duration") ?? $base->maxDuration,
             minGap: $arguments->positiveFloat("min-gap") ?? $base->minGap,
-            noOverlap: $arguments->has("no-overlap") || $base->noOverlap,
-            noEmptyCues: $arguments->has("no-empty-cues") || $base->noEmptyCues,
-            noDoubleSpaces: $arguments->has("no-double-spaces") || $base->noDoubleSpaces,
-            noLeadingOrTrailingSpaces: $arguments->has("no-leading-or-trailing-spaces") || $base->noLeadingOrTrailingSpaces,
-            noUnbalancedTags: $arguments->has("no-unbalanced-tags") || $base->noUnbalancedTags,
+            noOverlap: $arguments->has("check-overlap") || $base->noOverlap,
+            noEmptyCues: $arguments->has("check-empty-cues") || $base->noEmptyCues,
+            noDoubleSpaces: $arguments->has("check-double-spaces") || $base->noDoubleSpaces,
+            noLeadingOrTrailingSpaces: $arguments->has("check-leading-or-trailing-spaces") || $base->noLeadingOrTrailingSpaces,
+            noUnbalancedTags: $arguments->has("check-unbalanced-tags") || $base->noUnbalancedTags,
             dialogueDashStyle: $arguments->value("dialogue-dash") ?? $base->dialogueDashStyle,
             maxSpeakersPerCue: $arguments->positiveInt("max-speakers") ?? $base->maxSpeakersPerCue,
             maxWordsPerMinute: $arguments->positiveFloat("max-wpm") ?? $base->maxWordsPerMinute,
             minSecondsPerWord: $arguments->positiveFloat("min-seconds-per-word") ?? $base->minSecondsPerWord,
             allowedCharacters: $arguments->value("allowed-characters") ?? $base->allowedCharacters,
-            noAllCapsLines: $arguments->has("no-all-caps-lines") || $base->noAllCapsLines,
+            noAllCapsLines: $arguments->has("check-all-caps-lines") || $base->noAllCapsLines,
         );
         if ($this->rules == new ValidationRules()) {
             self::fail("Pass --preset or at least one rule option.");

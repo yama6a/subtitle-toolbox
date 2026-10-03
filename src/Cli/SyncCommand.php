@@ -44,7 +44,7 @@ class SyncCommand extends WriteCommand
         return "Only the cue times count, so the reference can be in another language. The scale is 1 or a factor\n" .
                "between 23.976, 24 and 25 fps. The tool prints the scale, the offset and a score from 0 to 1. A score\n" .
                "below 0.5 means that the files likely do not match. Without --output, --output-dir or --in-place, the\n" .
-               "result of one input file goes to standard output.\n" .
+               "result of one input file goes to standard output, and the results of several go next to their input files.\n" .
                "For a sync to the speech, run ffmpeg -i movie.mkv -af silencedetect=noise=-30dB:d=0.4 -f null - 2> silence.log\n" .
                "and pass --silence-log silence.log. A Whisper JSON transcript of the audio also works as --reference.";
     }

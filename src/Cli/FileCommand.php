@@ -19,6 +19,8 @@ abstract class FileCommand extends Command
 
     protected ?Format $fromFormat = null;
 
+    protected ?Format $secondFormat = null;
+
     protected ?float $inputFps = null;
 
     protected int $succeeded = 0;
@@ -78,6 +80,20 @@ abstract class FileCommand extends Command
     }
 
 
+    /**
+     * Returns --from2 and --track2, for a command that reads a second file.
+     *
+     * @return list<Option>
+     */
+    protected static function secondFileOptions(string $file): array
+    {
+        return [
+            Option::value("from2", "FORMAT", "Format of the $file file. Default: detected from the content, else taken from the file extension."),
+            Option::value("track2", "NUMBER", "Subtitle track of an MKV or WebM $file file. Needed when the file has several."),
+        ];
+    }
+
+
     protected function prepare(Arguments $arguments): void
     {
         $this->succeeded = 0;
@@ -85,9 +101,12 @@ abstract class FileCommand extends Command
         $this->inputFps  = self::rate($arguments, "input-fps");
         $arguments->positiveFloat("fps");
         $arguments->positiveInt("track");
+        $arguments->positiveInt("track2");
 
-        $from             = $arguments->value("from");
-        $this->fromFormat = $from === null ? null : self::readableFormat($from);
+        $from               = $arguments->value("from");
+        $this->fromFormat   = $from === null ? null : self::readableFormat($from);
+        $from2              = $arguments->value("from2");
+        $this->secondFormat = $from2 === null ? null : self::readableFormat($from2);
 
         try {
             $this->readOptions = new ReadOptions(
@@ -314,19 +333,33 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Reads a file other than the input, such as a reference, with format detection and without --from and --track.
+     * Reads a file other than the input, such as a reference, without --from and --track. Detects the format unless
+     * $format or $track is given.
      */
-    protected function loadOtherFile(string $path): Subtitle
+    protected function loadOtherFile(string $path, ?Format $format = null, ?int $track = null): Subtitle
     {
         if (!is_file($path)) {
             self::fail("$path: The file does not exist.");
         }
 
         try {
-            return Subtitle::loadAutoDetectFormat($path, $this->readOptions);
+            return match (true) {
+                $track !== null  => Subtitle::loadTrack($path, $track, $this->readOptions),
+                $format !== null => Subtitle::load($path, $format, $this->readOptions),
+                default          => Subtitle::loadAutoDetectFormat($path, $this->readOptions),
+            };
         } catch (SubtitleToolboxException $exception) {
             return self::fail("$path: " . $exception->getMessage());
         }
+    }
+
+
+    /**
+     * Reads the second file of diff and dual with --from2 and --track2.
+     */
+    protected function loadSecondFile(string $path, Arguments $arguments): Subtitle
+    {
+        return $this->loadOtherFile($path, $this->secondFormat, $arguments->positiveInt("track2"));
     }
 
 
