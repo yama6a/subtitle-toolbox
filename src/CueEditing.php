@@ -11,7 +11,7 @@ trait CueEditing
      */
     public function merge(Subtitle $other, float $offset = 0): self
     {
-        $ownAnchors   = $this->getCommentAnchors();
+        $ownAnchors   = CommentAnchors::of($this->cues, $this->comments);
         $otherCues    = [];
         $otherAnchors = [];
         foreach ($other->getCues() as $index => $cue) {
@@ -20,7 +20,7 @@ trait CueEditing
                 ->setEnd(max(0, $cue->getEnd() + $offset));
         }
         foreach ($other->getComments() as $comment) {
-            $otherAnchors[] = $this->findAnchor($otherCues, $comment["beforeCueIndex"]);
+            $otherAnchors[] = CommentAnchors::anchor($otherCues, $comment["beforeCueIndex"]);
         }
 
         $firstOtherCue = reset($otherCues) ?: null;
@@ -35,7 +35,7 @@ trait CueEditing
         $this->cues       = $cues;
         $this->metadata   = $this->metadata + $other->getAllMetadata();
         $this->formatData = $this->formatData + $other->formatData;
-        $this->setCommentsByAnchors($comments, array_merge($ownAnchors, $otherAnchors));
+        $this->comments = CommentAnchors::comments($this->cues, $comments, array_merge($ownAnchors, $otherAnchors));
 
         return $this;
     }
@@ -90,7 +90,7 @@ trait CueEditing
      */
     private function copyWithCues(\SplObjectStorage $copies): self
     {
-        $anchors = $this->getCommentAnchors();
+        $anchors = CommentAnchors::of($this->cues, $this->comments);
         $copy    = clone $this;
         $cues    = [];
         foreach ($this->cues as $cue) {
@@ -112,7 +112,7 @@ trait CueEditing
         }
 
         $copy->cues = $cues;
-        $copy->setCommentsByAnchors($comments, $newAnchors);
+        $copy->comments = CommentAnchors::comments($copy->cues, $comments, $newAnchors);
 
         return $copy;
     }
@@ -135,7 +135,7 @@ trait CueEditing
                                                "the cue has " . count($lines) . " lines.");
         }
 
-        $anchors = $this->getCommentAnchors();
+        $anchors = CommentAnchors::of($this->cues, $this->comments);
         $second  = (clone $cue)
             ->setIdentifier(null)
             ->setStart($at)
@@ -147,7 +147,7 @@ trait CueEditing
         array_splice($cues, $position + 1, 0, [$second]);
 
         $this->cues = $cues;
-        $this->setCommentsByAnchors($this->comments, $anchors);
+        $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
         return $this;
     }
@@ -166,7 +166,7 @@ trait CueEditing
         $this->getEditableCue($first);
         $this->getEditableCue($last);
 
-        $anchors = $this->getCommentAnchors();
+        $anchors = CommentAnchors::of($this->cues, $this->comments);
         $group   = array_filter(
             $this->cues,
             fn (int $index): bool => $index >= $first && $index <= $last,
@@ -174,7 +174,7 @@ trait CueEditing
         );
 
         $anchors = $this->joinGroup(array_values($group), $anchors, true);
-        $this->setCommentsByAnchors($this->comments, $anchors);
+        $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
         return $this;
     }
@@ -185,7 +185,7 @@ trait CueEditing
      */
     public function removeDuplicateCues(): self
     {
-        $anchors = $this->getCommentAnchors();
+        $anchors = CommentAnchors::of($this->cues, $this->comments);
         $groups  = [];
         $group   = [];
         foreach ($this->cues as $cue) {
@@ -206,7 +206,7 @@ trait CueEditing
                 $anchors = $this->joinGroup($group, $anchors, false);
             }
         }
-        $this->setCommentsByAnchors($this->comments, $anchors);
+        $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
         return $this;
     }
@@ -227,13 +227,8 @@ trait CueEditing
             if ($joinLines) {
                 $lines = array_merge($lines, $cue->getLines());
             }
-            $end = max($end, $cue->getEnd());
-
-            foreach ($anchors as $commentIndex => $anchor) {
-                if ($anchor === $cue) {
-                    $anchors[$commentIndex] = $joined;
-                }
-            }
+            $end     = max($end, $cue->getEnd());
+            $anchors = CommentAnchors::move($anchors, $cue, $joined);
         }
         $joined->setEnd($end)->setLinesByArray($lines);
 
@@ -253,52 +248,5 @@ trait CueEditing
         }
 
         return $this->cues[$index];
-    }
-
-
-    /**
-     * Returns the cue that each comment comes before, or null for a comment after the last cue.
-     *
-     * @return array<int, ?SubtitleCue>
-     */
-    private function getCommentAnchors(): array
-    {
-        return array_map(fn (array $comment): ?SubtitleCue => $this->findAnchor($this->cues, $comment["beforeCueIndex"]),
-                         $this->comments);
-    }
-
-
-    /**
-     * @param SubtitleCue[] $cues
-     */
-    private function findAnchor(array $cues, int $beforeCueIndex): ?SubtitleCue
-    {
-        foreach ($cues as $index => $cue) {
-            if ($index >= $beforeCueIndex) {
-                return $cue;
-            }
-        }
-
-        return null;
-    }
-
-
-    /**
-     * @param list<array{text: string, beforeCueIndex: int}> $comments
-     * @param array<int, ?SubtitleCue> $anchors
-     */
-    private function setCommentsByAnchors(array $comments, array $anchors): void
-    {
-        $comments = array_values($comments);
-        $anchors  = array_values($anchors);
-        foreach ($comments as $commentIndex => $comment) {
-            $cueIndex = $anchors[$commentIndex] === null ? false : array_search($anchors[$commentIndex], $this->cues, true);
-
-            $comments[$commentIndex]["beforeCueIndex"] = $cueIndex === false ? count($this->cues) : $cueIndex;
-        }
-
-        usort($comments, fn (array $comment1, array $comment2): int =>
-            $comment1["beforeCueIndex"] <=> $comment2["beforeCueIndex"]);
-        $this->comments = $comments;
     }
 }
