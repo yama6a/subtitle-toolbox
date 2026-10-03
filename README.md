@@ -1611,6 +1611,39 @@ $subtitle->splitLongCues(new ResegmentOptions(maxCharactersPerLine: 42, maxLines
 - **Unchanged**: image cues and cues of one word.
 - **Cue data**: a new cue keeps the alignment, forced flag and format data of its source cue. Only the cue with the first word of a source cue keeps its identifier. A comment before a source cue moves before that cue.
 
+## MKV subtitle tracks
+Media servers and subtitle managers get MKV files with embedded subtitles. `MatroskaReader` reads the subtitle tracks of MKV and WebM files in PHP, without `ffmpeg` or `mkvextract`.
+
+```php
+use SubtitleToolbox\Container\Matroska\MatroskaReader;
+use SubtitleToolbox\Formatters\SubRipFormatter;
+
+$mkv = MatroskaReader::open('/media/movie.mkv');                 // a path or a seekable stream resource
+foreach ($mkv->getSubtitleTracks() as $track) {
+    echo "$track->number $track->codecId $track->language $track->name", PHP_EOL;   // 3 S_TEXT/UTF8 de Deutsch (Forced)
+}
+$german = $mkv->extract(3);                                     // a Subtitle
+file_put_contents('movie.de.srt', $german->format(SubRipFormatter::class));
+```
+
+| Codec | Becomes |
+|:--- |:--- |
+| `S_TEXT/UTF8` | SubRip cues. The reader removes empty lines inside a block, because they would end the cue |
+| `S_TEXT/ASS`, `S_TEXT/SSA` | an ASS or SSA subtitle. The header comes from `CodecPrivate`. The reader rebuilds the `Dialogue:` lines in ReadOrder, with the fields in the order of the `Format:` line, as `mkvextract` does |
+| `S_TEXT/WEBVTT` | a WebVTT subtitle. The header comes from `CodecPrivate`. Cue settings, identifiers and comments come from `BlockAdditions`. Timestamps inside the cue text become absolute |
+| `S_HDMV/PGS` | image cues from `PgsParser`. The reader puts the `PG` bytes, the PTS from the block time and a DTS of 0 before each segment |
+
+- **Tracks**: `getSubtitleTracks()` lists only tracks of type subtitle. `MatroskaTrack` has `number`, `codecId`, `language`, `name`, `default` and `forced`.
+- **Language**: `LanguageBCP47`, else `Language`, else `eng`, as the spec defines. `extract()` puts it into the `language` metadata.
+- **Forced**: on a track with the forced flag, `extract()` sets the forced flag of every cue. PGS cues also keep the forced flag of their objects.
+- **Times**: the cluster timestamp plus the block timestamp, times `TimestampScale`, rounded to milliseconds. The end is the start plus `BlockDuration`, else plus the track `DefaultDuration`. A text block with neither ends at the start of the next block of the track. The last such block lasts `MatroskaReader::DEFAULT_LAST_CUE_DURATION`, 5 s.
+- **ContentEncoding**: zlib compression and header stripping, of the blocks and of `CodecPrivate`, in the order that `ContentEncodingOrder` gives.
+- **Layout**: the reader accepts a Segment and Clusters of unknown size, as live recordings write them. When `Tracks` follows the clusters, the reader finds it through the `SeekHead`.
+- **Memory**: the reader reads element headers and skips video and audio data with `fseek()`. Peak memory grows with the subtitle track, not with the file. For the 4 GB file below with 1,500 cues, it was 2.6 MB.
+- **Speed**: the reader walks all clusters for each `extract()` call. A 2-hour, 4 GB file with 400,000 blocks takes about 3 s of CPU time on PHP 8.2 and 8.5. The disk adds the time of 400,000 random reads. On a network volume this took 32 to 44 s, the same time as a bare `fseek()` and `fread()` loop.
+- **Errors**: `extract()` throws `InvalidArgumentException` for a number that is not a subtitle track. It throws `ParsingException` for other codecs such as `S_VOBSUB`, for encryption, for bzlib and LZO compression, for laced subtitle blocks and for a file that is not Matroska or WebM.
+- **Spec**: [Matroska elements](https://www.matroska.org/technical/elements.html), [Matroska subtitles](https://www.matroska.org/technical/subtitles.html) and [EBML, RFC 8794](https://datatracker.ietf.org/doc/html/rfc8794).
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
