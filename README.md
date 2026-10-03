@@ -1508,6 +1508,54 @@ $subtitle->getFormatData('youtube')['format'];                               // 
 - **Format data**: the subtitle keeps the `format` name. For json3 it also keeps all top-level fields except `events`, and the window events in `windows`. For srv3 it keeps the attributes of the `head` elements and the `w` windows, as lists keyed by element name such as `pen` and `wp`. Each cue keeps the other fields of its event or `<p>`, and the other fields of its segments in `segments`.
 - **Output**: the library cannot write these formats.
 
+## CSV and spreadsheets
+Translators, reviewers and dubbing studios work in Excel or Google Sheets. `CsvParser` and `CsvFormatter` read and write subtitles as CSV and TSV tables, with RFC 4180 quoting.
+
+```csv
+start,end,speaker,text
+00:00:01.000,00:00:04.000,Anna,Where are you going?
+00:00:04.500,00:00:06.000,Ben,"Home.
+Now."
+```
+
+```php
+use SubtitleToolbox\Formatters\CsvFormatter;
+use SubtitleToolbox\Parsers\CsvColumns;
+use SubtitleToolbox\Parsers\CsvParser;
+
+$subtitle = Subtitle::parse(file_get_contents('movie.csv'), CsvParser::class);   // headers start, end, text, ...
+$parser   = new CsvParser(new CsvColumns(start: 'Start TC', text: 'Text', speaker: 'Character', frameRate: 25));
+$subtitle = $parser->parse(file_get_contents('dubbing-script.csv'));
+$subtitle = (new CsvParser(new CsvColumns(start: 0, end: 1, text: 2, header: false), "\t"))->parse($tsv);
+
+$csv = $english->format(CsvFormatter::class, [
+    CsvFormatter::OPTION_DELIMITER          => ';',            // Excel in German and French locales
+    CsvFormatter::OPTION_SECOND_TEXT        => $german,        // a second text column, aligned by time
+    CsvFormatter::OPTION_SECOND_TEXT_HEADER => 'text (de)',    // default 'text2'
+]);
+```
+
+| Column role | Parser | Formatter |
+|:--- |:--- |:--- |
+| `start`, `end` | the cue times | the cue times |
+| `duration` | the end is start plus duration | the end minus the start |
+| `text` | the cue lines, one per line break in the cell | the text without tags and entities, lines joined by a line break |
+| `speaker` | `<v Name>` at the start of the first line | the name of the leading `<v>` tag |
+| `identifier` | the cue identifier | the cue identifier |
+| any other column | `getFormatData('csv')['columns']` of the cue, by header name | the same cell |
+
+- **Column mapping**: `CsvColumns` maps each role to a header name or to a 0-based column index. Header names match without case. A role without a mapping uses the header with its own name, such as `start`, when the table has one. A table without `start` or `text` throws `ParsingException`. So does a mapped header that the table lacks.
+- **No header row**: `header: false` needs a column index for each mapped role, and at least for `start` and `text`.
+- **Delimiter**: `,`, `;` or a tab. Without the second constructor argument, the parser takes the one that occurs most often in the first line. A comma wins a tie.
+- **Times**: seconds such as `62.5`, `00:01:02.500`, `00:01:02,500`, and `00:01:02:12` with frames. Frames need `frameRate`, and add frames divided by the frame rate. The formatter writes the format of the first parsed start time, else `hh:mm:ss.mmm`. `OPTION_TIME_FORMAT` takes one of the `CsvParser::TIME_*` constants, and `hh:mm:ss:ff` needs `OPTION_FRAME_RATE` or a parsed frame rate.
+- **No end column**: a cue without an end time ends at the next later start. The last such cue lasts 10 s, or the third constructor argument of `CsvParser`.
+- **Layout**: a subtitle from `CsvParser` keeps its columns, header names, delimiter and time format, so an unchanged table comes out byte for byte. A subtitle from another format gets `identifier` when a cue has one, `start`, `end`, `speaker` when a cue has a `<v>` tag, and `text`.
+- **Bilingual table**: `OPTION_SECOND_TEXT` adds a column after `text`. Each row gets the cue of the second subtitle that overlaps the row most. When one second cue is the best match of several rows, only the first of them gets it. A second cue that is no row's best match does not appear.
+- **Output**: a UTF-8 BOM by default, because Excel needs it to read UTF-8. `bom => false` leaves it out. `lineEnding` ends the rows. A line break inside a cell stays LF, as Excel writes it.
+- **Formula injection**: `OPTION_ESCAPE_FORMULAS => true` puts `'` before a cell that starts with `=`, `+`, `-` or `@`, so a spreadsheet does not run it as a formula. It is off by default, because dialogue lines start with `-` and the option changes them.
+- **Detection**: a CSV file has no signature, so pass `CsvParser::class`. The command line tool reads `.csv` and `.tsv` files by their extension.
+- **Lenient mode**: the parser skips a row with a bad time and records a `ParseWarning`. `blockIndex` counts the rows after the header, without empty rows.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:

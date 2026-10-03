@@ -77,6 +77,9 @@ class FormatRegistryTest extends TestCase
         $this->assertSame("ass", FormatRegistry::find("ssa"));
         $this->assertSame("srt", FormatRegistry::find("SRT"));
         $this->assertSame("ttml", FormatRegistry::find(".dfxp"));
+        $this->assertSame("tsv", FormatRegistry::forPath("script.TSV"));
+        $this->assertSame(Parsers\CsvParser::class, FormatRegistry::parserClass("tsv"));
+        $this->assertSame("csv", FormatRegistry::forParser(Parsers\CsvParser::class));
         $this->assertNull(FormatRegistry::find("doc"));
         $this->assertNull(FormatRegistry::forPath("README"));
         $this->assertNull(FormatRegistry::parserClass("txt"));
