@@ -74,10 +74,17 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $subtitle->addCue(new SubtitleCue(1, 2, "text1"), false);
         $subtitle->addCue(new SubtitleCue(5, 6, "text2"), false);
         $subtitle->addCue(new SubtitleCue(3, 4, "text3"), false);
-        $this->assertSame([[2, ValidationResult::RULE_UNSORTED_CUES, 2.0]], $problems($subtitle));
+        $this->assertSame([
+            [2, ValidationResult::RULE_UNSORTED_CUES, 2.0],
+            [2, ValidationResult::RULE_OVERLAP, 3.0],
+        ], $problems($subtitle));
 
         $subtitle->reIndexCues();
         $this->assertSame([], $problems($subtitle));
+
+        $subtitle->getCues()[1]->setEnd(5.5);
+        $this->assertSame([[2, ValidationResult::RULE_OVERLAP, 0.5]], $problems($subtitle));
+        $subtitle->getCues()[1]->setEnd(4);
 
         $subtitle->removeCue(1, false);
         $this->assertSame([[2, ValidationResult::RULE_INDEX_GAP, 1]], $problems($subtitle));

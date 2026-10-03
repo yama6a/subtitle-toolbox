@@ -56,6 +56,7 @@ final class ValidationRules
             noUnsortedCues: true,
             noNegativeDuration: true,
             noIndexGaps: true,
+            noOverlap: true,
         );
     }
 

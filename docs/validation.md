@@ -51,7 +51,7 @@ $results[0]->getLimit();        // 37
 |:--- |:--- |:--- |
 | `ValidationRules::netflixEnglish($frameRate)` | 20 characters per second, 42 characters per line, 2 lines, 5/6 s to 7 s, a gap of 2 frames at the frame rate, no overlaps | [English (USA) Timed Text Style Guide](https://partnerhelp.netflixstudios.com/hc/en-us/articles/217350977-English-USA-Timed-Text-Style-Guide), [General Requirements](https://partnerhelp.netflixstudios.com/hc/en-us/articles/215758617), [Subtitle Timing Guidelines](https://partnerhelp.netflixstudios.com/hc/en-us/articles/360051554394) |
 | `ValidationRules::bbc()` | 37 characters per line, 180 words per minute, 0.3 s per word | [BBC Subtitle Guidelines](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/), sections 3.1 and 4 |
-| `ValidationRules::structure()` | `requireCues`, `noUnsortedCues`, `noNegativeDuration` and `noIndexGaps` | the cue list of `Subtitle` |
+| `ValidationRules::structure()` | `requireCues`, `noUnsortedCues`, `noNegativeDuration`, `noIndexGaps` and `noOverlap` | the cue list of `Subtitle` |
 
 - **Netflix**: 20 characters per second is the limit for adult programs.
 - **BBC**: 37 characters is the broadcast line length. 180 words per minute is the upper end of the 160 to 180 that the guide gives. 0.3 s per word allows 200 words per minute, so a cue can break the speed rule and still meet the time per word.

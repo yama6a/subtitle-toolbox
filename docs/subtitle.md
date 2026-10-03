@@ -64,7 +64,7 @@ $subtitle->filterCues(fn (SubtitleCue $cue) => $cue->getEnd() - $cue->getStart()
 - **Keys**: `getCuesAt()`, `getCuesBetween()` and `findCues()` keep the cue index as the array key.
 - **Filter**: `filterCues()` moves a comment before a removed cue to the next kept cue, and then calls `reIndexCues()`.
 - **No array access**: `$subtitle[3]` does not work. Use `getCues()`, `addCue()` and `removeCue()`, so the cue indexes and comments stay correct.
-- **Structure check**: `validate(ValidationRules::structure())` returns one result per problem. It reports a subtitle without cues, a cue that starts before the previous cue starts, a cue that ends before it starts, and a gap in the cue indexes. See [validation](validation.md).
+- **Structure check**: `validate(ValidationRules::structure())` returns one result per problem. It reports a subtitle without cues, a cue that starts before the previous cue starts, a cue that ends before it starts, a cue that starts before the previous cue ends, and a gap in the cue indexes. See [validation](validation.md).
 
 ## Forced cues
 A **forced cue** shows also when the viewer has turned subtitles off, for example the translation of a sign. Apple and Netflix take a full subtitle file and a separate file with only the forced cues.
