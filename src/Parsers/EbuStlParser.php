@@ -176,8 +176,9 @@ class EbuStlParser extends SubtitleParser
                 "text"                => $cue->getText(),
                 "blocks"              => $hexes,
             ]);
-            $subtitle->addCue($cue);
+            $subtitle->addCue($cue, false);
         }
+        $subtitle->reIndexCues();
 
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, [
             "gsi"                        => $gsi,

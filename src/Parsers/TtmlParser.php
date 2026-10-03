@@ -112,7 +112,7 @@ class TtmlParser extends SubtitleParser
             $this->readContainer($subtitle, $body, 0.0, null, null, null, false, [], null);
         }
 
-        return $subtitle;
+        return $subtitle->reIndexCues();
     }
 
 
@@ -254,7 +254,7 @@ class TtmlParser extends SubtitleParser
                 if ($divAttributes !== []) {
                     $cue->setFormatData(self::FORMAT, [...$cue->getFormatData(self::FORMAT), "div" => $divAttributes]);
                 }
-                $subtitle->addCue($cue);
+                $subtitle->addCue($cue, false);
             }
         }
     }
