@@ -3,6 +3,7 @@
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Options;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -62,7 +63,7 @@ class SubRipFormatter extends SubtitleFormatter
         $lines = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines());
 
         // strip xml tags depending on option settings
-        $lines = in_array(parent::OPTION_STRIP_ALL_XML_TAGS, $options, true)
+        $lines = (bool) (Options::flag($options, parent::OPTION_STRIP_ALL_XML_TAGS) ?? false)
             ? Markup::stripAllTags($lines)
             : Markup::keepTags($lines, ["b", "u", "i", "s", "font"]);
         $lines = Markup::decodeEntities($lines);

@@ -3,6 +3,7 @@
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\PodcastTranscriptParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -25,7 +26,7 @@ class PodcastTranscriptFormatter extends SubtitleFormatter
      */
     public function format(Subtitle $subtitle, array $options = []): string
     {
-        $wordSegments = (bool)($options[self::OPTION_WORD_SEGMENTS] ?? false);
+        $wordSegments = (bool)(Options::flag($options, self::OPTION_WORD_SEGMENTS) ?? false);
         $fileData     = $subtitle->getFormatData(PodcastTranscriptParser::FORMAT_DATA_KEY);
         $cues         = $subtitle->getCues();
         $pieces       = $this->pieces($subtitle, $wordSegments);
@@ -42,7 +43,7 @@ class PodcastTranscriptFormatter extends SubtitleFormatter
 
         $document = ["version" => $fileData["version"] ?? self::VERSION, "segments" => $segments] + $fileData;
         $flags    = JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
-        if ($options[self::OPTION_PRETTY_PRINT] ?? false) {
+        if (Options::flag($options, self::OPTION_PRETTY_PRINT) ?? false) {
             $json = json_encode($document, $flags | JSON_PRETTY_PRINT) . StringHelpers::UNIX_LINE_ENDING;
         } else {
             $json = json_encode($document, $flags);

@@ -3,6 +3,7 @@
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Options;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 
@@ -28,7 +29,7 @@ abstract class SubtitleFormatter
             throw new InvalidArgumentException("The option " . self::OPTION_LINE_ENDING . " must be \"\\n\" or \"\\r\\n\".");
         }
 
-        $bom = $options[self::OPTION_BOM] ?? null;
+        $bom = Options::flag($options, self::OPTION_BOM);
         if (!is_bool($bom) && $bom !== null) {
             throw new InvalidArgumentException("The option " . self::OPTION_BOM . " must be true or false.");
         }

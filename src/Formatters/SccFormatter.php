@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Encoding\Cea608;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\SccParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -34,7 +35,7 @@ class SccFormatter extends SubtitleFormatter
      */
     public function format(Subtitle $subtitle, array $options = []): string
     {
-        $dropFrame = $options[self::OPTION_DROP_FRAME] ?? $subtitle->getFormatData(SccParser::FORMAT)["dropFrame"] ?? true;
+        $dropFrame = Options::flag($options, self::OPTION_DROP_FRAME) ?? $subtitle->getFormatData(SccParser::FORMAT)["dropFrame"] ?? true;
         if (!is_bool($dropFrame)) {
             throw new InvalidArgumentException("The option " . self::OPTION_DROP_FRAME . " must be true or false.");
         }

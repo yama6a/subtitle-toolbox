@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Parsers;
 use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Options;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -33,8 +34,8 @@ class PodcastTranscriptParser extends SubtitleParser
      */
     public function __construct(array $options = [], private readonly float $lastCueDuration = 10)
     {
-        $this->keepSegments   = !empty($options[self::OPTION_KEEP_SEGMENTS]);
-        $this->wordTimestamps = !empty($options[self::OPTION_WORD_TIMESTAMPS]);
+        $this->keepSegments   = !empty(Options::flag($options, self::OPTION_KEEP_SEGMENTS));
+        $this->wordTimestamps = !empty(Options::flag($options, self::OPTION_WORD_TIMESTAMPS));
     }
 
 

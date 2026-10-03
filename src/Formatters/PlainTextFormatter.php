@@ -4,6 +4,7 @@ namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Options;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 
@@ -20,10 +21,10 @@ class PlainTextFormatter extends SubtitleFormatter
      */
     public function format(Subtitle $subtitle, array $options = []): string
     {
-        $joinLines    = $options[self::OPTION_JOIN_LINES] ?? true;
-        $joinCues     = $options[self::OPTION_JOIN_CUES] ?? true;
+        $joinLines    = Options::flag($options, self::OPTION_JOIN_LINES) ?? true;
+        $joinCues     = Options::flag($options, self::OPTION_JOIN_CUES) ?? true;
         $paragraphGap = $options[self::OPTION_PARAGRAPH_GAP] ?? 2.0;
-        $withTimes    = $options[self::OPTION_WITH_TIMES] ?? false;
+        $withTimes    = Options::flag($options, self::OPTION_WITH_TIMES) ?? false;
         if (!is_int($paragraphGap) && !is_float($paragraphGap)) {
             throw new InvalidArgumentException("The option " . self::OPTION_PARAGRAPH_GAP . " must be a number of seconds.");
         }

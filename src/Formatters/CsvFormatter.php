@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -46,7 +47,7 @@ class CsvFormatter extends SubtitleFormatter
         if ($second !== null && !$second instanceof Subtitle) {
             throw new InvalidArgumentException("The option " . self::OPTION_SECOND_TEXT . " must be a Subtitle.");
         }
-        $escapeFormulas = $options[self::OPTION_ESCAPE_FORMULAS] ?? false;
+        $escapeFormulas = Options::flag($options, self::OPTION_ESCAPE_FORMULAS) ?? false;
 
         $cues               = array_values($subtitle->getCues());
         $rows               = array_map($this->splitSpeaker(...), $cues);

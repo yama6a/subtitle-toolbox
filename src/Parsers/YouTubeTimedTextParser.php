@@ -8,6 +8,7 @@ use DOMText;
 use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Options;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -29,7 +30,7 @@ class YouTubeTimedTextParser extends SubtitleParser
      */
     public function __construct(array $options = [])
     {
-        $this->wordTimestamps = !empty($options[self::OPTION_WORD_TIMESTAMPS]);
+        $this->wordTimestamps = !empty(Options::flag($options, self::OPTION_WORD_TIMESTAMPS));
     }
 
 

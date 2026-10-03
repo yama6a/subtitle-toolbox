@@ -2,6 +2,7 @@
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\Options;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 
@@ -16,7 +17,7 @@ class JsonFormatter extends SubtitleFormatter implements ImageFormatter
      */
     public function format(Subtitle $subtitle, array $options = []): string
     {
-        $array = $subtitle->toArray($options[self::OPTION_WITH_FORMAT_DATA] ?? true);
+        $array = $subtitle->toArray(Options::flag($options, self::OPTION_WITH_FORMAT_DATA) ?? true);
 
         $array["metadata"] = (object)$array["metadata"];
         if (array_key_exists("formatData", $array)) {
@@ -29,7 +30,7 @@ class JsonFormatter extends SubtitleFormatter implements ImageFormatter
         }
 
         $flags = JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
-        if ($options[self::OPTION_PRETTY_PRINT] ?? false) {
+        if (Options::flag($options, self::OPTION_PRETTY_PRINT) ?? false) {
             $json = json_encode($array, $flags | JSON_PRETTY_PRINT) . StringHelpers::UNIX_LINE_ENDING;
         } else {
             $json = json_encode($array, $flags);

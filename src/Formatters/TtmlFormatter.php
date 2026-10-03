@@ -7,6 +7,7 @@ use DOMElement;
 use DOMNode;
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -216,7 +217,7 @@ class TtmlFormatter extends SubtitleFormatter
         }
 
         $text = implode(self::NL, $cue->getLines());
-        if (in_array(parent::OPTION_STRIP_ALL_XML_TAGS, $options, true)) {
+        if ((bool) (Options::flag($options, parent::OPTION_STRIP_ALL_XML_TAGS) ?? false)) {
             return "<p$attributes>" . $this->formatText(Markup::stripAllTags($text)) . "</p>";
         }
 

@@ -111,7 +111,7 @@ class Subtitle implements \IteratorAggregate, \Countable
             $imageCueIndexes = array_keys(array_filter($this->cues, fn (SubtitleCue $cue): bool =>
                 CueImage::isImageCue($cue) && $cue->getLines() === []));
 
-            if ($imageCueIndexes !== [] && !($options[SubtitleFormatter::OPTION_SKIP_IMAGE_CUES] ?? false)) {
+            if ($imageCueIndexes !== [] && !(Options::flag($options, SubtitleFormatter::OPTION_SKIP_IMAGE_CUES) ?? false)) {
                 throw new ImageCueWithoutTextException("Cue #{$imageCueIndexes[0]} holds an image but no text. " .
                                                        "Run recognizeText() first, or pass the option " .
                                                        "SubtitleFormatter::OPTION_SKIP_IMAGE_CUES.");

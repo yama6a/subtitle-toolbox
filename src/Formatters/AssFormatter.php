@@ -4,6 +4,7 @@ namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -31,7 +32,7 @@ class AssFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, array $options = []): string
     {
         $data     = $subtitle->getFormatData(AssParser::FORMAT_DATA_KEY) + $this->defaultData();
-        $stripAll = in_array(parent::OPTION_STRIP_ALL_XML_TAGS, $options, true);
+        $stripAll = (bool) (Options::flag($options, parent::OPTION_STRIP_ALL_XML_TAGS) ?? false);
 
         $this->karaokeTag = $options[self::OPTION_KARAOKE_TAG] ?? "k";
         if (!in_array($this->karaokeTag, ["k", "kf", "ko"], true)) {
