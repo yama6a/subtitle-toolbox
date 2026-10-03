@@ -90,7 +90,7 @@ class CloudSpeechParsersTest extends TestCase
         $json = self::assemblyAiWords([["Hi.", 0, 300, "O'Neil"], ["Bye.", 400, 700, "B"]]);
 
         $this->assertSame([[0.0, 0.3, "Hi."], [0.4, 0.7, "Bye."]], self::cues((new AssemblyAiParser())->parse($json)));
-        $this->assertSame([[0.0, 0.3, "<v O&#39;Neil>Hi."], [0.4, 0.7, "<v B>Bye."]],
+        $this->assertSame([[0.0, 0.3, "<v O'Neil>Hi."], [0.4, 0.7, "<v B>Bye."]],
                           self::cues((new AssemblyAiParser([AssemblyAiParser::OPTION_SPEAKER_VOICES => true]))->parse($json)));
     }
 

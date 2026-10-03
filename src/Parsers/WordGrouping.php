@@ -159,8 +159,7 @@ trait WordGrouping
             : Markup::escapeText($text);
         $speaker = trim($speaker ?? "");
         if ($this->speakerVoices && $speaker !== "") {
-            // strip_tags() in the formatters reads a quote in a tag as the start of an attribute value.
-            $markup = "<v " . str_replace(["'", "\""], ["&#39;", "&quot;"], Markup::escapeText($speaker)) . ">" . $markup;
+            $markup = Markup::voiceTag($speaker) . $markup;
         }
 
         return (new SubtitleCue($start, $end, $markup))->setFormatData(self::FORMAT_DATA_KEY, $formatData);
