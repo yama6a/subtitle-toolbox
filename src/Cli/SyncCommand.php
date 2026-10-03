@@ -112,7 +112,7 @@ class SyncCommand extends WriteCommand
     {
         $log = $arguments->value("silence-log");
         if ($log === null) {
-            return $this->readSecondFile($arguments->value("reference"), $arguments, $console);
+            return $this->loadOtherFile($arguments->value("reference"));
         }
 
         $content = is_file($log) ? @file_get_contents($log) : false;

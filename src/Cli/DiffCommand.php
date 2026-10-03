@@ -97,7 +97,7 @@ class DiffCommand extends ReportCommand
     protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         $newPath     = $arguments->positionals[1];
-        $differences = SubtitleDiff::compare($subtitle, $this->readSecondFile($newPath, $arguments, $console), $this->diffOptions);
+        $differences = SubtitleDiff::compare($subtitle, $this->loadOtherFile($newPath), $this->diffOptions);
 
         $this->different = $differences !== [];
         $this->emit($console, SubtitleDiff::toText($differences), [

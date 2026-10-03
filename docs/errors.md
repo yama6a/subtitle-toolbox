@@ -18,13 +18,14 @@ try {
 |:--- |:--- |:--- |:--- |
 | `ParsingException` | `\RuntimeException` | 100 | content that a parser or `fromArray()` cannot read, or an unknown source encoding |
 | `InvalidFormatterException` | `\RuntimeException` | 101 | `toString()` with a format that the library cannot write, or a stored TTML head that is not valid XML |
-| `InvalidParserException` | `\RuntimeException` | 102 | `fromString()` with a format that the library cannot read, or content that format detection does not know |
+| `InvalidParserException` | `\RuntimeException` | 102 | `fromString()` with a format that the library cannot read, or an MKV or WebM file in `load()` or `fromString()` |
 | `ImageCueWithoutTextException` | `\RuntimeException` | 103 | an image cue without text in `toString()` with a text format |
 | `InvalidArgumentException` | `\InvalidArgumentException` | 104 | an invalid argument or option, for example alignment 10, frame rate 0, a missing MicroDVD frame rate or the options class of another format |
 | `CueNotFoundException` | `\RuntimeException` | 105 | `removeCue()` with an index that has no cue |
+| `UnknownFormatException` | `InvalidParserException` | 106 | `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()` when detection finds no format |
 
 - **SPL classes**: each class extends an SPL class, so `catch (\InvalidArgumentException $e)` and `catch (\RuntimeException $e)` also work.
-- **Messages**: the first four classes start the message with the class name and the code, for example `ParsingException (Error #100): `. The last two keep the plain message.
+- **Messages**: `InvalidArgumentException` and `CueNotFoundException` keep the plain message. The other classes start it with the class name and the code, for example `ParsingException (Error #100): `.
 - **Line number**: `ParsingException::getLineNumber()` returns the 1-based input line when the parser knows it, and null otherwise. Then the message ends with ` (line 12)`.
 
 These readers set the line number:

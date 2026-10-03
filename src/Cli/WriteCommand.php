@@ -7,11 +7,9 @@ namespace SubtitleToolbox\Cli;
 use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\FormatWriteOptions;
-use SubtitleToolbox\Formatters\Options\CsvOptions;
 use SubtitleToolbox\Formatters\Options\IttOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
 use SubtitleToolbox\LineEnding;
-use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
@@ -163,7 +161,7 @@ abstract class WriteCommand extends FileCommand
         $target       = $this->target($input, $format, $outputFormat, $arguments);
 
         try {
-            $content = $subtitle->toString($outputFormat, $this->formatterOptions($subtitle, $format, $outputFormat, $arguments));
+            $content = $subtitle->toString($outputFormat, $this->formatterOptions($outputFormat, $arguments));
         } catch (ImageCueWithoutTextException) {
             self::fail("The file holds image cues without text. Run OCR on them first, or pass --skip-image-cues.");
         }
@@ -258,26 +256,13 @@ abstract class WriteCommand extends FileCommand
     }
 
 
-    private function formatterOptions(Subtitle $subtitle, Format $inputFormat, Format $outputFormat, Arguments $arguments): WriteOptions
+    private function formatterOptions(Format $outputFormat, Arguments $arguments): WriteOptions
     {
-        $format = $this->commandFormatterOptions($outputFormat, $arguments);
-        // CsvFormatter writes the delimiter of the parsed table, so a TSV input would give a CSV file with tabs.
-        if ($outputFormat === Format::Tsv) {
-            $format = new CsvOptions(delimiter: "\t");
-        } elseif ($outputFormat === Format::Csv && $inputFormat === Format::Tsv) {
-            $format = new CsvOptions(delimiter: ",");
-        }
-        if ($outputFormat === Format::MicroDvd) {
-            $format = new MicroDvdOptions(frameRate: $this->fps
-                ?? $subtitle->getFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
-                ?? self::fail("MicroDVD output needs the frame rate of the video. Pass --fps."));
-        }
-        if ($outputFormat === Format::Itt) {
-            if ($this->fps === null && !isset($subtitle->getFormatData("itt")["frameRate"])) {
-                self::fail("iTT output needs the frame rate of the video. Pass --fps.");
-            }
-            $format = new IttOptions(frameRate: $this->fps);
-        }
+        $format = match (true) {
+            $this->fps !== null && $outputFormat === Format::MicroDvd => new MicroDvdOptions(frameRate: $this->fps),
+            $this->fps !== null && $outputFormat === Format::Itt      => new IttOptions(frameRate: $this->fps),
+            default                                                   => $this->commandFormatterOptions($outputFormat, $arguments),
+        };
 
         return new WriteOptions(
             lineEnding: $this->writeOptions->lineEnding,

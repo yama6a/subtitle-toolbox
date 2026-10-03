@@ -30,6 +30,33 @@ Format::FfMetadata->isAutoDetected();   // false
 - **Shared extensions**: when two formats share an extension, the earlier case owns it. So `fromPath()` returns `Format::MicroDvd` for `.sub`, `Format::Json` for `.json` and `Format::PlainText` for `.txt`.
 - **Parser and formatter classes**: the classes in `Parsers` and `Formatters` are public. `ReadOptions` holds the parser settings, for example `new ReadOptions(fps: 23.976)`. See [read-options.md](read-options.md).
 
+## Load and save
+```php
+use SubtitleToolbox\Format;
+use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
+
+Subtitle::load('movie.srt', Format::SubRip)->save('movie.vtt');
+Subtitle::loadAutoDetectFormat('movie.srt')->save('movie.vtt');
+Subtitle::load('movie.sub', Format::MicroDvd, new ReadOptions(encoding: 'Windows-1252', fps: 23.976))->save('movie.srt');
+Subtitle::load('movie.idx', Format::VobSub, new ReadOptions(language: 'de'));
+Subtitle::load('call.json', Format::Deepgram, new ReadOptions(speakerVoices: true));
+Subtitle::loadTrack('/media/movie.mkv', 3);           // see mkv.md
+
+$subtitle->getFormat();                               // Format::SubRip, the format that the load call read
+$subtitle->save('movie.txt', Format::WebVtt);         // the format argument wins over the extension
+```
+
+- **`load()`**: reads the file in the given format and never guesses. For VobSub, pass the `.idx` or the `.sub` file. The other file must lie next to it.
+- **`loadAutoDetectFormat()`**: tries only formats whose `isAutoDetected()` is true. It reads the format that [detection](detection.md) finds in the content. An iTT file with the `.itt` extension reads as iTT, not TTML.
+- **Extension fallback**: when detection finds nothing, `loadAutoDetectFormat()` takes the format of the extension, for example `.tsv`. It skips an extension that a format without detection also uses, such as `.json` and `.txt`. Then it throws `UnknownFormatException`.
+- **Chapters and cloud speech-to-text JSON**: they load only with `load()` and their format.
+- **MKV and WebM**: `load()` throws for them. `loadAutoDetectFormat()` reads a file with exactly 1 subtitle track and throws with the track list for other files.
+- **`getFormat()`**: null for a subtitle from `new Subtitle()` or `fromArray()`. For an MKV track, it is the format of the codec, for example `Format::SubRip`.
+- **`save()`**: writes the format argument, else the format of the extension. It throws `InvalidFormatterException` for an unknown extension.
+- **Frame rate**: MicroDVD and iTT output take the frame rate from `MicroDvdOptions::$frameRate` or `IttOptions::$frameRate`, else from the data of a MicroDVD or iTT input. Else `toString()` and `save()` throw `InvalidArgumentException`.
+- **CSV and TSV**: TSV output has tabs. CSV output from a TSV input has commas. A `CsvOptions::$delimiter` wins.
+
 ## Write options
 `WriteOptions` holds the settings that every formatter reads. Its `format` field takes the options class of one format, such as `MicroDvdOptions`.
 

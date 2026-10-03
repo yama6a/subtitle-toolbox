@@ -313,10 +313,32 @@ class BinaryTest extends TestCase
 
         $this->assertSame([0, $this->tripAs(Format::WebVtt), ""], $this->runBinary(["convert", "trip.txt", "--to", "vtt", "-o", "-"]));
         $this->assertSame(
-            [1, "", "notes.txt: The format is unknown. Pass --from.\n"],
+            [1, "", "notes.txt: UnknownFormatException (Error #106): Format detection found no subtitle format. Call load() with a " .
+                    "format. Chapters and cloud speech-to-text JSON always need one, for example Format::Deepgram.\n"],
             $this->runBinary(["convert", "notes.txt", "--to", "vtt"])
         );
         $this->assertSame([1, "", "missing.srt: The file does not exist.\n"], $this->runBinary(["convert", "missing.srt", "--to", "vtt"]));
+    }
+
+
+    public function testCloudSpeechJsonAndChaptersNeedFrom(): void
+    {
+        copy(self::FILES . "deepgram/real/pool_utterances_diarize.json", "$this->dir/pool.json");
+        copy(self::FILES . "chapters/ffmetadata/real/m4b_audiobook.ffmeta", "$this->dir/book.ffmeta");
+
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "pool.json", "--to", "srt", "-o", "-"]);
+        $this->assertSame([1, ""], [$code, $stdout]);
+        $this->assertStringContainsString("pool.json: UnknownFormatException (Error #106): Format detection found no subtitle format.", $stderr);
+        $this->assertSame(1, $this->runBinary(["convert", "book.ffmeta", "--to", "srt", "-o", "-"])[0]);
+
+        $this->assertSame(
+            [0, Subtitle::load("$this->dir/pool.json", Format::Deepgram)->toString(Format::SubRip), ""],
+            $this->runBinary(["convert", "pool.json", "--from", "deepgram", "--to", "srt", "-o", "-"])
+        );
+        $this->assertSame(
+            [0, Subtitle::load("$this->dir/book.ffmeta", Format::FfMetadata)->toString(Format::YouTubeChapters), ""],
+            $this->runBinary(["convert", "book.ffmeta", "--from", "ffmeta", "--to", "ytchapter", "-o", "-"])
+        );
     }
 
 
@@ -515,7 +537,7 @@ class BinaryTest extends TestCase
         $this->assertSame([0, "{25}{75}Hello from the frames.\n{100}{150}{y:i}Second line.\n", ""],
                           $this->runBinary(["shift", "frames.sub", "--by", "0", "--fps", "25"]));
 
-        $this->assertSame([1, "", "trip.srt: MicroDVD output needs the frame rate of the video. Pass --fps.\n"],
+        $this->assertSame([1, "", "trip.srt: MicroDVD output needs the frame rate of the video. Pass MicroDvdOptions::frameRate.\n"],
                           $this->runBinary(["convert", "trip.srt", "--to", "microdvd", "-o", "-"]));
         $this->assertSame(0, $this->runBinary(["convert", "trip.srt", "trip.sub", "--fps", "23.976"])[0]);
         $this->assertStringStartsWith("{24}{72}", $this->file("trip.sub"));
@@ -851,10 +873,10 @@ class BinaryTest extends TestCase
 
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "movie.mkv", "--to", "srt", "-o", "-"]);
         $this->assertSame([1, ""], [$code, $stdout]);
-        $this->assertStringStartsWith("movie.mkv: The file has 6 subtitle tracks. Pass --track with one of them:\n" .
+        $this->assertStringStartsWith("movie.mkv: InvalidParserException (Error #102): The MKV or WebM file has 6 subtitle tracks. Call loadTrack() with one of them:\n" .
                                       "  3: S_TEXT/UTF8, de, \"Deutsch (Forced)\", forced\n  4: S_TEXT/ASS, eng, \"English\", default\n", $stderr);
         $this->assertSame(1, $this->runBinary(["convert", "movie.mkv", "--to", "srt", "--track", "7", "-o", "-"])[0]);
-        $this->assertSame([1, "", "trip.srt: --track needs an MKV or WebM input.\n"],
+        $this->assertSame([1, "", "trip.srt: ParsingException (Error #100): The file is not a Matroska or WebM file.\n"],
                           $this->runBinary(["convert", "trip.srt", "--to", "vtt", "--track", "3", "-o", "-"]));
         $this->assertSame(2, $this->runBinary(["convert", "movie.mkv", "--to", "srt", "--track", "x"])[0]);
     }

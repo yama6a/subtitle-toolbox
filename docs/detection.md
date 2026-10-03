@@ -7,7 +7,8 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 Format::detect(file_get_contents('upload.sub'));                                    // Format::MicroDvd, or null for an unknown format
-$subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('upload.sub'));  // throws InvalidParserException for an unknown format
+$subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('upload.sub'));  // throws UnknownFormatException for an unknown format
+$subtitle = Subtitle::loadAutoDetectFormat('upload.sub');                           // also uses the extension, see formats.md#load-and-save
 Format::fromPath('upload.sub');                                                     // Format::MicroDvd, from the extension only
 ```
 

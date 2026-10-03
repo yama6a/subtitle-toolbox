@@ -253,7 +253,7 @@ class IttFormatterTest extends TestCase
     public function testWithoutFrameRateThrows(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("The ITT formatter needs IttOptions with a frame rate.");
+        $this->expectExceptionMessage("iTT output needs the frame rate of the video. Pass IttOptions::frameRate.");
 
         (new Subtitle())->toString(Format::Itt);
     }

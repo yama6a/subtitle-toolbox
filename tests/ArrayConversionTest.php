@@ -90,7 +90,7 @@ class ArrayConversionTest extends TestCase
     {
         $subtitle = (new Subtitle())->setMetadata("0", "zero");
 
-        $this->assertEquals($subtitle, Subtitle::fromStringAutoDetectFormat($subtitle->toString(Format::Json)));
+        $this->assertEquals($subtitle->toArray(), Subtitle::fromStringAutoDetectFormat($subtitle->toString(Format::Json))->toArray());
     }
 
 
@@ -173,7 +173,7 @@ class ArrayConversionTest extends TestCase
             default                                        => Subtitle::fromStringAutoDetectFormat($content),
         };
 
-        $this->assertEquals($subtitle, Subtitle::fromArray($subtitle->toArray()));
-        $this->assertEquals($subtitle, Subtitle::fromStringAutoDetectFormat($subtitle->toString(Format::Json)));
+        $this->assertEquals($subtitle->toArray(), Subtitle::fromArray($subtitle->toArray())->toArray());
+        $this->assertEquals($subtitle->toArray(), Subtitle::fromStringAutoDetectFormat($subtitle->toString(Format::Json))->toArray());
     }
 }

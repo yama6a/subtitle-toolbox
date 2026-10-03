@@ -109,7 +109,7 @@ class DualCommand extends WriteCommand
 
     protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
-        $secondary = $this->readSecondFile($arguments->positionals[1], $arguments, $console);
+        $secondary = $this->loadOtherFile($arguments->positionals[1]);
 
         parent::process($input, DualSubtitle::merge($subtitle, $secondary, $this->dualOptions), $format, $arguments, $console);
     }
