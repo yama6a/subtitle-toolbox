@@ -307,13 +307,15 @@ Detection ignores a UTF-8 BOM and leading blank lines. It checks the signatures 
 | 16 | `DeepgramParser` | an object with a `"channels"` list of objects, and an `"alternatives"` key after it |
 | 17 | `AssemblyAiParser` | an object with an `"audio_url"` key, or a `"words"` list whose first word starts with `"text"` |
 | 18 | `GoogleSpeechParser` | an object with a `"results"` list of objects, and an `"alternatives"` list after it |
-| 19 | `WhisperJsonParser` | an object with a `"segments"` or `"transcription"` list |
-| 20 | `YouTubeTimedTextParser` | a `<timedtext>` or `<transcript>` root, or an object with an `"events"` list whose events have `"tStartMs"` |
-| 21 | `Mpl2Parser` | `[12][45]` |
-| 22 | `TmPlayerParser` | `00:00:01:`, `0:00:01=` or `00:00:01,1=` |
-| 23 | `PodcastChaptersParser` | an object with a `"version"` key and a `"chapters"` list |
-| 24 | `FfMetadataChaptersParser` | `;FFMETADATA` |
-| 25 | `OgmChaptersParser` | `CHAPTER01=00:00:00.000`, then a `CHAPTER01NAME=` line |
+| 19 | `PodcastTranscriptParser` | an object with a `"segments"` list whose segments have `"startTime"` and `"body"` |
+| 20 | `WhisperJsonParser` | an object with a `"segments"` or `"transcription"` list |
+| 21 | `YouTubeTimedTextParser` | a `<timedtext>` or `<transcript>` root, or an object with an `"events"` list whose events have `"tStartMs"` |
+| 22 | `Mpl2Parser` | `[12][45]` |
+| 23 | `TmPlayerParser` | `00:00:01:`, `0:00:01=` or `00:00:01,1=` |
+| 24 | `PodcastChaptersParser` | an object with a `"version"` key and a `"chapters"` list |
+| 25 | `FfMetadataChaptersParser` | `;FFMETADATA` |
+| 26 | `OgmChaptersParser` | `CHAPTER01=00:00:00.000`, then a `CHAPTER01NAME=` line |
+| 27 | `HtmlTranscriptParser` | a tag at the start, and a `<cite>` and a `<time>` element |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line looks like SubRip, so it detects as SubRip.
 - **`.sub` files**: MicroDVD, MPSub and SubViewer text files all use `.sub`. SBV has three digits after the dot, SubViewer 2 has two.
@@ -1758,6 +1760,53 @@ $chapters = (new YouTubeChaptersParser())->parse($videoDescription);
 - **OGM chapters**: the parser reads the lines as mkvmerge does. A `CHAPTERxx=` line needs a fraction of 1 to 9 digits after `.` or `,`. A `CHAPTERxxNAME=` line must follow it. The parser throws `ParsingException` with the line number otherwise.
 - **File extensions**: `ffmeta` for FFmpeg metadata. The format names `ogm`, `podcast` and `ytchapter` share `.txt` and `.json` with plain text and the library JSON, so pass `--from` or `--to` to the command line tool. Format detection finds Podcasting 2.0 JSON, FFmpeg metadata and OGM chapters. YouTube text has no signature, so pass `YouTubeChaptersParser::class`.
 - **Lenient mode**: the chapter parsers ignore `setLenient()`.
+
+## Podcast transcripts
+A podcast feed links a transcript per episode with the `<podcast:transcript>` tag. Apple Podcasts, Podverse and Fountain read it. The [Podcasting 2.0 transcript spec](https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/examples/transcripts/transcripts.md) allows SubRip, WebVTT, a JSON format and an HTML format.
+
+```json
+{"version": "1.0.0", "segments": [
+  {"speaker": "Anna", "startTime": 0.5, "endTime": 0.75, "body": "The"},
+  {"speaker": "Anna", "startTime": 1, "endTime": 1.25, "body": "bakery"}
+]}
+```
+
+```html
+<cite>Anna:</cite>
+<time>0:00</time>
+<p>The bakery opens at seven.</p>
+```
+
+```php
+use SubtitleToolbox\Formatters\HtmlTranscriptFormatter;
+use SubtitleToolbox\Formatters\PodcastTranscriptFormatter;
+use SubtitleToolbox\Parsers\PodcastTranscriptParser;
+use SubtitleToolbox\Parsers\WhisperJsonParser;
+
+$subtitle = (new WhisperJsonParser([WhisperJsonParser::OPTION_WORD_TIMESTAMPS => true]))->parse($whisperJson);
+$json     = $subtitle->format(PodcastTranscriptFormatter::class, [PodcastTranscriptFormatter::OPTION_WORD_SEGMENTS => true]);
+$html     = $subtitle->format(HtmlTranscriptFormatter::class);
+$subtitle = Subtitle::parse(file_get_contents('episode.json'));                  // detects PodcastTranscriptParser
+$subtitle = (new PodcastTranscriptParser([PodcastTranscriptParser::OPTION_KEEP_SEGMENTS => true]))->parse($json);
+```
+
+| Class | Option | Effect |
+|:--- |:--- |:--- |
+| `PodcastTranscriptParser` | `OPTION_KEEP_SEGMENTS` | one cue per segment. By default, segments of one word join into a cue |
+| `PodcastTranscriptParser` | `OPTION_WORD_TIMESTAMPS` | a core word timestamp before each word of a joined cue |
+| `PodcastTranscriptFormatter` | `OPTION_WORD_SEGMENTS` | one segment per core word timestamp, for the word highlight of the apps. By default, one segment per cue |
+| `PodcastTranscriptFormatter` | `OPTION_PRETTY_PRINT` | indents with 4 spaces and ends with a newline |
+| `HtmlTranscriptFormatter` | `OPTION_PARAGRAPH_GAP` | the gap in seconds that starts a new paragraph, 2.0 by default, as in `PlainTextFormatter` |
+
+- **Speakers**: the `speaker` of a segment and the name in `<cite>` become `<v Name>`, and back. A cue with two `<v>` speakers gives one segment per speaker, both with the times of the cue.
+- **Joined words**: the parser joins a segment of one word with the next one of the same speaker, until a word ends with `.`, `?`, `!` or the ellipsis U+2026. A closing quote or bracket may follow the mark. A segment with a space in its body stays one cue.
+- **Word segments**: a word ends where the next word of its cue starts. The last word ends with the cue. Text before the first word timestamp starts at the cue start. So a round trip keeps the start of each word, not its end.
+- **No end time**: a segment without `endTime` and an HTML paragraph end at the next later start. The last one lasts 10 s, or the last constructor argument of the parser.
+- **HTML paragraphs**: each `<time>` starts a cue. The cue holds the `<p>` elements up to the next `<time>` or `<cite>`, one line per `<p>` and `<br>`. A `<cite>` names only the next cue. The parser strips other tags and reads times such as `0:09`, `12:05` and `1:02:03.5`.
+- **HTML output**: a new paragraph starts at a speaker change or a gap. The formatter writes `<cite>` only for a paragraph with a speaker, times such as `0:09` and `1:02:03`, and the text without tags with `&`, `<` and `>` escaped.
+- **Format data**: the JSON parser keeps the top-level fields except `segments` in `getFormatData('podcast')`, for example `version`. A cue of one segment keeps the other fields of the segment. The formatter writes them back, and `"version": "1.0.0"` when there is none.
+- **Errors**: a segment without a numeric `startTime` throws `ParsingException`. So does a `speaker`, `endTime` or `body` of the wrong type, a `<p>` without a `<time>` before it, and a bad time. A segment without `body` gives no cue. In lenient mode, the parsers skip the segment or the cue and record a `ParseWarning`. `blockIndex` counts the segments, or the paragraphs that each `<cite>` or `<time>` starts.
+- **Detection**: JSON with a `segments` list whose segments have `startTime` and `body`, and HTML with `<cite>` and `<time>`. The command line tool calls the formats `podcast-transcript` and `html`. The `.json` extension stays the library JSON, so pass `--to podcast-transcript`.
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.

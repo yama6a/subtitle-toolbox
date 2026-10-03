@@ -9,6 +9,7 @@ use SubtitleToolbox\Parsers\DeepgramParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\Parsers\GoogleSpeechParser;
+use SubtitleToolbox\Parsers\HtmlTranscriptParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
@@ -17,6 +18,7 @@ use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\OgmChaptersParser;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\PodcastChaptersParser;
+use SubtitleToolbox\Parsers\PodcastTranscriptParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SccParser;
@@ -62,17 +64,21 @@ class FormatDetector
      *     Transcribe, whose "channel_labels" object can hold such a list.
      * 17. AssemblyAI: an object with an "audio_url" key, or a "words" list whose first word starts with a "text" key.
      * 18. Google Cloud Speech-to-Text: an object with a "results" list of objects, and an "alternatives" list after it.
-     * 19. Whisper JSON: an object with a "segments" or "transcription" list. It comes after JSON, whose format data can hold such
+     * 19. Podcasting 2.0 JSON: an object with a "segments" list whose segments have a "startTime" and a "body" key. It
+     *     comes after JSON, whose format data can hold such a list, and before Whisper JSON, which also has a "segments" list.
+     * 20. Whisper JSON: an object with a "segments" or "transcription" list. It comes after JSON, whose format data can hold such
      *     a key, and after Amazon Transcribe and Deepgram, whose speaker labels and topics hold a "segments" list.
-     * 20. YouTube timed text: a `<timedtext>` or `<transcript>` root after an optional XML declaration, or an object with an
+     * 21. YouTube timed text: a `<timedtext>` or `<transcript>` root after an optional XML declaration, or an object with an
      *     "events" list whose events have a "tStartMs" key. It comes after JSON and Whisper JSON, which can hold such a list.
-     * 21. MPL2: a `[start][end]` first line in tenths of a second. No earlier signature matches it: LRC needs a colon
+     * 22. MPL2: a `[start][end]` first line in tenths of a second. No earlier signature matches it: LRC needs a colon
      *     inside the brackets, and MicroDVD needs braces.
-     * 22. TMPlayer: a first line such as `00:00:01:`, `0:00:01=` or `00:00:01,1=`. SBV and SubViewer 2 need a dot after the seconds.
-     * 23. Podcasting 2.0 JSON chapters: an object with a "version" key and a "chapters" list. It comes after the other JSON
+     * 23. TMPlayer: a first line such as `00:00:01:`, `0:00:01=` or `00:00:01,1=`. SBV and SubViewer 2 need a dot after the seconds.
+     * 24. Podcasting 2.0 JSON chapters: an object with a "version" key and a "chapters" list. It comes after the other JSON
      *     formats, whose format data can hold such keys.
-     * 24. FFmpeg metadata: the `;FFMETADATA` header.
-     * 25. OGM chapters: a `CHAPTER01=` line with a time, then a `CHAPTER01NAME=` line, as mkvmerge probes them.
+     * 25. FFmpeg metadata: the `;FFMETADATA` header.
+     * 26. OGM chapters: a `CHAPTER01=` line with a time, then a `CHAPTER01NAME=` line, as mkvmerge probes them.
+     * 27. Podcasting 2.0 HTML: a tag at the start, and a `<cite>` and a `<time>` element. It comes last, because TTML, SAMI
+     *     and the YouTube XML formats can hold such elements.
      */
     private const SIGNATURES = [
         WebVttParser::class   => '/\AWEBVTT(?:[ \t\n]|\z)/',
@@ -98,6 +104,8 @@ class FormatDetector
                                       '"(?:audio_url"\s*+:|words"\s*+:\s*+\[\s*+\{\s*+"text"\s*+:))/',
         GoogleSpeechParser::class  => '/\A\{(?=(?:[^"]++|"(?!results"\s*+:\s*+\[\s*+\{))*+"results"\s*+:\s*+\[\s*+\{' .
                                       '(?:[^"]++|"(?!alternatives"\s*+:))*+"alternatives"\s*+:\s*+\[)/',
+        PodcastTranscriptParser::class => '/\A\{(?=(?:[^"]++|"(?!segments"\s*+:))*+"segments"\s*+:\s*+\[\s*+\{' .
+                                          '(?=(?:[^"]++|"(?!startTime"\s*+:))*+"startTime"\s*+:)(?:[^"]++|"(?!body"\s*+:))*+"body"\s*+:)/',
         WhisperJsonParser::class => '/\A\{(?=(?:[^"]++|"(?!(?:segments|transcription)"\s*+:))*+"(?:segments|transcription)"\s*+:\s*+\[)/',
         YouTubeTimedTextParser::class => '/\A(?:' . self::XML_PROLOG . '<(?:timedtext|transcript)[\s>\/]' .
                                          '|\{(?=(?:[^"]++|"(?!events"\s*+:))*+"events"\s*+:\s*+\[\s*+\{' .
@@ -107,6 +115,7 @@ class FormatDetector
         PodcastChaptersParser::class => '/\A\{(?=(?:[^"]++|"(?!version"\s*+:))*+"version"\s*+:)(?=(?:[^"]++|"(?!chapters"\s*+:))*+"chapters"\s*+:\s*+\[)/',
         FfMetadataChaptersParser::class => '/\A;FFMETADATA/',
         OgmChaptersParser::class => '/\ACHAPTER\d+[ \t]*=[ \t]*\d+[ \t]*:.*\n\s*CHAPTER\d+NAME[ \t]*=/',
+        HtmlTranscriptParser::class => '/\A' . self::XML_PROLOG . '(?=<)(?=.*?<cite[\s>])(?=.*?<time[\s>])/is',
     ];
 
 

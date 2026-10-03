@@ -17,6 +17,7 @@ use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Formatters\AssFormatter;
 use SubtitleToolbox\Formatters\CsvFormatter;
 use SubtitleToolbox\Formatters\EbuStlFormatter;
+use SubtitleToolbox\Formatters\HtmlTranscriptFormatter;
 use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
 use SubtitleToolbox\Formatters\MpSubFormatter;
@@ -48,6 +49,7 @@ use SubtitleToolbox\Parsers\DeepgramParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\Parsers\GoogleSpeechParser;
+use SubtitleToolbox\Parsers\HtmlTranscriptParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
@@ -55,6 +57,7 @@ use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\OgmChaptersParser;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\PodcastChaptersParser;
+use SubtitleToolbox\Parsers\PodcastTranscriptParser;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SccParser;
@@ -277,6 +280,8 @@ class ThrowSitesTest extends TestCase
                 ["firstSubtitleNumber" => 65536])->format(EbuStlFormatter::class), ...$invalid],
             "Formatters/EbuStlFormatter.php: text too long" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 30000)))
                 ->format(EbuStlFormatter::class), ...$invalid],
+            "Formatters/HtmlTranscriptFormatter.php: paragraph gap" => [fn () => self::subtitle()->format(HtmlTranscriptFormatter::class,
+                [HtmlTranscriptFormatter::OPTION_PARAGRAPH_GAP => "2"]), ...$invalid],
             "Formatters/IttFormatter.php: no frame rate"    => [fn () => self::subtitle()->format(IttFormatter::class), ...$invalid],
             "Formatters/IttFormatter.php: unsupported frame rate" => [fn () => self::subtitle()->format(IttFormatter::class,
                 [IttFormatter::OPTION_FRAME_RATE => 50]), ...$invalid],
@@ -379,6 +384,9 @@ class ThrowSitesTest extends TestCase
             "Parsers/FfMetadataChaptersParser.php: no header" => [fn () => (new FfMetadataChaptersParser())->parse("title=x"), ...$parsing],
             "Parsers/FfMetadataChaptersParser.php: time base 0" => [fn () => (new FfMetadataChaptersParser())->parse(
                 ";FFMETADATA1\n[CHAPTER]\nTIMEBASE=0/1\n"), ...$parsing],
+            "Parsers/HtmlTranscriptParser.php: no time"     => [fn () => (new HtmlTranscriptParser())->parse("<p>Hi</p>"), ...$parsing],
+            "Parsers/HtmlTranscriptParser.php: bad time"    => [fn () => (new HtmlTranscriptParser())->parse("<time>x</time><p>Hi</p>"),
+                                                                ...$parsing],
             "Parsers/JsonParser.php: no JSON"               => [fn () => (new JsonParser())->parse("{"), ...$parsing],
             "Parsers/JsonParser.php: root no object"        => [fn () => (new JsonParser())->parse("[1]"), ...$parsing],
             "Parsers/JsonParser.php: invalid base64"        => [fn () => (new JsonParser())->parse(
@@ -416,6 +424,14 @@ class ThrowSitesTest extends TestCase
             "Parsers/PodcastChaptersParser.php: no chapters" => [fn () => (new PodcastChaptersParser())->parse('{"version": "1.2.0"}'), ...$parsing],
             "Parsers/PodcastChaptersParser.php: start no number" => [fn () => (new PodcastChaptersParser())->parse(
                 '{"chapters": [{"title": "x"}]}'), ...$parsing],
+            "Parsers/PodcastTranscriptParser.php: no JSON"  => [fn () => (new PodcastTranscriptParser())->parse("{"), ...$parsing],
+            "Parsers/PodcastTranscriptParser.php: root no object" => [fn () => (new PodcastTranscriptParser())->parse("[1]"), ...$parsing],
+            "Parsers/PodcastTranscriptParser.php: no segments" => [fn () => (new PodcastTranscriptParser())->parse('{"version": "1.0.0"}'),
+                                                                ...$parsing],
+            "Parsers/PodcastTranscriptParser.php: segment no object" => [fn () => (new PodcastTranscriptParser())->parse('{"segments": [1]}'),
+                                                                ...$parsing],
+            "Parsers/PodcastTranscriptParser.php: time no number" => [fn () => (new PodcastTranscriptParser())->parse(
+                '{"segments": [{"startTime": "0"}]}'), ...$parsing],
             "Parsers/SamiParser.php: negative duration"     => [fn () => new SamiParser(null, -1), ...$invalid],
             "Parsers/SamiParser.php: invalid UTF-8"         => [fn () => (new SamiParser())->parse("<SAMI>\xFF</SAMI>"), ...$parsing],
             "Parsers/SamiParser.php: no Start attribute"    => [fn () => (new SamiParser())->parse("<SAMI><BODY><SYNC>text</BODY></SAMI>"),
