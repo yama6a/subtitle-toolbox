@@ -12,6 +12,7 @@ use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Streaming\Streams;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Timecode;
 
 /**
  * Reads the subtitle tracks of Matroska (.mkv, .mka, .mks) and WebM files. It skips video and audio data with fseek().
@@ -689,10 +690,9 @@ final class MatroskaReader
 
     private function time(int $milliseconds, string $separator, bool $twoDigitHours): string
     {
-        $hours = intdiv($milliseconds, 3600000);
+        [$hours, $minutes, $seconds, $fraction] = Timecode::milliseconds($milliseconds / 1000);
 
-        return sprintf($twoDigitHours ? "%02d:%02d:%02d%s%03d" : "%d:%02d:%02d%s%03d", $hours, intdiv($milliseconds, 60000) % 60,
-                       intdiv($milliseconds, 1000) % 60, $separator, $milliseconds % 1000);
+        return sprintf($twoDigitHours ? "%02d:%02d:%02d%s%03d" : "%d:%02d:%02d%s%03d", $hours, $minutes, $seconds, $separator, $fraction);
     }
 
 

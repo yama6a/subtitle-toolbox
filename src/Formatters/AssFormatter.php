@@ -9,6 +9,7 @@ use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 class AssFormatter extends SubtitleFormatter
 {
@@ -21,6 +22,8 @@ class AssFormatter extends SubtitleFormatter
         "Default", "Arial", "16", "&H00FFFFFF", "&H00FFFFFF", "&H00000000", "&H00000000",
         "0", "0", "0", "0", "100", "100", "0", "0", "1", "1", "0", "2", "10", "10", "10", "1",
     ];
+
+    private const TIME_PATTERN = "%d:%02d:%02d.%02d";
 
     private const LEGACY_ALIGNMENTS = [1 => 1, 2 => 2, 3 => 3, 7 => 5, 8 => 6, 9 => 7, 4 => 9, 5 => 10, 6 => 11];
 
@@ -137,7 +140,7 @@ class AssFormatter extends SubtitleFormatter
     /**
      * Writes the stored Comment event with the same text, or a new Comment event at the given time.
      */
-    private function commentLine(string $text, array $format, array &$commentEvents, float $time): string
+    private function commentLine(string $text, array $format, array &$commentEvents, float $seconds): string
     {
         foreach ($commentEvents as $index => $event) {
             if ($this->fieldValue($event, "Text") === $text) {
@@ -147,7 +150,7 @@ class AssFormatter extends SubtitleFormatter
             }
         }
 
-        $time   = $this->formatTime($time);
+        $time   = sprintf(self::TIME_PATTERN, ...Timecode::centiseconds($seconds));
         $values = [];
         foreach ($format as $field) {
             $values[] = match (strtolower($field)) {
@@ -176,8 +179,8 @@ class AssFormatter extends SubtitleFormatter
         $values = [];
         foreach ($format as $field) {
             $values[] = match (strtolower($field)) {
-                "start" => $this->formatTime($cue->getStart()),
-                "end"   => $this->formatTime($cue->getEnd()),
+                "start" => sprintf(self::TIME_PATTERN, ...Timecode::centiseconds($cue->getStart())),
+                "end"   => sprintf(self::TIME_PATTERN, ...Timecode::centiseconds($cue->getEnd())),
                 "text"  => $text,
                 "name"  => $name,
                 default => $fields[$field] ?? $this->defaultFieldValue($field),
@@ -340,19 +343,5 @@ class AssFormatter extends SubtitleFormatter
         $scriptType = array_change_key_case($data["scriptInfo"] ?? [])["scripttype"] ?? "";
 
         return strcasecmp($scriptType, "v4.00") === 0 || strcasecmp($data["stylesSection"] ?? "", "V4 Styles") === 0;
-    }
-
-
-    private function formatTime(float $seconds): string
-    {
-        $centiseconds = (int) round($seconds * 100);
-
-        return sprintf(
-            "%d:%02d:%02d.%02d",
-            intdiv($centiseconds, 360000),
-            intdiv($centiseconds, 6000) % 60,
-            intdiv($centiseconds, 100) % 60,
-            $centiseconds % 100
-        );
     }
 }

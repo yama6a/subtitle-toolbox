@@ -7,6 +7,7 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\Options;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Timecode;
 
 class PlainTextFormatter extends SubtitleFormatter
 {
@@ -48,7 +49,7 @@ class PlainTextFormatter extends SubtitleFormatter
         }
 
         $blocks = array_map(fn (array $paragraph): string =>
-            ($withTimes ? $this->formatTime($paragraph["start"]) . " " : "") .
+            ($withTimes ? sprintf("[%02d:%02d:%02d] ", ...Timecode::seconds(floor($paragraph["start"]))) : "") .
             implode($joinCues ? " " : StringHelpers::UNIX_LINE_ENDING, $paragraph["cues"]) .
             StringHelpers::UNIX_LINE_ENDING, $paragraphs);
 
@@ -59,13 +60,5 @@ class PlainTextFormatter extends SubtitleFormatter
     private function plainLine(string $line): string
     {
         return trim(preg_replace('/[ \t]+/', " ", Markup::plainText($line)));
-    }
-
-
-    private function formatTime(float $seconds): string
-    {
-        $totalSeconds = (int) floor($seconds);
-
-        return sprintf("[%02d:%02d:%02d]", intdiv($totalSeconds, 3600), intdiv($totalSeconds, 60) % 60, $totalSeconds % 60);
     }
 }

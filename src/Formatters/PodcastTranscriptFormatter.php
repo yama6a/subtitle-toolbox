@@ -105,7 +105,7 @@ class PodcastTranscriptFormatter extends SubtitleFormatter
 
                 $cuePieces = $this->addPiece($cuePieces, $index, $speaker, $start, $text);
                 $speaker   = $name;
-                $start     = $isTimestamp ? $this->timestampInCue($token, $cue) : $start;
+                $start     = $isTimestamp ? $this->wordStartInCue($token, $cue) : $start;
                 $text      = "";
             }
             $cuePieces = $this->addPiece($cuePieces, $index, $speaker, $start, $text);
@@ -131,7 +131,7 @@ class PodcastTranscriptFormatter extends SubtitleFormatter
     }
 
 
-    private function timestampInCue(string $token, SubtitleCue $cue): float
+    private function wordStartInCue(string $token, SubtitleCue $cue): float
     {
         [$hours, $minutes, $seconds] = explode(":", trim($token, "<>"));
         $time = (int)$hours * 3600 + (int)$minutes * 60 + (float)$seconds;

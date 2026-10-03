@@ -9,6 +9,7 @@ use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 class CsvFormatter extends SubtitleFormatter
 {
@@ -64,9 +65,9 @@ class CsvFormatter extends SubtitleFormatter
         foreach ($cues as $index => $cue) {
             $records[] = array_map(fn (array $column): string => match ($column[0]) {
                 "identifier" => $cue->getIdentifier() ?? "",
-                "start"      => $this->formatTime($cue->getStart(), $timeFormat, $frameRate),
-                "end"        => $this->formatTime($cue->getEnd(), $timeFormat, $frameRate),
-                "duration"   => $this->formatTime($cue->getEnd() - $cue->getStart(), $timeFormat, $frameRate),
+                "start"      => $this->secondsCell($cue->getStart(), $timeFormat, $frameRate),
+                "end"        => $this->secondsCell($cue->getEnd(), $timeFormat, $frameRate),
+                "duration"   => $this->secondsCell($cue->getEnd() - $cue->getStart(), $timeFormat, $frameRate),
                 "speaker"    => $rows[$index][0],
                 "text"       => $rows[$index][1],
                 "second"     => $secondTexts[$index],
@@ -185,34 +186,17 @@ class CsvFormatter extends SubtitleFormatter
     }
 
 
-    private function formatTime(float $seconds, string $timeFormat, ?FrameRate $frameRate): string
+    private function secondsCell(float $seconds, string $layout, ?FrameRate $frameRate): string
     {
-        $milliseconds = (int) round(max(0, $seconds) * 1000);
-        $whole        = intdiv($milliseconds, 1000);
-        if ($timeFormat === CsvParser::TIME_SECONDS) {
-            return rtrim(rtrim(sprintf("%d.%03d", $whole, $milliseconds % 1000), "0"), ".");
-        }
+        $seconds      = max(0, $seconds);
+        $milliseconds = Timecode::totalMilliseconds($seconds);
 
-        $fraction = $milliseconds % 1000;
-        if ($timeFormat === CsvParser::TIME_FRAMES) {
-            $fraction = $frameRate->secondsToFrames($fraction / 1000);
-            if ($fraction >= round($frameRate->getFps())) {
-                $whole++;
-                $fraction = 0;
-            }
-        }
-
-        return sprintf(
-            match ($timeFormat) {
-                CsvParser::TIME_DOT    => "%02d:%02d:%02d.%03d",
-                CsvParser::TIME_COMMA  => "%02d:%02d:%02d,%03d",
-                CsvParser::TIME_FRAMES => "%02d:%02d:%02d:%02d",
-            },
-            intdiv($whole, 3600),
-            intdiv($whole, 60) % 60,
-            $whole % 60,
-            $fraction
-        );
+        return match ($layout) {
+            CsvParser::TIME_SECONDS => rtrim(rtrim(sprintf("%d.%03d", intdiv($milliseconds, 1000), $milliseconds % 1000), "0"), "."),
+            CsvParser::TIME_DOT     => sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($seconds)),
+            CsvParser::TIME_COMMA   => sprintf("%02d:%02d:%02d,%03d", ...Timecode::milliseconds($seconds)),
+            CsvParser::TIME_FRAMES  => sprintf("%02d:%02d:%02d:%02d", ...Timecode::clockSecondsAndFrames($seconds, $frameRate)),
+        };
     }
 
 

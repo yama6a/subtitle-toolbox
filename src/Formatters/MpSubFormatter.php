@@ -7,7 +7,7 @@ use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 class MpSubFormatter extends SubtitleFormatter
 {
@@ -32,9 +32,14 @@ class MpSubFormatter extends SubtitleFormatter
         $previousEnd = 0;
         foreach ($subtitle->getCues() as $cue) {
             $output .= StringHelpers::UNIX_LINE_ENDING;
-            $output .= $frameRate === null
-                ? $this->getTimestamp($cue, $previousEnd)
-                : $this->getFrameTimestamp($cue, $previousEnd, $frameRate);
+            if ($frameRate === null) {
+                $wait     = Timecode::totalMilliseconds($cue->getStart() - $previousEnd) / 1000;
+                $duration = Timecode::totalMilliseconds($cue->getEnd() - $cue->getStart()) / 1000;
+            } else {
+                $wait     = $frameRate->secondsToFrames($cue->getStart()) - $frameRate->secondsToFrames($previousEnd);
+                $duration = $frameRate->secondsToFrames($cue->getEnd()) - $frameRate->secondsToFrames($cue->getStart());
+            }
+            $output .= "$wait $duration" . StringHelpers::UNIX_LINE_ENDING;
             $output .= Markup::plainText(implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines()));
             $output .= StringHelpers::UNIX_LINE_ENDING;
 
@@ -83,24 +88,5 @@ class MpSubFormatter extends SubtitleFormatter
         }
 
         return $header;
-    }
-
-
-    private function getTimestamp(SubtitleCue $cue, float $previousEnd): string
-    {
-        $start    = round($cue->getStart() - $previousEnd, 3);
-        $duration = round($cue->getEnd() - $cue->getStart(), 3);
-
-        return $start . " " . $duration . StringHelpers::UNIX_LINE_ENDING;
-    }
-
-
-    private function getFrameTimestamp(SubtitleCue $cue, float $previousEnd, FrameRate $frameRate): string
-    {
-        $startFrame = $frameRate->secondsToFrames($cue->getStart());
-        $wait       = $startFrame - $frameRate->secondsToFrames($previousEnd);
-        $duration   = $frameRate->secondsToFrames($cue->getEnd()) - $startFrame;
-
-        return $wait . " " . $duration . StringHelpers::UNIX_LINE_ENDING;
     }
 }

@@ -7,6 +7,7 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Timecode;
 
 class SubViewerFormatter extends SubtitleFormatter
 {
@@ -51,9 +52,9 @@ class SubViewerFormatter extends SubtitleFormatter
                 continue;
             }
 
-            $output .= $this->formatVersion1Time($cue->getStart()) . StringHelpers::UNIX_LINE_ENDING .
+            $output .= sprintf("[%02d:%02d:%02d]", ...Timecode::seconds($cue->getStart())) . StringHelpers::UNIX_LINE_ENDING .
                        implode("|", $lines) . StringHelpers::UNIX_LINE_ENDING .
-                       $this->formatVersion1Time($cue->getEnd()) . StringHelpers::UNIX_LINE_ENDING .
+                       sprintf("[%02d:%02d:%02d]", ...Timecode::seconds($cue->getEnd())) . StringHelpers::UNIX_LINE_ENDING .
                        StringHelpers::UNIX_LINE_ENDING;
         }
 
@@ -82,7 +83,7 @@ class SubViewerFormatter extends SubtitleFormatter
                 continue;
             }
 
-            $blocks[] = $this->formatVersion2Time($cue->getStart()) . "," . $this->formatVersion2Time($cue->getEnd()) .
+            $blocks[] = sprintf("%02d:%02d:%02d.%02d,%02d:%02d:%02d.%02d", ...Timecode::centiseconds($cue->getStart()), ...Timecode::centiseconds($cue->getEnd())) .
                         StringHelpers::UNIX_LINE_ENDING .
                         implode("[br]", $lines) . StringHelpers::UNIX_LINE_ENDING;
         }
@@ -103,26 +104,5 @@ class SubViewerFormatter extends SubtitleFormatter
         }
 
         return $header + ($subtitle->getFormatData(SubViewerParser::FORMAT)["header"] ?? $defaultHeader);
-    }
-
-
-    private function formatVersion1Time(float $seconds): string
-    {
-        $totalSeconds = (int) round($seconds);
-
-        return sprintf("[%02d:%02d:%02d]", intdiv($totalSeconds, 3600), intdiv($totalSeconds, 60) % 60, $totalSeconds % 60);
-    }
-
-
-    private function formatVersion2Time(float $seconds): string
-    {
-        $totalCentis = (int) round($seconds * 100);
-
-        $hours   = intdiv($totalCentis, 360000);
-        $minutes = intdiv($totalCentis, 6000) % 60;
-        $secs    = intdiv($totalCentis, 100) % 60;
-        $centis  = $totalCentis % 100;
-
-        return sprintf("%02d:%02d:%02d.%02d", $hours, $minutes, $secs, $centis);
     }
 }

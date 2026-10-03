@@ -8,6 +8,7 @@ use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 class WebVttFormatter extends SubtitleFormatter
 {
@@ -117,7 +118,7 @@ class WebVttFormatter extends SubtitleFormatter
 
     private function formatCue(SubtitleCue $cue, array $options): string
     {
-        $timeStamps = $this->formatTimeToString($cue->getStart()) . " --> " . $this->formatTimeToString($cue->getEnd());
+        $timeStamps = sprintf("%02d:%02d:%02d.%03d --> %02d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getStart()), ...Timecode::milliseconds($cue->getEnd()));
         $settings   = $this->formatSettings($cue);
         if ($settings !== "") {
             $timeStamps .= " " . $settings;
@@ -176,16 +177,5 @@ class WebVttFormatter extends SubtitleFormatter
         $namesWithClasses = array_map(fn (string $name): string => rtrim($name, "/"), $matches[1]);
 
         return array_values(array_unique([...self::SPAN_TAGS, ...$namesWithClasses]));
-    }
-
-
-    private function formatTimeToString(float $timeInSeconds): string
-    {
-        $hour   = str_pad(floor($timeInSeconds / 3600), 2, "0", STR_PAD_LEFT);
-        $minute = str_pad(floor($timeInSeconds / 60) % 60, 2, "0", STR_PAD_LEFT);
-        $second = str_pad(floor($timeInSeconds) % 60, 2, "0", STR_PAD_LEFT);
-        $millis = str_pad(round(($timeInSeconds - floor($timeInSeconds)) * 1000), 3, "0", STR_PAD_LEFT);
-
-        return $hour . ":" . $minute . ":" . $second . "." . $millis;
     }
 }

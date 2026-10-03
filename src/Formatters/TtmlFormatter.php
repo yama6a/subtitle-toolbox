@@ -12,6 +12,7 @@ use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 class TtmlFormatter extends SubtitleFormatter
 {
@@ -196,8 +197,8 @@ class TtmlFormatter extends SubtitleFormatter
         if ($identifier !== null && preg_match("/^[A-Za-z_][\w.-]*$/", $identifier)) {
             $attributes .= $this->formatAttribute("xml:id", $identifier);
         }
-        $attributes .= $this->formatAttribute("begin", $this->formatTime($cue->getStart()));
-        $attributes .= $this->formatAttribute("end", $this->formatTime($cue->getEnd()));
+        $attributes .= $this->formatAttribute("begin", sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getStart())));
+        $attributes .= $this->formatAttribute("end", sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getEnd())));
 
         $cueData     = $cue->getFormatData(TtmlParser::FORMAT);
         $stored      = $cueData["attributes"] ?? [];
@@ -516,19 +517,5 @@ class TtmlFormatter extends SubtitleFormatter
     private function formatAttribute(string $name, string $value): string
     {
         return " $name=\"" . htmlspecialchars($value, ENT_XML1 | ENT_COMPAT, "UTF-8") . "\"";
-    }
-
-
-    private function formatTime(float $seconds): string
-    {
-        $millis = (int) round($seconds * 1000);
-
-        return sprintf(
-            "%02d:%02d:%02d.%03d",
-            intdiv($millis, 3600000),
-            intdiv($millis, 60000) % 60,
-            intdiv($millis, 1000) % 60,
-            $millis % 1000
-        );
     }
 }

@@ -11,6 +11,7 @@ use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\EbuStlParser as Stl;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 /**
  * Writes EBU STL files as defined in EBU Tech 3264: https://tech.ebu.ch/docs/tech/tech3264.pdf
@@ -93,7 +94,7 @@ class EbuStlFormatter extends SubtitleFormatter
         $sets     = [];
         foreach ([...array_keys($cues), count($cues)] as $index) {
             while ($comments !== [] && $comments[0]["beforeCueIndex"] <= $index) {
-                $timeCode = $this->timeCode(isset($cues[$index]) ? $cues[$index]->getStart() : (end($cues) ?: new SubtitleCue())->getEnd());
+                $timeCode = $this->smpteBytes(isset($cues[$index]) ? $cues[$index]->getStart() : (end($cues) ?: new SubtitleCue())->getEnd());
                 $sets[]   = ["blocks" => $this->commentBlocks(array_shift($comments)["text"], $storedComments, $timeCode), "comment" => true];
             }
 
@@ -111,7 +112,7 @@ class EbuStlFormatter extends SubtitleFormatter
      *
      * @return list<string>
      */
-    private function commentBlocks(string $text, array &$storedComments, string $timeCode): array
+    private function commentBlocks(string $text, array &$storedComments, string $smpteBytes): array
     {
         foreach ($storedComments as $index => $stored) {
             if ($stored["text"] === $text) {
@@ -124,7 +125,7 @@ class EbuStlFormatter extends SubtitleFormatter
         $bytes = implode(chr(Stl::NEW_LINE), array_map($this->encodeCharacters(...), explode("\n", $text)));
         [$verticalPosition, $justificationCode] = $this->position(2, count(explode("\n", $text)));
 
-        return $this->textBlocks($bytes, $this->header(0, 0, $timeCode, $timeCode, $verticalPosition, $justificationCode, 1));
+        return $this->textBlocks($bytes, $this->header(0, 0, $smpteBytes, $smpteBytes, $verticalPosition, $justificationCode, 1));
     }
 
 
@@ -137,8 +138,8 @@ class EbuStlFormatter extends SubtitleFormatter
     {
         $stored    = $cue->getFormatData(Stl::FORMAT_DATA_KEY);
         $alignment = $cue->getAlignment() ?? 2;
-        $timeIn    = $this->timeCode($cue->getStart());
-        $timeOut   = $this->timeCode($cue->getEnd());
+        $timeIn    = $this->smpteBytes($cue->getStart());
+        $timeOut   = $this->smpteBytes($cue->getEnd());
 
         $position = [$stored["verticalPosition"] ?? -1, $stored["justificationCode"] ?? -1];
         if (!isset($stored["verticalPosition"], $stored["justificationCode"]) ||
@@ -228,9 +229,9 @@ class EbuStlFormatter extends SubtitleFormatter
     /**
      * Returns the 16 header bytes of a TTI block, EBU Tech 3264 table 2. The formatter writes the subtitle number later.
      */
-    private function header(int $group, int $cumulativeStatus, string $timeIn, string $timeOut, int $verticalPosition, int $justificationCode, int $commentFlag = 0): string
+    private function header(int $group, int $cumulativeStatus, string $tci, string $tco, int $verticalPosition, int $justificationCode, int $commentFlag = 0): string
     {
-        return chr($group) . "\0\0" . chr(Stl::LAST_BLOCK) . chr($cumulativeStatus) . $timeIn . $timeOut .
+        return chr($group) . "\0\0" . chr(Stl::LAST_BLOCK) . chr($cumulativeStatus) . $tci . $tco .
                chr($verticalPosition) . chr($justificationCode) . chr($commentFlag);
     }
 
@@ -259,13 +260,11 @@ class EbuStlFormatter extends SubtitleFormatter
     /**
      * Returns the 4 time code bytes hours, minutes, seconds and frames, EBU Tech 3264 section 4.3.2.
      */
-    private function timeCode(float $seconds): string
+    private function smpteBytes(float $seconds): string
     {
-        $frames = $this->frameRate->secondsToFrames(max(0.0, $seconds + $this->offset));
-        $fps    = (int) $this->frameRate->getFps();
+        [$hours, $minutes, $wholeSeconds, $frames] = Timecode::frames(max(0.0, $seconds + $this->offset), $this->frameRate);
 
-        return chr(min(intdiv($frames, 3600 * $fps), 0xFF)) . chr(intdiv($frames, 60 * $fps) % 60) .
-               chr(intdiv($frames, $fps) % 60) . chr($frames % $fps);
+        return chr(min($hours, 0xFF)) . chr($minutes) . chr($wholeSeconds) . chr($frames);
     }
 
 
