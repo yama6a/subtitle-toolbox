@@ -103,10 +103,21 @@ movie.mkv
 | `--strip-tags` | removes all formatting tags, such as `<i>` and `<font>` |
 | `--speakers MODE` | `prefix`, `dashes`, `colours` or `from-prefix`. Calls `toPrefix()`, `toDialogueDashes()`, `toColours()` or `fromPrefix()` with the default arguments, see [Speakers](text.md#speakers) |
 | `--mask-words FILE` | masks the words of a word file, as [`ProfanityFilter::apply()`](text.md#profanity-filter) does |
-| `--mask STYLE` | `stars` (default), `first-letter` or `remove` |
+| `--mask STYLE` | `stars` (default), `first-letter`, `remove`, or `none`. `none` keeps the text and only finds the times for `--mute-edl` and `--mute-filter` |
+| `--mute-edl FILE` | writes the times of the matches to an EDL file with [`MuteRange::toEdl()`](text.md#profanity-filter), for Kodi and MPlayer |
+| `--mute-filter FILE` | writes the FFmpeg volume filter of `MuteRange::toFfmpegVolumeFilter()` |
+| `--mute-padding SECONDS` | widens each time range on both sides, default 0 |
 | `--forced-only` | keeps only the [forced cues](subtitle.md#forced-cues) |
 | `--ocr` | reads the text of image cues, see [OCR](#ocr) |
 | `--ocr-database FILE` | the `.nocr` glyph database for `--ocr` |
+
+```sh
+vendor/bin/subtitle-toolbox convert movie.srt clean.srt --mask-words words.txt --mute-filter mute.txt --mute-padding 0.1
+ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
+```
+
+- **Mute files**: they need `--mask-words` and one input file. Without `--force`, the tool does not overwrite them.
+- **No match**: the filter file is empty. Then leave out `-af`.
 
 ## Fix
 Pass at least one fix. The fixes run in this order: `--common-errors`, `--unwrap`, `--merge-short`, `--split-long`, `--wrap`, `--merge-duplicates`, `--overlaps`, `--min-duration`.

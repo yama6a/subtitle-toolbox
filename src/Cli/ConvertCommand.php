@@ -7,6 +7,7 @@ use GlyphOcr\GlyphDatabase;
 use GlyphOcr\Recognizer;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
+use SubtitleToolbox\Profanity\MuteRange;
 use SubtitleToolbox\Profanity\ProfanityFilter;
 use SubtitleToolbox\Profanity\ProfanityOptions;
 use SubtitleToolbox\Speakers\SpeakerLabels;
@@ -21,11 +22,17 @@ class ConvertCommand extends WriteCommand
         "stars"        => ProfanityOptions::MASK_STARS,
         "first-letter" => ProfanityOptions::MASK_FIRST_LETTER,
         "remove"       => ProfanityOptions::MASK_REMOVE,
+        "none"         => ProfanityOptions::MASK_NONE,
     ];
+
+    private const MUTE_OPTIONS = ["mute-edl", "mute-filter", "mute-padding"];
 
     private ?GlyphDatabase $ocrDatabase = null;
 
     private ?ProfanityOptions $profanity = null;
+
+    /** @var list<MuteRange> */
+    private array $muteRanges = [];
 
 
     public function name(): string
@@ -60,7 +67,10 @@ class ConvertCommand extends WriteCommand
             Option::flag("strip-tags", "Remove all formatting tags, such as <i> and <font>, from the cue text."),
             Option::value("speakers", "MODE", "Convert <v> speaker tags: prefix (ANNA: Hi), dashes, colours, or from-prefix (ANNA: to <v Anna>)."),
             Option::value("mask-words", "FILE", "Mask the words of this file, one per line, as ProfanityFilter does. A * at the end matches any ending."),
-            Option::value("mask", "STYLE", "How --mask-words masks a word: stars, first-letter or remove. Default: stars."),
+            Option::value("mask", "STYLE", "How --mask-words masks a word: stars, first-letter, remove, or none to keep the text. Default: stars."),
+            Option::value("mute-edl", "FILE", "Write the times of the --mask-words matches to this EDL file, for Kodi and MPlayer to mute the audio."),
+            Option::value("mute-filter", "FILE", "Write an FFmpeg volume filter that mutes the --mask-words matches to this file."),
+            Option::value("mute-padding", "SECONDS", "Widen each mute range by this time on both sides. Default: 0."),
             Option::flag("forced-only", "Keep only the forced cues, for example the translations of signs."),
             Option::flag("ocr", "Read the text of image cues, for example from PGS or VobSub, with GlyphOcrEngine."),
             Option::value("ocr-database", "FILE", "The .nocr glyph database for --ocr. Default: the Latin database of php-glyph-ocr."),
@@ -110,12 +120,43 @@ class ConvertCommand extends WriteCommand
         if ($arguments->has("mask") && !$arguments->has("mask-words")) {
             self::fail("Pass --mask-words with --mask.");
         }
+        foreach (self::MUTE_OPTIONS as $option) {
+            if ($arguments->has($option) && !$arguments->has("mask-words")) {
+                self::fail("Pass --mask-words with --$option.");
+            }
+        }
+        foreach (["mute-edl", "mute-filter"] as $option) {
+            $path = $arguments->value($option);
+            if ($path === self::DASH) {
+                self::fail("The option --$option needs a file path.");
+            }
+            if ($path !== null && file_exists($path) && !$arguments->has("force")) {
+                self::fail("$path exists. Pass --force to overwrite it.");
+            }
+        }
+        if (($arguments->float("mute-padding") ?? 0) < 0) {
+            self::fail("The option --mute-padding must not be negative.");
+        }
         $words           = $arguments->value("mask-words");
-        $this->profanity = $words === null ? null : new ProfanityOptions(mask: self::MASKS[$mask], wordFile: $words);
+        $this->profanity = $words === null ? null : new ProfanityOptions(
+            mask: self::MASKS[$mask],
+            padding: $arguments->float("mute-padding") ?? 0.0,
+            wordFile: $words,
+        );
 
         $this->ocrDatabase = $arguments->has("ocr") ? self::loadOcrDatabase($arguments->value("ocr-database")) : null;
         if ($this->ocrDatabase === null && $arguments->has("ocr-database")) {
             self::fail("Pass --ocr with --ocr-database.");
+        }
+    }
+
+
+    protected function checkInputs(array $inputs, Arguments $arguments): void
+    {
+        parent::checkInputs($inputs, $arguments);
+
+        if (count($inputs) > 1 && ($arguments->has("mute-edl") || $arguments->has("mute-filter"))) {
+            self::fail("--mute-edl and --mute-filter take one input file, got " . count($inputs) . ".");
         }
     }
 
@@ -145,6 +186,21 @@ class ConvertCommand extends WriteCommand
         }
 
         parent::process($input, $subtitle, $format, $arguments, $console);
+
+        $files = [
+            "mute-edl"    => MuteRange::toEdl($this->muteRanges),
+            "mute-filter" => MuteRange::toFfmpegVolumeFilter($this->muteRanges),
+        ];
+        foreach ($files as $option => $content) {
+            $path = $arguments->value($option);
+            if ($path === null) {
+                continue;
+            }
+            if (@file_put_contents($path, $content === "" || str_ends_with($content, "\n") ? $content : "$content\n") === false) {
+                self::fail("Cannot write $path.");
+            }
+            $this->report($console, self::label($input) . " -> $path\n");
+        }
     }
 
 
@@ -158,7 +214,7 @@ class ConvertCommand extends WriteCommand
             null          => null,
         };
         if ($this->profanity !== null) {
-            ProfanityFilter::apply($subtitle, $this->profanity);
+            $this->muteRanges = ProfanityFilter::apply($subtitle, $this->profanity);
         }
         if ($arguments->has("strip-tags")) {
             $subtitle->stripFormatting();

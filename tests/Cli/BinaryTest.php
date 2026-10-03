@@ -14,6 +14,7 @@ use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Profanity\MuteRange;
 use SubtitleToolbox\Profanity\ProfanityFilter;
 use SubtitleToolbox\Profanity\ProfanityOptions;
 use SubtitleToolbox\ResegmentOptions;
@@ -401,6 +402,34 @@ class BinaryTest extends TestCase
             [2, "", "Error: Cannot read the word file missing.txt.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
             $this->runBinary(["convert", "keys.srt", "--to", "srt", "--mask-words", "missing.txt"])
         );
+    }
+
+
+    public function testMuteRanges(): void
+    {
+        copy(self::FILES . "profanity/radio.vtt", "$this->dir/radio.vtt");
+        copy(self::FILES . "profanity/words.txt", "$this->dir/words.txt");
+        $subtitle = Subtitle::parse($this->file("radio.vtt"));
+        $ranges   = ProfanityFilter::apply($subtitle, new ProfanityOptions(mask: ProfanityOptions::MASK_NONE, padding: 0.1,
+                                                                           wordFile: "$this->dir/words.txt"));
+
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "radio.vtt", "out.vtt", "--mask-words", "words.txt", "--mask", "none",
+                                                      "--mute-edl", "radio.edl", "--mute-filter", "radio.af", "--mute-padding", "0.1"]);
+        $this->assertSame([0, "radio.vtt -> out.vtt\nradio.vtt -> radio.edl\nradio.vtt -> radio.af\n", ""], [$code, $stdout, $stderr]);
+        $this->assertSame($subtitle->format(WebVttFormatter::class), $this->file("out.vtt"));
+        $this->assertSame(MuteRange::toEdl($ranges), $this->file("radio.edl"));
+        $this->assertSame("1.500 2.100 1\n6.200 6.800 1\n7.900 9.100 1\n", $this->file("radio.edl"));
+        $this->assertSame(MuteRange::toFfmpegVolumeFilter($ranges) . "\n", $this->file("radio.af"));
+
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "radio.vtt", "--to", "srt", "-o", "-", "--mask-words", "words.txt",
+                                                      "--mute-edl", "-"]);
+        $this->assertSame([2, ""], [$code, $stdout]);
+        $this->assertSame([2, "", "Error: radio.edl exists. Pass --force to overwrite it.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+                          $this->runBinary(["convert", "radio.vtt", "--to", "srt", "--mask-words", "words.txt", "--mute-edl", "radio.edl"]));
+        $this->assertSame(2, $this->runBinary(["convert", "radio.vtt", "--to", "srt", "--mute-edl", "new.edl"])[0]);
+        $this->assertSame(2, $this->runBinary(["convert", "radio.vtt", "trip.srt", "--to", "vtt", "--output-dir", "out",
+                                               "--mask-words", "words.txt", "--mute-edl", "new.edl"])[0]);
+        $this->assertFileDoesNotExist("$this->dir/new.edl");
     }
 
 
