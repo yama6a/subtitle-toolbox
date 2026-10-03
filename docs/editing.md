@@ -1,6 +1,11 @@
 # Editing cues
 
-All methods on this page change the `Subtitle` in place and return it, unless the text says otherwise.
+All methods on this page change the `Subtitle` in place and return it, unless the text says otherwise. To keep the original, edit a copy. `clone` copies the cues too:
+
+```php
+$copy = clone $subtitle;
+$copy->shift(2);                                     // $subtitle keeps its times
+```
 
 ## Retiming
 ```php

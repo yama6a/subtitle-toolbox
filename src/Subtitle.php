@@ -54,6 +54,15 @@ class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
+     * Copies the cues too, so edits on the copy leave the original unchanged.
+     */
+    public function __clone()
+    {
+        $this->cues = array_map(fn (SubtitleCue $cue): SubtitleCue => clone $cue, $this->cues);
+    }
+
+
+    /**
      * Parses $content with $parserClass, or with the parser that detectParser() returns when $parserClass is null.
      * A UTF-16 or UTF-32 BOM, or else $sourceEncoding such as "Windows-1252", sets the encoding to convert from.
      * A parser instance in place of the class name keeps its settings, such as lenient mode, and its warnings.
