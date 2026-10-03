@@ -6,6 +6,7 @@ use Generator;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
 
 class WebVttStreamReader implements CueStreamReader
@@ -53,7 +54,7 @@ class WebVttStreamReader implements CueStreamReader
 
     public function read($stream): Generator
     {
-        $this->parser   = (new WebVttParser())->setLenient($this->lenient);
+        $this->parser   = (new WebVttParser())->useOptions(new ReadOptions(lenient: $this->lenient));
         $this->header   = [];
         $this->warnings = [];
         $seenCue        = false;

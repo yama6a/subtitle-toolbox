@@ -6,7 +6,6 @@ use DOMDocument;
 use DOMElement;
 use DOMNode;
 use DOMText;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -15,8 +14,6 @@ use SubtitleToolbox\SubtitleCue;
 class SamiParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = "smi";
-
-    public const DEFAULT_LAST_CUE_DURATION = 10;
 
     private const STYLE_TAGS = ["b" => "b", "i" => "i", "u" => "u", "s" => "s", "strike" => "s"];
 
@@ -30,26 +27,8 @@ class SamiParser extends SubtitleParser
 
     private const NBSP = "\u{00A0}";
 
-    private ?string $languageClass;
 
-    private float $lastCueDuration;
-
-
-    /**
-     * Creates a parser that reads the given language class, or the first class of the STYLE block when null.
-     */
-    public function __construct(?string $languageClass = null, float $lastCueDuration = self::DEFAULT_LAST_CUE_DURATION)
-    {
-        if ($lastCueDuration < 0) {
-            throw new InvalidArgumentException("The last cue duration must not be negative!");
-        }
-
-        $this->languageClass   = $languageClass;
-        $this->lastCueDuration = $lastCueDuration;
-    }
-
-
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $rawSubtitle    = StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle));
@@ -109,7 +88,7 @@ class SamiParser extends SubtitleParser
         }
 
         if ($openCue !== null) {
-            $subtitle->addCue($openCue->setEnd($openCue->getStart() + $this->lastCueDuration), false);
+            $subtitle->addCue($openCue->setEnd($openCue->getStart() + $this->options->lastCueDuration), false);
         }
 
         return $subtitle->reIndexCues();
@@ -321,10 +300,10 @@ class SamiParser extends SubtitleParser
             }
         }
 
-        if ($this->languageClass !== null) {
-            $key = strtolower($this->languageClass);
+        if ($this->options->language !== null) {
+            $key = strtolower($this->options->language);
             if (!isset($classes[$key]) && !isset($used[$key])) {
-                throw new ParsingException("The SAMI file has no class {$this->languageClass}.");
+                throw new ParsingException("The SAMI file has no class {$this->options->language}.");
             }
 
             return $classes[$key]["name"] ?? $used[$key];

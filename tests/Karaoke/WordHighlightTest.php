@@ -8,6 +8,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\AssOptions;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -41,8 +42,8 @@ class WordHighlightTest extends TestCase
 
     private static function whisper(): Subtitle
     {
-        return (new WhisperJsonParser([WhisperJsonParser::OPTION_WORD_TIMESTAMPS => true]))
-            ->parse(file_get_contents(self::FILES . "whisper/real/openai_whisper_word_timestamps.json"));
+        return (new WhisperJsonParser())
+            ->parse(file_get_contents(self::FILES . "whisper/real/openai_whisper_word_timestamps.json"), new ReadOptions(wordTimestamps: true));
     }
 
 

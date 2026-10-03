@@ -2,7 +2,6 @@
 
 namespace SubtitleToolbox\Parsers;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\ParseWarning;
@@ -16,8 +15,6 @@ class SubViewerParser extends SubtitleParser
 
     public const START_SCRIPT = "******** START SCRIPT ********";
 
-    public const DEFAULT_LAST_CUE_DURATION = 10;
-
     /** Maps SubViewer header tags to the shared metadata keys of Subtitle. */
     public const METADATA_TAGS = [
         "TITLE"  => Subtitle::METADATA_TITLE,
@@ -30,23 +27,8 @@ class SubViewerParser extends SubtitleParser
     private const STYLE_TAGS           = ["[COLF]", "[SIZE]", "[FONT]", "[STYLE]"];
     private const VERSION_2_BLOCK_TAGS = ["INFORMATION", "END INFORMATION", "SUBTITLE"];
 
-    private float $lastCueDuration;
 
-
-    /**
-     * Creates a parser that ends a SubViewer 1 last cue without an end line the given number of seconds after its start.
-     */
-    public function __construct(float $lastCueDuration = self::DEFAULT_LAST_CUE_DURATION)
-    {
-        if ($lastCueDuration < 0) {
-            throw new InvalidArgumentException("The last cue duration must not be negative!");
-        }
-
-        $this->lastCueDuration = $lastCueDuration;
-    }
-
-
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
@@ -136,7 +118,7 @@ class SubViewerParser extends SubtitleParser
 
         foreach ($cues as $idx => $cue) {
             if (!$hasEndLine[$idx]) {
-                $cue->setEnd(isset($cues[$idx + 1]) ? $cues[$idx + 1]->getStart() : $cue->getStart() + $this->lastCueDuration);
+                $cue->setEnd(isset($cues[$idx + 1]) ? $cues[$idx + 1]->getStart() : $cue->getStart() + $this->options->lastCueDuration);
             }
 
             $subtitle->addCue($cue, false);

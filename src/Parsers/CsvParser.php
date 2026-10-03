@@ -19,22 +19,6 @@ class CsvParser extends SubtitleParser
     private CsvColumns $columns;
 
 
-    /**
-     * Reads an RFC 4180 table. A null delimiter is detected from the first line. A cue without an end time ends at
-     * the next start, and the last such cue lasts $lastCueDuration seconds.
-     */
-    public function __construct(
-        ?CsvColumns $columns = null,
-        private readonly ?string $delimiter = null,
-        private readonly float $lastCueDuration = 10,
-    ) {
-        $this->columns = $columns ?? new CsvColumns();
-        if ($delimiter !== null) {
-            self::checkDelimiter($delimiter);
-        }
-    }
-
-
     public static function checkDelimiter(mixed $delimiter): void
     {
         if (!in_array($delimiter, self::DELIMITERS, true)) {
@@ -43,12 +27,18 @@ class CsvParser extends SubtitleParser
     }
 
 
-    public function parse(string $rawSubtitle): Subtitle
+    protected static function formatOptionsClass(): string
     {
-        $this->warnings = [];
-        $content        = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $delimiter      = $this->delimiter ?? self::detectDelimiter($content);
-        $records        = array_filter(
+        return CsvReadOptions::class;
+    }
+
+
+    protected function read(string $rawSubtitle): Subtitle
+    {
+        $this->columns = $this->formatOptions()->columns ?? new CsvColumns();
+        $content       = StringHelpers::removeUtf8Bom($rawSubtitle);
+        $delimiter     = $this->formatOptions()->delimiter ?? self::detectDelimiter($content);
+        $records       = array_filter(
             self::records($content, $delimiter),
             fn (array $record): bool => array_filter($record[1], fn (string $cell): bool => trim($cell) !== "") !== []
         );
@@ -290,7 +280,7 @@ class CsvParser extends SubtitleParser
                     break;
                 }
             }
-            $cue->setEnd($next ?? $cue->getStart() + $this->lastCueDuration);
+            $cue->setEnd($next ?? $cue->getStart() + $this->options->lastCueDuration);
         }
     }
 }

@@ -6,6 +6,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\SamiParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -32,7 +33,7 @@ class SamiFormatterTest extends TestCase
     #[DataProvider("realFiles")]
     public function testRealFileRoundTrips(string $file, ?string $class): void
     {
-        $subtitle = (new SamiParser($class))->parse(file_get_contents(self::DIR . $file));
+        $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . $file), new ReadOptions(language: $class));
         $output   = $subtitle->toString(Format::Sami);
         $reparsed = Subtitle::fromString($output, Format::Sami);
 
@@ -44,7 +45,7 @@ class SamiFormatterTest extends TestCase
 
     public function testWritesTheChosenClassOnly(): void
     {
-        $output = (new SamiParser("FRCC"))->parse(file_get_contents(self::DIR . "multi_language.smi"))->toString(Format::Sami);
+        $output = (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(language: "FRCC"))->toString(Format::Sami);
 
         $this->assertSame(
             "<SAMI>\n<HEAD>\n<TITLE>Bakery Tour</TITLE>\n<STYLE TYPE=\"text/css\">\n<!--\n" .
@@ -107,7 +108,7 @@ class SamiFormatterTest extends TestCase
         end($cues)->setLines(["<i>End</i> of the report"]);
 
         $this->assertStringContainsString(
-            "<SYNC Start=73000><P Class=ENUSCC><i>End</i> of the report\n<SYNC Start=83000><P Class=ENUSCC>&nbsp;\n",
+            "<SYNC Start=73000><P Class=ENUSCC><i>End</i> of the report\n<SYNC Start=78000><P Class=ENUSCC>&nbsp;\n",
             $subtitle->toString(Format::Sami)
         );
     }

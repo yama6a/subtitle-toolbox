@@ -18,19 +18,8 @@ class MicroDvdParser extends SubtitleParser
 
     private const CUE_REGEX = '/^\{(\d+)\}\{(\d+)\}(.*)$/';
 
-    protected ?float $frameRate;
 
-
-    /**
-     * Uses the given frame rate in place of the frame rate in a {1}{1}<fps> first line.
-     */
-    public function __construct(?float $frameRate = null)
-    {
-        $this->frameRate = $frameRate;
-    }
-
-
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
@@ -43,7 +32,7 @@ class MicroDvdParser extends SubtitleParser
             $rawLines = $this->skipLinesWithoutFrames($rawLines);
         }
 
-        $frameRate = $this->frameRate;
+        $frameRate = $this->options->fps;
         $firstLine = reset($rawLines);
         if ($firstLine !== false && preg_match('/^\{1\}\{1\}(\d+(?:\.\d+)?)$/', $firstLine, $matches)) {
             $frameRate ??= (float) $matches[1];

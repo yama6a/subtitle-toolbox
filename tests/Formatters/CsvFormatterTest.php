@@ -10,6 +10,8 @@ use SubtitleToolbox\Formatters\Options\CsvOptions;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\CsvColumns;
 use SubtitleToolbox\Parsers\CsvParser;
+use SubtitleToolbox\Parsers\CsvReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -82,8 +84,7 @@ class CsvFormatterTest extends TestCase
     public function testFrameRateOptionWinsOverTheParsedFrameRate(): void
     {
         $file     = file_get_contents(__DIR__ . "/../files/csv/real/dubbing_script.csv");
-        $parser   = new CsvParser(new CsvColumns(start: "Start TC", text: "Text", speaker: "Character", frameRate: 25));
-        $subtitle = $parser->parse($file);
+        $subtitle = (new CsvParser())->parse($file, new ReadOptions(format: new CsvReadOptions(new CsvColumns(start: "Start TC", text: "Text", speaker: "Character", frameRate: 25))));
 
         $this->assertStringContainsString("\n10:00:05:19,BEN,- I have one.,\n",
                                           $subtitle->toString(Format::Csv, new WriteOptions(format: new CsvOptions(frameRate: 24))));
@@ -102,7 +103,7 @@ class CsvFormatterTest extends TestCase
 
     public function testAddsASpeakerColumnToAParsedTableWithoutOne(): void
     {
-        $subtitle = (new CsvParser())->parse("Start;Text\n1;a\n");
+        $subtitle = (new CsvParser())->parse("Start;Text\n1;a\n", new ReadOptions());
         $subtitle->getCues()[0]->setLines("<v Lena>a");
 
         $this->assertSame("Start;speaker;Text\n1;Lena;a\n", $subtitle->toString(Format::Csv, new WriteOptions(bom: false)));
@@ -112,7 +113,7 @@ class CsvFormatterTest extends TestCase
     public function testWritesATableWithoutAHeaderRowBack(): void
     {
         $content  = "a\t1\t2\textra\nb\t3\t4\t\n";
-        $subtitle = (new CsvParser(new CsvColumns(start: 1, end: 2, text: 0, header: false)))->parse($content);
+        $subtitle = (new CsvParser())->parse($content, new ReadOptions(format: new CsvReadOptions(new CsvColumns(start: 1, end: 2, text: 0, header: false))));
 
         $this->assertSame($content, $subtitle->toString(Format::Csv, new WriteOptions(bom: false)));
     }

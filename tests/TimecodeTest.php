@@ -9,10 +9,9 @@ use SubtitleToolbox\Formatters\Options\CsvOptions;
 use SubtitleToolbox\Formatters\Options\IttOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
 use SubtitleToolbox\Parsers\CsvColumns;
-use SubtitleToolbox\Parsers\CsvParser;
-use SubtitleToolbox\Parsers\MicroDvdParser;
-use SubtitleToolbox\Parsers\PodcastTranscriptParser;
-use SubtitleToolbox\Parsers\SubtitleParser;
+use SubtitleToolbox\Parsers\CsvReadOptions;
+use SubtitleToolbox\Parsers\PodcastTranscriptReadOptions;
+use SubtitleToolbox\ReadOptions;
 
 class TimecodeTest extends TestCase
 {
@@ -91,25 +90,25 @@ class TimecodeTest extends TestCase
 
 
     /**
-     * @return array<string, array{string, float, array<string, mixed>, bool, 4?: SubtitleParser}>
+     * @return array<string, array{string, float, array<string, mixed>, bool, 4?: ReadOptions}>
      */
     public static function textFormats(): array
     {
         return [
             "ass"                => ["ass", 0.01, new WriteOptions(), true],
             "csv"                => ["csv", 0.001, new WriteOptions(), true],
-            "csv frames"         => ["csv", 1 / 25, new WriteOptions(format: new CsvOptions(timeFormat: CsvTimeFormat::Frames, frameRate: 25)), true, new CsvParser(new CsvColumns(frameRate: 25))],
+            "csv frames"         => ["csv", 1 / 25, new WriteOptions(format: new CsvOptions(timeFormat: CsvTimeFormat::Frames, frameRate: 25)), true, new ReadOptions(format: new CsvReadOptions(new CsvColumns(frameRate: 25)))],
             "ffmeta"             => ["ffmeta", 0.001, new WriteOptions(), true],
             "html"               => ["html", 1, new WriteOptions(), false],
             "itt"                => ["itt", 1 / 25, new WriteOptions(format: new IttOptions(frameRate: 25)), true],
             "json"               => ["json", 0.001, new WriteOptions(), true],
             "lrc"                => ["lrc", 0.01, new WriteOptions(), false],
-            "microdvd"           => ["microdvd", 1 / 25, new WriteOptions(format: new MicroDvdOptions(frameRate: 25)), true, new MicroDvdParser(25)],
+            "microdvd"           => ["microdvd", 1 / 25, new WriteOptions(format: new MicroDvdOptions(frameRate: 25)), true, new ReadOptions(fps: 25)],
             "mpl2"               => ["mpl2", 0.1, new WriteOptions(), true],
             "mpsub"              => ["mpsub", 0.001, new WriteOptions(), true],
             "ogm"                => ["ogm", 0.001, new WriteOptions(), false],
             "podcast"            => ["podcast", 0.001, new WriteOptions(), true],
-            "podcast-transcript" => ["podcast-transcript", 0.001, new WriteOptions(), true, new PodcastTranscriptParser([PodcastTranscriptParser::OPTION_KEEP_SEGMENTS => true])],
+            "podcast-transcript" => ["podcast-transcript", 0.001, new WriteOptions(), true, new ReadOptions(format: new PodcastTranscriptReadOptions(keepSegments: true))],
             "sami"               => ["sami", 0.001, new WriteOptions(), true],
             "sbv"                => ["sbv", 0.001, new WriteOptions(), true],
             "scc"                => ["scc", 1001 / 30000, new WriteOptions(), true],
@@ -125,14 +124,14 @@ class TimecodeTest extends TestCase
 
 
     #[DataProvider("textFormats")]
-    public function testCueAtTheEndOfASecondParsesBackWithinOneUnit(string $format, float $unit, WriteOptions $options, bool $writesEnd, ?SubtitleParser $parser = null): void
+    public function testCueAtTheEndOfASecondParsesBackWithinOneUnit(string $format, float $unit, WriteOptions $options, bool $writesEnd, ReadOptions $readOptions = new ReadOptions()): void
     {
         $subtitle = new Subtitle();
         $subtitle->addCue(new SubtitleCue(1.996, 4, "One"));
         $subtitle->addCue(new SubtitleCue(59.9996, 62, "Two"));
 
         $output = $subtitle->toString(Format::from($format), $options);
-        $parsed = array_values(($parser?->parse($output) ?? Subtitle::fromString($output, Format::from($format)))->getCues());
+        $parsed = array_values(Subtitle::fromString($output, Format::from($format), $readOptions)->getCues());
 
         $this->assertCount(2, $parsed, $output);
         foreach ([[1.996, 4], [59.9996, 62]] as $index => [$start, $end]) {

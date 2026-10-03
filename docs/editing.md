@@ -105,7 +105,7 @@ $report->cuesAfter;    // 3
 Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::ByWords, maxWordGap: 0.6));
 ```
 
-`ResegmentMode::ByWords` drops the cue boundaries and builds new cues from the word timestamps, for example from `WhisperJsonParser::OPTION_WORD_TIMESTAMPS`. Each cue then holds one sentence, or as much of it as fits.
+`ResegmentMode::ByWords` drops the cue boundaries and builds new cues from the word timestamps, for example from Whisper JSON read with `ReadOptions::$wordTimestamps`. Each cue then holds one sentence, or as much of it as fits.
 
 | Option | Default | Meaning |
 |:--- |:--- |:--- |

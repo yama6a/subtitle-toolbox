@@ -53,7 +53,7 @@ class SubViewerRealFilesTest extends TestCase
                 "subviewer1_delay.sub",
                 4,
                 [3.0, 6.0, "Sunny in the north\nand cloudy in the south."],
-                [17.0, 27.0, "Back at eight with the news."],
+                [17.0, 22.0, "Back at eight with the news."],
                 false,
             ],
         ];
@@ -142,7 +142,7 @@ class SubViewerRealFilesTest extends TestCase
         $subtitle = $this->parseFile("subviewer1_delay.sub");
 
         $this->assertSame(
-            [[3.0, 6.0], [8.0, 11.0], [11.0, 14.0], [17.0, 27.0]],
+            [[3.0, 6.0], [8.0, 11.0], [11.0, 14.0], [17.0, 22.0]],
             array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues())
         );
         $this->assertSame(["version" => 1, "header" => ["DELAY" => "0"]], $subtitle->getFormatData("subviewer"));

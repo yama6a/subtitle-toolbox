@@ -6,6 +6,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\LyricsParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 class LyricsParserTest extends TestCase
@@ -204,7 +205,7 @@ class LyricsParserTest extends TestCase
         $this->assertCount(3, $cues);
         $this->assertSame([12.0, 17.2, "Chorus"], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $this->assertSame([17.2, 75.3, "Verse"], [$cues[1]->getStart(), $cues[1]->getEnd(), $cues[1]->getText()]);
-        $this->assertSame([75.3, 85.3, "Chorus"], [$cues[2]->getStart(), $cues[2]->getEnd(), $cues[2]->getText()]);
+        $this->assertSame([75.3, 80.3, "Chorus"], [$cues[2]->getStart(), $cues[2]->getEnd(), $cues[2]->getText()]);
     }
 
 
@@ -251,29 +252,21 @@ class LyricsParserTest extends TestCase
     }
 
 
-    public function testLastCueLastsTenSecondsByDefault(): void
+    public function testLastCueLastsFiveSecondsByDefault(): void
     {
         $subtitle = Subtitle::fromString("[00:01.00] First
 ", Format::Lyrics);
 
-        $this->assertSame(11.0, $subtitle->getCues()[0]->getEnd());
+        $this->assertSame(6.0, $subtitle->getCues()[0]->getEnd());
     }
 
 
     public function testLastCueDurationIsAnOption(): void
     {
-        $subtitle = (new LyricsParser(2.5))->parse("[00:01.00] First
-");
+        $subtitle = (new LyricsParser())->parse("[00:01.00] First
+", new ReadOptions(lastCueDuration: 2.5));
 
         $this->assertSame(3.5, $subtitle->getCues()[0]->getEnd());
-    }
-
-
-    public function testNegativeLastCueDurationThrows(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-
-        new LyricsParser(-1);
     }
 
 
@@ -336,7 +329,7 @@ class LyricsParserTest extends TestCase
     {
         return [
             "justan-1"             => [
-                "justan-1.lrc", 42, [0.0, 1.0, "火车七点出发"], [202.98, 212.98, "烤箱闻起来很香"],
+                "justan-1.lrc", 42, [0.0, 1.0, "火车七点出发"], [202.98, 207.98, "烤箱闻起来很香"],
             ],
             "justan-4"             => [
                 "justan-4.lrc", 34, [0.0, 4.0, "火车七点出发"], [202.0, 207.0, "天气准时到站　站台下了一整天"],
@@ -345,22 +338,22 @@ class LyricsParserTest extends TestCase
                 "lrc-maker-nami.lrc", 39, [0.0, 1.0, "電車は七時に出る：example"], [235.536, 243.353, "——天気は晴れです、駅は少し混む。"],
             ],
             "mantas-done-lrc"      => [
-                "mantas-done-lrc.lrc", 5, [8.62, 9.64, "Trains run early"], [22.63, 32.63, "Rain comes later"],
+                "mantas-done-lrc.lrc", 5, [8.62, 9.64, "Trains run early"], [22.63, 27.63, "Rain comes later"],
             ],
             "subsrt-sample"        => [
-                "subsrt-sample.lrc", 6, [12.0, 17.2, "Line 1 about the train"], [29.02, 39.02, "Line 6 about the bread"],
+                "subsrt-sample.lrc", 6, [12.0, 17.2, "Line 1 about the train"], [29.02, 34.02, "Line 6 about the bread"],
             ],
             "handwritten-core"     => [
                 "handwritten-core.lrc",
                 5,
                 [5.0, 9.4, "The train leaves at seven"],
-                [32.8, 42.8, "Ring the bell, ring the bell"],
+                [32.8, 37.8, "Ring the bell, ring the bell"],
             ],
             "handwritten-enhanced" => [
                 "handwritten-enhanced.lrc",
                 3,
                 [3.0, 5.9, "<00:00:03.000> Slow <00:00:03.550> river <00:00:04.400> runs"],
-                [9.6, 19.6, "<00:00:09.600> Into <00:00:10.100> the <00:00:10.650> sea"],
+                [9.6, 14.6, "<00:00:09.600> Into <00:00:10.100> the <00:00:10.650> sea"],
             ],
         ];
     }

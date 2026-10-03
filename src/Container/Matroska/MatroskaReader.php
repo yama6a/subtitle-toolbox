@@ -9,6 +9,7 @@ use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Streaming\Streams;
 use SubtitleToolbox\Subtitle;
@@ -172,10 +173,10 @@ final class MatroskaReader
         $blocks       = $this->readBlocks($trackNumber);
 
         $subtitle = match ($track->codecId) {
-            self::CODEC_PGS    => (new PgsParser())->parse($this->pgsStream($blocks)),
-            self::CODEC_WEBVTT => (new WebVttParser())->parse($this->webVttFile($codecPrivate, $this->withEnds($blocks, $data))),
-            self::CODEC_SUBRIP => (new SubRipParser())->parse($this->subRipFile($this->withEnds($blocks, $data))),
-            default            => (new AssParser())->parse($this->assFile($track, $codecPrivate, $this->withEnds($blocks, $data))),
+            self::CODEC_PGS    => (new PgsParser())->parse($this->pgsStream($blocks), new ReadOptions()),
+            self::CODEC_WEBVTT => (new WebVttParser())->parse($this->webVttFile($codecPrivate, $this->withEnds($blocks, $data)), new ReadOptions()),
+            self::CODEC_SUBRIP => (new SubRipParser())->parse($this->subRipFile($this->withEnds($blocks, $data)), new ReadOptions()),
+            default            => (new AssParser())->parse($this->assFile($track, $codecPrivate, $this->withEnds($blocks, $data)), new ReadOptions()),
         };
 
         $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $track->language);

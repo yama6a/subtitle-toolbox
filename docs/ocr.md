@@ -33,16 +33,16 @@ Blu-ray discs and many MKV files store subtitles as PGS bitmaps in `.sup` files.
 
 ```php
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Parsers\PgsParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.sup'), Format::Pgs);
-$subtitle = (new PgsParser(3.0))->parse(file_get_contents('movie.sup'));   // the last cue lasts 3 s, not 5 s
+$subtitle = Subtitle::fromString(file_get_contents('movie.sup'), Format::Pgs, new ReadOptions(lastCueDuration: 3));   // the last cue lasts 3 s, not 5 s
 $subtitle->shift(-1.5)->convertFrameRate(25, 23.976);
 file_put_contents('movie.synced.sup', $subtitle->toString(Format::Pgs));
 ```
 
-- **Cues**: each display set that shows objects gives one cue. It ends at the next display set. A display set that repeats the same image does not start a new cue. A last cue that no later display set ends lasts 5 s, or the constructor argument in seconds.
+- **Cues**: each display set that shows objects gives one cue. It ends at the next display set. A display set that repeats the same image does not start a new cue. A last cue that no later display set ends lasts `ReadOptions::$lastCueDuration`, 5 s by default.
 - **Image**: one PNG covers all objects of the display set on a transparent background. The parser applies cropping, windows and palette updates.
 - **Forced**: `forced` in the image data is true when at least one object of the display set has the forced flag.
 - **Alignment**: an image whose center is in the top third of the screen gets alignment 8.
@@ -57,19 +57,23 @@ file_put_contents('movie.synced.sup', $subtitle->toString(Format::Pgs));
 VobSub is the subtitle format of DVD rips. It is a pair of files. The `.idx` text file holds the palette, the screen size, the tracks and their timestamps. The `.sub` file holds the bitmaps.
 
 ```php
-use SubtitleToolbox\Parsers\VobSubParser;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\VobSubReadOptions;
+use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
 
-$idx      = file_get_contents('movie.idx');
-$subtitle = (new VobSubParser($idx))->parse(file_get_contents('movie.sub'));         // first track
-$subtitle = (new VobSubParser($idx, 'de'))->parse(file_get_contents('movie.sub'));   // first track with "id: de"
-$subtitle = (new VobSubParser($idx, 1))->parse(file_get_contents('movie.sub'));      // track with "index: 1"
+$sub      = file_get_contents('movie.sub');
+$idx      = new VobSubReadOptions(file_get_contents('movie.idx'));
+$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: $idx));                   // first track
+$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(language: 'de', format: $idx));   // first track with "id: de"
+$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(track: 1, format: $idx));         // track with "index: 1"
 
 $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);   // "de", from the id line
 ```
 
-- **Parse**: call the parser directly. `Subtitle::fromString()` cannot pass the `.idx` content to the parser, so it throws `InvalidParserException` for `Format::VobSub`. For the same reason, format detection does not know VobSub. The command line tool takes the `.idx` file as input and reads the `.sub` file next to it.
+- **Parse**: pass the `.sub` content and a `VobSubReadOptions` with the `.idx` content. Without it, the parser throws `InvalidArgumentException`. Format detection does not know VobSub, because it sees only one file. The command line tool takes the `.idx` file as input and reads the `.sub` file next to it.
 - **Cues**: the image has the size and the position of the display area, on a screen of the `.idx` size. A subpicture with the forced start command sets `forced`.
-- **Times**: a cue starts at its `timestamp`, plus the `delay` lines of its track. It ends at the stop command of the subpicture. A subpicture without a stop command ends at the next one, at most 5 s later.
+- **Times**: a cue starts at its `timestamp`, plus the `delay` lines of its track. It ends at the stop command of the subpicture. A subpicture without a stop command ends at the next one, at most `ReadOptions::$lastCueDuration` later, 5 s by default.
 - **Colours**: the `.idx` palette and a `custom colors: ON` line apply.
 - **Limits**: the parser reads one image per subpicture. Colour and contrast changes after the start command do not apply. The parser ignores the `org`, `scale`, `align`, `fadein/out` and `time offset` player settings.
 - **No formatter**: convert VobSub to PGS with `PgsFormatter`, or to text after OCR.

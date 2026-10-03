@@ -48,7 +48,7 @@ class EncodingTest extends TestCase
         string $file, string $encoding, Format $format, array $first, array $last
     ): void {
         $raw      = file_get_contents(self::DIR . $file);
-        $subtitle = Subtitle::fromString($raw, $format, $encoding);
+        $subtitle = Subtitle::fromString($raw, $format, new ReadOptions(encoding: $encoding));
         $cues     = $subtitle->getCues();
 
         $this->assertCount(3, $cues);
@@ -61,9 +61,9 @@ class EncodingTest extends TestCase
     #[DataProvider("legacyFiles")]
     public function testFormatDetectionWorksOnTheConvertedContent(string $file, string $encoding, Format $format): void
     {
-        $detected = Subtitle::fromStringAutoDetectFormat(file_get_contents(self::DIR . $file), $encoding);
+        $detected = Subtitle::fromStringAutoDetectFormat(file_get_contents(self::DIR . $file), new ReadOptions(encoding: $encoding));
 
-        $this->assertEquals(Subtitle::fromString(file_get_contents(self::DIR . $file), $format, $encoding), $detected);
+        $this->assertEquals(Subtitle::fromString(file_get_contents(self::DIR . $file), $format, new ReadOptions(encoding: $encoding)), $detected);
     }
 
 
@@ -71,8 +71,8 @@ class EncodingTest extends TestCase
     {
         $raw = file_get_contents(self::DIR . "korean-cp949.smi");
 
-        $this->assertSame("기차 안내", Subtitle::fromString($raw, Format::Sami, "CP949")->getMetadata(Subtitle::METADATA_TITLE));
-        $this->assertSame("똠방각하가 왔습니다.", Subtitle::fromString($raw, Format::Sami, "CP949")->getCues()[1]->getText());
+        $this->assertSame("기차 안내", Subtitle::fromString($raw, Format::Sami, new ReadOptions(encoding: "CP949"))->getMetadata(Subtitle::METADATA_TITLE));
+        $this->assertSame("똠방각하가 왔습니다.", Subtitle::fromString($raw, Format::Sami, new ReadOptions(encoding: "CP949"))->getCues()[1]->getText());
 
         $this->expectException(ParsingException::class);
         Subtitle::fromString($raw, Format::Sami);
@@ -97,7 +97,7 @@ class EncodingTest extends TestCase
         $this->assertSame([1.0, 3.0, "Grüße aus Köln!"], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $this->assertSame([7.0, 9.0, "<b>Ende</b>"], [$cues[2]->getStart(), $cues[2]->getEnd(), $cues[2]->getText()]);
         $this->assertSame("Saved with Notepad", $subtitle->getComments()[0]["text"]);
-        $this->assertEquals($subtitle, Subtitle::fromString($raw, Format::WebVtt, "Windows-1252"));
+        $this->assertEquals($subtitle, Subtitle::fromString($raw, Format::WebVtt, new ReadOptions(encoding: "Windows-1252")));
 
         $output = $subtitle->toString(Format::WebVtt, self::windowsOutput());
         $again  = Subtitle::fromString("\xFF\xFE" . iconv("UTF-8", "UTF-16LE", $output), Format::WebVtt);

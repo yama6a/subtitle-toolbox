@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -54,9 +55,9 @@ class CloudSpeechParsersTest extends TestCase
 
     public function testWritesWordTimestampsWithTheOption(): void
     {
-        $parser = new AwsTranscribeParser([AwsTranscribeParser::OPTION_WORD_TIMESTAMPS => true]);
+        $parser = new AwsTranscribeParser();
 
-        $this->assertSame("<00:00:00.040>Hello <00:00:00.510>world.", $parser->parse(self::ISSUE_EXAMPLE)->getCues()[0]->getText());
+        $this->assertSame("<00:00:00.040>Hello <00:00:00.510>world.", $parser->parse(self::ISSUE_EXAMPLE, new ReadOptions(wordTimestamps: true))->getCues()[0]->getText());
     }
 
 
@@ -82,7 +83,7 @@ class CloudSpeechParsersTest extends TestCase
     #[DataProvider("groupings")]
     public function testGroupsWordsIntoCues(array $words, array $expected): void
     {
-        $this->assertSame($expected, self::cues((new AssemblyAiParser())->parse(self::assemblyAiWords($words))));
+        $this->assertSame($expected, self::cues((new AssemblyAiParser())->parse(self::assemblyAiWords($words), new ReadOptions())));
     }
 
 
@@ -90,9 +91,9 @@ class CloudSpeechParsersTest extends TestCase
     {
         $json = self::assemblyAiWords([["Hi.", 0, 300, "O'Neil"], ["Bye.", 400, 700, "B"]]);
 
-        $this->assertSame([[0.0, 0.3, "Hi."], [0.4, 0.7, "Bye."]], self::cues((new AssemblyAiParser())->parse($json)));
+        $this->assertSame([[0.0, 0.3, "Hi."], [0.4, 0.7, "Bye."]], self::cues((new AssemblyAiParser())->parse($json, new ReadOptions())));
         $this->assertSame([[0.0, 0.3, "<v O'Neil>Hi."], [0.4, 0.7, "<v B>Bye."]],
-                          self::cues((new AssemblyAiParser([AssemblyAiParser::OPTION_SPEAKER_VOICES => true]))->parse($json)));
+                          self::cues((new AssemblyAiParser())->parse($json, new ReadOptions(speakerVoices: true))));
     }
 
 
@@ -100,13 +101,13 @@ class CloudSpeechParsersTest extends TestCase
     {
         $json = self::assemblyAiWords([["<b>", 0, 300], ["&", 300, 600]]);
 
-        $this->assertSame([[0.0, 0.6, "&lt;b&gt; &amp;"]], self::cues((new AssemblyAiParser())->parse($json)));
+        $this->assertSame([[0.0, 0.6, "&lt;b&gt; &amp;"]], self::cues((new AssemblyAiParser())->parse($json, new ReadOptions())));
     }
 
 
     public function testAssemblyAiConvertsTheLanguageCodeToBcp47(): void
     {
-        $parse = fn (string $code): ?string => (new AssemblyAiParser())->parse('{"language_code": "' . $code . '", "words": []}')
+        $parse = fn (string $code): ?string => (new AssemblyAiParser())->parse('{"language_code": "' . $code . '", "words": []}', new ReadOptions())
                                                                        ->getMetadata(Subtitle::METADATA_LANGUAGE);
 
         $this->assertSame(["en-US", "en-AU", "de"], [$parse("en_us"), $parse("en_au"), $parse("de")]);
@@ -120,7 +121,7 @@ class CloudSpeechParsersTest extends TestCase
                 '{"type": "pronunciation", "start_time": "1.0", "end_time": "1.5", "alternatives": [{"content": "Vienes"}]},' .
                 '{"type": "punctuation", "alternatives": [{"content": "?"}]}]}}';
 
-        $this->assertSame([[1.0, 1.5, "\u{bf}Vienes?"]], self::cues((new AwsTranscribeParser())->parse($json)));
+        $this->assertSame([[1.0, 1.5, "\u{bf}Vienes?"]], self::cues((new AwsTranscribeParser())->parse($json, new ReadOptions())));
     }
 
 
@@ -129,9 +130,9 @@ class CloudSpeechParsersTest extends TestCase
         $json = '{"results": {"transcripts": [], "items": [' .
                 '{"type": "pronunciation", "start_time": "0.1", "end_time": "0.4", "speaker_label": "spk_0", "alternatives": [{"content": "Yes"}]},' .
                 '{"type": "pronunciation", "start_time": "0.5", "end_time": "0.9", "speaker_label": "spk_1", "alternatives": [{"content": "No"}]}]}}';
-        $parser = new AwsTranscribeParser([AwsTranscribeParser::OPTION_SPEAKER_VOICES => true]);
+        $parser = new AwsTranscribeParser();
 
-        $this->assertSame([[0.1, 0.4, "<v spk_0>Yes"], [0.5, 0.9, "<v spk_1>No"]], self::cues($parser->parse($json)));
+        $this->assertSame([[0.1, 0.4, "<v spk_0>Yes"], [0.5, 0.9, "<v spk_1>No"]], self::cues($parser->parse($json, new ReadOptions(speakerVoices: true))));
     }
 
 
@@ -140,7 +141,7 @@ class CloudSpeechParsersTest extends TestCase
         $json = '{"results": {"channels": [' .
                 '{"alternatives": [{"words": [{"word": "later", "start": 2.0, "end": 2.5}]}]},' .
                 '{"alternatives": [{"words": [{"word": "first", "start": 0.5, "end": 1.0, "punctuated_word": "First."}]}]}]}}';
-        $subtitle = (new DeepgramParser())->parse($json);
+        $subtitle = (new DeepgramParser())->parse($json, new ReadOptions());
 
         $this->assertSame([[0.5, 1.0, "First."], [2.0, 2.5, "later"]], self::cues($subtitle));
         $this->assertSame([1, 0], array_map(fn (SubtitleCue $cue): int => $cue->getFormatData("deepgram")["channel"], $subtitle->getCues()));
@@ -151,9 +152,9 @@ class CloudSpeechParsersTest extends TestCase
     {
         $json = '{"results": {"channels": [{"alternatives": [{"words": [], "paragraphs": {"paragraphs": [' .
                 '{"speaker": 1, "sentences": [{"text": "Hello there.", "start": 0.2, "end": 1.1}]}]}}]}]}}';
-        $parser = new DeepgramParser([DeepgramParser::OPTION_SPEAKER_VOICES => true]);
+        $parser = new DeepgramParser();
 
-        $this->assertSame([[0.2, 1.1, "<v 1>Hello there."]], self::cues($parser->parse($json)));
+        $this->assertSame([[0.2, 1.1, "<v 1>Hello there."]], self::cues($parser->parse($json, new ReadOptions(speakerVoices: true))));
     }
 
 
@@ -164,9 +165,9 @@ class CloudSpeechParsersTest extends TestCase
                 '{"startTime": "0.300s", "endTime": "0.600s", "word": "there"}]}]},' .
                 '{"alternatives": [{"words": [{"startTime": "0s", "endTime": "0.300s", "word": "hi", "speakerTag": 1}, ' .
                 '{"startTime": "0.300s", "endTime": "0.600s", "word": "there", "speakerTag": 2}]}]}]}';
-        $parser = new GoogleSpeechParser([GoogleSpeechParser::OPTION_SPEAKER_VOICES => true]);
+        $parser = new GoogleSpeechParser();
 
-        $this->assertSame([[0.0, 0.3, "<v 1>hi"], [0.3, 0.6, "<v 2>there"]], self::cues($parser->parse($json)));
+        $this->assertSame([[0.0, 0.3, "<v 1>hi"], [0.3, 0.6, "<v 2>there"]], self::cues($parser->parse($json, new ReadOptions(speakerVoices: true))));
     }
 
 
@@ -176,7 +177,7 @@ class CloudSpeechParsersTest extends TestCase
                 '{"resultEndTime": "5s"},' .
                 '{"alternatives": [{"transcript": " second part"}], "resultEndTime": {"seconds": "9", "nanos": 250000000}}]}';
 
-        $this->assertSame([[0.0, 4.5, "first part"], [5.0, 9.25, "second part"]], self::cues((new GoogleSpeechParser())->parse($json)));
+        $this->assertSame([[0.0, 4.5, "first part"], [5.0, 9.25, "second part"]], self::cues((new GoogleSpeechParser())->parse($json, new ReadOptions())));
     }
 
 
@@ -202,27 +203,26 @@ class CloudSpeechParsersTest extends TestCase
     #[DataProvider("brokenWords")]
     public function testThrowsForABrokenWordAndSkipsItInLenientMode(string $parserClass, string $json, string $message, array $cues): void
     {
-        $parser   = (new $parserClass())->setLenient();
-        $subtitle = $parser->parse($json);
+        $parser   = new $parserClass();
+        $subtitle = $parser->parse($json, new ReadOptions(lenient: true));
 
         $this->assertSame($cues, self::cues($subtitle));
-        $this->assertCount(1, $parser->getWarnings());
+        $this->assertCount(1, $subtitle->getParseWarnings());
         $this->assertSame([$message, 0, ParseWarning::SKIPPED],
-                          [$parser->getWarnings()[0]->message, $parser->getWarnings()[0]->blockIndex, $parser->getWarnings()[0]->action]);
+                          [$subtitle->getParseWarnings()[0]->message, $subtitle->getParseWarnings()[0]->blockIndex, $subtitle->getParseWarnings()[0]->action]);
 
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage($message);
-        (new $parserClass())->parse($json);
+        (new $parserClass())->parse($json, new ReadOptions());
     }
 
 
     public function testSkipsABrokenUtteranceInLenientMode(): void
     {
-        $parser   = (new AssemblyAiParser())->setLenient();
-        $subtitle = $parser->parse('{"words": [], "utterances": [{"start": 0, "text": "Hi"}, {"start": 1000, "end": 2000, "text": "Bye"}]}');
+        $subtitle = (new AssemblyAiParser())->parse('{"words": [], "utterances": [{"start": 0, "text": "Hi"}, {"start": 1000, "end": 2000, "text": "Bye"}]}', new ReadOptions(lenient: true));
 
         $this->assertSame([[1.0, 2.0, "Bye"]], self::cues($subtitle));
-        $this->assertSame("The field utterances[0].end must be a time.", $parser->getWarnings()[0]->message);
+        $this->assertSame("The field utterances[0].end must be a time.", $subtitle->getParseWarnings()[0]->message);
     }
 
 

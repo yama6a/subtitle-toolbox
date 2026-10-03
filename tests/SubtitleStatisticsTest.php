@@ -5,6 +5,7 @@ namespace SubtitleToolbox;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Parsers\MicroDvdParser;
+use SubtitleToolbox\ReadOptions;
 
 class SubtitleStatisticsTest extends TestCase
 {
@@ -133,7 +134,7 @@ class SubtitleStatisticsTest extends TestCase
     public function testCountsInvalidUtf8ByBytes(): void
     {
         $content    = "{1}{1}25.000\n{25}{75}Caf\xe9 au lait\n";
-        $statistics = SubtitleStatistics::of((new MicroDvdParser())->parse($content));
+        $statistics = SubtitleStatistics::of((new MicroDvdParser())->parse($content, new ReadOptions()));
 
         $this->assertSame(1, $statistics->getCueCount());
         $this->assertSame(3, $statistics->getWordCount());

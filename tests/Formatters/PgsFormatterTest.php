@@ -13,6 +13,8 @@ use SubtitleToolbox\Image\PngDecoder;
 use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\VobSubParser;
+use SubtitleToolbox\Parsers\VobSubReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -48,7 +50,7 @@ class PgsFormatterTest extends TestCase
 
     private static function pgsRoundTrip(Subtitle $subtitle): Subtitle
     {
-        return (new PgsParser())->parse($subtitle->toString(Format::Pgs));
+        return (new PgsParser())->parse($subtitle->toString(Format::Pgs), new ReadOptions());
     }
 
 
@@ -69,7 +71,7 @@ class PgsFormatterTest extends TestCase
     #[DataProvider("pgsFixtures")]
     public function testPgsFixturesRoundTripWithTheSamePixelsPositionsAndTimes(string $path): void
     {
-        $original = (new PgsParser())->parse(file_get_contents($path));
+        $original = (new PgsParser())->parse(file_get_contents($path), new ReadOptions());
         $written  = self::pgsRoundTrip($original);
 
         $this->assertCount(count($original), $written);
@@ -101,7 +103,7 @@ class PgsFormatterTest extends TestCase
     {
         $sup = file_get_contents($path);
 
-        $this->assertSame($sup, (new PgsParser())->parse($sup)->toString(Format::Pgs));
+        $this->assertSame($sup, (new PgsParser())->parse($sup, new ReadOptions())->toString(Format::Pgs));
     }
 
 
@@ -126,8 +128,8 @@ class PgsFormatterTest extends TestCase
     #[DataProvider("vobSubTracks")]
     public function testVobSubFixturesConvertToPgs(string $name, int $track): void
     {
-        $original = (new VobSubParser(file_get_contents(self::FILES . "vobsub/$name.idx"), $track))
-            ->parse(file_get_contents(self::FILES . "vobsub/$name.sub"));
+        $original = (new VobSubParser())
+            ->parse(file_get_contents(self::FILES . "vobsub/$name.sub"), new ReadOptions(track: $track, format: new VobSubReadOptions(file_get_contents(self::FILES . "vobsub/$name.idx"))));
         $written  = self::pgsRoundTrip($original);
 
         $this->assertCount(count($original), $written);
@@ -237,7 +239,7 @@ class PgsFormatterTest extends TestCase
 
     public function testTheForcedFlagOfTheCueSetsTheForcedFlagOfTheObject(): void
     {
-        $subtitle = (new PgsParser())->parse(file_get_contents(self::FILES . "pgs/shapes_1080p.sup"));
+        $subtitle = (new PgsParser())->parse(file_get_contents(self::FILES . "pgs/shapes_1080p.sup"), new ReadOptions());
         $subtitle->getCues()[0]->setForced(true);
         $subtitle->getCues()[2]->setForced(false);
 
@@ -251,8 +253,8 @@ class PgsFormatterTest extends TestCase
 
     public function testShiftedFileKeepsTheBitmaps(): void
     {
-        $original = (new PgsParser())->parse(file_get_contents(self::FILES . "pgs/text_1080p.sup"));
-        $shifted  = (new PgsParser())->parse(file_get_contents(self::FILES . "pgs/text_1080p.sup"))->shift(-0.75);
+        $original = (new PgsParser())->parse(file_get_contents(self::FILES . "pgs/text_1080p.sup"), new ReadOptions());
+        $shifted  = (new PgsParser())->parse(file_get_contents(self::FILES . "pgs/text_1080p.sup"), new ReadOptions())->shift(-0.75);
 
         $written = self::pgsRoundTrip($shifted);
 
@@ -272,7 +274,7 @@ class PgsFormatterTest extends TestCase
 
         $this->assertSame(0, $code);
         $this->assertSame([1.5, 4.0, 5.0, 10.0], array_merge(...array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()],
-                                                                     (new PgsParser())->parse(stream_get_contents($streams[1]))->getCues())));
+                                                                     (new PgsParser())->parse(stream_get_contents($streams[1]), new ReadOptions())->getCues())));
     }
 
 
