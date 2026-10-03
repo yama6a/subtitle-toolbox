@@ -49,7 +49,9 @@ class IttFormatter extends SubtitleFormatter
     /**
      * Writes an Apple iTunes Timed Text file with SMPTE times, one div, and a top and a bottom region.
      *
-     * @throws InvalidArgumentException when neither the `itt` format data nor OPTION_FRAME_RATE gives a supported frame rate.
+     * OPTION_FRAME_RATE wins over the frame rate of the `itt` format data.
+     *
+     * @throws InvalidArgumentException when neither OPTION_FRAME_RATE nor the `itt` format data gives a supported frame rate.
      */
     public function format(Subtitle $subtitle, array $options = []): string
     {
@@ -85,16 +87,17 @@ class IttFormatter extends SubtitleFormatter
      */
     private function frameRateParameters(array $ittData, array $options): array
     {
+        $stored = null;
         if (isset($ittData["frameRate"])) {
             $multiplier = $ittData["frameRateMultiplier"] ?? "1 1";
-            $stored     = $this->supportedFrameRate((float) $ittData["frameRate"] * $this->multiplierFactor($multiplier));
-            if ($stored !== null && self::FRAME_RATES[$stored][0] === $ittData["frameRate"]) {
-                return [$ittData["frameRate"], $multiplier];
+            $rate       = $this->supportedFrameRate((float) $ittData["frameRate"] * $this->multiplierFactor($multiplier));
+            if ($rate !== null && self::FRAME_RATES[$rate][0] === $ittData["frameRate"]) {
+                $stored = [$rate, [$ittData["frameRate"], $multiplier]];
             }
         }
 
         if (!isset($options[self::OPTION_FRAME_RATE])) {
-            throw new InvalidArgumentException("The ITT formatter needs the option " . self::OPTION_FRAME_RATE . ".");
+            return $stored[1] ?? throw new InvalidArgumentException("The ITT formatter needs the option " . self::OPTION_FRAME_RATE . ".");
         }
         $option = $this->supportedFrameRate((float) $options[self::OPTION_FRAME_RATE]);
         if ($option === null) {
@@ -103,7 +106,8 @@ class IttFormatter extends SubtitleFormatter
             );
         }
 
-        return self::FRAME_RATES[$option];
+        // Keeps a parsed multiplier such as "1000 1001" when the option names the same frame rate.
+        return $stored !== null && $stored[0] === $option ? $stored[1] : self::FRAME_RATES[$option];
     }
 
 
