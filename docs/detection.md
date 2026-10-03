@@ -11,7 +11,20 @@ $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('upload.sub')
 Format::fromPath('upload.sub');                                                     // Format::MicroDvd, from the extension only
 ```
 
-Detection ignores a UTF-8 BOM and leading blank lines. It checks the signatures in this order and takes the first match:
+Detection ignores a UTF-8 BOM and leading blank lines. It tries subtitle formats only.
+
+Content that starts with `{` and is a JSON object goes to the JSON checks. Detection reads the top-level keys in this order and takes the first match:
+
+| Order | Format | Keys |
+|:--- |:--- |:--- |
+| 1 | `Json` | a numeric `"version"` and a `"cues"` list |
+| 2 | `PodcastTranscript` | a `"segments"` list whose first segment has `"startTime"` and `"body"` |
+| 3 | `Whisper` | a `"segments"` or `"transcription"` list |
+| 4 | `YouTube` | an `"events"` list whose first event has `"tStartMs"` |
+
+A JSON object that matches none of these gives null. Invalid JSON gives null too, unless a text signature matches it, such as MicroDVD `{24}{72}`.
+
+Other content goes to the signatures of the text and binary formats. Detection checks them in this order and takes the first match:
 
 | Order | Format | Signature |
 |:--- |:--- |:--- |
@@ -26,19 +39,16 @@ Detection ignores a UTF-8 BOM and leading blank lines. It checks the signatures 
 | 9 | `SubViewer` | `******** START SCRIPT ********`, `[INFORMATION]` or `00:00:01.50,00:00:04.00` |
 | 10 | `Lyrics` | `[ti:Title]` or `[00:12.00]`, and at least one timestamp line |
 | 11 | `Pgs` | the bytes `PG`, then a known segment type |
-| 12 | `Json` | an object with a numeric `"version"` key and a `"cues"` list |
-| 13 | `EbuStl` | a 3-digit code page such as `850`, then `STL25.01` or `STL30.01` |
-| 14 | `Scc` | `Scenarist_SCC V1.0` |
-| 15 | `PodcastTranscript` | an object with a `"segments"` list whose segments have `"startTime"` and `"body"` |
-| 16 | `Whisper` | an object with a `"segments"` or `"transcription"` list |
-| 17 | `YouTube` | a `<timedtext>` or `<transcript>` root, or an object with an `"events"` list whose events have `"tStartMs"` |
-| 18 | `Mpl2` | `[12][45]` |
-| 19 | `TmPlayer` | `00:00:01:`, `0:00:01=` or `00:00:01,1=` |
-| 20 | `HtmlTranscript` | a tag at the start, and a `<cite>` and a `<time>` element |
+| 12 | `EbuStl` | a 3-digit code page such as `850`, then `STL25.01` or `STL30.01` |
+| 13 | `Scc` | `Scenarist_SCC V1.0` |
+| 14 | `YouTube` | a `<timedtext>` or `<transcript>` root |
+| 15 | `Mpl2` | `[12][45]` |
+| 16 | `TmPlayer` | `00:00:01:`, `0:00:01=` or `00:00:01,1=` |
+| 17 | `HtmlTranscript` | a tag at the start, and a `<cite>` and a `<time>` element |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line looks like SubRip, so it detects as SubRip.
 - **`.sub` files**: SBV has three digits after the dot, SubViewer 2 has two.
 - **MicroDVD**: detection does not find the frame rate. `fromStringAutoDetectFormat()` throws `ParsingException` for a MicroDVD file without a `{1}{1}<fps>` first line. Then pass the frame rate: `Subtitle::fromString($content, Format::MicroDvd, new ReadOptions(fps: 23.976))`.
 - **iTT**: an iTT file detects as `Format::Ttml`. Pass `Format::Itt` to keep the iTT format data.
 - **No signature**: CSV and TSV. Pass `Format::Csv` or `Format::Tsv`, see [formats.md](formats.md#csv-and-tsv). VobSub needs its `.idx` file, see [ocr.md](ocr.md#vobsub).
-- **Not detected**: chapters and cloud speech-to-text JSON look like other formats. `Format::detect()` returns null for them, and `isAutoDetected()` is false. Pass the format, for example `Subtitle::fromString($json, Format::Deepgram)`. `Format::fromPath()` still finds them by their extension, for example `.ffmeta`.
+- **Not detected**: chapters and cloud speech-to-text JSON look like other formats. `Format::detect()` returns null for them, and `isAutoDetected()` is false. Pass the format, for example `Subtitle::fromString($json, Format::Deepgram)`. `Format::fromPath()` still finds them by their extension, for example `.ffmeta`. The command line tool needs `--from` for them, for example `--from deepgram`.

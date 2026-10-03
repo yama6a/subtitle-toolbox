@@ -55,14 +55,11 @@ enum Format: string
 
 
     /**
-     * Returns the format whose signature matches the start of $content, or null. It never returns a format whose
-     * isAutoDetected() is false.
+     * Returns the subtitle format of $content, or null. It never returns a format whose isAutoDetected() is false.
      */
     public static function detect(string $content): ?self
     {
-        $format = FormatDetector::detect($content);
-
-        return $format?->isAutoDetected() ? $format : null;
+        return FormatDetector::detect($content);
     }
 
 

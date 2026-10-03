@@ -7,7 +7,6 @@ namespace SubtitleToolbox\Cli;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Matroska\MatroskaTrack;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\FormatDetector;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Parsers\VobSubReadOptions;
 use SubtitleToolbox\ReadOptions;
@@ -92,7 +91,7 @@ abstract class FileCommand extends Command
     {
         $options = [];
         if ($this->hasFormatOptions()) {
-            $options[] = Option::value("from", "FORMAT", "Input format. Default: detected from the content, else taken from the file extension.");
+            $options[] = Option::value("from", "FORMAT", "Input format. Default: detected from the content, else taken from the file extension. Chapters and cloud speech JSON need it.");
         }
 
         return [
@@ -444,7 +443,7 @@ abstract class FileCommand extends Command
         }
 
         $byExtension = $input === self::DASH ? null : Format::fromPath($input);
-        $detected    = FormatDetector::detect($content);
+        $detected    = Format::detect($content);
 
         if ($detected !== null) {
             // Detection returns TTML for an iTT file. IttParser reads the same cues and keeps the iTT timing.
@@ -454,7 +453,7 @@ abstract class FileCommand extends Command
 
             return $detected;
         }
-        if ($byExtension?->canRead()) {
+        if ($byExtension?->canRead() && $byExtension->isAutoDetected()) {
             return $byExtension;
         }
 
