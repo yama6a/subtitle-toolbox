@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Runs the PHAR once per feature that depends on how it was built: the version, iconv and the bundled OCR.
+# It also checks that the PHP of the image has ext-curl, which the translate command needs.
 # Usage: .build/smoke-test.sh <expected version> <tests/files as the PHP command sees it> <PHAR path> <PHP command...>
 # SMOKE_TESSERACT=1 also reads Cyrillic text with Tesseract, for the image with all Tesseract languages.
 set -euo pipefail
@@ -18,6 +19,11 @@ fi
 vtt=$("$@" "$phar" convert "$files/cli/latin1.srt" --encoding Windows-1252 --to vtt --output -)
 if ! grep -qx 'Café au lait.' <<< "$vtt"; then
   printf 'convert printed:\n%s\n' "$vtt" >&2
+  exit 1
+fi
+
+if ! "$@" -r 'exit(function_exists("curl_init") ? 0 : 1);'; then
+  echo "PHP has no ext-curl, which translate needs" >&2
   exit 1
 fi
 

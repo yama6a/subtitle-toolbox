@@ -269,6 +269,28 @@ vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-format
 | `--ignore-formatting`, `--ignore-whitespace`, `--text-only` | `ignoreFormatting`, `ignoreWhitespace`, `textOnly` |
 | `--json` | one object with `old`, `new`, `equal` and `differences`. A difference has `kind`, `oldIndex`, `newIndex`, `old` and `new`. A cue has `start`, `end`, `lines` and `forced` |
 
+## Translate
+`translate` translates the cue text with DeepL or Google Cloud Translation, through [`TranslationRunner`](translation.md) and the built-in engines. It needs the PHP extension curl.
+
+```sh
+vendor/bin/subtitle-toolbox translate movie.de.srt --engine deepl --source-language de --target-language en-US -o movie.en.srt
+DEEPL_API_KEY=... vendor/bin/subtitle-toolbox translate movie.de.srt --engine deepl --target-language en-US
+vendor/bin/subtitle-toolbox translate movie.de.srt --engine google --api-key "$KEY" --target-language fr --to vtt
+```
+
+| Option | Sets |
+|:--- |:--- |
+| `--engine deepl\|google` | the engine, `DeepLEngine` or `GoogleTranslateEngine`. Required |
+| `--api-key KEY` | the API key. Default: `DEEPL_API_KEY` for `deepl`, `GOOGLE_TRANSLATE_API_KEY` for `google` |
+| `--source-language CODE` | the language of the input, for example `de`. Default: the engine detects it |
+| `--target-language CODE` | the language of the output, for example `en-US` for DeepL or `fr` for Google. Required |
+
+- **Key**: the tool reads only the variable of the chosen engine. With `--engine deepl`, a set `GOOGLE_TRANSLATE_API_KEY` does not help. The key never appears in the output or in error messages.
+- **Usage errors**: a missing or unknown `--engine`, a missing key or a missing `--target-language` stops the tool with exit code 2.
+- **Engine errors**: a wrong key, too many requests or a used-up quota fail the file with exit code 1 and a message that names the cause.
+- **No curl**: without `ext-curl`, `translate` exits with code 1 and names the extension. The other commands run without it. The Docker images include it. For the PHAR, install it with your PHP, for example `apt install php8.2-curl`.
+- **Warnings**: the tool prints a warning per cue to standard error when the engine breaks a tag placeholder, see [translation.md](translation.md).
+
 ## Dual
 `dual` merges a primary and a secondary subtitle with [`DualSubtitle::merge()`](editing.md#dual-subtitles). The output has the format of the primary file, unless `--to` or the `--output` extension sets another one.
 
