@@ -1575,6 +1575,42 @@ $csv = $english->format(CsvFormatter::class, [
 - **Detection**: a CSV file has no signature, so pass `CsvParser::class`. The command line tool reads `.csv` and `.tsv` files by their extension.
 - **Lenient mode**: the parser skips a row with a bad time and records a `ParseWarning`. `blockIndex` counts the rows after the header, without empty rows.
 
+## Splitting long cues
+Speech-to-text tools such as Whisper write segments of 10 s and more. `wrapLines()` makes the lines shorter, but the cue stays too long to read. `splitLongCues()` splits such a cue into cues that fit the limits.
+
+```php
+// 00:00:00,000 --> 00:00:11,050  The tensor operators are optimized heavily for Apple silicon CPUs. Depending on
+//                                the computation size, Arm Neon SIMD instrisics or CBLAS Accelerate framework routines are used.
+$subtitle->splitLongCues(new ResegmentOptions(maxCharactersPerLine: 42, maxLines: 2));
+// 00:00:00,000 --> 00:00:04,231  The tensor operators are optimized heavily for Apple silicon CPUs.
+// 00:00:04,231 --> 00:00:06,441  Depending on the computation size,
+// 00:00:06,441 --> 00:00:11,050  Arm Neon SIMD instrisics or CBLAS Accelerate framework routines are used.
+```
+
+`resegmentByWords()` drops the cue boundaries and builds new cues from the word timestamps, for example of `WhisperJsonParser::OPTION_WORD_TIMESTAMPS`. Each cue then holds one sentence, or as much of it as fits.
+
+| Option | Default | Meaning |
+|:--- |:--- |:--- |
+| `maxCharactersPerLine` | 42 | the line length of a cue |
+| `maxLines` | 2 | the line count of a cue |
+| `maxDuration` | 7 | seconds from the start to the end of a cue |
+| `minDuration` | 1 | `splitLongCues()` never makes a cue shorter than this many seconds |
+| `maxCharactersPerSecond` | null | the reading speed of a cue. Null turns the rule off |
+| `maxWordGap` | 0.6 | `resegmentByWords()` ends a cue at a pause of this many seconds or more |
+
+- **Limits**: a cue breaks the limits when its text does not fit `maxLines` lines of `maxCharactersPerLine` characters, as `wrapLines()` wraps it. It also breaks them above `maxDuration` or `maxCharactersPerSecond`.
+- **Break points**, best first: a sentence end, a clause end, then the space closest to the middle. Among break points of the same kind, the one closest to the middle wins.
+- **Sentence end**: `.`, `?`, `!`, the ellipsis U+2026 and the CJK forms U+3002, U+FF01, U+FF1F and U+FF61. A full stop before a word in lower case, as in "e.g. this", is no sentence end.
+- **Clause end**: `,`, `;`, `:`, a dash, and the CJK forms U+3001, U+FF0C, U+FF1A, U+FF1B and U+FF64.
+- **Splitting**: `splitLongCues()` splits a cue in two at the best break point. It splits each part again while the part breaks a limit. A cue stays unchanged when no break point keeps both parts at `minDuration` or longer.
+- **Times**: a new cue starts at the word timestamp of its first word. Without one, the time splits in proportion to the visible characters.
+- **Text without spaces**, such as Japanese, splits after CJK punctuation and at word timestamps.
+- **Regrouping**: `resegmentByWords()` ends a cue after a sentence end, before a pause of `maxWordGap` seconds, and before a word that would break a limit. A word ends where the next word of its cue starts. The last word of a cue ends at the cue end. So a pause shows only between two cues.
+- **Kept apart**: `resegmentByWords()` never joins words of cues with different `<v>` speakers, alignments or forced flags. Cues without word timestamps stay unchanged.
+- **Text**: each new cue is wrapped as `mergeShortCues()` wraps a joined cue. A core markup tag that is open at a break closes at the end of the first cue and opens again in the next cue.
+- **Unchanged**: image cues and cues of one word.
+- **Cue data**: a new cue keeps the alignment, forced flag and format data of its source cue. Only the cue with the first word of a source cue keeps its identifier. A comment before a source cue moves before that cue.
+
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
 CI fails a PR that does not carry exactly one of these labels:
