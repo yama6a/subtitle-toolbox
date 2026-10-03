@@ -23,9 +23,10 @@ try {
 | `InvalidArgumentException` | `\InvalidArgumentException` | 104 | an invalid argument or option, for example alignment 10, frame rate 0, a missing MicroDVD frame rate or the options class of another format |
 | `CueNotFoundException` | `\RuntimeException` | 105 | `removeCue()` with an index that has no cue |
 | `UnknownFormatException` | `InvalidParserException` | 106 | `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()` when detection finds no format |
+| `TranslationException` | `\RuntimeException` | 107 | a translation engine without `ext-curl`, a request that gets no response, an HTTP error of DeepL or Google, or an answer that the engine cannot read |
 
 - **SPL classes**: each class extends an SPL class, so `catch (\InvalidArgumentException $e)` and `catch (\RuntimeException $e)` also work.
-- **Messages**: `InvalidArgumentException` and `CueNotFoundException` keep the plain message. The other classes start it with the class name and the code, for example `ParsingException (Error #100): `.
+- **Messages**: `InvalidArgumentException`, `CueNotFoundException` and `TranslationException` keep the plain message. The other classes start it with the class name and the code, for example `ParsingException (Error #100): `.
 - **Line number**: `ParsingException::getLineNumber()` returns the 1-based input line when the parser knows it, and null otherwise. Then the message ends with ` (line 12)`.
 
 These readers set the line number:
