@@ -1,0 +1,57 @@
+# Lenient parsing
+
+A subtitle download is often broken in one place. By default, the parsers throw `ParsingException` at the first broken block. In lenient mode, the parser skips or repairs the broken block, records a `ParseWarning` and goes on.
+
+```php
+use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Subtitle;
+
+$parser   = (new SubRipParser())->setLenient();
+$subtitle = Subtitle::parse($download, $parser);     // a parser instance in place of the class name
+foreach ($parser->getWarnings() as $warning) {
+    $logger->warning("line $warning->lineNumber: $warning->message ($warning->action)");
+}
+// line 5: Block #1 doesn't seem to have its timestamps on its second line! (skipped)
+```
+
+## SubRip, WebVTT and SBV
+| Damage | SubRip | WebVTT | SBV |
+|:--- |:--- |:--- |:--- |
+| cue without a cue number | repaired | not an error | not an error |
+| bad timestamp, `->` arrow, cue without text | skipped | skipped | skipped |
+| no empty line between two cues | repaired | split as the spec says, no warning | repaired |
+| no empty line after the `WEBVTT` header | not an error | repaired | not an error |
+| text before the first cue | skipped | skipped | skipped |
+| truncated last cue | skipped | skipped | skipped |
+
+## Other formats
+| Parser | Skipped with a warning | `blockIndex` counts |
+|:--- |:--- |:--- |
+| ASS, SSA | a `Dialogue:` or `Comment:` line with too few fields or a bad time. A file without a `Format:` line is not an error: the parser uses the default fields | events |
+| MicroDVD | a line without `{start}{end}` frames, also before the `{1}{1}<fps>` line | non-empty lines |
+| MPL2 | a line without `[start][end]` | non-empty lines |
+| TMPlayer | a line without a time | non-empty lines |
+| SubViewer | SubViewer 2: a timing line with one bad time and its text, and text before the first cue. SubViewer 1: a bad header line | cues |
+| MPSub | a bad wait and duration pair and its text, a cue without text, a bad `FORMAT=` value. A file without `FORMAT=` gets a `repaired` warning, and the parser reads the times as seconds | cues |
+| LRC | a line with a time tag that the parser cannot read, for example `[01:2x.00]` | non-empty lines |
+| SAMI | a `<SYNC>` tag without a valid `Start` | `<SYNC>` tags |
+| TTML, iTT | a `<p>` with a bad time or without an end time | `<p>` elements |
+| EBU STL | a subtitle with a time code out of range, a cut-off last TTI block | TTI blocks |
+| CSV, TSV | a row with a bad time | rows after the header, without empty rows |
+| JSON | a cue with a bad field | cues |
+| Whisper JSON | a segment without `start`, `end` or `text` | segments |
+| YouTube timed text | an event or element with a bad time | events or elements |
+| Amazon Transcribe, Deepgram, AssemblyAI, Google | a word, segment, utterance, sentence or result with a bad time or text | the index in its list |
+| Podcasting 2.0 transcript JSON | a segment with a bad field | segments |
+| HTML transcript | a paragraph with a bad time or without a `<time>` | the paragraphs that each `<cite>` or `<time>` starts |
+
+- **Ignored**: the SCC, PGS and VobSub parsers and the chapter parsers ignore `setLenient()` and always throw.
+- **`ParseWarning`**: `message`, the 1-based `lineNumber`, the 0-based `blockIndex`, the trimmed lines of the `block`, and the `action`, `ParseWarning::SKIPPED` or `ParseWarning::REPAIRED`. A skipped block reports its first line. A repair reports the line where the parser split or read the cue.
+- **No line numbers**: binary EBU STL and the JSON formats have no line numbers, so their warnings have `lineNumber` 0. The YouTube XML formats report the line of the XML element.
+- **Warnings**: `getWarnings()` returns the warnings of the last `parse()` call. Each call starts with an empty list.
+- **Not the format**: lenient mode still throws for a WebVTT file without `WEBVTT`. SubRip and SBV have no signature, so a file without one readable cue gives no cues and warnings.
+- **Whole-file errors**: lenient mode still throws for a problem outside one cue. Examples are invalid XML in TTML, invalid JSON, a SAMI file that is not UTF-8, an ASS file without `[Events]` and a MicroDVD file without a frame rate.
+- **Strict mode without an exception**: the LRC parser drops a line with a bad time tag. The EBU STL parser reads a time code out of range as it is. In lenient mode, both record a warning, and the EBU STL parser also skips the subtitle.
+- **`Subtitle::parse()`**: pass a parser instance to keep its mode and read its warnings after the call. The `sourceEncoding` argument works as with a class name. A class name parses in strict mode. Format detection returns a class name, so call `Subtitle::detectParser()` first to detect and parse leniently.
+- **Stream readers**: `SubRipStreamReader` and `WebVttStreamReader` have the same `setLenient()` and `getWarnings()`. They give the same cues and warnings as the batch parser.
+- **Command line tool**: `--lenient` turns on lenient mode and prints each warning to standard error.
