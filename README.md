@@ -19,6 +19,8 @@ composer require ymakhloufi/subtitle-toolbox
 | `ext-zlib`, optional | writing PGS, compressed PNG images, zlib-compressed MKV tracks |
 | [`yama6a/php-glyph-ocr`](https://github.com/yama6a/php-glyph-ocr), optional | the built-in OCR of PGS and VobSub bitmaps |
 
+Upgrading from 1.x: [docs/upgrade-2.0.md](docs/upgrade-2.0.md) maps each 1.x call to its 2.0 call.
+
 ## Quick start
 ```php
 use SubtitleToolbox\Format;
@@ -70,7 +72,7 @@ $subtitle->save('movie.vtt');                                   // WebVTT, from 
 | Podcasting 2.0 chapters | `PodcastChapters` | `podcast` | `.json` | yes | yes | not detected |
 | FFmpeg metadata chapters | `FfMetadata` | `ffmeta` | `.ffmeta` | yes | yes | not detected |
 | OGM chapters | `OgmChapters` | `ogm` | `.txt` | yes | yes | not detected |
-| MKV and WebM tracks | | | `.mkv`, `.webm` | yes | no | `MatroskaReader` reads `S_TEXT/UTF8`, ASS, SSA, WebVTT and PGS tracks. CLI: `--track` |
+| MKV and WebM tracks | | | `.mkv`, `.webm` | yes | no | `Subtitle::loadTrack()` reads `S_TEXT/UTF8`, ASS, SSA, WebVTT and PGS tracks. CLI: `--track` |
 
 **Case** is the case of the enum `Format`, for example `Format::SubRip`. **Name** is its value, and the format name for `--from` and `--to` in the command line tool. The details of each format are in [formats](docs/formats.md), [transcripts](docs/transcripts.md), [chapters](docs/chapters.md), [OCR](docs/ocr.md), [JSON](docs/json.md) and [MKV](docs/mkv.md).
 
