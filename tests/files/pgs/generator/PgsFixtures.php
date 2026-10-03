@@ -30,7 +30,8 @@ final class PgsFixtures
     public const FILES = [
         "shapes_1080p.sup" => "shapes1080p",
         "shapes_576p.sup"  => "shapes576p",
-        "text_1080p.sup"   => "text1080p",
+        "text_1080p.sup"          => "text1080p",
+        "text_cyrillic_1080p.sup" => "textCyrillic1080p",
     ];
 
     private const WHITE_RGB  = [255, 255, 255];
@@ -50,6 +51,22 @@ final class PgsFixtures
         [29.0, 31.5, ["The next stop is Central Station."], 52, self::YELLOW_RGB, false],
         [32.0, 35.0, ["Temperatures stay near 18 degrees.", "Light clouds in the evening."], 50, self::WHITE_RGB, false],
         [35.5, 38.0, ["<i>Tickets cost 4.50 each.</i>"], 56, self::WHITE_RGB, false],
+    ];
+
+    /** The cues of TEXT_CUES in Russian, for OCR of a script other than Latin. */
+    public const CYRILLIC_CUES = [
+        [1.0, 3.5, ["Поезд в Берген уходит в 7:45."], 52, self::WHITE_RGB, false],
+        [4.0, 7.0, ["Пекарня открывается в шесть.", "Свежий хлеб готов к семи."], 52, self::WHITE_RGB, false],
+        [7.5, 10.0, ["Сегодня после 15 часов ожидается дождь."], 48, self::WHITE_RGB, false],
+        [10.5, 13.0, ["Платформа 4, пожалуйста.", "Осторожно, ступенька."], 56, self::YELLOW_RGB, false],
+        [13.5, 16.0, ["<i>Ночью ветер повернёт на север.</i>"], 52, self::WHITE_RGB, false],
+        [16.5, 19.0, ["До полудня мы продали 120 булочек!"], 60, self::WHITE_RGB, false],
+        [19.5, 22.5, ["Автобус в 9:10 опять опаздывает?", "Да, примерно на пять минут."], 48, self::WHITE_RGB, false],
+        [23.0, 25.5, ["<i>Снег</i> ожидается в пятницу."], 52, self::WHITE_RGB, true],
+        [26.0, 28.5, ["Две буханки ржаного и один багет."], 44, self::WHITE_RGB, false],
+        [29.0, 31.5, ["Следующая остановка: Центральный вокзал."], 52, self::YELLOW_RGB, false],
+        [32.0, 35.0, ["Температура около 18 градусов.", "Вечером лёгкая облачность."], 50, self::WHITE_RGB, false],
+        [35.5, 38.0, ["<i>Билет стоит 45 рублей.</i>"], 56, self::WHITE_RGB, false],
     ];
 
 
@@ -170,8 +187,26 @@ final class PgsFixtures
      */
     public static function text1080p(): string
     {
+        return self::textCues1080p(self::TEXT_CUES);
+    }
+
+
+    /**
+     * The Russian text cues of CYRILLIC_CUES, drawn as text1080p() draws TEXT_CUES.
+     */
+    public static function textCyrillic1080p(): string
+    {
+        return self::textCues1080p(self::CYRILLIC_CUES);
+    }
+
+
+    /**
+     * @param list<array{float, float, list<string>, int, array{int, int, int}, bool}> $cues
+     */
+    private static function textCues1080p(array $cues): string
+    {
         $w = new PgsFixtureWriter();
-        foreach (self::TEXT_CUES as $index => [$start, $end, $lines, $size, $fill, $top]) {
+        foreach ($cues as $index => [$start, $end, $lines, $size, $fill, $top]) {
             [$pixels, $palette, $width, $height] = self::textObject(TextBitmap::render($lines, $size, $size / 16, 2), $fill);
             $x        = intdiv(1920 - $width, 2);
             $y        = $top ? 60 : 1020 - $height;
