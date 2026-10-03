@@ -1006,6 +1006,7 @@ curl -s https://example.com/movie.srt | vendor/bin/subtitle-toolbox convert - --
 - **Inputs**: a file, a directory, a glob such as `"season1/*.srt"`, or `-` for standard input. A directory gives its files with a known extension.
 - **Input format**: `--from`, else format detection on the content, else the file extension. `.sub` is MicroDVD.
 - **Output**: `--output` for one file, `--output-dir`, or `--in-place`. `--output -` writes standard output. Without these, `convert` writes next to the input with the new extension, and the other commands write standard output.
+- **CSV and TSV**: TSV output has tabs between the cells. CSV output from a TSV input has commas. Other CSV output keeps the delimiter of the input table.
 - **Overwrite**: the tool never overwrites a file without `--force` or `--in-place`.
 - **Batch**: the tool prints one line per file and a summary. It stops at the first failed file, unless you pass `--keep-going`.
 - **Exit code**: 0 when all files succeed, 1 when a file fails or breaks a validation rule, 2 for invalid arguments.

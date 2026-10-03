@@ -4,6 +4,7 @@ namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
 use SubtitleToolbox\FormatRegistry;
+use SubtitleToolbox\Formatters\CsvFormatter;
 use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
@@ -160,7 +161,7 @@ abstract class WriteCommand extends FileCommand
         $formatter    = FormatRegistry::formatterClass($outputFormat);
 
         try {
-            $content = $subtitle->format($formatter, $this->formatterOptions($subtitle, $formatter));
+            $content = $subtitle->format($formatter, $this->formatterOptions($subtitle, $formatter, $format, $outputFormat));
         } catch (ImageCueWithoutTextException) {
             self::fail("The file holds image cues without text. Run OCR on them first, or pass --skip-image-cues.");
         }
@@ -246,9 +247,15 @@ abstract class WriteCommand extends FileCommand
     }
 
 
-    private function formatterOptions(Subtitle $subtitle, string $formatter): array
+    private function formatterOptions(Subtitle $subtitle, string $formatter, string $inputFormat, string $outputFormat): array
     {
         $options = $this->formatterOptions;
+        // CsvFormatter writes the delimiter of the parsed table, so a TSV input would give a CSV file with tabs.
+        if ($outputFormat === "tsv") {
+            $options[CsvFormatter::OPTION_DELIMITER] = "\t";
+        } elseif ($outputFormat === "csv" && $inputFormat === "tsv") {
+            $options[CsvFormatter::OPTION_DELIMITER] = ",";
+        }
         if ($formatter === MicroDvdFormatter::class) {
             $options[MicroDvdFormatter::OPTION_FRAME_RATE] = $this->fps
                 ?? $subtitle->getFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]

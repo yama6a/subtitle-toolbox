@@ -170,6 +170,19 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testConvertToTsvWritesTabs(): void
+    {
+        $this->assertSame([0, "trip.srt -> trip.tsv\n", ""], $this->runBinary(["convert", "trip.srt", "trip.tsv"]));
+        $tsv = $this->file("trip.tsv");
+        $this->assertStringStartsWith(self::BOM . "start\tend\ttext\n00:00:01.000\t", $tsv);
+        $this->assertSame(0, substr_count($tsv, ","));
+
+        $this->assertSame([0, "trip.tsv -> trip.csv\n", ""], $this->runBinary(["convert", "trip.tsv", "trip.csv"]));
+        $this->assertStringStartsWith(self::BOM . "start,end,text\n00:00:01.000,", $this->file("trip.csv"));
+        $this->assertSame(0, substr_count($this->file("trip.csv"), "\t"));
+    }
+
+
     public function testConvertNeverOverwritesWithoutForce(): void
     {
         file_put_contents("$this->dir/trip.vtt", "old");
