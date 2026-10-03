@@ -24,11 +24,11 @@ class SubRipParser extends SubtitleParser
         $index    = 0;
         foreach ($this->splitIntoBlocks(explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle)) as $lineNumber => $rawLines) {
             foreach ($this->parseBlock($rawLines, $index++, $lineNumber) as $cue) {
-                $subtitle->addCue($cue);
+                $subtitle->addCue($cue, false);
             }
         }
 
-        return $subtitle;
+        return $subtitle->reIndexCues();
     }
 
 
