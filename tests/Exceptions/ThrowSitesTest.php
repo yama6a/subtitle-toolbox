@@ -13,6 +13,7 @@ use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Fixing\OcrReplaceList;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Formatters\AssFormatter;
+use SubtitleToolbox\Formatters\CsvFormatter;
 use SubtitleToolbox\Formatters\EbuStlFormatter;
 use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
@@ -34,6 +35,8 @@ use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Ocr\OcrResult;
 use SubtitleToolbox\Parsers\AssParser;
+use SubtitleToolbox\Parsers\CsvColumns;
+use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
@@ -188,6 +191,12 @@ class ThrowSitesTest extends TestCase
             "Fixing/OcrReplaceList.php: invalid XML"        => [fn () => OcrReplaceList::fromSubtitleEditXml("<ReplaceList>"), ...$parsing],
             "Formatters/AssFormatter.php: karaoke tag"      => [fn () => self::subtitle()->format(AssFormatter::class,
                                                                 [AssFormatter::OPTION_KARAOKE_TAG => "K"]), ...$invalid],
+            "Formatters/CsvFormatter.php: time format"      => [fn () => self::subtitle()->format(CsvFormatter::class,
+                                                                [CsvFormatter::OPTION_TIME_FORMAT => "mm:ss"]), ...$invalid],
+            "Formatters/CsvFormatter.php: frames without rate" => [fn () => self::subtitle()->format(CsvFormatter::class,
+                                                                [CsvFormatter::OPTION_TIME_FORMAT => CsvParser::TIME_FRAMES]), ...$invalid],
+            "Formatters/CsvFormatter.php: second text"      => [fn () => self::subtitle()->format(CsvFormatter::class,
+                                                                [CsvFormatter::OPTION_SECOND_TEXT => "text"]), ...$invalid],
             "Formatters/EbuStlFormatter.php: frame rate 24" => [fn () => self::subtitle()->format(EbuStlFormatter::class,
                 [EbuStlFormatter::OPTION_FRAME_RATE => 24]), ...$invalid],
             "Formatters/EbuStlFormatter.php: code table 09" => [fn () => self::subtitle()->setFormatData(EbuStlParser::FORMAT_DATA_KEY,
@@ -261,6 +270,12 @@ class ThrowSitesTest extends TestCase
                                                                                                   "Dialogue: 0,text\n"), ...$parsing],
             "Parsers/AssParser.php: invalid time"           => [fn () => (new AssParser())->parse("[Events]\nFormat: Start, End, Text\n" .
                                                                                                   "Dialogue: soon,0:00:02.00,text\n"), ...$parsing],
+            "Parsers/CsvColumns.php: negative index"        => [fn () => new CsvColumns(start: -1), ...$invalid],
+            "Parsers/CsvColumns.php: name without header"   => [fn () => new CsvColumns(start: 0, text: "Text", header: false), ...$invalid],
+            "Parsers/CsvParser.php: delimiter"              => [fn () => new CsvParser(delimiter: "|"), ...$invalid],
+            "Parsers/CsvParser.php: open quote"             => [fn () => (new CsvParser())->parse("start,text\n1,\"a"), ...$parsing],
+            "Parsers/CsvParser.php: bad time"               => [fn () => (new CsvParser())->parse("start,text\nsoon,a"), ...$parsing],
+            "Parsers/CsvParser.php: missing column"         => [fn () => (new CsvParser())->parse("start,end\n1,2"), ...$parsing],
             "Parsers/EbuStlParser.php: no GSI block"        => [fn () => (new EbuStlParser())->parse("STL"), ...$parsing],
             "Parsers/EbuStlParser.php: partial TTI block"   => [fn () => (new EbuStlParser())->parse(str_repeat(" ", 1025)), ...$parsing],
             "Parsers/EbuStlParser.php: disk format code"    => [fn () => (new EbuStlParser())->parse(str_repeat(" ", 1024)), ...$parsing],

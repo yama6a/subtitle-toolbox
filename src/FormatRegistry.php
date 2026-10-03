@@ -3,6 +3,7 @@
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Formatters\AssFormatter;
+use SubtitleToolbox\Formatters\CsvFormatter;
 use SubtitleToolbox\Formatters\EbuStlFormatter;
 use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\JsonFormatter;
@@ -18,6 +19,7 @@ use SubtitleToolbox\Formatters\SubViewerFormatter;
 use SubtitleToolbox\Formatters\TtmlFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\Parsers\AssParser;
+use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\JsonParser;
@@ -45,6 +47,7 @@ class FormatRegistry
      */
     private const FORMATS = [
         "ass"       => [AssParser::class, AssFormatter::class, ["ass", "ssa"]],
+        "csv"       => [CsvParser::class, CsvFormatter::class, ["csv"]],
         "itt"       => [IttParser::class, IttFormatter::class, ["itt"]],
         "json"      => [JsonParser::class, JsonFormatter::class, ["json"]],
         "lrc"       => [LyricsParser::class, LyricsFormatter::class, ["lrc"]],
@@ -58,6 +61,7 @@ class FormatRegistry
         "stl"       => [EbuStlParser::class, EbuStlFormatter::class, ["stl"]],
         "subviewer" => [SubViewerParser::class, SubViewerFormatter::class, ["sub"]],
         "ttml"      => [TtmlParser::class, TtmlFormatter::class, ["ttml", "dfxp", "xml"]],
+        "tsv"       => [CsvParser::class, CsvFormatter::class, ["tsv"]],
         "txt"       => [null, PlainTextFormatter::class, ["txt"]],
         "vobsub"    => [VobSubParser::class, null, ["idx"]],
         "vtt"       => [WebVttParser::class, WebVttFormatter::class, ["vtt"]],
