@@ -41,7 +41,7 @@ php subtitle-toolbox.phar --version
 | `fps` | retimes a subtitle `--from` one frame rate `--to` another. `sync-fps` is another name for it |
 | `fix` | fixes text errors, overlapping cues, short cues and long lines, see [Fix](#fix) |
 | `strip-sdh` | removes hearing-impaired annotations, as [`removeHearingImpaired()`](text.md#hearing-impaired-annotations) does |
-| `info` | prints the format, the cue count and statistics, as text or with `--json` |
+| `info` | prints the format, the cue count and statistics, as text or with `--json`. Lists the tracks of an MKV or WebM file |
 | `validate` | prints each broken rule, as text or with `--json`, see [Validate](#validate) |
 | `formats` | lists the format names and extensions for `--from` and `--to` |
 
@@ -59,6 +59,7 @@ php subtitle-toolbox.phar --version
 - **Output bytes**: `--line-ending lf|crlf`, `--bom` and `--no-bom`.
 - **Broken files**: `--lenient` skips or repairs broken cues and prints a warning for each, see [lenient-parsing.md](lenient-parsing.md).
 - **Frame rate**: `--fps` gives the frame rate for a MicroDVD file without a `{1}{1}<fps>` first line. MicroDVD and iTT output also use it. Without it, MicroDVD output takes the frame rate of a MicroDVD input, and iTT output the frame rate of an iTT input.
+- **MKV and WebM**: `--track` picks a subtitle track, see [MKV and WebM](#mkv-and-webm).
 - **Image cues**: `--skip-image-cues` leaves out image cues without text in place of failing.
 
 ## Formats and file extensions
@@ -70,6 +71,30 @@ Run `subtitle-toolbox formats` for the list. When two formats share an extension
 - **`.json` and `.txt` input**: format detection finds the speech-to-text JSON formats, podcast transcripts, Podcasting 2.0 chapters, MPL2, TMPlayer and OGM chapters by their content.
 - **Other output formats**: pass `--to`, for example `--to mpl2`, `--to podcast-transcript` or `--to ytchapter`.
 - **CSV and TSV**: TSV output has tabs between the cells. CSV output from a TSV input has commas. Other CSV output keeps the delimiter of the input table.
+
+## MKV and WebM
+Every command reads a subtitle track of an MKV or WebM file with [`MatroskaReader`](mkv.md). `--track` takes the track number that `info` lists.
+
+```sh
+vendor/bin/subtitle-toolbox info movie.mkv
+vendor/bin/subtitle-toolbox convert movie.mkv movie.srt --track 3
+vendor/bin/subtitle-toolbox convert movie.mkv movie.srt --track 5 --ocr
+```
+
+```
+movie.mkv
+  Format: matroska
+  Track 3: S_TEXT/UTF8, de, "Deutsch (Forced)", forced
+  Track 4: S_TEXT/ASS, eng, "English", default
+  Track 5: S_HDMV/PGS, eng
+```
+
+- **Detection**: the tool knows an MKV or WebM file by its first 4 bytes, not by its extension. Standard input works too.
+- **Track**: a file with one subtitle track needs no `--track`. For a file with more, the tool fails and lists the tracks.
+- **Format**: an `S_TEXT/UTF8` track is SubRip, ASS and SSA tracks are ASS, `S_TEXT/WEBVTT` is WebVTT and `S_HDMV/PGS` is PGS. Without `--to`, the output keeps this format. `convert movie.mkv --to srt` writes `movie.srt`.
+- **Info**: without `--track`, `info` lists the tracks. In the JSON, each track has `number`, `codecId`, `language`, `name`, `default` and `forced`. With `--track`, `info` prints the statistics of the track.
+- **Directories**: a directory argument skips MKV and WebM files. Pass them by name or with a glob.
+- **Errors**: `S_VOBSUB` tracks, bzlib and LZO compression and encryption fail, see [mkv.md](mkv.md).
 
 ## Convert
 | Option | Effect |

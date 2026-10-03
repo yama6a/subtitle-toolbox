@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Cli;
 use GlyphOcr\GlyphDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\FormatRegistry;
 use SubtitleToolbox\Formatters\JsonFormatter;
 use SubtitleToolbox\Formatters\SubRipFormatter;
@@ -682,6 +683,56 @@ class BinaryTest extends TestCase
             "valid"   => false,
             "results" => [["cueIndex" => 1, "cueNumber" => 2, "rule" => "maxCharactersPerLine", "value" => 57, "limit" => 42]],
         ], json_decode($stdout, true));
+    }
+
+
+    public function testConvertReadsATrackOfAnMkvFile(): void
+    {
+        copy(self::FILES . "mkv/text_tracks.mkv", "$this->dir/movie.mkv");
+        copy(self::FILES . "mkv/seek_head.mkv", "$this->dir/one.webm");
+        $mkv = MatroskaReader::open(self::FILES . "mkv/text_tracks.mkv");
+
+        $this->assertSame([0, "movie.mkv -> movie.srt\n", ""], $this->runBinary(["convert", "movie.mkv", "--to", "srt", "--track", "3"]));
+        $this->assertSame($mkv->extract(3)->format(SubRipFormatter::class), $this->file("movie.srt"));
+
+        [$code, $stdout] = $this->runBinary(["convert", "-", "--to", "vtt", "--track", "5"], $this->file("movie.mkv"));
+        $this->assertSame([0, $mkv->extract(5)->format(WebVttFormatter::class)], [$code, $stdout]);
+
+        $this->assertSame([0, "one.webm -> one.vtt\n", ""], $this->runBinary(["convert", "one.webm", "one.vtt"]));
+        $this->assertSame(MatroskaReader::open(self::FILES . "mkv/seek_head.mkv")->extract(2)->format(WebVttFormatter::class),
+                          $this->file("one.vtt"));
+
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "movie.mkv", "--to", "srt", "-o", "-"]);
+        $this->assertSame([1, ""], [$code, $stdout]);
+        $this->assertStringStartsWith("movie.mkv: The file has 6 subtitle tracks. Pass --track with one of them:\n" .
+                                      "  3: S_TEXT/UTF8, de, \"Deutsch (Forced)\", forced\n  4: S_TEXT/ASS, eng, \"English\", default\n", $stderr);
+        $this->assertSame(1, $this->runBinary(["convert", "movie.mkv", "--to", "srt", "--track", "7", "-o", "-"])[0]);
+        $this->assertSame([1, "", "trip.srt: --track needs an MKV or WebM input.\n"],
+                          $this->runBinary(["convert", "trip.srt", "--to", "vtt", "--track", "3", "-o", "-"]));
+        $this->assertSame(2, $this->runBinary(["convert", "movie.mkv", "--to", "srt", "--track", "x"])[0]);
+    }
+
+
+    public function testInfoListsTheTracksOfAnMkvFile(): void
+    {
+        copy(self::FILES . "mkv/pgs.mkv", "$this->dir/pgs.mkv");
+
+        $this->assertSame(
+            [0, "pgs.mkv\n  Format: matroska\n  Track 3: S_HDMV/PGS, ger, default\n  Track 4: S_HDMV/PGS, eng, default, forced\n", ""],
+            $this->runBinary(["info", "pgs.mkv"])
+        );
+
+        [$code, $stdout] = $this->runBinary(["info", "pgs.mkv", "--json"]);
+        $this->assertSame(0, $code);
+        $this->assertSame(["file" => "pgs.mkv", "format" => "matroska", "tracks" => [
+            ["number" => 3, "codecId" => "S_HDMV/PGS", "language" => "ger", "name" => null, "default" => true, "forced" => false],
+            ["number" => 4, "codecId" => "S_HDMV/PGS", "language" => "eng", "name" => null, "default" => true, "forced" => true],
+        ]], json_decode($stdout, true));
+
+        [$code, $stdout] = $this->runBinary(["info", "pgs.mkv", "--track", "4"]);
+        $this->assertSame(0, $code);
+        $this->assertStringContainsString("  Format:", $stdout);
+        $this->assertMatchesRegularExpression('/^  Image cues: +\d+, 0 with text$/m', $stdout);
     }
 
 

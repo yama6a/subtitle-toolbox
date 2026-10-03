@@ -93,6 +93,7 @@ Composer installs `vendor/bin/subtitle-toolbox`. Every [GitHub release](https://
 ```sh
 vendor/bin/subtitle-toolbox convert movie.srt movie.vtt
 vendor/bin/subtitle-toolbox fps season1/ --from 25 --to 23.976 --in-place
+vendor/bin/subtitle-toolbox convert movie.mkv movie.srt --track 3 --ocr
 
 curl -fsSLO https://github.com/yama6a/subtitle-toolbox/releases/latest/download/subtitle-toolbox.phar
 php subtitle-toolbox.phar validate movie.srt --preset netflix-en

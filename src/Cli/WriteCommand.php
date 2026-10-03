@@ -223,7 +223,7 @@ abstract class WriteCommand extends FileCommand
 
         $fileName   = basename($input);
         $extensions = FormatRegistry::extensions($outputFormat);
-        if ($outputFormat !== $inputFormat && !in_array(strtolower(pathinfo($fileName, PATHINFO_EXTENSION)), $extensions, true)) {
+        if (($outputFormat !== $inputFormat || $this->fromContainer) && !in_array(strtolower(pathinfo($fileName, PATHINFO_EXTENSION)), $extensions, true)) {
             $fileName = pathinfo($fileName, PATHINFO_FILENAME) . "." . $extensions[0];
         }
 
