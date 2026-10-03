@@ -31,11 +31,11 @@ final class Version
 
 
     /**
-     * Turns "v1.40.0" into "1.40.0", and a branch or an unknown version, such as "dev-master", into "dev".
+     * Turns "v1.40.0" into "1.40.0", and a branch or an unknown version, such as "dev-master" or "2.x-dev", into "dev".
      */
     public static function normalize(?string $version): string
     {
-        if ($version === null || $version === "" || str_starts_with($version, "dev-") || str_contains($version, "no-version-set")) {
+        if ($version === null || $version === "" || str_starts_with($version, "dev-") || str_ends_with($version, "-dev") || str_contains($version, "no-version-set")) {
             return "dev";
         }
 
