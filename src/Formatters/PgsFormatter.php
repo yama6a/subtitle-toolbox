@@ -52,6 +52,7 @@ class PgsFormatter extends SubtitleFormatter implements ImageFormatter
 
     public function format(Subtitle $subtitle, array $options = []): string
     {
+        $this->rejectUnknownOptions($options);
         $cues = array_values($subtitle->getCues());
         usort($cues, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());
 

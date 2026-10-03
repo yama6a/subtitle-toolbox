@@ -43,6 +43,7 @@ class EbuStlFormatter extends SubtitleFormatter
 
     public function format(Subtitle $subtitle, array $options = []): string
     {
+        $this->rejectUnknownOptions($options);
         $data = $subtitle->getFormatData(Stl::FORMAT_DATA_KEY);
         $gsi  = ($data["gsi"] ?? []) + self::DEFAULT_GSI;
 
