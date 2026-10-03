@@ -3,9 +3,11 @@
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Sync\ReferenceSync;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
+use SubtitleToolbox\Sync\SpeechReference;
 
 class SyncCommand extends WriteCommand
 {
@@ -24,13 +26,13 @@ class SyncCommand extends WriteCommand
 
     public function summary(): string
     {
-        return "Finds the offset and frame-rate scale against a reference subtitle and retimes the input.";
+        return "Finds the offset and frame-rate scale against a reference subtitle or the speech, and retimes the input.";
     }
 
 
     protected function usageLines(): array
     {
-        return ["<input>... --reference FILE [options]"];
+        return ["<input>... --reference FILE [options]", "<input>... --silence-log FILE --media-duration SECONDS [options]"];
     }
 
 
@@ -39,7 +41,9 @@ class SyncCommand extends WriteCommand
         return "Only the cue times count, so the reference can be in another language. The scale is 1 or a factor\n" .
                "between 23.976, 24 and 25 fps. The tool prints the scale, the offset and a score from 0 to 1. A score\n" .
                "below 0.5 means that the files likely do not match. Without --output, --output-dir or --in-place, the\n" .
-               "result of one input file goes to standard output.";
+               "result of one input file goes to standard output.\n" .
+               "For a sync to the speech, run ffmpeg -i movie.mkv -af silencedetect=noise=-30dB:d=0.4 -f null - 2> silence.log\n" .
+               "and pass --silence-log silence.log. A Whisper JSON transcript of the audio also works as --reference.";
     }
 
 
@@ -47,6 +51,8 @@ class SyncCommand extends WriteCommand
     {
         return [
             Option::value("reference", "FILE", "Subtitle in sync with the video, in any format that the tool reads."),
+            Option::value("silence-log", "FILE", "Log of the FFmpeg silencedetect filter. The speech between the silences is the reference."),
+            Option::value("media-duration", "SECONDS", "Duration of the video, for --silence-log."),
             Option::value("min-offset", "SECONDS", "Smallest offset to try. Default: -60."),
             Option::value("max-offset", "SECONDS", "Largest offset to try. Default: 60."),
             Option::flag("no-scale", "Keep the scale at 1 and find only the offset."),
@@ -87,15 +93,33 @@ class SyncCommand extends WriteCommand
 
     protected function checkReference(Arguments $arguments): void
     {
-        if (!$arguments->has("reference")) {
-            self::fail("Pass --reference FILE.");
+        if ($arguments->has("reference") === $arguments->has("silence-log")) {
+            self::fail("Pass one of --reference FILE and --silence-log FILE.");
         }
+        if ($arguments->has("silence-log") !== $arguments->has("media-duration")) {
+            self::fail("Pass --media-duration with --silence-log.");
+        }
+        $arguments->positiveFloat("media-duration");
     }
 
 
     protected function loadReference(Arguments $arguments, Console $console): Subtitle
     {
-        return $this->readSecondFile($arguments->value("reference"), $arguments, $console);
+        $log = $arguments->value("silence-log");
+        if ($log === null) {
+            return $this->readSecondFile($arguments->value("reference"), $arguments, $console);
+        }
+
+        $content = is_file($log) ? @file_get_contents($log) : false;
+        if ($content === false) {
+            self::fail("Cannot read the silence log $log.");
+        }
+
+        try {
+            return SpeechReference::fromFfmpegSilencedetect($content, $arguments->positiveFloat("media-duration"));
+        } catch (ParsingException $exception) {
+            return self::fail("$log: " . $exception->getMessage());
+        }
     }
 
 

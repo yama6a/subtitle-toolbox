@@ -44,6 +44,7 @@ class Application
             new SyncCommand(),
             new DiffCommand(),
             new DualCommand(),
+            new SnapCommand(),
             new HlsCommand(),
             new FormatsCommand(),
         ];

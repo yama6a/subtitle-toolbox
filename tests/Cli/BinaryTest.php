@@ -24,6 +24,11 @@ use SubtitleToolbox\Profanity\ProfanityFilter;
 use SubtitleToolbox\Profanity\ProfanityOptions;
 use SubtitleToolbox\ResegmentOptions;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Sync\ReferenceSync;
+use SubtitleToolbox\Sync\SpeechReference;
+use SubtitleToolbox\Timing\ShotChangeOptions;
+use SubtitleToolbox\Timing\ShotChanges;
+use SubtitleToolbox\Timing\ShotChangeTiming;
 
 /**
  * Runs bin/subtitle-toolbox as a separate process in a temporary directory with copies of the fixtures.
@@ -38,7 +43,7 @@ class BinaryTest extends TestCase
 
     private const BOM = "\xEF\xBB\xBF";
 
-    private const COMMANDS = ["convert", "shift", "scale", "fps", "sync-fps", "fix", "strip-sdh", "info", "validate", "sync", "diff", "dual", "hls", "formats"];
+    private const COMMANDS = ["convert", "shift", "scale", "fps", "sync-fps", "fix", "strip-sdh", "info", "validate", "sync", "diff", "dual", "snap", "hls", "formats"];
 
     private string $dir;
 
@@ -120,7 +125,7 @@ class BinaryTest extends TestCase
 
         $this->assertSame(0, $code);
         $this->assertStringContainsString("Usage: subtitle-toolbox <command>", $stdout);
-        foreach (["convert", "shift", "scale", "fps", "fix", "strip-sdh", "info", "validate", "sync", "diff", "dual", "hls", "formats", "help"] as $command) {
+        foreach (["convert", "shift", "scale", "fps", "fix", "strip-sdh", "info", "validate", "sync", "diff", "dual", "snap", "hls", "formats", "help"] as $command) {
             $this->assertMatchesRegularExpression("/^  $command +\S/m", $stdout);
         }
         $this->assertSame("", $stderr);
@@ -972,6 +977,53 @@ class BinaryTest extends TestCase
         $this->assertSame(2, $this->runBinary(["sync", "de.srt"])[0]);
         $this->assertSame(2, $this->runBinary(["sync", "de.srt", "--reference", "en.srt", "--min-offset", "10", "--max-offset", "-10"])[0]);
         $this->assertSame(2, $this->runBinary(["sync", "de.srt", "--reference", "en.srt", "--max-splits", "two"])[0]);
+    }
+
+
+    public function testSyncToTheSpeech(): void
+    {
+        copy(self::FILES . "sync/own_target_de_25fps.srt", "$this->dir/de.srt");
+        copy(self::FILES . "sync/own_ffmpeg_silencedetect.log", "$this->dir/silence.log");
+        $expected = Subtitle::parse($this->file("de.srt"));
+        ReferenceSync::sync($expected, SpeechReference::fromFfmpegSilencedetect($this->file("silence.log"), 840))->apply($expected);
+
+        [$code, $stdout, $stderr] = $this->runBinary(["sync", "de.srt", "--silence-log", "silence.log", "--media-duration", "840"]);
+        $this->assertSame([0, $expected->format(SubRipFormatter::class), "de.srt: scale 1.04271, offset -2.3 s, score 0.78\n"],
+                          [$code, $stdout, $stderr]);
+
+        foreach ([["--silence-log", "silence.log"], ["--media-duration", "840"], ["--reference", "trip.srt", "--silence-log", "silence.log",
+                  "--media-duration", "840"]] as $options) {
+            $this->assertSame(2, $this->runBinary(["sync", "de.srt", ...$options])[0], implode(" ", $options));
+        }
+        file_put_contents("$this->dir/mono.log", "[silencedetect @ 0x1] channel: 0 | silence_start: 1.5\n");
+        $this->assertSame(1, $this->runBinary(["sync", "de.srt", "--silence-log", "mono.log", "--media-duration", "840"])[0]);
+    }
+
+
+    public function testSnapToShotChanges(): void
+    {
+        foreach (["own_garden_24fps.srt" => "garden.srt", "own_ffmpeg_showinfo.log" => "scenes.log", "own_scenes.txt" => "scenes.txt"] as $from => $to) {
+            copy(self::FILES . "shot-changes/$from", "$this->dir/$to");
+        }
+        $timed = file_get_contents(self::FILES . "shot-changes/own_garden_24fps_timed.srt");
+
+        $this->assertSame([0, $timed, ""], $this->runBinary(["snap", "garden.srt", "--fps", "24", "--shot-changes", "scenes.log"]));
+        $this->assertSame([0, $timed, ""], $this->runBinary(["snap", "garden.srt", "--fps", "24", "--shot-changes", "scenes.txt"]));
+
+        $options  = new ShotChangeOptions(frameRate: 24, snapWindow: 6, minGapFrames: 3, chain: false, minDuration: 12);
+        $expected = ShotChangeTiming::apply(Subtitle::parse($this->file("garden.srt")), ShotChanges::fromText($this->file("scenes.txt")), $options);
+        $this->assertSame([0, $expected->format(SubRipFormatter::class), ""], $this->runBinary([
+            "snap", "garden.srt", "--fps", "24", "--shot-changes", "scenes.txt", "--snap-window", "6", "--min-gap-frames", "3",
+            "--no-chain", "--min-duration-frames", "12",
+        ]));
+
+        $chained = ShotChangeTiming::chainGaps(Subtitle::parse($this->file("garden.srt")), new ShotChangeOptions(24));
+        $this->assertSame([0, $chained->format(SubRipFormatter::class), ""], $this->runBinary(["snap", "garden.srt", "--fps", "24"]));
+
+        foreach ([[], ["--fps", "24", "--no-chain"], ["--fps", "24", "--snap-window", "-1"], ["--fps", "24", "--shot-changes", "missing.txt"],
+                  ["--fps", "24", "--shot-changes", "garden.srt"]] as $options) {
+            $this->assertSame(2, $this->runBinary(["snap", "garden.srt", ...$options])[0], implode(" ", $options));
+        }
     }
 
 

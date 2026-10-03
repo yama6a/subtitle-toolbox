@@ -46,6 +46,7 @@ php subtitle-toolbox.phar --version
 | `sync` | retimes a subtitle to a reference subtitle or to the speech, see [Sync](#sync) |
 | `diff` | lists the added, removed and changed cues of two files, see [Diff](#diff) |
 | `dual` | merges two languages into one file, see [Dual](#dual) |
+| `snap` | times cues to shot changes and closes small gaps, see [Snap](#snap) |
 | `hls` | cuts a subtitle into WebVTT segments and writes an HLS playlist, see [HLS](#hls) |
 | `formats` | lists the format names and extensions for `--from` and `--to` |
 
@@ -192,6 +193,9 @@ vendor/bin/subtitle-toolbox validate movie.srt --preset bbc --no-unbalanced-tags
 
 ```sh
 vendor/bin/subtitle-toolbox sync movie.de.srt --reference movie.en.srt -o movie.de.synced.srt
+
+ffmpeg -i movie.mkv -af silencedetect=noise=-30dB:d=0.4 -f null - 2> silence.log
+vendor/bin/subtitle-toolbox sync movie.de.srt --silence-log silence.log --media-duration 5400 -o movie.de.synced.srt
 ```
 
 ```
@@ -201,6 +205,7 @@ movie.de.srt: scale 1.04271, offset -2.3 s, score 0.89
 | Option | Sets |
 |:--- |:--- |
 | `--reference FILE` | the subtitle in sync with the video, in any format that the tool reads. A Whisper JSON transcript of the audio also works |
+| `--silence-log FILE`, `--media-duration SECONDS` | the speech in an FFmpeg `silencedetect` log as the reference, with [`SpeechReference`](sync.md#sync-to-speech) |
 | `--min-offset SECONDS`, `--max-offset SECONDS` | `minOffset` and `maxOffset`, default -60 and 60 |
 | `--no-scale` | `searchScale: false` |
 | `--max-splits N`, `--split-penalty SCORE` | `maxSplits`, default 0, and `splitPenalty`, default 0.1 |
@@ -236,6 +241,22 @@ vendor/bin/subtitle-toolbox dual movie.en.srt movie.de.srt --mode top-bottom -o 
 | `--secondary-style TAG` | `secondaryStyle`, for example `i` or `'font color="#ffff00"'` |
 | `--secondary-alignment 1-9` | `secondaryAlignment` for `top-bottom`, default 8 |
 | `--snap-tolerance SECONDS` | `snapTolerance` for `top-bottom`, default 0.25 |
+
+## Snap
+`snap` runs [`ShotChangeTiming::apply()`](editing.md#shot-changes-and-gaps) with the shot changes of a file. Without `--shot-changes`, it runs `chainGaps()`. `--fps` is required.
+
+```sh
+ffmpeg -i movie.mp4 -vf "select='gt(scene,0.3)',showinfo" -f null - 2> scenes.log
+vendor/bin/subtitle-toolbox snap movie.srt --fps 24 --shot-changes scenes.log -o movie.timed.srt
+```
+
+| Option | Sets |
+|:--- |:--- |
+| `--shot-changes FILE` | the shot changes: the log of the FFmpeg `showinfo` filter, or one time per line in seconds or `hh:mm:ss.mmm` |
+| `--snap-window FRAMES` | `snapWindow`, default half a second |
+| `--min-gap-frames FRAMES` | `minGapFrames`, default 2 |
+| `--min-duration-frames FRAMES` | `minDuration`, default 20 |
+| `--no-chain` | `chain: false` |
 
 ## HLS
 `hls` cuts one subtitle into WebVTT segments with [`HlsWebVttSegmenter`](hls.md) and writes them with the playlist into `--output-dir`.
