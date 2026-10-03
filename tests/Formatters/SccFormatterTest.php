@@ -81,6 +81,14 @@ class SccFormatterTest extends TestCase
     }
 
 
+    public function testSingleQuotedColourBecomesAMidRowCode(): void
+    {
+        $output = $this->subtitle(new SubtitleCue(2.0, 4.0, "Rain and <font color='#ffff00'>sun</font>"))->format(SccFormatter::class);
+
+        $this->assertSame(["Rain and <font color=\"#ffff00\">sun</font>"], Subtitle::parse($output, SccParser::class)->getCues()[0]->getLines());
+    }
+
+
     public function testDropsTagsThatCea608CannotShow(): void
     {
         $output = $this->subtitle(new SubtitleCue(2.0, 4.0, "<b>Bold</b> <v Ann>and <font color=\"#123456\">grey</font>"))->format(SccFormatter::class);

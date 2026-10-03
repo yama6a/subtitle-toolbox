@@ -98,6 +98,7 @@ class EbuStlFormatterTest extends TestCase
         return [
             "italics and underline"  => ["<i>warm</i> and <u>fresh</u>", "\x80warm\x81 and \x82fresh\x83"],
             "teletext colours"       => ["<font color=\"#FF0000\">Fresh</font> rolls", "\x01Fresh\x07rolls"],
+            "single quoted colour"   => ["<font color='#FF0000'>Fresh</font> rolls", "\x01Fresh\x07rolls"],
             "nested colours"         => ["<font color=\"#00ff00\">a <font color=\"#0000ff\">b</font> c</font>", "\x02a\x04b\x02c"],
             "other colours dropped"  => ["<font color=\"#123456\">dark</font> text", "dark text"],
             "open tags closed"       => ["<i><b>bold</b> italic", "\x80bold italic\x81"],

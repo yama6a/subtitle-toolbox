@@ -58,6 +58,16 @@ class IttFormatterTest extends TestCase
     }
 
 
+    public function testSingleQuotedColourBecomesAColourSpan(): void
+    {
+        $output = (new Subtitle())->addCue(new SubtitleCue(1, 2, "<font color='#ff0000'>red</font>"))
+                                  ->format(IttFormatter::class, [IttFormatter::OPTION_FRAME_RATE => 25]);
+
+        $this->assertSame(["<p begin=\"00:00:01:00\" end=\"00:00:02:00\" region=\"bottom\"><span tts:color=\"#ff0000\">red</span></p>"],
+                          $this->paragraphs($output));
+    }
+
+
     public function testSubtitleFromAnotherFormatGetsRegionsAndSupportedStyles(): void
     {
         $srt = "1\n00:00:01,000 --> 00:00:02,000\n{\\an8}<v Fred>Hi & <b>bold <i>both</i></b>\n"

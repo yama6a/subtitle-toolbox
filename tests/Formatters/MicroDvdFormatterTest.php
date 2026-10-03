@@ -70,6 +70,19 @@ class MicroDvdFormatterTest extends TestCase
     }
 
 
+    public function testSingleQuotedAndUnquotedColoursBecomeColourCodes(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue(new SubtitleCue(1, 2, "<font color='#ff0000'>Red</font>"))
+            ->addCue(new SubtitleCue(3, 4, "<font color=#00ff00>Green</font>"));
+
+        $this->assertSame(
+            "{25}{50}{c:\$0000FF}Red\n{75}{100}{c:\$00FF00}Green\n",
+            $subtitle->format(MicroDvdFormatter::class, [MicroDvdFormatter::OPTION_FRAME_RATE => 25])
+        );
+    }
+
+
     public function testStripAllTagsOptionDropsStyleCodes(): void
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "<i>Hello</i>"));
