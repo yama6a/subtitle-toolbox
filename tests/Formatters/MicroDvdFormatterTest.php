@@ -52,7 +52,7 @@ class MicroDvdFormatterTest extends TestCase
     public function testFrameRateOptionIsRequired(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("The MicroDVD formatter needs MicroDvdOptions with a frame rate.");
+        $this->expectExceptionMessage("MicroDVD output needs the frame rate of the video. Pass MicroDvdOptions::frameRate.");
         (new Subtitle())->addCue(new SubtitleCue(1, 2, "Hello"))->toString(Format::MicroDvd);
     }
 

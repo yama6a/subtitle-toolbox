@@ -68,7 +68,7 @@ class JsonRealFilesTest extends TestCase
         $json     = Subtitle::fromStringAutoDetectFormat(file_get_contents(self::DIR . "own_aegisub.json"));
         $original = Subtitle::fromStringAutoDetectFormat(file_get_contents(__DIR__ . "/../files/ass/real/own_aegisub.ass"));
 
-        $this->assertEquals($original, $json);
+        $this->assertEquals($original->toArray(), $json->toArray());
         $this->assertSame("Morning train to the coast", $json->getMetadata(Subtitle::METADATA_TITLE));
         $this->assertCount(3, $json->getComments());
         $this->assertSame("V4+ Styles", $json->getFormatData("ass")["stylesSection"]);

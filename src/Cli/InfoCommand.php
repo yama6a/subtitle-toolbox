@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Container\Matroska\MatroskaTrack;
+use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\ParseWarning;
@@ -46,11 +47,20 @@ class InfoCommand extends ReportCommand
     }
 
 
-    protected function listTracks(string $input, array $tracks, Console $console): bool
+    protected function listTracks(string $input, Console $console): bool
     {
+        if (Format::fromPath($input) !== null) {
+            return false;
+        }
+        try {
+            $tracks = Subtitle::tracks($input);
+        } catch (ParsingException) {
+            return false;
+        }
+
         $text = self::label($input) . "\n  Format: matroska\n";
         foreach ($tracks as $track) {
-            $text .= "  Track $track->number: " . self::describeTrack($track) . "\n";
+            $text .= "  Track $track->number: " . $track->describe() . "\n";
         }
         $this->emit($console, ($this->succeeded > 0 ? "\n" : "") . $text, [
             "file"   => self::label($input),

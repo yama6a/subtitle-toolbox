@@ -23,17 +23,17 @@ composer require ymakhloufi/subtitle-toolbox
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
-$subtitle = Subtitle::fromString(file_get_contents('movie.srt'), Format::SubRip);
+$subtitle = Subtitle::load('movie.srt', Format::SubRip);
 
 $subtitle->shift(-2.5);                                         // all cues 2.5 s earlier
 $subtitle->convertFrameRate(25, 23.976);                        // subtitle for a 25 fps video, video is 23.976 fps
 $subtitle->fixOverlaps(0.083);                                  // end each cue at least 0.083 s before the next one
 $subtitle->wrapLines(42);                                       // at most 42 characters per line, at most 2 lines
 
-file_put_contents('movie.vtt', $subtitle->toString(Format::WebVtt));
+$subtitle->save('movie.vtt');                                   // WebVTT, from the extension
 ```
 
-- **Format**: the enum `Format` names each format, for example `Format::SubRip`. `Subtitle::fromStringAutoDetectFormat($content)` detects the format from the content. See [detection](docs/detection.md).
+- **Format**: the enum `Format` names each format, for example `Format::SubRip`. `Subtitle::loadAutoDetectFormat('movie.srt')` detects the format from the content. See [load and save](docs/formats.md#load-and-save) and [detection](docs/detection.md).
 - **Read options**: `Subtitle::fromString($content, Format::SubRip, new ReadOptions(encoding: 'Windows-1252'))` converts the input to UTF-8. `ReadOptions` holds every parser setting. See [read options](docs/read-options.md) and [encodings](docs/encodings.md).
 - **Errors**: every exception implements `SubtitleToolboxException`. See [errors](docs/errors.md).
 

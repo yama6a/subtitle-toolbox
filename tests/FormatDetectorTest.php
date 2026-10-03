@@ -319,7 +319,7 @@ class FormatDetectorTest extends TestCase
     public function testAutoDetectionThrowsForUnknownContent(): void
     {
         $this->expectException(InvalidParserException::class);
-        $this->expectExceptionMessage("The subtitle format of the content is unknown.");
+        $this->expectExceptionMessage("Format detection found no subtitle format.");
 
         Subtitle::fromStringAutoDetectFormat("Just some text.");
     }

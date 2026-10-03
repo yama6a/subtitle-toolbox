@@ -115,6 +115,7 @@ class ThrowSitesTest extends TestCase
         ImageCueWithoutTextException::class => 103,
         InvalidArgumentException::class     => 104,
         CueNotFoundException::class         => 105,
+        UnknownFormatException::class       => 106,
     ];
 
     private const IDX = "# VobSub index file, v7 (do not modify this line!)\nsize: 720x576\n" .
@@ -122,6 +123,8 @@ class ThrowSitesTest extends TestCase
                         "33fa33, 11bb11, fafa33, bbbb11, fa33fa, bb11bb, 33fafa, 11bbbb\n";
 
     private const IDX_WITH_TRACK = self::IDX . "id: en, index: 0\ntimestamp: 00:00:01:000, filepos: 000000000\n";
+
+    private const FILES = __DIR__ . "/../files/";
 
     private const FAKE_TESSERACT = __DIR__ . "/../files/ocr/fake-tesseract/tesseract";
 
@@ -157,6 +160,16 @@ class ThrowSitesTest extends TestCase
         $body = "\x81\x00\x00\x20" . $unit;
 
         return "\x00\x00\x01\xBA\x44\x00\x04\x00\x04\x01\x01\x89\xC3\xFA\xFF\xFF\x00\x00\x01\xBD" . pack("n", strlen($body)) . $body;
+    }
+
+
+    private static function unreadableFile(): string
+    {
+        $path = tempnam(sys_get_temp_dir(), "unreadable");
+        chmod($path, 0);
+        register_shutdown_function(fn () => @unlink($path));
+
+        return $path;
     }
 
 
@@ -290,8 +303,9 @@ class ThrowSitesTest extends TestCase
                 ["firstSubtitleNumber" => 65536])->toString(Format::EbuStl), ...$invalid],
             "Formatters/EbuStlFormatter.php: text too long" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 30000)))
                 ->toString(Format::EbuStl), ...$invalid],
-            "Formatters/IttFormatter.php: no frame rate"    => [fn () => self::subtitle()->toString(Format::Itt), ...$invalid],
-            "Formatters/MicroDvdFormatter.php: no frame rate" => [fn () => self::subtitle()->toString(Format::MicroDvd), ...$invalid],
+            "Formatters/IttFormatter.php: no frame rate"    => [fn () => (new IttFormatter())->format(self::subtitle(), new WriteOptions()), ...$invalid],
+            "Formatters/MicroDvdFormatter.php: no frame rate" => [fn () => (new MicroDvdFormatter())->format(self::subtitle(), new WriteOptions()),
+                                                                ...$invalid],
             "Formatters/Options/AssOptions.php: karaoke tag" => [fn () => new AssOptions(karaokeTag: "K"), ...$invalid],
             "Formatters/Options/CsvOptions.php: frame rate 0" => [fn () => new CsvOptions(frameRate: 0), ...$invalid],
             "Formatters/Options/EbuStlOptions.php: frame rate 24" => [fn () => new EbuStlOptions(frameRate: 24), ...$invalid],
@@ -575,7 +589,23 @@ class ThrowSitesTest extends TestCase
             "StringHelpers.php: unknown encoding"           => [fn () => StringHelpers::convertToUtf8("text", "NO-SUCH-ENCODING"),
                                                                 ...$parsing],
             "Subtitle.php: unknown format"                  => [fn () => Subtitle::fromStringAutoDetectFormat("text"),
+                                                                InvalidParserException::class, UnknownFormatException::class],
+            "Subtitle.php: unknown format of a file"        => [fn () => Subtitle::loadAutoDetectFormat(self::FILES . "chapters/ffmetadata/real/m4b_audiobook.ffmeta"),
+                                                                InvalidParserException::class, UnknownFormatException::class],
+            "Subtitle.php: load() of an MKV file"           => [fn () => Subtitle::load(self::FILES . "mkv/pgs.mkv", Format::Pgs),
                                                                 InvalidParserException::class, InvalidParserException::class],
+            "Subtitle.php: fromString() of MKV content"     => [fn () => Subtitle::fromString(MatroskaReader::EBML_MAGIC, Format::SubRip),
+                                                                InvalidParserException::class, InvalidParserException::class],
+            "Subtitle.php: MKV with 2 subtitle tracks"      => [fn () => Subtitle::loadAutoDetectFormat(self::FILES . "mkv/pgs.mkv"),
+                                                                InvalidParserException::class, InvalidParserException::class],
+            "Subtitle.php: VobSub without its .sub file"    => [fn () => Subtitle::load(self::FILES . "vobsub/SOURCES.md", Format::VobSub), ...$invalid],
+            "Subtitle.php: missing file"                    => [fn () => Subtitle::load(self::FILES . "missing.srt", Format::SubRip), ...$invalid],
+            "Subtitle.php: unreadable file"                 => [fn () => Subtitle::load(self::unreadableFile(), Format::SubRip), ...$invalid],
+            "Subtitle.php: save() to an unknown extension"  => [fn () => self::subtitle()->save(self::FILES . "out.unknown"),
+                                                                InvalidFormatterException::class, InvalidFormatterException::class],
+            "Subtitle.php: save() into a missing directory" => [fn () => self::subtitle()->save(self::FILES . "missing/out.srt"), ...$invalid],
+            "Subtitle.php: MicroDVD without a frame rate"   => [fn () => self::subtitle()->toString(Format::MicroDvd), ...$invalid],
+            "Subtitle.php: iTT without a frame rate"        => [fn () => self::subtitle()->toString(Format::Itt), ...$invalid],
             "Subtitle.php: format without a parser"         => [fn () => Subtitle::fromString("text", Format::PlainText),
                                                                 InvalidParserException::class, InvalidParserException::class],
             "Subtitle.php: format without a formatter"      => [fn () => self::subtitle()->toString(Format::Whisper),
