@@ -60,7 +60,7 @@ php subtitle-toolbox.phar --version
 - **Output bytes**: `--line-ending lf|crlf`, `--bom` and `--no-bom`.
 - **Broken files**: `--lenient` skips or repairs broken cues and prints a warning for each, see [lenient-parsing.md](lenient-parsing.md).
 - **Frame rate**: `--fps` gives the frame rate for a MicroDVD file without a `{1}{1}<fps>` first line. MicroDVD and iTT output also use it. Without it, MicroDVD output takes the frame rate of a MicroDVD input, and iTT output the frame rate of an iTT input.
-- **Word timestamps**: `--word-timestamps` keeps the word times of the speech-to-text JSON formats, YouTube timed text and Podcasting 2.0 transcripts. `fix --resegment` turns it on.
+- **Word timestamps**: `--word-timestamps` keeps the word times of the speech-to-text JSON formats, YouTube timed text and Podcasting 2.0 transcripts. `fix --resegment`, `convert --karaoke` and `convert --karaoke-tag` turn it on.
 - **MKV and WebM**: `--track` picks a subtitle track, see [MKV and WebM](#mkv-and-webm).
 - **Image cues**: `--skip-image-cues` leaves out image cues without text in place of failing.
 
@@ -108,11 +108,18 @@ movie.mkv
 | `--mute-edl FILE` | writes the times of the matches to an EDL file with [`MuteRange::toEdl()`](text.md#profanity-filter), for Kodi and MPlayer |
 | `--mute-filter FILE` | writes the FFmpeg volume filter of `MuteRange::toFfmpegVolumeFilter()` |
 | `--mute-padding SECONDS` | widens each time range on both sides, default 0 |
+| `--karaoke` | writes one cue per word with the active word styled, with [`WordHighlight::expand()`](text.md#word-highlight-and-karaoke) |
+| `--karaoke-style TAG` | `b`, `i`, `u` (default), `s` or `'font color="#ffff00"'` |
+| `--karaoke-mode MODE` | `word` (default) styles the active word, `cumulative` all words up to it |
+| `--karaoke-words N` | shows only N words around the active word |
+| `--karaoke-tag TAG` | `k` (default), `kf` or `ko`, the ASS tag for word timestamps, see [formats.md](formats.md#ass-and-ssa). Needs ASS output |
 | `--forced-only` | keeps only the [forced cues](subtitle.md#forced-cues) |
 | `--ocr` | reads the text of image cues, see [OCR](#ocr) |
 | `--ocr-database FILE` | the `.nocr` glyph database for `--ocr` |
 
 ```sh
+vendor/bin/subtitle-toolbox convert song.json song.srt --karaoke --karaoke-words 5
+vendor/bin/subtitle-toolbox convert song.json song.ass --karaoke-tag kf
 vendor/bin/subtitle-toolbox convert movie.srt clean.srt --mask-words words.txt --mute-filter mute.txt --mute-padding 0.1
 ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 ```

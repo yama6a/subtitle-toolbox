@@ -5,7 +5,11 @@ namespace SubtitleToolbox\Cli;
 use GlyphOcr\Exceptions\GlyphOcrException;
 use GlyphOcr\GlyphDatabase;
 use GlyphOcr\Recognizer;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\AssFormatter;
 use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\Karaoke\WordHighlight;
+use SubtitleToolbox\Karaoke\WordHighlightOptions;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Profanity\MuteRange;
 use SubtitleToolbox\Profanity\ProfanityFilter;
@@ -25,11 +29,17 @@ class ConvertCommand extends WriteCommand
         "none"         => ProfanityOptions::MASK_NONE,
     ];
 
+    private const KARAOKE_OPTIONS = ["karaoke-style", "karaoke-mode", "karaoke-words"];
+
+    private const KARAOKE_TAGS = ["k", "kf", "ko"];
+
     private const MUTE_OPTIONS = ["mute-edl", "mute-filter", "mute-padding"];
 
     private ?GlyphDatabase $ocrDatabase = null;
 
     private ?ProfanityOptions $profanity = null;
+
+    private ?WordHighlightOptions $karaoke = null;
 
     /** @var list<MuteRange> */
     private array $muteRanges = [];
@@ -71,6 +81,11 @@ class ConvertCommand extends WriteCommand
             Option::value("mute-edl", "FILE", "Write the times of the --mask-words matches to this EDL file, for Kodi and MPlayer to mute the audio."),
             Option::value("mute-filter", "FILE", "Write an FFmpeg volume filter that mutes the --mask-words matches to this file."),
             Option::value("mute-padding", "SECONDS", "Widen each mute range by this time on both sides. Default: 0."),
+            Option::flag("karaoke", "Write one cue per word timestamp, with the active word styled, for players without karaoke."),
+            Option::value("karaoke-style", "TAG", "Style of the active word for --karaoke: b, i, u, s or 'font color=\"#ffff00\"'. Default: u."),
+            Option::value("karaoke-mode", "MODE", "word styles the active word, cumulative all words up to it. Default: word."),
+            Option::value("karaoke-words", "WORDS", "Show only this many words around the active word with --karaoke."),
+            Option::value("karaoke-tag", "TAG", "Write word timestamps as ASS karaoke tags \\k, \\kf or \\ko: k, kf or ko. Default: k."),
             Option::flag("forced-only", "Keep only the forced cues, for example the translations of signs."),
             Option::flag("ocr", "Read the text of image cues, for example from PGS or VobSub, with GlyphOcrEngine."),
             Option::value("ocr-database", "FILE", "The .nocr glyph database for --ocr. Default: the Latin database of php-glyph-ocr."),
@@ -144,10 +159,45 @@ class ConvertCommand extends WriteCommand
             wordFile: $words,
         );
 
+        $this->karaoke = null;
+        foreach (self::KARAOKE_OPTIONS as $option) {
+            if ($arguments->has($option) && !$arguments->has("karaoke")) {
+                self::fail("Pass --karaoke with --$option.");
+            }
+        }
+        if ($arguments->has("karaoke") && $arguments->has("karaoke-tag")) {
+            self::fail("Pass only one of --karaoke and --karaoke-tag.");
+        }
+        $tag = $arguments->value("karaoke-tag");
+        if ($tag !== null && !in_array($tag, self::KARAOKE_TAGS, true)) {
+            self::fail("The option --karaoke-tag must be k, kf or ko, got \"$tag\".");
+        }
+        $mode = $arguments->value("karaoke-mode");
+        if ($mode !== null && !in_array($mode, [WordHighlightOptions::MODE_WORD, WordHighlightOptions::MODE_CUMULATIVE], true)) {
+            self::fail("The option --karaoke-mode must be word or cumulative, got \"$mode\".");
+        }
+        if ($arguments->has("karaoke")) {
+            try {
+                $this->karaoke = new WordHighlightOptions(
+                    style: $arguments->value("karaoke-style") ?? "u",
+                    mode: $mode ?? WordHighlightOptions::MODE_WORD,
+                    maxWordsPerCue: $arguments->positiveInt("karaoke-words"),
+                );
+            } catch (InvalidArgumentException $exception) {
+                self::fail($exception->getMessage());
+            }
+        }
+
         $this->ocrDatabase = $arguments->has("ocr") ? self::loadOcrDatabase($arguments->value("ocr-database")) : null;
         if ($this->ocrDatabase === null && $arguments->has("ocr-database")) {
             self::fail("Pass --ocr with --ocr-database.");
         }
+    }
+
+
+    protected function needsWordTimestamps(Arguments $arguments): bool
+    {
+        return parent::needsWordTimestamps($arguments) || $arguments->has("karaoke") || $arguments->has("karaoke-tag");
     }
 
 
@@ -219,6 +269,26 @@ class ConvertCommand extends WriteCommand
         if ($arguments->has("strip-tags")) {
             $subtitle->stripFormatting();
         }
+    }
+
+
+    protected function rebuild(Subtitle $subtitle, Arguments $arguments): Subtitle
+    {
+        return $this->karaoke === null ? $subtitle : WordHighlight::expand($subtitle, $this->karaoke);
+    }
+
+
+    protected function commandFormatterOptions(string $formatter, Arguments $arguments): array
+    {
+        $tag = $arguments->value("karaoke-tag");
+        if ($tag === null) {
+            return [];
+        }
+        if ($formatter !== AssFormatter::class) {
+            self::fail("--karaoke-tag needs ASS output.");
+        }
+
+        return [AssFormatter::OPTION_KARAOKE_TAG => $tag];
     }
 
 

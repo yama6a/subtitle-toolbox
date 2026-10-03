@@ -434,6 +434,34 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testKaraoke(): void
+    {
+        copy(self::FILES . "whisper/real/openai_whisper_word_timestamps.json", "$this->dir/song.json");
+        copy(self::FILES . "lrc/real/handwritten-enhanced.lrc", "$this->dir/song.lrc");
+
+        $this->assertSame([0, "song.json -> word.srt\n", ""], $this->runBinary(["convert", "song.json", "word.srt", "--karaoke"]));
+        $this->assertFileEquals(self::FILES . "karaoke/whisper_word.srt", "$this->dir/word.srt");
+        $this->assertSame(
+            [0, file_get_contents(self::FILES . "karaoke/whisper_one_word.vtt"), ""],
+            $this->runBinary(["convert", "song.json", "--to", "vtt", "-o", "-", "--karaoke", "--karaoke-style", "b", "--karaoke-words", "1"])
+        );
+        $this->assertSame(
+            [0, file_get_contents(self::FILES . "karaoke/lrc_cumulative.srt"), ""],
+            $this->runBinary(["convert", "song.lrc", "--to", "srt", "-o", "-", "--karaoke", "--karaoke-mode", "cumulative",
+                              "--karaoke-style", 'font color="#ffff00"'])
+        );
+        $this->assertSame([0, file_get_contents(self::FILES . "karaoke/whisper_kf.ass"), ""],
+                          $this->runBinary(["convert", "song.json", "--to", "ass", "-o", "-", "--karaoke-tag", "kf"]));
+
+        $this->assertSame([1, "", "song.json: --karaoke-tag needs ASS output.\n"],
+                          $this->runBinary(["convert", "song.json", "--to", "srt", "-o", "-", "--karaoke-tag", "kf"]));
+        foreach ([["--karaoke-tag", "x"], ["--karaoke", "--karaoke-tag", "k"], ["--karaoke-words", "2"], ["--karaoke", "--karaoke-style", "em"],
+                  ["--karaoke", "--karaoke-mode", "all"], ["--karaoke", "--karaoke-words", "0"]] as $options) {
+            $this->assertSame(2, $this->runBinary(["convert", "song.json", "--to", "srt", "-o", "-", ...$options])[0], implode(" ", $options));
+        }
+    }
+
+
     public function testMicroDvdNeedsTheFrameRate(): void
     {
         [$code, , $stderr] = $this->runBinary(["convert", "frames.sub", "--to", "srt", "-o", "-"]);

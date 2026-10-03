@@ -161,13 +161,14 @@ abstract class WriteCommand extends FileCommand
     protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
     {
         $this->transform($subtitle, $arguments);
+        $subtitle = $this->rebuild($subtitle, $arguments);
 
         $outputFormat = $this->outputFormat($format);
         $target       = $this->target($input, $format, $outputFormat, $arguments);
         $formatter    = FormatRegistry::formatterClass($outputFormat);
 
         try {
-            $content = $subtitle->format($formatter, $this->formatterOptions($subtitle, $formatter, $format, $outputFormat));
+            $content = $subtitle->format($formatter, $this->formatterOptions($subtitle, $formatter, $format, $outputFormat, $arguments));
         } catch (ImageCueWithoutTextException) {
             self::fail("The file holds image cues without text. Run OCR on them first, or pass --skip-image-cues.");
         }
@@ -180,6 +181,26 @@ abstract class WriteCommand extends FileCommand
 
         $this->write($input, $target, $content, $arguments);
         $this->report($console, self::label($input) . " -> $target\n");
+    }
+
+
+    /**
+     * Returns the subtitle to write after transform(), for a change that builds a new Subtitle.
+     */
+    protected function rebuild(Subtitle $subtitle, Arguments $arguments): Subtitle
+    {
+        return $subtitle;
+    }
+
+
+    /**
+     * Returns formatter options of the command for the output format.
+     *
+     * @param class-string<SubtitleFormatter> $formatter
+     */
+    protected function commandFormatterOptions(string $formatter, Arguments $arguments): array
+    {
+        return [];
     }
 
 
@@ -254,9 +275,9 @@ abstract class WriteCommand extends FileCommand
     }
 
 
-    private function formatterOptions(Subtitle $subtitle, string $formatter, string $inputFormat, string $outputFormat): array
+    private function formatterOptions(Subtitle $subtitle, string $formatter, string $inputFormat, string $outputFormat, Arguments $arguments): array
     {
-        $options = $this->formatterOptions;
+        $options = $this->formatterOptions + $this->commandFormatterOptions($formatter, $arguments);
         // CsvFormatter writes the delimiter of the parsed table, so a TSV input would give a CSV file with tabs.
         if ($outputFormat === "tsv") {
             $options[CsvFormatter::OPTION_DELIMITER] = "\t";
