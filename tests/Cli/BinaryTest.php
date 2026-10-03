@@ -14,6 +14,7 @@ use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Profanity\MuteRange;
 use SubtitleToolbox\Profanity\ProfanityFilter;
 use SubtitleToolbox\Profanity\ProfanityOptions;
@@ -578,6 +579,28 @@ class BinaryTest extends TestCase
         $this->assertSame([2, "", "Error: Pass --common-errors with --language.\nRun \"subtitle-toolbox help fix\" for the usage.\n"],
                           $this->runBinary(["fix", "web.srt", "--overlaps", "--language", "en"]));
         $this->assertSame(2, $this->runBinary(["fix", "web.srt", "--common-errors", "--replace-list", "missing.xml"])[0]);
+    }
+
+
+    public function testWordTimestampsAndResegment(): void
+    {
+        copy(self::FILES . "resegmenting/own_whisper_long_segments.json", "$this->dir/lecture.json");
+        $withWords = fn (): Subtitle => (new WhisperJsonParser([WhisperJsonParser::OPTION_WORD_TIMESTAMPS => true]))->parse($this->file("lecture.json"));
+
+        [$code, $stdout, $stderr] = $this->runBinary(["fix", "lecture.json", "--resegment", "-o", "lecture.srt"]);
+        $this->assertSame([0, "lecture.json -> lecture.srt\n", ""], [$code, $stdout, $stderr]);
+        $this->assertFileEquals(self::FILES . "resegmenting/own_whisper_long_segments_resegmented.srt", "$this->dir/lecture.srt");
+
+        $options = new ResegmentOptions(maxCharactersPerLine: 30, maxLines: 1, maxWordGap: 0.3);
+        $this->assertSame(
+            [0, $withWords()->resegmentByWords($options)->format(SubRipFormatter::class), ""],
+            $this->runBinary(["fix", "lecture.json", "--resegment", "--max-cpl", "30", "--max-lines", "1", "--max-word-gap", "0.3", "--to", "srt"])
+        );
+
+        $this->assertSame([0, $withWords()->format(WebVttFormatter::class), ""],
+                          $this->runBinary(["convert", "lecture.json", "--to", "vtt", "-o", "-", "--word-timestamps"]));
+        $this->assertStringNotContainsString("<00:", $this->runBinary(["convert", "lecture.json", "--to", "vtt", "-o", "-"])[1]);
+        $this->assertSame(2, $this->runBinary(["fix", "lecture.json", "--overlaps", "--max-word-gap", "1"])[0]);
     }
 
 

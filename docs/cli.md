@@ -60,6 +60,7 @@ php subtitle-toolbox.phar --version
 - **Output bytes**: `--line-ending lf|crlf`, `--bom` and `--no-bom`.
 - **Broken files**: `--lenient` skips or repairs broken cues and prints a warning for each, see [lenient-parsing.md](lenient-parsing.md).
 - **Frame rate**: `--fps` gives the frame rate for a MicroDVD file without a `{1}{1}<fps>` first line. MicroDVD and iTT output also use it. Without it, MicroDVD output takes the frame rate of a MicroDVD input, and iTT output the frame rate of an iTT input.
+- **Word timestamps**: `--word-timestamps` keeps the word times of the speech-to-text JSON formats, YouTube timed text and Podcasting 2.0 transcripts. `fix --resegment` turns it on.
 - **MKV and WebM**: `--track` picks a subtitle track, see [MKV and WebM](#mkv-and-webm).
 - **Image cues**: `--skip-image-cues` leaves out image cues without text in place of failing.
 
@@ -120,11 +121,12 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 - **No match**: the filter file is empty. Then leave out `-af`.
 
 ## Fix
-Pass at least one fix. The fixes run in this order: `--common-errors`, `--unwrap`, `--merge-short`, `--split-long`, `--wrap`, `--merge-duplicates`, `--overlaps`, `--min-duration`.
+Pass at least one fix. The fixes run in this order: `--common-errors`, `--resegment`, `--unwrap`, `--merge-short`, `--split-long`, `--wrap`, `--merge-duplicates`, `--overlaps`, `--min-duration`.
 
 | Option | Calls |
 |:--- |:--- |
 | `--common-errors` | [`CommonErrorFixer::fix()`](text.md#fixing-common-errors) with all default fixes. `--language` sets the language rules, default the `language` metadata. `--replace-list FILE` adds a Subtitle Edit OCR replace list. `--list-fixes` prints each change to standard error |
+| `--resegment` | `resegmentByWords()`. `--max-cpl`, `--max-lines` and `--max-word-gap` set `maxCharactersPerLine`, `maxLines` and `maxWordGap`, default 0.6 s |
 | `--overlaps` | `fixOverlaps()` with `--min-gap` seconds, default 0 |
 | `--min-duration SECONDS` | `extendShortCues()` with `--min-gap` |
 | `--wrap CHARS` | `wrapLines()` with `--max-lines`, default 2 |
@@ -138,6 +140,7 @@ Pass at least one fix. The fixes run in this order: `--common-errors`, `--unwrap
 ```sh
 vendor/bin/subtitle-toolbox convert movie.sup movie.ocr.srt --ocr
 vendor/bin/subtitle-toolbox fix movie.ocr.srt --common-errors --language en --list-fixes -o movie.srt
+vendor/bin/subtitle-toolbox fix lecture.json --resegment -o lecture.srt
 ```
 
 `--list-fixes` prints one line per change, for example `movie.ocr.srt: cue 15: ocrLowercaseL: "lt's late." -> "It's late."`.

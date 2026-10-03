@@ -39,6 +39,8 @@ abstract class FileCommand extends Command
 
     protected bool $fromContainer = false;
 
+    protected bool $wordTimestamps = false;
+
 
     /**
      * @return list<Option>
@@ -64,6 +66,12 @@ abstract class FileCommand extends Command
     }
 
 
+    protected function needsWordTimestamps(Arguments $arguments): bool
+    {
+        return $arguments->has("word-timestamps");
+    }
+
+
     protected function fpsDescription(): string
     {
         return "Frame rate of the video. MicroDVD files without a {1}{1}<fps> first line need it.";
@@ -85,6 +93,7 @@ abstract class FileCommand extends Command
             Option::value("encoding", "NAME", "Encoding of the input, for example Windows-1252. Default: UTF-8. A BOM in the input overrides it."),
             Option::flag("lenient", "Skip or repair broken cues and print a warning for each. SCC, PGS, VobSub and chapter input ignore it."),
             Option::value("fps", "RATE", $this->fpsDescription()),
+            Option::flag("word-timestamps", "Keep the word times of speech-to-text JSON, YouTube timed text and podcast transcript input."),
             Option::value("track", "NUMBER", "Subtitle track of an MKV or WebM input. Needed when the file has several. \"info\" lists them."),
             Option::flag("keep-going", "Go on with the next file after a file fails. Default: stop at the first failure."),
         ];
@@ -97,6 +106,7 @@ abstract class FileCommand extends Command
         $this->failed    = 0;
         $this->fps       = $arguments->positiveFloat("fps");
         $arguments->positiveInt("track");
+        $this->wordTimestamps = $this->needsWordTimestamps($arguments);
 
         $from             = $this->hasFormatOptions() ? $arguments->value("from") : null;
         $this->fromFormat = $from === null ? null : self::readableFormat($from);
@@ -416,10 +426,12 @@ abstract class FileCommand extends Command
     {
         $class = FormatRegistry::parserClass($format);
 
-        return match ($class) {
-            MicroDvdParser::class => new MicroDvdParser($this->fps),
-            VobSubParser::class   => new VobSubParser($content),
-            default               => new $class(),
+        return match (true) {
+            $class === MicroDvdParser::class => new MicroDvdParser($this->fps),
+            $class === VobSubParser::class   => new VobSubParser($content),
+            $this->wordTimestamps && defined("$class::OPTION_WORD_TIMESTAMPS")
+                                             => new $class([$class::OPTION_WORD_TIMESTAMPS => true]),
+            default                          => new $class(),
         };
     }
 }

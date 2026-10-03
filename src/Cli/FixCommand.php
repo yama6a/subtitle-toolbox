@@ -12,7 +12,7 @@ use SubtitleToolbox\Subtitle;
 
 class FixCommand extends WriteCommand
 {
-    private const FIXES = ["common-errors", "overlaps", "min-duration", "wrap", "unwrap", "merge-duplicates", "merge-short", "split-long"];
+    private const FIXES = ["common-errors", "resegment", "overlaps", "min-duration", "wrap", "unwrap", "merge-duplicates", "merge-short", "split-long"];
 
     private ?CommonErrorOptions $commonErrors = null;
 
@@ -25,19 +25,19 @@ class FixCommand extends WriteCommand
 
     public function summary(): string
     {
-        return "Fixes overlapping cues, short cues and long lines.";
+        return "Fixes text errors, overlapping cues, short cues and long lines, and regroups words into cues.";
     }
 
 
     protected function usageLines(): array
     {
-        return ["<input>... [--common-errors] [--overlaps] [--min-duration SECONDS] [--wrap CHARS] [--unwrap] [--merge-duplicates] [--merge-short] [--split-long] [options]"];
+        return ["<input>... [--common-errors] [--resegment] [--overlaps] [--min-duration SECONDS] [--wrap CHARS] [--unwrap] [--merge-duplicates] [--merge-short] [--split-long] [options]"];
     }
 
 
     protected function details(): string
     {
-        return "Pass at least one fix. The fixes run in this order: --common-errors, --unwrap, --merge-short, --split-long, --wrap,\n" .
+        return "Pass at least one fix. The fixes run in this order: --common-errors, --resegment, --unwrap, --merge-short, --split-long, --wrap,\n" .
                "--merge-duplicates, --overlaps, --min-duration. The timing fixes move only end times. Without --output, --output-dir or\n" .
                "--in-place, the result of one input file goes to standard output.";
     }
@@ -50,17 +50,25 @@ class FixCommand extends WriteCommand
             Option::value("language", "CODE", "Language rules for --common-errors, for example en or de-AT. Default: the language of the input."),
             Option::value("replace-list", "FILE", "Also apply this Subtitle Edit OCR replace list, an XML file, with --common-errors."),
             Option::flag("list-fixes", "Print each change of --common-errors to standard error."),
+            Option::flag("resegment", "Build new cues from the word timestamps, one sentence or as much as fits --max-cpl and --max-lines each."),
+            Option::value("max-word-gap", "SECONDS", "--resegment ends a cue at a pause of this length. Default: 0.6."),
             Option::flag("overlaps", "End each cue at least --min-gap seconds before the next cue starts."),
             Option::value("min-duration", "SECONDS", "Show each cue for at least this time where the next cue allows it."),
             Option::value("min-gap", "SECONDS", "Gap between cues for --overlaps and --min-duration. Default: 0."),
             Option::value("wrap", "CHARS", "Break lines longer than this number of characters."),
-            Option::value("max-lines", "LINES", "Maximum number of lines per cue for --wrap, --merge-short and --split-long. Default: 2."),
+            Option::value("max-lines", "LINES", "Maximum number of lines per cue for --wrap, --resegment, --merge-short and --split-long. Default: 2."),
             Option::flag("unwrap", "Join the lines of each cue with a space."),
             Option::flag("merge-duplicates", "Join touching cues with the same text."),
             Option::flag("merge-short", "Join cues shorter than 1 s with a neighbour at most 0.25 s away, where the joined cue fits 7 s, --max-cpl and --max-lines."),
             Option::flag("split-long", "Split cues longer than 7 s, or longer than --max-lines lines of --max-cpl characters, at sentence ends, clause ends or spaces."),
-            Option::value("max-cpl", "CHARS", "Maximum characters per line for --merge-short and --split-long. Default: 42."),
+            Option::value("max-cpl", "CHARS", "Maximum characters per line for --resegment, --merge-short and --split-long. Default: 42."),
         ];
+    }
+
+
+    protected function needsWordTimestamps(Arguments $arguments): bool
+    {
+        return parent::needsWordTimestamps($arguments) || $arguments->has("resegment");
     }
 
 
@@ -80,6 +88,10 @@ class FixCommand extends WriteCommand
             language: $arguments->value("language"),
             replaceList: self::loadReplaceList($arguments->value("replace-list")),
         ) : null;
+        if ($arguments->has("max-word-gap") && !$arguments->has("resegment")) {
+            self::fail("Pass --resegment with --max-word-gap.");
+        }
+        $arguments->positiveFloat("max-word-gap");
         $arguments->positiveFloat("min-duration");
         $arguments->positiveInt("wrap");
         $arguments->positiveInt("max-lines");
@@ -110,6 +122,13 @@ class FixCommand extends WriteCommand
     {
         $minGap = $arguments->float("min-gap") ?? 0;
 
+        if ($arguments->has("resegment")) {
+            $subtitle->resegmentByWords(new ResegmentOptions(
+                maxCharactersPerLine: $arguments->positiveInt("max-cpl") ?? 42,
+                maxLines: $arguments->positiveInt("max-lines") ?? 2,
+                maxWordGap: $arguments->positiveFloat("max-word-gap") ?? 0.6,
+            ));
+        }
         if ($arguments->has("unwrap")) {
             $subtitle->unwrapLines();
         }
