@@ -6,6 +6,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Timecode;
 
 class HtmlTranscriptFormatter extends SubtitleFormatter
 {
@@ -40,22 +41,12 @@ class HtmlTranscriptFormatter extends SubtitleFormatter
             if ($paragraph["speaker"] !== null) {
                 $html .= "<cite>" . Markup::escapeText($paragraph["speaker"]) . ":</cite>" . StringHelpers::UNIX_LINE_ENDING;
             }
-            $html .= "<time>" . $this->formatTime($paragraph["start"]) . "</time>" . StringHelpers::UNIX_LINE_ENDING .
+            [$hours, $minutes, $seconds] = Timecode::seconds(floor($paragraph["start"]));
+            $time = $hours > 0 ? sprintf("%d:%02d:%02d", $hours, $minutes, $seconds) : sprintf("%d:%02d", $minutes, $seconds);
+            $html .= "<time>$time</time>" . StringHelpers::UNIX_LINE_ENDING .
                      "<p>" . Markup::escapeText(implode(" ", $paragraph["bodies"])) . "</p>" . StringHelpers::UNIX_LINE_ENDING;
         }
 
         return $this->applyOutputOptions($html, $options);
-    }
-
-
-    private function formatTime(float $seconds): string
-    {
-        $totalSeconds = (int)floor($seconds);
-        $hours        = intdiv($totalSeconds, 3600);
-        $minutes      = intdiv($totalSeconds, 60) % 60;
-
-        return $hours > 0
-            ? sprintf("%d:%02d:%02d", $hours, $minutes, $totalSeconds % 60)
-            : sprintf("%d:%02d", $minutes, $totalSeconds % 60);
     }
 }

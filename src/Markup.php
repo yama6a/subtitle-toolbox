@@ -316,14 +316,6 @@ class Markup
      */
     public static function coreTimestamp(float $seconds): string
     {
-        $milliseconds = (int) round($seconds * 1000);
-
-        return sprintf(
-            "%02d:%02d:%02d.%03d",
-            intdiv($milliseconds, 3600000),
-            intdiv($milliseconds, 60000) % 60,
-            intdiv($milliseconds, 1000) % 60,
-            $milliseconds % 1000
-        );
+        return sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($seconds));
     }
 }

@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Diff;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 final class SubtitleDiff
 {
@@ -144,14 +145,7 @@ final class SubtitleDiff
 
     private static function formatTime(float $seconds): string
     {
-        $milliseconds = (int)round(abs($seconds) * 1000);
-
-        return sprintf("%s%02d:%02d:%02d.%03d",
-                       $seconds < 0 ? "-" : "",
-                       intdiv($milliseconds, 3600000),
-                       intdiv($milliseconds, 60000) % 60,
-                       intdiv($milliseconds, 1000) % 60,
-                       $milliseconds % 1000);
+        return sprintf("%s%02d:%02d:%02d.%03d", $seconds < 0 ? "-" : "", ...Timecode::milliseconds(abs($seconds)));
     }
 
 

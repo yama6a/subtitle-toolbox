@@ -4,12 +4,14 @@ namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Encoding\Cea608;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\SccParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 /**
  * Writes pop-on captions for CEA-608 data channel 1, one byte pair per frame at 29.97 fps.
@@ -418,16 +420,18 @@ class SccFormatter extends SubtitleFormatter
     /**
      * Writes one line per run of consecutive frames, with an empty line between lines.
      *
-     * @param array<int, int> $timeline word by frame
+     * @param array<int, int> $wordsByFrame
      */
-    private function writeLines(array $timeline, bool $dropFrame): string
+    private function writeLines(array $wordsByFrame, bool $dropFrame): string
     {
-        ksort($timeline);
-        $lines    = [];
-        $previous = null;
-        foreach ($timeline as $frame => $word) {
+        ksort($wordsByFrame);
+        $frameRate = new FrameRate(30000 / 1001);
+        $lines     = [];
+        $previous  = null;
+        foreach ($wordsByFrame as $frame => $word) {
             if ($previous === null || $frame !== $previous + 1) {
-                $lines[] = $this->timecode($frame, $dropFrame) . "\t" . sprintf("%04x", $word);
+                [$hours, $minutes, $seconds, $frames] = Timecode::frameNumber($frame, $frameRate, $dropFrame);
+                $lines[] = sprintf("%02d:%02d:%02d%s%02d\t%04x", $hours, $minutes, $seconds, $dropFrame ? ";" : ":", $frames, $word);
             } else {
                 $lines[count($lines) - 1] .= sprintf(" %04x", $word);
             }
@@ -440,23 +444,5 @@ class SccFormatter extends SubtitleFormatter
         }
 
         return rtrim($output, StringHelpers::UNIX_LINE_ENDING) . StringHelpers::UNIX_LINE_ENDING;
-    }
-
-
-    /**
-     * Writes a frame count as SMPTE time code. Drop-frame time code skips the frame numbers 00 and 01
-     * at the start of each minute except every tenth minute, so that it stays in step with the clock.
-     */
-    private function timecode(int $frame, bool $dropFrame): string
-    {
-        if ($dropFrame) {
-            $tenMinutes = intdiv($frame, 17982);
-            $rest       = $frame % 17982;
-            $frame     += 18 * $tenMinutes + ($rest > 1 ? 2 * intdiv($rest - 2, 1798) : 0);
-        }
-
-        $seconds = intdiv($frame, 30);
-
-        return sprintf("%02d:%02d:%02d%s%02d", intdiv($seconds, 3600), intdiv($seconds, 60) % 60, $seconds % 60, $dropFrame ? ";" : ":", $frame % 30);
     }
 }

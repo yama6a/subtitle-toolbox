@@ -4,11 +4,13 @@ namespace SubtitleToolbox\Formatters;
 
 use DOMDocument;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 /**
  * @see https://help.apple.com/itc/videoaudioassetguide/en.lproj/static.html
@@ -56,7 +58,7 @@ class IttFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, array $options = []): string
     {
         [$frameRate, $multiplier] = $this->frameRateParameters($subtitle->getFormatData(IttParser::FORMAT), $options);
-        $fps                      = (float) $frameRate * $this->multiplierFactor($multiplier);
+        $rate                     = new FrameRate((float) $frameRate * $this->multiplierFactor($multiplier));
 
         $ttml = $this->toTtmlSubtitle($subtitle);
         $xml  = (new TtmlFormatter())->format($ttml, array_diff_key($options, [self::OPTION_LINE_ENDING => 0, self::OPTION_BOM => 0, self::OPTION_FRAME_RATE => 0]));
@@ -72,10 +74,10 @@ class IttFormatter extends SubtitleFormatter
         $cues       = $ttml->getCues();
         $paragraphs = $document->getElementsByTagNameNS(TtmlParser::NAMESPACE_TTML, "p");
         foreach ($paragraphs as $idx => $paragraph) {
-            $begin = $this->frameIndex($cues[$idx]->getStart(), $fps);
-            $end   = max($begin + 1, $this->frameIndex($cues[$idx]->getEnd(), $fps));
-            $paragraph->setAttribute("begin", $this->formatFrameIndex($begin, (int) $frameRate));
-            $paragraph->setAttribute("end", $this->formatFrameIndex($end, (int) $frameRate));
+            $begin = $rate->secondsToFrames(max(0.0, $cues[$idx]->getStart()));
+            $end   = max($begin + 1, $rate->secondsToFrames(max(0.0, $cues[$idx]->getEnd())));
+            $paragraph->setAttribute("begin", sprintf("%02d:%02d:%02d:%02d", ...Timecode::frameNumber($begin, $rate)));
+            $paragraph->setAttribute("end", sprintf("%02d:%02d:%02d:%02d", ...Timecode::frameNumber($end, $rate)));
         }
 
         return $this->applyOutputOptions($document->saveXML(), $options);
@@ -180,29 +182,6 @@ class IttFormatter extends SubtitleFormatter
                 return in_array($color, self::NAMED_COLORS, true) ? "<font color=\"$color\">" : "<font>";
             },
             $line
-        );
-    }
-
-
-    private function frameIndex(float $seconds, float $fps): int
-    {
-        return (int) round(max(0.0, $seconds) * $fps);
-    }
-
-
-    /**
-     * Writes a non-drop SMPTE time code, which counts $framesPerSecond labels per second, as TTML 1 section 6.2.3 defines.
-     */
-    private function formatFrameIndex(int $index, int $framesPerSecond): string
-    {
-        $seconds = intdiv($index, $framesPerSecond);
-
-        return sprintf(
-            "%02d:%02d:%02d:%02d",
-            intdiv($seconds, 3600),
-            intdiv($seconds, 60) % 60,
-            $seconds % 60,
-            $index % $framesPerSecond
         );
     }
 }

@@ -7,6 +7,7 @@ use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 class LyricsFormatter extends SubtitleFormatter
 {
@@ -22,7 +23,7 @@ class LyricsFormatter extends SubtitleFormatter
             $output .= StringHelpers::UNIX_LINE_ENDING;
 
             if ($cue->getFormatData(LyricsParser::FORMAT)["endLine"] ?? false) {
-                $output .= $this->formatTimeToString($cue->getEnd()) . StringHelpers::UNIX_LINE_ENDING;
+                $output .= $this->stamp($cue->getEnd()) . StringHelpers::UNIX_LINE_ENDING;
             }
         }
         $output .= $this->formatComments($comments, count($cues), PHP_INT_MAX);
@@ -68,32 +69,28 @@ class LyricsFormatter extends SubtitleFormatter
 
     private function formatCue(SubtitleCue $cue): string
     {
-        $timestamp = $this->formatTimeToString($cue->getStart());
+        $timestamp = $this->stamp($cue->getStart());
 
         $parts = preg_split(Markup::WORD_TIMESTAMP_REGEX, implode(" ", $cue->getLines()), -1, PREG_SPLIT_DELIM_CAPTURE);
         $lines = "";
         foreach ($parts as $idx => $part) {
-            $lines .= $idx % 2 === 1 ? $this->formatWordTimestamp($part) : Markup::plainText($part);
+            $lines .= $idx % 2 === 1 ? $this->wordStamp($part) : Markup::plainText($part);
         }
 
         return $timestamp . " " . $lines;
     }
 
 
-    private function formatWordTimestamp(string $coreTimestamp): string
+    private function wordStamp(string $coreTag): string
     {
-        return "<" . trim($this->formatTimeToString(Markup::wordTimestampSeconds($coreTimestamp)), "[]") . ">";
+        return "<" . trim($this->stamp(Markup::wordTimestampSeconds($coreTag)), "[]") . ">";
     }
 
 
-    private function formatTimeToString(float $timeInSeconds): string
+    private function stamp(float $seconds): string
     {
-        // round once on the total, so 1.996 s becomes [00:02.00] and not [00:01.100]
-        $totalCentiseconds = (int) round($timeInSeconds * 100);
-        $minute            = str_pad(intdiv($totalCentiseconds, 6000), 2, "0", STR_PAD_LEFT);
-        $second            = str_pad(intdiv($totalCentiseconds, 100) % 60, 2, "0", STR_PAD_LEFT);
-        $centiseconds      = str_pad($totalCentiseconds % 100, 2, "0", STR_PAD_LEFT);
+        [$hours, $minutes, $wholeSeconds, $centiseconds] = Timecode::centiseconds($seconds);
 
-        return "[" . $minute . ":" . $second . "." . $centiseconds . "]";
+        return sprintf("[%02d:%02d.%02d]", 60 * $hours + $minutes, $wholeSeconds, $centiseconds);
     }
 }
