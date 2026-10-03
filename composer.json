@@ -32,11 +32,11 @@
   },
   "require-dev": {
     "phpunit/phpunit": "^11.5",
-    "yama6a/php-glyph-ocr": "^0.1"
+    "yama6a/php-glyph-ocr": "^0.3"
   },
   "suggest": {
     "ext-zlib": "*, to decode PNG images, which PgsFormatter needs, to compress PNG images and to read zlib-compressed MKV tracks",
-    "yama6a/php-glyph-ocr": "^0.1, for GlyphOcrEngine, the built-in OCR of PGS and VobSub image cues"
+    "yama6a/php-glyph-ocr": "^0.3, for GlyphOcrEngine, the built-in OCR of PGS and VobSub image cues"
   },
   "config": {
     "platform": {

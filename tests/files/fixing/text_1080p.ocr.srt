@@ -1,6 +1,6 @@
 ﻿1
 00:00:01,000 --> 00:00:03,500
-The train to Bergen leaves at 7:45.
+The train to Bergen leaves at 7:4*.
 
 2
 00:00:04,000 --> 00:00:07,000
@@ -9,16 +9,16 @@ Fresh bread is ready by seven.
 
 3
 00:00:07,500 --> 00:00:10,000
-Rain is likely after 3 p.m. today.
+Rain is likely *fter 3 p.m. tod*y.
 
 4
 00:00:10,500 --> 00:00:13,000
-Platform 4, please.
-Watch your step.
+Pl*tform 4, ple*se.
+W*tch your step.
 
 5
 00:00:13,500 --> 00:00:16,000
-<i>The wind turns north tonight.</i>
+<i>The wind turns n0rth tonight.</i>
 
 6
 00:00:16,500 --> 00:00:19,000
@@ -26,8 +26,8 @@ We sold 120 rolls before noon!
 
 7
 00:00:19,500 --> 00:00:22,500
-Is the 9:10 bus late again?
-Yes, by about five minutes.
+ls the 9:10 bus l*te *gaiD?
+Yes, by *bout five minutes.
 
 8
 00:00:23,000 --> 00:00:25,500
@@ -48,4 +48,4 @@ Light clouds in the evening.
 
 12
 00:00:35,500 --> 00:00:38,000
-<i>Tickets cost 4.50 each.</i>
+<i>Tickets c0st 4.50 each.</i>

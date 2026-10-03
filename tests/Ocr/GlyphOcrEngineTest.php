@@ -42,14 +42,14 @@ class GlyphOcrEngineTest extends TestCase
                 fn (): Subtitle => (new PgsParser())->parse(file_get_contents(self::PGS . "text_1080p.sup")),
                 self::PGS . "text_1080p.ocr.srt",
                 array_column(PgsFixtures::TEXT_CUES, 2),
-                0.97,
+                1.0,
             ],
             "VobSub 576p, 24 to 30 px" => [
                 fn (): Subtitle => (new VobSubParser(file_get_contents(self::VOBSUB . "text-pal.idx")))
                     ->parse(file_get_contents(self::VOBSUB . "text-pal.sub")),
                 self::VOBSUB . "text-pal.ocr.srt",
                 array_column(TEXT_CUES, 2),
-                0.69,
+                0.97,
             ],
         ];
     }

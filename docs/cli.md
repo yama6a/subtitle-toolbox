@@ -291,8 +291,8 @@ vendor/bin/subtitle-toolbox convert movie.sup movie.srt --ocr
 vendor/bin/subtitle-toolbox convert movie.idx movie.srt --ocr --ocr-database my-font.nocr
 ```
 
-- **Database**: `--ocr-database` loads a `.nocr` file in place of the Latin database. See [Training a database](ocr.md#training-a-database).
+- **Database**: `--ocr-database` loads a `.nocr` file in place of the subtitle fonts database. See [Training a database](ocr.md#training-a-database).
 - **Missing package**: without php-glyph-ocr, `--ocr` stops with exit code 2 and prints the `composer require` command.
 - **Progress**: the tool prints `movie.sup: OCR 100/1500` to standard error after every 100 image cues and after the last one.
-- **Memory**: a 1,500-cue PGS file needs up to 139 MB, above the default `memory_limit` of 128 MB. Run `php -d memory_limit=512M vendor/bin/subtitle-toolbox convert movie.sup movie.srt --ocr` for long files.
+- **Memory**: a 1,500-cue PGS file needs up to 170 MB, above the default `memory_limit` of 128 MB. Run `php -d memory_limit=512M vendor/bin/subtitle-toolbox convert movie.sup movie.srt --ocr` for long files.
 - **Info**: `info` prints `Image cues: 12, 0 with text` for a file with image cues. The JSON holds `"imageCues": {"count": 12, "withText": 0}` for every file.

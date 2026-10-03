@@ -17,14 +17,14 @@ use WeakReference;
 
 final class GlyphOcrEngine implements OcrEngine
 {
-    // The Latin database takes about 50 MB, so engines that are alive at the same time share one copy.
-    private static ?WeakReference $latin = null;
+    // The subtitle fonts database takes about 76 MB, so engines that are alive at the same time share one copy.
+    private static ?WeakReference $subtitleFonts = null;
 
     private readonly Recognizer $recognizer;
 
 
     /**
-     * Reads image cues with the pure PHP OCR of the package yama6a/php-glyph-ocr, with its Latin database by default.
+     * Reads image cues with the pure PHP OCR of the package yama6a/php-glyph-ocr, with its subtitle fonts database by default.
      *
      * @param array<string, mixed> $options named arguments of the GlyphOcr\Recognizer constructor, for example
      *                                      ["italicSlant" => 0.2]
@@ -44,7 +44,7 @@ final class GlyphOcrEngine implements OcrEngine
         }
 
         try {
-            $this->recognizer = new Recognizer($database ?? self::latinDatabase(), ...$options);
+            $this->recognizer = new Recognizer($database ?? self::subtitleFontsDatabase(), ...$options);
         } catch (GlyphOcrException $exception) {
             throw new InvalidArgumentException("Cannot create a GlyphOcrEngine - the recognizer says: " .
                                                $exception->getMessage(), $exception);
@@ -108,12 +108,12 @@ final class GlyphOcrEngine implements OcrEngine
     }
 
 
-    private static function latinDatabase(): GlyphDatabase
+    private static function subtitleFontsDatabase(): GlyphDatabase
     {
-        $database = self::$latin?->get();
+        $database = self::$subtitleFonts?->get();
         if ($database === null) {
-            $database    = GlyphDatabase::latin();
-            self::$latin = WeakReference::create($database);
+            $database            = GlyphDatabase::subtitleFonts();
+            self::$subtitleFonts = WeakReference::create($database);
         }
 
         return $database;
