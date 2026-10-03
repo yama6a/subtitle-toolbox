@@ -19,6 +19,7 @@ use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
+use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 
 class FormatDetectorTest extends TestCase
 {
@@ -38,6 +39,7 @@ class FormatDetectorTest extends TestCase
         "ttml"     => TtmlParser::class,
         "vtt"      => WebVttParser::class,
         "whisper"  => WhisperJsonParser::class,
+        "youtube"  => YouTubeTimedTextParser::class,
     ];
 
     // These fixtures break their own format on purpose, so their parser rejects them.
@@ -136,6 +138,11 @@ class FormatDetectorTest extends TestCase
             "Whisper JSON"               => ["{\"text\": \" Hello\", \"segments\": [{\"id\": 0, \"start\": 0.0, \"end\": 2.0, \"text\": \" Hello\"}], \"language\": \"en\"}",
                                              WhisperJsonParser::class],
             "whisper.cpp JSON"           => ["{\n\t\"systeminfo\": \"\",\n\t\"transcription\": [\n\t]\n}\n", WhisperJsonParser::class],
+            "YouTube json3"              => ["{\"wireMagic\": \"pb3\", \"events\": [ {\"id\": 1}, {\"tStartMs\": 0, \"segs\": []} ]}", YouTubeTimedTextParser::class],
+            "YouTube srv3"               => ["<?xml version=\"1.0\" encoding=\"utf-8\" ?><timedtext format=\"3\">\n<body>\n</body>\n</timedtext>\n",
+                                             YouTubeTimedTextParser::class],
+            "YouTube srv1"               => ["<transcript><text start=\"1.2\" dur=\"2.3\">Hello</text></transcript>", YouTubeTimedTextParser::class],
+            "JSON with an events list"   => ["{\"version\": 1, \"formatData\": {\"x\": {\"events\": [{\"tStartMs\": 0}]}}, \"cues\": []}", JsonParser::class],
         ];
     }
 
@@ -193,6 +200,9 @@ class FormatDetectorTest extends TestCase
             "number without timing"    => ["1\nHello\n"],
             "WEBVTT inside a word"     => ["WEBVTTX\n"],
             "EBU STL at 24 fps"        => [str_pad("850STL24.011", 1024)],
+            "events without tStartMs"  => ["{\"events\": [{\"start\": 1}]}"],
+            "events as text"           => ["{\"text\": \"\\\"events\\\": [{\\\"tStartMs\\\": 1}]\"}"],
+            "timedtext inside a word"  => ["<timedtextx/>"],
         ];
     }
 
