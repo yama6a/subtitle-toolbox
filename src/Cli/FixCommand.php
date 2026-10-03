@@ -2,13 +2,19 @@
 
 namespace SubtitleToolbox\Cli;
 
+use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Fixing\CommonErrorFixer;
+use SubtitleToolbox\Fixing\CommonErrorOptions;
+use SubtitleToolbox\Fixing\OcrReplaceList;
 use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\ResegmentOptions;
 use SubtitleToolbox\Subtitle;
 
 class FixCommand extends WriteCommand
 {
-    private const FIXES = ["overlaps", "min-duration", "wrap", "unwrap", "merge-duplicates", "merge-short", "split-long"];
+    private const FIXES = ["common-errors", "overlaps", "min-duration", "wrap", "unwrap", "merge-duplicates", "merge-short", "split-long"];
+
+    private ?CommonErrorOptions $commonErrors = null;
 
 
     public function name(): string
@@ -25,13 +31,13 @@ class FixCommand extends WriteCommand
 
     protected function usageLines(): array
     {
-        return ["<input>... [--overlaps] [--min-duration SECONDS] [--wrap CHARS] [--unwrap] [--merge-duplicates] [--merge-short] [--split-long] [options]"];
+        return ["<input>... [--common-errors] [--overlaps] [--min-duration SECONDS] [--wrap CHARS] [--unwrap] [--merge-duplicates] [--merge-short] [--split-long] [options]"];
     }
 
 
     protected function details(): string
     {
-        return "Pass at least one fix. The fixes run in this order: --unwrap, --merge-short, --split-long, --wrap,\n" .
+        return "Pass at least one fix. The fixes run in this order: --common-errors, --unwrap, --merge-short, --split-long, --wrap,\n" .
                "--merge-duplicates, --overlaps, --min-duration. The timing fixes move only end times. Without --output, --output-dir or\n" .
                "--in-place, the result of one input file goes to standard output.";
     }
@@ -40,6 +46,10 @@ class FixCommand extends WriteCommand
     protected function commandOptions(): array
     {
         return [
+            Option::flag("common-errors", "Fix spacing, punctuation, dash, tag and OCR errors such as lt's for It's."),
+            Option::value("language", "CODE", "Language rules for --common-errors, for example en or de-AT. Default: the language of the input."),
+            Option::value("replace-list", "FILE", "Also apply this Subtitle Edit OCR replace list, an XML file, with --common-errors."),
+            Option::flag("list-fixes", "Print each change of --common-errors to standard error."),
             Option::flag("overlaps", "End each cue at least --min-gap seconds before the next cue starts."),
             Option::value("min-duration", "SECONDS", "Show each cue for at least this time where the next cue allows it."),
             Option::value("min-gap", "SECONDS", "Gap between cues for --overlaps and --min-duration. Default: 0."),
@@ -61,6 +71,15 @@ class FixCommand extends WriteCommand
         if (array_filter(self::FIXES, $arguments->has(...)) === []) {
             self::fail("Pass at least one fix: --" . implode(", --", self::FIXES) . ".");
         }
+        foreach (["language", "replace-list", "list-fixes"] as $option) {
+            if ($arguments->has($option) && !$arguments->has("common-errors")) {
+                self::fail("Pass --common-errors with --$option.");
+            }
+        }
+        $this->commonErrors = $arguments->has("common-errors") ? new CommonErrorOptions(
+            language: $arguments->value("language"),
+            replaceList: self::loadReplaceList($arguments->value("replace-list")),
+        ) : null;
         $arguments->positiveFloat("min-duration");
         $arguments->positiveInt("wrap");
         $arguments->positiveInt("max-lines");
@@ -68,6 +87,22 @@ class FixCommand extends WriteCommand
         if (($arguments->float("min-gap") ?? 0) < 0) {
             self::fail("The option --min-gap must not be negative.");
         }
+    }
+
+
+    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    {
+        if ($this->commonErrors !== null) {
+            foreach (CommonErrorFixer::fix($subtitle, $this->commonErrors) as $fix) {
+                if ($arguments->has("list-fixes")) {
+                    $console->err(self::label($input) . ": cue " . ($fix->cueIndex + 1) . ": $fix->rule: " .
+                                  json_encode($fix->before, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . " -> " .
+                                  json_encode($fix->after, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n");
+                }
+            }
+        }
+
+        parent::process($input, $subtitle, $format, $arguments, $console);
     }
 
 
@@ -101,6 +136,24 @@ class FixCommand extends WriteCommand
         }
         if ($arguments->has("min-duration")) {
             $subtitle->extendShortCues($arguments->positiveFloat("min-duration"), $minGap);
+        }
+    }
+
+
+    private static function loadReplaceList(?string $path): ?OcrReplaceList
+    {
+        if ($path === null) {
+            return null;
+        }
+        $xml = is_file($path) ? @file_get_contents($path) : false;
+        if ($xml === false) {
+            self::fail("Cannot read the replace list $path.");
+        }
+
+        try {
+            return OcrReplaceList::fromSubtitleEditXml($xml);
+        } catch (ParsingException $exception) {
+            return self::fail("$path: " . $exception->getMessage());
         }
     }
 }

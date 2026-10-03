@@ -25,6 +25,8 @@ class BinaryTest extends TestCase
 
     private const FIXTURES = __DIR__ . "/../files/cli/";
 
+    private const FILES = __DIR__ . "/../files/";
+
     private const BOM = "\xEF\xBB\xBF";
 
     private string $dir;
@@ -521,6 +523,28 @@ class BinaryTest extends TestCase
             [0, $split(new ResegmentOptions(maxCharactersPerLine: 30, maxLines: 1)), ""],
             $this->runBinary(["fix", "whisper.json", "--split-long", "--max-cpl", "30", "--max-lines", "1", "--to", "vtt"])
         );
+    }
+
+
+    public function testFixCommonErrors(): void
+    {
+        copy(self::FILES . "fixing/web-errors.srt", "$this->dir/web.srt");
+        copy(self::FILES . "vobsub/text-pal.ocr.srt", "$this->dir/pal.srt");
+        copy(self::FILES . "fixing/user_OCRFixReplaceList.xml", "$this->dir/list.xml");
+
+        [$code, $stdout, $stderr] = $this->runBinary(["fix", "web.srt", "--common-errors", "--language", "en", "--line-ending", "crlf"]);
+        $this->assertSame([0, ""], [$code, $stderr]);
+        $this->assertStringEqualsFile(self::FILES . "fixing/web-errors.fixed.srt", $stdout);
+
+        [$code, $stdout, $stderr] = $this->runBinary(["fix", "pal.srt", "--common-errors", "--language", "en", "--replace-list", "list.xml", "--list-fixes"]);
+        $this->assertSame(0, $code);
+        $this->assertStringEqualsFile(self::FILES . "fixing/text-pal.fixed.srt", $stdout);
+        $this->assertStringStartsWith("pal.srt: cue 1: ", $stderr);
+        $this->assertStringContainsString(": replaceList: ", $stderr);
+
+        $this->assertSame([2, "", "Error: Pass --common-errors with --language.\nRun \"subtitle-toolbox help fix\" for the usage.\n"],
+                          $this->runBinary(["fix", "web.srt", "--overlaps", "--language", "en"]));
+        $this->assertSame(2, $this->runBinary(["fix", "web.srt", "--common-errors", "--replace-list", "missing.xml"])[0]);
     }
 
 

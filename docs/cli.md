@@ -39,7 +39,7 @@ php subtitle-toolbox.phar --version
 | `shift` | moves all cues earlier or later by `--by` seconds, or only the cues from `--after` seconds |
 | `scale` | multiplies all cue times by `--factor` |
 | `fps` | retimes a subtitle `--from` one frame rate `--to` another. `sync-fps` is another name for it |
-| `fix` | fixes overlapping cues, short cues and long lines, see [Fix](#fix) |
+| `fix` | fixes text errors, overlapping cues, short cues and long lines, see [Fix](#fix) |
 | `strip-sdh` | removes hearing-impaired annotations, as [`removeHearingImpaired()`](text.md#hearing-impaired-annotations) does |
 | `info` | prints the format, the cue count and statistics, as text or with `--json` |
 | `validate` | prints each broken rule, as text or with `--json`, see [Validate](#validate) |
@@ -83,10 +83,11 @@ Run `subtitle-toolbox formats` for the list. When two formats share an extension
 | `--ocr-database FILE` | the `.nocr` glyph database for `--ocr` |
 
 ## Fix
-Pass at least one fix. The fixes run in this order: `--unwrap`, `--merge-short`, `--split-long`, `--wrap`, `--merge-duplicates`, `--overlaps`, `--min-duration`.
+Pass at least one fix. The fixes run in this order: `--common-errors`, `--unwrap`, `--merge-short`, `--split-long`, `--wrap`, `--merge-duplicates`, `--overlaps`, `--min-duration`.
 
 | Option | Calls |
 |:--- |:--- |
+| `--common-errors` | [`CommonErrorFixer::fix()`](text.md#fixing-common-errors) with all default fixes. `--language` sets the language rules, default the `language` metadata. `--replace-list FILE` adds a Subtitle Edit OCR replace list. `--list-fixes` prints each change to standard error |
 | `--overlaps` | `fixOverlaps()` with `--min-gap` seconds, default 0 |
 | `--min-duration SECONDS` | `extendShortCues()` with `--min-gap` |
 | `--wrap CHARS` | `wrapLines()` with `--max-lines`, default 2 |
@@ -96,6 +97,13 @@ Pass at least one fix. The fixes run in this order: `--unwrap`, `--merge-short`,
 | `--split-long` | `splitLongCues()` with the default options. `--max-cpl` and `--max-lines` set `maxCharactersPerLine` and `maxLines` |
 
 [editing.md](editing.md) describes each method.
+
+```sh
+vendor/bin/subtitle-toolbox convert movie.sup movie.ocr.srt --ocr
+vendor/bin/subtitle-toolbox fix movie.ocr.srt --common-errors --language en --list-fixes -o movie.srt
+```
+
+`--list-fixes` prints one line per change, for example `movie.ocr.srt: cue 15: ocrLowercaseL: "lt's late." -> "It's late."`.
 
 ## Strip SDH
 `strip-sdh` removes everything that [`removeHearingImpaired()`](text.md#hearing-impaired-annotations) removes by default.
