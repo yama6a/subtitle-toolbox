@@ -1,0 +1,118 @@
+<?php
+
+namespace SubtitleToolbox\Cli;
+
+use SubtitleToolbox\DualSubtitle;
+use SubtitleToolbox\DualSubtitleOptions;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Subtitle;
+
+class DualCommand extends WriteCommand
+{
+    private const MODES = ["stack" => DualSubtitleOptions::MODE_STACK, "top-bottom" => DualSubtitleOptions::MODE_TOP_BOTTOM];
+
+    private ?DualSubtitleOptions $dualOptions = null;
+
+
+    public function name(): string
+    {
+        return "dual";
+    }
+
+
+    public function summary(): string
+    {
+        return "Merges two subtitles in two languages into one file that shows both.";
+    }
+
+
+    protected function usageLines(): array
+    {
+        return ["<primary> <secondary> [options]"];
+    }
+
+
+    protected function details(): string
+    {
+        return "stack joins each secondary cue with the primary cue that it overlaps most, below its lines.\n" .
+               "top-bottom keeps both cues and moves the secondary one to the top. SubRip, WebVTT, ASS and TTML write\n" .
+               "the position. The output takes the format of the primary file unless --to or the --output extension sets\n" .
+               "it. Without --output or --output-dir, the result goes to standard output. --from and --track apply to the\n" .
+               "primary file.";
+    }
+
+
+    protected function commandOptions(): array
+    {
+        return [
+            Option::value("mode", "MODE", "stack or top-bottom. Default: stack."),
+            Option::value("secondary-style", "TAG", "Tag around each secondary line: b, i, u, s or 'font color=\"#ffff00\"'. Default: none."),
+            Option::value("secondary-alignment", "1-9", "Position of the secondary cues for top-bottom, as on a numeric keypad. Default: 8."),
+            Option::value("snap-tolerance", "SECONDS", "top-bottom moves a secondary time to a primary time this close. Default: 0.25."),
+        ];
+    }
+
+
+    protected function allowsInPlace(): bool
+    {
+        return false;
+    }
+
+
+    protected function inputOptions(): array
+    {
+        return array_values(array_filter(parent::inputOptions(), fn (Option $option): bool => $option->name !== "keep-going"));
+    }
+
+
+    protected function inputArguments(Arguments $arguments): array
+    {
+        if (count($arguments->positionals) !== 2) {
+            self::fail("Pass two files, the primary one and the secondary one.");
+        }
+
+        return [$arguments->positionals[0]];
+    }
+
+
+    protected function prepare(Arguments $arguments): void
+    {
+        parent::prepare($arguments);
+
+        $mode = $arguments->value("mode") ?? "stack";
+        if (!isset(self::MODES[$mode])) {
+            self::fail("Unknown mode \"$mode\". Known modes: " . implode(", ", array_keys(self::MODES)) . ".");
+        }
+        $alignment = $arguments->value("secondary-alignment") ?? "8";
+        if (!in_array($alignment, ["1", "2", "3", "4", "5", "6", "7", "8", "9"], true)) {
+            self::fail("The option --secondary-alignment needs a number from 1 to 9, got \"$alignment\".");
+        }
+        if (($arguments->float("snap-tolerance") ?? 0) < 0) {
+            self::fail("The option --snap-tolerance must not be negative.");
+        }
+
+        try {
+            $this->dualOptions = new DualSubtitleOptions(
+                mode: self::MODES[$mode],
+                snapTolerance: $arguments->float("snap-tolerance") ?? 0.25,
+                secondaryStyle: $arguments->value("secondary-style"),
+                secondaryAlignment: (int)$alignment,
+            );
+        } catch (InvalidArgumentException $exception) {
+            self::fail($exception->getMessage());
+        }
+    }
+
+
+    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    {
+        $secondary = $this->readSecondFile($arguments->positionals[1], $arguments, $console);
+
+        parent::process($input, DualSubtitle::merge($subtitle, $secondary, $this->dualOptions), $format, $arguments, $console);
+    }
+
+
+    protected function transform(Subtitle $subtitle, Arguments $arguments): void
+    {
+    }
+}

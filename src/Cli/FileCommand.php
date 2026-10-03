@@ -2,8 +2,11 @@
 
 namespace SubtitleToolbox\Cli;
 
+use SubtitleToolbox\Container\Matroska\MatroskaReader;
+use SubtitleToolbox\Container\Matroska\MatroskaTrack;
 use SubtitleToolbox\FormatDetector;
 use SubtitleToolbox\FormatRegistry;
+use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\SubtitleParser;
 use SubtitleToolbox\Parsers\VobSubParser;
@@ -17,6 +20,16 @@ abstract class FileCommand extends Command
 {
     public const DASH = "-";
 
+    private const EBML_MAGIC = "\x1A\x45\xDF\xA3";
+
+    private const MATROSKA_FORMATS = [
+        MatroskaReader::CODEC_SUBRIP => "srt",
+        MatroskaReader::CODEC_ASS    => "ass",
+        MatroskaReader::CODEC_SSA    => "ass",
+        MatroskaReader::CODEC_WEBVTT => "vtt",
+        MatroskaReader::CODEC_PGS    => "pgs",
+    ];
+
     protected ?string $fromFormat = null;
 
     protected ?float $fps = null;
@@ -24,6 +37,15 @@ abstract class FileCommand extends Command
     protected int $succeeded = 0;
 
     protected int $failed = 0;
+
+    protected bool $fromContainer = false;
+
+    protected bool $wordTimestamps = false;
+
+    /** @var list<ParseWarning> */
+    protected array $parseWarnings = [];
+
+    private bool $readingSecondFile = false;
 
 
     /**
@@ -50,6 +72,12 @@ abstract class FileCommand extends Command
     }
 
 
+    protected function needsWordTimestamps(Arguments $arguments): bool
+    {
+        return $arguments->has("word-timestamps");
+    }
+
+
     protected function fpsDescription(): string
     {
         return "Frame rate of the video. MicroDVD files without a {1}{1}<fps> first line need it.";
@@ -71,6 +99,8 @@ abstract class FileCommand extends Command
             Option::value("encoding", "NAME", "Encoding of the input, for example Windows-1252. Default: UTF-8. A BOM in the input overrides it."),
             Option::flag("lenient", "Skip or repair broken cues and print a warning for each. SCC, PGS, VobSub and chapter input ignore it."),
             Option::value("fps", "RATE", $this->fpsDescription()),
+            Option::flag("word-timestamps", "Keep the word times of speech-to-text JSON, YouTube timed text and podcast transcript input."),
+            Option::value("track", "NUMBER", "Subtitle track of an MKV or WebM input. Needed when the file has several. \"info\" lists them."),
             Option::flag("keep-going", "Go on with the next file after a file fails. Default: stop at the first failure."),
         ];
     }
@@ -81,6 +111,8 @@ abstract class FileCommand extends Command
         $this->succeeded = 0;
         $this->failed    = 0;
         $this->fps       = $arguments->positiveFloat("fps");
+        $arguments->positiveInt("track");
+        $this->wordTimestamps = $this->needsWordTimestamps($arguments);
 
         $from             = $this->hasFormatOptions() ? $arguments->value("from") : null;
         $this->fromFormat = $from === null ? null : self::readableFormat($from);
@@ -141,8 +173,10 @@ abstract class FileCommand extends Command
 
         foreach ($inputs as $input) {
             try {
-                [$subtitle, $format] = $this->read($input, $arguments, $console);
-                $this->process($input, $subtitle, $format, $arguments, $console);
+                $read = $this->read($input, $arguments, $console);
+                if ($read !== null) {
+                    $this->process($input, $read[0], $read[1], $arguments, $console);
+                }
                 $this->succeeded++;
             } catch (\Exception $exception) {
                 $this->failed++;
@@ -244,11 +278,31 @@ abstract class FileCommand extends Command
 
 
     /**
-     * @return array{Subtitle, string}
+     * Returns the subtitle and its format, or null when listTracks() handled an MKV or WebM input.
+     *
+     * @return array{Subtitle, string}|null
      */
-    protected function read(string $input, Arguments $arguments, Console $console): array
+    protected function read(string $input, Arguments $arguments, Console $console): ?array
     {
-        $content = StringHelpers::convertToUtf8($this->readFile($input, $console), $arguments->value("encoding"));
+        $this->fromContainer = false;
+        $this->parseWarnings = [];
+        if ($input !== self::DASH && is_file($input) && self::isMatroskaFile($input)) {
+            return $this->readMatroska(MatroskaReader::open($input), $input, $arguments, $console);
+        }
+
+        $raw = $this->readFile($input, $console);
+        if (str_starts_with($raw, self::EBML_MAGIC)) {
+            $stream = fopen("php://temp", "w+b");
+            fwrite($stream, $raw);
+            rewind($stream);
+
+            return $this->readMatroska(MatroskaReader::open($stream), $input, $arguments, $console);
+        }
+        if ($arguments->has("track") && !$this->readingSecondFile) {
+            self::fail("--track needs an MKV or WebM input.");
+        }
+
+        $content = StringHelpers::convertToUtf8($raw, $arguments->value("encoding"));
         $format  = $this->inputFormat($input, $content);
 
         if ($format === "vobsub" && $input === self::DASH) {
@@ -262,11 +316,97 @@ abstract class FileCommand extends Command
             $subtitle = $parser->parse($content);
         }
 
-        foreach ($parser->getWarnings() as $warning) {
+        $this->parseWarnings = $parser->getWarnings();
+        foreach ($this->parseWarnings as $warning) {
             $console->err(self::label($input) . ": line $warning->lineNumber: $warning->message ($warning->action)\n");
         }
 
         return [$subtitle, $format];
+    }
+
+
+    /**
+     * Reads a file other than the input, such as a reference, with format detection and without --from and --track.
+     */
+    protected function readSecondFile(string $path, Arguments $arguments, Console $console): Subtitle
+    {
+        $state                   = [$this->fromFormat, $this->fromContainer];
+        $this->fromFormat        = null;
+        $this->readingSecondFile = true;
+
+        try {
+            return $this->read($path, $arguments, $console)[0];
+        } catch (\Exception $exception) {
+            return self::fail("$path: " . $exception->getMessage());
+        } finally {
+            [$this->fromFormat, $this->fromContainer] = $state;
+            $this->readingSecondFile                  = false;
+        }
+    }
+
+
+    /**
+     * Handles an MKV or WebM input without --track. Returns false to read its only subtitle track.
+     *
+     * @param list<MatroskaTrack> $tracks
+     */
+    protected function listTracks(string $input, array $tracks, Console $console): bool
+    {
+        return false;
+    }
+
+
+    public static function describeTrack(MatroskaTrack $track): string
+    {
+        return implode(", ", array_filter([
+            $track->codecId,
+            $track->language,
+            $track->name === null ? null : json_encode($track->name, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            $track->default ? "default" : null,
+            $track->forced ? "forced" : null,
+        ]));
+    }
+
+
+    /**
+     * @return array{Subtitle, string}|null
+     */
+    private function readMatroska(MatroskaReader $reader, string $input, Arguments $arguments, Console $console): ?array
+    {
+        $tracks = $reader->getSubtitleTracks();
+        $number = $this->readingSecondFile ? null : $arguments->positiveInt("track");
+        if ($number === null) {
+            if (!$this->readingSecondFile && $this->listTracks($input, $tracks, $console)) {
+                return null;
+            }
+            if (count($tracks) !== 1) {
+                self::fail($tracks === [] ? "The file has no subtitle track." : "The file has " . count($tracks) .
+                           " subtitle tracks. Pass --track with one of them:\n" . implode("\n", array_map(
+                               fn (MatroskaTrack $track): string => "  $track->number: " . self::describeTrack($track),
+                               $tracks
+                           )));
+            }
+            $number = $tracks[0]->number;
+        }
+
+        $subtitle            = $reader->extract($number);
+        $this->fromContainer = true;
+        $codecs              = array_column(array_map(get_object_vars(...), $tracks), "codecId", "number");
+
+        return [$subtitle, self::MATROSKA_FORMATS[$codecs[$number]]];
+    }
+
+
+    private static function isMatroskaFile(string $path): bool
+    {
+        $handle = @fopen($path, "rb");
+        if ($handle === false) {
+            return false;
+        }
+        $magic = fread($handle, 4);
+        fclose($handle);
+
+        return $magic === self::EBML_MAGIC;
     }
 
 
@@ -314,10 +454,12 @@ abstract class FileCommand extends Command
     {
         $class = FormatRegistry::parserClass($format);
 
-        return match ($class) {
-            MicroDvdParser::class => new MicroDvdParser($this->fps),
-            VobSubParser::class   => new VobSubParser($content),
-            default               => new $class(),
+        return match (true) {
+            $class === MicroDvdParser::class => new MicroDvdParser($this->fps),
+            $class === VobSubParser::class   => new VobSubParser($content),
+            $this->wordTimestamps && defined("$class::OPTION_WORD_TIMESTAMPS")
+                                             => new $class([$class::OPTION_WORD_TIMESTAMPS => true]),
+            default                          => new $class(),
         };
     }
 }
