@@ -2,6 +2,7 @@
 
 namespace SubtitleToolbox\Fixing;
 
+use GlyphOcr\GlyphDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
@@ -131,8 +132,8 @@ class CommonErrorFixerTest extends TestCase
             "PGS OCR, German"        => ["fixing/ocr-de.ocr.srt", "de", null, "fixing/ocr-de.fixed.srt"],
             "PGS OCR, French"        => ["fixing/ocr-fr.ocr.srt", "fr", null, "fixing/ocr-fr.fixed.srt"],
             "PGS OCR, Spanish"       => ["fixing/ocr-es.ocr.srt", "es", null, "fixing/ocr-es.fixed.srt"],
-            "PGS OCR, 1080p"         => ["pgs/text_1080p.ocr.srt", "en", null, "fixing/text_1080p.fixed.srt"],
-            "VobSub OCR, user list"  => ["vobsub/text-pal.ocr.srt", "en", $list, "fixing/text-pal.fixed.srt"],
+            "PGS OCR, 1080p"         => ["fixing/text_1080p.ocr.srt", "en", null, "fixing/text_1080p.fixed.srt"],
+            "VobSub OCR, user list"  => ["fixing/text-pal.ocr.srt", "en", $list, "fixing/text-pal.fixed.srt"],
         ];
     }
 
@@ -179,8 +180,10 @@ class CommonErrorFixerTest extends TestCase
             $sup = file_get_contents(self::FILES . "fixing/ocr-$language.sup");
             $this->assertSame($sup, ocrFixture($language));
 
-            $subtitle = (new PgsParser())->parse($sup)->recognizeText(new GlyphOcrEngine());
-            $this->assertStringEqualsFile(self::FILES . "fixing/ocr-$language.ocr.srt", $subtitle->format(SubRipFormatter::class));
+            $this->assertStringEqualsFile(self::FILES . "fixing/ocr-$language.ocr.srt", ocrWithErrors((new PgsParser())->parse($sup)));
+        }
+        foreach (imageFixtures() as $name => $subtitle) {
+            $this->assertStringEqualsFile(self::FILES . "fixing/$name", ocrWithErrors($subtitle));
         }
     }
 
@@ -190,7 +193,7 @@ class CommonErrorFixerTest extends TestCase
         $subtitle = (new PgsParser())->parse(file_get_contents(self::FILES . "fixing/ocr-fr.sup"));
         $this->assertSame([], CommonErrorFixer::fix($subtitle, new CommonErrorOptions(language: "fr")));
 
-        $subtitle->recognizeText(new GlyphOcrEngine());
+        $subtitle->recognizeText(new GlyphOcrEngine(GlyphDatabase::latin(), ["lineContext" => false]));
         $fixes = CommonErrorFixer::fix($subtitle, new CommonErrorOptions(language: "fr"));
 
         $this->assertSame(["ll pleut. lls restent à la maison.", "Il pleut. Ils restent à la maison."],

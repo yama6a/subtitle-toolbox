@@ -11,6 +11,10 @@
          displayDetailsOnTestsThatTriggerDeprecations="true"
          displayDetailsOnTestsThatTriggerNotices="true"
          displayDetailsOnTestsThatTriggerWarnings="true">
+  <php>
+    <!-- The OCR tests load the subtitle fonts database of php-glyph-ocr, which takes about 76 MB. -->
+    <ini name="memory_limit" value="512M"/>
+  </php>
   <testsuites>
     <testsuite name="Tests">
       <directory>tests</directory>

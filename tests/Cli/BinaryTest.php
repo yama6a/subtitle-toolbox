@@ -627,7 +627,7 @@ class BinaryTest extends TestCase
     public function testFixCommonErrors(): void
     {
         copy(self::FILES . "fixing/web-errors.srt", "$this->dir/web.srt");
-        copy(self::FILES . "vobsub/text-pal.ocr.srt", "$this->dir/pal.srt");
+        copy(self::FILES . "fixing/text-pal.ocr.srt", "$this->dir/pal.srt");
         copy(self::FILES . "fixing/user_OCRFixReplaceList.xml", "$this->dir/list.xml");
 
         [$code, $stdout, $stderr] = $this->runBinary(["fix", "web.srt", "--common-errors", "--language", "en", "--line-ending", "crlf"]);

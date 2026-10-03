@@ -80,25 +80,27 @@ $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);   // "de", from the id line
 `GlyphOcrEngine` reads the bitmaps of PGS and VobSub cues in pure PHP. It uses the optional package [yama6a/php-glyph-ocr](https://github.com/yama6a/php-glyph-ocr), a port of the nOCR engine of Subtitle Edit.
 
 ```sh
-composer require yama6a/php-glyph-ocr:^0.1
+composer require yama6a/php-glyph-ocr:^0.3
 ```
 
 ```php
 $subtitle = Subtitle::parse(file_get_contents('movie.sup'));            // PGS, image cues
-$subtitle->recognizeText(new GlyphOcrEngine());                        // Latin database by default
+$subtitle->recognizeText(new GlyphOcrEngine());                        // subtitle fonts database by default
 file_put_contents('movie.srt', $subtitle->format(SubRipFormatter::class));
 ```
 
 - **Package**: without php-glyph-ocr, `new GlyphOcrEngine()` throws `InvalidArgumentException` with the `composer require` command.
-- **Database**: the first argument is a `GlyphOcr\GlyphDatabase`. The default is the Latin database of Subtitle Edit. It takes about 50 MB of memory, so engines that exist at the same time share one copy.
+- **Database**: the first argument is a `GlyphOcr\GlyphDatabase`. The default is `GlyphDatabase::subtitleFonts()`. It holds glyphs of DejaVu Sans, Liberation Sans and Noto Sans, upright and italic, and then the Latin database of Subtitle Edit for other fonts. Liberation Sans has the metrics of Arial. The database takes about 76 MB of memory, so engines that exist at the same time share one copy.
+- **Subtitle Edit output**: `new GlyphOcrEngine(GlyphDatabase::latin(), ['lineContext' => false])` reads the text as the nOCR engine of Subtitle Edit does.
 - **Options**: the second argument holds named arguments of `GlyphOcr\Recognizer`, for example `['italicSlant' => 0.2]`. An unknown name or an invalid value throws `InvalidArgumentException`.
 - **One engine per stream**: the engine learns the glyph heights from the cues it reads. So use a new engine for each subtitle stream.
 - **Italic**: a word becomes italic when most of its characters match italic glyphs.
 - **Language**: the engine ignores the language argument. The database sets the characters it knows.
 - **Confidence**: the `OcrResult` confidence is the mean confidence of the glyphs of the cue. A glyph that matches nothing reads as `*` with confidence 0.
-- **Limits**: the text must have one colour on a transparent or dark background. Glyphs with the same shape, such as I and l in sans-serif fonts, come out as the one the database has first. Fix such errors with [`CommonErrorFixer`](text.md#fixing-common-errors).
-- **Accuracy**: the Latin database reads 1080p Blu-ray text with about 97% correct characters, and small DVD text with about 69%. Training a database for the font of your file fixes most errors.
-- **Speed and memory**: OCR of a 1,500-cue 1080p PGS file takes about 2 minutes on one core with PHP 8.5. It needs up to 139 MB of memory. Raise `memory_limit` above the default 128 MB for a long file.
+- **I and l**: most sans-serif fonts draw capital I and lower case l as the same bar. The engine compares each bar with the capitals and the ascenders of its line, so it reads both letters correctly in the test files. The recognizer option `lineContext` controls this and is on by default. Fix remaining errors with [`CommonErrorFixer`](text.md#fixing-common-errors).
+- **Limits**: the text must have one colour on a transparent or dark background.
+- **Accuracy**: the default database reads the 1080p Blu-ray test file in Liberation Sans with 100% correct characters, and small DVD text with 98%. Other fonts give more errors. Training a database for the font of your file fixes most of them.
+- **Speed and memory**: OCR of a 1,500-cue 1080p PGS file takes about 2 minutes on one core with PHP 8.5. It needs up to 170 MB of memory. Raise `memory_limit` above the default 128 MB for a long file.
 
 ### Training a database
 Train a glyph from a sample that a person confirmed. Then save the database and pass it to the engine:
@@ -109,7 +111,7 @@ use GlyphOcr\Image;
 use GlyphOcr\Recognizer;
 use GlyphOcr\Trainer;
 
-$database   = GlyphDatabase::latin();
+$database   = GlyphDatabase::subtitleFonts();
 $recognizer = new Recognizer($database);
 $trainer    = new Trainer();
 foreach ($subtitle->getCues() as $cue) {

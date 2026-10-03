@@ -98,7 +98,7 @@ class ConvertCommand extends WriteCommand
             Option::value("karaoke-tag", "TAG", "Write word timestamps as ASS karaoke tags \\k, \\kf or \\ko: k, kf or ko. Default: k."),
             Option::flag("forced-only", "Keep only the forced cues, for example the translations of signs."),
             Option::flag("ocr", "Read the text of image cues, for example from PGS or VobSub, with GlyphOcrEngine."),
-            Option::value("ocr-database", "FILE", "The .nocr glyph database for --ocr. Default: the Latin database of php-glyph-ocr."),
+            Option::value("ocr-database", "FILE", "The .nocr glyph database for --ocr. Default: the subtitle fonts database of php-glyph-ocr."),
         ];
     }
 
@@ -346,7 +346,7 @@ class ConvertCommand extends WriteCommand
         }
 
         try {
-            return $path === null ? GlyphDatabase::latin() : GlyphDatabase::fromFile($path);
+            return $path === null ? GlyphDatabase::subtitleFonts() : GlyphDatabase::fromFile($path);
         } catch (GlyphOcrException $exception) {
             return self::fail($exception->getMessage());
         }
