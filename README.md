@@ -997,7 +997,7 @@ curl -s https://example.com/movie.srt | vendor/bin/subtitle-toolbox convert - --
 |:--- |:--- |
 | `convert` | writes each input in the format of `--to` or of the output file extension |
 | `shift`, `scale`, `fps` | call `shift()`, `scale()` and `convertFrameRate()`. `sync-fps` is another name for `fps` |
-| `fix` | calls `fixOverlaps()`, `extendShortCues()`, `wrapLines()`, `unwrapLines()` and `removeDuplicateCues()` |
+| `fix` | calls `fixOverlaps()`, `extendShortCues()`, `wrapLines()`, `unwrapLines()`, `removeDuplicateCues()` and `mergeShortCues()` |
 | `strip-sdh` | calls `removeHearingImpaired()` |
 | `info` | prints the format and the statistics, as text or with `--json` |
 | `validate` | prints each broken rule, as text or with `--json` |
@@ -1011,6 +1011,7 @@ curl -s https://example.com/movie.srt | vendor/bin/subtitle-toolbox convert - --
 - **Overwrite**: the tool never overwrites a file without `--force` or `--in-place`.
 - **Batch**: the tool prints one line per file and a summary. It stops at the first failed file, unless you pass `--keep-going`.
 - **Forced cues**: `convert --forced-only` keeps only the forced cues, as `forcedOnly()` does. See [Forced cues](#forced-cues).
+- **Short cues**: `fix --merge-short` calls `mergeShortCues()` with the default options. `--max-cpl` and `--max-lines` set `maxCharactersPerLine` and `maxLines`. See [Merging short cues](#merging-short-cues).
 - **Validate**: `--preset` takes `netflix-en` or `bbc`, see [Validation](#validation). A rule option overrides the value of the preset. The table below gives the rule of each option.
 - **Exit code**: 0 when all files succeed, 1 when a file fails or breaks a validation rule, 2 for invalid arguments.
 - **Version**: `subtitle-toolbox --version` prints the installed release, for example `1.40.0`, or `dev` in a Git checkout.

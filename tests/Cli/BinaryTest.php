@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\FormatRegistry;
 use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Subtitle;
 
@@ -401,6 +402,22 @@ class BinaryTest extends TestCase
         $this->assertStringContainsString("00:00:06,000 --> 00:00:07,000\n", $stdout);
         $this->assertSame(2, $this->runBinary(["fix", "trip.srt"])[0]);
         $this->assertSame(2, $this->runBinary(["fix", "trip.srt", "--wrap", "0"])[0]);
+    }
+
+
+    public function testFixMergeShort(): void
+    {
+        copy(__DIR__ . "/../files/short-cues/own_speech_to_text.srt", "$this->dir/speech.srt");
+        $narrow = Subtitle::parse($this->file("speech.srt"))
+            ->mergeShortCues(new MergeShortCuesOptions(maxCharactersPerLine: 20, maxLines: 3))
+            ->format(SubRipFormatter::class);
+
+        $this->assertSame(
+            [0, file_get_contents(__DIR__ . "/../files/short-cues/own_speech_to_text_merged.srt"), ""],
+            $this->runBinary(["fix", "speech.srt", "--merge-short"])
+        );
+        $this->assertSame([0, $narrow, ""], $this->runBinary(["fix", "speech.srt", "--merge-short", "--max-cpl", "20", "--max-lines", "3"]));
+        $this->assertSame(2, $this->runBinary(["fix", "speech.srt", "--merge-short", "--max-cpl", "0"])[0]);
     }
 
 
