@@ -17,6 +17,7 @@ use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
+use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 
 class FormatDetector
 {
@@ -48,6 +49,8 @@ class FormatDetector
      * 13. EBU STL: a 3-digit code page, then the disk format code STL25.01 or STL30.01.
      * 14. SCC: the `Scenarist_SCC V1.0` header line.
      * 15. Whisper JSON: an object with a "segments" or "transcription" list. It comes after JSON, whose format data can hold such a key.
+     * 16. YouTube timed text: a `<timedtext>` or `<transcript>` root after an optional XML declaration, or an object with an
+     *     "events" list whose events have a "tStartMs" key. It comes after JSON and Whisper JSON, which can hold such a list.
      */
     private const SIGNATURES = [
         WebVttParser::class   => '/\AWEBVTT(?:[ \t\n]|\z)/',
@@ -67,6 +70,9 @@ class FormatDetector
         EbuStlParser::class   => '/\A\d{3}STL(?:25|30)\.01/',
         SccParser::class      => '/\AScenarist_SCC V1\.0[ \t]*$/m',
         WhisperJsonParser::class => '/\A\{(?=(?:[^"]++|"(?!(?:segments|transcription)"\s*+:))*+"(?:segments|transcription)"\s*+:\s*+\[)/',
+        YouTubeTimedTextParser::class => '/\A(?:' . self::XML_PROLOG . '<(?:timedtext|transcript)[\s>\/]' .
+                                         '|\{(?=(?:[^"]++|"(?!events"\s*+:))*+"events"\s*+:\s*+\[\s*+\{' .
+                                         '(?:[^"]++|"(?!tStartMs"\s*+:))*+"tStartMs"\s*+:))/s',
     ];
 
 

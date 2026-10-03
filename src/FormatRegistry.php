@@ -34,6 +34,7 @@ use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\VobSubParser;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
+use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 
 class FormatRegistry
 {
@@ -61,6 +62,7 @@ class FormatRegistry
         "vobsub"    => [VobSubParser::class, null, ["idx"]],
         "vtt"       => [WebVttParser::class, WebVttFormatter::class, ["vtt"]],
         "whisper"   => [WhisperJsonParser::class, null, ["json"]],
+        "youtube"   => [YouTubeTimedTextParser::class, null, ["json3", "srv3", "srv1"]],
     ];
 
 

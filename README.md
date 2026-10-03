@@ -302,6 +302,7 @@ Detection ignores a UTF-8 BOM and leading blank lines. It checks the signatures 
 | 13 | `EbuStlParser` | a 3-digit code page such as `850`, then `STL25.01` or `STL30.01` |
 | 14 | `SccParser` | `Scenarist_SCC V1.0` |
 | 15 | `WhisperJsonParser` | an object with a `"segments"` or `"transcription"` list |
+| 16 | `YouTubeTimedTextParser` | a `<timedtext>` or `<transcript>` root, or an object with an `"events"` list whose events have `"tStartMs"` |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line looks like SubRip, so it detects as SubRip.
 - **`.sub` files**: MicroDVD, MPSub and SubViewer text files all use `.sub`. SBV has three digits after the dot, SubViewer 2 has two.
@@ -1480,6 +1481,32 @@ $subtitle->format(SubRipFormatter::class);
 - **Label names**: an upper case label becomes title case, so `DR. O'NEIL:` becomes `<v Dr. O'Neil>`. The dash before a label goes. A label on a line of its own names the speaker of the next line.
 - **Whisper**: `OPTION_SPEAKER_VOICES` is off by default. The `speaker` field also stays in the cue format data. whisper.cpp `-di` writes the speakers `0` and `1`, and `?` when it cannot tell. The parser ignores the speaker of each WhisperX word.
 - **Names**: the `list()` key of a speaker such as `0` is an int. A quote in a name is written as `&#39;` or `&quot;` in the tag.
+
+## YouTube timed text
+yt-dlp and youtube-transcript-api download YouTube captions as json3, srv3 or the older transcript XML. json3 and srv3 keep the time of each word of automatic captions. WebVTT downloads lose it.
+
+```php
+$subtitle = Subtitle::parse(file_get_contents('video.en.json3'));          // detects YouTubeTimedTextParser
+$parser   = new YouTubeTimedTextParser([YouTubeTimedTextParser::OPTION_WORD_TIMESTAMPS => true]);
+$subtitle = $parser->parse(file_get_contents('video.en.srv3'));
+$subtitle->getCues()[0]->getText();                                          // '<00:00:01.200>Hello <00:00:01.600>world'
+$subtitle->getFormatData('youtube')['format'];                               // 'srv3'
+```
+
+| Format | Shape | Times |
+|:--- |:--- |:--- |
+| json3 | `{"events": [{"tStartMs": 1200, "dDurationMs": 2300, "segs": [{"utf8": "Hello"}, {"utf8": " world", "tOffsetMs": 400}]}]}` | milliseconds |
+| srv3 | `<timedtext format="3"><body><p t="1200" d="2300">Hello<s t="400"> world</s></p></body></timedtext>` | milliseconds |
+| srv2 | `<timedtext><text t="1200" d="2300">Hello world</text></timedtext>` | milliseconds |
+| srv1 and transcript XML | `<transcript><text start="1.2" dur="2.3">Hello world</text></transcript>` | seconds |
+
+- **Automatic captions**: the parser skips the append events, `"aAppend": 1` in json3 and `a="1"` in srv3. They only add a line break. A cue in a window, `wWinId` in json3 and `w` in srv3, ends where the next cue of the same window starts. So the rolling cues do not stack. Cues outside a window and srv1 cues keep their times.
+- **Word timestamps**: off by default. With `OPTION_WORD_TIMESTAMPS`, each segment of a cue gets a core word timestamp, but only when at least one segment of the cue has a time. A segment without a time starts at the cue start. srv1 and srv2 have no word times.
+- **Entities**: the XML formats escape entities twice, for example `&amp;#39;`. The parser decodes them. json3 text stays as it is.
+- **Alignment**: from the anchor point of the window position of a cue, `apPoint` in json3 and `ap` in srv3. Anchor point 0 is top left and becomes alignment 7. Anchor point 8 is bottom right and becomes alignment 3. A cue without its own window position, such as an automatic caption, has no alignment.
+- **Pens**: the pen colour becomes `<font color>`. Bold, italic and underline become `<b>`, `<i>` and `<u>`.
+- **Format data**: the subtitle keeps the `format` name. For json3 it also keeps all top-level fields except `events`, and the window events in `windows`. For srv3 it keeps the attributes of the `head` elements and the `w` windows, as lists keyed by element name such as `pen` and `wp`. Each cue keeps the other fields of its event or `<p>`, and the other fields of its segments in `segments`.
+- **Output**: the library cannot write these formats.
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.

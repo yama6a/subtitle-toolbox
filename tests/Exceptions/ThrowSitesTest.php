@@ -49,6 +49,7 @@ use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\VobSubParser;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
+use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 use SubtitleToolbox\Profanity\ProfanityOptions;
 use SubtitleToolbox\Speakers\SpeakerLabels;
 use SubtitleToolbox\Streaming\SubRipStreamReader;
@@ -372,6 +373,14 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Parsers/WhisperJsonParser.php: text no string" => [fn () => (new WhisperJsonParser())->parse(
                 '{"segments": [{"start": 0, "end": 1}]}'), ...$parsing],
+            "Parsers/YouTubeTimedTextParser.php: no JSON"   => [fn () => (new YouTubeTimedTextParser())->parse("{"), ...$parsing],
+            "Parsers/YouTubeTimedTextParser.php: no events" => [fn () => (new YouTubeTimedTextParser())->parse('{"segs": []}'), ...$parsing],
+            "Parsers/YouTubeTimedTextParser.php: time no number" => [fn () => (new YouTubeTimedTextParser())->parse(
+                '{"events": [{"tStartMs": "0"}]}'), ...$parsing],
+            "Parsers/YouTubeTimedTextParser.php: no XML"    => [fn () => (new YouTubeTimedTextParser())->parse("<transcript>"), ...$parsing],
+            "Parsers/YouTubeTimedTextParser.php: other root" => [fn () => (new YouTubeTimedTextParser())->parse("<tt/>"), ...$parsing],
+            "Parsers/YouTubeTimedTextParser.php: bad time"  => [fn () => (new YouTubeTimedTextParser())->parse(
+                '<transcript><text dur="1">Hi</text></transcript>'), ...$parsing],
             "Profanity/ProfanityOptions.php: star in a word" => [fn () => new ProfanityOptions(["f*ck"]), ...$invalid],
             "Profanity/ProfanityOptions.php: no words"      => [fn () => new ProfanityOptions(), ...$invalid],
             "Profanity/ProfanityOptions.php: unknown mask"  => [fn () => new ProfanityOptions(["hell"], "blur"), ...$invalid],
