@@ -39,10 +39,14 @@ use SubtitleToolbox\Karaoke\WordHighlightOptions;
 use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Ocr\OcrResult;
+use SubtitleToolbox\Parsers\AssemblyAiParser;
 use SubtitleToolbox\Parsers\AssParser;
+use SubtitleToolbox\Parsers\AwsTranscribeParser;
 use SubtitleToolbox\Parsers\CsvColumns;
 use SubtitleToolbox\Parsers\CsvParser;
+use SubtitleToolbox\Parsers\DeepgramParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
+use SubtitleToolbox\Parsers\GoogleSpeechParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
@@ -354,17 +358,21 @@ class ThrowSitesTest extends TestCase
                                                                                                   "Dialogue: 0,text\n"), ...$parsing],
             "Parsers/AssParser.php: invalid time"           => [fn () => (new AssParser())->parse("[Events]\nFormat: Start, End, Text\n" .
                                                                                                   "Dialogue: soon,0:00:02.00,text\n"), ...$parsing],
+            "Parsers/AssemblyAiParser.php: no words"        => [fn () => (new AssemblyAiParser())->parse('{"text": "Hi"}'), ...$parsing],
+            "Parsers/AwsTranscribeParser.php: no items"     => [fn () => (new AwsTranscribeParser())->parse('{"results": {}}'), ...$parsing],
             "Parsers/CsvColumns.php: negative index"        => [fn () => new CsvColumns(start: -1), ...$invalid],
             "Parsers/CsvColumns.php: name without header"   => [fn () => new CsvColumns(start: 0, text: "Text", header: false), ...$invalid],
             "Parsers/CsvParser.php: delimiter"              => [fn () => new CsvParser(delimiter: "|"), ...$invalid],
             "Parsers/CsvParser.php: open quote"             => [fn () => (new CsvParser())->parse("start,text\n1,\"a"), ...$parsing],
             "Parsers/CsvParser.php: bad time"               => [fn () => (new CsvParser())->parse("start,text\nsoon,a"), ...$parsing],
             "Parsers/CsvParser.php: missing column"         => [fn () => (new CsvParser())->parse("start,end\n1,2"), ...$parsing],
+            "Parsers/DeepgramParser.php: no channels"       => [fn () => (new DeepgramParser())->parse('{"metadata": {}}'), ...$parsing],
             "Parsers/EbuStlParser.php: no GSI block"        => [fn () => (new EbuStlParser())->parse("STL"), ...$parsing],
             "Parsers/EbuStlParser.php: partial TTI block"   => [fn () => (new EbuStlParser())->parse(str_repeat(" ", 1025)), ...$parsing],
             "Parsers/EbuStlParser.php: disk format code"    => [fn () => (new EbuStlParser())->parse(str_repeat(" ", 1024)), ...$parsing],
             "Parsers/EbuStlParser.php: code table 09"       => [fn () => (new EbuStlParser())->parse(
                 str_pad("850STL25.01109", 1024, " ")), ...$parsing],
+            "Parsers/GoogleSpeechParser.php: no results"    => [fn () => (new GoogleSpeechParser())->parse('{"done": true}'), ...$parsing],
             "Parsers/JsonParser.php: no JSON"               => [fn () => (new JsonParser())->parse("{"), ...$parsing],
             "Parsers/JsonParser.php: root no object"        => [fn () => (new JsonParser())->parse("[1]"), ...$parsing],
             "Parsers/JsonParser.php: invalid base64"        => [fn () => (new JsonParser())->parse(
@@ -473,6 +481,12 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Parsers/WhisperJsonParser.php: text no string" => [fn () => (new WhisperJsonParser())->parse(
                 '{"segments": [{"start": 0, "end": 1}]}'), ...$parsing],
+            "Parsers/WordGrouping.php: no JSON"             => [fn () => (new DeepgramParser())->parse("{"), ...$parsing],
+            "Parsers/WordGrouping.php: root no object"      => [fn () => (new GoogleSpeechParser())->parse("[1]"), ...$parsing],
+            "Parsers/WordGrouping.php: bad time"            => [fn () => (new AssemblyAiParser())->parse('{"words": [{"text": "Hi", "start": "soon"}]}'),
+                                                                ...$parsing],
+            "Parsers/WordGrouping.php: text no string"      => [fn () => (new AwsTranscribeParser())->parse(
+                '{"results": {"items": [{"alternatives": []}]}}'), ...$parsing],
             "Parsers/YouTubeTimedTextParser.php: no JSON"   => [fn () => (new YouTubeTimedTextParser())->parse("{"), ...$parsing],
             "Parsers/YouTubeTimedTextParser.php: no events" => [fn () => (new YouTubeTimedTextParser())->parse('{"segs": []}'), ...$parsing],
             "Parsers/YouTubeTimedTextParser.php: time no number" => [fn () => (new YouTubeTimedTextParser())->parse(

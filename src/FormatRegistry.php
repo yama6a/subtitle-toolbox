@@ -21,9 +21,13 @@ use SubtitleToolbox\Formatters\SubViewerFormatter;
 use SubtitleToolbox\Formatters\TmPlayerFormatter;
 use SubtitleToolbox\Formatters\TtmlFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\Parsers\AssemblyAiParser;
 use SubtitleToolbox\Parsers\AssParser;
+use SubtitleToolbox\Parsers\AwsTranscribeParser;
 use SubtitleToolbox\Parsers\CsvParser;
+use SubtitleToolbox\Parsers\DeepgramParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
+use SubtitleToolbox\Parsers\GoogleSpeechParser;
 use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
@@ -55,6 +59,10 @@ class FormatRegistry
         "csv"       => [CsvParser::class, CsvFormatter::class, ["csv"]],
         "itt"       => [IttParser::class, IttFormatter::class, ["itt"]],
         "json"      => [JsonParser::class, JsonFormatter::class, ["json"]],
+        "assemblyai" => [AssemblyAiParser::class, null, ["json"]],
+        "aws-transcribe" => [AwsTranscribeParser::class, null, ["json"]],
+        "deepgram"  => [DeepgramParser::class, null, ["json"]],
+        "google-speech" => [GoogleSpeechParser::class, null, ["json"]],
         "lrc"       => [LyricsParser::class, LyricsFormatter::class, ["lrc"]],
         "microdvd"  => [MicroDvdParser::class, MicroDvdFormatter::class, ["sub"]],
         "mpsub"     => [MpSubParser::class, MpSubFormatter::class, ["mpsub"]],

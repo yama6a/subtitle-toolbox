@@ -303,10 +303,14 @@ Detection ignores a UTF-8 BOM and leading blank lines. It checks the signatures 
 | 12 | `JsonParser` | an object with a numeric `"version"` key and a `"cues"` list |
 | 13 | `EbuStlParser` | a 3-digit code page such as `850`, then `STL25.01` or `STL30.01` |
 | 14 | `SccParser` | `Scenarist_SCC V1.0` |
-| 15 | `WhisperJsonParser` | an object with a `"segments"` or `"transcription"` list |
-| 16 | `YouTubeTimedTextParser` | a `<timedtext>` or `<transcript>` root, or an object with an `"events"` list whose events have `"tStartMs"` |
-| 17 | `Mpl2Parser` | `[12][45]` |
-| 18 | `TmPlayerParser` | `00:00:01:`, `0:00:01=` or `00:00:01,1=` |
+| 15 | `AwsTranscribeParser` | an object with a `"transcripts"` list |
+| 16 | `DeepgramParser` | an object with a `"channels"` list of objects, and an `"alternatives"` key after it |
+| 17 | `AssemblyAiParser` | an object with an `"audio_url"` key, or a `"words"` list whose first word starts with `"text"` |
+| 18 | `GoogleSpeechParser` | an object with a `"results"` list of objects, and an `"alternatives"` list after it |
+| 19 | `WhisperJsonParser` | an object with a `"segments"` or `"transcription"` list |
+| 20 | `YouTubeTimedTextParser` | a `<timedtext>` or `<transcript>` root, or an object with an `"events"` list whose events have `"tStartMs"` |
+| 21 | `Mpl2Parser` | `[12][45]` |
+| 22 | `TmPlayerParser` | `00:00:01:`, `0:00:01=` or `00:00:01,1=` |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line looks like SubRip, so it detects as SubRip.
 - **`.sub` files**: MicroDVD, MPSub and SubViewer text files all use `.sub`. SBV has three digits after the dot, SubViewer 2 has two.
@@ -1492,6 +1496,7 @@ $subtitle->format(SubRipFormatter::class);
 | TTML, IMSC, DFXP | `ttm:agent` with its `ttm:name` | `ttm:agent` |
 | ASS, SSA | the Name field | the Name field, only the first speaker of a cue |
 | Whisper JSON | the segment `speaker`, with `OPTION_SPEAKER_VOICES` | no formatter |
+| Cloud speech-to-text JSON | the speaker labels of the service, with `OPTION_SPEAKER_VOICES` | no formatter |
 | JSON | the cue lines | the cue lines |
 | all other formats, iTT too | no speaker | nothing. Convert with `toPrefix()`, `toDialogueDashes()` or `toColours()` first |
 
@@ -1669,6 +1674,40 @@ file_put_contents('movie.de.srt', $german->format(SubRipFormatter::class));
 - **Speed**: the reader walks all clusters for each `extract()` call. A 2-hour, 4 GB file with 400,000 blocks takes about 3 s of CPU time on PHP 8.2 and 8.5. The disk adds the time of 400,000 random reads. On a network volume this took 32 to 44 s, the same time as a bare `fseek()` and `fread()` loop.
 - **Errors**: `extract()` throws `InvalidArgumentException` for a number that is not a subtitle track. It throws `ParsingException` for other codecs such as `S_VOBSUB`, for encryption, for bzlib and LZO compression, for laced subtitle blocks and for a file that is not Matroska or WebM.
 - **Spec**: [Matroska elements](https://www.matroska.org/technical/elements.html), [Matroska subtitles](https://www.matroska.org/technical/subtitles.html) and [EBML, RFC 8794](https://datatracker.ietf.org/doc/html/rfc8794).
+
+## Cloud speech-to-text transcripts
+Amazon Transcribe, Deepgram, AssemblyAI and Google Cloud Speech-to-Text return a JSON transcript. One parser per service turns it into cues for SubRip or WebVTT.
+
+```php
+$subtitle = Subtitle::parse($transcribeJson);                                // detects AwsTranscribeParser
+$parser   = new DeepgramParser([
+    DeepgramParser::OPTION_WORD_TIMESTAMPS => true,
+    DeepgramParser::OPTION_SPEAKER_VOICES  => true,
+]);
+$subtitle = $parser->parse($deepgramResponseBody);
+$subtitle->getCues()[2]->getText();                                          // '<v 0><00:00:06.500>Thank <00:00:06.800>you.'
+$subtitle->getCues()[2]->getFormatData('deepgram')['confidence'];            // 0.9637655
+```
+
+| Service | Parser, format data key | Cues | Times |
+|:--- |:--- |:--- |:--- |
+| [Amazon Transcribe](https://docs.aws.amazon.com/transcribe/latest/dg/how-input.html#how-output) | `AwsTranscribeParser`, `aws-transcribe` | one per `results.audio_segments` entry, else grouped from `results.items` | seconds as strings, such as `"0.64"` |
+| [Deepgram](https://developers.deepgram.com/docs/pre-recorded-audio) | `DeepgramParser`, `deepgram` | one per `results.utterances` entry, else one per paragraph sentence, else grouped from the words | seconds |
+| [AssemblyAI](https://www.assemblyai.com/docs/api-reference/transcripts/get) | `AssemblyAiParser`, `assemblyai` | one per `utterances` entry, else grouped from `words` | milliseconds |
+| [Google Cloud Speech-to-Text](https://cloud.google.com/speech-to-text/docs/async-time-offsets) | `GoogleSpeechParser`, `google-speech` | one per result, else grouped from the words of the last result | durations such as `"1.300s"` |
+
+- **Word grouping**: a cue ends after a word that ends a sentence with `.`, `?`, `!` or their CJK forms. It also ends before a pause of 1 s or more, before a word that makes it longer than 84 characters, and where the speaker changes. A full stop before a word in lower case, as in "e.g. this", ends no sentence.
+- **Long cues**: an audio segment, utterance or result stays one cue. `splitLongCues()` breaks it up, see [Splitting long cues](#splitting-long-cues). With `OPTION_WORD_TIMESTAMPS`, `resegmentByWords()` regroups the words with other limits.
+- **Word timestamps**: off by default. With `OPTION_WORD_TIMESTAMPS`, each word gets a core word timestamp before it. In a cue from a segment, the parser finds the words in the text in order and skips the others.
+- **Speakers**: off by default. `OPTION_SPEAKER_VOICES` has the same name as in `WhisperJsonParser`. It writes the speaker label of the service as a `<v>` tag, for example `<v spk_0>`, `<v 0>`, `<v A>` or `<v 1>`. `SpeakerLabels::rename()` gives them names, see [Speakers](#speakers).
+- **Amazon Transcribe**: a punctuation item joins the word before it. The speaker comes from `speaker_label`, the language from `results.language_code`.
+- **Deepgram**: the parser reads every channel and sorts the cues by time. A word shows its `punctuated_word`, else its `word`. A sentence cue gets the words whose middle lies inside the sentence. The language comes from `detected_language` of the first channel.
+- **AssemblyAI**: the language `en_us` becomes `en-US`.
+- **Google**: the parser reads V1 and V2 fields: `startTime` or `startOffset`, `resultEndTime` or `resultEndOffset`, `speakerTag` or `speakerLabel`. It reads a long-running operation from `operations.get` through its `response`. A cue starts at its first word and ends at its last word. A result without words spans from the end of the result before it to its own end. With diarization, each result repeats the words of the results before it, so the parser groups the words of the last result.
+- **Format data**: the subtitle keeps the top-level fields except the transcript text and the lists of words and segments. Each cue keeps the fields of its segment, utterance or result except the times and the text. Its words with their confidence are in `items` for Amazon Transcribe and in `words` for the other services. Deepgram cues also have `channel`.
+- **Lenient mode**: the parser skips a word, segment, utterance, sentence or result with a bad time or text, and records a `ParseWarning`. `blockIndex` is the index in its list.
+- **Errors**: each parser throws `ParsingException` for JSON without the list it needs. These are `results.items` for Amazon Transcribe, `results.channels` for Deepgram, `words` or `utterances` for AssemblyAI and `results` for Google.
+- **Output**: the library cannot write these formats.
 
 ## Releases
 Every merge to `master` publishes a release to Packagist. The PR label sets the version bump.
