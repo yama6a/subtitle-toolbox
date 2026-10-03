@@ -84,6 +84,37 @@ class CsvFormatterTest extends TestCase
     }
 
 
+    public function testFrameRateKeyOfTheOtherFormattersWinsOverTheParsedFrameRate(): void
+    {
+        $file     = file_get_contents(__DIR__ . "/../files/csv/real/dubbing_script.csv");
+        $parser   = new CsvParser(new CsvColumns(start: "Start TC", text: "Text", speaker: "Character", frameRate: 25));
+        $subtitle = $parser->parse($file);
+
+        $shared = $subtitle->format(CsvFormatter::class, [EbuStlFormatter::OPTION_FRAME_RATE => 24]);
+
+        $this->assertSame("OPTION_FRAME_RATE", CsvFormatter::OPTION_FRAME_RATE);
+        $this->assertStringContainsString("\n10:00:05:19,BEN,- I have one.,\n", $shared);
+        $this->assertStringContainsString("\n10:00:05:20,BEN,- I have one.,\n", $subtitle->format(CsvFormatter::class));
+    }
+
+
+    public function testOldFrameRateKeyStillWorks(): void
+    {
+        $file     = file_get_contents(__DIR__ . "/../files/csv/real/dubbing_script.csv");
+        $parser   = new CsvParser(new CsvColumns(start: "Start TC", text: "Text", speaker: "Character", frameRate: 25));
+        $subtitle = $parser->parse($file);
+
+        $this->assertSame(
+            $subtitle->format(CsvFormatter::class, [CsvFormatter::OPTION_FRAME_RATE => 24]),
+            $subtitle->format(CsvFormatter::class, ["frameRate" => 24])
+        );
+        $this->assertSame(
+            $subtitle->format(CsvFormatter::class, [CsvFormatter::OPTION_FRAME_RATE => 30]),
+            $subtitle->format(CsvFormatter::class, [CsvFormatter::OPTION_FRAME_RATE => 30, "frameRate" => 24])
+        );
+    }
+
+
     public function testWritesIdentifiersAndOtherColumnsFromAnotherFormat(): void
     {
         $subtitle = Subtitle::parse("WEBVTT\n\nintro\n00:00:01.000 --> 00:00:02.000\nHi\n", null);
