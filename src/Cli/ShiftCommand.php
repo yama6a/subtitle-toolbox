@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
+use SubtitleToolbox\Cli\Edits\RetimeEdit;
+
 class ShiftCommand extends RetimeCommand
 {
     public function name(): string
@@ -54,9 +56,8 @@ class ShiftCommand extends RetimeCommand
     }
 
 
-    protected function readEdits(Arguments $arguments): void
+    protected function readEdit(Arguments $arguments): RetimeEdit
     {
-        $this->shift      = $arguments->float("by") ?? self::fail("Pass --by SECONDS.");
-        $this->shiftAfter = $arguments->float("after");
+        return new RetimeEdit(shift: $arguments->float("by") ?? self::fail("Pass --by SECONDS."), shiftAfter: $arguments->float("after"));
     }
 }

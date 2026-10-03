@@ -5,14 +5,28 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Cli;
 
 use Composer\Autoload\ClassLoader;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Fixing\CommonErrorFixer;
+use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\HearingImpairedOptions;
+use SubtitleToolbox\HearingImpairedRemover;
 use SubtitleToolbox\Http\FakeHttpClient;
 use SubtitleToolbox\Http\LocalServer;
+use SubtitleToolbox\Karaoke\WordHighlight;
+use SubtitleToolbox\Karaoke\WordHighlightOptions;
 use SubtitleToolbox\Ocr\TesseractOcrEngine;
+use SubtitleToolbox\Profanity\ProfanityFilter;
+use SubtitleToolbox\Profanity\ProfanityOptions;
+use SubtitleToolbox\Speakers\SpeakerLabelOptions;
+use SubtitleToolbox\Speakers\SpeakerLabels;
+use SubtitleToolbox\Speakers\SpeakerStyle;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Timing\ShotChangeOptions;
+use SubtitleToolbox\Timing\ShotChangeTiming;
 use SubtitleToolbox\Translation\DeepLEngine;
 use SubtitleToolbox\Translation\GoogleTranslateEngine;
 use SubtitleToolbox\Translation\TranslationEngine;
@@ -23,6 +37,8 @@ require_once __DIR__ . "/../Http/LocalServer.php";
 
 class ApplicationTest extends TestCase
 {
+    private const FILES = __DIR__ . "/../files/";
+
     private const TRANSLATION = __DIR__ . "/../files/translation/";
 
     private const KEY_VARIABLES = ["DEEPL_API_KEY", "GOOGLE_TRANSLATE_API_KEY", "SUBTITLE_TOOLBOX_TRANSLATE_URL"];
@@ -191,6 +207,123 @@ class ApplicationTest extends TestCase
         [$code, $stdout] = self::runApplication(["info", "-", "--from", "deepgram"], $deepgram);
         $this->assertSame(0, $code);
         $this->assertStringContainsString("deepgram", $stdout);
+    }
+
+
+    public function testConvertRunsOcrAndFixesCommonErrorsInOneCall(): void
+    {
+        // The golden file comes from the Latin database. The default database reads one more letter right.
+        $latin = __DIR__ . "/../../vendor/yama6a/php-glyph-ocr/resources/Latin.nocr";
+
+        [$code, $stdout, $stderr] = self::runApplication(["convert", self::FILES . "fixing/ocr-en.sup", "--to", "srt", "-o", "-", "--ocr",
+                                                          "--ocr-engine", "glyph", "--ocr-database", $latin, "--fix-common-errors", "--language", "en"]);
+
+        $this->assertSame([0, file_get_contents(self::FILES . "fixing/ocr-en.fixed.srt")], [$code, $stdout]);
+        $this->assertStringEndsWith(": OCR 6/6\n", $stderr);
+    }
+
+
+    public function testConvertRunsTextAndTimingEditsInOneCall(): void
+    {
+        $expected = Subtitle::load(self::FILES . "cli/trip.srt", Format::SubRip);
+        HearingImpairedRemover::apply($expected, new HearingImpairedOptions());
+        $expected->fixOverlaps()->shift(-0.5);
+
+        $this->assertSame([0, $expected->toString(Format::WebVtt), ""],
+                          self::runApplication(["convert", self::FILES . "cli/trip.srt", "--sdh", "--fix-overlaps", "--shift", "-0.5", "--to", "vtt", "-o", "-"]));
+        $this->assertSame("\u{FEFF}WEBVTT\n\n1\n00:00:00.500 --> 00:00:02.000\n<i>The train leaves at noon.</i>\n\n" .
+                          "2\n00:00:02.000 --> 00:00:04.500\nWe need two tickets for the long ride to the coast.\n\n" .
+                          "3\n00:00:05.500 --> 00:00:05.900\nToo late.\n", $expected->toString(Format::WebVtt));
+    }
+
+
+    /**
+     * Each set: the input file, the convert options and the expected file.
+     *
+     * @return array<string, array{string, list<string>, string}>
+     */
+    public static function goldenFiles(): array
+    {
+        return [
+            "SDH"           => ["hearing-impaired/own_sdh.srt", ["--sdh", "--line-ending", "crlf", "--bom"], "hearing-impaired/own_sdh_removed.srt"],
+            "shot changes"  => ["shot-changes/own_garden_24fps.srt", ["--snap-shot-changes", self::FILES . "shot-changes/own_ffmpeg_showinfo.log",
+                                "--video-fps", "24"], "shot-changes/own_garden_24fps_timed.srt"],
+            "timing fixes"  => ["fixes/own_overlaps_and_short_cues.srt", ["--fix-overlaps", "--fix-min-duration", "0.833", "--fix-min-gap", "0.083",
+                                "--fix-wrap", "42"], "fixes/own_overlaps_and_short_cues_fixed.srt"],
+        ];
+    }
+
+
+    /**
+     * @param list<string> $options
+     */
+    #[DataProvider("goldenFiles")]
+    public function testConvertEditsMatchTheGoldenFiles(string $input, array $options, string $expected): void
+    {
+        $this->assertSame([0, file_get_contents(self::FILES . $expected), ""],
+                          self::runApplication(["convert", self::FILES . $input, "--to", "srt", "-o", "-", ...$options]));
+    }
+
+
+    public function testConvertRunsAllGroupsInTheFixedOrder(): void
+    {
+        $words = tempnam(sys_get_temp_dir(), "words");
+        file_put_contents($words, "tickets\n");
+
+        $expected = Subtitle::load(self::FILES . "cli/trip.srt", Format::SubRip);
+        CommonErrorFixer::apply($expected, new CommonErrorOptions(language: "en"));
+        HearingImpairedRemover::apply($expected, new HearingImpairedOptions(parentheses: false));
+        $expected->replaceText("Too late", "[late] too late")->stripFormatting()->changeCase("upper", "en");
+        SpeakerLabels::apply($expected, new SpeakerLabelOptions(to: SpeakerStyle::Prefix));
+        ProfanityFilter::apply($expected, new ProfanityOptions(mask: ProfanityOptions::MASK_FIRST_LETTER, wordFile: $words));
+        $expected->wrapLines(20)->removeDuplicateCues()->shift(-0.5)->scale(1.001);
+        ShotChangeTiming::apply($expected, new ShotChangeOptions(24));
+        $expected->fixOverlaps(0.1)->extendShortCues(1.0, 0.1);
+        WordHighlight::apply($expected, new WordHighlightOptions(style: "b"));
+
+        [$code, $stdout, $stderr] = self::runApplication([
+            "convert", self::FILES . "cli/trip.srt", "--to", "srt", "-o", "-",
+            "--karaoke", "--karaoke-style", "b", "--fix-min-duration", "1", "--fix-overlaps", "--fix-min-gap", "0.1",
+            "--snap-min-gap-frames", "2", "--video-fps", "24", "--scale", "1.001", "--shift", "-0.5", "--fix-merge-duplicates", "--fix-wrap", "20",
+            "--mask-words", $words, "--mask", "first-letter", "--speakers", "prefix", "--case", "upper", "--strip-tags",
+            "--replace", "Too late=[late] too late", "--sdh", "--sdh-keep-parentheses", "--language", "en", "--fix-common-errors",
+            "--ocr", "--ocr-engine", "glyph",
+        ]);
+        unlink($words);
+
+        $this->assertSame([0, $expected->toString(Format::SubRip), ""], [$code, $stdout, $stderr]);
+        $this->assertStringContainsString("\nWE NEED TWO T****** FOR\n", $stdout);
+        $this->assertStringContainsString("\n(SIGHS) [LATE]\nTOO LATE.\n", $stdout);
+    }
+
+
+    public function testRemovedCommandsPrintTheConvertCall(): void
+    {
+        $this->assertSame([2, "", "fix was removed. Use: subtitle-toolbox convert tests/files/cli/trip.srt --fix-overlaps\n"],
+                          self::runApplication(["fix", "tests/files/cli/trip.srt", "--overlaps"]));
+        $this->assertSame(
+            [2, "", "fix was removed. Use: subtitle-toolbox convert a.srt --fix-common-errors --language en --fix-replace-list list.xml --fix-list " .
+                    "--fix-resegment --fix-max-word-gap=0.3 --fix-max-cpl 30 --fix-max-lines 1 --fix-min-duration 1 --fix-min-gap 0.1 " .
+                    "--fix-unwrap --fix-merge-short --fix-split-long --fix-wrap 30 --fix-merge-duplicates -o out.srt --line-ending crlf --force\n"],
+            self::runApplication(["fix", "a.srt", "--common-errors", "--language", "en", "--replace-list", "list.xml", "--list-fixes", "--resegment",
+                                  "--max-word-gap=0.3", "--max-cpl", "30", "--max-lines", "1", "--min-duration", "1", "--min-gap", "0.1", "--unwrap",
+                                  "--merge-short", "--split-long", "--wrap", "30", "--merge-duplicates", "-o", "out.srt", "--line-ending", "crlf", "--force"])
+        );
+        $this->assertSame(
+            [2, "", "strip-sdh was removed. Use: subtitle-toolbox convert movie.srt --sdh --sdh-keep-square-brackets --sdh-keep-parentheses " .
+                    "--sdh-keep-speaker-labels --sdh-keep-music-lines --sdh-any-case-labels --sdh-lyrics --sdh-brackets '{}' --to vtt\n"],
+            self::runApplication(["strip-sdh", "movie.srt", "--keep-square-brackets", "--keep-parentheses", "--keep-speaker-labels",
+                                  "--keep-music-lines", "--any-case-labels", "--lyrics", "--brackets", "{}", "--to", "vtt"])
+        );
+        $this->assertSame([2, "", "strip-sdh was removed. Use: subtitle-toolbox convert - --sdh\n"], self::runApplication(["strip-sdh", "-"]));
+        $this->assertSame(
+            [2, "", "snap was removed. Use: subtitle-toolbox convert movie.srt --video-fps 24 --snap-shot-changes scenes.log --snap-window 6 " .
+                    "--snap-min-gap-frames 2 --snap-min-duration-frames 12 --snap-no-chain\n"],
+            self::runApplication(["snap", "movie.srt", "--video-fps", "24", "--shot-changes", "scenes.log", "--snap-window", "6",
+                                  "--min-gap-frames", "2", "--min-duration-frames", "12", "--no-chain"])
+        );
+        $this->assertSame([2, "", "snap was removed. Use: subtitle-toolbox convert movie.srt --snap-min-gap-frames 2 --fps 24\n"],
+                          self::runApplication(["snap", "movie.srt", "--fps", "24"]));
     }
 
 

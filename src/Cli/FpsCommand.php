@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
-class FpsCommand extends Command
+class FpsCommand extends RemovedCommand
 {
     public function name(): string
     {
@@ -15,12 +15,6 @@ class FpsCommand extends Command
     public function aliases(): array
     {
         return ["sync-fps"];
-    }
-
-
-    public function listed(): bool
-    {
-        return false;
     }
 
 
@@ -42,22 +36,8 @@ class FpsCommand extends Command
     }
 
 
-    public function options(): array
+    protected function replacement(array $arguments): string
     {
-        return [];
-    }
-
-
-    public function run(array $arguments, Console $console): int
-    {
-        $console->err("fps was removed. Use: " . self::replacementCall("retime", $arguments, ["from" => "from-fps", "to" => "to-fps"]) . "\n");
-
-        return Application::EXIT_USAGE;
-    }
-
-
-    public function execute(Arguments $arguments, Console $console): int
-    {
-        return $this->run($arguments->positionals, $console);
+        return self::replacementCall("retime", $arguments, ["from" => "from-fps", "to" => "to-fps"]);
     }
 }

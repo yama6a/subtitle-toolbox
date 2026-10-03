@@ -102,9 +102,4 @@ class TranslateCommand extends WriteCommand
 
         parent::process($input, $translated, $format, $arguments, $console);
     }
-
-
-    protected function transform(Subtitle $subtitle, Arguments $arguments): void
-    {
-    }
 }

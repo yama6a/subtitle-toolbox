@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
+use SubtitleToolbox\Cli\Edits\RetimeEdit;
+
 class ScaleCommand extends RetimeCommand
 {
     public function name(): string
@@ -51,8 +53,8 @@ class ScaleCommand extends RetimeCommand
     }
 
 
-    protected function readEdits(Arguments $arguments): void
+    protected function readEdit(Arguments $arguments): RetimeEdit
     {
-        $this->scale = $arguments->positiveFloat("factor") ?? self::fail("Pass --factor FACTOR.");
+        return new RetimeEdit(scale: $arguments->positiveFloat("factor") ?? self::fail("Pass --factor FACTOR."));
     }
 }
