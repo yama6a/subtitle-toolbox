@@ -19,15 +19,15 @@ Every release also ships the tool as a PHAR file and as a container image.
 | Form | Needs | Example |
 |:--- |:--- |:--- |
 | PHAR on the [GitHub release](https://github.com/yama6a/subtitle-toolbox/releases) | PHP 8.2 or later with `ext-dom`, `ext-iconv` and `ext-zlib`, plus `ext-curl` for `translate` | `php subtitle-toolbox.phar convert in.srt out.vtt` |
-| Image `ghcr.io/yama6a/subtitle-toolbox` | Docker or another container runtime | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:1.65.0 convert in.srt out.vtt` |
-| Image `ghcr.io/yama6a/subtitle-toolbox:tesseract` | the same, for OCR with Tesseract in every language | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:1.65.0-tesseract convert in.sup out.srt --ocr --ocr-language deu` |
+| Image `ghcr.io/yama6a/subtitle-toolbox` | Docker or another container runtime | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:2.0.0 convert in.srt out.vtt` |
+| Image `ghcr.io/yama6a/subtitle-toolbox:tesseract` | the same, for OCR with Tesseract in every language | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:2.0.0-tesseract convert in.sup out.srt --ocr --ocr-language deu` |
 
 ```sh
 curl -fsSLO https://github.com/yama6a/subtitle-toolbox/releases/latest/download/subtitle-toolbox.phar
 php subtitle-toolbox.phar --version
 ```
 
-- **Version**: the PHAR file, the image tag, the Git tag and the Packagist version are the same string, for example `1.65.0`. The image also has the tags `1.65`, `1` and `latest`. The Tesseract image has the tags `1.65.0-tesseract`, `1.65-tesseract`, `1-tesseract` and `tesseract`.
+- **Version**: the PHAR file, the image tag, the Git tag and the Packagist version are the same string, for example `2.0.0`. The image also has the tags `2.0`, `2` and `latest`. The Tesseract image has the tags `2.0.0-tesseract`, `2.0-tesseract`, `2-tesseract` and `tesseract`.
 - **Image**: the tool runs in `/work`, so mount your files there. `--user` makes the tool write files that you own. Without it, the tool runs as `www-data` and cannot write to most mounted folders.
 - **Platforms**: the image is for `linux/amd64` and `linux/arm64`.
 - **OCR**: `convert --ocr` works in every form with no extra steps, because all include php-glyph-ocr. The Tesseract image adds Tesseract with the fast models of all its languages. It is about 340 MB larger.
@@ -49,7 +49,7 @@ php subtitle-toolbox.phar --version
 
 - **Old commands**: `shift` and `scale` still run and print a deprecation warning, see [Retime](#retime). `fps` and `sync-fps` exit with code 2 and print the matching `retime` call. `fix`, `strip-sdh` and `snap` exit with code 2 and print the matching `convert` call, see [Removed commands](#removed-commands).
 - **Help**: `subtitle-toolbox help convert` or `subtitle-toolbox convert --help` lists all options of a command.
-- **Version**: `subtitle-toolbox --version` prints the installed release, for example `1.65.0`, or `dev` in a Git checkout.
+- **Version**: `subtitle-toolbox --version` prints the installed release, for example `2.0.0`, or `dev` in a Git checkout.
 - **Exit code**: 0 when all files succeed, 1 when a file fails, breaks a validation rule or differs in `diff`, 2 for invalid arguments.
 
 ## Input and output

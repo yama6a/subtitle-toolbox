@@ -42,7 +42,7 @@ class MicroDvdParser extends SubtitleParser
         }
 
         if ($frameRate === null) {
-            throw new ParsingException("The frame rate is unknown. Pass it to the constructor or start the file with {1}{1}<fps>.");
+            throw new ParsingException("The frame rate is unknown. Set ReadOptions::\$fps or start the file with {1}{1}<fps>.");
         }
 
         try {

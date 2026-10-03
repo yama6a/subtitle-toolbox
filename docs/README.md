@@ -24,3 +24,4 @@
 | [lenient-parsing.md](lenient-parsing.md) | parsing broken files with warnings |
 | [errors.md](errors.md) | exceptions, error codes and line numbers |
 | [cli.md](cli.md) | the command line tool, the PHAR file and the container image |
+| [upgrade-2.0.md](upgrade-2.0.md) | the 2.0 call for each 1.x call, and the changes in output and exit codes |
