@@ -566,9 +566,9 @@ class BinaryTest extends TestCase
         [$code, $stdout, $stderr] = $this->runBinary(["formats"]);
 
         $this->assertSame(0, $code);
-        $this->assertMatchesRegularExpression('/\AName {7}Extensions +Read  Write\n/', $stdout);
-        $this->assertMatchesRegularExpression('/^srt {8}\.srt +yes   yes$/m', $stdout);
-        $this->assertMatchesRegularExpression('/^pgs {8}\.sup +yes   yes$/m', $stdout);
+        $this->assertMatchesRegularExpression('/\AName +Extensions +Read  Write\n/', $stdout);
+        $this->assertMatchesRegularExpression('/^srt +\.srt +yes   yes$/m', $stdout);
+        $this->assertMatchesRegularExpression('/^pgs +\.sup +yes   yes$/m', $stdout);
         $this->assertCount(count(FormatRegistry::names()) + 1, explode("\n", trim($stdout)));
         $this->assertSame("", $stderr);
     }
