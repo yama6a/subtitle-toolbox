@@ -6,8 +6,12 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Parsers\AssemblyAiParser;
 use SubtitleToolbox\Parsers\AssParser;
+use SubtitleToolbox\Parsers\AwsTranscribeParser;
+use SubtitleToolbox\Parsers\DeepgramParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
+use SubtitleToolbox\Parsers\GoogleSpeechParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
@@ -29,6 +33,10 @@ class FormatDetectorTest extends TestCase
 
     private const PARSERS = [
         "ass"      => AssParser::class,
+        "assemblyai" => AssemblyAiParser::class,
+        "aws-transcribe" => AwsTranscribeParser::class,
+        "deepgram" => DeepgramParser::class,
+        "google-speech" => GoogleSpeechParser::class,
         "json"     => JsonParser::class,
         "lrc"      => LyricsParser::class,
         "microdvd" => MicroDvdParser::class,
@@ -142,6 +150,21 @@ class FormatDetectorTest extends TestCase
             "Whisper JSON"               => ["{\"text\": \" Hello\", \"segments\": [{\"id\": 0, \"start\": 0.0, \"end\": 2.0, \"text\": \" Hello\"}], \"language\": \"en\"}",
                                              WhisperJsonParser::class],
             "whisper.cpp JSON"           => ["{\n\t\"systeminfo\": \"\",\n\t\"transcription\": [\n\t]\n}\n", WhisperJsonParser::class],
+            "Amazon Transcribe"          => ["{\"jobName\": \"a\", \"results\": {\"transcripts\": [{\"transcript\": \"\"}], \"items\": []}}",
+                                             AwsTranscribeParser::class],
+            "Amazon Transcribe speakers" => ["{\"results\": {\"speaker_labels\": {\"segments\": []}, \"transcripts\": []}}", AwsTranscribeParser::class],
+            "Deepgram"                   => ["{\"metadata\": {\"channels\": 1}, \"results\": {\"channels\": [{\"alternatives\": []}]}}",
+                                             DeepgramParser::class],
+            "Deepgram with topics"       => ["{\"results\": {\"topics\": {\"segments\": []}, \"channels\": [{\"detected_language\": \"en\", " .
+                                             "\"alternatives\": []}]}}", DeepgramParser::class],
+            "AssemblyAI"                 => ["{\"id\": \"x\", \"audio_url\": \"https://example.com/a.mp3\", \"words\": null}", AssemblyAiParser::class],
+            "AssemblyAI words only"      => ["{\"words\": [{\"text\": \"Hi\", \"start\": 250, \"end\": 650}]}", AssemblyAiParser::class],
+            "Google V1"                  => ["{\"results\": [{\"alternatives\": [{\"transcript\": \"hi\"}], \"resultEndTime\": \"1s\"}]}",
+                                             GoogleSpeechParser::class],
+            "Google V2 end first"        => ["{\"results\": [{\"resultEndOffset\": \"1s\", \"alternatives\": []}], \"metadata\": {}}",
+                                             GoogleSpeechParser::class],
+            "Whisper JSON with words"    => ["{\"segments\": [], \"words\": [{\"word\": \"Hi\", \"start\": 0, \"end\": 1}], " .
+                                             "\"results\": [{\"x\": 1}]}", WhisperJsonParser::class],
             "YouTube json3"              => ["{\"wireMagic\": \"pb3\", \"events\": [ {\"id\": 1}, {\"tStartMs\": 0, \"segs\": []} ]}", YouTubeTimedTextParser::class],
             "YouTube srv3"               => ["<?xml version=\"1.0\" encoding=\"utf-8\" ?><timedtext format=\"3\">\n<body>\n</body>\n</timedtext>\n",
                                              YouTubeTimedTextParser::class],

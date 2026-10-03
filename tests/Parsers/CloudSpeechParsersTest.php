@@ -1,0 +1,234 @@
+<?php
+
+namespace SubtitleToolbox\Parsers;
+
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
+
+class CloudSpeechParsersTest extends TestCase
+{
+    private const ISSUE_EXAMPLE = <<<'JSON'
+        {"jobName": "lecture-12", "results": {
+          "transcripts": [{"transcript": "Hello world."}],
+          "items": [
+            {"type": "pronunciation", "start_time": "0.04", "end_time": "0.51", "alternatives": [{"confidence": "0.99", "content": "Hello"}]},
+            {"type": "pronunciation", "start_time": "0.51", "end_time": "0.98", "alternatives": [{"confidence": "0.98", "content": "world"}]},
+            {"type": "punctuation", "alternatives": [{"confidence": "0.0", "content": "."}]}
+          ]}}
+        JSON;
+
+
+    private static function cues(Subtitle $subtitle): array
+    {
+        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $subtitle->getCues());
+    }
+
+
+    /**
+     * @param list<array{string, int, int, 3?: string}> $words text, start and end in milliseconds, speaker
+     */
+    private static function assemblyAiWords(array $words): string
+    {
+        return json_encode(["words" => array_map(
+            fn (array $word): array => ["text" => $word[0], "start" => $word[1], "end" => $word[2], "confidence" => 0.9, "speaker" => $word[3] ?? null],
+            $words
+        )]);
+    }
+
+
+    public function testReadsTheIssueExample(): void
+    {
+        $subtitle = Subtitle::parse(self::ISSUE_EXAMPLE);
+
+        $this->assertSame([[0.04, 0.98, "Hello world."]], self::cues($subtitle));
+        $this->assertSame(["jobName" => "lecture-12"], $subtitle->getFormatData("aws-transcribe"));
+        $this->assertSame(["0.99", "0.98", "0.0"],
+                          array_column(array_column(array_column($subtitle->getCues()[0]->getFormatData("aws-transcribe")["items"], "alternatives"), 0), "confidence"));
+    }
+
+
+    public function testWritesWordTimestampsWithTheOption(): void
+    {
+        $parser = new AwsTranscribeParser([AwsTranscribeParser::OPTION_WORD_TIMESTAMPS => true]);
+
+        $this->assertSame("<00:00:00.040>Hello <00:00:00.510>world.", $parser->parse(self::ISSUE_EXAMPLE)->getCues()[0]->getText());
+    }
+
+
+    public static function groupings(): array
+    {
+        return [
+            "sentence end"            => [[["One.", 0, 300], ["Two", 400, 700]], [[0.0, 0.3, "One."], [0.4, 0.7, "Two"]]],
+            "question mark and quote" => [[["Why?\"", 0, 300], ["Two", 400, 700]], [[0.0, 0.3, "Why?\""], [0.4, 0.7, "Two"]]],
+            "lower case after a dot"  => [[["e.g.", 0, 300], ["this", 400, 700]], [[0.0, 0.7, "e.g. this"]]],
+            "CJK full stop"           => [[["\u{3067}\u{3059}\u{3002}", 0, 300], ["\u{306F}\u{3044}", 400, 700]],
+                                          [[0.0, 0.3, "\u{3067}\u{3059}\u{3002}"], [0.4, 0.7, "\u{306F}\u{3044}"]]],
+            "gap of 1 s"              => [[["wait", 0, 300], ["then", 1300, 1600]], [[0.0, 0.3, "wait"], [1.3, 1.6, "then"]]],
+            "gap below 1 s"           => [[["wait", 0, 300], ["then", 1299, 1600]], [[0.0, 1.6, "wait then"]]],
+            "speaker change"          => [[["Hi", 0, 300, "A"], ["there", 400, 700, "B"]], [[0.0, 0.3, "Hi"], [0.4, 0.7, "there"]]],
+            "84 characters"           => [[[str_repeat("a", 41), 0, 300], [str_repeat("b", 42), 300, 600], ["c", 600, 900]],
+                                          [[0.0, 0.6, str_repeat("a", 41) . " " . str_repeat("b", 42)], [0.6, 0.9, "c"]]],
+            "84 characters in UTF-8"  => [[[str_repeat("\u{e9}", 41), 0, 300], [str_repeat("\u{e8}", 42), 300, 600]],
+                                          [[0.0, 0.6, str_repeat("\u{e9}", 41) . " " . str_repeat("\u{e8}", 42)]]],
+        ];
+    }
+
+
+    #[DataProvider("groupings")]
+    public function testGroupsWordsIntoCues(array $words, array $expected): void
+    {
+        $this->assertSame($expected, self::cues((new AssemblyAiParser())->parse(self::assemblyAiWords($words))));
+    }
+
+
+    public function testWritesTheSpeakerAsVoiceTagOnlyWithTheOption(): void
+    {
+        $json = self::assemblyAiWords([["Hi.", 0, 300, "O'Neil"], ["Bye.", 400, 700, "B"]]);
+
+        $this->assertSame([[0.0, 0.3, "Hi."], [0.4, 0.7, "Bye."]], self::cues((new AssemblyAiParser())->parse($json)));
+        $this->assertSame([[0.0, 0.3, "<v O&#39;Neil>Hi."], [0.4, 0.7, "<v B>Bye."]],
+                          self::cues((new AssemblyAiParser([AssemblyAiParser::OPTION_SPEAKER_VOICES => true]))->parse($json)));
+    }
+
+
+    public function testEscapesTextAndKeepsItsMarkup(): void
+    {
+        $json = self::assemblyAiWords([["<b>", 0, 300], ["&", 300, 600]]);
+
+        $this->assertSame([[0.0, 0.6, "&lt;b&gt; &amp;"]], self::cues((new AssemblyAiParser())->parse($json)));
+    }
+
+
+    public function testAssemblyAiConvertsTheLanguageCodeToBcp47(): void
+    {
+        $parse = fn (string $code): ?string => (new AssemblyAiParser())->parse('{"language_code": "' . $code . '", "words": []}')
+                                                                       ->getMetadata(Subtitle::METADATA_LANGUAGE);
+
+        $this->assertSame(["en-US", "en-AU", "de"], [$parse("en_us"), $parse("en_au"), $parse("de")]);
+    }
+
+
+    public function testAwsJoinsALeadingPunctuationItemToTheNextWord(): void
+    {
+        $json = '{"results": {"transcripts": [], "items": [' .
+                '{"type": "punctuation", "alternatives": [{"content": "¿"}]},' .
+                '{"type": "pronunciation", "start_time": "1.0", "end_time": "1.5", "alternatives": [{"content": "Vienes"}]},' .
+                '{"type": "punctuation", "alternatives": [{"content": "?"}]}]}}';
+
+        $this->assertSame([[1.0, 1.5, "\u{bf}Vienes?"]], self::cues((new AwsTranscribeParser())->parse($json)));
+    }
+
+
+    public function testAwsWithoutSegmentsUsesTheSpeakerOfEachItem(): void
+    {
+        $json = '{"results": {"transcripts": [], "items": [' .
+                '{"type": "pronunciation", "start_time": "0.1", "end_time": "0.4", "speaker_label": "spk_0", "alternatives": [{"content": "Yes"}]},' .
+                '{"type": "pronunciation", "start_time": "0.5", "end_time": "0.9", "speaker_label": "spk_1", "alternatives": [{"content": "No"}]}]}}';
+        $parser = new AwsTranscribeParser([AwsTranscribeParser::OPTION_SPEAKER_VOICES => true]);
+
+        $this->assertSame([[0.1, 0.4, "<v spk_0>Yes"], [0.5, 0.9, "<v spk_1>No"]], self::cues($parser->parse($json)));
+    }
+
+
+    public function testDeepgramReadsEveryChannelInTimeOrder(): void
+    {
+        $json = '{"results": {"channels": [' .
+                '{"alternatives": [{"words": [{"word": "later", "start": 2.0, "end": 2.5}]}]},' .
+                '{"alternatives": [{"words": [{"word": "first", "start": 0.5, "end": 1.0, "punctuated_word": "First."}]}]}]}}';
+        $subtitle = (new DeepgramParser())->parse($json);
+
+        $this->assertSame([[0.5, 1.0, "First."], [2.0, 2.5, "later"]], self::cues($subtitle));
+        $this->assertSame([1, 0], array_map(fn (SubtitleCue $cue): int => $cue->getFormatData("deepgram")["channel"], $subtitle->getCues()));
+    }
+
+
+    public function testDeepgramParagraphsUseTheSpeakerOfTheParagraph(): void
+    {
+        $json = '{"results": {"channels": [{"alternatives": [{"words": [], "paragraphs": {"paragraphs": [' .
+                '{"speaker": 1, "sentences": [{"text": "Hello there.", "start": 0.2, "end": 1.1}]}]}}]}]}}';
+        $parser = new DeepgramParser([DeepgramParser::OPTION_SPEAKER_VOICES => true]);
+
+        $this->assertSame([[0.2, 1.1, "<v 1>Hello there."]], self::cues($parser->parse($json)));
+    }
+
+
+    public function testGoogleV1DiarizationReadsTheWordsOfTheLastResult(): void
+    {
+        $json = '{"results": [' .
+                '{"alternatives": [{"transcript": "hi there", "words": [{"startTime": "0s", "endTime": "0.300s", "word": "hi"}, ' .
+                '{"startTime": "0.300s", "endTime": "0.600s", "word": "there"}]}]},' .
+                '{"alternatives": [{"words": [{"startTime": "0s", "endTime": "0.300s", "word": "hi", "speakerTag": 1}, ' .
+                '{"startTime": "0.300s", "endTime": "0.600s", "word": "there", "speakerTag": 2}]}]}]}';
+        $parser = new GoogleSpeechParser([GoogleSpeechParser::OPTION_SPEAKER_VOICES => true]);
+
+        $this->assertSame([[0.0, 0.3, "<v 1>hi"], [0.3, 0.6, "<v 2>there"]], self::cues($parser->parse($json)));
+    }
+
+
+    public function testGoogleResultsWithoutWordsSpanFromTheEndOfTheResultBefore(): void
+    {
+        $json = '{"results": [{"alternatives": [{"transcript": "first part"}], "resultEndTime": "4.500s"},' .
+                '{"resultEndTime": "5s"},' .
+                '{"alternatives": [{"transcript": " second part"}], "resultEndTime": {"seconds": "9", "nanos": 250000000}}]}';
+
+        $this->assertSame([[0.0, 4.5, "first part"], [5.0, 9.25, "second part"]], self::cues((new GoogleSpeechParser())->parse($json)));
+    }
+
+
+    public static function brokenWords(): array
+    {
+        return [
+            "Amazon Transcribe" => [AwsTranscribeParser::class, '{"results": {"transcripts": [], "items": [' .
+                '{"type": "pronunciation", "start_time": "soon", "end_time": "1", "alternatives": [{"content": "Hi"}]},' .
+                '{"type": "pronunciation", "start_time": "1", "end_time": "2", "alternatives": [{"content": "there"}]}]}}',
+                "The field results.items[0].start_time must be a time.", [[1.0, 2.0, "there"]]],
+            "Deepgram"          => [DeepgramParser::class, '{"results": {"channels": [{"alternatives": [{"words": [' .
+                '{"word": "hi", "start": 0}, {"word": "there", "start": 1, "end": 2}]}]}]}}',
+                "The field results.channels[0].alternatives[0].words[0].end must be a time.", [[1.0, 2.0, "there"]]],
+            "AssemblyAI"        => [AssemblyAiParser::class, '{"words": [{"text": null}, {"text": "there", "start": 1000, "end": 2000}]}',
+                "The field words[0].text must be a string.", [[1.0, 2.0, "there"]]],
+            "Google"            => [GoogleSpeechParser::class, '{"results": [{"alternatives": [{"transcript": "hi there", "words": [' .
+                '{"word": "hi", "startTime": "soon", "endTime": "1s"}, {"word": "there", "startTime": "1s", "endTime": "2s"}]}]}]}',
+                "The field results[0].alternatives[0].words[0].startTime must be a time.", [[1.0, 2.0, "hi there"]]],
+        ];
+    }
+
+
+    #[DataProvider("brokenWords")]
+    public function testThrowsForABrokenWordAndSkipsItInLenientMode(string $parserClass, string $json, string $message, array $cues): void
+    {
+        $parser   = (new $parserClass())->setLenient();
+        $subtitle = $parser->parse($json);
+
+        $this->assertSame($cues, self::cues($subtitle));
+        $this->assertCount(1, $parser->getWarnings());
+        $this->assertSame([$message, 0, ParseWarning::SKIPPED],
+                          [$parser->getWarnings()[0]->message, $parser->getWarnings()[0]->blockIndex, $parser->getWarnings()[0]->action]);
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage($message);
+        (new $parserClass())->parse($json);
+    }
+
+
+    public function testSkipsABrokenUtteranceInLenientMode(): void
+    {
+        $parser   = (new AssemblyAiParser())->setLenient();
+        $subtitle = $parser->parse('{"words": [], "utterances": [{"start": 0, "text": "Hi"}, {"start": 1000, "end": 2000, "text": "Bye"}]}');
+
+        $this->assertSame([[1.0, 2.0, "Bye"]], self::cues($subtitle));
+        $this->assertSame("The field utterances[0].end must be a time.", $parser->getWarnings()[0]->message);
+    }
+
+
+    public function testDetectionDoesNotTakeWhisperJson(): void
+    {
+        foreach (glob(__DIR__ . "/../files/whisper/real/*.json") as $path) {
+            $this->assertSame(WhisperJsonParser::class, Subtitle::detectParser(file_get_contents($path)), basename($path));
+        }
+    }
+}

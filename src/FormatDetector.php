@@ -2,8 +2,12 @@
 
 namespace SubtitleToolbox;
 
+use SubtitleToolbox\Parsers\AssemblyAiParser;
 use SubtitleToolbox\Parsers\AssParser;
+use SubtitleToolbox\Parsers\AwsTranscribeParser;
+use SubtitleToolbox\Parsers\DeepgramParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
+use SubtitleToolbox\Parsers\GoogleSpeechParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
@@ -50,12 +54,18 @@ class FormatDetector
      * 12. JSON: an object with a numeric "version" key and a "cues" list. The possessive loops skip strings without backtracking.
      * 13. EBU STL: a 3-digit code page, then the disk format code STL25.01 or STL30.01.
      * 14. SCC: the `Scenarist_SCC V1.0` header line.
-     * 15. Whisper JSON: an object with a "segments" or "transcription" list. It comes after JSON, whose format data can hold such a key.
-     * 16. YouTube timed text: a `<timedtext>` or `<transcript>` root after an optional XML declaration, or an object with an
+     * 15. Amazon Transcribe: an object with a "transcripts" list.
+     * 16. Deepgram: an object with a "channels" list of objects, and an "alternatives" key after it. It comes after Amazon
+     *     Transcribe, whose "channel_labels" object can hold such a list.
+     * 17. AssemblyAI: an object with an "audio_url" key, or a "words" list whose first word starts with a "text" key.
+     * 18. Google Cloud Speech-to-Text: an object with a "results" list of objects, and an "alternatives" list after it.
+     * 19. Whisper JSON: an object with a "segments" or "transcription" list. It comes after JSON, whose format data can hold such
+     *     a key, and after Amazon Transcribe and Deepgram, whose speaker labels and topics hold a "segments" list.
+     * 20. YouTube timed text: a `<timedtext>` or `<transcript>` root after an optional XML declaration, or an object with an
      *     "events" list whose events have a "tStartMs" key. It comes after JSON and Whisper JSON, which can hold such a list.
-     * 17. MPL2: a `[start][end]` first line in tenths of a second. No earlier signature matches it: LRC needs a colon
+     * 21. MPL2: a `[start][end]` first line in tenths of a second. No earlier signature matches it: LRC needs a colon
      *     inside the brackets, and MicroDVD needs braces.
-     * 18. TMPlayer: a first line such as `00:00:01:`, `0:00:01=` or `00:00:01,1=`. SBV and SubViewer 2 need a dot after the seconds.
+     * 22. TMPlayer: a first line such as `00:00:01:`, `0:00:01=` or `00:00:01,1=`. SBV and SubViewer 2 need a dot after the seconds.
      */
     private const SIGNATURES = [
         WebVttParser::class   => '/\AWEBVTT(?:[ \t\n]|\z)/',
@@ -74,6 +84,13 @@ class FormatDetector
         JsonParser::class     => '/\A\{(?=(?:[^"]++|"(?!version"\s*+:))*+"version"\s*+:\s*+\d)(?=(?:[^"]++|"(?!cues"\s*+:))*+"cues"\s*+:\s*+\[)/',
         EbuStlParser::class   => '/\A\d{3}STL(?:25|30)\.01/',
         SccParser::class      => '/\AScenarist_SCC V1\.0[ \t]*$/m',
+        AwsTranscribeParser::class => '/\A\{(?=(?:[^"]++|"(?!transcripts"\s*+:\s*+\[))*+"transcripts"\s*+:\s*+\[)/',
+        DeepgramParser::class      => '/\A\{(?=(?:[^"]++|"(?!channels"\s*+:\s*+\[))*+"channels"\s*+:\s*+\[\s*+\{' .
+                                      '(?:[^"]++|"(?!alternatives"\s*+:))*+"alternatives"\s*+:)/',
+        AssemblyAiParser::class    => '/\A\{(?=(?:[^"]++|"(?!audio_url"\s*+:|words"\s*+:\s*+\[\s*+\{\s*+"text"\s*+:))*+' .
+                                      '"(?:audio_url"\s*+:|words"\s*+:\s*+\[\s*+\{\s*+"text"\s*+:))/',
+        GoogleSpeechParser::class  => '/\A\{(?=(?:[^"]++|"(?!results"\s*+:\s*+\[\s*+\{))*+"results"\s*+:\s*+\[\s*+\{' .
+                                      '(?:[^"]++|"(?!alternatives"\s*+:))*+"alternatives"\s*+:\s*+\[)/',
         WhisperJsonParser::class => '/\A\{(?=(?:[^"]++|"(?!(?:segments|transcription)"\s*+:))*+"(?:segments|transcription)"\s*+:\s*+\[)/',
         YouTubeTimedTextParser::class => '/\A(?:' . self::XML_PROLOG . '<(?:timedtext|transcript)[\s>\/]' .
                                          '|\{(?=(?:[^"]++|"(?!events"\s*+:))*+"events"\s*+:\s*+\[\s*+\{' .
