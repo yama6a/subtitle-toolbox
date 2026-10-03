@@ -13,10 +13,13 @@ class CsvFormatter extends SubtitleFormatter
 {
     public const OPTION_DELIMITER          = "delimiter";
     public const OPTION_TIME_FORMAT        = "timeFormat";
-    public const OPTION_FRAME_RATE         = "frameRate";
+    public const OPTION_FRAME_RATE         = "OPTION_FRAME_RATE";
     public const OPTION_SECOND_TEXT        = "secondText";
     public const OPTION_SECOND_TEXT_HEADER = "secondTextHeader";
     public const OPTION_ESCAPE_FORMULAS    = "escapeFormulas";
+
+    // The old key of OPTION_FRAME_RATE. Callers that pass it as a string keep working.
+    private const OPTION_FRAME_RATE_OLD_KEY = "frameRate";
 
     private const SPEAKER_REGEX = '/^<v(?:\.[^\s>]*)?\s+([^>]*)>/';
 
@@ -34,7 +37,7 @@ class CsvFormatter extends SubtitleFormatter
             throw new InvalidArgumentException("The option " . self::OPTION_TIME_FORMAT . " must be one of " .
                                                implode(", ", CsvParser::TIME_FORMATS) . ".");
         }
-        $fps       = $options[self::OPTION_FRAME_RATE] ?? $data["frameRate"] ?? null;
+        $fps       = $options[self::OPTION_FRAME_RATE] ?? $options[self::OPTION_FRAME_RATE_OLD_KEY] ?? $data["frameRate"] ?? null;
         $frameRate = $fps === null ? null : new FrameRate($fps);
         if ($timeFormat === CsvParser::TIME_FRAMES && $frameRate === null) {
             throw new InvalidArgumentException("The time format " . CsvParser::TIME_FRAMES . " needs the option " . self::OPTION_FRAME_RATE . ".");
