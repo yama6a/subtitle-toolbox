@@ -6,7 +6,7 @@ Blu-ray discs store subtitles as PGS bitmaps, DVDs as VobSub bitmaps. The librar
 An **image cue** is a cue with a PNG image in the format data key `image`. It has no text lines until an OCR engine reads it.
 
 ```php
-use SubtitleToolbox\Formatters\SubRipFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
@@ -15,14 +15,14 @@ $image = CueImage::fromCue($cue);                    // $image->png, x, y, width
 file_put_contents('cue.png', $image->png);
 
 $subtitle->recognizeText(new GlyphOcrEngine());      // sets the lines of each image cue without text
-$subtitle->format(SubRipFormatter::class);
+$subtitle->toString(Format::SubRip);
 
-$subtitle->format(SubRipFormatter::class, [
+$subtitle->toString(Format::SubRip, [
     SubtitleFormatter::OPTION_SKIP_IMAGE_CUES => true,    // drops image cues without text
 ]);
 ```
 
-- **Text formatters**: `format()` throws `ImageCueWithoutTextException` for an image cue without text. So a file without OCR fails at once, and does not become a valid file with missing cues.
+- **Text formats**: `toString()` throws `ImageCueWithoutTextException` for an image cue without text. So a file without OCR fails at once, and does not become a valid file with missing cues.
 - **After OCR**: the cue keeps its image, so `PgsFormatter` can still write it.
 - **Language**: `recognizeText()` passes the language code to the engine as it is. Use a code that the engine knows, for example `eng` for Tesseract.
 - **Confidence**: `(new OcrRunner($engine))->run($subtitle, 'eng')` does the same as `recognizeText()` and returns the `OcrResult` of each cue by cue index.
@@ -34,14 +34,14 @@ $subtitle->format(SubRipFormatter::class, [
 Blu-ray discs and many MKV files store subtitles as PGS bitmaps in `.sup` files.
 
 ```php
-use SubtitleToolbox\Formatters\PgsFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Subtitle;
 
-$subtitle = Subtitle::parse(file_get_contents('movie.sup'));                     // detects PGS
-$subtitle = (new PgsParser(3.0))->parse(file_get_contents('movie.sup'));         // the last cue lasts 3 s, not 5 s
+$subtitle = Subtitle::fromString(file_get_contents('movie.sup'), Format::Pgs);
+$subtitle = (new PgsParser(3.0))->parse(file_get_contents('movie.sup'));   // the last cue lasts 3 s, not 5 s
 $subtitle->shift(-1.5)->convertFrameRate(25, 23.976);
-file_put_contents('movie.synced.sup', $subtitle->format(PgsFormatter::class));
+file_put_contents('movie.synced.sup', $subtitle->toString(Format::Pgs));
 ```
 
 - **Cues**: each display set that shows objects gives one cue. It ends at the next display set. A display set that repeats the same image does not start a new cue. A last cue that no later display set ends lasts 5 s, or the constructor argument in seconds.
@@ -69,7 +69,7 @@ $subtitle = (new VobSubParser($idx, 1))->parse(file_get_contents('movie.sub')); 
 $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);   // "de", from the id line
 ```
 
-- **Parse**: call the parser directly. `Subtitle::parse()` creates the parser without arguments, so it cannot pass the `.idx` content. For the same reason, format detection does not know VobSub. The command line tool takes the `.idx` file as input and reads the `.sub` file next to it.
+- **Parse**: call the parser directly. `Subtitle::fromString()` cannot pass the `.idx` content to the parser, so it throws `InvalidParserException` for `Format::VobSub`. For the same reason, format detection does not know VobSub. The command line tool takes the `.idx` file as input and reads the `.sub` file next to it.
 - **Cues**: the image has the size and the position of the display area, on a screen of the `.idx` size. A subpicture with the forced start command sets `forced`.
 - **Times**: a cue starts at its `timestamp`, plus the `delay` lines of its track. It ends at the stop command of the subpicture. A subpicture without a stop command ends at the next one, at most 5 s later.
 - **Colours**: the `.idx` palette and a `custom colors: ON` line apply.
@@ -140,9 +140,11 @@ composer require yama6a/php-glyph-ocr:^0.3
 ```
 
 ```php
-$subtitle = Subtitle::parse(file_get_contents('movie.sup'));            // PGS, image cues
-$subtitle->recognizeText(new GlyphOcrEngine());                        // subtitle fonts database by default
-file_put_contents('movie.srt', $subtitle->format(SubRipFormatter::class));
+use SubtitleToolbox\Format;
+
+$subtitle = Subtitle::fromString(file_get_contents('movie.sup'), Format::Pgs);   // image cues
+$subtitle->recognizeText(new GlyphOcrEngine());                                  // subtitle fonts database by default
+file_put_contents('movie.srt', $subtitle->toString(Format::SubRip));
 ```
 
 - **Package**: without php-glyph-ocr, `new GlyphOcrEngine()` throws `InvalidArgumentException` with the `composer require` command.

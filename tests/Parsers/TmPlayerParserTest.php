@@ -5,8 +5,8 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
-use SubtitleToolbox\Formatters\TmPlayerFormatter;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -64,7 +64,7 @@ class TmPlayerParserTest extends TestCase
     public function testRealFileSurvivesARoundTrip(string $file, int $cueCount, array $firstCue, array $lastCue, ?array $options): void
     {
         $subtitle  = $this->parseFile($file);
-        $formatted = $subtitle->format(TmPlayerFormatter::class, $options ?? []);
+        $formatted = $subtitle->toString(Format::TmPlayer, $options ?? []);
 
         $this->assertEquals($subtitle->getCues(), (new TmPlayerParser())->parse($formatted)->getCues());
         if ($options !== null) {
@@ -155,13 +155,13 @@ class TmPlayerParserTest extends TestCase
 
     public function testSubtitleParseDetectsTmPlayer(): void
     {
-        $this->assertCount(2, Subtitle::parse("00:00:01:Where are you?\r\n00:00:04:Home.\r\n")->getCues());
+        $this->assertCount(2, Subtitle::fromStringAutoDetectFormat("00:00:01:Where are you?\r\n00:00:04:Home.\r\n")->getCues());
     }
 
 
     private function parseFile(string $file): Subtitle
     {
-        return Subtitle::parse(file_get_contents(self::DIR . "real/$file"), TmPlayerParser::class);
+        return Subtitle::fromString(file_get_contents(self::DIR . "real/$file"), Format::TmPlayer);
     }
 
 

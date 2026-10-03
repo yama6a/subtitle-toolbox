@@ -3,8 +3,7 @@
 namespace SubtitleToolbox\Hls;
 
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\WebVttFormatter;
-use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -29,13 +28,13 @@ class HlsWebVttJoinerTest extends TestCase
 
     public function testRealSegmentsParse(): void
     {
-        $first = Subtitle::parse($this->ownSegments()[0], WebVttParser::class);
+        $first = Subtitle::fromString($this->ownSegments()[0], Format::WebVtt);
         $this->assertSame([[1.0, 3.0, "The ferry leaves at noon."], [5.0, 7.5, "Please keep your tickets ready."]],
                           $this->summarize($first));
         $this->assertSame(181083, TimestampMap::fromSubtitle($first)->mpegts);
 
         foreach (["shaka-vtt-071.vtt", "shaka-vtt-072.vtt"] as $file) {
-            $segment = Subtitle::parse(file_get_contents(self::FILES . $file), WebVttParser::class);
+            $segment = Subtitle::fromString(file_get_contents(self::FILES . $file), Format::WebVtt);
             $this->assertSame([], $segment->getCues());
             $this->assertSame(3600.0, TimestampMap::fromSubtitle($segment)->local);
         }
@@ -54,7 +53,7 @@ class HlsWebVttJoinerTest extends TestCase
         ], $this->summarize($joined));
         $this->assertStringStartsWith("WEBVTT\n\n1\n00:00:01.000 --> 00:00:03.000 align:center line:90%\n" .
                                       "The ferry leaves at noon.\n\n2\n00:00:05.000 --> 00:00:07.500 align:center line:90%\n",
-                                      $joined->format(WebVttFormatter::class, ["bom" => false]));
+                                      $joined->toString(Format::WebVtt, ["bom" => false]));
     }
 
 
@@ -109,14 +108,14 @@ class HlsWebVttJoinerTest extends TestCase
 
     public function testSegmentAndJoinRoundTripARealFile(): void
     {
-        $original = Subtitle::parse(file_get_contents(self::FILES . "node-webvtt-subs1.vtt"), WebVttParser::class);
+        $original = Subtitle::fromString(file_get_contents(self::FILES . "node-webvtt-subs1.vtt"), Format::WebVtt);
 
         foreach ([new HlsSegmentOptions(), new HlsSegmentOptions(segmentDuration: 4, mpegts: 181083, local: 3600),
                   new HlsSegmentOptions(segmentDuration: 2.002, mpegts: TimestampMap::MPEGTS_WRAP - 90000)] as $options) {
             $joined = HlsWebVttJoiner::join(HlsWebVttSegmenter::segment($original, $options)->getSegments());
 
             $this->assertSame($this->summarize($original), $this->summarize($joined));
-            $this->assertSame($original->format(WebVttFormatter::class), $joined->format(WebVttFormatter::class));
+            $this->assertSame($original->toString(Format::WebVtt), $joined->toString(Format::WebVtt));
         }
     }
 }

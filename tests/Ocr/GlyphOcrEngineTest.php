@@ -12,7 +12,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Formatters\SubRipFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Markup;
@@ -61,7 +61,7 @@ class GlyphOcrEngineTest extends TestCase
     {
         $subtitle = $parse()->recognizeText(new GlyphOcrEngine());
 
-        $this->assertStringEqualsFile($golden, $subtitle->format(SubRipFormatter::class));
+        $this->assertStringEqualsFile($golden, $subtitle->toString(Format::SubRip));
 
         $errors = 0;
         $length = 0;

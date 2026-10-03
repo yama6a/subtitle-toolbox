@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -257,7 +258,7 @@ class AssParserTest extends TestCase
 
     private function parseFile(string $file): Subtitle
     {
-        return Subtitle::parse(file_get_contents(__DIR__ . "/../files/ass/real/$file"), AssParser::class);
+        return Subtitle::fromString(file_get_contents(__DIR__ . "/../files/ass/real/$file"), Format::Ass);
     }
 
 

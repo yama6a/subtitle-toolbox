@@ -4,13 +4,10 @@ namespace SubtitleToolbox\Karaoke;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\AssFormatter;
-use SubtitleToolbox\Formatters\LyricsFormatter;
 use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Parsers\AssParser;
-use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -59,7 +56,7 @@ class WordHighlightTest extends TestCase
             "2\n00:00:00,240 --> 00:00:00,710\nThe <u>beach</u> was quiet.\n\n" .
             "3\n00:00:00,710 --> 00:00:00,950\nThe beach <u>was</u> quiet.\n\n" .
             "4\n00:00:00,950 --> 00:00:01,600\nThe beach was <u>quiet.</u>\n",
-            $karaoke->format(SubRipFormatter::class, [SubRipFormatter::OPTION_BOM => false])
+            $karaoke->toString(Format::SubRip, [SubRipFormatter::OPTION_BOM => false])
         );
     }
 
@@ -253,49 +250,49 @@ class WordHighlightTest extends TestCase
     public function testHebrewRealFileParsesAndRoundTrips(): void
     {
         $content  = file_get_contents(self::FILES . "karaoke/hebrew.lrc");
-        $subtitle = Subtitle::parse($content, LyricsParser::class);
+        $subtitle = Subtitle::fromString($content, Format::Lyrics);
 
         $this->assertSame([
             [1.0, 4.0, "<00:00:01.000>הרכבת <00:00:01.600>יוצאת <00:00:02.300>בשבע."],
             [4.0, 7.0, "<00:00:04.000>הלחם <00:00:04.550>מוכן <00:00:05.100>בשמונה."],
         ], self::describe($subtitle));
-        $this->assertSame($content, $subtitle->format(LyricsFormatter::class));
+        $this->assertSame($content, $subtitle->toString(Format::Lyrics));
     }
 
 
     public static function realFiles(): array
     {
-        $lrc = fn (string $file): Subtitle => Subtitle::parse(file_get_contents(self::FILES . $file), LyricsParser::class);
+        $lrc = fn (string $file): Subtitle => Subtitle::fromString(file_get_contents(self::FILES . $file), Format::Lyrics);
 
         return [
             "Hebrew enhanced LRC" => [
                 fn (): Subtitle => $lrc("karaoke/hebrew.lrc"),
                 new WordHighlightOptions(),
-                SubRipFormatter::class,
+                Format::SubRip,
                 "hebrew_word.srt",
             ],
             "openai-whisper words" => [
                 fn (): Subtitle => self::whisper(),
                 new WordHighlightOptions(),
-                SubRipFormatter::class,
+                Format::SubRip,
                 "whisper_word.srt",
             ],
             "openai-whisper, one bold word" => [
                 fn (): Subtitle => self::whisper(),
                 new WordHighlightOptions(style: "b", maxWordsPerCue: 1),
-                WebVttFormatter::class,
+                Format::WebVtt,
                 "whisper_one_word.vtt",
             ],
             "enhanced LRC, cumulative" => [
                 fn (): Subtitle => $lrc("lrc/real/handwritten-enhanced.lrc"),
                 new WordHighlightOptions(style: 'font color="#ffff00"', mode: WordHighlightOptions::MODE_CUMULATIVE),
-                SubRipFormatter::class,
+                Format::SubRip,
                 "lrc_cumulative.srt",
             ],
             "Aegisub karaoke, 3 words" => [
-                fn (): Subtitle => Subtitle::parse(file_get_contents(self::FILES . "ass/real/own_aegisub.ass"), AssParser::class),
+                fn (): Subtitle => Subtitle::fromString(file_get_contents(self::FILES . "ass/real/own_aegisub.ass"), Format::Ass),
                 new WordHighlightOptions(maxWordsPerCue: 3),
-                SubRipFormatter::class,
+                Format::SubRip,
                 "aegisub_window.srt",
             ],
         ];
@@ -303,11 +300,11 @@ class WordHighlightTest extends TestCase
 
 
     #[DataProvider("realFiles")]
-    public function testRealFile(\Closure $parse, WordHighlightOptions $options, string $formatter, string $expected): void
+    public function testRealFile(\Closure $parse, WordHighlightOptions $options, Format $format, string $expected): void
     {
         $this->assertSame(
             file_get_contents(self::FILES . "karaoke/" . $expected),
-            WordHighlight::expand($parse(), $options)->format($formatter)
+            WordHighlight::expand($parse(), $options)->toString($format)
         );
     }
 
@@ -316,22 +313,22 @@ class WordHighlightTest extends TestCase
     {
         $this->assertSame(
             file_get_contents(self::FILES . "karaoke/whisper_kf.ass"),
-            self::whisper()->format(AssFormatter::class, [AssFormatter::OPTION_KARAOKE_TAG => "kf"])
+            self::whisper()->toString(Format::Ass, [AssFormatter::OPTION_KARAOKE_TAG => "kf"])
         );
 
         $subtitle = self::subtitle(new SubtitleCue(0, 1.6, "Oh <00:00:00.500>the <00:00:01.000>sea"));
         $this->assertStringContainsString("{\\ko50}Oh {\\ko50}the {\\ko60}sea",
-                                          $subtitle->format(AssFormatter::class, [AssFormatter::OPTION_KARAOKE_TAG => "ko"]));
-        $this->assertStringContainsString("{\\k50}Oh {\\k50}the {\\k60}sea", $subtitle->format(AssFormatter::class));
+                                          $subtitle->toString(Format::Ass, [AssFormatter::OPTION_KARAOKE_TAG => "ko"]));
+        $this->assertStringContainsString("{\\k50}Oh {\\k50}the {\\k60}sea", $subtitle->toString(Format::Ass));
     }
 
 
     public function testAssFormatterKeepsTheTagsOfUnchangedCues(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FILES . "ass/real/own_aegisub.ass"), AssParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "ass/real/own_aegisub.ass"), Format::Ass);
 
         $this->assertStringContainsString("{\\k40}The {\\k35}train {\\k50}leaves {\\kf60}at {\\ko45}noon",
-                                          $subtitle->format(AssFormatter::class, [AssFormatter::OPTION_KARAOKE_TAG => "kf"]));
+                                          $subtitle->toString(Format::Ass, [AssFormatter::OPTION_KARAOKE_TAG => "kf"]));
     }
 
 }

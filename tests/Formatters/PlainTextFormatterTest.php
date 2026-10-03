@@ -5,8 +5,8 @@ namespace SubtitleToolbox\Formatters;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
-use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -47,7 +47,7 @@ class PlainTextFormatterTest extends TestCase
     #[DataProvider("options")]
     public function testFormatsWithOptions(array $options, string $expected): void
     {
-        $this->assertSame($expected, $this->walk()->format(PlainTextFormatter::class, $options));
+        $this->assertSame($expected, $this->walk()->toString(Format::PlainText, $options));
     }
 
 
@@ -58,7 +58,7 @@ class PlainTextFormatterTest extends TestCase
         $subtitle->addCue(new SubtitleCue(1, 2, "Short"));
         $subtitle->addCue(new SubtitleCue(11, 12, "Overlapped"));
 
-        $this->assertSame("Long Short Overlapped\n", $subtitle->format(PlainTextFormatter::class));
+        $this->assertSame("Long Short Overlapped\n", $subtitle->toString(Format::PlainText));
     }
 
 
@@ -68,8 +68,8 @@ class PlainTextFormatterTest extends TestCase
         $subtitle->addCue(new SubtitleCue(1, 2, "<i></i>"));
         $subtitle->addCue((new CueImage("png", 0, 0, 1, 1, 720, 576))->toCue(new SubtitleCue(3, 4)));
 
-        $this->assertSame("", (new Subtitle())->format(PlainTextFormatter::class));
-        $this->assertSame("", $subtitle->format(PlainTextFormatter::class, [PlainTextFormatter::OPTION_SKIP_IMAGE_CUES => true]));
+        $this->assertSame("", (new Subtitle())->toString(Format::PlainText));
+        $this->assertSame("", $subtitle->toString(Format::PlainText, [PlainTextFormatter::OPTION_SKIP_IMAGE_CUES => true]));
     }
 
 
@@ -78,7 +78,7 @@ class PlainTextFormatterTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("The option paragraphGap must be a number of seconds.");
 
-        $this->walk()->format(PlainTextFormatter::class, [PlainTextFormatter::OPTION_PARAGRAPH_GAP => "2"]);
+        $this->walk()->toString(Format::PlainText, [PlainTextFormatter::OPTION_PARAGRAPH_GAP => "2"]);
     }
 
 
@@ -94,8 +94,8 @@ class PlainTextFormatterTest extends TestCase
     #[DataProvider("realFiles")]
     public function testRealFileGivesTheExpectedTranscript(string $fileName, array $options): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "sbv/real/youtube_studio_lf.sbv"), SbvParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "sbv/real/youtube_studio_lf.sbv"), Format::Sbv);
 
-        $this->assertSame(file_get_contents(self::DIR . "plaintext/real/$fileName"), $subtitle->format(PlainTextFormatter::class, $options));
+        $this->assertSame(file_get_contents(self::DIR . "plaintext/real/$fileName"), $subtitle->toString(Format::PlainText, $options));
     }
 }

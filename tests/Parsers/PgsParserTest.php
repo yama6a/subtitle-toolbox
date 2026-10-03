@@ -6,8 +6,7 @@ use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\FormatDetector;
-use SubtitleToolbox\Formatters\SubRipFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\FakeOcrEngine;
 use SubtitleToolbox\StringHelpers;
@@ -74,8 +73,8 @@ class PgsParserTest extends TestCase
     {
         $content = file_get_contents(self::DIR . array_search($method, PgsFixtures::FILES, true));
 
-        $this->assertSame(PgsParser::class, FormatDetector::detect($content));
-        $this->assertEquals((new PgsParser())->parse($content)->getCues(), Subtitle::parse($content)->getCues());
+        $this->assertSame(Format::Pgs, Format::detect($content));
+        $this->assertEquals((new PgsParser())->parse($content)->getCues(), Subtitle::fromStringAutoDetectFormat($content)->getCues());
     }
 
 
@@ -185,7 +184,7 @@ class PgsParserTest extends TestCase
 
     public function testRecognizesTextWithAnOcrEngine(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "shapes_1080p.sup"));
+        $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents(self::DIR . "shapes_1080p.sup"));
         $engine   = new FakeOcrEngine(["Next stop: Main Station"]);
 
         $subtitle->recognizeText($engine, "eng");
@@ -196,7 +195,7 @@ class PgsParserTest extends TestCase
         $this->assertTrue($engine->calls[2]["image"]->forced);
         $this->assertStringStartsWith("1\n00:00:01,000 --> 00:00:03,500\nNext stop: Main Station\n\n" .
                                       "2\n00:00:05,000 --> 00:00:07,000\nNext stop: Main Station\n\n",
-                                      StringHelpers::removeUtf8Bom($subtitle->format(SubRipFormatter::class)));
+                                      StringHelpers::removeUtf8Bom($subtitle->toString(Format::SubRip)));
     }
 
 

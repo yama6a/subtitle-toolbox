@@ -4,8 +4,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\FormatDetector;
-use SubtitleToolbox\Formatters\SccFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -65,7 +64,7 @@ class SccRealFileTest extends TestCase
         array $lastLines,
         ?int $lastAlignment
     ): void {
-        $cues = array_values(Subtitle::parse(file_get_contents(self::DIR . $file), SccParser::class)->getCues());
+        $cues = array_values(Subtitle::fromString(file_get_contents(self::DIR . $file), Format::Scc)->getCues());
 
         $this->assertCount($cueCount, $cues);
         $this->assertSame([$firstStart, $firstEnd, $firstLines, $firstAlignment], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getLines(), $cues[0]->getAlignment()]);
@@ -77,7 +76,7 @@ class SccRealFileTest extends TestCase
     #[DataProvider("realFileProvider")]
     public function testRealFileDetectsAsScc(string $file): void
     {
-        $this->assertSame(SccParser::class, FormatDetector::detect(file_get_contents(self::DIR . $file)));
+        $this->assertSame(Format::Scc, Format::detect(file_get_contents(self::DIR . $file)));
     }
 
 
@@ -95,12 +94,12 @@ class SccRealFileTest extends TestCase
     #[DataProvider("popOnFileProvider")]
     public function testRealFileRoundTripKeepsCues(string $file): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . $file), SccParser::class);
-        $output   = $subtitle->format(SccFormatter::class);
-        $reparsed = Subtitle::parse($output, SccParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . $file), Format::Scc);
+        $output   = $subtitle->toString(Format::Scc);
+        $reparsed = Subtitle::fromString($output, Format::Scc);
 
         $this->assertSame($this->describe($subtitle), $this->describe($reparsed));
-        $this->assertSame($output, $reparsed->format(SccFormatter::class));
+        $this->assertSame($output, $reparsed->toString(Format::Scc));
     }
 
 
@@ -110,8 +109,8 @@ class SccRealFileTest extends TestCase
     #[DataProvider("realFileProvider")]
     public function testRealFileRoundTripKeepsTextAndEndTimes(string $file): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . $file), SccParser::class);
-        $reparsed = Subtitle::parse($subtitle->format(SccFormatter::class), SccParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . $file), Format::Scc);
+        $reparsed = Subtitle::fromString($subtitle->toString(Format::Scc), Format::Scc);
 
         $this->assertSame(count($subtitle->getCues()), count($reparsed->getCues()));
         foreach ($subtitle->getCues() as $idx => $cue) {
@@ -125,7 +124,7 @@ class SccRealFileTest extends TestCase
 
     public function testDropFrameTimeCodesAcrossMinutes(): void
     {
-        $cues = array_values(Subtitle::parse(file_get_contents(self::DIR . "popon_broadcast_df.scc"), SccParser::class)->getCues());
+        $cues = array_values(Subtitle::fromString(file_get_contents(self::DIR . "popon_broadcast_df.scc"), Format::Scc)->getCues());
 
         // 00:59:00;02 is the first frame of minute 59, frame 106094. The EOC is the 24th byte pair of the line.
         $this->assertSame(["WE HAVE <i>FRESH</i> BREAD TODAY."], $cues[5]->getLines());
@@ -140,7 +139,7 @@ class SccRealFileTest extends TestCase
 
     public function testRollUpFileShowsEachScreen(): void
     {
-        $cues  = array_values(Subtitle::parse(file_get_contents(self::DIR . "rollup_news_ndf.scc"), SccParser::class)->getCues());
+        $cues  = array_values(Subtitle::fromString(file_get_contents(self::DIR . "rollup_news_ndf.scc"), Format::Scc)->getCues());
         $lines = array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $cues);
 
         $this->assertSame(["&gt;&gt; GOOD MORNING. HERE IS THE"], $lines[1]);
@@ -151,7 +150,7 @@ class SccRealFileTest extends TestCase
 
     public function testPaintOnFileAppliesBackspaceAndDeleteToEndOfRow(): void
     {
-        $cues = array_values(Subtitle::parse(file_get_contents(self::DIR . "painton_corrections.scc"), SccParser::class)->getCues());
+        $cues = array_values(Subtitle::fromString(file_get_contents(self::DIR . "painton_corrections.scc"), Format::Scc)->getCues());
 
         $this->assertSame(["BAKERY NEWS", "BREAD IS READY"], $cues[1]->getLines());
         $this->assertSame(["BAKERY NEWS", "BREAD IS READY SOON."], $cues[2]->getLines());
@@ -160,7 +159,7 @@ class SccRealFileTest extends TestCase
 
     public function testRawDataRowStaysInOneRow(): void
     {
-        $cues = array_values(Subtitle::parse(file_get_contents(self::DIR . "raw_data_row.scc"), SccParser::class)->getCues());
+        $cues = array_values(Subtitle::fromString(file_get_contents(self::DIR . "raw_data_row.scc"), Format::Scc)->getCues());
 
         $this->assertCount(1, $cues[1]->getLines());
         $this->assertLessThanOrEqual(32, Markup::countCharacters(Markup::decodeEntities($cues[1]->getLines()[0])));

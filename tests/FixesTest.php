@@ -3,8 +3,6 @@
 namespace SubtitleToolbox;
 
 use InvalidArgumentException;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Parsers\SubRipParser;
 
 class FixesTest extends \PHPUnit\Framework\TestCase
 {
@@ -38,7 +36,7 @@ class FixesTest extends \PHPUnit\Framework\TestCase
     public function testRealFileWithOverlapsAndShortCues(): void
     {
         $content  = file_get_contents(__DIR__ . "/files/fixes/own_overlaps_and_short_cues.srt");
-        $subtitle = Subtitle::parse($content, SubRipParser::class);
+        $subtitle = Subtitle::fromString($content, Format::SubRip);
         $cues     = $subtitle->getCues();
 
         $this->assertCount(9, $cues);
@@ -48,7 +46,7 @@ class FixesTest extends \PHPUnit\Framework\TestCase
         $subtitle->fixOverlaps(0.083)->extendShortCues(0.833, 0.083)->wrapLines(42);
 
         $this->assertSame(file_get_contents(__DIR__ . "/files/fixes/own_overlaps_and_short_cues_fixed.srt"),
-                          $subtitle->format(SubRipFormatter::class));
+                          $subtitle->toString(Format::SubRip));
         $this->assertSame([], $subtitle->getErrors());
     }
 

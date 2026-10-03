@@ -4,12 +4,11 @@ Every exception of the library implements `SubtitleToolbox\Exceptions\SubtitleTo
 
 ```php
 use SubtitleToolbox\Exceptions\SubtitleToolboxException;
-use SubtitleToolbox\Formatters\WebVttFormatter;
-use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 try {
-    $vtt = Subtitle::parse($upload, SubRipParser::class)->format(WebVttFormatter::class);
+    $vtt = Subtitle::fromString($upload, Format::SubRip)->toString(Format::WebVtt);
 } catch (SubtitleToolboxException $e) {
     return response($e->getMessage(), 422);
 }
@@ -18,9 +17,9 @@ try {
 | Exception | Extends | `getCode()` | Thrown for |
 |:--- |:--- |:--- |:--- |
 | `ParsingException` | `\RuntimeException` | 100 | content that a parser or `fromArray()` cannot read, or an unknown source encoding |
-| `InvalidFormatterException` | `\RuntimeException` | 101 | a formatter class that is not a `SubtitleFormatter`, or a stored TTML head that is not valid XML |
-| `InvalidParserException` | `\RuntimeException` | 102 | a parser class that is not a `SubtitleParser`, or content that format detection does not know |
-| `ImageCueWithoutTextException` | `\RuntimeException` | 103 | an image cue without text in `format()` with a text formatter |
+| `InvalidFormatterException` | `\RuntimeException` | 101 | `toString()` with a format that the library cannot write, or a stored TTML head that is not valid XML |
+| `InvalidParserException` | `\RuntimeException` | 102 | `fromString()` with a format that the library cannot read, or content that format detection does not know |
+| `ImageCueWithoutTextException` | `\RuntimeException` | 103 | an image cue without text in `toString()` with a text format |
 | `InvalidArgumentException` | `\InvalidArgumentException` | 104 | an invalid argument or option, for example alignment 10, frame rate 0 or a missing `OPTION_FRAME_RATE` |
 | `CueNotFoundException` | `\RuntimeException` | 105 | `removeCue()` with an index that has no cue |
 

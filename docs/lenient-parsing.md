@@ -4,10 +4,9 @@ A subtitle download is often broken in one place. By default, the parsers throw 
 
 ```php
 use SubtitleToolbox\Parsers\SubRipParser;
-use SubtitleToolbox\Subtitle;
 
 $parser   = (new SubRipParser())->setLenient();
-$subtitle = Subtitle::parse($download, $parser);     // a parser instance in place of the class name
+$subtitle = $parser->parse($download);
 foreach ($parser->getWarnings() as $warning) {
     $logger->warning("line $warning->lineNumber: $warning->message ($warning->action)");
 }
@@ -52,6 +51,6 @@ foreach ($parser->getWarnings() as $warning) {
 - **Not the format**: lenient mode still throws for a WebVTT file without `WEBVTT`. SubRip and SBV have no signature, so a file without one readable cue gives no cues and warnings.
 - **Whole-file errors**: lenient mode still throws for a problem outside one cue. Examples are invalid XML in TTML, invalid JSON, a SAMI file that is not UTF-8, an ASS file without `[Events]` and a MicroDVD file without a frame rate.
 - **Strict mode without an exception**: the LRC parser drops a line with a bad time tag. The EBU STL parser reads a time code out of range as it is. In lenient mode, both record a warning, and the EBU STL parser also skips the subtitle.
-- **`Subtitle::parse()`**: pass a parser instance to keep its mode and read its warnings after the call. The `sourceEncoding` argument works as with a class name. A class name parses in strict mode. Format detection returns a class name, so call `Subtitle::detectParser()` first to detect and parse leniently.
+- **`Subtitle::fromString()`**: it parses in strict mode. For lenient mode, call the parser directly. Convert other encodings first with `StringHelpers::convertToUtf8()`, see [encodings.md](encodings.md).
 - **Stream readers**: `SubRipStreamReader` and `WebVttStreamReader` have the same `setLenient()` and `getWarnings()`. They give the same cues and warnings as the batch parser.
 - **Command line tool**: `--lenient` turns on lenient mode and prints each warning to standard error.

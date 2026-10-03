@@ -2,34 +2,9 @@
 
 namespace SubtitleToolbox;
 
-use SubtitleToolbox\Parsers\AssemblyAiParser;
-use SubtitleToolbox\Parsers\AssParser;
-use SubtitleToolbox\Parsers\AwsTranscribeParser;
-use SubtitleToolbox\Parsers\DeepgramParser;
-use SubtitleToolbox\Parsers\EbuStlParser;
-use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
-use SubtitleToolbox\Parsers\GoogleSpeechParser;
-use SubtitleToolbox\Parsers\HtmlTranscriptParser;
-use SubtitleToolbox\Parsers\JsonParser;
-use SubtitleToolbox\Parsers\LyricsParser;
-use SubtitleToolbox\Parsers\MicroDvdParser;
-use SubtitleToolbox\Parsers\Mpl2Parser;
-use SubtitleToolbox\Parsers\MpSubParser;
-use SubtitleToolbox\Parsers\OgmChaptersParser;
-use SubtitleToolbox\Parsers\PgsParser;
-use SubtitleToolbox\Parsers\PodcastChaptersParser;
-use SubtitleToolbox\Parsers\PodcastTranscriptParser;
-use SubtitleToolbox\Parsers\SamiParser;
-use SubtitleToolbox\Parsers\SbvParser;
-use SubtitleToolbox\Parsers\SccParser;
-use SubtitleToolbox\Parsers\SubRipParser;
-use SubtitleToolbox\Parsers\SubViewerParser;
-use SubtitleToolbox\Parsers\TmPlayerParser;
-use SubtitleToolbox\Parsers\TtmlParser;
-use SubtitleToolbox\Parsers\WebVttParser;
-use SubtitleToolbox\Parsers\WhisperJsonParser;
-use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
-
+/**
+ * @internal Use Format::detect().
+ */
 class FormatDetector
 {
     private const LRC_TIMESTAMP = '\[\d{2,3}:\d{2}(?:[.:]\d{2,3})?\]';
@@ -39,7 +14,7 @@ class FormatDetector
     private const XML_PROLOG = '(?:\s|<\?.*?\?>|<!--.*?-->|<!DOCTYPE[^>]*>)*';
 
     /**
-     * The signatures in check order, keyed by parser class. Each pattern runs on the content
+     * The signatures in check order, keyed by format. Each pattern runs on the content
      * without a UTF-8 BOM, with LF line endings and without leading white space.
      *
      * 1. WebVTT: the WEBVTT keyword.
@@ -81,56 +56,57 @@ class FormatDetector
      *     and the YouTube XML formats can hold such elements.
      */
     private const SIGNATURES = [
-        WebVttParser::class   => '/\AWEBVTT(?:[ \t\n]|\z)/',
-        TtmlParser::class     => '/\A' . self::XML_PROLOG . '<(?:[A-Za-z_][\w.-]*:)?tt[\s>\/]/s',
-        SamiParser::class     => '/\A' . self::XML_PROLOG . '<SAMI[\s>]/is',
-        AssParser::class      => '/\A\[Script Info\][ \t]*$/im',
-        MpSubParser::class    => '/\A(?=[A-Z]+=).*?^FORMAT=/ms',
-        MicroDvdParser::class => '/\A\{\d+\}\{\d*\}/',
-        SubRipParser::class   => '/\A\d+[ \t]*\n[ \t]*\d+:\d{2}:\d{2}(?:[,.]\d+)?[ \t]*-->/',
-        SbvParser::class      => '/\A\d+:\d{2}:\d{2}\.\d{3},\d+:\d{2}:\d{2}\.\d{3}[ \t]*$/m',
-        SubViewerParser::class => '/^\*{8} START SCRIPT \*{8}[ \t]*$' .
-                                  '|\A(?:\[INFORMATION\]|(?:\[.*\n)*' . self::SUBVIEWER_TIMING . ')[ \t]*$/m',
-        LyricsParser::class   => '/\A(?=' . self::LRC_TIMESTAMP . '|\[[A-Za-z#][A-Za-z0-9_]*:[^\]\n]*\]).*?^[ \t]*' .
-                                 self::LRC_TIMESTAMP . '/ms',
-        PgsParser::class      => '/\APG.{8}[\x14-\x17\x80]/s',
-        JsonParser::class     => '/\A\{(?=(?:[^"]++|"(?!version"\s*+:))*+"version"\s*+:\s*+\d)(?=(?:[^"]++|"(?!cues"\s*+:))*+"cues"\s*+:\s*+\[)/',
-        EbuStlParser::class   => '/\A\d{3}STL(?:25|30)\.01/',
-        SccParser::class      => '/\AScenarist_SCC V1\.0[ \t]*$/m',
-        AwsTranscribeParser::class => '/\A\{(?=(?:[^"]++|"(?!transcripts"\s*+:\s*+\[))*+"transcripts"\s*+:\s*+\[)/',
-        DeepgramParser::class      => '/\A\{(?=(?:[^"]++|"(?!channels"\s*+:\s*+\[))*+"channels"\s*+:\s*+\[\s*+\{' .
-                                      '(?:[^"]++|"(?!alternatives"\s*+:))*+"alternatives"\s*+:)/',
-        AssemblyAiParser::class    => '/\A\{(?=(?:[^"]++|"(?!audio_url"\s*+:|words"\s*+:\s*+\[\s*+\{\s*+"text"\s*+:))*+' .
-                                      '"(?:audio_url"\s*+:|words"\s*+:\s*+\[\s*+\{\s*+"text"\s*+:))/',
-        GoogleSpeechParser::class  => '/\A\{(?=(?:[^"]++|"(?!results"\s*+:\s*+\[\s*+\{))*+"results"\s*+:\s*+\[\s*+\{' .
-                                      '(?:[^"]++|"(?!alternatives"\s*+:))*+"alternatives"\s*+:\s*+\[)/',
-        PodcastTranscriptParser::class => '/\A\{(?=(?:[^"]++|"(?!segments"\s*+:))*+"segments"\s*+:\s*+\[\s*+\{' .
-                                          '(?=(?:[^"]++|"(?!startTime"\s*+:))*+"startTime"\s*+:)(?:[^"]++|"(?!body"\s*+:))*+"body"\s*+:)/',
-        WhisperJsonParser::class => '/\A\{(?=(?:[^"]++|"(?!(?:segments|transcription)"\s*+:))*+"(?:segments|transcription)"\s*+:\s*+\[)/',
-        YouTubeTimedTextParser::class => '/\A(?:' . self::XML_PROLOG . '<(?:timedtext|transcript)[\s>\/]' .
-                                         '|\{(?=(?:[^"]++|"(?!events"\s*+:))*+"events"\s*+:\s*+\[\s*+\{' .
-                                         '(?:[^"]++|"(?!tStartMs"\s*+:))*+"tStartMs"\s*+:))/s',
-        Mpl2Parser::class     => '/\A\[\d+\]\[\d+\]/',
-        TmPlayerParser::class => '/\A\d+:[0-5]\d:[0-5]\d(?:,\d+)?[:=]/',
-        PodcastChaptersParser::class => '/\A\{(?=(?:[^"]++|"(?!version"\s*+:))*+"version"\s*+:)(?=(?:[^"]++|"(?!chapters"\s*+:))*+"chapters"\s*+:\s*+\[)/',
-        FfMetadataChaptersParser::class => '/\A;FFMETADATA/',
-        OgmChaptersParser::class => '/\ACHAPTER\d+[ \t]*=[ \t]*\d+[ \t]*:.*\n\s*CHAPTER\d+NAME[ \t]*=/',
-        HtmlTranscriptParser::class => '/\A' . self::XML_PROLOG . '(?=<)(?=.*?<cite[\s>])(?=.*?<time[\s>])/is',
+        Format::WebVtt->value   => '/\AWEBVTT(?:[ \t\n]|\z)/',
+        Format::Ttml->value     => '/\A' . self::XML_PROLOG . '<(?:[A-Za-z_][\w.-]*:)?tt[\s>\/]/s',
+        Format::Sami->value     => '/\A' . self::XML_PROLOG . '<SAMI[\s>]/is',
+        Format::Ass->value      => '/\A\[Script Info\][ \t]*$/im',
+        Format::MpSub->value    => '/\A(?=[A-Z]+=).*?^FORMAT=/ms',
+        Format::MicroDvd->value => '/\A\{\d+\}\{\d*\}/',
+        Format::SubRip->value   => '/\A\d+[ \t]*\n[ \t]*\d+:\d{2}:\d{2}(?:[,.]\d+)?[ \t]*-->/',
+        Format::Sbv->value      => '/\A\d+:\d{2}:\d{2}\.\d{3},\d+:\d{2}:\d{2}\.\d{3}[ \t]*$/m',
+        Format::SubViewer->value => '/^\*{8} START SCRIPT \*{8}[ \t]*$' .
+                                    '|\A(?:\[INFORMATION\]|(?:\[.*\n)*' . self::SUBVIEWER_TIMING . ')[ \t]*$/m',
+        Format::Lyrics->value   => '/\A(?=' . self::LRC_TIMESTAMP . '|\[[A-Za-z#][A-Za-z0-9_]*:[^\]\n]*\]).*?^[ \t]*' .
+                                   self::LRC_TIMESTAMP . '/ms',
+        Format::Pgs->value      => '/\APG.{8}[\x14-\x17\x80]/s',
+        Format::Json->value     => '/\A\{(?=(?:[^"]++|"(?!version"\s*+:))*+"version"\s*+:\s*+\d)(?=(?:[^"]++|"(?!cues"\s*+:))*+"cues"\s*+:\s*+\[)/',
+        Format::EbuStl->value   => '/\A\d{3}STL(?:25|30)\.01/',
+        Format::Scc->value      => '/\AScenarist_SCC V1\.0[ \t]*$/m',
+        Format::AwsTranscribe->value => '/\A\{(?=(?:[^"]++|"(?!transcripts"\s*+:\s*+\[))*+"transcripts"\s*+:\s*+\[)/',
+        Format::Deepgram->value      => '/\A\{(?=(?:[^"]++|"(?!channels"\s*+:\s*+\[))*+"channels"\s*+:\s*+\[\s*+\{' .
+                                        '(?:[^"]++|"(?!alternatives"\s*+:))*+"alternatives"\s*+:)/',
+        Format::AssemblyAi->value    => '/\A\{(?=(?:[^"]++|"(?!audio_url"\s*+:|words"\s*+:\s*+\[\s*+\{\s*+"text"\s*+:))*+' .
+                                        '"(?:audio_url"\s*+:|words"\s*+:\s*+\[\s*+\{\s*+"text"\s*+:))/',
+        Format::GoogleSpeech->value  => '/\A\{(?=(?:[^"]++|"(?!results"\s*+:\s*+\[\s*+\{))*+"results"\s*+:\s*+\[\s*+\{' .
+                                        '(?:[^"]++|"(?!alternatives"\s*+:))*+"alternatives"\s*+:\s*+\[)/',
+        Format::PodcastTranscript->value => '/\A\{(?=(?:[^"]++|"(?!segments"\s*+:))*+"segments"\s*+:\s*+\[\s*+\{' .
+                                            '(?=(?:[^"]++|"(?!startTime"\s*+:))*+"startTime"\s*+:)(?:[^"]++|"(?!body"\s*+:))*+"body"\s*+:)/',
+        Format::Whisper->value => '/\A\{(?=(?:[^"]++|"(?!(?:segments|transcription)"\s*+:))*+"(?:segments|transcription)"\s*+:\s*+\[)/',
+        Format::YouTube->value => '/\A(?:' . self::XML_PROLOG . '<(?:timedtext|transcript)[\s>\/]' .
+                                  '|\{(?=(?:[^"]++|"(?!events"\s*+:))*+"events"\s*+:\s*+\[\s*+\{' .
+                                  '(?:[^"]++|"(?!tStartMs"\s*+:))*+"tStartMs"\s*+:))/s',
+        Format::Mpl2->value     => '/\A\[\d+\]\[\d+\]/',
+        Format::TmPlayer->value => '/\A\d+:[0-5]\d:[0-5]\d(?:,\d+)?[:=]/',
+        Format::PodcastChapters->value => '/\A\{(?=(?:[^"]++|"(?!version"\s*+:))*+"version"\s*+:)(?=(?:[^"]++|"(?!chapters"\s*+:))*+"chapters"\s*+:\s*+\[)/',
+        Format::FfMetadata->value => '/\A;FFMETADATA/',
+        Format::OgmChapters->value => '/\ACHAPTER\d+[ \t]*=[ \t]*\d+[ \t]*:.*\n\s*CHAPTER\d+NAME[ \t]*=/',
+        Format::HtmlTranscript->value => '/\A' . self::XML_PROLOG . '(?=<)(?=.*?<cite[\s>])(?=.*?<time[\s>])/is',
     ];
 
 
     /**
-     * Returns the parser class whose signature matches the start of $content, or null when none matches.
+     * Returns the format whose signature matches the start of $content, or null when none matches. Unlike
+     * Format::detect(), it also returns chapters and cloud speech JSON.
      */
-    public static function detect(string $content): ?string
+    public static function detect(string $content): ?Format
     {
         $content = StringHelpers::removeUtf8Bom($content);
         $content = StringHelpers::normalizeEOLs($content);
         $content = ltrim($content);
 
-        foreach (self::SIGNATURES as $parserClass => $pattern) {
+        foreach (self::SIGNATURES as $format => $pattern) {
             if (preg_match($pattern, $content) === 1) {
-                return $parserClass;
+                return Format::from($format);
             }
         }
 

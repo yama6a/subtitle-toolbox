@@ -5,7 +5,6 @@ namespace SubtitleToolbox;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Formatters\JsonFormatter;
 use SubtitleToolbox\Parsers\CsvColumns;
 use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
@@ -13,6 +12,9 @@ use SubtitleToolbox\Parsers\MicroDvdParser;
 class ArrayConversionTest extends TestCase
 {
     private const DIR = __DIR__ . "/files/";
+
+    // Format::detect() does not detect cloud speech JSON, so these fixtures load with the format of their directory.
+    private const CLOUD_SPEECH = ["assemblyai", "aws-transcribe", "deepgram", "google-speech"];
 
 
     private function bakery(): Subtitle
@@ -84,7 +86,7 @@ class ArrayConversionTest extends TestCase
     {
         $subtitle = (new Subtitle())->setMetadata("0", "zero");
 
-        $this->assertEquals($subtitle, Subtitle::parse($subtitle->format(JsonFormatter::class)));
+        $this->assertEquals($subtitle, Subtitle::fromStringAutoDetectFormat($subtitle->toString(Format::Json)));
     }
 
 
@@ -156,16 +158,18 @@ class ArrayConversionTest extends TestCase
     #[DataProvider("realFiles")]
     public function testEveryRealFileSurvivesTheArrayAndJsonRoundTrip(string $file): void
     {
-        $content  = file_get_contents(self::DIR . $file);
-        $subtitle = match (true) {
-            str_starts_with($file, "microdvd/")          => (new MicroDvdParser(25))->parse($content),
-            $file === "csv/real/dubbing_script.csv"      => (new CsvParser(new CsvColumns(start: "Start TC", speaker: "Character", frameRate: 25)))->parse($content),
-            $file === "csv/real/excel_de_semicolon.csv"  => (new CsvParser(new CsvColumns(end: "Ende", speaker: "Sprecher")))->parse($content),
-            str_starts_with($file, "csv/")               => (new CsvParser())->parse($content),
-            default                                      => Subtitle::parse($content),
+        $content   = file_get_contents(self::DIR . $file);
+        $directory = explode("/", $file)[0];
+        $subtitle  = match (true) {
+            str_starts_with($file, "microdvd/")            => (new MicroDvdParser(25))->parse($content),
+            $file === "csv/real/dubbing_script.csv"        => (new CsvParser(new CsvColumns(start: "Start TC", speaker: "Character", frameRate: 25)))->parse($content),
+            $file === "csv/real/excel_de_semicolon.csv"    => (new CsvParser(new CsvColumns(end: "Ende", speaker: "Sprecher")))->parse($content),
+            str_starts_with($file, "csv/")                 => (new CsvParser())->parse($content),
+            in_array($directory, self::CLOUD_SPEECH, true) => Subtitle::fromString($content, Format::from($directory)),
+            default                                        => Subtitle::fromStringAutoDetectFormat($content),
         };
 
         $this->assertEquals($subtitle, Subtitle::fromArray($subtitle->toArray()));
-        $this->assertEquals($subtitle, Subtitle::parse($subtitle->format(JsonFormatter::class)));
+        $this->assertEquals($subtitle, Subtitle::fromStringAutoDetectFormat($subtitle->toString(Format::Json)));
     }
 }

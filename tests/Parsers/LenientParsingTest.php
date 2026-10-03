@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Streaming\SubRipStreamReader;
 use SubtitleToolbox\Streaming\WebVttStreamReader;
@@ -434,7 +435,7 @@ class LenientParsingTest extends TestCase
                    "3\n00:00:08,000 --> 00:00:10,000\nStill fine\n";
 
         $parser   = (new SubRipParser())->setLenient();
-        $subtitle = Subtitle::parse($content, $parser);
+        $subtitle = $parser->parse($content);
 
         $this->assertEquals([[1, 4, "Hello"], [8, 10, "Still fine"]], $this->cueRows($subtitle->getCues()));
         $this->assertEquals(
@@ -450,22 +451,10 @@ class LenientParsingTest extends TestCase
     }
 
 
-    public function testSubtitleParseConvertsTheEncodingBeforeTheParserInstance(): void
-    {
-        $content = mb_convert_encoding("1\n00:00:01,000 --> 00:00:02,000\nCafé au lait\n\nbroken\n", "Windows-1252", "UTF-8");
-        $parser  = (new SubRipParser())->setLenient();
-
-        $subtitle = Subtitle::parse($content, $parser, "Windows-1252");
-
-        $this->assertSame("Café au lait", $subtitle->getCues()[0]->getText());
-        $this->assertCount(1, $parser->getWarnings());
-    }
-
-
-    public function testSubtitleParseWithAClassNameStaysStrict(): void
+    public function testFromStringStaysStrict(): void
     {
         $this->expectException(ParsingException::class);
-        Subtitle::parse(file_get_contents(self::DIR . "bad_timestamp.srt"), SubRipParser::class);
+        Subtitle::fromString(file_get_contents(self::DIR . "bad_timestamp.srt"), Format::SubRip);
     }
 
 

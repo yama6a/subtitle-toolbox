@@ -5,7 +5,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Formatters\Mpl2Formatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
@@ -67,7 +67,7 @@ class Mpl2ParserTest extends TestCase
     public function testRealFileSurvivesARoundTrip(string $file, ?string $encoding, int $cueCount, array $firstCue, array $lastCue, ?array $options): void
     {
         $subtitle  = $this->parseFile($file, $encoding);
-        $formatted = $subtitle->format(Mpl2Formatter::class, $options ?? []);
+        $formatted = $subtitle->toString(Format::Mpl2, $options ?? []);
 
         $this->assertEquals($subtitle->getCues(), (new Mpl2Parser())->parse($formatted)->getCues());
         if ($options !== null) {
@@ -132,15 +132,15 @@ class Mpl2ParserTest extends TestCase
 
     public function testSubtitleParseDetectsMpl2(): void
     {
-        $subtitle = Subtitle::parse("[12][45]Where are you?|/Home.\r\n");
+        $subtitle = Subtitle::fromStringAutoDetectFormat("[12][45]Where are you?|/Home.\r\n");
 
-        $this->assertSame("[12][45]Where are you?|/Home.\n", $subtitle->format(Mpl2Formatter::class));
+        $this->assertSame("[12][45]Where are you?|/Home.\n", $subtitle->toString(Format::Mpl2));
     }
 
 
     private function parseFile(string $file, ?string $encoding): Subtitle
     {
-        return Subtitle::parse(file_get_contents(self::DIR . "real/$file"), Mpl2Parser::class, $encoding);
+        return Subtitle::fromString(file_get_contents(self::DIR . "real/$file"), Format::Mpl2, $encoding);
     }
 
 

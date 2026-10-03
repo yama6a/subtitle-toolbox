@@ -4,6 +4,7 @@ namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Sync\ReferenceSync;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
@@ -123,7 +124,7 @@ class SyncCommand extends WriteCommand
     }
 
 
-    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         $this->reference ??= $this->loadReference($arguments, $console);
 

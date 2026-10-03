@@ -5,8 +5,7 @@ namespace SubtitleToolbox\Timing;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -43,7 +42,7 @@ class ShotChangeTimingTest extends TestCase
 
     public function testRealFile(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FILES . "own_garden_24fps.srt"), SubRipParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "own_garden_24fps.srt"), Format::SubRip);
         $cues     = $subtitle->getCues();
         $this->assertCount(11, $cues);
         $this->assertSame([10.0, 12.0, "The garden gate stays open\nuntil the evening."],
@@ -54,7 +53,7 @@ class ShotChangeTimingTest extends TestCase
         $result      = ShotChangeTiming::apply($subtitle, $shotChanges, new ShotChangeOptions(frameRate: 24));
 
         $this->assertSame($subtitle, $result);
-        $this->assertSame(file_get_contents(self::FILES . "own_garden_24fps_timed.srt"), $subtitle->format(SubRipFormatter::class));
+        $this->assertSame(file_get_contents(self::FILES . "own_garden_24fps_timed.srt"), $subtitle->toString(Format::SubRip));
     }
 
 

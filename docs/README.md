@@ -18,7 +18,7 @@
 | [translation.md](translation.md) | machine translation with an engine of your choice |
 | [streaming.md](streaming.md) | SRT and WebVTT files too large for memory |
 | [hls.md](hls.md) | WebVTT segments and playlists for HTTP Live Streaming |
-| [detection.md](detection.md) | how `Subtitle::parse()` finds the format |
+| [detection.md](detection.md) | how `Format::detect()` finds the format |
 | [encodings.md](encodings.md) | input encodings |
 | [lenient-parsing.md](lenient-parsing.md) | parsing broken files with warnings |
 | [errors.md](errors.md) | exceptions, error codes and line numbers |

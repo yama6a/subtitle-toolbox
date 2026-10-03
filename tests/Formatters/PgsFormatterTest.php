@@ -6,6 +6,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Cli\Application;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatRegistry;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngDecoder;
@@ -47,7 +48,7 @@ class PgsFormatterTest extends TestCase
 
     private static function pgsRoundTrip(Subtitle $subtitle): Subtitle
     {
-        return (new PgsParser())->parse($subtitle->format(PgsFormatter::class));
+        return (new PgsParser())->parse($subtitle->toString(Format::Pgs));
     }
 
 
@@ -100,7 +101,7 @@ class PgsFormatterTest extends TestCase
     {
         $sup = file_get_contents($path);
 
-        $this->assertSame($sup, (new PgsParser())->parse($sup)->format(PgsFormatter::class));
+        $this->assertSame($sup, (new PgsParser())->parse($sup)->toString(Format::Pgs));
     }
 
 
@@ -160,7 +161,7 @@ class PgsFormatterTest extends TestCase
             ->addCue(self::imageCue(2.5, 4.0, 3, 2, [0x00000000, 0xFFFFFFFF, 0xFFFFFFFF, 0x000000FF, 0x00000000, 0x00000000], true))
             ->addCue(self::imageCue(1.0, 2.0, 2, 1, [0xFFFF00FF, 0xFFFF00FF]));
 
-        $segments = self::segments($subtitle->format(PgsFormatter::class));
+        $segments = self::segments($subtitle->toString(Format::Pgs));
 
         $this->assertSame([[90000, 0x16], [90000, 0x17], [90000, 0x14], [90000, 0x15], [90000, 0x80],
                            [180000, 0x16], [180000, 0x17], [180000, 0x80],
@@ -189,7 +190,7 @@ class PgsFormatterTest extends TestCase
 
         $this->assertSame([[1.0, 2.0], [2.0, 4.0], [4.0, 5.0]],
                           array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $written->getCues()));
-        $this->assertCount(3 * 5 + 3, self::segments($subtitle->format(PgsFormatter::class)));
+        $this->assertCount(3 * 5 + 3, self::segments($subtitle->toString(Format::Pgs)));
     }
 
 
@@ -205,7 +206,7 @@ class PgsFormatterTest extends TestCase
         }
         $subtitle = (new Subtitle())->addCue(self::imageCue(1.0, 2.0, 600, 300, $pixels));
 
-        $objects = array_values(array_filter(self::segments($subtitle->format(PgsFormatter::class)),
+        $objects = array_values(array_filter(self::segments($subtitle->toString(Format::Pgs)),
                                              fn (array $segment): bool => $segment[2] === 0x15));
 
         $this->assertGreaterThan(2, count($objects));
@@ -223,7 +224,7 @@ class PgsFormatterTest extends TestCase
         }
         $subtitle = (new Subtitle())->addCue(self::imageCue(1.0, 2.0, 30, 40, $pixels));
 
-        $palette = array_values(array_filter(self::segments($subtitle->format(PgsFormatter::class)),
+        $palette = array_values(array_filter(self::segments($subtitle->toString(Format::Pgs)),
                                              fn (array $segment): bool => $segment[2] === 0x14))[0][3];
         $written = PngDecoder::decode(CueImage::fromCue(self::pgsRoundTrip($subtitle)->getCues()[0])->png)["pixels"];
 
@@ -263,7 +264,7 @@ class PgsFormatterTest extends TestCase
 
     public function testTheCommandLineToolWritesPgs(): void
     {
-        $this->assertSame(PgsFormatter::class, FormatRegistry::formatterClass("pgs"));
+        $this->assertSame(PgsFormatter::class, FormatRegistry::formatterClass(Format::Pgs));
 
         $streams = [fopen("php://memory", "w+b"), fopen("php://memory", "w+b"), fopen("php://memory", "w+b")];
         $code    = (new Application(...$streams))->run(["subtitle-toolbox", "shift", self::FILES . "pgs/shapes_576p.sup", "--by", "1"]);
@@ -297,6 +298,6 @@ class PgsFormatterTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage($message);
 
-        (new Subtitle())->addCue($cue)->format(PgsFormatter::class);
+        (new Subtitle())->addCue($cue)->toString(Format::Pgs);
     }
 }

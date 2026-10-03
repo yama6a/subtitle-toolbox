@@ -5,9 +5,9 @@ namespace SubtitleToolbox\Formatters;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\CsvColumns;
 use SubtitleToolbox\Parsers\CsvParser;
-use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -30,7 +30,7 @@ class CsvFormatterTest extends TestCase
             self::BOM . "start,end,speaker,text\n" .
             "00:00:01.000,00:00:04.000,Anna,Where are you going?\n" .
             "00:00:04.500,00:00:06.000,Ben,\"Home.\nNow.\"\n",
-            self::english()->format(CsvFormatter::class)
+            self::english()->toString(Format::Csv)
         );
     }
 
@@ -41,7 +41,7 @@ class CsvFormatterTest extends TestCase
 
         $this->assertSame(
             "start,end,text\n00:00:01.000,00:00:02.000,\"Tom & \"\"Ann\"\", both\"\n",
-            $subtitle->format(CsvFormatter::class, [SubtitleFormatter::OPTION_BOM => false])
+            $subtitle->toString(Format::Csv, [SubtitleFormatter::OPTION_BOM => false])
         );
     }
 
@@ -51,7 +51,7 @@ class CsvFormatterTest extends TestCase
         $this->assertSame(
             "start;end;speaker;text\r\n00:00:01.000;00:00:04.000;Anna;Where are you going?\r\n" .
             "00:00:04.500;00:00:06.000;Ben;\"Home.\nNow.\"\r\n",
-            self::english()->format(CsvFormatter::class, [
+            self::english()->toString(Format::Csv, [
                 CsvFormatter::OPTION_DELIMITER        => ";",
                 SubtitleFormatter::OPTION_LINE_ENDING => "\r\n",
                 SubtitleFormatter::OPTION_BOM         => false,
@@ -76,7 +76,7 @@ class CsvFormatterTest extends TestCase
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(62.48, 3599.99, "a"));
 
-        $this->assertSame("start,end,text\n$start,$end,a\n", $subtitle->format(CsvFormatter::class, [
+        $this->assertSame("start,end,text\n$start,$end,a\n", $subtitle->toString(Format::Csv, [
             CsvFormatter::OPTION_TIME_FORMAT => $timeFormat,
             CsvFormatter::OPTION_FRAME_RATE  => 25,
             SubtitleFormatter::OPTION_BOM    => false,
@@ -90,11 +90,11 @@ class CsvFormatterTest extends TestCase
         $parser   = new CsvParser(new CsvColumns(start: "Start TC", text: "Text", speaker: "Character", frameRate: 25));
         $subtitle = $parser->parse($file);
 
-        $shared = $subtitle->format(CsvFormatter::class, [EbuStlFormatter::OPTION_FRAME_RATE => 24]);
+        $shared = $subtitle->toString(Format::Csv, [EbuStlFormatter::OPTION_FRAME_RATE => 24]);
 
         $this->assertSame("OPTION_FRAME_RATE", CsvFormatter::OPTION_FRAME_RATE);
         $this->assertStringContainsString("\n10:00:05:19,BEN,- I have one.,\n", $shared);
-        $this->assertStringContainsString("\n10:00:05:20,BEN,- I have one.,\n", $subtitle->format(CsvFormatter::class));
+        $this->assertStringContainsString("\n10:00:05:20,BEN,- I have one.,\n", $subtitle->toString(Format::Csv));
     }
 
 
@@ -105,22 +105,22 @@ class CsvFormatterTest extends TestCase
         $subtitle = $parser->parse($file);
 
         $this->assertSame(
-            $subtitle->format(CsvFormatter::class, [CsvFormatter::OPTION_FRAME_RATE => 24]),
-            $subtitle->format(CsvFormatter::class, ["frameRate" => 24])
+            $subtitle->toString(Format::Csv, [CsvFormatter::OPTION_FRAME_RATE => 24]),
+            $subtitle->toString(Format::Csv, ["frameRate" => 24])
         );
         $this->assertSame(
-            $subtitle->format(CsvFormatter::class, [CsvFormatter::OPTION_FRAME_RATE => 30]),
-            $subtitle->format(CsvFormatter::class, [CsvFormatter::OPTION_FRAME_RATE => 30, "frameRate" => 24])
+            $subtitle->toString(Format::Csv, [CsvFormatter::OPTION_FRAME_RATE => 30]),
+            $subtitle->toString(Format::Csv, [CsvFormatter::OPTION_FRAME_RATE => 30, "frameRate" => 24])
         );
     }
 
 
     public function testWritesIdentifiersAndOtherColumnsFromAnotherFormat(): void
     {
-        $subtitle = Subtitle::parse("WEBVTT\n\nintro\n00:00:01.000 --> 00:00:02.000\nHi\n", null);
+        $subtitle = Subtitle::fromStringAutoDetectFormat("WEBVTT\n\nintro\n00:00:01.000 --> 00:00:02.000\nHi\n");
         $subtitle->getCues()[0]->setFormatData("csv", ["columns" => ["Take" => "2"]]);
 
-        $this->assertSame("identifier,start,end,text,Take\nintro,00:00:01.000,00:00:02.000,Hi,2\n", $subtitle->format(CsvFormatter::class, [
+        $this->assertSame("identifier,start,end,text,Take\nintro,00:00:01.000,00:00:02.000,Hi,2\n", $subtitle->toString(Format::Csv, [
             SubtitleFormatter::OPTION_BOM => false,
         ]));
     }
@@ -131,7 +131,7 @@ class CsvFormatterTest extends TestCase
         $subtitle = (new CsvParser())->parse("Start;Text\n1;a\n");
         $subtitle->getCues()[0]->setLines("<v Lena>a");
 
-        $this->assertSame("Start;speaker;Text\n1;Lena;a\n", $subtitle->format(CsvFormatter::class, [SubtitleFormatter::OPTION_BOM => false]));
+        $this->assertSame("Start;speaker;Text\n1;Lena;a\n", $subtitle->toString(Format::Csv, [SubtitleFormatter::OPTION_BOM => false]));
     }
 
 
@@ -140,7 +140,7 @@ class CsvFormatterTest extends TestCase
         $content  = "a\t1\t2\textra\nb\t3\t4\t\n";
         $subtitle = (new CsvParser(new CsvColumns(start: 1, end: 2, text: 0, header: false)))->parse($content);
 
-        $this->assertSame($content, $subtitle->format(CsvFormatter::class, [SubtitleFormatter::OPTION_BOM => false]));
+        $this->assertSame($content, $subtitle->toString(Format::Csv, [SubtitleFormatter::OPTION_BOM => false]));
     }
 
 
@@ -148,7 +148,7 @@ class CsvFormatterTest extends TestCase
     {
         $content = "start,end,text,Notes\n1,2,a\n";
 
-        $this->assertSame("start,end,text,Notes\n1,2,a,\n", Subtitle::parse($content, CsvParser::class)->format(CsvFormatter::class, [
+        $this->assertSame("start,end,text,Notes\n1,2,a,\n", Subtitle::fromString($content, Format::Csv)->toString(Format::Csv, [
             SubtitleFormatter::OPTION_BOM => false,
         ]));
     }
@@ -156,11 +156,10 @@ class CsvFormatterTest extends TestCase
 
     public function testWritesABilingualTable(): void
     {
-        $german = Subtitle::parse(
+        $german = Subtitle::fromString(
             "1\n00:00:01,200 --> 00:00:03,900\nWohin gehst du?\n\n" .
             "2\n00:00:04,400 --> 00:00:09,000\nNach Hause. Jetzt.\n",
-            SubRipParser::class
-        );
+            Format::SubRip);
         $english = self::english()->addCue(new SubtitleCue(6.5, 8, "Right now."));
 
         $this->assertSame(
@@ -168,7 +167,7 @@ class CsvFormatterTest extends TestCase
             "00:00:01.000,00:00:04.000,Anna,Where are you going?,Wohin gehst du?\n" .
             "00:00:04.500,00:00:06.000,Ben,\"Home.\nNow.\",Nach Hause. Jetzt.\n" .
             "00:00:06.500,00:00:08.000,,Right now.,\n",
-            $english->format(CsvFormatter::class, [
+            $english->toString(Format::Csv, [
                 CsvFormatter::OPTION_SECOND_TEXT        => $german,
                 CsvFormatter::OPTION_SECOND_TEXT_HEADER => "text (de)",
                 SubtitleFormatter::OPTION_BOM           => false,
@@ -184,7 +183,7 @@ class CsvFormatterTest extends TestCase
 
         $this->assertSame(
             "start,end,text,text2\n0,2,a,x\n2,6,b,\n",
-            $primary->format(CsvFormatter::class, [
+            $primary->toString(Format::Csv, [
                 CsvFormatter::OPTION_SECOND_TEXT => $second,
                 CsvFormatter::OPTION_TIME_FORMAT => CsvParser::TIME_SECONDS,
                 SubtitleFormatter::OPTION_BOM    => false,
@@ -203,20 +202,20 @@ class CsvFormatterTest extends TestCase
 
         $this->assertSame(
             "start,end,text\n1,2,\"- Hi.\n- Hello.\"\n3,4,=SUM(A1)\n5,6,+1 @home\n",
-            $subtitle->format(CsvFormatter::class, $options)
+            $subtitle->toString(Format::Csv, $options)
         );
         $this->assertSame(
             "start,end,text\n1,2,\"'- Hi.\n- Hello.\"\n3,4,'=SUM(A1)\n5,6,'+1 @home\n",
-            $subtitle->format(CsvFormatter::class, [CsvFormatter::OPTION_ESCAPE_FORMULAS => true] + $options)
+            $subtitle->toString(Format::Csv, [CsvFormatter::OPTION_ESCAPE_FORMULAS => true] + $options)
         );
     }
 
 
     public function testRoundTripsThroughTheParser(): void
     {
-        $csv = self::english()->format(CsvFormatter::class);
+        $csv = self::english()->toString(Format::Csv);
 
-        $this->assertSame($csv, Subtitle::parse($csv, CsvParser::class)->format(CsvFormatter::class));
+        $this->assertSame($csv, Subtitle::fromString($csv, Format::Csv)->toString(Format::Csv));
     }
 
 
@@ -237,6 +236,6 @@ class CsvFormatterTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        self::english()->format(CsvFormatter::class, $options);
+        self::english()->toString(Format::Csv, $options);
     }
 }

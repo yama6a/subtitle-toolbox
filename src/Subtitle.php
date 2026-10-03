@@ -12,7 +12,6 @@ use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\OcrEngine;
 use SubtitleToolbox\Ocr\OcrRunner;
-use SubtitleToolbox\Parsers\SubtitleParser;
 
 
 class Subtitle implements \IteratorAggregate, \Countable
@@ -63,48 +62,41 @@ class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Parses $content with $parserClass, or with the parser that detectParser() returns when $parserClass is null.
-     * A UTF-16 or UTF-32 BOM, or else $sourceEncoding such as "Windows-1252", sets the encoding to convert from.
-     * A parser instance in place of the class name keeps its settings, such as lenient mode, and its warnings.
+     * Reads $content in $format. A UTF-16 or UTF-32 BOM, or else $sourceEncoding such as "Windows-1252", sets the
+     * encoding to convert from.
      */
-    public static function parse(string $content, string|SubtitleParser|null $parserClass = null, ?string $sourceEncoding = null): self
+    public static function fromString(string $content, Format $format, ?string $sourceEncoding = null): self
+    {
+        $parserClass = FormatRegistry::parserClass($format)
+            ?? throw new InvalidParserException("The format {$format->value} can be written but not read.");
+        if ($format === Format::VobSub) {
+            throw new InvalidParserException("VobSub needs the content of its .idx file. Use VobSubParser.");
+        }
+
+        return (new $parserClass())->parse(StringHelpers::convertToUtf8($content, $sourceEncoding));
+    }
+
+
+    /**
+     * Reads $content in the format that Format::detect() finds. It tries only formats whose isAutoDetected() is true.
+     */
+    public static function fromStringAutoDetectFormat(string $content, ?string $sourceEncoding = null): self
     {
         $content = StringHelpers::convertToUtf8($content, $sourceEncoding);
+        $format  = Format::detect($content)
+            ?? throw new InvalidParserException("The subtitle format of the content is unknown. Call fromString() with a format.");
 
-        $parserClass ??= self::detectParser($content)
-            ?? throw new InvalidParserException("The subtitle format of the content is unknown. Pass a parser class.");
-
-        if ($parserClass instanceof SubtitleParser) {
-            return $parserClass->parse($content);
-        }
-
-        if (!is_subclass_of($parserClass, SubtitleParser::class)) {
-            throw new InvalidParserException("The supplied parser $parserClass " .
-                                             "is not of type " . SubtitleParser::class);
-        }
-
-        return (new $parserClass())->parse($content);
+        return self::fromString($content, $format);
     }
 
 
     /**
-     * Returns the parser class for the format of $content, or null when no known format matches.
+     * Writes the subtitle in $format and throws on an image cue without text, unless the format writes images.
      */
-    public static function detectParser(string $content): ?string
+    public function toString(Format $format, array $options = []): string
     {
-        return FormatDetector::detect($content);
-    }
-
-
-    /**
-     * Writes the subtitle with $formatterClass and throws on an image cue without text, unless the formatter is an ImageFormatter.
-     */
-    public function format(string $formatterClass, array $options = []): string
-    {
-        if (!is_subclass_of($formatterClass, SubtitleFormatter::class)) {
-            throw new InvalidFormatterException("The supplied formatter $formatterClass " .
-                                                "is not of type " . SubtitleFormatter::class);
-        }
+        $formatterClass = FormatRegistry::formatterClass($format)
+            ?? throw new InvalidFormatterException("The format {$format->value} can be read but not written.");
 
         $subtitle = $this;
         if (!is_subclass_of($formatterClass, ImageFormatter::class)) {

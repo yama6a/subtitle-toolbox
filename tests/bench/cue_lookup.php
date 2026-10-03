@@ -3,7 +3,7 @@
 // Times 1,000 calls of getCuesAt() on 100, 2,000 and 20,000 cues, first alone and then each after a setEnd() call.
 // Usage: php tests/bench/cue_lookup.php
 
-use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -13,7 +13,7 @@ const LOOKUPS = 1000;
 
 function buildSubtitle(int $cueCount): Subtitle
 {
-    $source   = Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/real/language_subtitles_dots_tester.srt"), SubRipParser::class);
+    $source   = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/real/language_subtitles_dots_tester.srt"), Format::SubRip);
     $subtitle = new Subtitle();
     // Adding with a sort per cue, as the parsers do, takes minutes at 20,000 cues, so this sorts once.
     for ($copy = 0; count($subtitle) < $cueCount; $copy++) {

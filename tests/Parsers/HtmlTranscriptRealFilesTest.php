@@ -4,7 +4,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\HtmlTranscriptFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -53,16 +53,16 @@ class HtmlTranscriptRealFilesTest extends TestCase
     #[DataProvider("realFiles")]
     public function testFormatterOutputRoundTripsByteForByte(string $fileName): void
     {
-        $html = self::parse($fileName)->format(HtmlTranscriptFormatter::class);
+        $html = self::parse($fileName)->toString(Format::HtmlTranscript);
 
-        $this->assertSame($html, (new HtmlTranscriptParser())->parse($html)->format(HtmlTranscriptFormatter::class));
+        $this->assertSame($html, (new HtmlTranscriptParser())->parse($html)->toString(Format::HtmlTranscript));
     }
 
 
     public function testSpecExampleShapeKeepsItsCuesThroughTheFormatter(): void
     {
         $subtitle = self::parse("spec_example_shape.html");
-        $again    = (new HtmlTranscriptParser())->parse($subtitle->format(HtmlTranscriptFormatter::class));
+        $again    = (new HtmlTranscriptParser())->parse($subtitle->toString(Format::HtmlTranscript));
 
         $this->assertEquals($subtitle->getCues(), $again->getCues());
     }
@@ -70,7 +70,7 @@ class HtmlTranscriptRealFilesTest extends TestCase
 
     public function testParagraphsOfOneSpeakerWithoutAGapJoin(): void
     {
-        $html = self::parse("hhmmss_empty_paragraphs.html")->format(HtmlTranscriptFormatter::class);
+        $html = self::parse("hhmmss_empty_paragraphs.html")->toString(Format::HtmlTranscript);
 
         $this->assertStringStartsWith(
             "<cite>Speaker 1:</cite>\n<time>0:00</time>\n" .

@@ -6,7 +6,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Formatters\SubRipFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\FakeOcrEngine;
 use SubtitleToolbox\Subtitle;
@@ -227,7 +227,7 @@ class VobSubParserTest extends TestCase
         $this->assertTrue(CueImage::isImageCue($subtitle->getCues()[1]));
         $this->assertSame("\xEF\xBB\xBF1\n00:00:03,000 --> 00:00:03,990\nDer Zug\n<i>fährt ab.</i>\n\n" .
                           "2\n01:02:04,456 --> 01:02:06,447\nDer Zug\n<i>fährt ab.</i>\n",
-                          $subtitle->format(SubRipFormatter::class));
+                          $subtitle->toString(Format::SubRip));
     }
 
 
@@ -235,7 +235,7 @@ class VobSubParserTest extends TestCase
     {
         $this->expectException(ImageCueWithoutTextException::class);
 
-        $this->parseFixture("two-tracks-pal")->format(SubRipFormatter::class);
+        $this->parseFixture("two-tracks-pal")->toString(Format::SubRip);
     }
 
 

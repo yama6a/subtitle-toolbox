@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 class TtmlParserTest extends TestCase
@@ -15,10 +16,9 @@ class TtmlParserTest extends TestCase
 
     private function parse(string $body, string $rootAttributes = "", string $head = ""): Subtitle
     {
-        return Subtitle::parse(
+        return Subtitle::fromString(
             self::HEADER . " $rootAttributes><head>$head</head><body>$body</body></tt>",
-            TtmlParser::class
-        );
+            Format::Ttml);
     }
 
 
@@ -32,14 +32,13 @@ class TtmlParserTest extends TestCase
 
     public function testIssueExample(): void
     {
-        $subtitle = Subtitle::parse(
+        $subtitle = Subtitle::fromString(
             "<tt xmlns=\"http://www.w3.org/ns/ttml\" xmlns:tts=\"http://www.w3.org/ns/ttml#styling\" xml:lang=\"en\">\n"
             . "  <body>\n    <div>\n"
             . "      <p begin=\"00:00:01.500\" end=\"00:00:04.000\">Hello<br/><span tts:fontStyle=\"italic\">world</span></p>\n"
             . "      <p begin=\"5s\" dur=\"2500ms\">Second cue</p>\n"
             . "    </div>\n  </body>\n</tt>",
-            TtmlParser::class
-        );
+            Format::Ttml);
         $cues = $subtitle->getCues();
 
         $this->assertSame("en", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
@@ -137,7 +136,7 @@ class TtmlParserTest extends TestCase
 
     public function testBodyBeginOffset(): void
     {
-        $subtitle = Subtitle::parse(self::HEADER . "><body begin=\"5s\"><div><p begin=\"1s\" end=\"2s\">x</p></div></body></tt>", TtmlParser::class);
+        $subtitle = Subtitle::fromString(self::HEADER . "><body begin=\"5s\"><div><p begin=\"1s\" end=\"2s\">x</p></div></body></tt>", Format::Ttml);
 
         $this->assertSame([6.0, 7.0], [$subtitle->getCues()[0]->getStart(), $subtitle->getCues()[0]->getEnd()]);
     }
@@ -293,12 +292,11 @@ class TtmlParserTest extends TestCase
 
     public function testDfxpNamespacesAreRead(): void
     {
-        $subtitle = Subtitle::parse(
+        $subtitle = Subtitle::fromString(
             "<tt xmlns=\"http://www.w3.org/2006/10/ttaf1\" xmlns:tts=\"http://www.w3.org/2006/10/ttaf1#style\""
             . " xmlns:ttp=\"http://www.w3.org/2006/10/ttaf1#parameter\" ttp:frameRate=\"25\">"
             . "<body><div><p begin=\"00:00:01:05\" end=\"2s\"><span tts:fontWeight=\"bold\">x</span></p></div></body></tt>",
-            TtmlParser::class
-        );
+            Format::Ttml);
 
         $this->assertSame([1.2, "<b>x</b>"], [$subtitle->getCues()[0]->getStart(), $subtitle->getCues()[0]->getText()]);
     }
@@ -306,11 +304,10 @@ class TtmlParserTest extends TestCase
 
     public function testExternalEntityIsNotLoaded(): void
     {
-        $subtitle = Subtitle::parse(
+        $subtitle = Subtitle::fromString(
             "<?xml version=\"1.0\"?>\n<!DOCTYPE tt [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]>\n"
             . "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div><p begin=\"0s\" end=\"1s\">a&xxe;b</p></div></body></tt>",
-            TtmlParser::class
-        );
+            Format::Ttml);
 
         $this->assertSame("ab", $subtitle->getCues()[0]->getText());
         $this->assertStringNotContainsString("root:", serialize($subtitle));
@@ -319,11 +316,10 @@ class TtmlParserTest extends TestCase
 
     public function testExternalDtdIsNotLoaded(): void
     {
-        $subtitle = Subtitle::parse(
+        $subtitle = Subtitle::fromString(
             "<?xml version=\"1.0\"?>\n<!DOCTYPE tt SYSTEM \"http://127.0.0.1:1/missing.dtd\">\n"
             . "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div><p begin=\"0s\" end=\"1s\">x</p></div></body></tt>",
-            TtmlParser::class
-        );
+            Format::Ttml);
 
         $this->assertSame("x", $subtitle->getCues()[0]->getText());
     }
@@ -344,6 +340,6 @@ class TtmlParserTest extends TestCase
     public function testInvalidFileThrows(string $content): void
     {
         $this->expectException(ParsingException::class);
-        Subtitle::parse($content, TtmlParser::class);
+        Subtitle::fromString($content, Format::Ttml);
     }
 }

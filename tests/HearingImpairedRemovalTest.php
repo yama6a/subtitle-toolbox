@@ -3,10 +3,6 @@
 namespace SubtitleToolbox;
 
 use InvalidArgumentException;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
-use SubtitleToolbox\Parsers\SubRipParser;
-use SubtitleToolbox\Parsers\WebVttParser;
 
 class HearingImpairedRemovalTest extends \PHPUnit\Framework\TestCase
 {
@@ -39,31 +35,31 @@ class HearingImpairedRemovalTest extends \PHPUnit\Framework\TestCase
     public function testRealSubRipFileParsesAndRoundTrips(): void
     {
         $content  = file_get_contents(self::FILES . "own_sdh.srt");
-        $subtitle = Subtitle::parse($content, SubRipParser::class);
+        $subtitle = Subtitle::fromString($content, Format::SubRip);
         $cues     = array_values($subtitle->getCues());
 
         $this->assertCount(14, $cues);
         $this->assertSame([1.0, 3.0, "[TRAIN WHISTLE BLOWS]"], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $this->assertSame([39.5, 42.0, "- # The wheels go round #\n- It stopped raining. (birds chirping)"],
                           [$cues[13]->getStart(), $cues[13]->getEnd(), $cues[13]->getText()]);
-        $this->assertSame($content, $subtitle->format(SubRipFormatter::class, ["lineEnding" => "\r\n", "bom" => true]));
+        $this->assertSame($content, $subtitle->toString(Format::SubRip, ["lineEnding" => "\r\n", "bom" => true]));
     }
 
 
     public function testRealSubRipFileWithDefaultOptions(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FILES . "own_sdh.srt"), SubRipParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "own_sdh.srt"), Format::SubRip);
 
         $this->assertSame($subtitle, $subtitle->removeHearingImpaired());
         $this->assertSame(file_get_contents(self::FILES . "own_sdh_removed.srt"),
-                          $subtitle->format(SubRipFormatter::class, ["lineEnding" => "\r\n", "bom" => true]));
+                          $subtitle->toString(Format::SubRip, ["lineEnding" => "\r\n", "bom" => true]));
         $this->assertSame([], $subtitle->getErrors());
     }
 
 
     public function testRealSubRipFileWithAllOptions(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FILES . "own_sdh.srt"), SubRipParser::class)
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "own_sdh.srt"), Format::SubRip)
             ->removeHearingImpaired(new HearingImpairedOptions(
                 speakerLabelsUpperCaseOnly: false,
                 customBrackets: [["{", "}"]],
@@ -71,13 +67,13 @@ class HearingImpairedRemovalTest extends \PHPUnit\Framework\TestCase
             ));
 
         $this->assertSame(file_get_contents(self::FILES . "own_sdh_removed_all_options.srt"),
-                          $subtitle->format(SubRipFormatter::class));
+                          $subtitle->toString(Format::SubRip));
     }
 
 
     public function testRealWebVttFileParsesAndRoundTrips(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FILES . "own_sdh.vtt"), WebVttParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "own_sdh.vtt"), Format::WebVtt);
         $cues     = array_values($subtitle->getCues());
 
         $this->assertCount(8, $cues);
@@ -85,7 +81,7 @@ class HearingImpairedRemovalTest extends \PHPUnit\Framework\TestCase
         $this->assertSame([21.5, 24.0, "<i>[door opens]\n(footsteps)</i>"],
                           [$cues[7]->getStart(), $cues[7]->getEnd(), $cues[7]->getText()]);
 
-        $again = Subtitle::parse($subtitle->format(WebVttFormatter::class), WebVttParser::class);
+        $again = Subtitle::fromString($subtitle->toString(Format::WebVtt), Format::WebVtt);
         $this->assertSame($this->getTexts($subtitle), $this->getTexts($again));
         $this->assertSame($subtitle->getComments(), $again->getComments());
     }
@@ -93,10 +89,10 @@ class HearingImpairedRemovalTest extends \PHPUnit\Framework\TestCase
 
     public function testRealWebVttFileWithDefaultOptions(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FILES . "own_sdh.vtt"), WebVttParser::class)
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "own_sdh.vtt"), Format::WebVtt)
             ->removeHearingImpaired();
 
-        $this->assertSame(file_get_contents(self::FILES . "own_sdh_removed.vtt"), $subtitle->format(WebVttFormatter::class));
+        $this->assertSame(file_get_contents(self::FILES . "own_sdh_removed.vtt"), $subtitle->toString(Format::WebVtt));
         $this->assertSame([], $subtitle->getErrors());
     }
 

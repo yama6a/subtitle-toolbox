@@ -4,8 +4,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\IttFormatter;
-use SubtitleToolbox\FormatDetector;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -37,7 +36,7 @@ class IttRealFileTest extends TestCase
         string $lastText,
         ?int $lastAlignment
     ): void {
-        $cues = array_values(Subtitle::parse(file_get_contents(self::DIR . $file), IttParser::class)->getCues());
+        $cues = array_values(Subtitle::fromString(file_get_contents(self::DIR . $file), Format::Itt)->getCues());
 
         $this->assertCount($cueCount, $cues);
         $this->assertEqualsWithDelta([$firstStart, $firstEnd], [$cues[0]->getStart(), $cues[0]->getEnd()], 0.001);
@@ -51,16 +50,16 @@ class IttRealFileTest extends TestCase
     #[DataProvider("realFileProvider")]
     public function testRealFileDetectsAsTtml(string $file): void
     {
-        $this->assertSame(TtmlParser::class, FormatDetector::detect(file_get_contents(self::DIR . $file)));
+        $this->assertSame(Format::Ttml, Format::detect(file_get_contents(self::DIR . $file)));
     }
 
 
     #[DataProvider("realFileProvider")]
     public function testRealFileRoundTripKeepsCues(string $file): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . $file), IttParser::class);
-        $output   = $subtitle->format(IttFormatter::class);
-        $reparsed = Subtitle::parse($output, IttParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . $file), Format::Itt);
+        $output   = $subtitle->toString(Format::Itt);
+        $reparsed = Subtitle::fromString($output, Format::Itt);
 
         $this->assertSame(count($subtitle->getCues()), count($reparsed->getCues()));
         foreach ($subtitle->getCues() as $idx => $cue) {
@@ -71,13 +70,13 @@ class IttRealFileTest extends TestCase
         }
         $this->assertSame($subtitle->getAllMetadata(), $reparsed->getAllMetadata());
         $this->assertSame($subtitle->getFormatData("itt"), $reparsed->getFormatData("itt"));
-        $this->assertSame($output, $reparsed->format(IttFormatter::class));
+        $this->assertSame($output, $reparsed->toString(Format::Itt));
     }
 
 
     public function testRealFileFormatData(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "avscript_testing.itt"), IttParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "avscript_testing.itt"), Format::Itt);
 
         $this->assertSame(
             ["timeBase" => "smpte", "frameRate" => "24", "frameRateMultiplier" => "1000 1001", "dropMode" => "nonDrop"],
@@ -89,7 +88,7 @@ class IttRealFileTest extends TestCase
 
     public function testRealFileWithBomKeepsTitleLanguageAndStyles(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "bom_2997_crlf.itt"), IttParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "bom_2997_crlf.itt"), Format::Itt);
         $cues     = $subtitle->getCues();
 
         $this->assertSame("Wetterbericht", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
@@ -102,7 +101,7 @@ class IttRealFileTest extends TestCase
 
     public function testRealFileFinalCutProStyles(): void
     {
-        $cues = Subtitle::parse(file_get_contents(self::DIR . "fcp_23976_styles.itt"), IttParser::class)->getCues();
+        $cues = Subtitle::fromString(file_get_contents(self::DIR . "fcp_23976_styles.itt"), Format::Itt)->getCues();
 
         $this->assertSame([8, "<i>[oven door creaks]</i>"], [$cues[2]->getAlignment(), $cues[2]->getText()]);
         $this->assertSame("Wheat bread takes <u>two</u>.", $cues[4]->getText());

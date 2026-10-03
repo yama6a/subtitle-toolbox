@@ -6,6 +6,7 @@ use SubtitleToolbox\Diff\CueDifference;
 use SubtitleToolbox\Diff\SubtitleDiff;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -91,7 +92,7 @@ class DiffCommand extends ReportCommand
     }
 
 
-    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         $newPath     = $arguments->positionals[1];
         $differences = SubtitleDiff::compare($subtitle, $this->readSecondFile($newPath, $arguments, $console), $this->diffOptions);

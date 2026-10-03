@@ -3,6 +3,7 @@
 namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -18,7 +19,7 @@ class TmPlayerFormatterTest extends TestCase
 
         $this->assertSame(
             "00:00:01:Where are you?|Home.\n00:00:04:Next\n00:00:06:\n01:02:05:Later\n01:02:07:\n01:02:08:Last\n",
-            $subtitle->format(TmPlayerFormatter::class)
+            $subtitle->toString(Format::TmPlayer)
         );
     }
 
@@ -29,7 +30,7 @@ class TmPlayerFormatterTest extends TestCase
             ->addCue(new SubtitleCue(1.1, 1.3, "Short"))
             ->addCue(new SubtitleCue(5, 6, "Next"));
 
-        $this->assertSame("00:00:01:Short\n00:00:02:\n00:00:05:Next\n", $subtitle->format(TmPlayerFormatter::class));
+        $this->assertSame("00:00:01:Short\n00:00:02:\n00:00:05:Next\n", $subtitle->toString(Format::TmPlayer));
     }
 
 
@@ -40,7 +41,7 @@ class TmPlayerFormatterTest extends TestCase
             ->addCue(new SubtitleCue(2, 3, ["<b></b>"]))
             ->addCue(new SubtitleCue(3, 4, "Sun"));
 
-        $this->assertSame("00:00:01:Rain & wind\n00:00:02:\n00:00:03:Sun\n", $subtitle->format(TmPlayerFormatter::class));
+        $this->assertSame("00:00:01:Rain & wind\n00:00:02:\n00:00:03:Sun\n", $subtitle->toString(Format::TmPlayer));
     }
 
 
@@ -48,7 +49,7 @@ class TmPlayerFormatterTest extends TestCase
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(0, 1, "Hello"));
 
-        $this->assertSame("\xEF\xBB\xBF00:00:00:Hello\r\n", $subtitle->format(TmPlayerFormatter::class, [
+        $this->assertSame("\xEF\xBB\xBF00:00:00:Hello\r\n", $subtitle->toString(Format::TmPlayer, [
             SubtitleFormatter::OPTION_LINE_ENDING => "\r\n",
             SubtitleFormatter::OPTION_BOM         => true,
         ]));

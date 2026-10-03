@@ -5,7 +5,6 @@ namespace SubtitleToolbox;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Parsers\MicroDvdParser;
-use SubtitleToolbox\Parsers\SubRipParser;
 
 class SubtitleStatisticsTest extends TestCase
 {
@@ -25,7 +24,7 @@ class SubtitleStatisticsTest extends TestCase
 
     public function testOwnFile(): void
     {
-        $subtitle   = Subtitle::parse(file_get_contents(self::FILES . "/statistics/own_bakery.srt"), SubRipParser::class);
+        $subtitle   = Subtitle::fromString(file_get_contents(self::FILES . "/statistics/own_bakery.srt"), Format::SubRip);
         $statistics = SubtitleStatistics::of($subtitle);
 
         $this->assertSame(4, $statistics->getCueCount());
@@ -45,7 +44,7 @@ class SubtitleStatisticsTest extends TestCase
 
     public function testToArrayEncodesAsJson(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FILES . "/statistics/own_bakery.srt"), SubRipParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "/statistics/own_bakery.srt"), Format::SubRip);
         $array    = SubtitleStatistics::of($subtitle)->toArray();
 
         $this->assertSame(["cueCount", "wordCount", "characterCount", "totalDisplayTime", "span", "charactersPerSecond",

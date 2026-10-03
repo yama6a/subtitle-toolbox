@@ -3,7 +3,7 @@
 namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -11,33 +11,33 @@ class SubRipFormatterTest extends TestCase
 {
     public function testSubtitleIsFormattedCorrectly()
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/valid.srt"), SubRipParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/valid.srt"), Format::SubRip);
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/srt/valid.srt"),
-            $subtitle->format(SubRipFormatter::class)
+            $subtitle->toString(Format::SubRip)
         );
     }
 
 
     public function testUnsupportedXmlTagsAreStrippedAway()
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/strip_xml.srt"), SubRipParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/strip_xml.srt"), Format::SubRip);
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/srt/valid.srt"),
-            $subtitle->format(SubRipFormatter::class)
+            $subtitle->toString(Format::SubRip)
         );
     }
 
 
     public function testAllXmlTagsAreStrippedAwayIfOptionIsSet()
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/strip_xml.srt"), SubRipParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/strip_xml.srt"), Format::SubRip);
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/srt/all_tags_stripped.srt"),
-            $subtitle->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+            $subtitle->toString(Format::SubRip, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
         );
     }
 
@@ -48,22 +48,22 @@ class SubRipFormatterTest extends TestCase
 
         $this->assertSame(
             "\u{feff}1\n00:00:01,000 --> 00:00:02,000\n<s>struck</s> plain\n",
-            $subtitle->format(SubRipFormatter::class)
+            $subtitle->toString(Format::SubRip)
         );
         $this->assertSame(
             "\u{feff}1\n00:00:01,000 --> 00:00:02,000\nstruck plain\n",
-            $subtitle->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+            $subtitle->toString(Format::SubRip, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
         );
     }
 
 
     public function testTimestampsAreWrittenInTheStandardForm(): void
     {
-        $subtitle = Subtitle::parse("1\n0:00:01.5 --> 0:00:02.25\nText\n", SubRipParser::class);
+        $subtitle = Subtitle::fromString("1\n0:00:01.5 --> 0:00:02.25\nText\n", Format::SubRip);
 
         $this->assertSame(
             "\u{feff}1\n00:00:01,500 --> 00:00:02,250\nText\n",
-            $subtitle->format(SubRipFormatter::class)
+            $subtitle->toString(Format::SubRip)
         );
     }
 
@@ -71,23 +71,23 @@ class SubRipFormatterTest extends TestCase
     public function testCoordinatesAreWrittenBack(): void
     {
         $raw      = "\u{feff}1\n00:00:01,000 --> 00:00:04,000 X1:100 X2:600 Y1:40 Y2:80\nText\n";
-        $subtitle = Subtitle::parse($raw, SubRipParser::class);
+        $subtitle = Subtitle::fromString($raw, Format::SubRip);
 
-        $this->assertSame($raw, $subtitle->format(SubRipFormatter::class));
+        $this->assertSame($raw, $subtitle->toString(Format::SubRip));
     }
 
 
     public function testAlignmentIsWrittenAtTheStartOfTheFirstLine(): void
     {
-        $subtitle = Subtitle::parse("1\n00:00:01,000 --> 00:00:04,000\n<i>The train</i> {\\an8}leaves\nsoon\n", SubRipParser::class);
+        $subtitle = Subtitle::fromString("1\n00:00:01,000 --> 00:00:04,000\n<i>The train</i> {\\an8}leaves\nsoon\n", Format::SubRip);
 
         $this->assertSame(
             "\u{feff}1\n00:00:01,000 --> 00:00:04,000\n{\\an8}<i>The train</i> leaves\nsoon\n",
-            $subtitle->format(SubRipFormatter::class)
+            $subtitle->toString(Format::SubRip)
         );
         $this->assertSame(
             "\u{feff}1\n00:00:01,000 --> 00:00:04,000\n{\\an8}The train leaves\nsoon\n",
-            $subtitle->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+            $subtitle->toString(Format::SubRip, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
         );
     }
 
@@ -100,7 +100,7 @@ class SubRipFormatterTest extends TestCase
 
         $this->assertSame(
             "\u{feff}1\n00:00:01,000 --> 00:00:02,000\nBottom center\n\n2\n00:00:03,000 --> 00:00:04,000\nDefault\n",
-            $subtitle->format(SubRipFormatter::class)
+            $subtitle->toString(Format::SubRip)
         );
     }
 
@@ -111,7 +111,7 @@ class SubRipFormatterTest extends TestCase
 
         $this->assertSame(
             "\u{feff}1\n00:00:01,000 --> 00:00:02,000\nBefore\nAfter\n",
-            $subtitle->format(SubRipFormatter::class)
+            $subtitle->toString(Format::SubRip)
         );
     }
 
@@ -122,11 +122,11 @@ class SubRipFormatterTest extends TestCase
 
         $this->assertSame(
             "\u{feff}1\n00:00:01,000 --> 00:00:02,000\nI <3 bread & jam\n<i>Salt & pepper</i> 2 > 1\n",
-            $subtitle->format(SubRipFormatter::class)
+            $subtitle->toString(Format::SubRip)
         );
         $this->assertSame(
             "\u{feff}1\n00:00:01,000 --> 00:00:02,000\nI <3 bread & jam\nSalt & pepper 2 > 1\n",
-            $subtitle->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+            $subtitle->toString(Format::SubRip, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
         );
     }
 
@@ -135,7 +135,7 @@ class SubRipFormatterTest extends TestCase
     {
         $raw = "\u{feff}1\n00:00:01,000 --> 00:00:02,000\nI <3 bread & jam\n";
 
-        $this->assertSame($raw, Subtitle::parse($raw, SubRipParser::class)->format(SubRipFormatter::class));
+        $this->assertSame($raw, Subtitle::fromString($raw, Format::SubRip)->toString(Format::SubRip));
     }
 
 
@@ -143,9 +143,9 @@ class SubRipFormatterTest extends TestCase
     {
         $raw = "\u{feff}1\n00:00:01,000 --> 00:00:02,000\ncaf\xE9 & <i>cr\xE8me</i>\n";
 
-        $subtitle = Subtitle::parse($raw, SubRipParser::class);
+        $subtitle = Subtitle::fromString($raw, Format::SubRip);
 
         $this->assertSame(["caf\xE9 &amp; <i>cr\xE8me</i>"], $subtitle->getCues()[0]->getLines());
-        $this->assertSame($raw, $subtitle->format(SubRipFormatter::class));
+        $this->assertSame($raw, $subtitle->toString(Format::SubRip));
     }
 }

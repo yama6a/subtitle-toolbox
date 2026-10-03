@@ -4,14 +4,14 @@ Media servers and subtitle managers get MKV files with embedded subtitles. `Matr
 
 ```php
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
-use SubtitleToolbox\Formatters\SubRipFormatter;
+use SubtitleToolbox\Format;
 
 $mkv = MatroskaReader::open('/media/movie.mkv');                 // a path or a seekable stream resource
 foreach ($mkv->getSubtitleTracks() as $track) {
     echo "$track->number $track->codecId $track->language $track->name", PHP_EOL;   // 3 S_TEXT/UTF8 de Deutsch (Forced)
 }
 $german = $mkv->extract(3);                                     // a Subtitle
-file_put_contents('movie.de.srt', $german->format(SubRipFormatter::class));
+file_put_contents('movie.de.srt', $german->toString(Format::SubRip));
 ```
 
 | Codec | Becomes |

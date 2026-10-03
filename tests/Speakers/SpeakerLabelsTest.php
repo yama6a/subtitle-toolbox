@@ -5,12 +5,7 @@ namespace SubtitleToolbox\Speakers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\TtmlFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
-use SubtitleToolbox\Parsers\SubRipParser;
-use SubtitleToolbox\Parsers\TtmlParser;
-use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -44,7 +39,7 @@ class SpeakerLabelsTest extends TestCase
 
     private static function voices(): Subtitle
     {
-        return Subtitle::parse(file_get_contents(self::FILES . "voices.vtt"), WebVttParser::class);
+        return Subtitle::fromString(file_get_contents(self::FILES . "voices.vtt"), Format::WebVtt);
     }
 
 
@@ -66,20 +61,20 @@ class SpeakerLabelsTest extends TestCase
                           [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $this->assertSame([15.2, 17.4, "<v Clara>We meet again next week.</v>"],
                           [$cues[6]->getStart(), $cues[6]->getEnd(), $cues[6]->getText()]);
-        $this->assertSame(file_get_contents(self::FILES . "voices.vtt"), $subtitle->format(WebVttFormatter::class, self::NO_BOM));
+        $this->assertSame(file_get_contents(self::FILES . "voices.vtt"), $subtitle->toString(Format::WebVtt, self::NO_BOM));
     }
 
 
     public function testSdhLabelsFileParsesAndRoundTrips(): void
     {
         $content  = file_get_contents(self::FILES . "sdh_labels.srt");
-        $subtitle = Subtitle::parse($content, SubRipParser::class);
+        $subtitle = Subtitle::fromString($content, Format::SubRip);
         $cues     = array_values($subtitle->getCues());
 
         $this->assertCount(7, $cues);
         $this->assertSame([1.0, 3.0, "JOHN: The gate opens at nine."], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $this->assertSame([14.2, 16.0, "MARY: Next time,\nCHLOÉ: drives."], [$cues[6]->getStart(), $cues[6]->getEnd(), $cues[6]->getText()]);
-        $this->assertSame($content, $subtitle->format(SubRipFormatter::class, self::NO_BOM + ["lineEnding" => "\r\n"]));
+        $this->assertSame($content, $subtitle->toString(Format::SubRip, self::NO_BOM + ["lineEnding" => "\r\n"]));
     }
 
 
@@ -113,7 +108,7 @@ class SpeakerLabelsTest extends TestCase
         $subtitle = self::voices();
 
         $this->assertSame($subtitle, SpeakerLabels::toPrefix($subtitle));
-        $this->assertSame(file_get_contents(self::FILES . "voices_prefix.srt"), $subtitle->format(SubRipFormatter::class, self::NO_BOM));
+        $this->assertSame(file_get_contents(self::FILES . "voices_prefix.srt"), $subtitle->toString(Format::SubRip, self::NO_BOM));
     }
 
 
@@ -155,7 +150,7 @@ class SpeakerLabelsTest extends TestCase
         $subtitle = self::voices();
 
         $this->assertSame($subtitle, SpeakerLabels::toDialogueDashes($subtitle));
-        $this->assertSame(file_get_contents(self::FILES . "voices_dashes.srt"), $subtitle->format(SubRipFormatter::class, self::NO_BOM));
+        $this->assertSame(file_get_contents(self::FILES . "voices_dashes.srt"), $subtitle->toString(Format::SubRip, self::NO_BOM));
     }
 
 
@@ -191,7 +186,7 @@ class SpeakerLabelsTest extends TestCase
         $subtitle = self::voices();
 
         $this->assertSame($subtitle, SpeakerLabels::toColours($subtitle));
-        $this->assertSame(file_get_contents(self::FILES . "voices_colours.srt"), $subtitle->format(SubRipFormatter::class, self::NO_BOM));
+        $this->assertSame(file_get_contents(self::FILES . "voices_colours.srt"), $subtitle->toString(Format::SubRip, self::NO_BOM));
     }
 
 
@@ -245,10 +240,10 @@ class SpeakerLabelsTest extends TestCase
 
     public function testFromPrefixFile(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FILES . "sdh_labels.srt"), SubRipParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "sdh_labels.srt"), Format::SubRip);
 
         $this->assertSame($subtitle, SpeakerLabels::fromPrefix($subtitle));
-        $this->assertSame(file_get_contents(self::FILES . "sdh_labels_voices.vtt"), $subtitle->format(WebVttFormatter::class, self::NO_BOM));
+        $this->assertSame(file_get_contents(self::FILES . "sdh_labels_voices.vtt"), $subtitle->toString(Format::WebVtt, self::NO_BOM));
     }
 
 
@@ -300,8 +295,8 @@ class SpeakerLabelsTest extends TestCase
     {
         $subtitle = SpeakerLabels::fromPrefix(self::subtitle("DR. O'NEIL: Yes.\nMARY: No."));
 
-        $vtt  = Subtitle::parse($subtitle->format(WebVttFormatter::class), WebVttParser::class);
-        $ttml = Subtitle::parse($subtitle->format(TtmlFormatter::class), TtmlParser::class);
+        $vtt  = Subtitle::fromString($subtitle->toString(Format::WebVtt), Format::WebVtt);
+        $ttml = Subtitle::fromString($subtitle->toString(Format::Ttml), Format::Ttml);
 
         $this->assertSame(["Dr. O'Neil" => 1, "Mary" => 1], SpeakerLabels::list($vtt));
         $this->assertSame(["Dr. O'Neil" => 1, "Mary" => 1], SpeakerLabels::list($ttml));
@@ -341,7 +336,7 @@ class SpeakerLabelsTest extends TestCase
         $this->assertSame([6.3, 8.0, "<v 0>Then we can go."], [$cues[3]->getStart(), $cues[3]->getEnd(), $cues[3]->getText()]);
         $this->assertSame("?", $cues[2]->getFormatData("whisper")["speaker"]);
         $this->assertSame([0 => 2, 1 => 1, "?" => 1], SpeakerLabels::list($subtitle));
-        $this->assertSame(file_get_contents(self::FILES . "whisper_cpp_diarize.vtt"), $subtitle->format(WebVttFormatter::class, self::NO_BOM));
+        $this->assertSame(file_get_contents(self::FILES . "whisper_cpp_diarize.vtt"), $subtitle->toString(Format::WebVtt, self::NO_BOM));
     }
 
 
@@ -356,7 +351,7 @@ class SpeakerLabelsTest extends TestCase
         $this->assertSame(["Anna" => 1, "Ben" => 2], SpeakerLabels::list($subtitle));
 
         SpeakerLabels::toPrefix($subtitle);
-        $this->assertSame(file_get_contents(self::FILES . "whisperx_diarize_prefix.srt"), $subtitle->format(SubRipFormatter::class, self::NO_BOM));
+        $this->assertSame(file_get_contents(self::FILES . "whisperx_diarize_prefix.srt"), $subtitle->toString(Format::SubRip, self::NO_BOM));
     }
 
 

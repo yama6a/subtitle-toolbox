@@ -4,13 +4,8 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\AssFormatter;
-use SubtitleToolbox\Formatters\EbuStlFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
-use SubtitleToolbox\Formatters\SbvFormatter;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\TtmlFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -22,28 +17,28 @@ class ParseSpeedTest extends TestCase
     public static function formats(): array
     {
         return [
-            "SubRip"   => [SubRipParser::class, SubRipFormatter::class, []],
-            "WebVTT"   => [WebVttParser::class, WebVttFormatter::class, []],
-            "SBV"      => [SbvParser::class, SbvFormatter::class, []],
-            "ASS"      => [AssParser::class, AssFormatter::class, []],
-            "MicroDVD" => [MicroDvdParser::class, MicroDvdFormatter::class, [
+            "SubRip"   => [Format::SubRip, []],
+            "WebVTT"   => [Format::WebVtt, []],
+            "SBV"      => [Format::Sbv, []],
+            "ASS"      => [Format::Ass, []],
+            "MicroDVD" => [Format::MicroDvd, [
                 MicroDvdFormatter::OPTION_FRAME_RATE            => 25,
                 MicroDvdFormatter::OPTION_WRITE_FRAME_RATE_LINE => true,
             ]],
-            "TTML"     => [TtmlParser::class, TtmlFormatter::class, []],
-            "EBU STL"  => [EbuStlParser::class, EbuStlFormatter::class, []],
+            "TTML"     => [Format::Ttml, []],
+            "EBU STL"  => [Format::EbuStl, []],
         ];
     }
 
 
     // A parser that sorts the cues after each added cue takes minutes here.
     #[DataProvider("formats")]
-    public function testParsesTwentyThousandCuesUnderTenSeconds(string $parserClass, string $formatterClass, array $options): void
+    public function testParsesTwentyThousandCuesUnderTenSeconds(Format $format, array $options): void
     {
-        $content = $this->repeatFixture(self::CUE_COUNT)->format($formatterClass, $options);
+        $content = $this->repeatFixture(self::CUE_COUNT)->toString($format, $options);
 
         $start    = microtime(true);
-        $subtitle = Subtitle::parse($content, $parserClass);
+        $subtitle = Subtitle::fromString($content, $format);
 
         $this->assertLessThan(10, microtime(true) - $start);
         $this->assertCount(self::CUE_COUNT, $subtitle->getCues());
@@ -53,7 +48,7 @@ class ParseSpeedTest extends TestCase
 
     private function repeatFixture(int $cueCount): Subtitle
     {
-        $cues     = Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/real/own_escaping.srt"), SubRipParser::class)->getCues();
+        $cues     = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/real/own_escaping.srt"), Format::SubRip)->getCues();
         $period   = ceil(end($cues)->getEnd()) + 1;
         $subtitle = new Subtitle();
         for ($index = 0; $index < $cueCount; $index++) {

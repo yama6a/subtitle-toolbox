@@ -3,8 +3,7 @@
 namespace SubtitleToolbox\Sync;
 
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -12,7 +11,7 @@ class ReferenceSyncSplitTest extends TestCase
 {
     private function load(string $name): Subtitle
     {
-        return Subtitle::parse(file_get_contents(__DIR__ . "/../files/sync/$name"), SubRipParser::class);
+        return Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sync/$name"), Format::SubRip);
     }
 
 
@@ -81,7 +80,7 @@ class ReferenceSyncSplitTest extends TestCase
         $result = ReferenceSync::sync($target, $reference, new ReferenceSyncOptions(-180, 180, maxSplits: 2));
         $this->assertSame($target, $result->apply($target));
         $this->assertSame(file_get_contents(__DIR__ . "/../files/sync/own_target_de_split_synced.srt"),
-                          $target->format(SubRipFormatter::class));
+                          $target->toString(Format::SubRip));
 
         $referenceStarts = array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $reference->getCues());
         $matched         = 0;

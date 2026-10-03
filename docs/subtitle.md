@@ -58,14 +58,13 @@ $subtitle->filterCues(fn (SubtitleCue $cue) => $cue->getEnd() - $cue->getStart()
 A **forced cue** shows also when the viewer has turned subtitles off, for example the translation of a sign. Apple and Netflix take a full subtitle file and a separate file with only the forced cues.
 
 ```php
-use SubtitleToolbox\Formatters\IttFormatter;
-use SubtitleToolbox\Parsers\IttParser;
+use SubtitleToolbox\Format;
 
-$subtitle = Subtitle::parse(file_get_contents('movie.itt'), IttParser::class);   // <p itts:forcedDisplay="true">Sector 7 ahead</p>
-$subtitle->getCues()[3]->isForced();                            // true
+$subtitle = Subtitle::fromString(file_get_contents('movie.itt'), Format::Itt);   // <p itts:forcedDisplay="true">Sector 7 ahead</p>
+$subtitle->getCues()[3]->isForced();                                             // true
 $subtitle->getCues()[4]->setForced(true);
 $forced = $subtitle->forcedOnly();                              // a new Subtitle with copies of the forced cues
-file_put_contents('movie.forced.itt', $forced->format(IttFormatter::class));
+file_put_contents('movie.forced.itt', $forced->toString(Format::Itt));
 ```
 
 | Format | Read | Write |

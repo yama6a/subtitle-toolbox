@@ -2,6 +2,7 @@
 
 namespace SubtitleToolbox\Cli;
 
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Validation\ValidationResult;
 use SubtitleToolbox\Validation\ValidationRules;
@@ -117,7 +118,7 @@ class ValidateCommand extends ReportCommand
     }
 
 
-    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         $results = $subtitle->validate($this->rules);
         if ($results !== []) {
@@ -134,7 +135,7 @@ class ValidateCommand extends ReportCommand
 
         $this->emit($console, $text, [
             "file"    => $label,
-            "format"  => $format,
+            "format"  => $format->value,
             "valid"   => $results === [],
             "results" => array_map(fn (ValidationResult $result): array => [
                 "cueIndex"  => $result->getCueIndex(),

@@ -3,7 +3,7 @@
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
-use SubtitleToolbox\FormatRegistry;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\CsvFormatter;
 use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
@@ -19,7 +19,7 @@ abstract class WriteCommand extends FileCommand
 {
     private const LINE_ENDINGS = ["lf" => StringHelpers::UNIX_LINE_ENDING, "crlf" => StringHelpers::WINDOWS_LINE_ENDING];
 
-    protected ?string $toFormat = null;
+    protected ?Format $toFormat = null;
 
     protected ?string $output = null;
 
@@ -146,29 +146,27 @@ abstract class WriteCommand extends FileCommand
     }
 
 
-    public static function writableFormat(string $nameOrExtension): string
+    public static function writableFormat(string $nameOrExtension): Format
     {
-        $format = FormatRegistry::find($nameOrExtension)
-            ?? self::fail("Unknown format \"$nameOrExtension\". Run \"" . Application::NAME . " formats\" for the list.");
-        if (FormatRegistry::formatterClass($format) === null) {
-            self::fail("The format $format can be read but not written.");
+        $format = self::findFormat($nameOrExtension);
+        if (!$format->canWrite()) {
+            self::fail("The format $format->value can be read but not written.");
         }
 
         return $format;
     }
 
 
-    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         $this->transform($subtitle, $arguments);
         $subtitle = $this->rebuild($subtitle, $arguments);
 
         $outputFormat = $this->outputFormat($format);
         $target       = $this->target($input, $format, $outputFormat, $arguments);
-        $formatter    = FormatRegistry::formatterClass($outputFormat);
 
         try {
-            $content = $subtitle->format($formatter, $this->formatterOptions($subtitle, $formatter, $format, $outputFormat, $arguments));
+            $content = $subtitle->toString($outputFormat, $this->formatterOptions($subtitle, $format, $outputFormat, $arguments));
         } catch (ImageCueWithoutTextException) {
             self::fail("The file holds image cues without text. Run OCR on them first, or pass --skip-image-cues.");
         }
@@ -195,16 +193,14 @@ abstract class WriteCommand extends FileCommand
 
     /**
      * Returns formatter options of the command for the output format.
-     *
-     * @param class-string<SubtitleFormatter> $formatter
      */
-    protected function commandFormatterOptions(string $formatter, Arguments $arguments): array
+    protected function commandFormatterOptions(Format $outputFormat, Arguments $arguments): array
     {
         return [];
     }
 
 
-    private function outputFormat(string $inputFormat): string
+    private function outputFormat(Format $inputFormat): Format
     {
         if ($this->toFormat !== null) {
             return $this->toFormat;
@@ -212,25 +208,24 @@ abstract class WriteCommand extends FileCommand
 
         if ($this->output !== null && $this->output !== self::DASH) {
             $extension = strtolower(pathinfo($this->output, PATHINFO_EXTENSION));
-            if (in_array($extension, FormatRegistry::extensions($inputFormat), true)
-                && FormatRegistry::formatterClass($inputFormat) !== null) {
+            if (in_array($extension, $inputFormat->extensions(), true) && $inputFormat->canWrite()) {
                 return $inputFormat;
             }
-            $byExtension = FormatRegistry::forExtension($extension);
-            if ($byExtension !== null && FormatRegistry::formatterClass($byExtension) !== null) {
+            $byExtension = Format::fromPath($this->output);
+            if ($byExtension?->canWrite()) {
                 return $byExtension;
             }
         }
-        if (FormatRegistry::formatterClass($inputFormat) !== null) {
+        if ($inputFormat->canWrite()) {
             return $inputFormat;
         }
 
-        return self::fail("The format $inputFormat can be read but not written." .
+        return self::fail("The format $inputFormat->value can be read but not written." .
                           ($this->hasFormatOptions() ? " Pass --to with another format." : ""));
     }
 
 
-    private function target(string $input, string $inputFormat, string $outputFormat, Arguments $arguments): string
+    private function target(string $input, Format $inputFormat, Format $outputFormat, Arguments $arguments): string
     {
         if ($this->output !== null) {
             return $this->output;
@@ -243,7 +238,7 @@ abstract class WriteCommand extends FileCommand
         }
 
         $fileName   = basename($input);
-        $extensions = FormatRegistry::extensions($outputFormat);
+        $extensions = $outputFormat->extensions();
         if (($outputFormat !== $inputFormat || $this->fromContainer) && !in_array(strtolower(pathinfo($fileName, PATHINFO_EXTENSION)), $extensions, true)) {
             $fileName = pathinfo($fileName, PATHINFO_FILENAME) . "." . $extensions[0];
         }
@@ -275,21 +270,21 @@ abstract class WriteCommand extends FileCommand
     }
 
 
-    private function formatterOptions(Subtitle $subtitle, string $formatter, string $inputFormat, string $outputFormat, Arguments $arguments): array
+    private function formatterOptions(Subtitle $subtitle, Format $inputFormat, Format $outputFormat, Arguments $arguments): array
     {
-        $options = $this->formatterOptions + $this->commandFormatterOptions($formatter, $arguments);
+        $options = $this->formatterOptions + $this->commandFormatterOptions($outputFormat, $arguments);
         // CsvFormatter writes the delimiter of the parsed table, so a TSV input would give a CSV file with tabs.
-        if ($outputFormat === "tsv") {
+        if ($outputFormat === Format::Tsv) {
             $options[CsvFormatter::OPTION_DELIMITER] = "\t";
-        } elseif ($outputFormat === "csv" && $inputFormat === "tsv") {
+        } elseif ($outputFormat === Format::Csv && $inputFormat === Format::Tsv) {
             $options[CsvFormatter::OPTION_DELIMITER] = ",";
         }
-        if ($formatter === MicroDvdFormatter::class) {
+        if ($outputFormat === Format::MicroDvd) {
             $options[MicroDvdFormatter::OPTION_FRAME_RATE] = $this->fps
                 ?? $subtitle->getFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
                 ?? self::fail("MicroDVD output needs the frame rate of the video. Pass --fps.");
         }
-        if ($formatter === IttFormatter::class) {
+        if ($outputFormat === Format::Itt) {
             if ($this->fps === null && !isset($subtitle->getFormatData("itt")["frameRate"])) {
                 self::fail("iTT output needs the frame rate of the video. Pass --fps.");
             }

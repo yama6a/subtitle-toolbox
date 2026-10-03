@@ -54,6 +54,7 @@ $result->apply($german);   // shifts each part with its own offset
 Without a reference subtitle, the speech in the audio is the reference. FFmpeg finds the silences, and `SpeechReference` turns the speech between them into cues without text.
 
 ```php
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Sync\SpeechReference;
 
@@ -63,7 +64,7 @@ ReferenceSync::sync($german, $speech)->apply($german);
 
 $speech = SpeechReference::fromIntervals([[1.2, 3.4], [5.0, 7.75]]);   // seconds, from any voice activity detector
 
-$transcript = Subtitle::parse(file_get_contents('whisper.json'));       // a Whisper JSON transcript of the audio
+$transcript = Subtitle::fromString(file_get_contents('whisper.json'), Format::Whisper);   // a Whisper JSON transcript of the audio
 ReferenceSync::sync($german, $transcript)->apply($german);
 ```
 

@@ -4,21 +4,18 @@ namespace SubtitleToolbox;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\WebVttFormatter;
-use SubtitleToolbox\Parsers\AssParser;
-use SubtitleToolbox\Parsers\WebVttParser;
 
 class CueLookupTest extends TestCase
 {
     private function parseSigns(): Subtitle
     {
-        return Subtitle::parse(file_get_contents(__DIR__ . "/files/ass/real/own_signs_crlf.ass"), AssParser::class);
+        return Subtitle::fromString(file_get_contents(__DIR__ . "/files/ass/real/own_signs_crlf.ass"), Format::Ass);
     }
 
 
     private function parseHarbourTour(): Subtitle
     {
-        return Subtitle::parse(file_get_contents(__DIR__ . "/files/editing/harbour_tour.vtt"), WebVttParser::class);
+        return Subtitle::fromString(file_get_contents(__DIR__ . "/files/editing/harbour_tour.vtt"), Format::WebVtt);
     }
 
 
@@ -295,7 +292,7 @@ class CueLookupTest extends TestCase
         );
         $this->assertStringContainsString(
             "NOTE The boat turns left here\n\n4\n00:00:18.000 --> 00:00:20.000",
-            $subtitle->format(WebVttFormatter::class)
+            $subtitle->toString(Format::WebVtt)
         );
     }
 

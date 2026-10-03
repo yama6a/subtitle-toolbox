@@ -3,14 +3,14 @@
 A web app stores the cues in a database and sends them to the browser as JSON. `toArray()`, `fromArray()`, `JsonFormatter` and `JsonParser` convert a subtitle without loss.
 
 ```php
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\JsonFormatter;
-use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Subtitle;
 
 $array = $subtitle->toArray();                     // toArray(false) leaves out the format data
 $copy  = Subtitle::fromArray($array);              // equal to $subtitle
-$json  = $subtitle->format(JsonFormatter::class, [JsonFormatter::OPTION_PRETTY_PRINT => true]);
-$copy  = Subtitle::parse($json, JsonParser::class);
+$json  = $subtitle->toString(Format::Json, [JsonFormatter::OPTION_PRETTY_PRINT => true]);
+$copy  = Subtitle::fromString($json, Format::Json);
 ```
 
 `JsonFormatter` writes this shape. `toArray()` returns the same shape as a PHP array, with binary strings as they are.
@@ -48,4 +48,4 @@ $copy  = Subtitle::parse($json, JsonParser::class);
 - **Errors**: `JsonParser` and `fromArray()` throw `ParsingException` with the path of the bad field, for example `The field cues[3].start must be a number.`
 - **Text**: cue lines and metadata must be UTF-8. Otherwise `JsonFormatter` throws `JsonException`. Parse a file in another encoding with its [source encoding](encodings.md).
 - **Options**: `OPTION_PRETTY_PRINT` indents with 4 spaces and ends with a newline. `OPTION_WITH_FORMAT_DATA => false` leaves out the format data. The options `lineEnding` and `bom` work as in the other formatters.
-- **Detection**: an object with a numeric `version` key and a `cues` list detects as `JsonParser`. Detection fails when more than about 70,000 cues come before the `version` key. Then pass `JsonParser::class`. `JsonFormatter` writes `version` first.
+- **Detection**: an object with a numeric `version` key and a `cues` list detects as `Format::Json`. Detection fails when more than about 70,000 cues come before the `version` key. Then pass `Format::Json`. `JsonFormatter` writes `version` first.

@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -42,7 +43,7 @@ class CloudSpeechParsersTest extends TestCase
 
     public function testReadsTheIssueExample(): void
     {
-        $subtitle = Subtitle::parse(self::ISSUE_EXAMPLE);
+        $subtitle = Subtitle::fromString(self::ISSUE_EXAMPLE, Format::AwsTranscribe);
 
         $this->assertSame([[0.04, 0.98, "Hello world."]], self::cues($subtitle));
         $this->assertSame(["jobName" => "lecture-12"], $subtitle->getFormatData("aws-transcribe"));
@@ -228,7 +229,7 @@ class CloudSpeechParsersTest extends TestCase
     public function testDetectionDoesNotTakeWhisperJson(): void
     {
         foreach (glob(__DIR__ . "/../files/whisper/real/*.json") as $path) {
-            $this->assertSame(WhisperJsonParser::class, Subtitle::detectParser(file_get_contents($path)), basename($path));
+            $this->assertSame(Format::Whisper, Format::detect(file_get_contents($path)), basename($path));
         }
     }
 }

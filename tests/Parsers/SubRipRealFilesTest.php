@@ -4,7 +4,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\SubRipFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -76,14 +76,14 @@ class SubRipRealFilesTest extends TestCase
     public function testRealFileSurvivesARoundTrip(string $fileName): void
     {
         $subtitle  = $this->parseFile($fileName);
-        $formatted = $subtitle->format(SubRipFormatter::class);
-        $reparsed  = Subtitle::parse($formatted, SubRipParser::class);
+        $formatted = $subtitle->toString(Format::SubRip);
+        $reparsed  = Subtitle::fromString($formatted, Format::SubRip);
 
         $this->assertSame(
             array_map($this->describeCue(...), $subtitle->getCues()),
             array_map($this->describeCue(...), $reparsed->getCues())
         );
-        $this->assertSame($formatted, $reparsed->format(SubRipFormatter::class));
+        $this->assertSame($formatted, $reparsed->toString(Format::SubRip));
     }
 
 
@@ -105,7 +105,7 @@ class SubRipRealFilesTest extends TestCase
     {
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/srt/real/own_alignment_and_coordinates_formatted.srt"),
-            $this->parseFile("own_alignment_and_coordinates.srt")->format(SubRipFormatter::class)
+            $this->parseFile("own_alignment_and_coordinates.srt")->toString(Format::SubRip)
         );
     }
 
@@ -114,13 +114,13 @@ class SubRipRealFilesTest extends TestCase
     {
         $raw = file_get_contents(__DIR__ . "/../files/srt/real/own_escaping.srt");
 
-        $this->assertSame($raw, Subtitle::parse($raw, SubRipParser::class)->format(SubRipFormatter::class));
+        $this->assertSame($raw, Subtitle::fromString($raw, Format::SubRip)->toString(Format::SubRip));
     }
 
 
     public function testTimestampWithoutMillisecondsIsWrittenWithMilliseconds(): void
     {
-        $formatted = $this->parseFile("own_timestamp_without_millis.srt")->format(SubRipFormatter::class);
+        $formatted = $this->parseFile("own_timestamp_without_millis.srt")->toString(Format::SubRip);
 
         $this->assertStringStartsWith("\u{feff}1\n00:01:39,000 --> 00:01:41,040\n(train brakes squeal)\n", $formatted);
     }
@@ -140,7 +140,7 @@ class SubRipRealFilesTest extends TestCase
 
     private function parseFile(string $fileName): Subtitle
     {
-        return Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/real/$fileName"), SubRipParser::class);
+        return Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/real/$fileName"), Format::SubRip);
     }
 
 
