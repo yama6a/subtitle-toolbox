@@ -41,6 +41,9 @@ class Application
             new StripSdhCommand(),
             new InfoCommand(),
             new ValidateCommand(),
+            new SyncCommand(),
+            new DiffCommand(),
+            new DualCommand(),
             new HlsCommand(),
             new FormatsCommand(),
         ];

@@ -41,6 +41,8 @@ abstract class FileCommand extends Command
 
     protected bool $wordTimestamps = false;
 
+    private bool $readingSecondFile = false;
+
 
     /**
      * @return list<Option>
@@ -291,7 +293,7 @@ abstract class FileCommand extends Command
 
             return $this->readMatroska(MatroskaReader::open($stream), $input, $arguments, $console);
         }
-        if ($arguments->has("track")) {
+        if ($arguments->has("track") && !$this->readingSecondFile) {
             self::fail("--track needs an MKV or WebM input.");
         }
 
@@ -314,6 +316,26 @@ abstract class FileCommand extends Command
         }
 
         return [$subtitle, $format];
+    }
+
+
+    /**
+     * Reads a file other than the input, such as a reference, with format detection and without --from and --track.
+     */
+    protected function readSecondFile(string $path, Arguments $arguments, Console $console): Subtitle
+    {
+        $state                   = [$this->fromFormat, $this->fromContainer];
+        $this->fromFormat        = null;
+        $this->readingSecondFile = true;
+
+        try {
+            return $this->read($path, $arguments, $console)[0];
+        } catch (\Exception $exception) {
+            return self::fail("$path: " . $exception->getMessage());
+        } finally {
+            [$this->fromFormat, $this->fromContainer] = $state;
+            $this->readingSecondFile                  = false;
+        }
     }
 
 
@@ -346,9 +368,9 @@ abstract class FileCommand extends Command
     private function readMatroska(MatroskaReader $reader, string $input, Arguments $arguments, Console $console): ?array
     {
         $tracks = $reader->getSubtitleTracks();
-        $number = $arguments->positiveInt("track");
+        $number = $this->readingSecondFile ? null : $arguments->positiveInt("track");
         if ($number === null) {
-            if ($this->listTracks($input, $tracks, $console)) {
+            if (!$this->readingSecondFile && $this->listTracks($input, $tracks, $console)) {
                 return null;
             }
             if (count($tracks) !== 1) {

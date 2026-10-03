@@ -43,12 +43,15 @@ php subtitle-toolbox.phar --version
 | `strip-sdh` | removes hearing-impaired annotations, as [`removeHearingImpaired()`](text.md#hearing-impaired-annotations) does |
 | `info` | prints the format, the cue count and statistics, as text or with `--json`. Lists the tracks of an MKV or WebM file |
 | `validate` | prints each broken rule, as text or with `--json`, see [Validate](#validate) |
+| `sync` | retimes a subtitle to a reference subtitle or to the speech, see [Sync](#sync) |
+| `diff` | lists the added, removed and changed cues of two files, see [Diff](#diff) |
+| `dual` | merges two languages into one file, see [Dual](#dual) |
 | `hls` | cuts a subtitle into WebVTT segments and writes an HLS playlist, see [HLS](#hls) |
 | `formats` | lists the format names and extensions for `--from` and `--to` |
 
 - **Help**: `subtitle-toolbox help convert` or `subtitle-toolbox convert --help` lists all options of a command.
 - **Version**: `subtitle-toolbox --version` prints the installed release, for example `1.65.0`, or `dev` in a Git checkout.
-- **Exit code**: 0 when all files succeed, 1 when a file fails or breaks a validation rule, 2 for invalid arguments.
+- **Exit code**: 0 when all files succeed, 1 when a file fails, breaks a validation rule or differs in `diff`, 2 for invalid arguments.
 
 ## Input and output
 - **Inputs**: a file, a directory, a glob such as `"season1/*.srt"`, or `-` for standard input. A directory gives its files with a known extension.
@@ -183,6 +186,56 @@ vendor/bin/subtitle-toolbox fix lecture.json --resegment -o lecture.srt
 ```sh
 vendor/bin/subtitle-toolbox validate movie.srt --preset bbc --no-unbalanced-tags --dialogue-dash '- '
 ```
+
+## Sync
+`sync` finds the scale and the offset with [`ReferenceSync`](sync.md), applies them and prints them to standard error.
+
+```sh
+vendor/bin/subtitle-toolbox sync movie.de.srt --reference movie.en.srt -o movie.de.synced.srt
+```
+
+```
+movie.de.srt: scale 1.04271, offset -2.3 s, score 0.89
+```
+
+| Option | Sets |
+|:--- |:--- |
+| `--reference FILE` | the subtitle in sync with the video, in any format that the tool reads. A Whisper JSON transcript of the audio also works |
+| `--min-offset SECONDS`, `--max-offset SECONDS` | `minOffset` and `maxOffset`, default -60 and 60 |
+| `--no-scale` | `searchScale: false` |
+| `--max-splits N`, `--split-penalty SCORE` | `maxSplits`, default 0, and `splitPenalty`, default 0.1 |
+
+- **Score**: below 0.5, the tool also prints that the files likely do not match. The exit code stays 0.
+- **Splits**: for each part, the tool prints a line such as `movie.de.srt: from 414.32 s: offset 147.7 s`.
+- **Reference**: the tool detects the format of the reference. `--from` and `--track` apply only to the input.
+
+## Diff
+`diff` compares an old and a new file with [`SubtitleDiff`](compare.md) and prints `toText()`. The files can have different formats. The exit code is 1 when they differ, as with `diff`. Equal files give no output.
+
+```sh
+vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-formatting
+```
+
+| Option | Sets |
+|:--- |:--- |
+| `--time-tolerance SECONDS` | `timeTolerance`, default 0.001 |
+| `--ignore-formatting`, `--ignore-whitespace`, `--text-only` | `ignoreFormatting`, `ignoreWhitespace`, `textOnly` |
+| `--json` | one object with `old`, `new`, `equal` and `differences`. A difference has `kind`, `oldIndex`, `newIndex`, `old` and `new`. A cue has `start`, `end`, `lines` and `forced` |
+
+## Dual
+`dual` merges a primary and a secondary subtitle with [`DualSubtitle::merge()`](editing.md#dual-subtitles). The output has the format of the primary file, unless `--to` or the `--output` extension sets another one.
+
+```sh
+vendor/bin/subtitle-toolbox dual movie.en.srt movie.de.srt --secondary-style i -o movie.en-de.srt
+vendor/bin/subtitle-toolbox dual movie.en.srt movie.de.srt --mode top-bottom -o movie.en-de.ass
+```
+
+| Option | Sets |
+|:--- |:--- |
+| `--mode MODE` | `stack` (default) or `top-bottom` |
+| `--secondary-style TAG` | `secondaryStyle`, for example `i` or `'font color="#ffff00"'` |
+| `--secondary-alignment 1-9` | `secondaryAlignment` for `top-bottom`, default 8 |
+| `--snap-tolerance SECONDS` | `snapTolerance` for `top-bottom`, default 0.25 |
 
 ## HLS
 `hls` cuts one subtitle into WebVTT segments with [`HlsWebVttSegmenter`](hls.md) and writes them with the playlist into `--output-dir`.
