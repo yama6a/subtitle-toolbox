@@ -6,6 +6,8 @@ use Closure;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Cli\Arguments;
+use SubtitleToolbox\Container\Matroska\MatroskaReader;
+use SubtitleToolbox\Container\Matroska\MkvFixtureWriter;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\DualSubtitleOptions;
 use SubtitleToolbox\Encoding\Cea608;
@@ -72,6 +74,8 @@ use SubtitleToolbox\Translation\TranslationEngine;
 use SubtitleToolbox\Translation\TranslationOptions;
 use SubtitleToolbox\Translation\TranslationRunner;
 use SubtitleToolbox\Validation\ValidationRules;
+
+require_once __DIR__ . "/../files/mkv/generator/MkvFixtureWriter.php";
 
 class ThrowSitesTest extends TestCase
 {
@@ -149,6 +153,20 @@ class ThrowSitesTest extends TestCase
     }
 
 
+    /**
+     * Opens an MKV file with one S_TEXT/UTF8 track 2, the given track fields and the given segment data after the Tracks element.
+     */
+    private static function mkv(string $clusters, array $track = [], string $cut = ""): MatroskaReader
+    {
+        $tracks = MkvFixtureWriter::element(MkvFixtureWriter::TRACKS, MkvFixtureWriter::trackEntry($track + [
+            "number" => 2, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "S_TEXT/UTF8",
+        ]));
+        $file   = MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT, $tracks . $clusters);
+
+        return MatroskaReader::open(self::stream($cut === "" ? $file : substr($file, 0, -strlen($cut))));
+    }
+
+
     private static function fromArray(array $data): Subtitle
     {
         return Subtitle::fromArray($data + ["version" => Subtitle::ARRAY_VERSION, "cues" => []]);
@@ -193,6 +211,30 @@ class ThrowSitesTest extends TestCase
             "ArrayConversion.php: map no object"            => [fn () => self::fromArray(["metadata" => 5]), ...$parsing],
             "ArrayConversion.php: comments no list"         => [fn () => self::fromArray(["comments" => 5]), ...$parsing],
             "Cli/Command.php: unknown option"               => [fn () => Arguments::parse(["--nope"], []), ...$invalid],
+            "Container/Matroska/EbmlReader.php: invalid element header" => [fn () => MatroskaReader::open(self::stream("\0\0\0\0")), ...$parsing],
+            "Container/Matroska/EbmlReader.php: cut off element data" => [fn () => self::mkv("", ["codecPrivate" => "abc"], "c"), ...$parsing],
+            "Container/Matroska/MatroskaReader.php: stream not seekable" => [fn () => MatroskaReader::open(fopen("php://output", "wb")), ...$invalid],
+            "Container/Matroska/MatroskaReader.php: unknown track" => [fn () => self::mkv("")->extract(9), ...$invalid],
+            "Container/Matroska/MatroskaReader.php: unsupported codec" => [fn () => self::mkv("", ["codecId" => "S_VOBSUB"])->extract(2), ...$parsing],
+            "Container/Matroska/MatroskaReader.php: not Matroska" => [fn () => MatroskaReader::open(self::stream(MkvFixtureWriter::ebmlHeader("avi"))),
+                                                                ...$parsing],
+            "Container/Matroska/MatroskaReader.php: no Tracks" => [fn () => MatroskaReader::open(self::stream(MkvFixtureWriter::ebmlHeader() .
+                                                                MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT, MkvFixtureWriter::info()))), ...$parsing],
+            "Container/Matroska/MatroskaReader.php: invalid block header" => [fn () => self::mkv(MkvFixtureWriter::cluster(0, [
+                                                                MkvFixtureWriter::element(0xA3, "\0\0\0\0")]))->extract(2), ...$parsing],
+            "Container/Matroska/MatroskaReader.php: laced subtitle block" => [fn () => self::mkv(MkvFixtureWriter::cluster(0, [
+                                                                MkvFixtureWriter::simpleBlock(2, 0, "\0x", MkvFixtureWriter::LACING_XIPH)]))->extract(2), ...$parsing],
+            "Container/Matroska/MatroskaReader.php: bzlib compression" => [fn () => self::mkv(MkvFixtureWriter::cluster(0, [
+                                                                MkvFixtureWriter::blockGroup(2, 0, "BZh9", 1000)]),
+                                                                ["encodings" => MkvFixtureWriter::compression(0, 1)])->extract(2), ...$parsing],
+            "Container/Matroska/MatroskaReader.php: invalid zlib data" => [fn () => self::mkv(MkvFixtureWriter::cluster(0, [
+                                                                MkvFixtureWriter::blockGroup(2, 0, "not zlib", 1000)]),
+                                                                ["encodings" => MkvFixtureWriter::compression(0, 0)])->extract(2), ...$parsing],
+            "Container/Matroska/MatroskaReader.php: child larger than its parent" => [fn () => MatroskaReader::open(self::stream(
+                                                                "\x1A\x45\xDF\xA3\x84\x42\x82\x88matroska")), ...$parsing],
+            "Container/Matroska/MatroskaReader.php: unknown size of Tracks" => [fn () => MatroskaReader::open(self::stream(
+                                                                MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT,
+                                                                MkvFixtureWriter::unknownSizeElement(MkvFixtureWriter::TRACKS, "")))), ...$parsing],
             "CueEditing.php: slice start after end"         => [fn () => self::subtitle()->slice(5, 1), ...$invalid],
             "CueEditing.php: split time outside the cue"    => [fn () => self::subtitle()->splitCue(0, 9, 1), ...$invalid],
             "CueEditing.php: split line out of range"       => [fn () => self::subtitle()->splitCue(0, 1.5, 5), ...$invalid],
