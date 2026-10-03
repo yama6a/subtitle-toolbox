@@ -43,6 +43,7 @@ php subtitle-toolbox.phar --version
 | `strip-sdh` | removes hearing-impaired annotations, as [`removeHearingImpaired()`](text.md#hearing-impaired-annotations) does |
 | `info` | prints the format, the cue count and statistics, as text or with `--json`. Lists the tracks of an MKV or WebM file |
 | `validate` | prints each broken rule, as text or with `--json`, see [Validate](#validate) |
+| `hls` | cuts a subtitle into WebVTT segments and writes an HLS playlist, see [HLS](#hls) |
 | `formats` | lists the format names and extensions for `--from` and `--to` |
 
 - **Help**: `subtitle-toolbox help convert` or `subtitle-toolbox convert --help` lists all options of a command.
@@ -155,6 +156,27 @@ vendor/bin/subtitle-toolbox fix movie.ocr.srt --common-errors --language en --li
 ```sh
 vendor/bin/subtitle-toolbox validate movie.srt --preset bbc --no-unbalanced-tags --dialogue-dash '- '
 ```
+
+## HLS
+`hls` cuts one subtitle into WebVTT segments with [`HlsWebVttSegmenter`](hls.md) and writes them with the playlist into `--output-dir`.
+
+```sh
+vendor/bin/subtitle-toolbox hls movie.srt --output-dir hls/ --segment 6 --media-duration 5400
+```
+
+This writes `hls/sub0.vtt` to `hls/sub899.vtt` and `hls/subs.m3u8`.
+
+| Option | Default | Sets |
+|:--- |:--- |:--- |
+| `--output-dir DIR` | required | the directory of the segments and the playlist |
+| `--segment SECONDS` | 6 | `segmentDuration` |
+| `--playlist NAME` | `subs.m3u8` | the file name of the playlist |
+| `--pattern PATTERN` | `sub%d.vtt` | `fileNamePattern`. `%d` is the segment number from 0 |
+| `--mpegts TICKS` | 900000 | `mpegts`, the 90 kHz MPEG-2 timestamp at which subtitle time 0 plays |
+| `--local SECONDS` | 0 | `local`, the WebVTT cue time that maps to `--mpegts` |
+| `--media-duration SECONDS` | the end of the last cue | `mediaDuration`. Set it to the video duration, so the playlist covers the whole video |
+
+- **Overwrite**: `hls` fails before it writes a file when a segment or the playlist exists. Pass `--force` to overwrite.
 
 ## OCR
 `convert --ocr` reads the image cues of PGS and VobSub files with [`GlyphOcrEngine`](ocr.md#built-in-ocr) before it writes the output. With Composer, it needs the package php-glyph-ocr.

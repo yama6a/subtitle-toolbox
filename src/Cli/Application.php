@@ -41,6 +41,7 @@ class Application
             new StripSdhCommand(),
             new InfoCommand(),
             new ValidateCommand(),
+            new HlsCommand(),
             new FormatsCommand(),
         ];
     }

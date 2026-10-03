@@ -7,6 +7,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\FormatRegistry;
+use SubtitleToolbox\Hls\HlsSegmentOptions;
+use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\Formatters\JsonFormatter;
 use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
@@ -29,6 +31,8 @@ class BinaryTest extends TestCase
     private const FILES = __DIR__ . "/../files/";
 
     private const BOM = "\xEF\xBB\xBF";
+
+    private const COMMANDS = ["convert", "shift", "scale", "fps", "sync-fps", "fix", "strip-sdh", "info", "validate", "hls", "formats"];
 
     private string $dir;
 
@@ -110,7 +114,7 @@ class BinaryTest extends TestCase
 
         $this->assertSame(0, $code);
         $this->assertStringContainsString("Usage: subtitle-toolbox <command>", $stdout);
-        foreach (["convert", "shift", "scale", "fps", "fix", "strip-sdh", "info", "validate", "formats", "help"] as $command) {
+        foreach (["convert", "shift", "scale", "fps", "fix", "strip-sdh", "info", "validate", "hls", "formats", "help"] as $command) {
             $this->assertMatchesRegularExpression("/^  $command +\S/m", $stdout);
         }
         $this->assertSame("", $stderr);
@@ -125,9 +129,8 @@ class BinaryTest extends TestCase
     public static function commands(): array
     {
         return array_combine(
-            ["convert", "shift", "scale", "fps", "sync-fps", "fix", "strip-sdh", "info", "validate", "formats"],
-            array_map(fn (string $command): array => [$command],
-                ["convert", "shift", "scale", "fps", "sync-fps", "fix", "strip-sdh", "info", "validate", "formats"])
+            self::COMMANDS,
+            array_map(fn (string $command): array => [$command], self::COMMANDS)
         );
     }
 
@@ -829,6 +832,33 @@ class BinaryTest extends TestCase
 
         [, $stdout] = $this->runBinary(["info", "trip.srt"]);
         $this->assertStringNotContainsString("Image cues", $stdout);
+    }
+
+
+    public function testHlsWritesTheSegmentsAndThePlaylist(): void
+    {
+        copy(self::FILES . "hls/node-webvtt-subs1.vtt", "$this->dir/talk.vtt");
+        $expected = HlsWebVttSegmenter::segment(
+            Subtitle::parse($this->file("talk.vtt")),
+            new HlsSegmentOptions(segmentDuration: 10, mpegts: 126000, fileNamePattern: "part%03d.vtt", mediaDuration: 150)
+        );
+
+        $this->assertSame([0, "talk.vtt -> out/index.m3u8, 15 segments\n", ""], $this->runBinary([
+            "hls", "talk.vtt", "--output-dir", "out", "--segment", "10", "--mpegts", "126000", "--pattern", "part%03d.vtt",
+            "--media-duration", "150", "--playlist", "index.m3u8",
+        ]));
+        $this->assertSame($expected->getPlaylist(), $this->file("out/index.m3u8"));
+        foreach ($expected->getSegments() as $name => $content) {
+            $this->assertSame($content, $this->file("out/$name"));
+        }
+        $this->assertCount(16, glob("$this->dir/out/*"));
+
+        $this->assertSame([1, "", "talk.vtt: out/part000.vtt exists. Pass --force to overwrite it.\n"],
+                          $this->runBinary(["hls", "talk.vtt", "--output-dir", "out", "--pattern", "part%03d.vtt"]));
+        $this->assertSame(0, $this->runBinary(["hls", "talk.vtt", "--output-dir", "out", "--pattern", "part%03d.vtt", "--force"])[0]);
+        $this->assertSame(2, $this->runBinary(["hls", "talk.vtt"])[0]);
+        $this->assertSame(2, $this->runBinary(["hls", "talk.vtt", "--output-dir", "out", "--pattern", "part.vtt"])[0]);
+        $this->assertSame(2, $this->runBinary(["hls", "talk.vtt", "trip.srt", "--output-dir", "out"])[0]);
     }
 
 
