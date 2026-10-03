@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -25,10 +26,10 @@ class MicroDvdFormatter extends SubtitleFormatter
         }
 
         $frameRate = new FrameRate((float) $options[self::OPTION_FRAME_RATE]);
-        $stripAll  = in_array(parent::OPTION_STRIP_ALL_XML_TAGS, $options, true);
+        $stripAll  = (bool) (Options::flag($options, parent::OPTION_STRIP_ALL_XML_TAGS) ?? false);
 
         $output = "";
-        if (!empty($options[self::OPTION_WRITE_FRAME_RATE_LINE])) {
+        if (!empty(Options::flag($options, self::OPTION_WRITE_FRAME_RATE_LINE))) {
             $output .= "{1}{1}" . $frameRate->getFps() . StringHelpers::UNIX_LINE_ENDING;
         }
 

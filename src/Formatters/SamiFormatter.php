@@ -3,6 +3,7 @@
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -19,7 +20,7 @@ class SamiFormatter extends SubtitleFormatter
 
     public function format(Subtitle $subtitle, array $options = []): string
     {
-        $stripAll = in_array(parent::OPTION_STRIP_ALL_XML_TAGS, $options, true);
+        $stripAll = (bool) (Options::flag($options, parent::OPTION_STRIP_ALL_XML_TAGS) ?? false);
         $data     = $subtitle->getFormatData(SamiParser::FORMAT_DATA_KEY);
         $language = $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);
         $class    = isset($data["style"]) || isset($data["class"]) ? ($data["class"] ?? null) : $this->classFor($language);

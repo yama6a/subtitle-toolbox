@@ -7,6 +7,7 @@ use SubtitleToolbox\Encoding\Iso6937;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\EbuStlParser as Stl;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -60,7 +61,7 @@ class EbuStlFormatter extends SubtitleFormatter
         $this->characterCodeTable = $gsi["CCT"];
         $this->maxRow             = Stl::maxRow($gsi);
         $this->teletext           = in_array($gsi["DSC"], ["1", "2"], true);
-        $this->stripAll           = in_array(parent::OPTION_STRIP_ALL_XML_TAGS, $options, true);
+        $this->stripAll           = (bool) (Options::flag($options, parent::OPTION_STRIP_ALL_XML_TAGS) ?? false);
 
         $sets = $this->subtitleSets($subtitle, $data["comments"] ?? []);
 

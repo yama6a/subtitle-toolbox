@@ -5,6 +5,7 @@ namespace SubtitleToolbox\Parsers;
 use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Options;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\SubtitleCue;
 
@@ -30,8 +31,8 @@ trait WordGrouping
      */
     public function __construct(array $options = [])
     {
-        $this->wordTimestamps = !empty($options[self::OPTION_WORD_TIMESTAMPS]);
-        $this->speakerVoices  = !empty($options[self::OPTION_SPEAKER_VOICES]);
+        $this->wordTimestamps = !empty(Options::flag($options, self::OPTION_WORD_TIMESTAMPS));
+        $this->speakerVoices  = !empty(Options::flag($options, self::OPTION_SPEAKER_VOICES));
     }
 
 

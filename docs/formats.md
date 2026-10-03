@@ -23,7 +23,8 @@ $subtitle->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_STRIP_ALL_X
 
 - **Line endings**: every formatter writes LF by default.
 - **BOM**: ASS, CSV, LRC, MPSub, SubRip and WebVTT write a UTF-8 BOM by default. The other formatters do not.
-- **Strip all tags**: `OPTION_STRIP_ALL_XML_TAGS` is a list value, not a key. ASS, EBU STL, iTT, MicroDVD, SAMI, SubRip, TTML and WebVTT read it.
+- **Strip all tags**: ASS, EBU STL, iTT, MicroDVD, SAMI, SubRip, TTML and WebVTT read `OPTION_STRIP_ALL_XML_TAGS`.
+- **True-or-false options**: each one works as a list value such as `[OPTION_STRIP_ALL_XML_TAGS]` or as a key such as `[OPTION_STRIP_ALL_XML_TAGS => true]`. This holds for the options of the formatters and of the speech-to-text and transcript parsers.
 - **Image cues**: see [ocr.md](ocr.md#image-cues).
 
 ## ASS and SSA
