@@ -30,6 +30,26 @@ abstract class Command
 
 
     /**
+     * Runs the command with the arguments after the command name and returns the exit code.
+     *
+     * @param list<string> $arguments
+     */
+    public function run(array $arguments, Console $console): int
+    {
+        return $this->execute(Arguments::parse($arguments, $this->options()), $console);
+    }
+
+
+    /**
+     * Returns false for a command that the overview in the main help leaves out.
+     */
+    public function listed(): bool
+    {
+        return true;
+    }
+
+
+    /**
      * @return list<string>
      */
     public function aliases(): array
@@ -53,6 +73,32 @@ abstract class Command
     public static function fail(string $message): never
     {
         throw new InvalidArgumentException($message);
+    }
+
+
+    /**
+     * Returns the call of $command with $arguments, where each option of $renames gets its new name.
+     *
+     * @param list<string>          $arguments
+     * @param array<string, string> $renames   old long name => new long name
+     */
+    protected static function replacementCall(string $command, array $arguments, array $renames): string
+    {
+        $words = [Application::NAME, $command];
+        foreach ($arguments as $index => $argument) {
+            if ($argument === "--") {
+                array_push($words, ...array_slice($arguments, $index));
+                break;
+            }
+            [$name, $value] = array_pad(explode("=", $argument, 2), 2, null);
+            $renamed        = isset($renames[substr($name, 2)]) && str_starts_with($name, "--") ? "--" . $renames[substr($name, 2)] : $name;
+            $words[]        = $value === null ? $renamed : "$renamed=$value";
+        }
+
+        return implode(" ", array_map(
+            fn (string $word): string => preg_match('~^[\w.,:/=+@%-]+$~', $word) === 1 ? $word : "'" . str_replace("'", "'\\''", $word) . "'",
+            $words
+        ));
     }
 
 

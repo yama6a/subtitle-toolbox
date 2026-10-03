@@ -30,7 +30,7 @@ class SnapCommand extends WriteCommand
 
     protected function usageLines(): array
     {
-        return ["<input>... --fps RATE [--shot-changes FILE] [options]"];
+        return ["<input>... --video-fps RATE [--shot-changes FILE] [options]"];
     }
 
 
@@ -46,13 +46,14 @@ class SnapCommand extends WriteCommand
 
     protected function fpsDescription(): string
     {
-        return "Frame rate of the video. Required. MicroDVD input also reads its times with it.";
+        return "Sets --input-fps, --output-fps and --video-fps. Each of them overrides it.";
     }
 
 
     protected function commandOptions(): array
     {
         return [
+            Option::value("video-fps", "RATE", "Frame rate of the video, for the frames of the shot changes and of the other options. Required."),
             Option::value("shot-changes", "FILE", "Shot change times, one per line in seconds or hh:mm:ss.mmm, or the log of the FFmpeg showinfo filter."),
             Option::value("snap-window", "FRAMES", "Largest move to a shot change, and largest gap that closes. Default: half a second."),
             Option::value("min-gap-frames", "FRAMES", "Gap between a cue and the next cue or shot change. Default: 2."),
@@ -66,9 +67,7 @@ class SnapCommand extends WriteCommand
     {
         parent::prepare($arguments);
 
-        if ($this->fps === null) {
-            self::fail("Pass --fps RATE.");
-        }
+        $videoFps = self::rate($arguments, "video-fps") ?? self::fail("Pass --video-fps RATE.");
         $path = $arguments->value("shot-changes");
         if ($path === null && $arguments->has("no-chain")) {
             self::fail("Pass --shot-changes FILE. With --no-chain and no shot changes, snap changes nothing.");
@@ -77,7 +76,7 @@ class SnapCommand extends WriteCommand
         $shotChanges = $path === null ? [] : self::loadShotChanges($path);
         try {
             $this->timing = new ShotChangeOptions(
-                frameRate: $this->fps,
+                frameRate: $videoFps,
                 shotChanges: $shotChanges,
                 snapWindow: self::frames($arguments, "snap-window"),
                 minGapFrames: self::frames($arguments, "min-gap-frames") ?? 2,

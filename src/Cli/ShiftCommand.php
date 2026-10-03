@@ -4,37 +4,36 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\Subtitle;
-
-class ShiftCommand extends WriteCommand
+class ShiftCommand extends RetimeCommand
 {
-    private float $seconds = 0;
-
-    private ?float $after = null;
-
-
     public function name(): string
     {
         return "shift";
     }
 
 
+    public function listed(): bool
+    {
+        return false;
+    }
+
+
     public function summary(): string
     {
-        return "Moves all cues earlier or later by a number of seconds.";
+        return "Deprecated. Use retime --shift.";
     }
 
 
     protected function usageLines(): array
     {
-        return ["<input>... --by SECONDS [options]"];
+        return ["<input>... --by SECONDS [--after SECONDS] [options]"];
     }
 
 
     protected function details(): string
     {
-        return "A time that becomes negative becomes 0. Without --output, --output-dir or --in-place, the result of one\n" .
-               "input file goes to standard output.";
+        return "shift runs retime with --by as --shift and --after as --shift-after, and prints a deprecation warning\n" .
+               "on standard error. It takes the other options of retime.";
     }
 
 
@@ -47,17 +46,17 @@ class ShiftCommand extends WriteCommand
     }
 
 
-    protected function prepare(Arguments $arguments): void
+    public function run(array $arguments, Console $console): int
     {
-        parent::prepare($arguments);
+        $console->err("shift is deprecated. Use: " . self::replacementCall("retime", $arguments, ["by" => "shift", "after" => "shift-after"]) . "\n");
 
-        $this->seconds = $arguments->float("by") ?? self::fail("Pass --by SECONDS.");
-        $this->after   = $arguments->float("after");
+        return parent::run($arguments, $console);
     }
 
 
-    protected function transform(Subtitle $subtitle, Arguments $arguments): void
+    protected function readEdits(Arguments $arguments): void
     {
-        $subtitle->shift($this->seconds, $this->after);
+        $this->shift      = $arguments->float("by") ?? self::fail("Pass --by SECONDS.");
+        $this->shiftAfter = $arguments->float("after");
     }
 }

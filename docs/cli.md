@@ -6,8 +6,8 @@
 vendor/bin/subtitle-toolbox convert movie.srt movie.vtt
 vendor/bin/subtitle-toolbox convert season1/ --to vtt --output-dir out/ --keep-going
 vendor/bin/subtitle-toolbox convert movie.sub movie.srt --fps 23.976
-vendor/bin/subtitle-toolbox shift movie.srt --by -2.5 --output movie.fixed.srt
-vendor/bin/subtitle-toolbox fps *.srt --from 25 --to 23.976 --in-place
+vendor/bin/subtitle-toolbox retime movie.srt --shift -2.5 --output movie.fixed.srt
+vendor/bin/subtitle-toolbox retime *.srt --from-fps 25 --to-fps 23.976 --in-place
 vendor/bin/subtitle-toolbox fix movie.srt --overlaps --min-gap 0.083 --wrap 42 --output movie.fixed.srt
 vendor/bin/subtitle-toolbox validate movie.srt --preset netflix-en --json
 curl -s https://example.com/movie.srt | vendor/bin/subtitle-toolbox convert - --to vtt > movie.vtt
@@ -37,9 +37,7 @@ php subtitle-toolbox.phar --version
 | Command | Does |
 |:--- |:--- |
 | `convert` | writes each input in the format of `--to` or of the output file extension |
-| `shift` | moves all cues earlier or later by `--by` seconds, or only the cues from `--after` seconds |
-| `scale` | multiplies all cue times by `--factor` |
-| `fps` | retimes a subtitle `--from` one frame rate `--to` another. `sync-fps` is another name for it |
+| `retime` | shifts and scales all cue times, or fits them to a video with another frame rate, see [Retime](#retime) |
 | `fix` | fixes text errors, overlapping cues, short cues and long lines, see [Fix](#fix) |
 | `strip-sdh` | removes hearing-impaired annotations, as [`HearingImpairedRemover::apply()`](text.md#hearing-impaired-annotations) does |
 | `info` | prints the format, the cue count and statistics, as text or with `--json`. Lists the tracks of an MKV or WebM file |
@@ -51,6 +49,7 @@ php subtitle-toolbox.phar --version
 | `hls` | cuts a subtitle into WebVTT segments and writes an HLS playlist, see [HLS](#hls) |
 | `formats` | lists the format names and extensions for `--from` and `--to` |
 
+- **Old commands**: `shift` and `scale` still run and print a deprecation warning, see [Retime](#retime). `fps` and `sync-fps` exit with code 2 and print the matching `retime` call.
 - **Help**: `subtitle-toolbox help convert` or `subtitle-toolbox convert --help` lists all options of a command.
 - **Version**: `subtitle-toolbox --version` prints the installed release, for example `1.65.0`, or `dev` in a Git checkout.
 - **Exit code**: 0 when all files succeed, 1 when a file fails, breaks a validation rule or differs in `diff`, 2 for invalid arguments.
@@ -64,10 +63,22 @@ php subtitle-toolbox.phar --version
 - **Encoding**: `--encoding` names the encoding of the input, for example `Windows-1252`. See [encodings.md](encodings.md).
 - **Output bytes**: `--line-ending lf|crlf`, `--bom` and `--no-bom`.
 - **Broken files**: `--lenient` skips or repairs broken cues and prints a warning for each, see [lenient-parsing.md](lenient-parsing.md).
-- **Frame rate**: `--fps` gives the frame rate for a MicroDVD file without a `{1}{1}<fps>` first line. MicroDVD and iTT output also use it. Without it, MicroDVD output takes the frame rate of a MicroDVD input, and iTT output the frame rate of an iTT input.
+- **Frame rate**: see [Frame rates](#frame-rates).
 - **Word timestamps**: `--word-timestamps` keeps the word times of the speech-to-text JSON formats, YouTube timed text and Podcasting 2.0 transcripts. `fix --resegment`, `convert --karaoke` and `convert --karaoke-tag` turn it on.
 - **MKV and WebM**: `--track` picks a subtitle track, see [MKV and WebM](#mkv-and-webm).
 - **Image cues**: `--skip-image-cues` leaves out image cues without text in place of failing.
+
+## Frame rates
+| Option | Sets | Commands |
+|:--- |:--- |:--- |
+| `--input-fps RATE` | the frame rate of a MicroDVD input without a `{1}{1}<fps>` first line, as `ReadOptions::$fps` | all that read a file |
+| `--output-fps RATE` | the frame rate of MicroDVD and iTT output, as `MicroDvdOptions::$frameRate` and `IttOptions::$frameRate` | all that write a file |
+| `--video-fps RATE` | the frame rate of the video for the frame rules, see [Snap](#snap) and [Validate](#validate) | `snap`, `validate` |
+| `--fps RATE` | each of the 3 options above that the command has | all that read a file |
+
+- **Override**: a specific option wins over `--fps`. `convert movie.sub movie.srt --fps 25 --output-fps 23.976` reads at 25 fps and writes at 23.976 fps.
+- **Output default**: without `--output-fps`, MicroDVD output takes the frame rate of a MicroDVD input, and iTT output the frame rate of an iTT input.
+- **Formats**: `--from` and `--to` always name formats. `retime` changes the frame rate with `--from-fps` and `--to-fps`.
 
 ## Formats and file extensions
 Run `subtitle-toolbox formats` for the list. When two formats share an extension, the first one in the list owns it.
@@ -102,6 +113,30 @@ movie.mkv
 - **Info**: without `--track`, `info` lists the tracks of a file whose extension names no subtitle format, such as `.mkv` and `.webm`. In the JSON, each track has `number`, `codecId`, `language`, `name`, `default` and `forced`. With `--track`, `info` prints the statistics of the track.
 - **Directories**: a directory argument skips MKV and WebM files. Pass them by name or with a glob.
 - **Errors**: `S_VOBSUB` tracks, bzlib and LZO compression and encryption fail, see [mkv.md](mkv.md).
+
+## Retime
+`retime` changes the cue times with one or more edits. It applies them in this order: `--shift`, `--scale`, then `--from-fps` and `--to-fps`.
+
+```sh
+vendor/bin/subtitle-toolbox retime trip.srt --shift -1.5 --scale 1.001 -o trip.fixed.srt
+vendor/bin/subtitle-toolbox retime movie.sub --from-fps 25 --to-fps 23.976 --input-fps 25 --to srt -o movie.srt
+```
+
+| Option | Calls |
+|:--- |:--- |
+| `--shift SECONDS` | [`shift()`](editing.md#retiming) with the seconds to add to every time. A negative value shows the cues earlier |
+| `--shift-after SECONDS` | `shift()` with `$fromTime`, so only the cues from this time move. Needs `--shift` |
+| `--scale FACTOR` | `scale()`. `--scale 1.001` fixes a subtitle that drifts 3.6 s per hour |
+| `--from-fps RATE`, `--to-fps RATE` | `convertFrameRate()`. `--from-fps 25 --to-fps 23.976` fits a subtitle for a 25 fps release to a 23.976 fps video |
+
+- **Negative times**: a time that becomes negative becomes 0.
+
+| Deprecated call | Same as |
+|:--- |:--- |
+| `shift FILE --by S --after T` | `retime FILE --shift S --shift-after T` |
+| `scale FILE --factor F` | `retime FILE --scale F` |
+
+The deprecated commands print `shift is deprecated. Use: subtitle-toolbox retime movie.srt --shift 2` on standard error, then run. `fps FILE --from A --to B` fails with exit code 2 and prints `fps was removed. Use: subtitle-toolbox retime FILE --from-fps A --to-fps B`.
 
 ## Convert
 | Option | Effect |
@@ -180,7 +215,7 @@ vendor/bin/subtitle-toolbox fix lecture.json --resegment -o lecture.srt
 - **MKV and WebM**: see [MKV and WebM](#mkv-and-webm).
 
 ## Validate
-`--preset` takes `netflix-en` or `bbc`, see [validation.md](validation.md#presets). A rule option overrides the value of the preset. `--fps` sets the frame rate for the 2-frame gap of `netflix-en`, default 23.976.
+`--preset` takes `netflix-en` or `bbc`, see [validation.md](validation.md#presets). A rule option overrides the value of the preset. `--video-fps` sets the frame rate for the 2-frame gap of `netflix-en`, default 23.976.
 
 | Option | Rule |
 |:--- |:--- |
@@ -250,11 +285,11 @@ vendor/bin/subtitle-toolbox dual movie.en.srt movie.de.srt --mode top-bottom -o 
 | `--snap-tolerance SECONDS` | `snapTolerance` for `top-bottom`, default 0.25 |
 
 ## Snap
-`snap` runs [`ShotChangeTiming::apply()`](editing.md#shot-changes-and-gaps) with the shot changes of a file. Without `--shot-changes`, it only closes small gaps. `--fps` is required.
+`snap` runs [`ShotChangeTiming::apply()`](editing.md#shot-changes-and-gaps) with the shot changes of a file. Without `--shot-changes`, it only closes small gaps. `--video-fps` is required. It sets the frame rate of the shot changes and of the frame options. `--input-fps` sets the frame rate of a MicroDVD input on its own.
 
 ```sh
 ffmpeg -i movie.mp4 -vf "select='gt(scene,0.3)',showinfo" -f null - 2> scenes.log
-vendor/bin/subtitle-toolbox snap movie.srt --fps 24 --shot-changes scenes.log -o movie.timed.srt
+vendor/bin/subtitle-toolbox snap movie.srt --video-fps 24 --shot-changes scenes.log -o movie.timed.srt
 ```
 
 | Option | Sets |

@@ -51,7 +51,7 @@ class ValidateCommand extends ReportCommand
 
     protected function fpsDescription(): string
     {
-        return "Frame rate of the video, for the 2-frame gap of netflix-en and for MicroDVD input. Default: 23.976.";
+        return "Sets --input-fps and --video-fps. Each of them overrides it.";
     }
 
 
@@ -59,6 +59,7 @@ class ValidateCommand extends ReportCommand
     {
         return [
             Option::value("preset", "NAME", "Rule set: netflix-en or bbc."),
+            Option::value("video-fps", "RATE", "Frame rate of the video, for the 2-frame gap of netflix-en. Default: 23.976."),
             Option::value("max-cps", "CHARS", "Maximum characters per second."),
             Option::value("max-cpl", "CHARS", "Maximum characters per line."),
             Option::value("max-lines", "LINES", "Maximum lines per cue."),
@@ -92,7 +93,7 @@ class ValidateCommand extends ReportCommand
         $base = match ($preset) {
             null         => new ValidationRules(),
             "bbc"        => ValidationRules::bbc(),
-            "netflix-en" => ValidationRules::netflixEnglish($this->fps ?? self::DEFAULT_FPS),
+            "netflix-en" => ValidationRules::netflixEnglish(self::rate($arguments, "video-fps") ?? self::DEFAULT_FPS),
         };
 
         $this->rules = new ValidationRules(

@@ -4,15 +4,8 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\Subtitle;
-
-class FpsCommand extends WriteCommand
+class FpsCommand extends Command
 {
-    private float $fromFps = 25;
-
-    private float $toFps = 25;
-
-
     public function name(): string
     {
         return "fps";
@@ -25,9 +18,15 @@ class FpsCommand extends WriteCommand
     }
 
 
+    public function listed(): bool
+    {
+        return false;
+    }
+
+
     public function summary(): string
     {
-        return "Retimes subtitles for a video with another frame rate.";
+        return "Removed. Use retime --from-fps RATE --to-fps RATE.";
     }
 
 
@@ -39,38 +38,26 @@ class FpsCommand extends WriteCommand
 
     protected function details(): string
     {
-        return "For example, --from 25 --to 23.976 fits a subtitle for a 25 fps release to a 23.976 fps video.\n" .
-               "The output keeps the input format, or takes the format of the --output extension. Without --output,\n" .
-               "--output-dir or --in-place, the result of one input file goes to standard output.";
+        return "fps exits with code 2 and prints the matching retime call, with --from as --from-fps and --to as --to-fps.";
     }
 
 
-    protected function hasFormatOptions(): bool
+    public function options(): array
     {
-        return false;
+        return [];
     }
 
 
-    protected function commandOptions(): array
+    public function run(array $arguments, Console $console): int
     {
-        return [
-            Option::value("from", "RATE", "Frame rate of the video that the subtitle fits now."),
-            Option::value("to", "RATE", "Frame rate of the video that the subtitle must fit."),
-        ];
+        $console->err("fps was removed. Use: " . self::replacementCall("retime", $arguments, ["from" => "from-fps", "to" => "to-fps"]) . "\n");
+
+        return Application::EXIT_USAGE;
     }
 
 
-    protected function prepare(Arguments $arguments): void
+    public function execute(Arguments $arguments, Console $console): int
     {
-        parent::prepare($arguments);
-
-        $this->fromFps = $arguments->positiveFloat("from") ?? self::fail("Pass --from RATE.");
-        $this->toFps   = $arguments->positiveFloat("to") ?? self::fail("Pass --to RATE.");
-    }
-
-
-    protected function transform(Subtitle $subtitle, Arguments $arguments): void
-    {
-        $subtitle->convertFrameRate($this->fromFps, $this->toFps);
+        return $this->run($arguments->positionals, $console);
     }
 }

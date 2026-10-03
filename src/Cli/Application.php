@@ -36,6 +36,7 @@ class Application
         );
         $this->commands = [
             new ConvertCommand(),
+            new RetimeCommand(),
             new ShiftCommand(),
             new ScaleCommand(),
             new FpsCommand(),
@@ -89,7 +90,7 @@ class Application
         }
 
         try {
-            return $command->execute(Arguments::parse($arguments, $command->options()), $this->console);
+            return $command->run($arguments, $this->console);
         } catch (SubtitleToolboxException $exception) {
             return $this->usageError($exception->getMessage(), "help " . $command->name());
         }
@@ -136,9 +137,10 @@ class Application
 
     private function help(): string
     {
-        $width    = max(array_map(fn (Command $command): int => strlen($command->name()), $this->commands));
+        $listed   = array_filter($this->commands, fn (Command $command): bool => $command->listed());
+        $width    = max(array_map(fn (Command $command): int => strlen($command->name()), $listed));
         $commands = "";
-        foreach ($this->commands as $command) {
+        foreach ($listed as $command) {
             $commands .= "  " . str_pad($command->name(), $width) . "  " . $command->summary() . "\n";
         }
         $commands .= "  " . str_pad("help", $width) . "  Shows the help of a command.\n";

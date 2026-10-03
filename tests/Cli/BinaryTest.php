@@ -14,6 +14,7 @@ use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\DualSubtitle;
 use SubtitleToolbox\DualSubtitleOptions;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
 use SubtitleToolbox\Hls\HlsSegmentOptions;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\MergeShortCuesOptions;
@@ -33,6 +34,7 @@ use SubtitleToolbox\Sync\SpeechReference;
 use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\Timing\ShotChanges;
 use SubtitleToolbox\Timing\ShotChangeTiming;
+use SubtitleToolbox\WriteOptions;
 
 /**
  * Runs bin/subtitle-toolbox as a separate process in a temporary directory with copies of the fixtures.
@@ -47,7 +49,7 @@ class BinaryTest extends TestCase
 
     private const BOM = "\xEF\xBB\xBF";
 
-    private const COMMANDS = ["convert", "shift", "scale", "fps", "sync-fps", "fix", "strip-sdh", "info", "validate", "sync", "diff", "dual", "snap", "hls", "formats"];
+    private const COMMANDS = ["convert", "retime", "shift", "scale", "fps", "sync-fps", "fix", "strip-sdh", "info", "validate", "sync", "diff", "dual", "snap", "hls", "formats"];
 
     private string $dir;
 
@@ -129,8 +131,11 @@ class BinaryTest extends TestCase
 
         $this->assertSame(0, $code);
         $this->assertStringContainsString("Usage: subtitle-toolbox <command>", $stdout);
-        foreach (["convert", "shift", "scale", "fps", "fix", "strip-sdh", "info", "validate", "sync", "diff", "dual", "snap", "hls", "formats", "help"] as $command) {
+        foreach (["convert", "retime", "fix", "strip-sdh", "info", "validate", "sync", "diff", "dual", "snap", "hls", "formats", "help"] as $command) {
             $this->assertMatchesRegularExpression("/^  $command +\S/m", $stdout);
+        }
+        foreach (["shift", "scale", "fps"] as $command) {
+            $this->assertDoesNotMatchRegularExpression("/^  $command +\S/m", $stdout);
         }
         $this->assertSame("", $stderr);
         $this->assertSame([0, $stdout, ""], $this->runBinary(["--help"]));
@@ -170,13 +175,27 @@ class BinaryTest extends TestCase
         $this->assertMatchesRegularExpression('/^  --lenient +Skip or repair broken cues and print a warning for each\. ' .
                                               'SCC, PGS, VobSub and chapter input ignore it\.$/m', $convert);
         $this->assertMatchesRegularExpression('/^  --encoding NAME +.*A BOM in the input overrides it\.$/m', $convert);
-        $this->assertMatchesRegularExpression('/^  --fps RATE +.*for MicroDVD and iTT output\.$/m', $convert);
+        $this->assertMatchesRegularExpression('/^  --input-fps RATE +Frame rate of a MicroDVD input without a \{1\}\{1\}<fps> first line\.$/m', $convert);
+        $this->assertMatchesRegularExpression('/^  --output-fps RATE +Frame rate of MicroDVD and iTT output\..*$/m', $convert);
+        $this->assertMatchesRegularExpression('/^  --fps RATE +Sets --input-fps and --output-fps\. Each of them overrides it\.$/m', $convert);
+        $this->assertMatchesRegularExpression('/^  --from FORMAT +Input format\./m', $convert);
+        $this->assertMatchesRegularExpression('/^  --to FORMAT +Output format\./m', $convert);
         $this->assertStringNotContainsString("SubRip, WebVTT and SBV", $convert);
 
         $fix = $this->runBinary(["fix", "--help"])[1];
         $this->assertMatchesRegularExpression('/^  --split-long +.*at sentence ends, clause ends or spaces\.$/m', $fix);
         $this->assertMatchesRegularExpression('/^  --merge-short +.*at most 0\.25 s away.*$/m', $fix);
-        $this->assertDoesNotMatchRegularExpression('/MicroDVD and iTT output/', $this->runBinary(["info", "--help"])[1]);
+        $info = $this->runBinary(["info", "--help"])[1];
+        $this->assertDoesNotMatchRegularExpression('/--output-fps|--video-fps/', $info);
+        $this->assertMatchesRegularExpression('/^  --fps RATE +Same as --input-fps\.$/m', $info);
+
+        $snap = $this->runBinary(["snap", "--help"])[1];
+        $this->assertStringStartsWith("Usage: subtitle-toolbox snap <input>... --video-fps RATE ", $snap);
+        $this->assertMatchesRegularExpression('/^  --fps RATE +Sets --input-fps, --output-fps and --video-fps\. Each of them overrides it\.$/m', $snap);
+        $validate = $this->runBinary(["validate", "--help"])[1];
+        $this->assertMatchesRegularExpression('/^  --video-fps RATE +Frame rate of the video, for the 2-frame gap of netflix-en\. Default: 23\.976\.$/m', $validate);
+        $this->assertMatchesRegularExpression('/^  --fps RATE +Sets --input-fps and --video-fps\. Each of them overrides it\.$/m', $validate);
+        $this->assertDoesNotMatchRegularExpression('/--output-fps/', $validate);
     }
 
 
@@ -535,7 +554,7 @@ class BinaryTest extends TestCase
         $this->assertStringContainsString("00:00:01,000 --> 00:00:03,000\nHello from the frames.\n", $stdout);
 
         $this->assertSame([0, "{25}{75}Hello from the frames.\n{100}{150}{y:i}Second line.\n", ""],
-                          $this->runBinary(["shift", "frames.sub", "--by", "0", "--fps", "25"]));
+                          $this->runBinary(["retime", "frames.sub", "--shift", "0", "--fps", "25"]));
 
         $this->assertSame([1, "", "trip.srt: MicroDVD output needs the frame rate of the video. Pass MicroDvdOptions::frameRate.\n"],
                           $this->runBinary(["convert", "trip.srt", "--to", "microdvd", "-o", "-"]));
@@ -544,38 +563,53 @@ class BinaryTest extends TestCase
     }
 
 
-    public function testShiftWritesOneInputToStandardOutput(): void
+    public function testRetimeShiftWritesOneInputToStandardOutput(): void
     {
-        $expected = Subtitle::fromString($this->file("trip.srt"), Format::SubRip)->shift(-1.5)->toString(Format::SubRip);
+        $expected = Subtitle::fromString($this->file("trip.srt"), Format::SubRip)->shift(-0.5)->toString(Format::SubRip);
 
-        $this->assertSame([0, $expected, ""], $this->runBinary(["shift", "trip.srt", "--by", "-1.5"]));
-        $this->assertSame([0, $expected, ""], $this->runBinary(["shift", "trip.srt", "--by=-1.5"]));
-        $this->assertSame([0, "trip.srt -> shifted.srt\n", ""], $this->runBinary(["shift", "trip.srt", "--by", "-1.5", "-o", "shifted.srt"]));
+        $this->assertSame([0, $expected, ""], $this->runBinary(["retime", "trip.srt", "--shift", "-0.5"]));
+        $this->assertSame([0, $expected, ""], $this->runBinary(["retime", "trip.srt", "--shift=-0.5"]));
+        $this->assertSame([0, "trip.srt -> shifted.srt\n", ""], $this->runBinary(["retime", "trip.srt", "--shift", "-0.5", "-o", "shifted.srt"]));
         $this->assertSame($expected, $this->file("shifted.srt"));
-        $this->assertSame(2, $this->runBinary(["shift", "trip.srt"])[0]);
-        $this->assertSame(2, $this->runBinary(["shift", "trip.srt", "--by", "soon"])[0]);
+        $this->assertSame(2, $this->runBinary(["retime", "trip.srt"])[0]);
+        $this->assertSame(2, $this->runBinary(["retime", "trip.srt", "--shift", "soon"])[0]);
     }
 
 
-    public function testShiftAfter(): void
+    public function testDeprecatedShiftRunsRetimeWithAWarning(): void
     {
-        [$code, $stdout] = $this->runBinary(["shift", "shop.vtt", "--by", "5", "--after", "12"]);
+        $expected = $this->runBinary(["retime", "trip.srt", "--shift", "-0.5"])[1];
+
+        $this->assertSame([0, $expected, "shift is deprecated. Use: subtitle-toolbox retime trip.srt --shift -0.5\n"],
+                          $this->runBinary(["shift", "trip.srt", "--by", "-0.5"]));
+        $this->assertSame([0, $expected, "shift is deprecated. Use: subtitle-toolbox retime trip.srt --shift=-0.5\n"],
+                          $this->runBinary(["shift", "trip.srt", "--by=-0.5"]));
+        $this->assertSame(2, $this->runBinary(["shift", "trip.srt"])[0]);
+        $this->assertSame(2, $this->runBinary(["shift", "trip.srt", "--shift", "1"])[0]);
+    }
+
+
+    public function testRetimeShiftAfter(): void
+    {
+        [$code, $stdout] = $this->runBinary(["retime", "shop.vtt", "--shift", "5", "--shift-after", "12"]);
 
         $this->assertSame(0, $code);
         $this->assertStringContainsString("00:00:10.000 --> 00:00:12.000", $stdout);
         $this->assertStringContainsString("00:00:18.000 --> 00:00:20.500", $stdout);
+        $this->assertSame([0, $stdout, "shift is deprecated. Use: subtitle-toolbox retime shop.vtt --shift 5 --shift-after 12\n"],
+                          $this->runBinary(["shift", "shop.vtt", "--by", "5", "--after", "12"]));
     }
 
 
     public function testInPlaceRetimesSeveralFiles(): void
     {
         $this->assertSame(
-            [2, "", "Error: Pass --output-dir or --in-place for several input files.\nRun \"subtitle-toolbox help shift\" for the usage.\n"],
-            $this->runBinary(["shift", "trip.srt", "shop.vtt", "--by", "1"])
+            [2, "", "Error: Pass --output-dir or --in-place for several input files.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            $this->runBinary(["retime", "trip.srt", "shop.vtt", "--shift", "1"])
         );
-        $this->assertSame(2, $this->runBinary(["shift", "trip.srt", "shop.vtt", "--by", "1", "-o", "out.srt"])[0]);
+        $this->assertSame(2, $this->runBinary(["retime", "trip.srt", "shop.vtt", "--shift", "1", "-o", "out.srt"])[0]);
 
-        [$code, $stdout, $stderr] = $this->runBinary(["shift", "trip.srt", "shop.vtt", "--by", "1", "--in-place"]);
+        [$code, $stdout, $stderr] = $this->runBinary(["retime", "trip.srt", "shop.vtt", "--shift", "1", "--in-place"]);
 
         $this->assertSame([0, "trip.srt -> trip.srt\nshop.vtt -> shop.vtt\n2 files: 2 succeeded, 0 failed.\n", ""], [$code, $stdout, $stderr]);
         $this->assertStringContainsString("00:00:11.000 --> 00:00:13.000", $this->file("shop.vtt"));
@@ -583,24 +617,87 @@ class BinaryTest extends TestCase
     }
 
 
-    public function testScale(): void
+    public function testRetimeScale(): void
     {
-        [$code, $stdout] = $this->runBinary(["scale", "shop.vtt", "--factor", "2"]);
+        [$code, $stdout] = $this->runBinary(["retime", "shop.vtt", "--scale", "2"]);
 
         $this->assertSame(0, $code);
         $this->assertStringContainsString("00:00:20.000 --> 00:00:24.000", $stdout);
-        $this->assertSame(2, $this->runBinary(["scale", "shop.vtt", "--factor", "0"])[0]);
+        $this->assertSame(2, $this->runBinary(["retime", "shop.vtt", "--scale", "0"])[0]);
     }
 
 
-    public function testFpsAndItsAlias(): void
+    public function testDeprecatedScaleRunsRetimeWithAWarning(): void
     {
-        $expected = Subtitle::fromStringAutoDetectFormat($this->file("shop.vtt"))->convertFrameRate(25, 23.976)->toString(Format::WebVtt);
+        $expected = $this->runBinary(["retime", "trip.srt", "--scale", "1.001"])[1];
 
-        $this->assertSame([0, $expected, ""], $this->runBinary(["fps", "shop.vtt", "--from", "25", "--to", "23.976"]));
-        $this->assertSame([0, $expected, ""], $this->runBinary(["sync-fps", "shop.vtt", "--from", "25", "--to", "23.976"]));
-        $this->assertSame(2, $this->runBinary(["fps", "shop.vtt", "--from", "25"])[0]);
-        $this->assertSame(2, $this->runBinary(["fps", "shop.vtt", "--from", "vtt", "--to", "srt"])[0]);
+        $this->assertSame([0, $expected, "scale is deprecated. Use: subtitle-toolbox retime trip.srt --scale 1.001\n"],
+                          $this->runBinary(["scale", "trip.srt", "--factor", "1.001"]));
+        $this->assertSame(2, $this->runBinary(["scale", "trip.srt", "--factor", "0"])[0]);
+    }
+
+
+    public function testRetimeAppliesShiftThenScaleThenFrameRate(): void
+    {
+        $trip     = $this->file("trip.srt");
+        $expected = Subtitle::fromString($trip, Format::SubRip)->shift(-1.5)->scale(1.001)->convertFrameRate(25, 23.976)->toString(Format::SubRip);
+        $reversed = Subtitle::fromString($trip, Format::SubRip)->convertFrameRate(25, 23.976)->scale(1.001)->shift(-1.5)->toString(Format::SubRip);
+
+        $this->assertNotSame($reversed, $expected);
+        $this->assertSame([0, $expected, ""], $this->runBinary([
+            "retime", "trip.srt", "--from-fps", "25", "--to-fps", "23.976", "--scale", "1.001", "--shift", "-1.5",
+        ]));
+    }
+
+
+    public function testRetimeChangesTheFrameRateAndTheFormat(): void
+    {
+        $expected = Subtitle::fromString($this->file("frames.sub"), Format::MicroDvd, new ReadOptions(fps: 25))
+            ->convertFrameRate(25, 23.976)
+            ->toString(Format::WebVtt);
+
+        [$code, $stdout, $stderr] = $this->runBinary(["retime", "frames.sub", "--input-fps", "25", "--from-fps", "25", "--to-fps", "23.976", "--to", "vtt"]);
+
+        $this->assertSame([0, $expected, ""], [$code, $stdout, $stderr]);
+        $this->assertStringContainsString("00:00:01.043 --> 00:00:03.128\nHello from the frames.\n", $stdout);
+        $this->assertSame(2, $this->runBinary(["retime", "frames.sub", "--input-fps", "25", "--from-fps", "25"])[0]);
+    }
+
+
+    public function testFpsWasRemoved(): void
+    {
+        $this->assertSame(
+            [2, "", "fps was removed. Use: subtitle-toolbox retime tests/files/cli/frames.sub --from-fps 25 --to-fps 23.976\n"],
+            $this->runBinary(["fps", "tests/files/cli/frames.sub", "--from", "25", "--to", "23.976"])
+        );
+        $this->assertSame(
+            [2, "", "fps was removed. Use: subtitle-toolbox retime 'my movie.sub' --from-fps=25 --to-fps 23.976 --fps 25 -o out.srt\n"],
+            $this->runBinary(["sync-fps", "my movie.sub", "--from=25", "--to", "23.976", "--fps", "25", "-o", "out.srt"])
+        );
+        $this->assertFileDoesNotExist("$this->dir/out.srt");
+    }
+
+
+    public function testFromAndToAlwaysNameFormats(): void
+    {
+        $this->assertSame(
+            [2, "", "Error: Unknown format \"25\". Run \"subtitle-toolbox formats\" for the list.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            $this->runBinary(["retime", "trip.srt", "--from", "25", "--to", "23.976"])
+        );
+        $this->assertSame([0, $this->tripAs(Format::WebVtt), ""], $this->runBinary(["retime", "trip.srt", "--shift", "0", "--from", "srt", "--to", "vtt"]));
+    }
+
+
+    public function testInputAndOutputFrameRatesAreSeparate(): void
+    {
+        $this->assertSame([0, "{24}{72}Hello from the frames.\n{96}{144}{y:i}Second line.\n", ""],
+                          $this->runBinary(["convert", "frames.sub", "--input-fps", "25", "--output-fps", "23.976", "--to", "microdvd", "-o", "-"]));
+        $this->assertSame([0, "{24}{72}Hello from the frames.\n{96}{144}{y:i}Second line.\n", ""],
+                          $this->runBinary(["convert", "frames.sub", "--fps", "25", "--output-fps", "23.976", "--to", "microdvd", "-o", "-"]));
+        $this->assertSame([0, "{25}{75}Hello from the frames.\n{100}{150}{y:i}Second line.\n", ""],
+                          $this->runBinary(["convert", "frames.sub", "--fps", "25", "--to", "microdvd", "-o", "-"]));
+        $this->assertSame(1, $this->runBinary(["convert", "frames.sub", "--output-fps", "25", "--to", "microdvd", "-o", "-"])[0]);
+        $this->assertSame(2, $this->runBinary(["convert", "frames.sub", "--input-fps", "0", "--to", "srt", "-o", "-"])[0]);
     }
 
 
@@ -789,6 +886,22 @@ class BinaryTest extends TestCase
         $this->assertSame([0, "shop.vtt: no problems\n", ""], $this->runBinary(["validate", "shop.vtt", "--preset", "netflix-en", "--max-cps", "30"]));
         $this->assertSame(2, $this->runBinary(["validate", "shop.vtt"])[0]);
         $this->assertSame(2, $this->runBinary(["validate", "shop.vtt", "--preset", "nope"])[0]);
+    }
+
+
+    public function testValidateTakesTheVideoFrameRateForTheGap(): void
+    {
+        copy(self::FILES . "validation/own_netflix_checks.srt", "$this->dir/checks.srt");
+
+        $this->assertStringContainsString("checks.srt: cue 2: minGap 0.04, limit 0.083\n",
+                                          $this->runBinary(["validate", "checks.srt", "--preset", "netflix-en"])[1]);
+        $this->assertStringContainsString("checks.srt: cue 2: minGap 0.04, limit 0.08\n",
+                                          $this->runBinary(["validate", "checks.srt", "--preset", "netflix-en", "--video-fps", "25"])[1]);
+        $this->assertStringContainsString("checks.srt: cue 2: minGap 0.04, limit 0.08\n",
+                                          $this->runBinary(["validate", "checks.srt", "--preset", "netflix-en", "--fps", "25"])[1]);
+        $this->assertStringNotContainsString("minGap",
+                                             $this->runBinary(["validate", "checks.srt", "--preset", "netflix-en", "--video-fps", "50"])[1]);
+        $this->assertSame(2, $this->runBinary(["validate", "checks.srt", "--preset", "netflix-en", "--from", "25"])[0]);
     }
 
 
@@ -1157,14 +1270,14 @@ class BinaryTest extends TestCase
         }
         $timed = file_get_contents(self::FILES . "shot-changes/own_garden_24fps_timed.srt");
 
-        $this->assertSame([0, $timed, ""], $this->runBinary(["snap", "garden.srt", "--fps", "24", "--shot-changes", "scenes.log"]));
+        $this->assertSame([0, $timed, ""], $this->runBinary(["snap", "garden.srt", "--video-fps", "24", "--shot-changes", "scenes.log"]));
         $this->assertSame([0, $timed, ""], $this->runBinary(["snap", "garden.srt", "--fps", "24", "--shot-changes", "scenes.txt"]));
 
         $expected = Subtitle::fromStringAutoDetectFormat($this->file("garden.srt"));
         ShotChangeTiming::apply($expected, new ShotChangeOptions(frameRate: 24, shotChanges: ShotChanges::fromText($this->file("scenes.txt")),
                                                                  snapWindow: 6, minGapFrames: 3, chain: false, minDuration: 12));
         $this->assertSame([0, $expected->toString(Format::SubRip), ""], $this->runBinary([
-            "snap", "garden.srt", "--fps", "24", "--shot-changes", "scenes.txt", "--snap-window", "6", "--min-gap-frames", "3",
+            "snap", "garden.srt", "--video-fps", "24", "--shot-changes", "scenes.txt", "--snap-window", "6", "--min-gap-frames", "3",
             "--no-chain", "--min-duration-frames", "12",
         ]));
 
@@ -1172,10 +1285,35 @@ class BinaryTest extends TestCase
         ShotChangeTiming::apply($chained, new ShotChangeOptions(24));
         $this->assertSame([0, $chained->toString(Format::SubRip), ""], $this->runBinary(["snap", "garden.srt", "--fps", "24"]));
 
-        foreach ([[], ["--fps", "24", "--no-chain"], ["--fps", "24", "--snap-window", "-1"], ["--fps", "24", "--shot-changes", "missing.txt"],
-                  ["--fps", "24", "--shot-changes", "garden.srt"]] as $options) {
+        foreach ([[], ["--input-fps", "24"], ["--video-fps", "24", "--no-chain"], ["--video-fps", "24", "--snap-window", "-1"],
+                  ["--video-fps", "24", "--shot-changes", "missing.txt"], ["--video-fps", "24", "--shot-changes", "garden.srt"]] as $options) {
             $this->assertSame(2, $this->runBinary(["snap", "garden.srt", ...$options])[0], implode(" ", $options));
         }
+    }
+
+
+    public function testSnapTakesTheVideoAndInputFrameRatesApart(): void
+    {
+        copy(self::FILES . "shot-changes/own_ffmpeg_showinfo.log", "$this->dir/scenes.log");
+        $garden = file_get_contents(self::FILES . "shot-changes/own_garden_24fps.srt");
+        file_put_contents("$this->dir/garden.sub", Subtitle::fromString($garden, Format::SubRip)->toString(
+            Format::MicroDvd,
+            new WriteOptions(format: new MicroDvdOptions(frameRate: 25)),
+        ));
+        $shotChanges = ShotChanges::fromFfmpegLog($this->file("scenes.log"));
+
+        $expected = Subtitle::fromString($this->file("garden.sub"), Format::MicroDvd, new ReadOptions(fps: 25));
+        ShotChangeTiming::apply($expected, new ShotChangeOptions(frameRate: 24, shotChanges: $shotChanges));
+        $readAt24 = Subtitle::fromString($this->file("garden.sub"), Format::MicroDvd, new ReadOptions(fps: 24));
+        ShotChangeTiming::apply($readAt24, new ShotChangeOptions(frameRate: 24, shotChanges: $shotChanges));
+
+        $this->assertNotSame($readAt24->toString(Format::SubRip), $expected->toString(Format::SubRip));
+        $this->assertSame([0, $expected->toString(Format::SubRip), ""], $this->runBinary([
+            "snap", "garden.sub", "--video-fps", "24", "--input-fps", "25", "--shot-changes", "scenes.log", "--to", "srt",
+        ]));
+        $this->assertSame([0, $readAt24->toString(Format::SubRip), ""], $this->runBinary([
+            "snap", "garden.sub", "--fps", "24", "--shot-changes", "scenes.log", "--to", "srt",
+        ]));
     }
 
 
