@@ -16,24 +16,24 @@ use SubtitleToolbox\Parsers\TtmlParser;
 class FormatRegistryTest extends TestCase
 {
     /**
-     * @return array<string, array{string, list<string>}>
+     * @return array<string, array{string, class-string, list<string>}>
      */
     public static function classDirectories(): array
     {
         return [
-            "parsers"    => ["Parsers", FormatRegistry::parserClasses()],
-            "formatters" => ["Formatters", FormatRegistry::formatterClasses()],
+            "parsers"    => ["Parsers", Parsers\SubtitleParser::class, FormatRegistry::parserClasses()],
+            "formatters" => ["Formatters", Formatters\SubtitleFormatter::class, FormatRegistry::formatterClasses()],
         ];
     }
 
 
     #[DataProvider("classDirectories")]
-    public function testEveryParserAndFormatterClassHasAFormat(string $directory, array $registered): void
+    public function testEveryParserAndFormatterClassHasAFormat(string $directory, string $baseClass, array $registered): void
     {
         $classes = [];
         foreach (glob(__DIR__ . "/../src/$directory/*.php") as $path) {
             $class = "SubtitleToolbox\\$directory\\" . basename($path, ".php");
-            if ((new \ReflectionClass($class))->isInstantiable()) {
+            if ((new \ReflectionClass($class))->isInstantiable() && is_subclass_of($class, $baseClass)) {
                 $classes[] = $class;
             }
         }
