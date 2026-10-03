@@ -102,8 +102,8 @@ class SpeakerLabelsTest extends TestCase
     {
         $subtitle = self::subtitle("<v SPEAKER_00>Where?", "<v.loud SPEAKER_01>Home.</v>", "<v SPEAKER_02>Here.");
 
-        $this->assertSame($subtitle, SpeakerLabels::rename($subtitle, ["SPEAKER_00" => "Anna", "SPEAKER_01" => "O'Neil & Son"]));
-        $this->assertSame([["<v Anna>Where?"], ["<v.loud O&#39;Neil &amp; Son>Home.</v>"], ["<v SPEAKER_02>Here."]],
+        $this->assertSame($subtitle, SpeakerLabels::rename($subtitle, ["SPEAKER_00" => "Anna", "SPEAKER_01" => "O'Neil & Son", "SPEAKER_02" => "Sam \"Ace\" Reed"]));
+        $this->assertSame([["<v Anna>Where?"], ["<v.loud O'Neil &amp; Son>Home.</v>"], ["<v Sam \"Ace\" Reed>Here."]],
                           self::lines($subtitle));
     }
 
@@ -259,7 +259,7 @@ class SpeakerLabelsTest extends TestCase
     {
         return [
             "upper case label"        => ["JOHN: Hi.", true, ["<v John>Hi."]],
-            "title, dot and quote"    => ["DR. O'NEIL: Yes.", true, ["<v Dr. O&#39;Neil>Yes."]],
+            "title, dot and quote"    => ["DR. O'NEIL: Yes.", true, ["<v Dr. O'Neil>Yes."]],
             "number"                  => ["MAN 2: Run!", true, ["<v Man 2>Run!"]],
             "UTF-8 label"             => ["ÉMILE: Salut.", true, ["<v Émile>Salut."]],
             "mixed case label"        => ["Note: this stays.", true, ["Note: this stays."]],
@@ -367,6 +367,6 @@ class SpeakerLabelsTest extends TestCase
                   ' {"start": 3, "end": 4, "text": "Yes.", "speaker": 5}]}';
         $parser = new WhisperJsonParser([WhisperJsonParser::OPTION_SPEAKER_VOICES => true, WhisperJsonParser::OPTION_WORD_TIMESTAMPS => true]);
 
-        $this->assertSame([["<v O&#39;Neil &amp; &lt;Son&gt;><00:00:00.500>Hi."], ["Bye."], ["Yes."]], self::lines($parser->parse($json)));
+        $this->assertSame([["<v O'Neil &amp; &lt;Son&gt;><00:00:00.500>Hi."], ["Bye."], ["Yes."]], self::lines($parser->parse($json)));
     }
 }

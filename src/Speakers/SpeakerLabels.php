@@ -318,12 +318,9 @@ final class SpeakerLabels
     }
 
 
-    /**
-     * Escapes quotes too, because strip_tags() in the formatters reads a quote in a tag as the start of an attribute value.
-     */
     private static function voiceTag(string $name, string $class = ""): string
     {
-        return "<v$class " . str_replace(["'", "\""], ["&#39;", "&quot;"], Markup::escapeText($name)) . ">";
+        return "<v$class " . Markup::escapeText($name) . ">";
     }
 
 

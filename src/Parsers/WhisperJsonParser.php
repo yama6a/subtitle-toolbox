@@ -99,8 +99,7 @@ class WhisperJsonParser extends SubtitleParser
             $markup  = $this->wordTimestamps ? $this->withWordTimestamps($text, $words) : $this->escape($text);
             $speaker = is_string($formatData["speaker"] ?? null) ? trim($formatData["speaker"]) : "";
             if ($this->speakerVoices && $speaker !== "") {
-                // strip_tags() in the formatters reads a quote in a tag as the start of an attribute value.
-                $markup = "<v " . str_replace(["'", "\""], ["&#39;", "&quot;"], $this->escape($speaker)) . ">" . $markup;
+                $markup = "<v " . $this->escape($speaker) . ">" . $markup;
             }
 
             $cue = new SubtitleCue($start, $end, $markup);
