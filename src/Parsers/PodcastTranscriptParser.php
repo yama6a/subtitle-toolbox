@@ -69,8 +69,7 @@ class PodcastTranscriptParser extends SubtitleParser
             }
             $markup = implode(" ", $words);
             if ($speaker !== "") {
-                // strip_tags() in the formatters reads a quote in a tag as the start of an attribute value.
-                $markup = "<v " . str_replace(["'", "\""], ["&#39;", "&quot;"], Markup::escapeText($speaker)) . ">" . $markup;
+                $markup = Markup::voiceTag($speaker) . $markup;
             }
 
             $cue = new SubtitleCue($group[0]["start"], $group[count($group) - 1]["end"], $markup);

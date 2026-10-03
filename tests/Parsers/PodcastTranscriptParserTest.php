@@ -83,7 +83,7 @@ class PodcastTranscriptParserTest extends TestCase
     {
         $json = '{"segments": [{"speaker": "Dr. O\'Neil", "startTime": 0, "endTime": 1, "body": " Fish & <chips>\n "}]}';
 
-        $this->assertSame([[0.0, 1.0, "<v Dr. O&#39;Neil>Fish &amp; &lt;chips&gt;"]], self::cues((new PodcastTranscriptParser())->parse($json)));
+        $this->assertSame([[0.0, 1.0, "<v Dr. O'Neil>Fish &amp; &lt;chips&gt;"]], self::cues((new PodcastTranscriptParser())->parse($json)));
     }
 
 

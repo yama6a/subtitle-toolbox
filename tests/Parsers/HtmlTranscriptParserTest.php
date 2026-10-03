@@ -33,7 +33,7 @@ class HtmlTranscriptParserTest extends TestCase
     {
         $html = "<cite>Dr. O'Neil :</cite><time>0:00</time><p>Hi.</p><time>0:02</time><p>Bye.</p>";
 
-        $this->assertSame([[0.0, 2.0, ["<v Dr. O&#39;Neil>Hi."]], [2.0, 5.0, ["Bye."]]],
+        $this->assertSame([[0.0, 2.0, ["<v Dr. O'Neil>Hi."]], [2.0, 5.0, ["Bye."]]],
                           self::cues((new HtmlTranscriptParser(3))->parse($html)));
     }
 

@@ -76,8 +76,7 @@ class HtmlTranscriptParser extends SubtitleParser
                 $next++;
             }
             if ($speaker !== "") {
-                // strip_tags() in the formatters reads a quote in a tag as the start of an attribute value.
-                $lines[0] = "<v " . str_replace(["'", "\""], ["&#39;", "&quot;"], Markup::escapeText($speaker)) . ">" . $lines[0];
+                $lines[0] = Markup::voiceTag($speaker) . $lines[0];
             }
 
             $subtitle->addCue(new SubtitleCue($start, $cues[$next][0] ?? round($start + $this->lastCueDuration, 3), $lines), false);
