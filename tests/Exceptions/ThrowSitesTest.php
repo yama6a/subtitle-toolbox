@@ -57,6 +57,7 @@ use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 use SubtitleToolbox\Profanity\ProfanityOptions;
+use SubtitleToolbox\ResegmentOptions;
 use SubtitleToolbox\Speakers\SpeakerLabels;
 use SubtitleToolbox\Streaming\SubRipStreamReader;
 use SubtitleToolbox\Streaming\SubRipStreamWriter;
@@ -441,6 +442,9 @@ class ThrowSitesTest extends TestCase
             "Profanity/ProfanityOptions.php: unknown mask"  => [fn () => new ProfanityOptions(["hell"], "blur"), ...$invalid],
             "Profanity/ProfanityOptions.php: negative padding" => [fn () => new ProfanityOptions(["hell"], padding: -1), ...$invalid],
             "Profanity/ProfanityOptions.php: missing word file" => [fn () => new ProfanityOptions(wordFile: __DIR__ . "/missing.txt"), ...$invalid],
+            "ResegmentOptions.php: maximum lines 0"         => [fn () => new ResegmentOptions(maxLines: 0), ...$invalid],
+            "ResegmentOptions.php: negative word gap"       => [fn () => new ResegmentOptions(maxWordGap: -1), ...$invalid],
+            "ResegmentOptions.php: maximum duration 0"      => [fn () => new ResegmentOptions(maxDuration: 0), ...$invalid],
             "Retiming.php: scale factor 0"                  => [fn () => self::subtitle()->scale(0), ...$invalid],
             "Retiming.php: same old times"                  => [fn () => self::subtitle()->syncByTwoPoints(1, 1, 1, 2), ...$invalid],
             "Retiming.php: new times in reverse"            => [fn () => self::subtitle()->syncByTwoPoints(1, 2, 2, 1), ...$invalid],

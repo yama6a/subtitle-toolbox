@@ -26,6 +26,7 @@ class Subtitle implements \IteratorAggregate, \Countable
     use CueLookup;
     use ArrayConversion;
     use ShortCueMerging;
+    use Resegmenting;
 
     /** @var array|SubtitleCue[] */
     protected $cues;
