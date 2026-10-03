@@ -58,6 +58,12 @@ abstract class WriteCommand extends FileCommand
     }
 
 
+    protected function fpsDescription(): string
+    {
+        return "Frame rate of the video, for MicroDVD input without a {1}{1}<fps> first line, and for MicroDVD and iTT output.";
+    }
+
+
     /**
      * @return list<Option>
      */
@@ -185,7 +191,8 @@ abstract class WriteCommand extends FileCommand
 
         if ($this->output !== null && $this->output !== self::DASH) {
             $extension = strtolower(pathinfo($this->output, PATHINFO_EXTENSION));
-            if (in_array($extension, FormatRegistry::extensions($inputFormat), true)) {
+            if (in_array($extension, FormatRegistry::extensions($inputFormat), true)
+                && FormatRegistry::formatterClass($inputFormat) !== null) {
                 return $inputFormat;
             }
             $byExtension = FormatRegistry::forExtension($extension);

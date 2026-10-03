@@ -6,6 +6,7 @@ use GlyphOcr\GlyphDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\FormatRegistry;
+use SubtitleToolbox\Formatters\JsonFormatter;
 use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\MergeShortCuesOptions;
@@ -142,6 +143,22 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testHelpTextsDescribeWhatTheOptionsDo(): void
+    {
+        $convert = $this->runBinary(["convert", "--help"])[1];
+        $this->assertMatchesRegularExpression('/^  --lenient +Skip or repair broken cues and print a warning for each\. ' .
+                                              'SCC, PGS, VobSub and chapter input ignore it\.$/m', $convert);
+        $this->assertMatchesRegularExpression('/^  --encoding NAME +.*A BOM in the input overrides it\.$/m', $convert);
+        $this->assertMatchesRegularExpression('/^  --fps RATE +.*for MicroDVD and iTT output\.$/m', $convert);
+        $this->assertStringNotContainsString("SubRip, WebVTT and SBV", $convert);
+
+        $fix = $this->runBinary(["fix", "--help"])[1];
+        $this->assertMatchesRegularExpression('/^  --split-long +.*at sentence ends, clause ends or spaces\.$/m', $fix);
+        $this->assertMatchesRegularExpression('/^  --merge-short +.*at most 0\.25 s away.*$/m', $fix);
+        $this->assertDoesNotMatchRegularExpression('/MicroDVD and iTT output/', $this->runBinary(["info", "--help"])[1]);
+    }
+
+
     public function testUnknownCommandAndOptionAreUsageErrors(): void
     {
         $this->assertSame([2, "", "Error: Unknown command \"merge\".\nRun \"subtitle-toolbox help\" for the usage.\n"], $this->runBinary(["merge"]));
@@ -184,6 +201,15 @@ class BinaryTest extends TestCase
         $this->assertSame([0, "trip.tsv -> trip.csv\n", ""], $this->runBinary(["convert", "trip.tsv", "trip.csv"]));
         $this->assertStringStartsWith(self::BOM . "start,end,text\n00:00:01.000,", $this->file("trip.csv"));
         $this->assertSame(0, substr_count($this->file("trip.csv"), "\t"));
+    }
+
+
+    public function testAnOutputExtensionOfAReadOnlyInputFormatGivesTheWritableFormatOfTheExtension(): void
+    {
+        copy(__DIR__ . "/../files/whisper/real/openai_whisper_german.json", "$this->dir/lecture.json");
+
+        $this->assertSame([0, "lecture.json -> out.json\n", ""], $this->runBinary(["convert", "lecture.json", "out.json"]));
+        $this->assertSame(Subtitle::parse($this->file("lecture.json"))->format(JsonFormatter::class), $this->file("out.json"));
     }
 
 

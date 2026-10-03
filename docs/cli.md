@@ -58,13 +58,13 @@ php subtitle-toolbox.phar --version
 - **Encoding**: `--encoding` names the encoding of the input, for example `Windows-1252`. See [encodings.md](encodings.md).
 - **Output bytes**: `--line-ending lf|crlf`, `--bom` and `--no-bom`.
 - **Broken files**: `--lenient` skips or repairs broken cues and prints a warning for each, see [lenient-parsing.md](lenient-parsing.md).
-- **MicroDVD**: `--fps` gives the frame rate for a file without a `{1}{1}<fps>` first line.
+- **Frame rate**: `--fps` gives the frame rate for a MicroDVD file without a `{1}{1}<fps>` first line. MicroDVD and iTT output also use it. Without it, MicroDVD output takes the frame rate of a MicroDVD input, and iTT output the frame rate of an iTT input.
 - **Image cues**: `--skip-image-cues` leaves out image cues without text in place of failing.
 
 ## Formats and file extensions
 Run `subtitle-toolbox formats` for the list. When two formats share an extension, the first one in the list owns it.
 
-- **Output extension**: when the input format also uses the extension of the output file, the output keeps the input format. So an MPL2 `film.txt` converts to MPL2 in `out.txt`. Otherwise the owner of the extension decides: an SRT input and `out.txt` give plain text.
+- **Output extension**: when the input format also uses the extension of the output file, the output keeps the input format. So an MPL2 `film.txt` converts to MPL2 in `out.txt`. Otherwise the owner of the extension decides: an SRT input and `out.txt` give plain text. A Whisper JSON input and `out.json` give the library JSON, because the tool cannot write Whisper JSON.
 - **`.sub`**: MicroDVD. Pass `--from subviewer` for SubViewer. A directory skips a `.sub` file that has an `.idx` file next to it.
 - **VobSub**: pass the `.idx` file. The tool reads the `.sub` file next to it. Standard input does not work.
 - **`.json` and `.txt` input**: format detection finds the speech-to-text JSON formats, podcast transcripts, Podcasting 2.0 chapters, MPL2, TMPlayer and OGM chapters by their content.
