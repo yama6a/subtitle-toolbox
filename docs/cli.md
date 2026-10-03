@@ -20,16 +20,17 @@ Every release also ships the tool as a PHAR file and as a container image.
 |:--- |:--- |:--- |
 | PHAR on the [GitHub release](https://github.com/yama6a/subtitle-toolbox/releases) | PHP 8.2 or later with `ext-dom`, `ext-iconv` and `ext-zlib` | `php subtitle-toolbox.phar convert in.srt out.vtt` |
 | Image `ghcr.io/yama6a/subtitle-toolbox` | Docker or another container runtime | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:1.65.0 convert in.srt out.vtt` |
+| Image `ghcr.io/yama6a/subtitle-toolbox:tesseract` | the same, for OCR with Tesseract in every language | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:1.65.0-tesseract convert in.sup out.srt --ocr --ocr-language deu` |
 
 ```sh
 curl -fsSLO https://github.com/yama6a/subtitle-toolbox/releases/latest/download/subtitle-toolbox.phar
 php subtitle-toolbox.phar --version
 ```
 
-- **Version**: the PHAR file, the image tag, the Git tag and the Packagist version are the same string, for example `1.65.0`. The image also has the tags `1.65`, `1` and `latest`.
+- **Version**: the PHAR file, the image tag, the Git tag and the Packagist version are the same string, for example `1.65.0`. The image also has the tags `1.65`, `1` and `latest`. The Tesseract image has the tags `1.65.0-tesseract`, `1.65-tesseract`, `1-tesseract` and `tesseract`.
 - **Image**: the tool runs in `/work`, so mount your files there. `--user` makes the tool write files that you own. Without it, the tool runs as `www-data` and cannot write to most mounted folders.
 - **Platforms**: the image is for `linux/amd64` and `linux/arm64`.
-- **OCR**: `convert --ocr` works in both forms with no extra steps, because both include php-glyph-ocr.
+- **OCR**: `convert --ocr` works in every form with no extra steps, because all include php-glyph-ocr. The Tesseract image adds Tesseract with the fast models of all its languages. It is about 340 MB larger.
 - **Memory**: the image sets `memory_limit` to 512 MB. The PHAR raises a `memory_limit` of 128 MB to 512 MB when you pass `--ocr`. It keeps any other value, for example from `php -d memory_limit=1G`.
 
 ## Commands

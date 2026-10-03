@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Runs the PHAR once per feature that depends on how it was built: the version, iconv and the bundled OCR.
 # Usage: .build/smoke-test.sh <expected version> <tests/files as the PHP command sees it> <PHAR path> <PHP command...>
+# SMOKE_TESSERACT=1 also reads Cyrillic text with Tesseract, for the image with all Tesseract languages.
 set -euo pipefail
 
 expected=$1
@@ -24,6 +25,14 @@ ocr=$("$@" "$phar" convert "$files/pgs/text_1080p.sup" --ocr --to srt --output -
 if [[ $ocr != *Bergen* ]]; then
   printf 'convert --ocr printed:\n%s\n' "$ocr" >&2
   exit 1
+fi
+
+if [ "${SMOKE_TESSERACT:-}" = 1 ]; then
+  ocr=$("$@" "$phar" convert "$files/pgs/text_cyrillic_1080p.sup" --ocr --ocr-engine tesseract --ocr-language rus --to srt --output -)
+  if [[ $ocr != *Берген* ]]; then
+    printf 'convert --ocr-engine tesseract printed:\n%s\n' "$ocr" >&2
+    exit 1
+  fi
 fi
 
 echo "smoke test passed: $version"

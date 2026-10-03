@@ -48,6 +48,14 @@ jobs:
         VERSION=0.0.0-ci
       smoke-test: .build/smoke-test.sh 0.0.0-ci files /usr/local/bin/subtitle-toolbox.phar docker run --rm -v "$PWD/tests/files:/work/files:ro" --entrypoint php "$IMAGE"
 
+  docker-tesseract:
+    uses: yama6a/gha/.github/workflows/docker-build-check.yaml@v2
+    with:
+      dockerfile: .build/tesseract.Dockerfile
+      build-args: |
+        VERSION=0.0.0-ci
+      smoke-test: SMOKE_TESSERACT=1 .build/smoke-test.sh 0.0.0-ci files /usr/local/bin/subtitle-toolbox.phar docker run --rm -v "$PWD/tests/files:/work/files:ro" --entrypoint php "$IMAGE"
+
   # The php job has no Tesseract, so its tests skip there and run here.
   tesseract:
     runs-on: ubuntu-26.04-arm
