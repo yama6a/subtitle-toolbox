@@ -183,8 +183,8 @@ $dual = DualSubtitle::merge($english, $german, new DualSubtitleOptions(
 
 | Mode | Result for `00:00:01.000 --> 00:00:04.000 Where are you going?` and `00:00:01.200 --> 00:00:03.900 Wohin gehst du?` | Formats |
 |:--- |:--- |:--- |
-| `stack`, the default | one cue from 1.000 s to 4.000 s with the lines `Where are you going?` and `<i>Wohin gehst du?</i>` | all |
-| `topBottom` | the English cue with alignment `null`, and the German cue with alignment 8 from 1.000 s to 4.000 s | SubRip with `{\an8}`, WebVTT, ASS and TTML. The other formats do not write the alignment |
+| `stack`, the default | one cue from 1.000 s to 4.000 s with the lines `Where are you going?` and `<i>Wohin gehst du?</i>` with `secondaryStyle: 'i'` | all |
+| `topBottom` | the English cue with alignment `null`, and the German cue with alignment 8 from 1.000 s to 4.000 s | SubRip with `{\an8}`, WebVTT, ASS, TTML, iTT, EBU STL and SCC. The other formats do not write the alignment |
 
 - **Stack**: each secondary cue joins the primary cue that it overlaps most. The joined cue spans from the earlier start to the later end. A cue without an overlap stays a cue of its own.
 - **Top and bottom**: a secondary start or end time moves to the closest primary start or end time within `snapTolerance`. So the two languages appear and disappear together. A cue keeps its times when both would move to the same time.

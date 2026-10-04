@@ -84,7 +84,7 @@ php subtitle-toolbox.phar --version
 | `--video-fps RATE` | the frame rate of the video for the frame rules, see [Timing](#timing) and [Validate](#validate) | `convert`, `validate` |
 | `--fps RATE` | each of the 3 options above that the command has | all that read a file |
 
-- **Override**: a specific option wins over `--fps`. `convert movie.sub movie.srt --fps 25 --output-fps 23.976` reads at 25 fps and writes at 23.976 fps.
+- **Override**: a specific option wins over `--fps`. `convert movie.sub new.sub --fps 25 --output-fps 23.976` reads at 25 fps and writes at 23.976 fps.
 - **Output default**: without `--output-fps`, MicroDVD output takes the frame rate of a MicroDVD input, and iTT output the frame rate of an iTT input.
 - **Formats**: `--from` and `--to` always name formats. `retime` changes the frame rate with `--from-fps` and `--to-fps`.
 

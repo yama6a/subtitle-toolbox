@@ -8,10 +8,10 @@ Every edit has one of 3 shapes:
 | Shape | Example | Returns |
 |:--- |:--- |:--- |
 | method on `Subtitle` | `$subtitle->shift(2)->wrapLines(42)` | `$this`, so calls chain |
-| method on `Subtitle` that starts with `to`, `with` or `only`, and `slice()` | `$subtitle->onlyForced()`, `$subtitle->slice(10, 20)` | a new `Subtitle`. The original stays unchanged. |
+| `onlyForced()` and `slice()` | `$subtitle->onlyForced()`, `$subtitle->slice(10, 20)` | a new `Subtitle`. The original stays unchanged. |
 | service with `apply()` | `HearingImpairedRemover::apply($subtitle, new HearingImpairedOptions())` | a report. The service changes `$subtitle`. |
 
-- **Service**: a feature with many settings is a class with one static `apply(Subtitle $subtitle, XOptions $options): XReport`. The services are `Resegmenter`, `HearingImpairedRemover`, `ReferenceSync`, `ShotChangeTiming`, `CommonErrorFixer`, `WordHighlight`, `ProfanityFilter` and `SpeakerLabels`.
+- **Service**: a feature with many settings is a class with one static `apply(Subtitle $subtitle, XOptions $options): XReport`. `ReferenceSync` names the first parameter `$target` and returns a `SyncResult`. The services are `Resegmenter`, `HearingImpairedRemover`, `ReferenceSync`, `ShotChangeTiming`, `CommonErrorFixer`, `WordHighlight`, `ProfanityFilter` and `SpeakerLabels`.
 - **Keep the original**: `clone` copies the cues too. Pass `clone $subtitle` to a service or to a method that changes the subtitle, and the original stays unchanged.
 
 ## Metadata, comments and cue identifiers
@@ -64,7 +64,7 @@ $subtitle->filterCues(fn (SubtitleCue $cue) => $cue->getEnd() - $cue->getStart()
 - **Keys**: `getCuesAt()`, `getCuesBetween()` and `findCues()` keep the cue index as the array key.
 - **Filter**: `filterCues()` moves a comment before a removed cue to the next kept cue, and then calls `reIndexCues()`.
 - **No array access**: `$subtitle[3]` does not work. Use `getCues()`, `addCue()` and `removeCue()`, so the cue indexes and comments stay correct.
-- **Structure check**: `validate(ValidationRules::structure())` returns one result per problem. It reports a subtitle without cues, a cue that starts before the previous cue starts, a cue that ends before it starts, a cue that starts before the previous cue ends, and a gap in the cue indexes. See [validation](validation.md).
+- **Structure check**: `validate(ValidationRules::structure())` returns one result per problem. It reports a subtitle without cues, and a gap in the cue indexes. It also reports a cue that starts before the previous cue starts or ends, and a cue that ends before it starts. See [validation](validation.md).
 
 ## Forced cues
 A **forced cue** shows also when the viewer has turned subtitles off, for example the translation of a sign. Apple and Netflix take a full subtitle file and a separate file with only the forced cues.

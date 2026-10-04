@@ -29,7 +29,7 @@ $english->save('movie.en.srt');
 - **Engine errors**: `translate()` throws `InvalidArgumentException` when the engine does not return one string per text. Exceptions of the engine pass through.
 
 ## Engines
-An engine is a class that implements `TranslationEngine`. This engine uses [deeplcom/deepl-php](https://github.com/DeepLcom/deepl-php):
+An engine is a class that implements `TranslationEngine`. The package ships no engine. This example engine uses [deeplcom/deepl-php](https://github.com/DeepLcom/deepl-php):
 
 ```php
 use DeepL\DeepLClient;
