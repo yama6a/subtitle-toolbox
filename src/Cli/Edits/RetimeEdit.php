@@ -22,6 +22,18 @@ final class RetimeEdit extends Edit
     }
 
 
+    public static function group(): string
+    {
+        return "retime";
+    }
+
+
+    public static function summary(): string
+    {
+        return "Shift and scale the times, or change the frame rate.";
+    }
+
+
     public static function options(): array
     {
         return [

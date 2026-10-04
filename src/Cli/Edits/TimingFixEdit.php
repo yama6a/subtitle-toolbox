@@ -20,6 +20,18 @@ final class TimingFixEdit extends Edit
     }
 
 
+    public static function group(): string
+    {
+        return "timing";
+    }
+
+
+    public static function summary(): string
+    {
+        return "Fix overlaps and short cues.";
+    }
+
+
     public static function options(): array
     {
         return [

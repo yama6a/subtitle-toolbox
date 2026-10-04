@@ -126,7 +126,7 @@ php subtitle-toolbox.phar validate movie.srt --preset netflix-en
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox convert movie.sup movie.srt --ocr
 ```
 
-See [cli.md](docs/cli.md) for all commands and options.
+See [cli.md](docs/cli.md) for all commands and options. `subtitle-toolbox convert --help` lists the option groups of `convert`, and `convert --help GROUP` the options of one group.
 
 ## Contributing and releases
 Pull requests are welcome. Run the tests with `composer test`.

@@ -22,6 +22,18 @@ final class SnapEdit extends Edit
     }
 
 
+    public static function group(): string
+    {
+        return "snap";
+    }
+
+
+    public static function summary(): string
+    {
+        return "Time cues to shot changes and close small gaps.";
+    }
+
+
     public static function options(): array
     {
         return [

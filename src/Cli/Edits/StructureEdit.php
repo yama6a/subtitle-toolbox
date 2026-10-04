@@ -31,6 +31,18 @@ final class StructureEdit extends Edit
     }
 
 
+    public static function group(): string
+    {
+        return "structure";
+    }
+
+
+    public static function summary(): string
+    {
+        return "Rebuild, join, split and wrap cues.";
+    }
+
+
     public static function options(): array
     {
         return [

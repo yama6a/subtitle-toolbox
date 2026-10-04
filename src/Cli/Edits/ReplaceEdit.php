@@ -23,6 +23,18 @@ final class ReplaceEdit extends Edit
     }
 
 
+    public static function group(): string
+    {
+        return "replace";
+    }
+
+
+    public static function summary(): string
+    {
+        return "Replace words or patterns in the text.";
+    }
+
+
     public static function options(): array
     {
         return [

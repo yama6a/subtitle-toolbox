@@ -11,6 +11,18 @@ use SubtitleToolbox\Subtitle;
 
 final class ForcedEdit extends Edit
 {
+    public static function group(): string
+    {
+        return "forced";
+    }
+
+
+    public static function summary(): string
+    {
+        return "Keep only the forced cues.";
+    }
+
+
     public static function options(): array
     {
         return [Option::flag("forced-only", "Keep only the forced cues, for example the translations of signs.")];

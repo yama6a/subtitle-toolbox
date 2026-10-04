@@ -37,18 +37,12 @@ class Application
         $this->commands = [
             new ConvertCommand(),
             new RetimeCommand(),
-            new ShiftCommand(),
-            new ScaleCommand(),
-            new FpsCommand(),
-            new FixCommand(),
-            new StripSdhCommand(),
             new InfoCommand(),
             new ValidateCommand(),
             new SyncCommand(),
             new DiffCommand(),
             new TranslateCommand(),
             new DualCommand(),
-            new SnapCommand(),
             new HlsCommand(),
             new FormatsCommand(),
         ];
@@ -84,10 +78,11 @@ class Application
             return $this->usageError("Unknown command \"$name\".", "help");
         }
 
-        if (in_array("--help", $arguments, true) || in_array("-h", $arguments, true)) {
-            $this->console->out($command->help());
+        $help = array_key_first(array_filter($arguments, fn (string $argument): bool => $argument === "--help" || $argument === "-h"));
+        if ($help !== null) {
+            $topic = $arguments[$help + 1] ?? null;
 
-            return self::EXIT_OK;
+            return $this->printHelp($command, $topic !== null && !str_starts_with($topic, "-") ? $topic : null);
         }
 
         try {
@@ -110,7 +105,18 @@ class Application
         if ($command === null) {
             return $this->usageError("Unknown command \"$arguments[0]\".", "help");
         }
-        $this->console->out($command->help());
+
+        return $this->printHelp($command, $arguments[1] ?? null);
+    }
+
+
+    private function printHelp(Command $command, ?string $topic): int
+    {
+        try {
+            $this->console->out($command->help($topic));
+        } catch (SubtitleToolboxException $exception) {
+            return $this->usageError($exception->getMessage(), "help " . $command->name());
+        }
 
         return self::EXIT_OK;
     }
@@ -119,7 +125,7 @@ class Application
     private function find(string $name): ?Command
     {
         foreach ($this->commands as $command) {
-            if ($command->name() === $name || in_array($name, $command->aliases(), true)) {
+            if ($command->name() === $name) {
                 return $command;
             }
         }
@@ -138,10 +144,9 @@ class Application
 
     private function help(): string
     {
-        $listed   = array_filter($this->commands, fn (Command $command): bool => $command->listed());
-        $width    = max(array_map(fn (Command $command): int => strlen($command->name()), $listed));
+        $width    = max(array_map(fn (Command $command): int => strlen($command->name()), $this->commands));
         $commands = "";
-        foreach ($listed as $command) {
+        foreach ($this->commands as $command) {
             $commands .= "  " . str_pad($command->name(), $width) . "  " . $command->summary() . "\n";
         }
         $commands .= "  " . str_pad("help", $width) . "  Shows the help of a command.\n";

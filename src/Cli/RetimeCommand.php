@@ -50,13 +50,7 @@ class RetimeCommand extends WriteCommand
     {
         parent::prepare($arguments);
 
-        $this->retime = $this->readEdit($arguments) ?? self::fail("Pass --shift SECONDS, --scale FACTOR, or --from-fps RATE and --to-fps RATE.");
-    }
-
-
-    protected function readEdit(Arguments $arguments): ?RetimeEdit
-    {
-        return RetimeEdit::fromArguments($arguments);
+        $this->retime = RetimeEdit::fromArguments($arguments) ?? self::fail("Pass --shift SECONDS, --scale FACTOR, or --from-fps RATE and --to-fps RATE.");
     }
 
 

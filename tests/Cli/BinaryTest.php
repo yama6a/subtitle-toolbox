@@ -53,7 +53,7 @@ class BinaryTest extends TestCase
 
     private const BOM = "\xEF\xBB\xBF";
 
-    private const COMMANDS = ["convert", "retime", "shift", "scale", "fps", "sync-fps", "fix", "strip-sdh", "info", "validate", "sync", "diff", "dual", "snap", "hls", "formats"];
+    private const COMMANDS = ["convert", "retime", "info", "validate", "sync", "diff", "dual", "hls", "formats"];
 
     private string $dir;
 
@@ -138,9 +138,6 @@ class BinaryTest extends TestCase
         foreach (["convert", "retime", "info", "validate", "sync", "diff", "dual", "hls", "formats", "help"] as $command) {
             $this->assertMatchesRegularExpression("/^  $command +\S/m", $stdout);
         }
-        foreach (["shift", "scale", "fps", "fix", "strip-sdh", "snap"] as $command) {
-            $this->assertDoesNotMatchRegularExpression("/^  $command +\S/m", $stdout);
-        }
         $this->assertSame("", $stderr);
         $this->assertSame([0, $stdout, ""], $this->runBinary(["--help"]));
         $this->assertSame([0, $stdout, ""], $this->runBinary(["help"]));
@@ -186,8 +183,9 @@ class BinaryTest extends TestCase
         $this->assertMatchesRegularExpression('/^  --to FORMAT +Output format\./m', $convert);
         $this->assertStringNotContainsString("SubRip, WebVTT and SBV", $convert);
 
-        $this->assertMatchesRegularExpression('/^  --fix-split-long +.*at sentence ends, clause ends or spaces\.$/m', $convert);
-        $this->assertMatchesRegularExpression('/^  --fix-merge-short +.*at most 0\.25 s away.*$/m', $convert);
+        $structure = $this->runBinary(["convert", "--help", "structure"])[1];
+        $this->assertMatchesRegularExpression('/^  --fix-split-long +.*at sentence ends, clause ends or spaces\.$/m', $structure);
+        $this->assertMatchesRegularExpression('/^  --fix-merge-short +.*at most 0\.25 s away.*$/m', $structure);
         $info = $this->runBinary(["info", "--help"])[1];
         $this->assertDoesNotMatchRegularExpression('/--output-fps|--video-fps/', $info);
         $this->assertMatchesRegularExpression('/^  --fps RATE +Same as --input-fps\.$/m', $info);
@@ -613,19 +611,6 @@ class BinaryTest extends TestCase
     }
 
 
-    public function testDeprecatedShiftRunsRetimeWithAWarning(): void
-    {
-        $expected = $this->runBinary(["retime", "trip.srt", "--shift", "-0.5"])[1];
-
-        $this->assertSame([0, $expected, "shift is deprecated. Use: subtitle-toolbox retime trip.srt --shift -0.5\n"],
-                          $this->runBinary(["shift", "trip.srt", "--by", "-0.5"]));
-        $this->assertSame([0, $expected, "shift is deprecated. Use: subtitle-toolbox retime trip.srt --shift=-0.5\n"],
-                          $this->runBinary(["shift", "trip.srt", "--by=-0.5"]));
-        $this->assertSame(2, $this->runBinary(["shift", "trip.srt"])[0]);
-        $this->assertSame(2, $this->runBinary(["shift", "trip.srt", "--shift", "1"])[0]);
-    }
-
-
     public function testRetimeShiftAfter(): void
     {
         [$code, $stdout] = $this->runBinary(["retime", "shop.vtt", "--shift", "5", "--shift-after", "12"]);
@@ -633,8 +618,6 @@ class BinaryTest extends TestCase
         $this->assertSame(0, $code);
         $this->assertStringContainsString("00:00:10.000 --> 00:00:12.000", $stdout);
         $this->assertStringContainsString("00:00:18.000 --> 00:00:20.500", $stdout);
-        $this->assertSame([0, $stdout, "shift is deprecated. Use: subtitle-toolbox retime shop.vtt --shift 5 --shift-after 12\n"],
-                          $this->runBinary(["shift", "shop.vtt", "--by", "5", "--after", "12"]));
     }
 
 
@@ -684,16 +667,6 @@ class BinaryTest extends TestCase
     }
 
 
-    public function testDeprecatedScaleRunsRetimeWithAWarning(): void
-    {
-        $expected = $this->runBinary(["retime", "trip.srt", "--scale", "1.001"])[1];
-
-        $this->assertSame([0, $expected, "scale is deprecated. Use: subtitle-toolbox retime trip.srt --scale 1.001\n"],
-                          $this->runBinary(["scale", "trip.srt", "--factor", "1.001"]));
-        $this->assertSame(2, $this->runBinary(["scale", "trip.srt", "--factor", "0"])[0]);
-    }
-
-
     public function testRetimeAppliesShiftThenScaleThenFrameRate(): void
     {
         $trip     = $this->file("trip.srt");
@@ -718,20 +691,6 @@ class BinaryTest extends TestCase
         $this->assertSame([0, $expected, ""], [$code, $stdout, $stderr]);
         $this->assertStringContainsString("00:00:01.043 --> 00:00:03.128\nHello from the frames.\n", $stdout);
         $this->assertSame(2, $this->runBinary(["retime", "frames.sub", "--input-fps", "25", "--from-fps", "25"])[0]);
-    }
-
-
-    public function testFpsWasRemoved(): void
-    {
-        $this->assertSame(
-            [2, "", "fps was removed. Use: subtitle-toolbox retime tests/files/cli/frames.sub --from-fps 25 --to-fps 23.976\n"],
-            $this->runBinary(["fps", "tests/files/cli/frames.sub", "--from", "25", "--to", "23.976"])
-        );
-        $this->assertSame(
-            [2, "", "fps was removed. Use: subtitle-toolbox retime 'my movie.sub' --from-fps=25 --to-fps 23.976 --fps 25 -o out.srt\n"],
-            $this->runBinary(["sync-fps", "my movie.sub", "--from=25", "--to", "23.976", "--fps", "25", "-o", "out.srt"])
-        );
-        $this->assertFileDoesNotExist("$this->dir/out.srt");
     }
 
 

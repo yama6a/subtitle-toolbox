@@ -47,8 +47,7 @@ php subtitle-toolbox.phar --version
 | `hls` | cuts a subtitle into WebVTT segments and writes an HLS playlist, see [HLS](#hls) |
 | `formats` | lists the format names and extensions for `--from` and `--to` |
 
-- **Old commands**: `shift` and `scale` still run and print a deprecation warning, see [Retime](#retime). `fps` and `sync-fps` exit with code 2 and print the matching `retime` call. `fix`, `strip-sdh` and `snap` exit with code 2 and print the matching `convert` call, see [Removed commands](#removed-commands).
-- **Help**: `subtitle-toolbox help convert` or `subtitle-toolbox convert --help` lists all options of a command.
+- **Help**: `subtitle-toolbox help CMD` and `subtitle-toolbox CMD --help` list the options of a command. For `convert`, they list the common options and the option groups, see [Order](#order).
 - **Version**: `subtitle-toolbox --version` prints the installed release, for example `2.0.0`, or `dev` in a Git checkout.
 - **Exit code**: 0 when all files succeed, 1 when a file fails, breaks a validation rule or differs in `diff`, 2 for invalid arguments.
 
@@ -142,13 +141,6 @@ vendor/bin/subtitle-toolbox retime movie.sub --from-fps 25 --to-fps 23.976 --inp
 
 - **Negative times**: a time that becomes negative becomes 0.
 
-| Deprecated call | Same as |
-|:--- |:--- |
-| `shift FILE --by S --after T` | `retime FILE --shift S --shift-after T` |
-| `scale FILE --factor F` | `retime FILE --scale F` |
-
-The deprecated commands print `shift is deprecated. Use: subtitle-toolbox retime movie.srt --shift 2` on standard error, then run. `fps FILE --from A --to B` fails with exit code 2 and prints `fps was removed. Use: subtitle-toolbox retime FILE --from-fps A --to-fps B`.
-
 ## Convert
 `convert` reads each input, runs the edits of its options, and writes the result in the format of `--to` or of the output file extension. Without both, the output keeps the input format. One call can run OCR, fix text, strip SDH, retime and convert:
 
@@ -162,18 +154,18 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --fix-common-errors --in-place
 - **Output file argument**: `convert IN OUT` reads `IN` and writes `OUT` only without `--to`, `-o`, `--output-dir` and `--in-place`. With one of them, both arguments are inputs.
 
 ### Order
-`convert` always runs the edits in this order, whatever the order of the options:
+`convert` always runs the edits in this order, whatever the order of the options. The options form groups. `convert --help GROUP` lists the options of one group, and `convert --help all` lists every option.
 
-| Step | Options | Why here |
-|:--- |:--- |:--- |
-| 1. Read | input options | |
-| 2. OCR | `--ocr` | the later steps need text |
-| 3. Forced | `--forced-only` | |
-| 4. Text | `--fix-common-errors`, `--sdh`, `--replace`, `--strip-tags`, `--case`, `--speakers`, `--mask-words` | SDH changes the line lengths, so it runs before wrapping |
-| 5. Structure | `--fix-resegment`, `--fix-unwrap`, `--fix-merge-short`, `--fix-split-long`, `--fix-wrap`, `--fix-merge-duplicates` | |
-| 6. Timing | `--shift`, `--scale`, `--from-fps` and `--to-fps`, `--snap-shot-changes`, `--fix-overlaps`, `--fix-min-duration` | splits in step 5 create new cues |
-| 7. Karaoke | `--karaoke` | it multiplies the cues |
-| 8. Write | output options | |
+| Step | Group | Options | Why here |
+|:--- |:--- |:--- |:--- |
+| 1. Read | | input options | |
+| 2. OCR | `ocr` | `--ocr` | the later steps need text |
+| 3. Forced | `forced` | `--forced-only` | |
+| 4. Text | `errors`, `sdh`, `replace`, `text`, `masking` | `--fix-common-errors`, `--sdh`, `--replace`, `--strip-tags`, `--case`, `--speakers`, `--mask-words` | SDH changes the line lengths, so it runs before wrapping |
+| 5. Structure | `structure` | `--fix-resegment`, `--fix-unwrap`, `--fix-merge-short`, `--fix-split-long`, `--fix-wrap`, `--fix-merge-duplicates` | |
+| 6. Timing | `retime`, `snap`, `timing` | `--shift`, `--scale`, `--from-fps` and `--to-fps`, `--snap-shot-changes`, `--fix-overlaps`, `--fix-min-duration` | splits in step 5 create new cues |
+| 7. Karaoke | `karaoke` | `--karaoke` | it multiplies the cues |
+| 8. Write | `ass` | output options, `--ass-karaoke-tag` | |
 
 ### OCR and forced cues
 | Option | Effect |
@@ -264,22 +256,6 @@ vendor/bin/subtitle-toolbox convert movie.srt movie.timed.srt --video-fps 24 --s
 | `--ass-karaoke-tag TAG` | `k` (default), `kf` or `ko`, the ASS tag for word timestamps, see [formats.md](formats.md#ass-and-ssa). Needs ASS output. Pass only one of `--karaoke` and `--ass-karaoke-tag` |
 
 - **Library only**: the cumulative mode and the word limit of `WordHighlightOptions` have no option. Call `WordHighlight::apply()` for them.
-
-### Removed commands
-`fix`, `strip-sdh` and `snap` exit with code 2 and print the matching `convert` call, with the output options of the old call. For example, `strip-sdh movie.srt -o clean.srt` prints `strip-sdh was removed. Use: subtitle-toolbox convert movie.srt --sdh -o clean.srt`.
-
-| 1.x | 2.0 |
-|:--- |:--- |
-| `fix FILE --X` | `convert FILE --fix-X`, for example `--overlaps` becomes `--fix-overlaps` |
-| `fix --list-fixes` | `--fix-list` |
-| `fix --language`, `convert --case-language` | `--language` |
-| `strip-sdh FILE --X` | `convert FILE --sdh --sdh-X`, for example `--lyrics` becomes `--sdh-lyrics` |
-| `snap FILE --shot-changes F` | `convert FILE --snap-shot-changes F` |
-| `snap --snap-window` | `--snap-window-frames` |
-| `snap --min-gap-frames`, `--min-duration-frames`, `--no-chain` | `--snap-min-gap-frames`, `--snap-min-duration-frames`, `--snap-no-chain` |
-| `--regex`, `--ignore-case` | `--replace-regex`, `--replace-ignore-case` |
-| `--karaoke-tag` | `--ass-karaoke-tag` |
-| `--karaoke-mode`, `--karaoke-words` | none. Use `WordHighlightOptions` in PHP |
 
 ## Info
 - **Warnings**: with `--lenient`, `info` prints `Warnings: 1` for a file with one broken cue. The JSON holds a `warnings` list, empty for a file without warnings. A warning has `lineNumber`, `blockIndex`, `message` and `action`, see [lenient-parsing.md](lenient-parsing.md).

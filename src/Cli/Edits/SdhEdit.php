@@ -19,6 +19,18 @@ final class SdhEdit extends Edit
     }
 
 
+    public static function group(): string
+    {
+        return "sdh";
+    }
+
+
+    public static function summary(): string
+    {
+        return "Remove hearing-impaired annotations.";
+    }
+
+
     public static function options(): array
     {
         return [
