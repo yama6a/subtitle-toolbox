@@ -10,6 +10,7 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Streaming\SubRipStreamReader;
 use SubtitleToolbox\Streaming\WebVttStreamReader;
@@ -20,8 +21,8 @@ class LenientParsingTest extends TestCase
 {
     private const DIR = __DIR__ . "/../files/lenient/";
 
-    private const SKIPPED  = ParseWarning::SKIPPED;
-    private const REPAIRED = ParseWarning::REPAIRED;
+    private const SKIPPED  = ParseWarningAction::Skipped;
+    private const REPAIRED = ParseWarningAction::Repaired;
 
 
     /**
@@ -446,7 +447,7 @@ class LenientParsingTest extends TestCase
                 5,
                 1,
                 ["2", "00:00:05,000 -> 00:00:07,000", "Broken arrow"],
-                ParseWarning::SKIPPED
+                ParseWarningAction::Skipped
             )],
             $subtitle->getParseWarnings()
         );

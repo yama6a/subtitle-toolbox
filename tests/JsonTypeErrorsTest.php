@@ -171,7 +171,7 @@ class JsonTypeErrorsTest extends TestCase
 
         $subtitle = Subtitle::fromString($json, Format::Json, new ReadOptions(lenient: true));
         $warning  = $subtitle->getParseWarnings()[0];
-        $this->assertSame([$message, null, ParseWarning::SKIPPED], [$warning->message, $warning->blockIndex, $warning->action]);
+        $this->assertSame([$message, null, ParseWarningAction::Skipped], [$warning->message, $warning->blockIndex, $warning->action]);
         $this->assertSame([json_encode([$key => $formatData[$key]])], $warning->block);
         $this->assertSame([], $subtitle->getFormatData($key));
         $this->assertCount(1, $subtitle->getCues());

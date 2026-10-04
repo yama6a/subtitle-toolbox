@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -64,7 +65,7 @@ class HtmlTranscriptParserTest extends TestCase
         $subtitle = (new HtmlTranscriptParser())->parse("<time>0:00</time><p>Hi.</p>\n<time>0:61</time><p>Oops.</p>\n<time>0:04</time><p>Bye.</p>", new ReadOptions(lenient: true));
 
         $this->assertSame([[0.0, 4.0, ["Hi."]], [4.0, 9.0, ["Bye."]]], self::cues($subtitle));
-        $this->assertSame([["The time \"0:61\" is not valid.", 2, 1, ParseWarning::SKIPPED]], array_map(
+        $this->assertSame([["The time \"0:61\" is not valid.", 2, 1, ParseWarningAction::Skipped]], array_map(
             fn (ParseWarning $warning): array => [$warning->message, $warning->lineNumber, $warning->blockIndex, $warning->action],
             $subtitle->getParseWarnings()
         ));

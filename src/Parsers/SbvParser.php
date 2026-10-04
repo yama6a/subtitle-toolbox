@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -24,7 +24,7 @@ final class SbvParser extends SubtitleParser
         $idx        = 0;
         foreach ($this->splitAtEmptyLines(explode(LineEnding::Lf->value, $rawSubtitle)) as $lineNumber => $rawLines) {
             if ($this->lenient && $rawLines === [""]) {
-                $this->warn("The file has no cues.", $lineNumber, $idx, $rawLines, ParseWarning::SKIPPED);
+                $this->warn("The file has no cues.", $lineNumber, $idx, $rawLines, ParseWarningAction::Skipped);
                 break;
             }
 

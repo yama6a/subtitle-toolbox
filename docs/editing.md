@@ -92,9 +92,9 @@ $subtitle->mergeShortCues(new MergeShortCuesOptions(
 Speech-to-text tools such as Whisper write segments of 10 s and more. `wrapLines()` makes the lines shorter, but the cue stays too long to read. `Resegmenter` with `ResegmentMode::SplitLong` splits such a cue into cues that fit the limits.
 
 ```php
-use SubtitleToolbox\ResegmentMode;
-use SubtitleToolbox\Resegmenter;
-use SubtitleToolbox\ResegmentOptions;
+use SubtitleToolbox\Resegmenting\ResegmentMode;
+use SubtitleToolbox\Resegmenting\Resegmenter;
+use SubtitleToolbox\Resegmenting\ResegmentOptions;
 
 // 00:00:00,000 --> 00:00:11,050  The tensor operators are optimized heavily for Apple silicon CPUs. Depending on
 //                                the computation size, Arm Neon SIMD instrisics or CBLAS Accelerate framework routines are used.
@@ -169,15 +169,16 @@ $report->movedEnds;     // the cue ends that moved by one frame or more
 A dual subtitle shows two languages at the same time, for example for language learners. Most players show only one subtitle track, so both languages go into one file.
 
 ```php
-use SubtitleToolbox\DualSubtitle;
-use SubtitleToolbox\DualSubtitleOptions;
+use SubtitleToolbox\Dual\DualSubtitle;
+use SubtitleToolbox\Dual\DualSubtitleMode;
+use SubtitleToolbox\Dual\DualSubtitleOptions;
 
 $english = Subtitle::fromStringAutoDetectFormat(file_get_contents('movie.en.srt'));
 $german  = Subtitle::fromStringAutoDetectFormat(file_get_contents('movie.de.srt'));
 
 $dual = DualSubtitle::merge($english, $german, new DualSubtitleOptions(secondaryStyle: 'i'));
 $dual = DualSubtitle::merge($english, $german, new DualSubtitleOptions(
-    mode: DualSubtitleOptions::MODE_TOP_BOTTOM,     // English at the bottom, German at the top
+    mode: DualSubtitleMode::TopBottom,              // English at the bottom, German at the top
     snapTolerance: 0.25,                            // seconds
     secondaryStyle: 'font color="#ffff00"',
     secondaryAlignment: 8,

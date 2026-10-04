@@ -13,11 +13,11 @@ The calls below use these imports:
 
 ```php
 use SubtitleToolbox\Format;
-use SubtitleToolbox\HearingImpairedRemover;
+use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\ReadOptions;
-use SubtitleToolbox\Resegmenter;
-use SubtitleToolbox\ResegmentMode;
+use SubtitleToolbox\Resegmenting\Resegmenter;
+use SubtitleToolbox\Resegmenting\ResegmentMode;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;

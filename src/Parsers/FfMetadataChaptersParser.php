@@ -17,6 +17,7 @@ final class FfMetadataChaptersParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::FfMetadata->value;
 
+    /** @internal */
     public const METADATA_KEYS = [
         Subtitle::METADATA_TITLE, Subtitle::METADATA_AUTHOR, Subtitle::METADATA_ARTIST,
         Subtitle::METADATA_ALBUM, Subtitle::METADATA_LANGUAGE,

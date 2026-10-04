@@ -10,7 +10,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -91,7 +91,7 @@ final class MpSubParser extends SubtitleParser
                     $lineNumber,
                     $cueIndex,
                     [$line],
-                    ParseWarning::REPAIRED
+                    ParseWarningAction::Repaired
                 );
                 $hasFormat = true;
             }

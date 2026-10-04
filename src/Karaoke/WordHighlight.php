@@ -129,7 +129,7 @@ final class WordHighlight
             $pending = "";
             foreach ($items as [$type, $value, $word]) {
                 $isVisible = ($word >= $first || ($word === -1 && $first === 0)) && $word <= $last;
-                $isStyled  = $word >= 0 && ($options->mode === WordHighlightOptions::MODE_WORD ? $word === $active : $word <= $active);
+                $isStyled  = $word >= 0 && ($options->mode === WordHighlightMode::Word ? $word === $active : $word <= $active);
 
                 if ($type === "text" && !$isVisible) {
                     continue;

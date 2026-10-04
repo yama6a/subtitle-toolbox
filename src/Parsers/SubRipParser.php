@@ -9,7 +9,7 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -70,7 +70,7 @@ final class SubRipParser extends SubtitleParser
         }
 
         if ($rawLines === [""]) {
-            $this->warn("The file has no cues.", $lineNumber, $index, $rawLines, ParseWarning::SKIPPED);
+            $this->warn("The file has no cues.", $lineNumber, $index, $rawLines, ParseWarningAction::Skipped);
 
             return [];
         }
@@ -93,7 +93,7 @@ final class SubRipParser extends SubtitleParser
                     $partLine,
                     $index,
                     $part,
-                    ParseWarning::REPAIRED
+                    ParseWarningAction::Repaired
                 );
             }
             $cues[] = $cue;

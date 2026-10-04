@@ -7,6 +7,7 @@ namespace SubtitleToolbox;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Diff\CueDifference;
+use SubtitleToolbox\Diff\CueDifferenceKind;
 use SubtitleToolbox\Diff\SubtitleDiff;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
@@ -174,8 +175,8 @@ class ForcedCuesTest extends TestCase
         $differences = SubtitleDiff::compare($old, $new);
 
         $this->assertCount(1, $differences);
-        $this->assertSame([CueDifference::KIND_TEXT_CHANGED, 1, 1],
-                          [$differences[0]->getKind(), $differences[0]->getOldIndex(), $differences[0]->getNewIndex()]);
+        $this->assertSame([CueDifferenceKind::TextChanged, 1, 1],
+                          [$differences[0]->kind, $differences[0]->oldIndex, $differences[0]->newIndex]);
         $this->assertSame("text changed: old cue 2, new cue 2\n" .
                           "- 00:00:03.000 --> 00:00:04.000\n  EXIT\n" .
                           "+ 00:00:03.000 --> 00:00:04.000 forced\n  EXIT\n",

@@ -325,7 +325,7 @@ abstract class FileCommand extends Command
         $this->parseWarnings = $subtitle->getParseWarnings();
         foreach ($this->parseWarnings as $warning) {
             $line = $warning->lineNumber === null ? "" : "line $warning->lineNumber: ";
-            $console->err(self::label($input) . ": $line$warning->message ($warning->action)\n");
+            $console->err(self::label($input) . ": $line$warning->message ({$warning->action->value})\n");
         }
 
         return [$subtitle, $subtitle->getFormat()];

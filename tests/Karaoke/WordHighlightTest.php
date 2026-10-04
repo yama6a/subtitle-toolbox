@@ -105,7 +105,7 @@ class WordHighlightTest extends TestCase
     {
         $karaoke = self::expand(
             self::subtitle(new SubtitleCue(0, 1.6, self::BEACH)),
-            new WordHighlightOptions(style: 'font color="#ffff00"', mode: WordHighlightOptions::MODE_CUMULATIVE)
+            new WordHighlightOptions(style: 'font color="#ffff00"', mode: WordHighlightMode::Cumulative)
         );
 
         $this->assertSame([
@@ -153,7 +153,7 @@ class WordHighlightTest extends TestCase
     public function testStyleNeverCrossesOtherTags(): void
     {
         $cue     = new SubtitleCue(0, 3, "<v Ann><00:00:00.000>Hi <b><00:00:01.000>there</b> <00:00:02.000>you");
-        $karaoke = self::expand(self::subtitle($cue), new WordHighlightOptions(mode: WordHighlightOptions::MODE_CUMULATIVE));
+        $karaoke = self::expand(self::subtitle($cue), new WordHighlightOptions(mode: WordHighlightMode::Cumulative));
 
         $this->assertSame([
             "<v Ann><u>Hi</u> <b>there</b> you",
@@ -306,7 +306,7 @@ class WordHighlightTest extends TestCase
             ],
             "enhanced LRC, cumulative" => [
                 fn (): Subtitle => $lrc("lrc/real/handwritten-enhanced.lrc"),
-                new WordHighlightOptions(style: 'font color="#ffff00"', mode: WordHighlightOptions::MODE_CUMULATIVE),
+                new WordHighlightOptions(style: 'font color="#ffff00"', mode: WordHighlightMode::Cumulative),
                 Format::SubRip,
                 "lrc_cumulative.srt",
             ],

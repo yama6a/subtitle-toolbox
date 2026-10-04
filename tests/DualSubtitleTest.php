@@ -7,6 +7,9 @@ namespace SubtitleToolbox;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Dual\DualSubtitle;
+use SubtitleToolbox\Dual\DualSubtitleMode;
+use SubtitleToolbox\Dual\DualSubtitleOptions;
 
 class DualSubtitleTest extends TestCase
 {
@@ -69,7 +72,7 @@ class DualSubtitleTest extends TestCase
     public static function provideExpectedFiles(): array
     {
         $stack     = new DualSubtitleOptions(secondaryStyle: "i");
-        $topBottom = new DualSubtitleOptions(mode: DualSubtitleOptions::MODE_TOP_BOTTOM,
+        $topBottom = new DualSubtitleOptions(mode: DualSubtitleMode::TopBottom,
                                              secondaryStyle: 'font color="#ffff00"');
 
         return [
@@ -102,7 +105,7 @@ class DualSubtitleTest extends TestCase
         $germanBefore  = $this->describeCues($german);
 
         DualSubtitle::merge($english, $german, new DualSubtitleOptions(secondaryStyle: "i"));
-        DualSubtitle::merge($english, $german, new DualSubtitleOptions(mode: DualSubtitleOptions::MODE_TOP_BOTTOM));
+        DualSubtitle::merge($english, $german, new DualSubtitleOptions(mode: DualSubtitleMode::TopBottom));
 
         $this->assertSame($englishBefore, $this->describeCues($english));
         $this->assertSame($germanBefore, $this->describeCues($german));
@@ -150,7 +153,7 @@ class DualSubtitleTest extends TestCase
         $secondary = $this->makeSubtitle([[0, 2, "erste"]]);
 
         $dual = DualSubtitle::merge($primary, $secondary, new DualSubtitleOptions(
-            mode: DualSubtitleOptions::MODE_TOP_BOTTOM,
+            mode: DualSubtitleMode::TopBottom,
             secondaryAlignment: 9,
         ));
 
@@ -164,10 +167,10 @@ class DualSubtitleTest extends TestCase
         $secondary = $this->makeSubtitle([[1.25, 3.7, "erste"]]);
 
         $dual = DualSubtitle::merge($primary, $secondary, new DualSubtitleOptions(
-            mode: DualSubtitleOptions::MODE_TOP_BOTTOM,
+            mode: DualSubtitleMode::TopBottom,
         ));
         $noSnap = DualSubtitle::merge($primary, $secondary, new DualSubtitleOptions(
-            mode: DualSubtitleOptions::MODE_TOP_BOTTOM,
+            mode: DualSubtitleMode::TopBottom,
             snapTolerance: 0,
         ));
 
@@ -182,7 +185,7 @@ class DualSubtitleTest extends TestCase
         $secondary = $this->makeSubtitle([[3.9, 4.1, "kurz"]]);
 
         $dual = DualSubtitle::merge($primary, $secondary, new DualSubtitleOptions(
-            mode: DualSubtitleOptions::MODE_TOP_BOTTOM,
+            mode: DualSubtitleMode::TopBottom,
         ));
 
         $this->assertSame([3.9, 4.1, "kurz", 8], $this->describeCues($dual)[1]);
@@ -255,7 +258,6 @@ class DualSubtitleTest extends TestCase
     public static function provideInvalidOptions(): array
     {
         return [
-            "unknown mode"       => [["mode" => "sideBySide"]],
             "negative tolerance" => [["snapTolerance" => -0.1]],
             "unknown tag"        => [["secondaryStyle" => "c.yellow"]],
             "alignment 0"        => [["secondaryAlignment" => 0]],

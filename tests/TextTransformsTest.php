@@ -62,7 +62,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     {
         $subtitle = $this->parseCaptions();
 
-        $this->assertSame($subtitle, $subtitle->changeCase("sentence"));
+        $this->assertSame($subtitle, $subtitle->changeCase(CaseMode::Sentence));
         $this->assertSame(file_get_contents(self::FILES . "own_cea608_caps_sentence.vtt"),
                           $subtitle->toString(Format::WebVtt));
     }
@@ -102,7 +102,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
             "große bäckerei. öffnet um 6 uhr!",
             "<font color=\"#ffff00\">i\u{307}stasyon kapisi işikli.</font>",
             "<i>rain &lt;3 &amp; snow</i>",
-        ], $this->getTexts($this->parseMultilingual()->changeCase("lower")));
+        ], $this->getTexts($this->parseMultilingual()->changeCase(CaseMode::Lower)));
     }
 
 
@@ -113,7 +113,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
             "Große bäckereı. Öffnet um 6 uhr!",
             "<font color=\"#ffff00\">İstasyon kapısı ışıklı.</font>",
             "<i>Raın &lt;3 &amp; snow</i>",
-        ], $this->getTexts($this->parseMultilingual()->changeCase("sentence", "tr-TR")));
+        ], $this->getTexts($this->parseMultilingual()->changeCase(CaseMode::Sentence, "tr-TR")));
     }
 
 
@@ -122,27 +122,27 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
         $subtitle = $this->makeSubtitle("<i>stop</i>", "tom &amp; <font color=\"#ff0000\">jerry</font> &lt;3");
 
         $this->assertSame(["<i>STOP</i>", "TOM &amp; <font color=\"#ff0000\">JERRY</font> &lt;3"],
-                          $this->getTexts($subtitle->changeCase("upper")));
+                          $this->getTexts($subtitle->changeCase(CaseMode::Upper)));
     }
 
 
     public function testUpperCaseOfGermanAndTurkish(): void
     {
-        $this->assertSame(["STRASSE", "ISTANBUL"], $this->getTexts($this->makeSubtitle("straße", "istanbul")->changeCase("upper")));
-        $this->assertSame(["İSTANBUL KAPI"], $this->getTexts($this->makeSubtitle("istanbul kapı")->changeCase("upper", "tr")));
-        $this->assertSame(["istanbul kapı"], $this->getTexts($this->makeSubtitle("İSTANBUL KAPI")->changeCase("lower", "az")));
+        $this->assertSame(["STRASSE", "ISTANBUL"], $this->getTexts($this->makeSubtitle("straße", "istanbul")->changeCase(CaseMode::Upper)));
+        $this->assertSame(["İSTANBUL KAPI"], $this->getTexts($this->makeSubtitle("istanbul kapı")->changeCase(CaseMode::Upper, "tr")));
+        $this->assertSame(["istanbul kapı"], $this->getTexts($this->makeSubtitle("İSTANBUL KAPI")->changeCase(CaseMode::Lower, "az")));
     }
 
 
     public function testLowerCaseUsesGreekFinalSigma(): void
     {
-        $this->assertSame(["οδος σας, σ"], $this->getTexts($this->makeSubtitle("ΟΔΟΣ ΣΑΣ, Σ")->changeCase("lower")));
+        $this->assertSame(["οδος σας, σ"], $this->getTexts($this->makeSubtitle("ΟΔΟΣ ΣΑΣ, Σ")->changeCase(CaseMode::Lower)));
     }
 
 
     public function testCaseChangeKeepsBytesOfInvalidUtf8(): void
     {
-        $this->assertSame(["CAF\xe9 <i>NO\xebL</i>"], $this->getTexts($this->makeSubtitle("caf\xe9 <i>no\xebl</i>")->changeCase("upper")));
+        $this->assertSame(["CAF\xe9 <i>NO\xebL</i>"], $this->getTexts($this->makeSubtitle("caf\xe9 <i>no\xebl</i>")->changeCase(CaseMode::Upper)));
     }
 
 
@@ -160,14 +160,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
             "<i>Wait...</i> <b>What?!</b> \"No.\" Ok",
             "- Read www.example.com.\n- 3.5 km, then stop!",
             "Strasse. Ssad",
-        ], $this->getTexts($subtitle->changeCase("sentence")));
-    }
-
-
-    public function testChangeCaseRejectsUnknownMode(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->makeSubtitle("text")->changeCase("title");
+        ], $this->getTexts($subtitle->changeCase(CaseMode::Sentence)));
     }
 
 

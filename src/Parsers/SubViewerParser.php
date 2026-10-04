@@ -8,7 +8,7 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -17,9 +17,14 @@ final class SubViewerParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::SubViewer->value;
 
+    /** @internal */
     public const START_SCRIPT = "******** START SCRIPT ********";
 
-    /** Maps SubViewer header tags to the shared metadata keys of Subtitle. */
+    /**
+     * Maps SubViewer header tags to the shared metadata keys of Subtitle.
+     *
+     * @internal
+     */
     public const METADATA_TAGS = [
         "TITLE"  => Subtitle::METADATA_TITLE,
         "AUTHOR" => Subtitle::METADATA_AUTHOR,
@@ -287,7 +292,7 @@ final class SubViewerParser extends SubtitleParser
     {
         if ($skipped !== null) {
             [$lineNumber, $cueIndex, $block] = $skipped;
-            $this->warn("Line $lineNumber is a timing line with a bad time: $block[0]", $lineNumber, $cueIndex, $block, ParseWarning::SKIPPED);
+            $this->warn("Line $lineNumber is a timing line with a bad time: $block[0]", $lineNumber, $cueIndex, $block, ParseWarningAction::Skipped);
         }
     }
 

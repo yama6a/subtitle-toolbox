@@ -8,7 +8,7 @@ use Generator;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
-use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -128,7 +128,7 @@ final class WebVttParser extends SubtitleParser
                 $lineNumber + $timingOffset,
                 0,
                 $block,
-                ParseWarning::REPAIRED
+                ParseWarningAction::Repaired
             );
             yield $lineNumber => array_slice($block, 0, $timingOffset);
 

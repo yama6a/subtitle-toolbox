@@ -8,6 +8,10 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Resegmenting\Resegmenter;
+use SubtitleToolbox\Resegmenting\ResegmentMode;
+use SubtitleToolbox\Resegmenting\ResegmentOptions;
+use SubtitleToolbox\Resegmenting\ResegmentReport;
 
 class ResegmenterTest extends TestCase
 {

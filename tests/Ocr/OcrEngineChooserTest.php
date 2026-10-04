@@ -34,10 +34,10 @@ class OcrEngineChooserTest extends TestCase
 
     public function testPrefersTesseractAndFallsBackToGlyphOcr(): void
     {
-        $this->assertSame("tesseract", OcrEngineChooser::choose(null, self::FAKE));
-        $this->assertSame("glyph", OcrEngineChooser::choose(null, self::MISSING));
-        $this->assertSame("glyph", OcrEngineChooser::choose("glyph", self::FAKE));
-        $this->assertSame("tesseract", OcrEngineChooser::choose("tesseract", self::FAKE));
+        $this->assertSame(OcrEngineName::Tesseract, OcrEngineChooser::choose(null, self::FAKE));
+        $this->assertSame(OcrEngineName::Glyph, OcrEngineChooser::choose(null, self::MISSING));
+        $this->assertSame(OcrEngineName::Glyph, OcrEngineChooser::choose(OcrEngineName::Glyph, self::FAKE));
+        $this->assertSame(OcrEngineName::Tesseract, OcrEngineChooser::choose(OcrEngineName::Tesseract, self::FAKE));
     }
 
 
@@ -52,22 +52,13 @@ class OcrEngineChooserTest extends TestCase
     }
 
 
-    public function testUnknownEngineThrows(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot choose the OCR engine \"easyocr\" - the engines are: tesseract, glyph!");
-
-        OcrEngineChooser::choose("easyocr");
-    }
-
-
     public function testForcedTesseractThrowsWhenItIsMissing(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("Cannot run OCR with Tesseract - the program \"" . self::MISSING . "\" is missing! " .
                                       "Install Tesseract with: apt install tesseract-ocr");
 
-        OcrEngineChooser::choose("tesseract", self::MISSING);
+        OcrEngineChooser::choose(OcrEngineName::Tesseract, self::MISSING);
     }
 
 
@@ -80,7 +71,7 @@ class OcrEngineChooserTest extends TestCase
         $this->expectExceptionMessage("Cannot run OCR with php-glyph-ocr - the package yama6a/php-glyph-ocr is missing! " .
                                       "Install php-glyph-ocr with: composer require yama6a/php-glyph-ocr");
 
-        OcrEngineChooser::choose("glyph", self::FAKE);
+        OcrEngineChooser::choose(OcrEngineName::Glyph, self::FAKE);
     }
 
 
@@ -88,7 +79,7 @@ class OcrEngineChooserTest extends TestCase
     public function testThrowsWithBothInstallHintsWhenNeitherEngineIsInstalled(): void
     {
         self::hideGlyphOcr();
-        $this->assertSame("tesseract", OcrEngineChooser::choose(null, self::FAKE));
+        $this->assertSame(OcrEngineName::Tesseract, OcrEngineChooser::choose(null, self::FAKE));
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("Cannot run OCR - neither Tesseract nor the package yama6a/php-glyph-ocr is " .

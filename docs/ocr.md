@@ -86,11 +86,12 @@ $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);   // "de", from the id line
 
 ```php
 use SubtitleToolbox\Ocr\OcrEngineChooser;
+use SubtitleToolbox\Ocr\OcrEngineName;
 
-$subtitle->recognizeText(OcrEngineChooser::create());                  // Tesseract in English, or php-glyph-ocr
-$subtitle->recognizeText(OcrEngineChooser::create(null, 'deu+eng'));   // Tesseract in German and English
-$subtitle->recognizeText(OcrEngineChooser::create('glyph'));           // always php-glyph-ocr
-OcrEngineChooser::choose();                                             // "tesseract" or "glyph"
+$subtitle->recognizeText(OcrEngineChooser::create());                       // Tesseract in English, or php-glyph-ocr
+$subtitle->recognizeText(OcrEngineChooser::create(null, 'deu+eng'));        // Tesseract in German and English
+$subtitle->recognizeText(OcrEngineChooser::create(OcrEngineName::Glyph));   // always php-glyph-ocr
+OcrEngineChooser::choose();                                                 // OcrEngineName::Tesseract or OcrEngineName::Glyph
 ```
 
 - **Missing engines**: `choose()` and `create()` throw `InvalidArgumentException` when neither engine is installed, or when the forced engine is missing. The message holds the install commands.

@@ -6,7 +6,8 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
-use SubtitleToolbox\Validation\ValidationResult;
+use SubtitleToolbox\Validation\ValidationRule;
+use SubtitleToolbox\Validation\ValidationViolation;
 use SubtitleToolbox\Validation\ValidationRules;
 
 class SubtitleTest extends \PHPUnit\Framework\TestCase
@@ -66,33 +67,33 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     {
         $rules    = ValidationRules::structure();
         $problems = fn (Subtitle $subtitle): array => array_map(
-            fn (ValidationResult $result): array => [$result->getCueIndex(), $result->getRule(), $result->getValue()],
+            fn (ValidationViolation $result): array => [$result->cueIndex, $result->rule, $result->value],
             $subtitle->validate($rules)
         );
 
         $subtitle = new Subtitle();
-        $this->assertSame([[null, ValidationResult::RULE_REQUIRE_CUES, 0]], $problems($subtitle));
+        $this->assertSame([[null, ValidationRule::RequireCues, 0]], $problems($subtitle));
 
         $subtitle->addCues([new SubtitleCue(1, 2, "text1"), new SubtitleCue(3, 4, "text2"), new SubtitleCue(5, 6, "text3")]);
         $subtitle->getCues()[1]->setStart(5)->setEnd(6);
         $subtitle->getCues()[2]->setStart(3)->setEnd(4);
         $this->assertSame([
-            [2, ValidationResult::RULE_UNSORTED_CUES, 2.0],
-            [2, ValidationResult::RULE_OVERLAP, 3.0],
+            [2, ValidationRule::NoUnsortedCues, 2.0],
+            [2, ValidationRule::NoOverlap, 3.0],
         ], $problems($subtitle));
 
         $subtitle->reIndexCues();
         $this->assertSame([], $problems($subtitle));
 
         $subtitle->getCues()[1]->setEnd(5.5);
-        $this->assertSame([[2, ValidationResult::RULE_OVERLAP, 0.5]], $problems($subtitle));
+        $this->assertSame([[2, ValidationRule::NoOverlap, 0.5]], $problems($subtitle));
         $subtitle->getCues()[1]->setEnd(4);
 
         $subtitle->removeCue(1);
         $this->assertSame([], $problems($subtitle));
 
         $subtitle->addCue(new SubtitleCue(9, 1, "text4"));
-        $this->assertSame([[2, ValidationResult::RULE_NEGATIVE_DURATION, -8.0]], $problems($subtitle));
+        $this->assertSame([[2, ValidationRule::NoNegativeDuration, -8.0]], $problems($subtitle));
 
         $subtitle->removeCue(2);
         $this->assertSame([], $problems($subtitle));

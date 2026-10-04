@@ -24,10 +24,16 @@ use SubtitleToolbox\SubtitleCue;
 final class SccParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::Scc->value;
+
+    /** @internal */
     public const HEADER = "Scenarist_SCC V1.0";
 
+    // The values of the 3 caption modes appear as "mode" in the format data of a cue.
+    /** @internal */
     public const MODE_POP_ON   = "pop-on";
+    /** @internal */
     public const MODE_ROLL_UP  = "roll-up";
+    /** @internal */
     public const MODE_PAINT_ON = "paint-on";
     private const MODE_TEXT    = "text";
 

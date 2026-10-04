@@ -88,18 +88,16 @@ trait TextTransforms
 
 
     /**
-     * Changes the case of the text between tags. $mode is "upper", "lower" or "sentence".
-     * $language "tr" or "az" maps i to İ and ı to I.
+     * Changes the case of the text between tags. $language "tr" or "az" maps i to İ and ı to I.
      */
-    public function changeCase(string $mode, ?string $language = null): self
+    public function changeCase(CaseMode $mode, ?string $language = null): self
     {
         $turkic = in_array(StringHelpers::primaryLanguage($language), ["tr", "az"], true);
 
         return match ($mode) {
-            "upper"    => $this->textTransformsMapRuns(fn (string $text): string => self::textTransformsUpper($text, $turkic)),
-            "lower"    => $this->textTransformsMapRuns(fn (string $text): string => self::textTransformsLower($text, $turkic)),
-            "sentence" => $this->textTransformsSentenceCase($turkic),
-            default    => throw new InvalidArgumentException("The case mode must be upper, lower or sentence, got $mode."),
+            CaseMode::Upper    => $this->textTransformsMapRuns(fn (string $text): string => self::textTransformsUpper($text, $turkic)),
+            CaseMode::Lower    => $this->textTransformsMapRuns(fn (string $text): string => self::textTransformsLower($text, $turkic)),
+            CaseMode::Sentence => $this->textTransformsSentenceCase($turkic),
         };
     }
 

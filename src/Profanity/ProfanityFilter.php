@@ -118,7 +118,7 @@ final class ProfanityFilter
     }
 
 
-    private static function mask(string $word, string|\Closure $mask): string
+    private static function mask(string $word, ProfanityMask|\Closure $mask): string
     {
         if ($mask instanceof \Closure) {
             return $mask($word);
@@ -128,10 +128,10 @@ final class ProfanityFilter
         $characters = $characters[0];
 
         return match ($mask) {
-            ProfanityOptions::MASK_STARS        => str_repeat("*", count($characters)),
-            ProfanityOptions::MASK_FIRST_LETTER => $characters[0] . str_repeat("*", count($characters) - 1),
-            ProfanityOptions::MASK_REMOVE       => "",
-            ProfanityOptions::MASK_NONE         => $word,
+            ProfanityMask::Stars       => str_repeat("*", count($characters)),
+            ProfanityMask::FirstLetter => $characters[0] . str_repeat("*", count($characters) - 1),
+            ProfanityMask::Remove      => "",
+            ProfanityMask::None        => $word,
         };
     }
 

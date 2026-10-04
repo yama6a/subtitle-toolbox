@@ -9,7 +9,7 @@ use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString($download, Format::SubRip, new ReadOptions(lenient: true));
 foreach ($subtitle->getParseWarnings() as $warning) {
-    $logger->warning("line $warning->lineNumber: $warning->message ($warning->action)");   // lineNumber is null for EBU STL and JSON
+    $logger->warning("line $warning->lineNumber: $warning->message ({$warning->action->value})");   // lineNumber is null for EBU STL and JSON
 }
 // line 5: Block #1 doesn't seem to have its timestamps on its second line! (skipped)
 ```
@@ -46,7 +46,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | HTML transcript | a paragraph with a bad time or without a `<time>` | the paragraphs that each `<cite>` or `<time>` starts |
 
 - **Ignored**: the SCC, PGS and VobSub parsers and the chapter parsers ignore `ReadOptions::$lenient` and always throw.
-- **`ParseWarning`**: `message`, the 1-based `lineNumber`, the 0-based `blockIndex` or null for a library JSON field outside the cues, the trimmed lines of the `block`, and the `action`, `ParseWarning::SKIPPED` or `ParseWarning::REPAIRED`. A skipped block reports its first line. A repair reports the line where the parser split or read the cue.
+- **`ParseWarning`**: `message`, the 1-based `lineNumber`, the 0-based `blockIndex` or null for a library JSON field outside the cues, the trimmed lines of the `block`, and the `action`, `ParseWarningAction::Skipped` or `ParseWarningAction::Repaired`. A skipped block reports its first line. A repair reports the line where the parser split or read the cue.
 - **No line numbers**: binary EBU STL and the JSON formats have no line numbers, so their warnings have `lineNumber` null. The YouTube XML formats report the line of the XML element.
 - **Warnings**: `Subtitle::getParseWarnings()` returns the warnings of the read that made the subtitle.
 - **Not the format**: lenient mode still throws for a WebVTT file without `WEBVTT`. SubRip and SBV have no signature, so a file without one readable cue gives no cues and warnings.

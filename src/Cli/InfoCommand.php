@@ -136,7 +136,7 @@ class InfoCommand extends ReportCommand
                 "lineNumber" => $warning->lineNumber,
                 "blockIndex" => $warning->blockIndex,
                 "message"    => $warning->message,
-                "action"     => $warning->action,
+                "action"     => $warning->action->value,
             ], $this->parseWarnings),
         ]);
     }

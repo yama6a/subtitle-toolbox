@@ -111,11 +111,11 @@ class DiffCommand extends ReportCommand
             "new"         => self::label($newPath),
             "equal"       => $differences === [],
             "differences" => array_map(fn (CueDifference $difference): array => [
-                "kind"     => $difference->getKind(),
-                "oldIndex" => $difference->getOldIndex(),
-                "newIndex" => $difference->getNewIndex(),
-                "old"      => self::cue($difference->getOldCue()),
-                "new"      => self::cue($difference->getNewCue()),
+                "kind"     => $difference->kind->value,
+                "oldIndex" => $difference->oldIndex,
+                "newIndex" => $difference->newIndex,
+                "old"      => self::cue($difference->oldCue),
+                "new"      => self::cue($difference->newCue),
             ], $differences),
         ]);
     }

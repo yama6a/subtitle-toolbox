@@ -2,9 +2,15 @@
 
 declare(strict_types=1);
 
-namespace SubtitleToolbox;
+namespace SubtitleToolbox\Resegmenting;
 
+use SubtitleToolbox\CommentAnchors;
+use SubtitleToolbox\CueList;
 use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\LineWrapper;
+use SubtitleToolbox\Markup;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 
 final class Resegmenter
 {

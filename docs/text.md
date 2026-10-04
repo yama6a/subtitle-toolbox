@@ -28,8 +28,8 @@ $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>
 
 ## Hearing-impaired annotations
 ```php
-use SubtitleToolbox\HearingImpairedOptions;
-use SubtitleToolbox\HearingImpairedRemover;
+use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
+use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
 
 $report = HearingImpairedRemover::apply($subtitle, new HearingImpairedOptions());   // '(laughs) You came back.' becomes 'You came back.'
 $report->removedLines;                      // the lines that went, the lines of removed cues included
@@ -120,13 +120,14 @@ $subtitle->toString(Format::SubRip);
 ```php
 use SubtitleToolbox\Profanity\MuteRange;
 use SubtitleToolbox\Profanity\ProfanityFilter;
+use SubtitleToolbox\Profanity\ProfanityMask;
 use SubtitleToolbox\Profanity\ProfanityOptions;
 
 // 00:01:02.000 --> 00:01:04.000
 // <00:01:02.000>What <00:01:02.300>the <00:01:02.480>hell <00:01:02.800>is this?
 $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(
     words: ['hell', 'damn*'],                    // * at the end matches any ending, so "damned" matches
-    mask: ProfanityOptions::MASK_FIRST_LETTER,
+    mask: ProfanityMask::FirstLetter,
     padding: 0.1,                                // seconds added on both sides of a range
 ))->muteRanges;
 // cue text: "<00:01:02.000>What <00:01:02.300>the <00:01:02.480>h*** <00:01:02.800>is this?"
@@ -136,24 +137,24 @@ $ranges[0]->end;                                 // 62.9
 file_put_contents('movie.edl', MuteRange::toEdl($ranges));     // "62.380 62.900 1\n"
 MuteRange::toFfmpegVolumeFilter($ranges);                       // "volume=enable='between(t,62.380,62.900)':volume=0"
 
-new ProfanityOptions(wordFile: 'words-en.txt');                 // one word per line
+new ProfanityOptions(preg_split('/\R+/', trim(file_get_contents('words-en.txt'))));   // one word per line
 new ProfanityOptions(['hell'], fn (string $word): string => '[beep]');
 ```
 
 | Mask | `What the hell?` becomes |
 |:--- |:--- |
-| `MASK_STARS` (default) | `What the ****?` |
-| `MASK_FIRST_LETTER` | `What the h***?` |
-| `MASK_REMOVE` | `What the ?` |
-| `MASK_NONE` | `What the hell?`. Only the report has the ranges |
+| `ProfanityMask::Stars` (default) | `What the ****?` |
+| `ProfanityMask::FirstLetter` | `What the h***?` |
+| `ProfanityMask::Remove` | `What the ?` |
+| `ProfanityMask::None` | `What the hell?`. Only the report has the ranges |
 | a callback | the string the callback returns for the matched word |
 
 - **No word list**: the package ships none. The words to filter depend on the language and the audience.
 - **Matches**: case-insensitive and Unicode-aware. A match is a whole word, so `hell` does not match `hello` or `shell`. A word can hold spaces, such as `son of a`. A `*` in another place than the end throws `InvalidArgumentException`.
-- **Word file**: one word per line. The filter ignores a UTF-8 BOM, CR LF line endings and empty lines. The words of `wordFile` add to the words of `words`.
+- **Word file**: `ProfanityOptions` takes the words, not a file. The CLI option `--mask-words` reads one word per line and ignores a UTF-8 BOM, CR LF line endings and empty lines.
 - **Range**: the range runs from the word timestamp before the match to the next word timestamp. Without a timestamp on a side, the range uses the start or end of the cue. Padding then widens the range. A range does not start before 0.
 - **Joining**: `muteRanges` is sorted by time. Ranges that touch or overlap after the padding become one range.
-- **Removed cues**: `MASK_REMOVE` removes a cue that has no visible text left, and re-indexes the cues.
+- **Removed cues**: `ProfanityMask::Remove` removes a cue that has no visible text left, and re-indexes the cues.
 - **Text runs**: the filter sees text runs. It does not find a word that a tag splits, such as `h<i>ell</i>`, or a word across two lines.
 - **EDL**: `toEdl()` writes the [Kodi](https://kodi.wiki/view/Edit_decision_list) and MPlayer format. Each line holds the start, the end and action `1`, mute.
 - **FFmpeg**: use the filter as `ffmpeg -i in.mp4 -af "<filter>" -c:v copy out.mp4`. It returns `""` for no ranges. Then leave out `-af`.
@@ -163,6 +164,7 @@ Lyric videos and short-form captions show a line and mark the word that is sung 
 
 ```php
 use SubtitleToolbox\Karaoke\WordHighlight;
+use SubtitleToolbox\Karaoke\WordHighlightMode;
 use SubtitleToolbox\Karaoke\WordHighlightOptions;
 
 // 00:00:00.000 --> 00:00:01.600  <00:00:00.000>The <00:00:00.240>beach <00:00:00.710>was <00:00:00.950>quiet.
@@ -175,7 +177,7 @@ $report->cuesAfter;                                    // 4
 
 WordHighlight::apply($subtitle, new WordHighlightOptions(
     style: 'font color="#ffff00"',                     // b, i, u (default), s or font
-    mode: WordHighlightOptions::MODE_CUMULATIVE,       // styles all words up to the active one
+    mode: WordHighlightMode::Cumulative,               // styles all words up to the active one
     maxWordsPerCue: 1,                                 // shows only the active word
 ));
 ```
@@ -199,11 +201,12 @@ OCR of PGS and VobSub cues reads `It's` as `lt's`. Files from the web have space
 ```php
 use SubtitleToolbox\Fixing\CommonErrorFixer;
 use SubtitleToolbox\Fixing\CommonErrorOptions;
+use SubtitleToolbox\Fixing\CommonErrorRule;
 use SubtitleToolbox\Fixing\OcrReplaceList;
 
 $fixes = CommonErrorFixer::apply($subtitle, new CommonErrorOptions(language: 'en'))->fixes;
 $fixes[0]->cueIndex;   // 14
-$fixes[0]->rule;       // 'ocrLowercaseL'
+$fixes[0]->rule;       // CommonErrorRule::OcrLowercaseL
 $fixes[0]->before;     // "lt's late."
 $fixes[0]->after;      // "It's late."
 
@@ -212,8 +215,8 @@ CommonErrorFixer::apply($subtitle, new CommonErrorOptions(
     dialogueDash: '-',                                       // '- ' (default), '-', or an en or em dash with or without a space
     unicodeEllipsis: true,                                   // writes U+2026 for every ellipsis
     replaceList: OcrReplaceList::fromSubtitleEditXml(file_get_contents('fra_OCRFixReplaceList_User.xml')),
-    dryRun: true,                                            // lists the fixes and changes nothing
 ));
+CommonErrorFixer::preview($subtitle, new CommonErrorOptions(language: 'en'));   // lists the fixes and changes nothing
 ```
 
 | Option | Before | After |
@@ -230,7 +233,7 @@ CommonErrorFixer::apply($subtitle, new CommonErrorOptions(
 | `ocrZeroInWords` | `D0N'T`, `n0rth` | `DON'T`, `north`. Not in `007` or `2.0` |
 | `replaceList` | the words of an `OcrReplaceList` | the replacement |
 
-- **Defaults**: every fix is on, except `replaceList` and `unicodeEllipsis`. The fixes run in the order of `CommonErrorFixer::RULES`. The report holds one `AppliedFix` in `fixes` for each rule that changed a cue.
+- **Defaults**: every fix is on, except `replaceList` and `unicodeEllipsis`. The fixes run in the order of `CommonErrorRule::cases()`. The value of a case is the name of its option. The report holds one `AppliedFix` in `fixes` for each rule that changed a cue.
 - **Text runs**: the fixes see text runs, as `replaceText()` does. Only `unbalancedTags` and `emptyTags` change tags. `unbalancedTags` closes a tag at the end of the last line of its cue. It removes a closing tag without an opening tag.
 - **Language**: `language` takes a code such as `en`, `de-AT` or `fra`. Null takes the `language` metadata of the subtitle. English, German, French and Spanish have their own rules for I and l. Other languages get only the rules that apply to all languages, for example `lT` to `IT`.
 - **I and l**: OCR reads a capital I as l when the font draws both the same. `ocrLowercaseL` changes an `l` at the start of a word before a consonant: `lch` to `Ich`, `lsabel` to `Isabel`. French also changes `ll` to `Il`, and keeps `l'hôtel`. Spanish keeps `llega`. English also changes `l`, `l'm`, `l'll`, `l've` and `l'd`. `5 lbs` and `2 l` stay.

@@ -3,15 +3,15 @@
 A translator delivers `episode1_v2.srt`. `SubtitleDiff` lists what changed against `episode1_v1.srt`. It pairs cues by time and text, not by cue number, so one added cue does not shift the rest.
 
 ```php
-use SubtitleToolbox\Diff\CueDifference;
+use SubtitleToolbox\Diff\CueDifferenceKind;
 use SubtitleToolbox\Diff\SubtitleDiff;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
 
 $differences = SubtitleDiff::compare($v1, $v2);
-$differences[0]->getKind();       // CueDifference::KIND_TEXT_CHANGED, "text changed"
-$differences[0]->getOldIndex();   // 11, the key in $v1->getCues(), null for an added cue
-$differences[0]->getNewIndex();   // 11, the key in $v2->getCues(), null for a removed cue
-$differences[0]->getOldCue();     // the SubtitleCue in $v1
+$differences[0]->kind;       // CueDifferenceKind::TextChanged, with the value "text changed"
+$differences[0]->oldIndex;   // 11, the key in $v1->getCues(), null for an added cue
+$differences[0]->newIndex;   // 11, the key in $v2->getCues(), null for a removed cue
+$differences[0]->oldCue;     // the SubtitleCue in $v1
 echo SubtitleDiff::toText($differences);
 
 SubtitleDiff::compare($v1, $v2, new SubtitleDiffOptions(

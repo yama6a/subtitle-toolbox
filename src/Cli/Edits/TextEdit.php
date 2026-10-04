@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli\Edits;
 
+use SubtitleToolbox\CaseMode;
 use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
@@ -81,7 +82,7 @@ final class TextEdit extends Edit
             SpeakerLabels::apply($subtitle, $this->speakers);
         }
         if ($this->case !== null) {
-            $subtitle->changeCase($this->case, $this->language);
+            $subtitle->changeCase(CaseMode::from($this->case), $this->language);
         }
         if ($this->stripTags) {
             $subtitle->stripFormatting();

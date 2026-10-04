@@ -19,7 +19,9 @@ use SubtitleToolbox\SubtitleCue;
 final class CsvParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::Csv->value;
-    public const DELIMITERS      = [",", ";", "\t"];
+
+    /** @internal */
+    public const DELIMITERS = [",", ";", "\t"];
 
     private CsvColumns $columns;
 

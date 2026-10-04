@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
-namespace SubtitleToolbox;
+namespace SubtitleToolbox\Dual;
+
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 
 final class DualSubtitle
 {
@@ -17,7 +20,7 @@ final class DualSubtitle
             array_values($secondary->getCues())
         );
 
-        $ownCues = $options->mode === DualSubtitleOptions::MODE_STACK
+        $ownCues = $options->mode === DualSubtitleMode::Stack
             ? self::stack($primaryCues, $secondaryCues)
             : self::placeAtTop($primaryCues, $secondaryCues, $options);
 

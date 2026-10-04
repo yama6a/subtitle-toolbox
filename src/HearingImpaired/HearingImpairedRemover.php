@@ -2,7 +2,11 @@
 
 declare(strict_types=1);
 
-namespace SubtitleToolbox;
+namespace SubtitleToolbox\HearingImpaired;
+
+use SubtitleToolbox\Markup;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 
 /**
  * The rules follow the "Remove text for hearing impaired" tool of Subtitle Edit:

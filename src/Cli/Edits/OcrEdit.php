@@ -16,6 +16,7 @@ use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Ocr\OcrEngine;
 use SubtitleToolbox\Ocr\OcrEngineChooser;
+use SubtitleToolbox\Ocr\OcrEngineName;
 use SubtitleToolbox\Ocr\TesseractOcrEngine;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -26,7 +27,7 @@ final class OcrEdit extends Edit
 
 
     private function __construct(
-        private readonly string $engine,
+        private readonly OcrEngineName $engine,
         private readonly ?string $language,
         private readonly ?GlyphDatabase $database,
     ) {
@@ -63,12 +64,15 @@ final class OcrEdit extends Edit
             return null;
         }
 
-        $engine = $arguments->value("ocr-engine");
+        $name   = $arguments->value("ocr-engine");
+        $engine = $name === null ? null : OcrEngineName::tryFrom($name)
+            ?? Command::fail("Cannot choose the OCR engine \"$name\" - the engines are: " .
+                             implode(", ", array_column(OcrEngineName::cases(), "value")) . "!");
         if ($arguments->has("ocr-database")) {
-            if ($engine === OcrEngineChooser::ENGINE_TESSERACT) {
+            if ($engine === OcrEngineName::Tesseract) {
                 Command::fail("--ocr-database works only with the glyph engine.");
             }
-            $engine = OcrEngineChooser::ENGINE_GLYPH;
+            $engine = OcrEngineName::Glyph;
         }
         try {
             $engine = OcrEngineChooser::choose($engine);
@@ -79,7 +83,7 @@ final class OcrEdit extends Edit
         return new self(
             $engine,
             $arguments->value("ocr-language"),
-            $engine === OcrEngineChooser::ENGINE_GLYPH ? self::loadDatabase($arguments->value("ocr-database")) : null,
+            $engine === OcrEngineName::Glyph ? self::loadDatabase($arguments->value("ocr-database")) : null,
         );
     }
 
@@ -97,7 +101,7 @@ final class OcrEdit extends Edit
 
     private function engine(Console $console): OcrEngine
     {
-        if ($this->engine === OcrEngineChooser::ENGINE_TESSERACT) {
+        if ($this->engine === OcrEngineName::Tesseract) {
             return new TesseractOcrEngine($this->language ?? "eng");
         }
         if ($this->language !== null && !$this->warnedAboutLanguage) {

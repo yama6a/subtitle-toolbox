@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Speakers;
 
-use SubtitleToolbox\HearingImpairedOptions;
-use SubtitleToolbox\HearingImpairedRemover;
+use SubtitleToolbox\CaseMode;
+use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
+use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -98,7 +99,7 @@ final class SpeakerLabels
         self::convert($subtitle, function (array $lines) use ($upperCase, $separator): array {
             $result = [];
             foreach ($lines as [$speaker, $line, $startsSpeaker]) {
-                $name     = $speaker === null ? "" : Markup::escapeText($upperCase ? self::changeCase($speaker, "upper") : $speaker);
+                $name     = $speaker === null ? "" : Markup::escapeText($upperCase ? self::changeCase($speaker, CaseMode::Upper) : $speaker);
                 $result[] = $startsSpeaker && $speaker !== null ? $name . Markup::escapeText($separator) . $line : $line;
             }
 
@@ -314,8 +315,8 @@ final class SpeakerLabels
     {
         return preg_replace_callback(
             "/(?:^|(?<=[\\s.'-]))\\p{Ll}/u",
-            fn (array $match): string => self::changeCase($match[0], "upper"),
-            self::changeCase($name, "lower")
+            fn (array $match): string => self::changeCase($match[0], CaseMode::Upper),
+            self::changeCase($name, CaseMode::Lower)
         ) ?? $name;
     }
 
@@ -323,7 +324,7 @@ final class SpeakerLabels
     /**
      * Uses the case rules of Subtitle::changeCase(), which fall back to A to Z without ext-mbstring.
      */
-    private static function changeCase(string $text, string $mode): string
+    private static function changeCase(string $text, CaseMode $mode): string
     {
         $cue = new SubtitleCue(0, 1, Markup::escapeText($text));
         (new Subtitle())->addCue($cue)->changeCase($mode);

@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use InvalidArgumentException;
+use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
+use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
+use SubtitleToolbox\HearingImpaired\HearingImpairedReport;
 use SubtitleToolbox\Validation\ValidationRules;
 
 class HearingImpairedRemoverTest extends \PHPUnit\Framework\TestCase

@@ -11,7 +11,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\EbuStlReadOptions;
-use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -91,7 +91,7 @@ final class EbuStlParser extends SubtitleParser
                     null,
                     $blockIndex - count($blocks),
                     $hexes,
-                    ParseWarning::SKIPPED
+                    ParseWarningAction::Skipped
                 );
                 continue;
             }

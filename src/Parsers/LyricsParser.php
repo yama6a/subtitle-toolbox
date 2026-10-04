@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -16,7 +16,11 @@ final class LyricsParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::Lyrics->value;
 
-    /** Maps LRC ID tags to the shared metadata keys of Subtitle. */
+    /**
+     * Maps LRC ID tags to the shared metadata keys of Subtitle.
+     *
+     * @internal
+     */
     public const METADATA_TAGS = [
         "ti" => Subtitle::METADATA_TITLE,
         "ar" => Subtitle::METADATA_ARTIST,
@@ -94,7 +98,7 @@ final class LyricsParser extends SubtitleParser
 
             if (preg_match("/^\[\d/", $line) && !preg_match(self::TIMESTAMP_LINE_REGEX, $line)) {
                 $lineNumber = $lineIndex + 1;
-                $this->warn("Line $lineNumber has a time tag that could not be parsed: $line", $lineNumber, $blockIndex, [$line], ParseWarning::SKIPPED);
+                $this->warn("Line $lineNumber has a time tag that could not be parsed: $line", $lineNumber, $blockIndex, [$line], ParseWarningAction::Skipped);
             }
             $blockIndex++;
         }

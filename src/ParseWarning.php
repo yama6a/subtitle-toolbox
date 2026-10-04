@@ -8,24 +8,19 @@ use SubtitleToolbox\Exceptions\ParsingException;
 
 final class ParseWarning
 {
-    public const SKIPPED  = "skipped";
-    public const REPAIRED = "repaired";
-
-
     /**
      * Holds one problem that a lenient parser found and what it did about it.
      *
      * @param ?int         $lineNumber 1-based input line of the problem. Null for binary EBU STL and the JSON formats, which have no lines.
      * @param ?int         $blockIndex 0-based number of the block, as in the "Block #n" messages. Null for a library JSON field outside the cues.
      * @param list<string> $block      the lines of the block, trimmed as the parser reads them
-     * @param string       $action     self::SKIPPED or self::REPAIRED
      */
     public function __construct(
         public readonly string $message,
         public readonly ?int $lineNumber,
         public readonly ?int $blockIndex,
         public readonly array $block,
-        public readonly string $action,
+        public readonly ParseWarningAction $action,
     ) {
     }
 
@@ -44,6 +39,6 @@ final class ParseWarning
             $message = substr($message, 0, -strlen($suffix));
         }
 
-        return new self($message, $lineNumber, $blockIndex, $block, self::SKIPPED);
+        return new self($message, $lineNumber, $blockIndex, $block, ParseWarningAction::Skipped);
     }
 }

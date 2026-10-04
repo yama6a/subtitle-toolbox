@@ -8,8 +8,8 @@ use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
-use SubtitleToolbox\HearingImpairedOptions;
-use SubtitleToolbox\HearingImpairedRemover;
+use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
+use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
 use SubtitleToolbox\Subtitle;
 
 final class SdhEdit extends Edit

@@ -11,16 +11,18 @@ use SubtitleToolbox\Cli\FileCommand;
 use SubtitleToolbox\Cli\Option;
 use SubtitleToolbox\Profanity\MuteRange;
 use SubtitleToolbox\Profanity\ProfanityFilter;
+use SubtitleToolbox\Profanity\ProfanityMask;
 use SubtitleToolbox\Profanity\ProfanityOptions;
+use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 
 final class MaskingEdit extends Edit
 {
     private const MASKS = [
-        "stars"        => ProfanityOptions::MASK_STARS,
-        "first-letter" => ProfanityOptions::MASK_FIRST_LETTER,
-        "remove"       => ProfanityOptions::MASK_REMOVE,
-        "none"         => ProfanityOptions::MASK_NONE,
+        "stars"        => ProfanityMask::Stars,
+        "first-letter" => ProfanityMask::FirstLetter,
+        "remove"       => ProfanityMask::Remove,
+        "none"         => ProfanityMask::None,
     ];
 
     /** @var list<MuteRange> */
@@ -86,10 +88,28 @@ final class MaskingEdit extends Edit
         }
 
         return new self(
-            new ProfanityOptions(mask: self::MASKS[$mask], padding: $padding, wordFile: $words),
+            new ProfanityOptions(self::readWordFile($words), self::MASKS[$mask], $padding),
             $arguments->value("mute-edl"),
             $arguments->value("mute-filter"),
         );
+    }
+
+
+    /**
+     * Reads one word per line. A UTF-8 BOM, CR LF line endings and empty lines do not count.
+     *
+     * @return list<string>
+     */
+    private static function readWordFile(string $path): array
+    {
+        $content = is_file($path) ? @file_get_contents($path) : false;
+        if ($content === false) {
+            Command::fail("Cannot read the word file $path.");
+        }
+
+        $lines = preg_split('/\R/', StringHelpers::removeUtf8Bom($content));
+
+        return array_values(array_filter(array_map("trim", $lines), fn (string $line): bool => $line !== ""));
     }
 
 

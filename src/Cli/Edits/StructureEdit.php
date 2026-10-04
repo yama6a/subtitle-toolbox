@@ -8,9 +8,9 @@ use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
 use SubtitleToolbox\MergeShortCuesOptions;
-use SubtitleToolbox\ResegmentMode;
-use SubtitleToolbox\Resegmenter;
-use SubtitleToolbox\ResegmentOptions;
+use SubtitleToolbox\Resegmenting\ResegmentMode;
+use SubtitleToolbox\Resegmenting\Resegmenter;
+use SubtitleToolbox\Resegmenting\ResegmentOptions;
 use SubtitleToolbox\Subtitle;
 
 final class StructureEdit extends Edit
