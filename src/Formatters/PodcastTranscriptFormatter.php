@@ -44,10 +44,10 @@ class PodcastTranscriptFormatter extends SubtitleFormatter
         }
 
         $document = ["version" => $fileData["version"] ?? self::VERSION, "segments" => $segments] + $fileData;
-        $flags    = JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
+        $flags    = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
         $json     = $podcast->prettyPrint
-            ? json_encode($document, $flags | JSON_PRETTY_PRINT) . StringHelpers::UNIX_LINE_ENDING
-            : json_encode($document, $flags);
+            ? JsonOutput::encode($document, $flags | JSON_PRETTY_PRINT) . StringHelpers::UNIX_LINE_ENDING
+            : JsonOutput::encode($document, $flags);
 
         return $this->applyOutputOptions($json, $options);
     }

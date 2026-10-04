@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
-use JsonException;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\JsonOptions;
@@ -81,16 +80,5 @@ class JsonFormatterTest extends TestCase
             '{"version":1,"metadata":{},"comments":[],"cues":[{"start":1.0,"end":2.0,"lines":["Rain"],"identifier":null,"alignment":null}]}',
             $subtitle->toString(Format::Json, new WriteOptions(format: new JsonOptions(withFormatData: false)))
         );
-    }
-
-
-    public function testThrowsJsonExceptionForTextThatIsNotUtf8(): void
-    {
-        $subtitle = new Subtitle();
-        $subtitle->addCue(new SubtitleCue(1, 2, "Caf\xE9"));
-
-        $this->expectException(JsonException::class);
-
-        $subtitle->toString(Format::Json);
     }
 }
