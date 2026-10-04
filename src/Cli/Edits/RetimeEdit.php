@@ -10,9 +10,12 @@ use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
 use SubtitleToolbox\Subtitle;
 
+/**
+ * @internal
+ */
 final class RetimeEdit extends Edit
 {
-    public function __construct(
+    private function __construct(
         private readonly ?float $shift = null,
         private readonly ?float $shiftAfter = null,
         private readonly ?float $scale = null,
@@ -48,6 +51,7 @@ final class RetimeEdit extends Edit
 
     public static function fromArguments(Arguments $arguments): ?static
     {
+        self::needs($arguments, "shift", ["shift-after"]);
         $edit = new self(
             $arguments->float("shift"),
             $arguments->float("shift-after"),
@@ -55,9 +59,6 @@ final class RetimeEdit extends Edit
             $arguments->positiveFloat("from-fps"),
             $arguments->positiveFloat("to-fps"),
         );
-        if ($edit->shiftAfter !== null && $edit->shift === null) {
-            Command::fail("--shift-after needs --shift.");
-        }
         if (($edit->fromFps === null) !== ($edit->toFps === null)) {
             Command::fail("Pass --from-fps and --to-fps together.");
         }

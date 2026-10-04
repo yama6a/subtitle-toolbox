@@ -8,7 +8,7 @@ vendor/bin/subtitle-toolbox convert season1/ --to vtt --output-dir out/ --keep-g
 vendor/bin/subtitle-toolbox convert movie.sub movie.srt --fps 23.976
 vendor/bin/subtitle-toolbox retime movie.srt --shift -2.5 --output movie.fixed.srt
 vendor/bin/subtitle-toolbox retime *.srt --from-fps 25 --to-fps 23.976 --in-place
-vendor/bin/subtitle-toolbox convert movie.srt movie.fixed.srt --fix-overlaps --fix-min-gap 0.083 --fix-wrap 42
+vendor/bin/subtitle-toolbox convert movie.srt movie.fixed.srt --timing-fix-overlaps --timing-min-gap 0.083 --structure-wrap
 vendor/bin/subtitle-toolbox validate movie.srt --preset netflix-en --json
 curl -s https://example.com/movie.srt | vendor/bin/subtitle-toolbox convert - --to vtt > movie.vtt
 ```
@@ -50,6 +50,7 @@ php subtitle-toolbox.phar --version
 - **Version**: `subtitle-toolbox --version` prints the installed release, for example `2.0.0`, or `dev` in a Git checkout.
 - **Exit code**: 0 when all files succeed, 1 when a file fails, breaks a validation rule or differs in `diff`, 2 for invalid arguments.
 - **Failures**: a failed file prints `FILE: MESSAGE` to standard error. The message of a library exception starts with its class, for example `ParsingException (Error #100):`. Any other PHP error prints its class and message, for example `movie.json: TypeError: ...`, and fails that file with exit code 1. An error outside a file prints `Error: CLASS: MESSAGE` and exits with code 1.
+- **Stable parts**: semantic versioning covers the binary, its commands, options, output and exit codes. The PHP classes in `src/Cli` are `@internal` and can change in any release.
 - **Messages**: where a library message names a PHP method or option, the tool names the CLI option. For example "Call loadTrack() with one of them" becomes "Pass --track N with one of them".
 
 ## Input and output
@@ -72,9 +73,9 @@ php subtitle-toolbox.phar --version
 - **Option names**: `--no-X` always turns X off, for example `--no-bom`. A time option is in seconds, unless its name ends in `-frames`.
 - **Encoding**: `--encoding` names the encoding of the input, for example `Windows-1252`. See [encodings.md](encodings.md).
 - **Output bytes**: `--line-ending lf|crlf`, `--bom` and `--no-bom`.
-- **Broken files**: `--lenient` skips or repairs broken cues and prints a warning for each, see [lenient-parsing.md](lenient-parsing.md).
+- **Broken files**: `--lenient` skips or repairs broken cues and prints a warning for each file that a command reads, also a second file or a `--reference`, see [lenient-parsing.md](lenient-parsing.md).
 - **Frame rate**: see [Frame rates](#frame-rates).
-- **Word timestamps**: `--word-timestamps` keeps the word times of the speech-to-text JSON formats, YouTube timed text and Podcasting 2.0 transcripts. `--fix-resegment`, `--karaoke` and `--ass-karaoke-tag` turn it on.
+- **Word timestamps**: `--word-timestamps` keeps the word times of the speech-to-text JSON formats, YouTube timed text and Podcasting 2.0 transcripts. `--structure-resegment`, `--karaoke` and `--ass-karaoke-tag` turn it on.
 - **MKV and WebM**: `--track` picks a subtitle track, see [MKV and WebM](#mkv-and-webm).
 - **Image cues**: `--skip-image-cues` leaves out image cues without text in place of failing.
 
@@ -146,25 +147,25 @@ vendor/bin/subtitle-toolbox retime movie.sub --from-fps 25 --to-fps 23.976 --inp
 `convert` reads each input, runs the edits of its options, and writes the result in the format of `--to` or of the output file extension. Without both, the output keeps the input format. One call can run OCR, fix text, strip SDH, retime and convert:
 
 ```sh
-vendor/bin/subtitle-toolbox convert movie.sup movie.srt --ocr --fix-common-errors --sdh --shift -1.5
-vendor/bin/subtitle-toolbox convert lecture.json lecture.srt --fix-resegment --fix-min-duration 1
+vendor/bin/subtitle-toolbox convert movie.sup movie.srt --ocr --errors-fix --sdh --shift -1.5
+vendor/bin/subtitle-toolbox convert lecture.json lecture.srt --structure-resegment --timing-min-duration 1
 vendor/bin/subtitle-toolbox convert song.json song.ass --ass-karaoke-tag kf
-vendor/bin/subtitle-toolbox convert season1/*.srt --fix-common-errors --in-place
+vendor/bin/subtitle-toolbox convert season1/*.srt --errors-fix --in-place
 ```
 
 - **Output file argument**: `convert IN OUT` reads `IN` and writes `OUT` only without `--to`, `-o`, `--output-dir` and `--in-place`. With one of them, both arguments are inputs.
 
 ### Order
-`convert` always runs the edits in this order, whatever the order of the options. The options form groups. `convert --help GROUP` lists the options of one group, and `convert --help all` lists every option. A word after `--help` that holds a dot or a slash, or names a file, is no group, so `convert in.srt -h out.srt` prints the convert help.
+`convert` always runs the edits in this order, whatever the order of the options. The options form groups. `convert --help GROUP` lists the options of one group, and `convert --help all` lists every option. A word after `--help` that holds a dot or a slash, or names a file, is no group, so `convert in.srt -h out.srt` prints the convert help. A group prefix is the group name, for example `--structure-wrap` and `--timing-min-gap`.
 
 | Step | Group | Options | Why here |
 |:--- |:--- |:--- |:--- |
 | 1. Read | | input options | |
 | 2. Forced | `forced` | `--forced-only` | OCR then reads only the cues that stay |
 | 3. OCR | `ocr` | `--ocr` | the later steps need text |
-| 4. Text | `errors`, `sdh`, `replace`, `text` | `--fix-common-errors`, `--sdh`, `--replace`, `--speakers`, `--case`, `--strip-tags` | SDH changes the line lengths, so it runs before wrapping |
-| 5. Structure | `structure` | `--fix-resegment`, `--fix-unwrap`, `--fix-merge-short`, `--fix-split-long`, `--fix-wrap`, `--fix-merge-duplicates` | |
-| 6. Timing | `retime`, `snap`, `timing` | `--shift`, `--scale`, `--from-fps` and `--to-fps`, `--snap-shot-changes`, `--fix-overlaps`, `--fix-min-duration` | splits in step 5 create new cues |
+| 4. Text | `errors`, `sdh`, `replace`, `text` | `--errors-fix`, `--sdh`, `--replace`, `--speakers`, `--case`, `--strip-tags` | SDH changes the line lengths, so it runs before wrapping |
+| 5. Structure | `structure` | `--structure-resegment`, `--structure-unwrap`, `--structure-merge-short`, `--structure-split-long`, `--structure-wrap`, `--structure-merge-duplicates` | |
+| 6. Timing | `retime`, `snap`, `timing` | `--shift`, `--scale`, `--from-fps` and `--to-fps`, `--snap-shot-changes`, `--timing-fix-overlaps`, `--timing-min-duration` | splits in step 5 create new cues |
 | 7. Masking | `masking` | `--mask-words` | the mute ranges of `--mute-edl` and `--mute-filter` need the final times |
 | 8. Karaoke | `karaoke` | `--karaoke` | it multiplies the cues |
 | 9. Write | `ass` | output options, `--ass-karaoke-tag` | |
@@ -181,9 +182,9 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --fix-common-errors --in-place
 ### Text
 | Option | Effect |
 |:--- |:--- |
-| `--fix-common-errors` | [`CommonErrorFixer::apply()`](text.md#fixing-common-errors) with all default fixes |
-| `--fix-replace-list FILE` | adds a Subtitle Edit OCR replace list to `--fix-common-errors` |
-| `--fix-list` | prints each change of `--fix-common-errors` to standard error, for example `movie.srt: cue 15: ocrLowercaseL: "lt's late." -> "It's late."`. A byte that is not valid UTF-8 prints as U+FFFD |
+| `--errors-fix` | [`CommonErrorFixer::apply()`](text.md#fixing-common-errors) with all default fixes |
+| `--errors-replace-list FILE` | adds a Subtitle Edit OCR replace list to `--errors-fix` |
+| `--errors-list` | prints each change of `--errors-fix` to standard error, for example `movie.srt: cue 15: ocrLowercaseL: "lt's late." -> "It's late."`. A byte that is not valid UTF-8 prints as U+FFFD |
 | `--sdh` | removes everything that [`HearingImpairedRemover::apply()`](text.md#hearing-impaired-annotations) removes by default. A cue with no text left goes |
 | `--sdh-keep-square-brackets`, `--sdh-keep-parentheses`, `--sdh-keep-speaker-labels`, `--sdh-keep-music-lines` | turns off one rule of `--sdh` |
 | `--sdh-any-case-labels` | also removes speaker labels that are not upper case, such as `Baker:` |
@@ -192,10 +193,10 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --fix-common-errors --in-place
 | `--replace FROM=TO` | [`replaceText()`](text.md#transforms) on the text between tags. Repeatable. The first `=` ends FROM |
 | `--replace-regex` | reads each FROM as a regular expression with delimiters, for example `--replace '/\.{4,}/=...'` |
 | `--replace-ignore-case` | matches FROM in any case |
-| `--speakers MODE` | `prefix`, `dashes`, `colours` or `from-prefix`. Calls `SpeakerLabels::apply()` with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colors`, or with `readPrefixes: true`, and the other options at their defaults, see [Speakers](text.md#speakers) |
+| `--speakers MODE` | `prefix`, `dashes`, `colors` or `from-prefix`. Calls `SpeakerLabels::apply()` with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colors`, or with `readPrefixes: true`, and the other options at their defaults, see [Speakers](text.md#speakers) |
 | `--case MODE` | `upper`, `lower` or `sentence`, with `changeCase()` |
 | `--strip-tags` | removes all formatting tags, such as `<i>` and `<font>` |
-| `--language CODE` | the language of `--case` and `--fix-common-errors`, for example `en`, `de-AT` or `tr`. `tr` and `az` map `i` to `İ` and `ı` to `I`. Without it, `--fix-common-errors` takes the `language` metadata |
+| `--language CODE` | the language of `--case` and `--errors-fix`, for example `en`, `de-AT` or `tr`. `tr` and `az` map `i` to `İ` and `ı` to `I`. Without it, `--errors-fix` takes the `language` metadata |
 
 ### Masking
 | Option | Effect |
@@ -219,16 +220,16 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 
 | Option | Calls |
 |:--- |:--- |
-| `--fix-resegment` | `Resegmenter::apply()` with `ResegmentMode::ByWords`. `--fix-max-word-gap` sets `maxWordGap`, default 0.6 s. It turns on `--word-timestamps` |
-| `--fix-unwrap` | `unwrapLines()` |
-| `--fix-merge-short` | `mergeShortCues()` with the default options |
-| `--fix-split-long` | `Resegmenter::apply()` with `ResegmentMode::SplitLong` and the default options |
-| `--fix-wrap CHARS` | `wrapLines()` |
-| `--fix-merge-duplicates` | `removeDuplicateCues()` |
-| `--fix-max-cpl CHARS` | `maxCharactersPerLine` of `--fix-resegment`, `--fix-merge-short` and `--fix-split-long`, default 42 |
-| `--fix-max-lines LINES` | `maxLines` of `--fix-resegment`, `--fix-merge-short`, `--fix-split-long` and `--fix-wrap`, default 2 |
+| `--structure-resegment` | `Resegmenter::apply()` with `ResegmentMode::ByWords`. `--structure-max-word-gap` sets `maxWordGap`, default 0.6 s. It turns on `--word-timestamps` |
+| `--structure-unwrap` | `unwrapLines()` |
+| `--structure-merge-short` | `mergeShortCues()` with the default options |
+| `--structure-split-long` | `Resegmenter::apply()` with `ResegmentMode::SplitLong` and the default options |
+| `--structure-wrap` | `wrapLines()` with `--structure-max-cpl` and `--structure-max-lines` |
+| `--structure-merge-duplicates` | `removeDuplicateCues()` |
+| `--structure-max-cpl CHARS` | `maxCharactersPerLine` of `--structure-resegment`, `--structure-merge-short`, `--structure-split-long` and `--structure-wrap`, default 42 |
+| `--structure-max-lines LINES` | `maxLines` of `--structure-resegment`, `--structure-merge-short`, `--structure-split-long` and `--structure-wrap`, default 2 |
 
-- **Limits without their fix**: `--fix-max-cpl`, `--fix-max-lines` and `--fix-min-gap` alone are a usage error, exit code 2. The message names the fix options that use them.
+- **Limits without their fix**: `--structure-max-cpl`, `--structure-max-lines` and `--timing-min-gap` alone are a usage error, exit code 2. The message names the fix options that use them.
 
 ### Timing
 `--shift`, `--shift-after`, `--scale`, `--from-fps` and `--to-fps` work as in [Retime](#retime).
@@ -241,9 +242,9 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 | `--snap-min-gap-frames FRAMES` | `minGapFrames`, default 2 |
 | `--snap-min-duration-frames FRAMES` | `minDurationFrames`, default 20 |
 | `--snap-no-chain` | `chain: false` |
-| `--fix-overlaps` | `fixOverlaps()` with `--fix-min-gap` seconds, default 0 |
-| `--fix-min-duration SECONDS` | `extendShortCues()` with `--fix-min-gap` |
-| `--fix-min-gap SECONDS` | the gap of `--fix-overlaps` and `--fix-min-duration` |
+| `--timing-fix-overlaps` | `fixOverlaps()` with `--timing-min-gap` seconds, default 0 |
+| `--timing-min-duration SECONDS` | `extendShortCues()` with `--timing-min-gap` |
+| `--timing-min-gap SECONDS` | the gap of `--timing-fix-overlaps` and `--timing-min-duration` |
 
 ```sh
 ffmpeg -i movie.mp4 -vf "select='gt(scene,0.3)',showinfo" -f null - 2> scenes.log
@@ -262,8 +263,20 @@ vendor/bin/subtitle-toolbox convert movie.srt movie.timed.srt --video-fps 24 --s
 
 - **Library only**: the cumulative mode and the word limit of `WordHighlightOptions` have no option. Call `WordHighlight::apply()` for them.
 
+## JSON output
+`info`, `validate` and `diff` print JSON with `--json`: one object for one input, a list of objects for several.
+
+| Command | Object |
+|:--- |:--- |
+| `info` | `file`, `format`, `metadata`, `statistics`, `imageCues` and `warnings`. `statistics` is `SubtitleStatistics::toArray()`, with `gaps` and a `mostUsedWords` list of `{"word", "count"}` |
+| `validate` | `file`, `format`, `valid`, `violations` and `warnings`. A violation has `cueIndex`, `rule`, `value` and `limit` |
+| `diff` | `oldFile`, `newFile`, `equal`, `differences`, `oldWarnings` and `newWarnings`. A difference has `kind`, `oldIndex`, `newIndex`, `old` and `new`. A cue has `start`, `end`, `lines` and `forced` |
+
+- **Indexes**: `cueIndex`, `oldIndex`, `newIndex` and `blockIndex` start at 0, as in the library. The text output counts cues from 1.
+- **Warnings**: a list of the parse warnings of the file, empty without `--lenient`. A warning has `lineNumber`, `blockIndex`, `message` and `action`, see [lenient-parsing.md](lenient-parsing.md).
+
 ## Info
-- **Warnings**: with `--lenient`, `info` prints `Warnings: 1` for a file with one broken cue. The JSON holds a `warnings` list, empty for a file without warnings. A warning has `lineNumber`, `blockIndex`, `message` and `action`, see [lenient-parsing.md](lenient-parsing.md).
+- **Warnings**: with `--lenient`, `info` prints `Warnings: 1` for a file with one broken cue.
 - **MKV and WebM**: see [MKV and WebM](#mkv-and-webm).
 
 ## Validate
@@ -320,7 +333,7 @@ vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-format
 | `--time-tolerance SECONDS` | `timeTolerance`, default 0.001 |
 | `--ignore-formatting`, `--ignore-whitespace`, `--text-only` | `ignoreFormatting`, `ignoreWhitespace`, `textOnly` |
 | `--from2 FORMAT`, `--track2 NUMBER` | the format and the MKV or WebM track of the new file. `--from` and `--track` apply to the old file |
-| `--json` | one object with `old`, `new`, `equal` and `differences`. A difference has `kind`, `oldIndex`, `newIndex`, `old` and `new`. A cue has `start`, `end`, `lines` and `forced` |
+| `--json` | prints JSON, see [JSON output](#json-output) |
 
 ## Dual
 `dual` merges a primary and a secondary subtitle with [`DualSubtitle::fromPair()`](editing.md#dual-subtitles). The output has the format of the primary file, unless `--to` or the `--output` extension sets another one.

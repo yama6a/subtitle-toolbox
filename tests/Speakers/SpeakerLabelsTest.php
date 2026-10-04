@@ -214,7 +214,7 @@ class SpeakerLabelsTest extends TestCase
         $subtitle = self::voices();
 
         SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Colors));
-        $this->assertSame(file_get_contents(self::FILES . "voices_colours.srt"), $subtitle->toString(Format::SubRip, self::noBom()));
+        $this->assertSame(file_get_contents(self::FILES . "voices_colors.srt"), $subtitle->toString(Format::SubRip, self::noBom()));
     }
 
 

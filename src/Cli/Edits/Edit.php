@@ -11,7 +11,11 @@ use SubtitleToolbox\Cli\Option;
 use SubtitleToolbox\Subtitle;
 
 /**
- * One group of convert options that share a prefix, with the checks of these options.
+ * One option group of convert, with the checks of its options. Where a group has a prefix, it is the group name, such
+ * as --structure- or --sdh-. The retime, snap, text and masking groups also hold options without it: --shift and
+ * --video-fps keep the names of the retime and validate commands, and --case and --mute-edl read better alone.
+ *
+ * @internal
  */
 abstract class Edit
 {

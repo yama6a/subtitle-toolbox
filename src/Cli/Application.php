@@ -6,7 +6,10 @@ namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Exceptions\SubtitleToolboxException;
 
-class Application
+/**
+ * @internal
+ */
+final class Application
 {
     public const NAME = "subtitle-toolbox";
 

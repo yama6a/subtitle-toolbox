@@ -14,11 +14,14 @@ use SubtitleToolbox\Speakers\SpeakerLabels;
 use SubtitleToolbox\Speakers\SpeakerStyle;
 use SubtitleToolbox\Subtitle;
 
+/**
+ * @internal
+ */
 final class TextEdit extends Edit
 {
     private const CASES = ["upper", "lower", "sentence"];
 
-    private const SPEAKER_MODES = ["prefix", "dashes", "colours", "from-prefix"];
+    private const SPEAKER_MODES = ["prefix", "dashes", "colors", "from-prefix"];
 
 
     private function __construct(
@@ -45,7 +48,7 @@ final class TextEdit extends Edit
     public static function options(): array
     {
         return [
-            Option::value("speakers", "MODE", "Convert <v> speaker tags: prefix (ANNA: Hi), dashes, colours, or from-prefix (ANNA: to <v Anna>)."),
+            Option::value("speakers", "MODE", "Convert <v> speaker tags: prefix (ANNA: Hi), dashes, colors, or from-prefix (ANNA: to <v Anna>)."),
             Option::value("case", "MODE", "Change the case of the text between tags: upper, lower or sentence."),
             Option::flag("strip-tags", "Remove all formatting tags, such as <i> and <font>, from the cue text."),
         ];
@@ -69,7 +72,7 @@ final class TextEdit extends Edit
         return new self($arguments->has("strip-tags"), $case, $arguments->value("language"), match ($speakers) {
             "prefix"      => new SpeakerLabelOptions(to: SpeakerStyle::Prefix),
             "dashes"      => new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes),
-            "colours"     => new SpeakerLabelOptions(to: SpeakerStyle::Colors),
+            "colors"     => new SpeakerLabelOptions(to: SpeakerStyle::Colors),
             "from-prefix" => new SpeakerLabelOptions(readPrefixes: true),
             null          => null,
         });

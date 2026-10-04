@@ -245,6 +245,11 @@ See [cli.md](cli.md) for every command and option.
 | `convert movie.srt --to vtt` to write `movie.vtt` | `convert movie.srt --to vtt -o movie.vtt` |
 | `convert call.json --to srt` for Deepgram JSON | `convert call.json --from deepgram --to srt`. Chapters and cloud speech JSON always need `--from` |
 | none | `diff` and `dual` read the second file with `--from2` and `--track2`. `convert` and `dual` take `--in-place`. `diff`, `dual` and `hls` take `--keep-going` |
+| `convert --speakers colours` | `convert --speakers colors` |
+| `validate --json` with `results`, each with `cueIndex` and `cueNumber` | `violations`, each with `cueIndex` only. `cueIndex` starts at 0, so the cue number is `cueIndex + 1` |
+| `diff --json` with `old` and `new` for the file names | `oldFile` and `newFile`. Each difference keeps `old` and `new` for the cues |
+| only `info --json` had `warnings` | `validate --json` has `warnings` too, and `diff --json` has `oldWarnings` and `newWarnings`. `diff`, `dual` and `sync --reference` also print the warnings of their second file to standard error |
+| the classes in `SubtitleToolbox\Cli`, for example a subclass of `InfoCommand` | `@internal`, and every class that is not abstract is final. Run the binary. Only its commands, options, output and exit codes are stable |
 
 ### Removed commands
 2.0 removes the commands `shift`, `scale`, `fps` with its alias `sync-fps`, `fix`, `strip-sdh` and `snap`. They fail like any unknown command: exit code 2 and a pointer to the command list. Use the `retime` or `convert` call of the table.
@@ -254,8 +259,11 @@ See [cli.md](cli.md) for every command and option.
 | `shift FILE --by 2 --after 60` | `retime FILE --shift 2 --shift-after 60` |
 | `scale FILE --factor 1.001` | `retime FILE --scale 1.001` |
 | `fps FILE --from 25 --to 23.976`, `sync-fps FILE --from 25 --to 23.976` | `retime FILE --from-fps 25 --to-fps 23.976` |
-| `fix FILE --overlaps --min-gap 0.083` | `convert FILE --fix-overlaps --fix-min-gap 0.083`. Each `fix --X` option becomes `--fix-X` |
-| `fix FILE --common-errors --replace-list L --list-fixes --language de` | `convert FILE --fix-common-errors --fix-replace-list L --fix-list --language de` |
+| `fix FILE --overlaps --min-duration 1 --min-gap 0.083` | `convert FILE --timing-fix-overlaps --timing-min-duration 1 --timing-min-gap 0.083` |
+| `fix FILE --common-errors --replace-list L --list-fixes --language de` | `convert FILE --errors-fix --errors-replace-list L --errors-list --language de` |
+| `fix FILE --wrap 32 --max-lines 3` | `convert FILE --structure-wrap --structure-max-cpl 32 --structure-max-lines 3`. `--structure-wrap` takes no value. Its width is `--structure-max-cpl`, default 42 |
+| `fix FILE --resegment --max-word-gap 0.3 --max-cpl 32 --max-lines 1` | `convert FILE --structure-resegment --structure-max-word-gap 0.3 --structure-max-cpl 32 --structure-max-lines 1` |
+| `fix FILE --unwrap`, `--merge-short`, `--split-long`, `--merge-duplicates` | `convert FILE --structure-unwrap`, `--structure-merge-short`, `--structure-split-long`, `--structure-merge-duplicates` |
 | `strip-sdh FILE` | `convert FILE --sdh` |
 | `strip-sdh FILE --lyrics --brackets "{}"` | `convert FILE --sdh --sdh-lyrics --sdh-brackets "{}"`. Each `strip-sdh --X` option becomes `--sdh-X` |
 | `snap FILE --shot-changes F --fps 24` | `convert FILE --snap-shot-changes F --video-fps 24` |

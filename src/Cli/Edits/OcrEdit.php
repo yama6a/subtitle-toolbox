@@ -21,6 +21,9 @@ use SubtitleToolbox\Ocr\TesseractOcrEngine;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
+/**
+ * @internal
+ */
 final class OcrEdit extends Edit
 {
     private bool $warnedAboutLanguage = false;
@@ -70,7 +73,7 @@ final class OcrEdit extends Edit
                              implode(", ", array_column(OcrEngineName::cases(), "value")) . "!");
         if ($arguments->has("ocr-database")) {
             if ($engine === OcrEngineName::Tesseract) {
-                Command::fail("--ocr-database works only with the glyph engine.");
+                Command::fail("Pass --ocr-engine glyph with --ocr-database.");
             }
             $engine = OcrEngineName::Glyph;
         }

@@ -8,12 +8,14 @@ use SubtitleToolbox\Container\Matroska\MatroskaTrack;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
-use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\SubtitleStatistics;
 
-class InfoCommand extends ReportCommand
+/**
+ * @internal
+ */
+final class InfoCommand extends ReportCommand
 {
     public function name(): string
     {
@@ -131,12 +133,7 @@ class InfoCommand extends ReportCommand
             "metadata"   => (object)$subtitle->getAllMetadata(),
             "statistics" => $data,
             "imageCues"  => ["count" => count($imageCues), "withText" => $imageCuesWithText],
-            "warnings"   => array_map(fn (ParseWarning $warning): array => [
-                "lineNumber" => $warning->lineNumber,
-                "blockIndex" => $warning->blockIndex,
-                "message"    => $warning->message,
-                "action"     => $warning->action->value,
-            ], $this->parseWarnings),
+            "warnings"   => self::warningsJson($this->parseWarnings),
         ]);
     }
 }

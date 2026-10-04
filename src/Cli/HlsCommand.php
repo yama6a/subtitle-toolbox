@@ -10,7 +10,10 @@ use SubtitleToolbox\Hls\HlsSegmentOptions;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\Subtitle;
 
-class HlsCommand extends FileCommand
+/**
+ * @internal
+ */
+final class HlsCommand extends FileCommand
 {
     private ?HlsSegmentOptions $segmentOptions = null;
 

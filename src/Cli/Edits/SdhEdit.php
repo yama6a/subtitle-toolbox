@@ -12,6 +12,9 @@ use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
 use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
 use SubtitleToolbox\Subtitle;
 
+/**
+ * @internal
+ */
 final class SdhEdit extends Edit
 {
     private function __construct(private readonly HearingImpairedOptions $options)

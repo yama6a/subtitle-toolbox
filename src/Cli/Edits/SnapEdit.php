@@ -15,6 +15,9 @@ use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\Timing\ShotChanges;
 use SubtitleToolbox\Timing\ShotChangeTiming;
 
+/**
+ * @internal
+ */
 final class SnapEdit extends Edit
 {
     private function __construct(private readonly ShotChangeOptions $options)

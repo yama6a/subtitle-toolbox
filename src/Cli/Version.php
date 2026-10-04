@@ -6,9 +6,12 @@ namespace SubtitleToolbox\Cli;
 
 use Composer\InstalledVersions;
 
+/**
+ * @internal
+ */
 final class Version
 {
-    public const PACKAGE = "ymakhloufi/subtitle-toolbox";
+    private const PACKAGE = "ymakhloufi/subtitle-toolbox";
 
     // Box replaces this placeholder with the release version when it builds the PHAR. See .build/build-phar.sh.
     private const BUILD_VERSION = "@package_version@";

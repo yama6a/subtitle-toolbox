@@ -8,9 +8,12 @@ use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\OcrEngine;
 use SubtitleToolbox\Ocr\RecognizedText;
 
+/**
+ * @internal
+ */
 final class OcrProgress implements OcrEngine
 {
-    public const INTERVAL = 100;
+    private const INTERVAL = 100;
 
     private int $done = 0;
 

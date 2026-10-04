@@ -117,7 +117,7 @@ class ApplicationTest extends TestCase
             self::runApplication(["retime", "-", "--from-fps", "25"])
         );
         $this->assertSame(
-            [2, "", "Error: --shift-after needs --shift.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            [2, "", "Error: Pass --shift with --shift-after.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
             self::runApplication(["retime", "-", "--scale", "2", "--shift-after", "1"])
         );
     }
@@ -143,7 +143,7 @@ class ApplicationTest extends TestCase
         $this->assertStringStartsWith("Usage: subtitle-toolbox convert <input> <output> [options]\n", $stdout);
         $this->assertMatchesRegularExpression('/^  --encoding NAME +/m', $stdout);
         $this->assertMatchesRegularExpression('/^  --language CODE +/m', $stdout);
-        $this->assertDoesNotMatchRegularExpression('/^  --(ocr|sdh|fix-wrap|shift|karaoke)\b/m', $stdout);
+        $this->assertDoesNotMatchRegularExpression('/^  --(ocr|sdh|structure-wrap|shift|karaoke)\b/m', $stdout);
         preg_match_all('/^  ([a-z]+) {2,}[A-Z]/m', $stdout, $groups);
         $this->assertSame(["forced", "ocr", "errors", "sdh", "replace", "text", "structure", "retime", "snap", "timing", "masking", "karaoke", "ass"],
                           $groups[1]);
@@ -276,7 +276,7 @@ class ApplicationTest extends TestCase
         $latin = __DIR__ . "/../../vendor/yama6a/php-glyph-ocr/resources/Latin.nocr";
 
         [$code, $stdout, $stderr] = self::runApplication(["convert", self::FILES . "fixing/ocr-en.sup", "--to", "srt", "-o", "-", "--ocr",
-                                                          "--ocr-engine", "glyph", "--ocr-database", $latin, "--fix-common-errors", "--language", "en"]);
+                                                          "--ocr-engine", "glyph", "--ocr-database", $latin, "--errors-fix", "--language", "en"]);
 
         $this->assertSame([0, file_get_contents(self::FILES . "fixing/ocr-en.fixed.srt")], [$code, $stdout]);
         $this->assertStringEndsWith(": OCR 6/6\n", $stderr);
@@ -290,7 +290,7 @@ class ApplicationTest extends TestCase
         $expected->fixOverlaps()->shift(-0.5);
 
         $this->assertSame([0, $expected->toString(Format::WebVtt), ""],
-                          self::runApplication(["convert", self::FILES . "cli/trip.srt", "--sdh", "--fix-overlaps", "--shift", "-0.5", "--to", "vtt", "-o", "-"]));
+                          self::runApplication(["convert", self::FILES . "cli/trip.srt", "--sdh", "--timing-fix-overlaps", "--shift", "-0.5", "--to", "vtt", "-o", "-"]));
         $this->assertSame("\u{FEFF}WEBVTT\n\n1\n00:00:00.500 --> 00:00:02.000\n<i>The train leaves at noon.</i>\n\n" .
                           "2\n00:00:02.000 --> 00:00:04.500\nWe need two tickets for the long ride to the coast.\n\n" .
                           "3\n00:00:05.500 --> 00:00:05.900\nToo late.\n", $expected->toString(Format::WebVtt));
@@ -308,8 +308,8 @@ class ApplicationTest extends TestCase
             "SDH"           => ["hearing-impaired/own_sdh.srt", ["--sdh", "--line-ending", "crlf", "--bom"], "hearing-impaired/own_sdh_removed.srt"],
             "shot changes"  => ["shot-changes/own_garden_24fps.srt", ["--snap-shot-changes", self::FILES . "shot-changes/own_ffmpeg_showinfo.log",
                                 "--video-fps", "24"], "shot-changes/own_garden_24fps_timed.srt"],
-            "timing fixes"  => ["fixes/own_overlaps_and_short_cues.srt", ["--fix-overlaps", "--fix-min-duration", "0.833", "--fix-min-gap", "0.083",
-                                "--fix-wrap", "42"], "fixes/own_overlaps_and_short_cues_fixed.srt"],
+            "timing fixes"  => ["fixes/own_overlaps_and_short_cues.srt", ["--timing-fix-overlaps", "--timing-min-duration", "0.833", "--timing-min-gap", "0.083",
+                                "--structure-wrap", "--structure-max-cpl", "42"], "fixes/own_overlaps_and_short_cues_fixed.srt"],
         ];
     }
 
@@ -343,10 +343,10 @@ class ApplicationTest extends TestCase
 
         [$code, $stdout, $stderr] = self::runApplication([
             "convert", self::FILES . "cli/trip.srt", "--to", "srt", "-o", "-",
-            "--karaoke", "--karaoke-style", "b", "--fix-min-duration", "1", "--fix-overlaps", "--fix-min-gap", "0.1",
-            "--snap-min-gap-frames", "2", "--video-fps", "24", "--scale", "1.001", "--shift", "-0.5", "--fix-merge-duplicates", "--fix-wrap", "20",
+            "--karaoke", "--karaoke-style", "b", "--timing-min-duration", "1", "--timing-fix-overlaps", "--timing-min-gap", "0.1",
+            "--snap-min-gap-frames", "2", "--video-fps", "24", "--scale", "1.001", "--shift", "-0.5", "--structure-merge-duplicates", "--structure-wrap", "--structure-max-cpl", "20",
             "--mask-words", $words, "--mask", "first-letter", "--speakers", "prefix", "--case", "upper", "--strip-tags",
-            "--replace", "Too late=[late] too late", "--sdh", "--sdh-keep-parentheses", "--language", "en", "--fix-common-errors",
+            "--replace", "Too late=[late] too late", "--sdh", "--sdh-keep-parentheses", "--language", "en", "--errors-fix",
             "--ocr", "--ocr-engine", "glyph",
         ]);
         unlink($words);

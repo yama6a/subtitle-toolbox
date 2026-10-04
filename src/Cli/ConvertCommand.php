@@ -12,7 +12,10 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
 use SubtitleToolbox\Subtitle;
 
-class ConvertCommand extends WriteCommand
+/**
+ * @internal
+ */
+final class ConvertCommand extends WriteCommand
 {
     private EditPipeline $edits;
 
@@ -106,8 +109,8 @@ class ConvertCommand extends WriteCommand
 
     private static function languageOption(): Option
     {
-        return Option::value("language", "CODE", "Language for --case and --fix-common-errors, for example en, de-AT or tr. " .
-                                               "--fix-common-errors takes the language of the input without it.");
+        return Option::value("language", "CODE", "Language for --case and --errors-fix, for example en, de-AT or tr. " .
+                                               "--errors-fix takes the language of the input without it.");
     }
 
 
@@ -155,7 +158,7 @@ class ConvertCommand extends WriteCommand
 
     protected function needsWordTimestamps(Arguments $arguments): bool
     {
-        return parent::needsWordTimestamps($arguments) || $arguments->has("fix-resegment") || $arguments->has("karaoke")
+        return parent::needsWordTimestamps($arguments) || $arguments->has("structure-resegment") || $arguments->has("karaoke")
             || $arguments->has("ass-karaoke-tag");
     }
 

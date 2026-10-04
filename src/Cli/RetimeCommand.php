@@ -7,7 +7,10 @@ namespace SubtitleToolbox\Cli;
 use SubtitleToolbox\Cli\Edits\RetimeEdit;
 use SubtitleToolbox\Subtitle;
 
-class RetimeCommand extends WriteCommand
+/**
+ * @internal
+ */
+final class RetimeCommand extends WriteCommand
 {
     private ?RetimeEdit $retime = null;
 

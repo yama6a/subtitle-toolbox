@@ -10,6 +10,9 @@ use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
 use SubtitleToolbox\Subtitle;
 
+/**
+ * @internal
+ */
 final class TimingFixEdit extends Edit
 {
     private function __construct(
@@ -35,26 +38,26 @@ final class TimingFixEdit extends Edit
     public static function options(): array
     {
         return [
-            Option::flag("fix-overlaps", "End each cue at least --fix-min-gap seconds before the next cue starts."),
-            Option::value("fix-min-duration", "SECONDS", "Show each cue for at least this time where the next cue allows it."),
-            Option::value("fix-min-gap", "SECONDS", "Gap between cues for --fix-overlaps and --fix-min-duration. Default: 0."),
+            Option::flag("timing-fix-overlaps", "End each cue at least --timing-min-gap seconds before the next cue starts."),
+            Option::value("timing-min-duration", "SECONDS", "Show each cue for at least this time where the next cue allows it."),
+            Option::value("timing-min-gap", "SECONDS", "Gap between cues for --timing-fix-overlaps and --timing-min-duration. Default: 0."),
         ];
     }
 
 
     public static function fromArguments(Arguments $arguments): ?static
     {
-        self::needsOneOf($arguments, ["fix-overlaps", "fix-min-duration"], "fix-min-gap");
-        $minDuration = $arguments->positiveFloat("fix-min-duration");
-        $minGap      = $arguments->float("fix-min-gap") ?? 0.0;
+        self::needsOneOf($arguments, ["timing-fix-overlaps", "timing-min-duration"], "timing-min-gap");
+        $minDuration = $arguments->positiveFloat("timing-min-duration");
+        $minGap      = $arguments->float("timing-min-gap") ?? 0.0;
         if ($minGap < 0) {
-            Command::fail("The option --fix-min-gap must not be negative.");
+            Command::fail("The option --timing-min-gap must not be negative.");
         }
-        if (!$arguments->has("fix-overlaps") && $minDuration === null) {
+        if (!$arguments->has("timing-fix-overlaps") && $minDuration === null) {
             return null;
         }
 
-        return new self($arguments->has("fix-overlaps"), $minDuration, $minGap);
+        return new self($arguments->has("timing-fix-overlaps"), $minDuration, $minGap);
     }
 
 
