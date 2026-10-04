@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
-use SubtitleToolbox\Formatters\Options\PodcastTranscriptOptions;
+use SubtitleToolbox\Formatters\Options\PodcastTranscriptWriteOptions;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\PodcastTranscriptParser;
 use SubtitleToolbox\StringHelpers;
@@ -12,9 +12,9 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
 
-class PodcastTranscriptFormatter extends SubtitleFormatter
+final class PodcastTranscriptFormatter extends SubtitleFormatter
 {
-    protected const FORMAT_OPTIONS = PodcastTranscriptOptions::class;
+    protected const FORMAT_OPTIONS = PodcastTranscriptWriteOptions::class;
 
     private const VERSION = "1.0.0";
 
@@ -27,7 +27,7 @@ class PodcastTranscriptFormatter extends SubtitleFormatter
      */
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $podcast      = $this->formatOptions($options) ?? new PodcastTranscriptOptions();
+        $podcast      = $this->formatOptions($options) ?? new PodcastTranscriptWriteOptions();
         $wordSegments = $podcast->wordSegments;
         $fileData     = $subtitle->getFormatData(PodcastTranscriptParser::FORMAT_DATA_KEY);
         $cues         = $subtitle->getCues();
@@ -55,6 +55,8 @@ class PodcastTranscriptFormatter extends SubtitleFormatter
 
     /**
      * Returns the segments that format() writes, each with "startTime", "endTime", "body" and, when known, "speaker".
+     *
+     * @internal HtmlTranscriptFormatter calls it.
      *
      * @return list<array{speaker?: string, startTime: float, endTime: float, body: string}>
      */

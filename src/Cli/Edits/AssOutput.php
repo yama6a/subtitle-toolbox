@@ -8,17 +8,15 @@ use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Option;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\Options\AssOptions;
+use SubtitleToolbox\Formatters\Options\AssKaraokeTag;
+use SubtitleToolbox\Formatters\Options\AssWriteOptions;
 
 /**
  * The ASS writer settings of convert.
  */
 final class AssOutput
 {
-    private const KARAOKE_TAGS = ["k", "kf", "ko"];
-
-
-    private function __construct(private readonly string $karaokeTag)
+    private function __construct(private readonly AssKaraokeTag $karaokeTag)
     {
     }
 
@@ -53,20 +51,17 @@ final class AssOutput
         if ($arguments->has("karaoke")) {
             Command::fail("Pass only one of --karaoke and --ass-karaoke-tag.");
         }
-        if (!in_array($tag, self::KARAOKE_TAGS, true)) {
-            Command::fail("The option --ass-karaoke-tag must be k, kf or ko, got \"$tag\".");
-        }
 
-        return new self($tag);
+        return new self(AssKaraokeTag::tryFrom($tag) ?? Command::fail("The option --ass-karaoke-tag must be k, kf or ko, got \"$tag\"."));
     }
 
 
-    public function formatOptions(Format $outputFormat): AssOptions
+    public function formatOptions(Format $outputFormat): AssWriteOptions
     {
         if ($outputFormat !== Format::Ass) {
             Command::fail("--ass-karaoke-tag needs ASS output.");
         }
 
-        return new AssOptions($this->karaokeTag);
+        return new AssWriteOptions($this->karaokeTag);
     }
 }

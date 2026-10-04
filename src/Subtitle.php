@@ -14,9 +14,9 @@ use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Exceptions\UnknownFormatException;
 use SubtitleToolbox\Formatters\ImageFormatter;
-use SubtitleToolbox\Formatters\Options\CsvOptions;
-use SubtitleToolbox\Formatters\Options\IttOptions;
-use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
+use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
+use SubtitleToolbox\Formatters\Options\IttWriteOptions;
+use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\OcrEngine;
 use SubtitleToolbox\Ocr\OcrRunner;
@@ -360,7 +360,7 @@ class Subtitle implements \IteratorAggregate, \Countable
     /**
      * Writes the subtitle in $format and throws on an image cue without text, unless the format writes images.
      * MicroDVD and iTT take the frame rate from the options, else from the format data of their parser. TSV writes
-     * tabs and CSV from a TSV load writes commas, unless CsvOptions::$delimiter is set.
+     * tabs and CSV from a TSV load writes commas, unless CsvWriteOptions::$delimiter is set.
      */
     public function toString(Format $format, WriteOptions $options = new WriteOptions()): string
     {
@@ -394,18 +394,18 @@ class Subtitle implements \IteratorAggregate, \Countable
             $format === Format::Csv && $this->format === Format::Tsv => ",",
             default                                                   => null,
         };
-        $csv = $formatOptions ?? new CsvOptions();
-        if ($delimiter !== null && $csv instanceof CsvOptions && $csv->delimiter === null) {
-            $formatOptions = new CsvOptions($delimiter, $csv->timeFormat, $csv->frameRate, $csv->secondText,
+        $csv = $formatOptions ?? new CsvWriteOptions();
+        if ($delimiter !== null && $csv instanceof CsvWriteOptions && $csv->delimiter === null) {
+            $formatOptions = new CsvWriteOptions($delimiter, $csv->timeFormat, $csv->frameRate, $csv->secondText,
                                             $csv->secondTextHeader, $csv->escapeFormulas);
         }
         if ($format === Format::MicroDvd && $formatOptions === null) {
-            $formatOptions = new MicroDvdOptions($this->getFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
-                ?? throw new InvalidArgumentException("MicroDVD output needs the frame rate of the video. Pass MicroDvdOptions::frameRate."));
+            $formatOptions = new MicroDvdWriteOptions($this->getFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
+                ?? throw new InvalidArgumentException("MicroDVD output needs the frame rate of the video. Pass MicroDvdWriteOptions::frameRate."));
         }
-        if ($format === Format::Itt && ($formatOptions === null || ($formatOptions instanceof IttOptions && $formatOptions->frameRate === null))
+        if ($format === Format::Itt && ($formatOptions === null || ($formatOptions instanceof IttWriteOptions && $formatOptions->frameRate === null))
             && !isset($this->getFormatData(IttParser::FORMAT)["frameRate"])) {
-            throw new InvalidArgumentException("iTT output needs the frame rate of the video. Pass IttOptions::frameRate.");
+            throw new InvalidArgumentException("iTT output needs the frame rate of the video. Pass IttWriteOptions::frameRate.");
         }
 
         return $formatOptions === $options->format ? $options : new WriteOptions(

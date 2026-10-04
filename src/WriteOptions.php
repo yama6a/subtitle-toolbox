@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
-use SubtitleToolbox\Formatters\FormatWriteOptions;
+use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
 
 /**
- * The settings that every formatter reads. $format holds the settings of one format, such as CsvOptions.
+ * The settings that every formatter reads. $format holds the settings of one format, such as CsvWriteOptions.
  */
 final class WriteOptions
 {

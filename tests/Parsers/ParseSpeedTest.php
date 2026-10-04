@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
+use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Validation\ValidationRules;
@@ -25,7 +25,7 @@ class ParseSpeedTest extends TestCase
             "WebVTT"   => [Format::WebVtt, new WriteOptions()],
             "SBV"      => [Format::Sbv, new WriteOptions()],
             "ASS"      => [Format::Ass, new WriteOptions()],
-            "MicroDVD" => [Format::MicroDvd, new WriteOptions(format: new MicroDvdOptions(frameRate: 25, writeFrameRateLine: true))],
+            "MicroDVD" => [Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25, writeFrameRateLine: true))],
             "TTML"     => [Format::Ttml, new WriteOptions()],
             "EBU STL"  => [Format::EbuStl, new WriteOptions()],
         ];

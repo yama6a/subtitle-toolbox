@@ -10,18 +10,19 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatRegistry;
 use SubtitleToolbox\FrameRate;
-use SubtitleToolbox\Formatters\Options\AssOptions;
-use SubtitleToolbox\Formatters\Options\CsvOptions;
-use SubtitleToolbox\Formatters\Options\EbuStlOptions;
-use SubtitleToolbox\Formatters\Options\HtmlTranscriptOptions;
-use SubtitleToolbox\Formatters\Options\IttOptions;
-use SubtitleToolbox\Formatters\Options\JsonOptions;
-use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
-use SubtitleToolbox\Formatters\Options\MpSubOptions;
-use SubtitleToolbox\Formatters\Options\PlainTextOptions;
-use SubtitleToolbox\Formatters\Options\PodcastTranscriptOptions;
-use SubtitleToolbox\Formatters\Options\SccOptions;
-use SubtitleToolbox\Formatters\Options\SubViewerOptions;
+use SubtitleToolbox\Formatters\Options\AssWriteOptions;
+use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
+use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
+use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
+use SubtitleToolbox\Formatters\Options\HtmlTranscriptWriteOptions;
+use SubtitleToolbox\Formatters\Options\IttWriteOptions;
+use SubtitleToolbox\Formatters\Options\JsonWriteOptions;
+use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
+use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
+use SubtitleToolbox\Formatters\Options\PlainTextWriteOptions;
+use SubtitleToolbox\Formatters\Options\PodcastTranscriptWriteOptions;
+use SubtitleToolbox\Formatters\Options\SccWriteOptions;
+use SubtitleToolbox\Formatters\Options\SubViewerWriteOptions;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -40,26 +41,26 @@ class OutputOptionsTest extends TestCase
 
     // The options that a format needs, or that give JSON output line breaks.
     private const FORMAT_OPTIONS = [
-        "itt"                => [IttOptions::class, ["frameRate" => 25]],
-        "json"               => [JsonOptions::class, ["prettyPrint" => true]],
-        "microdvd"           => [MicroDvdOptions::class, ["frameRate" => 25]],
-        "podcast-transcript" => [PodcastTranscriptOptions::class, ["prettyPrint" => true]],
+        "itt"                => [IttWriteOptions::class, ["frameRate" => 25]],
+        "json"               => [JsonWriteOptions::class, ["prettyPrint" => true]],
+        "microdvd"           => [MicroDvdWriteOptions::class, ["frameRate" => 25]],
+        "podcast-transcript" => [PodcastTranscriptWriteOptions::class, ["prettyPrint" => true]],
     ];
 
     private const OPTIONS_CLASSES = [
-        "ass"                => AssOptions::class,
-        "csv"                => CsvOptions::class,
-        "html"               => HtmlTranscriptOptions::class,
-        "itt"                => IttOptions::class,
-        "json"               => JsonOptions::class,
-        "microdvd"           => MicroDvdOptions::class,
-        "mpsub"              => MpSubOptions::class,
-        "podcast-transcript" => PodcastTranscriptOptions::class,
-        "scc"                => SccOptions::class,
-        "stl"                => EbuStlOptions::class,
-        "subviewer"          => SubViewerOptions::class,
-        "tsv"                => CsvOptions::class,
-        "txt"                => PlainTextOptions::class,
+        "ass"                => AssWriteOptions::class,
+        "csv"                => CsvWriteOptions::class,
+        "html"               => HtmlTranscriptWriteOptions::class,
+        "itt"                => IttWriteOptions::class,
+        "json"               => JsonWriteOptions::class,
+        "microdvd"           => MicroDvdWriteOptions::class,
+        "mpsub"              => MpSubWriteOptions::class,
+        "podcast-transcript" => PodcastTranscriptWriteOptions::class,
+        "scc"                => SccWriteOptions::class,
+        "stl"                => EbuStlWriteOptions::class,
+        "subviewer"          => SubViewerWriteOptions::class,
+        "tsv"                => CsvWriteOptions::class,
+        "txt"                => PlainTextWriteOptions::class,
     ];
 
 
@@ -146,12 +147,12 @@ class OutputOptionsTest extends TestCase
     #[DataProvider("writableFormats")]
     public function testOptionsOfAnotherFormatThrow(Format $format): void
     {
-        $other = $format === Format::Ass ? new SccOptions() : new AssOptions();
+        $other = $format === Format::Ass ? new SccWriteOptions() : new AssWriteOptions();
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage(isset(self::OPTIONS_CLASSES[$format->value]) ? ", got AssOptions." : " takes no format options, got AssOptions.");
+        $this->expectExceptionMessage(isset(self::OPTIONS_CLASSES[$format->value]) ? ", got AssWriteOptions." : " takes no format options, got AssWriteOptions.");
         if ($format === Format::Ass) {
-            $this->expectExceptionMessage("AssFormatter takes AssOptions, got SccOptions.");
+            $this->expectExceptionMessage("AssFormatter takes AssWriteOptions, got SccWriteOptions.");
         }
 
         self::subtitle($format)->toString($format, new WriteOptions(format: $other));
@@ -161,9 +162,9 @@ class OutputOptionsTest extends TestCase
     public function testCsvOptionsForSubRipThrow(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("SubRipFormatter takes no format options, got CsvOptions.");
+        $this->expectExceptionMessage("SubRipFormatter takes no format options, got CsvWriteOptions.");
 
-        self::subtitle(Format::SubRip)->toString(Format::SubRip, new WriteOptions(format: new CsvOptions()));
+        self::subtitle(Format::SubRip)->toString(Format::SubRip, new WriteOptions(format: new CsvWriteOptions()));
     }
 
 
@@ -188,7 +189,7 @@ class OutputOptionsTest extends TestCase
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "itt/real/fcp_23976_styles.itt"), Format::Itt);
 
-        $output = $subtitle->toString(Format::Itt, new WriteOptions(format: new IttOptions(frameRate: 25)));
+        $output = $subtitle->toString(Format::Itt, new WriteOptions(format: new IttWriteOptions(frameRate: 25)));
 
         $this->assertStringContainsString('ttp:frameRate="25"', $output);
         $this->assertStringContainsString('ttp:frameRateMultiplier="1 1"', $output);
@@ -200,7 +201,7 @@ class OutputOptionsTest extends TestCase
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "stl/real/harbour_open_30fps.stl"), Format::EbuStl);
         $this->assertSame("STL30.01", substr(file_get_contents(self::FILES . "stl/real/harbour_open_30fps.stl"), 3, 8));
 
-        $output = $subtitle->toString(Format::EbuStl, new WriteOptions(format: new EbuStlOptions(frameRate: 25)));
+        $output = $subtitle->toString(Format::EbuStl, new WriteOptions(format: new EbuStlWriteOptions(frameRate: 25)));
 
         $this->assertSame("STL25.01", substr($output, 3, 8));
     }
@@ -211,7 +212,7 @@ class OutputOptionsTest extends TestCase
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "csv/real/excel_de_semicolon.csv"), Format::Csv);
         $first    = array_values($subtitle->getCues())[0];
 
-        $output = $subtitle->toString(Format::Csv, new WriteOptions(format: new CsvOptions(timeFormat: CsvTimeFormat::Frames, frameRate: 25)));
+        $output = $subtitle->toString(Format::Csv, new WriteOptions(format: new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames, frameRate: 25)));
         $start  = sprintf("%02d:%02d:%02d:%02d", ...Timecode::clockSecondsAndFrames($first->getStart(), new FrameRate(25)));
 
         $this->assertStringContainsString("\n$start;", $output);

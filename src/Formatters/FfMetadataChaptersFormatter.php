@@ -10,7 +10,7 @@ use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
-class FfMetadataChaptersFormatter extends SubtitleFormatter
+final class FfMetadataChaptersFormatter extends SubtitleFormatter
 {
     private const DEFAULT_TIME_BASE = "1/1000";
 

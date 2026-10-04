@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
-use SubtitleToolbox\Formatters\Options\MpSubOptions;
+use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
@@ -12,16 +12,9 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
-class MpSubFormatter extends SubtitleFormatter
+final class MpSubFormatter extends SubtitleFormatter
 {
-    public const MPSUB_HEADER = "TITLE=" . StringHelpers::UNIX_LINE_ENDING .
-                                "AUTHOR=" . StringHelpers::UNIX_LINE_ENDING .
-                                "TYPE=VIDEO" . StringHelpers::UNIX_LINE_ENDING .
-                                "FORMAT=TIME" . StringHelpers::UNIX_LINE_ENDING .
-                                "NOTE=Created with the PHP Subtitle Toolbox (https://github.com/yama6a/subtitle-toolbox)" .
-                                StringHelpers::UNIX_LINE_ENDING;
-
-    protected const FORMAT_OPTIONS = MpSubOptions::class;
+    protected const FORMAT_OPTIONS = MpSubWriteOptions::class;
 
     private const DEFAULT_TYPE = "VIDEO";
     private const DEFAULT_NOTE = "Created with the PHP Subtitle Toolbox (https://github.com/yama6a/subtitle-toolbox)";

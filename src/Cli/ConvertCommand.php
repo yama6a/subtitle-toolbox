@@ -9,7 +9,7 @@ use SubtitleToolbox\Cli\Edits\Edit;
 use SubtitleToolbox\Cli\Edits\EditPipeline;
 use SubtitleToolbox\Cli\Edits\MaskingEdit;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\FormatWriteOptions;
+use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
 use SubtitleToolbox\Subtitle;
 
 class ConvertCommand extends WriteCommand

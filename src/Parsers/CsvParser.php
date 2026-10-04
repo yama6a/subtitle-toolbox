@@ -6,7 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Formatters\CsvTimeFormat;
+use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;

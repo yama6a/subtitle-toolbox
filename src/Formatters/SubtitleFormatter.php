@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;

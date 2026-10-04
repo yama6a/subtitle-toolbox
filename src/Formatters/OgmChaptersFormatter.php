@@ -8,7 +8,7 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
-class OgmChaptersFormatter extends SubtitleFormatter
+final class OgmChaptersFormatter extends SubtitleFormatter
 {
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {

@@ -6,9 +6,9 @@ namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\FormatWriteOptions;
-use SubtitleToolbox\Formatters\Options\IttOptions;
-use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
+use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
+use SubtitleToolbox\Formatters\Options\IttWriteOptions;
+use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
@@ -271,8 +271,8 @@ abstract class WriteCommand extends FileCommand
     private function formatterOptions(Format $outputFormat, Arguments $arguments): WriteOptions
     {
         $format = match (true) {
-            $this->outputFps !== null && $outputFormat === Format::MicroDvd => new MicroDvdOptions(frameRate: $this->outputFps),
-            $this->outputFps !== null && $outputFormat === Format::Itt      => new IttOptions(frameRate: $this->outputFps),
+            $this->outputFps !== null && $outputFormat === Format::MicroDvd => new MicroDvdWriteOptions(frameRate: $this->outputFps),
+            $this->outputFps !== null && $outputFormat === Format::Itt      => new IttWriteOptions(frameRate: $this->outputFps),
             default                                                         => $this->commandFormatterOptions($outputFormat, $arguments),
         };
 

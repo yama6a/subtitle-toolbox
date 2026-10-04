@@ -8,7 +8,7 @@ use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
+use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
@@ -36,7 +36,7 @@ class MicroDvdFormatterTest extends TestCase
         // Some source files have no line break after the last cue.
         $this->assertSame(
             rtrim($raw, "\n") . "\n",
-            $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdOptions(frameRate: $frameRate)))
+            $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: $frameRate)))
         );
     }
 
@@ -45,14 +45,14 @@ class MicroDvdFormatterTest extends TestCase
     {
         $raw = file_get_contents(__DIR__ . "/../files/microdvd/valid.sub");
 
-        $this->assertSame($raw, Subtitle::fromString($raw, Format::MicroDvd)->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdOptions(frameRate: 23.976, writeFrameRateLine: true))));
+        $this->assertSame($raw, Subtitle::fromString($raw, Format::MicroDvd)->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 23.976, writeFrameRateLine: true))));
     }
 
 
     public function testFrameRateOptionIsRequired(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("MicroDVD output needs the frame rate of the video. Pass MicroDvdOptions::frameRate.");
+        $this->expectExceptionMessage("MicroDVD output needs the frame rate of the video. Pass MicroDvdWriteOptions::frameRate.");
         (new Subtitle())->addCue(new SubtitleCue(1, 2, "Hello"))->toString(Format::MicroDvd);
     }
 
@@ -67,7 +67,7 @@ class MicroDvdFormatterTest extends TestCase
 
         $this->assertSame(
             "{25}{50}{c:\$0000FF}{y:b}{y:i}Red|{y:u}{y:s}Under & strike|Partly italic <3\n",
-            $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdOptions(frameRate: 25)))
+            $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25)))
         );
     }
 
@@ -80,7 +80,7 @@ class MicroDvdFormatterTest extends TestCase
 
         $this->assertSame(
             "{25}{50}{c:\$0000FF}Red\n{75}{100}{c:\$00FF00}Green\n",
-            $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdOptions(frameRate: 25)))
+            $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25)))
         );
     }
 
@@ -89,7 +89,7 @@ class MicroDvdFormatterTest extends TestCase
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "<i>Hello</i>"));
 
-        $this->assertSame("{25}{50}Hello\n", $subtitle->toString(Format::MicroDvd, new WriteOptions(stripTags: true, format: new MicroDvdOptions(frameRate: 25))));
+        $this->assertSame("{25}{50}Hello\n", $subtitle->toString(Format::MicroDvd, new WriteOptions(stripTags: true, format: new MicroDvdWriteOptions(frameRate: 25))));
     }
 
 
@@ -100,7 +100,7 @@ class MicroDvdFormatterTest extends TestCase
 
         $this->assertSame(
             "{25}{50}{y:b}{f:Arial}One|{y:i}Two\n",
-            $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdOptions(frameRate: 25)))
+            $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25)))
         );
     }
 
@@ -108,7 +108,7 @@ class MicroDvdFormatterTest extends TestCase
     public function testSubRipConvertsToMicroDvd(): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/valid.srt"), Format::SubRip);
-        $output   = $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdOptions(frameRate: 25)));
+        $output   = $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25)));
         $reparsed = (new MicroDvdParser())->parse($output, new ReadOptions(fps: 25));
 
         $this->assertSame(count($subtitle->getCues()), count($reparsed->getCues()));

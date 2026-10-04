@@ -10,7 +10,7 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
-class TmPlayerFormatter extends SubtitleFormatter
+final class TmPlayerFormatter extends SubtitleFormatter
 {
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {

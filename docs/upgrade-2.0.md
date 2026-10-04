@@ -20,8 +20,8 @@ use SubtitleToolbox\Resegmenter;
 use SubtitleToolbox\ResegmentMode;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
-use SubtitleToolbox\Formatters\CsvTimeFormat;
-use SubtitleToolbox\Formatters\Options\CsvOptions;      // and the other classes of the write options table
+use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
+use SubtitleToolbox\Formatters\Options\CsvWriteOptions; // and the other classes and enums of the write options table
 use SubtitleToolbox\Parsers\CsvReadOptions;             // and the other classes of the read options table
 use SubtitleToolbox\Speakers\SpeakerLabelOptions;
 use SubtitleToolbox\Speakers\SpeakerStyle;
@@ -53,7 +53,12 @@ use SubtitleToolbox\Validation\ValidationRules;
 | `MatroskaReader::DEFAULT_LAST_CUE_DURATION` | `ReadOptions::$lastCueDuration`, 5 s by default |
 | `(new VobSubParser(file_get_contents('movie.idx'), 'de'))->parse(file_get_contents('movie.sub'))` | `Subtitle::load('movie.idx', Format::VobSub, new ReadOptions(language: 'de'))`. It reads the `.sub` file next to the `.idx` file |
 | `new SubRipStreamWriter($stream, [SubtitleFormatter::OPTION_LINE_ENDING => "\r\n"])` | `new SubRipStreamWriter($stream, new WriteOptions(lineEnding: LineEnding::Crlf))`. `WebVttStreamWriter` takes the options as its third argument |
-| a parser or formatter object, for example `(new SubRipParser())->parse($content)` | the classes stay public. `parse()` takes `(string $content, ReadOptions $options)`, `format()` takes `(Subtitle $subtitle, WriteOptions $options)`. `formatCueBlock()` of `SubRipFormatter` and `WebVttFormatter` also takes `WriteOptions` |
+| a parser or formatter object, for example `(new SubRipParser())->parse($content)` | the classes stay public. `parse()` takes `(string $content, ReadOptions $options)`, `format()` takes `(Subtitle $subtitle, WriteOptions $options)` |
+| a class that extends a formatter, such as `class MyFormatter extends SubRipFormatter` | every formatter except `SubtitleFormatter` is `final`. Call the formatter from your own class and change the string that `format()` returns |
+| `SubRipFormatter::formatCueBlock()`, `WebVttFormatter::formatCueBlock()` | `@internal`. Write one cue at a time with `SubRipStreamWriter` or `WebVttStreamWriter` |
+| `PodcastTranscriptFormatter::segments()` | `@internal`. Read the `segments` key of `json_decode($subtitle->toString(Format::PodcastTranscript), true)` |
+| `MpSubFormatter::MPSUB_HEADER` | removed. `(new Subtitle())->toString(Format::MpSub)` returns the header without metadata, after a UTF-8 BOM |
+| `SamiFormatter::DEFAULT_CLASS` | private. Its value is `'SUBTTL'` |
 
 `FormatRegistry` and `FormatDetector` are internal now. `getFormat()` returns the format that a load or `fromString()` call read.
 
@@ -80,7 +85,7 @@ No parser constructor takes an argument. Pass the setting to `ReadOptions`.
 The per-format read classes are in `SubtitleToolbox\Parsers`.
 
 ## Write options
-Every `OPTION_*` constant of the formatters is gone. The per-format classes are in `SubtitleToolbox\Formatters\Options`.
+Every `OPTION_*` constant of the formatters is gone. The per-format classes are in `SubtitleToolbox\Formatters\Options`. Each class name ends in `WriteOptions`, and each `frameRate` field is a `float`.
 
 ```php
 // 1.x
@@ -94,7 +99,7 @@ $sub = $subtitle->format(MicroDvdFormatter::class, [
 $sub = $subtitle->toString(Format::MicroDvd, new WriteOptions(
     lineEnding: LineEnding::Crlf,
     stripTags: true,
-    format: new MicroDvdOptions(frameRate: 23.976),
+    format: new MicroDvdWriteOptions(frameRate: 23.976),
 ));
 ```
 
@@ -104,22 +109,22 @@ $sub = $subtitle->toString(Format::MicroDvd, new WriteOptions(
 | `SubtitleFormatter::OPTION_BOM => true` | `WriteOptions(bom: true)` |
 | `SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS` | `WriteOptions(stripTags: true)` |
 | `SubtitleFormatter::OPTION_SKIP_IMAGE_CUES` | `WriteOptions(skipImageCues: true)` |
-| `AssFormatter::OPTION_KARAOKE_TAG` | `AssOptions(karaokeTag: 'kf')` |
-| `CsvFormatter::OPTION_DELIMITER` | `CsvOptions(delimiter: ';')` |
-| `CsvFormatter::OPTION_TIME_FORMAT => CsvParser::TIME_COMMA` | `CsvOptions(timeFormat: CsvTimeFormat::Comma)`. The enum also has `Seconds`, `Dot` and `Frames` |
-| `CsvFormatter::OPTION_FRAME_RATE`, the key `'frameRate'` | `CsvOptions(frameRate: 25)` |
-| `CsvFormatter::OPTION_SECOND_TEXT`, `OPTION_SECOND_TEXT_HEADER` | `CsvOptions(secondText: $german, secondTextHeader: 'text (de)')` |
-| `CsvFormatter::OPTION_ESCAPE_FORMULAS` | `CsvOptions(escapeFormulas: true)` |
-| `EbuStlFormatter::OPTION_FRAME_RATE` | `EbuStlOptions(frameRate: 25)` |
-| `HtmlTranscriptFormatter::OPTION_PARAGRAPH_GAP` | `HtmlTranscriptOptions(paragraphGap: 2.0)` |
-| `IttFormatter::OPTION_FRAME_RATE` | `IttOptions(frameRate: 25)` |
-| `JsonFormatter::OPTION_PRETTY_PRINT`, `OPTION_WITH_FORMAT_DATA` | `JsonOptions(prettyPrint: true, withFormatData: false)` |
-| `MicroDvdFormatter::OPTION_FRAME_RATE`, `OPTION_WRITE_FRAME_RATE_LINE` | `MicroDvdOptions(frameRate: 23.976, writeFrameRateLine: true)` |
-| `MpSubFormatter::OPTION_FRAME_RATE` | `MpSubOptions(frameRate: 25)` |
-| `PlainTextFormatter::OPTION_JOIN_LINES`, `OPTION_JOIN_CUES`, `OPTION_PARAGRAPH_GAP`, `OPTION_WITH_TIMES` | `PlainTextOptions(joinLines: false, joinCues: false, paragraphGap: 3.0, withTimes: true)` |
-| `PodcastTranscriptFormatter::OPTION_WORD_SEGMENTS`, `OPTION_PRETTY_PRINT` | `PodcastTranscriptOptions(wordSegments: true, prettyPrint: true)` |
-| `SccFormatter::OPTION_DROP_FRAME` | `SccOptions(dropFrame: false)` |
-| `SubViewerFormatter::OPTION_VERSION` | `SubViewerOptions(version: 1)` |
+| `AssFormatter::OPTION_KARAOKE_TAG` | `AssWriteOptions(karaokeTag: AssKaraokeTag::Fill)`. The enum also has `Instant` for `k` and `Outline` for `ko` |
+| `CsvFormatter::OPTION_DELIMITER` | `CsvWriteOptions(delimiter: ';')` |
+| `CsvFormatter::OPTION_TIME_FORMAT => CsvParser::TIME_COMMA` | `CsvWriteOptions(timeFormat: CsvTimeFormat::Comma)`. The enum also has `Seconds`, `Dot` and `Frames` |
+| `CsvFormatter::OPTION_FRAME_RATE`, the key `'frameRate'` | `CsvWriteOptions(frameRate: 25)` |
+| `CsvFormatter::OPTION_SECOND_TEXT`, `OPTION_SECOND_TEXT_HEADER` | `CsvWriteOptions(secondText: $german, secondTextHeader: 'text (de)')` |
+| `CsvFormatter::OPTION_ESCAPE_FORMULAS` | `CsvWriteOptions(escapeFormulas: true)` |
+| `EbuStlFormatter::OPTION_FRAME_RATE` | `EbuStlWriteOptions(frameRate: 25)` |
+| `HtmlTranscriptFormatter::OPTION_PARAGRAPH_GAP` | `HtmlTranscriptWriteOptions(paragraphGap: 2.0)` |
+| `IttFormatter::OPTION_FRAME_RATE` | `IttWriteOptions(frameRate: 25)` |
+| `JsonFormatter::OPTION_PRETTY_PRINT`, `OPTION_WITH_FORMAT_DATA` | `JsonWriteOptions(prettyPrint: true, withFormatData: false)` |
+| `MicroDvdFormatter::OPTION_FRAME_RATE`, `OPTION_WRITE_FRAME_RATE_LINE` | `MicroDvdWriteOptions(frameRate: 23.976, writeFrameRateLine: true)` |
+| `MpSubFormatter::OPTION_FRAME_RATE` | `MpSubWriteOptions(frameRate: 25)` |
+| `PlainTextFormatter::OPTION_JOIN_LINES`, `OPTION_JOIN_CUES`, `OPTION_PARAGRAPH_GAP`, `OPTION_WITH_TIMES` | `PlainTextWriteOptions(joinLines: false, joinCues: false, paragraphGap: 3.0, withTimes: true)` |
+| `PodcastTranscriptFormatter::OPTION_WORD_SEGMENTS`, `OPTION_PRETTY_PRINT` | `PodcastTranscriptWriteOptions(wordSegments: true, prettyPrint: true)` |
+| `SccFormatter::OPTION_DROP_FRAME` | `SccWriteOptions(dropFrame: false)` |
+| `SubViewerFormatter::OPTION_VERSION` | `SubViewerWriteOptions(version: SubViewerVersion::V1)`. The enum also has `V2` |
 | `CsvParser::TIME_SECONDS`, `TIME_DOT`, `TIME_COMMA`, `TIME_FRAMES` | `CsvTimeFormat::Seconds`, `Dot`, `Comma`, `Frames` |
 | `CsvParser::TIME_FORMATS` | `CsvTimeFormat::cases()` |
 
@@ -198,7 +203,7 @@ These changes alter the output or the exit code of a call that needs no other ch
 | CLI output of 2 or more inputs | the commands that edit a file failed and asked for `--output-dir` or `--in-place` | every command writes each output next to its input, with the extension of the output format | `--output-dir` or `--in-place` |
 | `convert --help` | listed every option | lists the common options and the option groups. `convert --help GROUP` lists the options of one group | `convert --help all` |
 | CLI inputs | `--force` let a command write over its input | a command never overwrites an input without `--in-place`, also not with `--force`. That file fails | `--in-place` |
-| Unknown options | before 1.70.5, a misspelled key or a key of another format was ignored. 1.70.5 and later threw `InvalidArgumentException` | a misspelled field, such as `new WriteOptions(lineEndings: LineEnding::Crlf)`, is a PHP `Error` for an unknown named parameter. An options class of another format, such as `new CsvOptions()` for SubRip output, throws `InvalidArgumentException`. Read classes follow the same rule | fix the name, or pass the class of the format |
+| Unknown options | before 1.70.5, a misspelled key or a key of another format was ignored. 1.70.5 and later threw `InvalidArgumentException` | a misspelled field, such as `new WriteOptions(lineEndings: LineEnding::Crlf)`, is a PHP `Error` for an unknown named parameter. An options class of another format, such as `new CsvWriteOptions()` for SubRip output, throws `InvalidArgumentException`. Read classes follow the same rule | fix the name, or pass the class of the format |
 | Strict types | the library converted scalar values | every file declares `strict_types`. A `mapText()`, `mapLines()`, `Markup::mapTextRuns()` or `ProfanityOptions` mask callback must return a string, else it throws `TypeError`. `GlyphOcrEngine` options need their exact types, for example `['inkThreshold' => 128]` | return the documented type |
 | CSV and TSV times in `hh:mm:ss:ff` | `CsvParser` threw `ParsingException` without `CsvColumns(frameRate:)`, and the CLI could not read such a file | `CsvParser` takes the frame rate of `ReadOptions::$fps` when `CsvColumns` has none. The CLI `--input-fps` and `--fps` set it | pass `CsvColumns(frameRate:)`, which wins |
 | JSON output of text that is not UTF-8 | `JsonFormatter` and the Podcasting 2.0 formatters threw `JsonException` | they throw `InvalidArgumentException`, with the `JsonException` as its previous exception | catch `InvalidArgumentException` or `SubtitleToolboxException` |
@@ -210,6 +215,7 @@ These changes alter the output or the exit code of a call that needs no other ch
 | HLS segments | `HlsWebVttResult::getSegments()` and `getDurations()` returned arrays | they return generators that write each segment when you read it, so a long subtitle needs no memory for all segments. `getSegmentCount()` returns the number | `iterator_to_array($hls->getSegments())` |
 | Sync limits | `ReferenceSyncOptions` and the CLI `sync` took any offset range and any number of splits, and ran out of memory on large values | `minOffset` and `maxOffset` are from -86,400 to 86,400 s and at most 7,200 s apart. `maxSplits` is from 0 to 10. A larger value throws `InvalidArgumentException`, and the CLI exits with code 2 | keep the values in these ranges |
 | Image size | the PGS and VobSub parsers decoded an image of any size | an image larger than 7,680 pixels per side or 8,294,400 pixels, one 3840x2160 frame, throws `ParsingException`. `new CueImage()` and `PngDecoder::decode()` throw `InvalidArgumentException` | nothing for Blu-ray, UHD and DVD files, whose images are at most 3840x2160 |
+| Stored TTML head that is not valid XML | `toString(Format::Ttml)` threw `InvalidFormatterException`, error code 101 | it throws `InvalidArgumentException`, error code 104 | catch `InvalidArgumentException` |
 | Karaoke | `WordHighlight::expand()` returned a new subtitle and left its input as it was | `WordHighlight::apply()` changes the subtitle that you pass | pass `clone $subtitle` |
 
 Code that does not declare `strict_types` itself still calls the library as before. `new SubtitleCue("1", 2)` from such a file works.

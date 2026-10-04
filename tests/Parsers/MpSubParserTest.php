@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\Options\MpSubOptions;
+use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Validation\ValidationRules;
@@ -90,7 +90,7 @@ class MpSubParserTest extends TestCase
     public function testFrameBasedSampleFileRoundTripsWithinOneFrame(): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::FRAMES_FILE), Format::MpSub);
-        $output   = $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubOptions(frameRate: 25)));
+        $output   = $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubWriteOptions(frameRate: 25)));
         $reparsed = Subtitle::fromString($output, Format::MpSub);
 
         $this->assertStringContainsString("\nFORMAT=25\n", $output);
@@ -122,7 +122,7 @@ class MpSubParserTest extends TestCase
             "FORMAT=25\nNOTE=Created with the PHP Subtitle Toolbox (https://github.com/yama6a/subtitle-toolbox)\n",
             $raw
         );
-        $this->assertSame($expected, $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubOptions(frameRate: 25))));
+        $this->assertSame($expected, $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubWriteOptions(frameRate: 25))));
     }
 
 

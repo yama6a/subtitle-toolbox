@@ -8,7 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Formatters\CsvTimeFormat;
+use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Parsers\CsvReadOptions;
 use SubtitleToolbox\ReadOptions;

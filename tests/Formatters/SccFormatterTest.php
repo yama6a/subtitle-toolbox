@@ -8,7 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\Options\SccOptions;
+use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\SccParser;
 use SubtitleToolbox\Subtitle;
@@ -188,7 +188,7 @@ class SccFormatterTest extends TestCase
         $this->assertStringContainsString("\n00:01:01;00\t942c 942c\n", $subtitle->toString(Format::Scc));
         $this->assertStringContainsString(
             "\n00:01:00:28\t942c 942c\n",
-            $subtitle->toString(Format::Scc, new WriteOptions(format: new SccOptions(dropFrame: false)))
+            $subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dropFrame: false)))
         );
     }
 
@@ -198,7 +198,7 @@ class SccFormatterTest extends TestCase
         $subtitle = Subtitle::fromString(self::HEADER . "00:00:01:00\t9420 9420 9470 9470 c8e9 942f 942f\n\n00:00:03:00\t942c 942c\n", Format::Scc);
 
         $this->assertStringContainsString("\n00:00:03:00\t942c 942c\n", $subtitle->toString(Format::Scc));
-        $this->assertStringContainsString("\n00:00:03;00\t942c 942c\n", $subtitle->toString(Format::Scc, new WriteOptions(format: new SccOptions(dropFrame: true))));
+        $this->assertStringContainsString("\n00:00:03;00\t942c 942c\n", $subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dropFrame: true))));
     }
 
 

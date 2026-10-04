@@ -9,7 +9,7 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
-class YouTubeChaptersFormatter extends SubtitleFormatter
+final class YouTubeChaptersFormatter extends SubtitleFormatter
 {
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {

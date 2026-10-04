@@ -176,7 +176,7 @@ class JsonTypeErrorsTest extends TestCase
         $this->assertSame([], $subtitle->getFormatData($key));
         $this->assertCount(1, $subtitle->getCues());
         $this->assertNotSame("", $subtitle->toString($format, $format === Format::MicroDvd || $format === Format::Itt
-            ? new WriteOptions(format: $format === Format::Itt ? new Formatters\Options\IttOptions(25) : new Formatters\Options\MicroDvdOptions(25))
+            ? new WriteOptions(format: $format === Format::Itt ? new Formatters\Options\IttWriteOptions(25) : new Formatters\Options\MicroDvdWriteOptions(25))
             : new WriteOptions()));
     }
 

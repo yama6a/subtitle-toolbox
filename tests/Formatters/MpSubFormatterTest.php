@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\Options\MpSubOptions;
+use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -31,7 +31,7 @@ class MpSubFormatterTest extends TestCase
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/mpsub/valid_25fps.mpsub"),
-            $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubOptions(frameRate: 25)))
+            $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubWriteOptions(frameRate: 25)))
         );
     }
 
@@ -43,7 +43,7 @@ class MpSubFormatterTest extends TestCase
             $subtitle->addCue(new SubtitleCue($i * 0.06, ($i + 1) * 0.06, "Cue $i"));
         }
 
-        $output = $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubOptions(frameRate: 25)));
+        $output = $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubWriteOptions(frameRate: 25)));
 
         $this->assertStringContainsString("\n0 2\nCue 0\n\n0 1\nCue 1\n\n0 2\nCue 2\n\n0 1\nCue 3\n", $output);
     }
@@ -61,7 +61,15 @@ class MpSubFormatterTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("The MPSub frame rate must be a positive integer, got 0.");
-        new MpSubOptions(frameRate: 0);
+        new MpSubWriteOptions(frameRate: 0);
+    }
+
+
+    public function testFractionalFrameRateThrows(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("The MPSub frame rate must be a positive integer, got 29.97.");
+        new MpSubWriteOptions(frameRate: 29.97);
     }
 
 
@@ -69,7 +77,7 @@ class MpSubFormatterTest extends TestCase
     {
         $subtitle = (new Subtitle())->setMetadata(Subtitle::METADATA_LANGUAGE, "en");
 
-        $this->assertSame("\xEF\xBB\xBF" . MpSubFormatter::MPSUB_HEADER, $subtitle->toString(Format::MpSub));
+        $this->assertSame("\xEF\xBB\xBFTITLE=\nAUTHOR=\nTYPE=VIDEO\nFORMAT=TIME\nNOTE=Created with the PHP Subtitle Toolbox (https://github.com/yama6a/subtitle-toolbox)\n", $subtitle->toString(Format::MpSub));
     }
 
 

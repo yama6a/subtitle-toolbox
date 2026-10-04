@@ -10,7 +10,7 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
-class SbvFormatter extends SubtitleFormatter
+final class SbvFormatter extends SubtitleFormatter
 {
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {

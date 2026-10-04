@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Formatters\Options\CsvOptions;
+use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
+use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\CsvParser;
@@ -14,9 +15,9 @@ use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
-class CsvFormatter extends SubtitleFormatter
+final class CsvFormatter extends SubtitleFormatter
 {
-    protected const FORMAT_OPTIONS = CsvOptions::class;
+    protected const FORMAT_OPTIONS = CsvWriteOptions::class;
 
     private const SPEAKER_REGEX = '/^<v(?:\.[^\s>]*)?\s+([^>]*)>/';
 
@@ -26,7 +27,7 @@ class CsvFormatter extends SubtitleFormatter
      */
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $csv       = $this->formatOptions($options) ?? new CsvOptions();
+        $csv       = $this->formatOptions($options) ?? new CsvWriteOptions();
         $data      = $subtitle->getFormatData(CsvParser::FORMAT_DATA_KEY);
         $delimiter = $csv->delimiter ?? $data["delimiter"] ?? ",";
         CsvParser::checkDelimiter($delimiter);
@@ -34,7 +35,7 @@ class CsvFormatter extends SubtitleFormatter
         $fps        = $csv->frameRate ?? $data["frameRate"] ?? null;
         $frameRate  = $fps === null ? null : new FrameRate($fps);
         if ($timeFormat === CsvTimeFormat::Frames && $frameRate === null) {
-            throw new InvalidArgumentException("The time format " . CsvTimeFormat::Frames->value . " needs CsvOptions::\$frameRate.");
+            throw new InvalidArgumentException("The time format " . CsvTimeFormat::Frames->value . " needs CsvWriteOptions::\$frameRate.");
         }
         $second = $csv->secondText;
 
