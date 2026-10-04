@@ -1209,6 +1209,19 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testForcedOnlyRunsOcrOnTheForcedCuesAlone(): void
+    {
+        copy(self::FILES . "vobsub/two-tracks-pal.idx", "$this->dir/movie.idx");
+        copy(self::FILES . "vobsub/two-tracks-pal.sub", "$this->dir/movie.sub");
+        $forced = Subtitle::load("$this->dir/movie.idx", Format::VobSub)->onlyForced();
+
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "movie.idx", "--to", "srt", "-o", "-", "--ocr", "--ocr-engine", "glyph", "--forced-only"]);
+        $this->assertSame([0, "movie.idx: OCR 1/1\n"], [$code, $stderr]);
+        $this->assertCount(1, $forced);
+        $this->assertSame(1, substr_count($stdout, " --> "));
+    }
+
+
     public function testImageFormats(): void
     {
         mkdir("$this->dir/disc");

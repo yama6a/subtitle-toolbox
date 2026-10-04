@@ -159,8 +159,8 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --fix-common-errors --in-place
 | Step | Group | Options | Why here |
 |:--- |:--- |:--- |:--- |
 | 1. Read | | input options | |
-| 2. OCR | `ocr` | `--ocr` | the later steps need text |
-| 3. Forced | `forced` | `--forced-only` | |
+| 2. Forced | `forced` | `--forced-only` | OCR then reads only the cues that stay |
+| 3. OCR | `ocr` | `--ocr` | the later steps need text |
 | 4. Text | `errors`, `sdh`, `replace`, `text` | `--fix-common-errors`, `--sdh`, `--replace`, `--speakers`, `--case`, `--strip-tags` | SDH changes the line lengths, so it runs before wrapping |
 | 5. Structure | `structure` | `--fix-resegment`, `--fix-unwrap`, `--fix-merge-short`, `--fix-split-long`, `--fix-wrap`, `--fix-merge-duplicates` | |
 | 6. Timing | `retime`, `snap`, `timing` | `--shift`, `--scale`, `--from-fps` and `--to-fps`, `--snap-shot-changes`, `--fix-overlaps`, `--fix-min-duration` | splits in step 5 create new cues |
