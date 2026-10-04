@@ -58,4 +58,20 @@ abstract class Edit
             }
         }
     }
+
+
+    /**
+     * Fails when $arguments hold $option without one of the options $needed.
+     *
+     * @param non-empty-list<string> $needed
+     */
+    protected static function needsOneOf(Arguments $arguments, array $needed, string $option): void
+    {
+        if (!$arguments->has($option) || array_filter($needed, $arguments->has(...)) !== []) {
+            return;
+        }
+        $last = "--" . array_pop($needed);
+
+        Command::fail("Pass " . ($needed === [] ? $last : "--" . implode(", --", $needed) . " or $last") . " with --$option.");
+    }
 }

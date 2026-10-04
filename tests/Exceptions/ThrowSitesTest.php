@@ -295,6 +295,8 @@ class ThrowSitesTest extends TestCase
             "Fixing/CommonErrorOptions.php: dialogue dash"  => [fn () => new CommonErrorOptions(dialogueDash: "*"), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid regex"      => [fn () => new OcrReplaceList(regularExpressions: ["/(/" => ""]), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid XML"        => [fn () => OcrReplaceList::fromSubtitleEditXml("<ReplaceList>"), ...$parsing],
+            "Formatters/JsonOutput.php: invalid UTF-8" => [fn () => Subtitle::load(self::FILES . "cli/latin1.srt", Format::SubRip)->toString(Format::Json),
+                ...$invalid],
             "Formatters/CsvFormatter.php: frames without rate" => [fn () => self::subtitle()->toString(Format::Csv,
                 new WriteOptions(format: new CsvOptions(timeFormat: CsvTimeFormat::Frames))), ...$invalid],
             "Formatters/EbuStlFormatter.php: code table 09" => [fn () => self::subtitle()->setFormatData(EbuStlParser::FORMAT_DATA_KEY,

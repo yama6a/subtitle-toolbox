@@ -14,6 +14,8 @@ final class RawJson
      */
     public static function encode(mixed $value): string
     {
-        return json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        // json_decode() reads a number such as 1e400 as INF, which JSON cannot hold. Partial output writes 0 for it.
+        return json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR)
+            ?: "null";
     }
 }

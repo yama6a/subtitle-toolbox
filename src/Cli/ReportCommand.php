@@ -21,9 +21,15 @@ abstract class ReportCommand extends FileCommand
     {
         return [
             ...$this->commandOptions(),
-            Option::flag("json", "Print JSON: one object for one input file, a list of objects for several."),
+            Option::flag("json", $this->jsonDescription()),
             ...$this->inputOptions(),
         ];
+    }
+
+
+    protected function jsonDescription(): string
+    {
+        return "Print JSON: one object for one input file, a list of objects for several.";
     }
 
 

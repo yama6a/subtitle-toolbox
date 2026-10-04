@@ -21,6 +21,8 @@ use SubtitleToolbox\Karaoke\WordHighlight;
 use SubtitleToolbox\Karaoke\WordHighlightOptions;
 use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\Ocr\TesseractOcrEngine;
+use SubtitleToolbox\Parsers\CsvColumns;
+use SubtitleToolbox\Parsers\CsvReadOptions;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Profanity\MuteRange;
 use SubtitleToolbox\Profanity\ProfanityFilter;
@@ -176,7 +178,7 @@ class BinaryTest extends TestCase
         $this->assertMatchesRegularExpression('/^  --lenient +Skip or repair broken cues and print a warning for each\. ' .
                                               'SCC, PGS, VobSub and chapter input ignore it\.$/m', $convert);
         $this->assertMatchesRegularExpression('/^  --encoding NAME +.*A BOM in the input overrides it\.$/m', $convert);
-        $this->assertMatchesRegularExpression('/^  --input-fps RATE +Frame rate of a MicroDVD input without a \{1\}\{1\}<fps> first line\.$/m', $convert);
+        $this->assertMatchesRegularExpression('/^  --input-fps RATE +Frame rate of a MicroDVD input without a \{1\}\{1\}<fps> first line, and of CSV or TSV times in hh:mm:ss:ff\.$/m', $convert);
         $this->assertMatchesRegularExpression('/^  --output-fps RATE +Frame rate of MicroDVD and iTT output\..*$/m', $convert);
         $this->assertMatchesRegularExpression('/^  --fps RATE +Sets --input-fps, --output-fps and --video-fps\. Each of them overrides it\.$/m', $convert);
         $this->assertMatchesRegularExpression('/^  --from FORMAT +Input format\./m', $convert);
@@ -370,8 +372,8 @@ class BinaryTest extends TestCase
 
         $this->assertSame([0, $this->tripAs(Format::WebVtt), ""], $this->runBinary(["convert", "trip.txt", "--to", "vtt", "-o", "-"]));
         $this->assertSame(
-            [1, "", "notes.txt: UnknownFormatException (Error #106): Format detection found no subtitle format. Call load() with a " .
-                    "format. Chapters and cloud speech-to-text JSON always need one, for example Format::Deepgram.\n"],
+            [1, "", "notes.txt: UnknownFormatException (Error #106): Format detection found no subtitle format. Pass --from FORMAT. " .
+                    "Chapters and cloud speech-to-text JSON always need it, for example --from deepgram.\n"],
             $this->runBinary(["convert", "notes.txt", "--to", "vtt"])
         );
         $this->assertSame([1, "", "missing.srt: The file does not exist.\n"], $this->runBinary(["convert", "missing.srt", "--to", "vtt"]));
@@ -465,6 +467,25 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testSpeakersRunBeforeCaseAndStripTags(): void
+    {
+        $files = __DIR__ . "/../files/speakers/";
+        copy($files . "voices.vtt", "$this->dir/voices.vtt");
+        copy($files . "sdh_labels.srt", "$this->dir/labels.srt");
+        $prefix = Subtitle::fromString(file_get_contents($files . "voices_prefix.srt"), Format::SubRip)->stripFormatting();
+        $voices = Subtitle::fromString(file_get_contents($files . "sdh_labels_voices.vtt"), Format::WebVtt)->changeCase("lower");
+
+        $this->assertSame(
+            [0, $prefix->toString(Format::SubRip, new WriteOptions(bom: false)), ""],
+            $this->runBinary(["convert", "voices.vtt", "--to", "srt", "-o", "-", "--no-bom", "--strip-tags", "--speakers", "prefix"])
+        );
+        $this->assertSame(
+            [0, $voices->toString(Format::WebVtt, new WriteOptions(bom: false)), ""],
+            $this->runBinary(["convert", "labels.srt", "--to", "vtt", "-o", "-", "--no-bom", "--case", "lower", "--speakers", "from-prefix"])
+        );
+    }
+
+
     public function testReplaceAndCase(): void
     {
         copy(self::FILES . "transforms/own_cea608_caps.vtt", "$this->dir/caps.vtt");
@@ -553,6 +574,24 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testMuteRangesHoldTheTimesAfterTheTimingEdits(): void
+    {
+        copy(self::FILES . "profanity/keys.srt", "$this->dir/keys.srt");
+        copy(self::FILES . "profanity/words.txt", "$this->dir/words.txt");
+        $subtitle = Subtitle::load("$this->dir/keys.srt", Format::SubRip)->shift(100);
+        $subtitle->extendShortCues(3);
+        $ranges   = ProfanityFilter::apply($subtitle, new ProfanityOptions(wordFile: "$this->dir/words.txt"))->muteRanges;
+
+        [$code, , $stderr] = $this->runBinary(["convert", "keys.srt", "out.srt", "--shift", "100", "--fix-min-duration", "3",
+                                               "--mask-words", "words.txt", "--mute-edl", "keys.edl", "--mute-filter", "keys.af"]);
+        $this->assertSame([0, ""], [$code, $stderr]);
+        $this->assertSame("103.400 105.500 1\n108.000 109.100 1\n111.500 116.200 1\n", $this->file("keys.edl"));
+        $this->assertSame(MuteRange::toEdl($ranges), $this->file("keys.edl"));
+        $this->assertSame(MuteRange::toFfmpegVolumeFilter($ranges) . "\n", $this->file("keys.af"));
+        $this->assertSame($subtitle->toString(Format::SubRip), $this->file("out.srt"));
+    }
+
+
     public function testKaraoke(): void
     {
         copy(self::FILES . "whisper/real/openai_whisper_word_timestamps.json", "$this->dir/song.json");
@@ -591,7 +630,7 @@ class BinaryTest extends TestCase
         $this->assertSame([0, "{25}{75}Hello from the frames.\n{100}{150}{y:i}Second line.\n", ""],
                           $this->runBinary(["retime", "frames.sub", "--shift", "0", "--fps", "25"]));
 
-        $this->assertSame([1, "", "trip.srt: MicroDVD output needs the frame rate of the video. Pass MicroDvdOptions::frameRate.\n"],
+        $this->assertSame([1, "", "trip.srt: MicroDVD output needs the frame rate of the video. Pass --fps or --output-fps.\n"],
                           $this->runBinary(["convert", "trip.srt", "--to", "microdvd", "-o", "-"]));
         $this->assertSame(0, $this->runBinary(["convert", "trip.srt", "trip.sub", "--fps", "23.976"])[0]);
         $this->assertStringStartsWith("{24}{72}", $this->file("trip.sub"));
@@ -727,6 +766,35 @@ class BinaryTest extends TestCase
         $this->assertStringContainsString("00:00:06,000 --> 00:00:07,000\n", $stdout);
         $this->assertSame(2, $this->runBinary(["convert", "trip.srt", "--to", "srt", "-o", "-", "--fix-wrap", "0"])[0]);
         $this->assertSame(2, $this->runBinary(["convert", "trip.srt", "--to", "srt", "-o", "-", "--fix-min-gap", "-1"])[0]);
+    }
+
+
+    /**
+     * @return array<string, array{list<string>, string}>
+     */
+    public static function fixLimitsWithoutTheirFix(): array
+    {
+        return [
+            "max cpl"           => [["--fix-max-cpl", "30"], "Pass --fix-resegment, --fix-merge-short or --fix-split-long with --fix-max-cpl."],
+            "max cpl with wrap" => [["--fix-max-cpl", "30", "--fix-wrap", "20"],
+                                    "Pass --fix-resegment, --fix-merge-short or --fix-split-long with --fix-max-cpl."],
+            "max lines"         => [["--fix-max-lines", "1", "--fix-overlaps"],
+                                    "Pass --fix-wrap, --fix-resegment, --fix-merge-short or --fix-split-long with --fix-max-lines."],
+            "min gap"           => [["--fix-min-gap", "0.1", "--fix-wrap", "20"], "Pass --fix-overlaps or --fix-min-duration with --fix-min-gap."],
+        ];
+    }
+
+
+    /**
+     * @param list<string> $options
+     */
+    #[DataProvider("fixLimitsWithoutTheirFix")]
+    public function testFixLimitWithoutItsFixIsAUsageError(array $options, string $message): void
+    {
+        $this->assertSame(
+            [2, "", "Error: $message\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            $this->runBinary(["convert", "trip.srt", "--to", "srt", "-o", "-", ...$options])
+        );
     }
 
 
@@ -1023,12 +1091,86 @@ class BinaryTest extends TestCase
 
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "movie.mkv", "--to", "srt", "-o", "-"]);
         $this->assertSame([1, ""], [$code, $stdout]);
-        $this->assertStringStartsWith("movie.mkv: InvalidParserException (Error #102): The MKV or WebM file has 6 subtitle tracks. Call loadTrack() with one of them:\n" .
+        $this->assertStringStartsWith("movie.mkv: InvalidParserException (Error #102): The MKV or WebM file has 6 subtitle tracks. Pass --track N with one of them:\n" .
                                       "  3: S_TEXT/UTF8, de, \"Deutsch (Forced)\", forced\n  4: S_TEXT/ASS, eng, \"English\", default\n", $stderr);
         $this->assertSame(1, $this->runBinary(["convert", "movie.mkv", "--to", "srt", "--track", "7", "-o", "-"])[0]);
         $this->assertSame([1, "", "trip.srt: ParsingException (Error #100): The file is not a Matroska or WebM file.\n"],
                           $this->runBinary(["convert", "trip.srt", "--to", "vtt", "--track", "3", "-o", "-"]));
         $this->assertSame(2, $this->runBinary(["convert", "movie.mkv", "--to", "srt", "--track", "x"])[0]);
+    }
+
+
+    /**
+     * @return array<string, array{list<string>, string, string}> arguments, file on standard input, start of standard error
+     */
+    public static function libraryMessagesInCliWords(): array
+    {
+        $tracks = "InvalidParserException (Error #102): The MKV or WebM file has 6 subtitle tracks. %s\n" .
+                  "  3: S_TEXT/UTF8, de, \"Deutsch (Forced)\", forced\n";
+        $format = "UnknownFormatException (Error #106): Format detection found no subtitle format. %s\n";
+        $frames = "The frame rate is unknown. Pass --fps or --input-fps, or start the file with {1}{1}<fps>.\n";
+
+        return [
+            "track"            => [["convert", "movie.mkv", "--to", "srt", "-o", "-"], "",
+                                   "movie.mkv: " . sprintf($tracks, "Pass --track N with one of them:")],
+            "track on stdin"   => [["convert", "-", "--from", "srt", "--to", "vtt", "-o", "-"], "movie.mkv",
+                                   "stdin: InvalidParserException (Error #102): The input is an MKV or WebM file. Pass --track N.\n"],
+            "track2"           => [["diff", "trip.srt", "movie.mkv"], "",
+                                   "trip.srt: movie.mkv: " . sprintf($tracks, "Pass --track2 N with one of them:")],
+            "reference track"  => [["sync", "trip.srt", "--reference", "movie.mkv"], "",
+                                   "trip.srt: movie.mkv: " . sprintf($tracks, "Write one of them to a subtitle file with convert --track N first:")],
+            "from"             => [["convert", "call.json", "--to", "srt", "-o", "-"], "",
+                                   "call.json: " . sprintf($format, "Pass --from FORMAT. Chapters and cloud speech-to-text JSON always need it, " .
+                                                                    "for example --from deepgram.")],
+            "from2"            => [["diff", "trip.srt", "call.json"], "",
+                                   "trip.srt: call.json: " . sprintf($format, "Pass --from2 FORMAT. Chapters and cloud speech-to-text JSON " .
+                                                                              "always need it, for example --from2 deepgram.")],
+            "reference format" => [["sync", "trip.srt", "--reference", "call.json"], "",
+                                   "trip.srt: call.json: " . sprintf($format, "Write it to a subtitle file with convert --from FORMAT first. " .
+                                                                              "Chapters and cloud speech-to-text JSON always need --from, " .
+                                                                              "for example --from deepgram.")],
+            "microdvd output"  => [["convert", "trip.srt", "--to", "microdvd", "-o", "-"], "",
+                                   "trip.srt: MicroDVD output needs the frame rate of the video. Pass --fps or --output-fps.\n"],
+            "itt output"       => [["convert", "trip.srt", "--to", "itt", "-o", "-"], "",
+                                   "trip.srt: iTT output needs the frame rate of the video. Pass --fps or --output-fps.\n"],
+            "microdvd input"   => [["convert", "frames.sub", "--to", "srt", "-o", "-"], "", "frames.sub: ParsingException (Error #100): $frames"],
+            "info microdvd"    => [["info", "frames.sub"], "", "frames.sub: ParsingException (Error #100): $frames"],
+            "info from"        => [["info", "call.json"], "",
+                                   "call.json: " . sprintf($format, "Pass --from FORMAT. Chapters and cloud speech-to-text JSON always need it, " .
+                                                                    "for example --from deepgram.")],
+            "csv frames"       => [["convert", "frames.csv", "--to", "srt", "-o", "-"], "",
+                                   "frames.csv: ParsingException (Error #100): The time \"00:00:01:12\" counts frames. Pass --fps or --input-fps. (line 2)\n"],
+            "scc line length"  => [["convert", "trip.srt", "--to", "scc", "-o", "-"], "",
+                                   "trip.srt: Cue #1 at 2.5 s has a line with 57 characters, but SCC allows 32. Pass --fix-wrap 32 --fix-max-lines 4.\n"],
+        ];
+    }
+
+
+    /**
+     * @param list<string> $arguments
+     */
+    #[DataProvider("libraryMessagesInCliWords")]
+    public function testLibraryMessagesNameCliOptions(array $arguments, string $stdin, string $stderr): void
+    {
+        copy(self::FILES . "mkv/text_tracks.mkv", "$this->dir/movie.mkv");
+        copy(self::FILES . "deepgram/real/pool_utterances_diarize.json", "$this->dir/call.json");
+        copy(self::FILES . "csv/own_frame_times.csv", "$this->dir/frames.csv");
+
+        [$code, $stdout, $actual] = $this->runBinary($arguments, $stdin === "" ? "" : $this->file($stdin));
+
+        $this->assertSame([1, ""], [$code, $stdout]);
+        $this->assertStringStartsWith($stderr, $actual);
+    }
+
+
+    public function testInputFpsReadsCsvTimesInFrames(): void
+    {
+        copy(self::FILES . "csv/own_frame_times.csv", "$this->dir/frames.csv");
+        $expected = Subtitle::fromString($this->file("frames.csv"), Format::Csv, new ReadOptions(format: new CsvReadOptions(new CsvColumns(frameRate: 25))));
+
+        $this->assertSame([0, $expected->toString(Format::SubRip), ""], $this->runBinary(["convert", "frames.csv", "--to", "srt", "-o", "-", "--input-fps", "25"]));
+        $this->assertSame([0, str_replace("\r\n", "\n", $this->file("frames.csv")), ""],
+                          $this->runBinary(["convert", "frames.csv", "--to", "csv", "-o", "-", "--fps", "25", "--no-bom"]));
     }
 
 
@@ -1052,6 +1194,31 @@ class BinaryTest extends TestCase
         $this->assertSame(0, $code);
         $this->assertStringContainsString("  Format:", $stdout);
         $this->assertMatchesRegularExpression('/^  Image cues: +\d+, 0 with text$/m', $stdout);
+    }
+
+
+    public function testInfoListsTheTracksOfAnMkvFileOnStandardInput(): void
+    {
+        $this->assertSame(
+            [0, "stdin\n  Format: matroska\n  Track 3: S_HDMV/PGS, ger, default\n  Track 4: S_HDMV/PGS, eng, default, forced\n", ""],
+            $this->runBinary(["info", "-"], file_get_contents(self::FILES . "mkv/pgs.mkv"))
+        );
+
+        [$code, $stdout] = $this->runBinary(["info", "-", "--json"], file_get_contents(self::FILES . "mkv/pgs.mkv"));
+        $this->assertSame([0, "stdin", [3, 4]], [$code, json_decode($stdout, true)["file"], array_column(json_decode($stdout, true)["tracks"], "number")]);
+    }
+
+
+    public function testForcedOnlyRunsOcrOnTheForcedCuesAlone(): void
+    {
+        copy(self::FILES . "vobsub/two-tracks-pal.idx", "$this->dir/movie.idx");
+        copy(self::FILES . "vobsub/two-tracks-pal.sub", "$this->dir/movie.sub");
+        $forced = Subtitle::load("$this->dir/movie.idx", Format::VobSub)->onlyForced();
+
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "movie.idx", "--to", "srt", "-o", "-", "--ocr", "--ocr-engine", "glyph", "--forced-only"]);
+        $this->assertSame([0, "movie.idx: OCR 1/1\n"], [$code, $stderr]);
+        $this->assertCount(1, $forced);
+        $this->assertSame(1, substr_count($stdout, " --> "));
     }
 
 

@@ -104,6 +104,19 @@ class CsvParserTest extends TestCase
     }
 
 
+    public function testFramesUseTheFrameRateOfReadOptionsWhenTheColumnsHaveNone(): void
+    {
+        $content = file_get_contents(__DIR__ . "/../files/csv/own_frame_times.csv");
+        $columns = (new CsvParser())->parse($content, new ReadOptions(format: new CsvReadOptions(new CsvColumns(frameRate: 25))));
+        $fps     = (new CsvParser())->parse($content, new ReadOptions(fps: 25));
+        $both    = (new CsvParser())->parse($content, new ReadOptions(fps: 30, format: new CsvReadOptions(new CsvColumns(frameRate: 25))));
+
+        $this->assertEquals($columns, $fps);
+        $this->assertEquals($columns, $both);
+        $this->assertSame(1.48, $fps->getCues()[0]->getStart());
+    }
+
+
     public function testFramesNeedAFrameRate(): void
     {
         $this->expectException(ParsingException::class);

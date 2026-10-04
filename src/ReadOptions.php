@@ -15,7 +15,7 @@ final class ReadOptions
     /**
      * @param ?string            $encoding        The encoding to convert from, such as "Windows-1252". A UTF-16 or UTF-32 BOM wins.
      * @param bool               $lenient         Skip or repair a broken block and record a ParseWarning instead of throwing. SCC, PGS and VobSub ignore it.
-     * @param ?float             $fps             The MicroDVD frame rate. It wins over a {1}{1}fps line.
+     * @param ?float             $fps             The MicroDVD frame rate. It wins over a {1}{1}fps line. CSV and TSV times in hh:mm:ss:ff use it when CsvColumns has no frame rate.
      * @param bool               $wordTimestamps  Write word times as core markup: Whisper, YouTube, Podcasting 2.0 and cloud speech JSON.
      * @param bool               $speakerVoices   Write speakers as voice tags: Whisper and cloud speech JSON.
      * @param float              $lastCueDuration Seconds that a last cue without an end lasts.

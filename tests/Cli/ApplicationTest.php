@@ -143,7 +143,7 @@ class ApplicationTest extends TestCase
         $this->assertMatchesRegularExpression('/^  --language CODE +/m', $stdout);
         $this->assertDoesNotMatchRegularExpression('/^  --(ocr|sdh|fix-wrap|shift|karaoke)\b/m', $stdout);
         preg_match_all('/^  ([a-z]+) {2,}[A-Z]/m', $stdout, $groups);
-        $this->assertSame(["ocr", "forced", "errors", "sdh", "replace", "text", "masking", "structure", "retime", "snap", "timing", "karaoke", "ass"],
+        $this->assertSame(["forced", "ocr", "errors", "sdh", "replace", "text", "structure", "retime", "snap", "timing", "masking", "karaoke", "ass"],
                           $groups[1]);
         $this->assertSame([0, $stdout, ""], self::runApplication(["help", "convert"]));
     }
@@ -174,10 +174,29 @@ class ApplicationTest extends TestCase
     }
 
 
+    public function testConvertHelpBeforeAFileArgumentPrintsTheConvertHelp(): void
+    {
+        $help = self::runApplication(["convert", "--help"]);
+        $cwd  = getcwd();
+        chdir(__DIR__ . "/../..");
+        try {
+            $this->assertSame([0, ""], [$help[0], $help[2]]);
+            $this->assertSame($help, self::runApplication(["convert", "in.srt", "-h", "out.srt"]));
+            $this->assertSame($help, self::runApplication(["convert", "-h", "season1/movie"]));
+            $this->assertSame($help, self::runApplication(["convert", "-h", "LICENSE"]));
+            $this->assertSame($help, self::runApplication(["help", "convert", "out.srt"]));
+            $this->assertSame(self::runApplication(["convert", "--help", "text"]), self::runApplication(["convert", "in.srt", "-h", "text"]));
+            $this->assertSame(2, self::runApplication(["convert", "in.srt", "-h", "out"])[0]);
+        } finally {
+            chdir($cwd);
+        }
+    }
+
+
     public function testConvertHelpOfAnUnknownGroupListsTheGroups(): void
     {
-        $expected = [2, "", "Error: Unknown option group \"timings\". The groups are ocr, forced, errors, sdh, replace, text, masking, structure, " .
-                            "retime, snap, timing, karaoke, ass, and all for every option.\nRun \"subtitle-toolbox help convert\" for the usage.\n"];
+        $expected = [2, "", "Error: Unknown option group \"timings\". The groups are forced, ocr, errors, sdh, replace, text, structure, " .
+                            "retime, snap, timing, masking, karaoke, ass, and all for every option.\nRun \"subtitle-toolbox help convert\" for the usage.\n"];
 
         $this->assertSame($expected, self::runApplication(["convert", "--help", "timings"]));
         $this->assertSame($expected, self::runApplication(["help", "convert", "timings"]));
@@ -208,10 +227,20 @@ class ApplicationTest extends TestCase
     }
 
 
+    public function testHelpDescribesTheDiffExitCodeAndJson(): void
+    {
+        $this->assertStringContainsString("\nExit codes: 0 success, 1 a file failed, broke a validation rule or differs in diff, 2 invalid arguments.\n",
+                                          self::runApplication(["--help"])[1]);
+        $this->assertMatchesRegularExpression('/^  --json +Print the differences as one JSON object\.$/m', self::runApplication(["diff", "--help"])[1]);
+        $this->assertMatchesRegularExpression('/^  --json +Print JSON: one object for one input file, a list of objects for several\.$/m',
+                                              self::runApplication(["info", "--help"])[1]);
+    }
+
+
     public function testFileErrorsExitWith1(): void
     {
-        $this->assertSame([1, "", "stdin: UnknownFormatException (Error #106): Format detection found no subtitle format. Call fromString() " .
-                                  "with a format. Chapters and cloud speech-to-text JSON always need one, for example Format::Deepgram.\n"],
+        $this->assertSame([1, "", "stdin: UnknownFormatException (Error #106): Format detection found no subtitle format. Pass --from FORMAT. " .
+                                  "Chapters and cloud speech-to-text JSON always need it, for example --from deepgram.\n"],
                           self::runApplication(["info", "-"], "hello"));
         $this->assertSame([1, "", "stdin: VobSub needs the path of the .idx file. Standard input does not work.\n"],
                           self::runApplication(["info", "-", "--from", "vobsub"], "hello"));
@@ -223,11 +252,11 @@ class ApplicationTest extends TestCase
         $chapters = __DIR__ . "/../files/chapters/ffmetadata/real/m4b_audiobook.ffmeta";
         $deepgram = file_get_contents(__DIR__ . "/../files/deepgram/real/pool_utterances_diarize.json");
 
-        $unknown = "UnknownFormatException (Error #106): Format detection found no subtitle format. Call %s with a format. " .
-                   "Chapters and cloud speech-to-text JSON always need one, for example Format::Deepgram.\n";
+        $unknown = "UnknownFormatException (Error #106): Format detection found no subtitle format. Pass --from FORMAT. " .
+                   "Chapters and cloud speech-to-text JSON always need it, for example --from deepgram.\n";
 
-        $this->assertSame([1, "", "$chapters: " . sprintf($unknown, "load()")], self::runApplication(["info", $chapters]));
-        $this->assertSame([1, "", "stdin: " . sprintf($unknown, "fromString()")], self::runApplication(["info", "-"], $deepgram));
+        $this->assertSame([1, "", "$chapters: $unknown"], self::runApplication(["info", $chapters]));
+        $this->assertSame([1, "", "stdin: $unknown"], self::runApplication(["info", "-"], $deepgram));
 
         [$code, $stdout] = self::runApplication(["info", $chapters, "--from", "ffmeta"]);
         $this->assertSame(0, $code);

@@ -311,4 +311,42 @@ class CueLookupTest extends TestCase
         ));
     }
 
+
+    public function testAnUnserializedSubtitleInANewProcessFindsTheCuesAtTheirNewTimes(): void
+    {
+        $autoload = var_export(__DIR__ . "/../vendor/autoload.php", true);
+        $fixture  = var_export(__DIR__ . "/files/profanity/keys.srt", true);
+        $saved    = $this->runPhp("require $autoload;
+            \$subtitle = SubtitleToolbox\\Subtitle::load($fixture, SubtitleToolbox\\Format::SubRip);
+            \$subtitle->getCuesAt(1.5);
+            echo SubtitleToolbox\\SubtitleCue::timeEditCount(), ' ', base64_encode(serialize(\$subtitle));");
+        [$edits, $serialized] = explode(" ", $saved);
+
+        // The second process repeats the edit count of the first, so a cache that trusts the count looks fresh.
+        $found = $this->runPhp("require $autoload;
+            \$subtitle = unserialize(base64_decode('$serialized'));
+            foreach (\$subtitle->getCues() as \$cue) {
+                \$cue->setEnd(\$cue->getEnd() + 100)->setStart(\$cue->getStart() + 100);
+            }
+            while (SubtitleToolbox\\SubtitleCue::timeEditCount() < $edits) {
+                \$subtitle->getCues()[0]->setStart(\$subtitle->getCues()[0]->getStart());
+            }
+            echo SubtitleToolbox\\SubtitleCue::timeEditCount() === $edits ? json_encode([array_keys(\$subtitle->getCuesAt(1.5)),
+                array_keys(\$subtitle->getCuesAt(101.5))]) : 'count';");
+
+        $this->assertSame("[[],[0]]", $found);
+    }
+
+
+    private function runPhp(string $code): string
+    {
+        $process = proc_open([PHP_BINARY, "-r", $code], [1 => ["pipe", "w"], 2 => ["pipe", "w"]], $pipes);
+        $stdout  = stream_get_contents($pipes[1]);
+        $stderr  = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $this->assertSame([0, ""], [proc_close($process), $stderr]);
+
+        return $stdout;
+    }
 }

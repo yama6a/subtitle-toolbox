@@ -124,8 +124,8 @@ class Mpl2ParserTest extends TestCase
         $this->assertSame([[1.0, 3.0, "The market opens at ten."], [7.0, 9.5, "<i>Bring a basket.</i>"]], array_map($this->row(...), $subtitle->getCues()));
         $this->assertSame(
             [
-                [1, 0, ParseWarning::SKIPPED, "Line 1 is not an MPL2 cue: Downloaded from a subtitle site (line 1)"],
-                [3, 2, ParseWarning::SKIPPED, "Line 3 is not an MPL2 cue: [4x][60]The stalls sell fish. (line 3)"],
+                [1, 0, ParseWarning::SKIPPED, "Line 1 is not an MPL2 cue: Downloaded from a subtitle site"],
+                [3, 2, ParseWarning::SKIPPED, "Line 3 is not an MPL2 cue: [4x][60]The stalls sell fish."],
             ],
             array_map(fn (ParseWarning $warning): array => [$warning->lineNumber, $warning->blockIndex, $warning->action, $warning->message], $subtitle->getParseWarnings())
         );

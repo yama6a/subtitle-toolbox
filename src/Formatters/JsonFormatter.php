@@ -32,10 +32,10 @@ class JsonFormatter extends SubtitleFormatter implements ImageFormatter
             }
         }
 
-        $flags = JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
+        $flags = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
         $output = $json->prettyPrint
-            ? json_encode($array, $flags | JSON_PRETTY_PRINT) . StringHelpers::UNIX_LINE_ENDING
-            : json_encode($array, $flags);
+            ? JsonOutput::encode($array, $flags | JSON_PRETTY_PRINT) . StringHelpers::UNIX_LINE_ENDING
+            : JsonOutput::encode($array, $flags);
 
         return $this->applyOutputOptions($output, $options);
     }

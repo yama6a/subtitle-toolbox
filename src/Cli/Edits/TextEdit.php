@@ -37,16 +37,16 @@ final class TextEdit extends Edit
 
     public static function summary(): string
     {
-        return "Remove tags, change the case, convert speaker labels.";
+        return "Convert speaker labels, change the case, remove tags.";
     }
 
 
     public static function options(): array
     {
         return [
-            Option::flag("strip-tags", "Remove all formatting tags, such as <i> and <font>, from the cue text."),
-            Option::value("case", "MODE", "Change the case of the text between tags: upper, lower or sentence."),
             Option::value("speakers", "MODE", "Convert <v> speaker tags: prefix (ANNA: Hi), dashes, colours, or from-prefix (ANNA: to <v Anna>)."),
+            Option::value("case", "MODE", "Change the case of the text between tags: upper, lower or sentence."),
+            Option::flag("strip-tags", "Remove all formatting tags, such as <i> and <font>, from the cue text."),
         ];
     }
 
@@ -77,14 +77,14 @@ final class TextEdit extends Edit
 
     public function apply(Subtitle $subtitle, Console $console, string $label): Subtitle
     {
-        if ($this->stripTags) {
-            $subtitle->stripFormatting();
+        if ($this->speakers !== null) {
+            SpeakerLabels::apply($subtitle, $this->speakers);
         }
         if ($this->case !== null) {
             $subtitle->changeCase($this->case, $this->language);
         }
-        if ($this->speakers !== null) {
-            SpeakerLabels::apply($subtitle, $this->speakers);
+        if ($this->stripTags) {
+            $subtitle->stripFormatting();
         }
 
         return $subtitle;

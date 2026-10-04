@@ -176,7 +176,7 @@ class AssParser extends SubtitleParser
             return;
         }
 
-        $startTime = $this->secondsFromString($fields[$start]);
+        $startTime = $this->secondsFromString($fields[$start], $lineNumber);
         $wrapStyle = array_change_key_case($data["scriptInfo"])["wrapstyle"] ?? "";
 
         [$lines, $alignment] = $this->convertText($fields[$text], $startTime, $wrapStyle === "2");
@@ -187,7 +187,7 @@ class AssParser extends SubtitleParser
             $lines[$firstLine] = "<v " . htmlspecialchars($fields[$name], ENT_NOQUOTES, "UTF-8") . ">" . ltrim($lines[$firstLine]);
         }
 
-        $cue = new SubtitleCue($startTime, $this->secondsFromString($fields[$end]), $lines);
+        $cue = new SubtitleCue($startTime, $this->secondsFromString($fields[$end], $lineNumber), $lines);
         $cue->setAlignment($alignment);
         $cue->setFormatData(self::FORMAT_DATA_KEY, [
             "fields"    => array_diff_key($fields, array_flip([$start, $end, $text])),
@@ -258,10 +258,10 @@ class AssParser extends SubtitleParser
     }
 
 
-    private function secondsFromString(string $time): float
+    private function secondsFromString(string $time, int $lineNumber): float
     {
         if (!preg_match('/^(\d+):(\d{1,2}):(\d{1,2})\.(\d{1,3})$/', trim($time), $matches)) {
-            throw new ParsingException("The time of at least one event could not be parsed: $time");
+            throw new ParsingException("The time of at least one event could not be parsed: $time", $lineNumber);
         }
 
         return $matches[1] * 3600 + $matches[2] * 60 + $matches[3] + (int) str_pad($matches[4], 3, "0") / 1000;

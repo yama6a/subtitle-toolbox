@@ -47,6 +47,6 @@ $copy  = Subtitle::fromString($json, Format::Json);
 
 - **Binary data**: `JsonFormatter` writes each format data string that is not valid UTF-8 as `{"base64": "..."}`. The PNG of an image cue is such a string. `JsonParser` decodes every object in the format data that has `base64` as its only key.
 - **Errors**: `JsonParser` and `fromArray()` throw `ParsingException` with the path of the bad field, for example `The field cues[3].start must be a number.`
-- **Text**: cue lines and metadata must be UTF-8. Otherwise `JsonFormatter` throws `JsonException`. Parse a file in another encoding with its [source encoding](encodings.md).
+- **Text**: cue lines and metadata must be UTF-8. Otherwise `JsonFormatter` throws `InvalidArgumentException` with the `JsonException` as its previous exception. Parse a file in another encoding with its [source encoding](encodings.md).
 - **Options**: `JsonOptions(prettyPrint: true)` indents with 4 spaces and ends with a newline. `JsonOptions(withFormatData: false)` leaves out the format data. `lineEnding` and `bom` of `WriteOptions` work as in the other formatters.
 - **Detection**: an object with a numeric top-level `version` key and a `cues` list detects as `Format::Json`.

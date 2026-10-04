@@ -49,7 +49,8 @@ class CsvParser extends SubtitleParser
         $roles  = $this->resolveRoles($header);
 
         $subtitle   = new Subtitle();
-        $frameRate  = $this->columns->frameRate === null ? null : new FrameRate($this->columns->frameRate);
+        $rate       = $this->columns->frameRate ?? $this->options->fps;
+        $frameRate  = $rate === null ? null : new FrameRate($rate);
         $timeFormat = null;
         $openEnds   = [];
         foreach (array_values($records) as $rowIndex => [$lineNumber, $cells]) {
@@ -93,7 +94,7 @@ class CsvParser extends SubtitleParser
             "roles"      => $roles,
             "width"      => max([count($header ?? []), ...array_map("count", array_column($records, 1))]),
             "timeFormat" => $timeFormat ?? CsvTimeFormat::Dot->value,
-            "frameRate"  => $this->columns->frameRate,
+            "frameRate"  => $rate,
         ]);
 
         return $subtitle;

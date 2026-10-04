@@ -49,6 +49,7 @@ php subtitle-toolbox.phar --version
 - **Help**: `subtitle-toolbox help CMD` and `subtitle-toolbox CMD --help` list the options of a command. For `convert`, they list the common options and the option groups, see [Order](#order).
 - **Version**: `subtitle-toolbox --version` prints the installed release, for example `2.0.0`, or `dev` in a Git checkout.
 - **Exit code**: 0 when all files succeed, 1 when a file fails, breaks a validation rule or differs in `diff`, 2 for invalid arguments.
+- **Messages**: where a library message names a PHP method or option, the tool names the CLI option. For example "Call loadTrack() with one of them" becomes "Pass --track N with one of them".
 
 ## Input and output
 - **Inputs**: a file, a directory, a glob such as `"season1/*.srt"`, or `-` for standard input. A directory gives its files with a known extension.
@@ -79,7 +80,7 @@ php subtitle-toolbox.phar --version
 ## Frame rates
 | Option | Sets | Commands |
 |:--- |:--- |:--- |
-| `--input-fps RATE` | the frame rate of a MicroDVD input without a `{1}{1}<fps>` first line, as `ReadOptions::$fps` | all that read a file |
+| `--input-fps RATE` | the frame rate of a MicroDVD input without a `{1}{1}<fps>` first line, and of CSV or TSV times in `hh:mm:ss:ff`, as `ReadOptions::$fps` | all that read a file |
 | `--output-fps RATE` | the frame rate of MicroDVD and iTT output, as `MicroDvdOptions::$frameRate` and `IttOptions::$frameRate` | all that write a file |
 | `--video-fps RATE` | the frame rate of the video for the frame rules, see [Timing](#timing) and [Validate](#validate) | `convert`, `validate` |
 | `--fps RATE` | each of the 3 options above that the command has | all that read a file |
@@ -153,18 +154,19 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --fix-common-errors --in-place
 - **Output file argument**: `convert IN OUT` reads `IN` and writes `OUT` only without `--to`, `-o`, `--output-dir` and `--in-place`. With one of them, both arguments are inputs.
 
 ### Order
-`convert` always runs the edits in this order, whatever the order of the options. The options form groups. `convert --help GROUP` lists the options of one group, and `convert --help all` lists every option.
+`convert` always runs the edits in this order, whatever the order of the options. The options form groups. `convert --help GROUP` lists the options of one group, and `convert --help all` lists every option. A word after `--help` that holds a dot or a slash, or names a file, is no group, so `convert in.srt -h out.srt` prints the convert help.
 
 | Step | Group | Options | Why here |
 |:--- |:--- |:--- |:--- |
 | 1. Read | | input options | |
-| 2. OCR | `ocr` | `--ocr` | the later steps need text |
-| 3. Forced | `forced` | `--forced-only` | |
-| 4. Text | `errors`, `sdh`, `replace`, `text`, `masking` | `--fix-common-errors`, `--sdh`, `--replace`, `--strip-tags`, `--case`, `--speakers`, `--mask-words` | SDH changes the line lengths, so it runs before wrapping |
+| 2. Forced | `forced` | `--forced-only` | OCR then reads only the cues that stay |
+| 3. OCR | `ocr` | `--ocr` | the later steps need text |
+| 4. Text | `errors`, `sdh`, `replace`, `text` | `--fix-common-errors`, `--sdh`, `--replace`, `--speakers`, `--case`, `--strip-tags` | SDH changes the line lengths, so it runs before wrapping |
 | 5. Structure | `structure` | `--fix-resegment`, `--fix-unwrap`, `--fix-merge-short`, `--fix-split-long`, `--fix-wrap`, `--fix-merge-duplicates` | |
 | 6. Timing | `retime`, `snap`, `timing` | `--shift`, `--scale`, `--from-fps` and `--to-fps`, `--snap-shot-changes`, `--fix-overlaps`, `--fix-min-duration` | splits in step 5 create new cues |
-| 7. Karaoke | `karaoke` | `--karaoke` | it multiplies the cues |
-| 8. Write | `ass` | output options, `--ass-karaoke-tag` | |
+| 7. Masking | `masking` | `--mask-words` | the mute ranges of `--mute-edl` and `--mute-filter` need the final times |
+| 8. Karaoke | `karaoke` | `--karaoke` | it multiplies the cues |
+| 9. Write | `ass` | output options, `--ass-karaoke-tag` | |
 
 ### OCR and forced cues
 | Option | Effect |
@@ -189,9 +191,9 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --fix-common-errors --in-place
 | `--replace FROM=TO` | [`replaceText()`](text.md#transforms) on the text between tags. Repeatable. The first `=` ends FROM |
 | `--replace-regex` | reads each FROM as a regular expression with delimiters, for example `--replace '/\.{4,}/=...'` |
 | `--replace-ignore-case` | matches FROM in any case |
-| `--strip-tags` | removes all formatting tags, such as `<i>` and `<font>` |
-| `--case MODE` | `upper`, `lower` or `sentence`, with `changeCase()` |
 | `--speakers MODE` | `prefix`, `dashes`, `colours` or `from-prefix`. Calls `SpeakerLabels::apply()` with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colours`, or with `from: SpeakerStyle::Prefix`, and the other options at their defaults, see [Speakers](text.md#speakers) |
+| `--case MODE` | `upper`, `lower` or `sentence`, with `changeCase()` |
+| `--strip-tags` | removes all formatting tags, such as `<i>` and `<font>` |
 | `--language CODE` | the language of `--case` and `--fix-common-errors`, for example `en`, `de-AT` or `tr`. `tr` and `az` map `i` to `İ` and `ı` to `I`. Without it, `--fix-common-errors` takes the `language` metadata |
 
 ### Masking
@@ -208,7 +210,7 @@ vendor/bin/subtitle-toolbox convert movie.srt clean.srt --mask-words words.txt -
 ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 ```
 
-- **Mute files**: they need `--mask-words` and one input file. Without `--force`, the tool does not overwrite them.
+- **Mute files**: they need `--mask-words` and one input file. They hold the times after `--shift`, `--scale`, snapping and the timing fixes. Without `--force`, the tool does not overwrite them.
 - **No match**: the filter file is empty. Then leave out `-af`.
 
 ### Structure
@@ -225,6 +227,8 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 | `--fix-max-cpl CHARS` | `maxCharactersPerLine` of `--fix-resegment`, `--fix-merge-short` and `--fix-split-long`, default 42 |
 | `--fix-max-lines LINES` | `maxLines` of `--fix-resegment`, `--fix-merge-short`, `--fix-split-long` and `--fix-wrap`, default 2 |
 
+- **Limits without their fix**: `--fix-max-cpl`, `--fix-max-lines` and `--fix-min-gap` alone are a usage error, exit code 2. The message names the fix options that use them.
+
 ### Timing
 `--shift`, `--shift-after`, `--scale`, `--from-fps` and `--to-fps` work as in [Retime](#retime).
 
@@ -238,6 +242,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 | `--snap-no-chain` | `chain: false` |
 | `--fix-overlaps` | `fixOverlaps()` with `--fix-min-gap` seconds, default 0 |
 | `--fix-min-duration SECONDS` | `extendShortCues()` with `--fix-min-gap` |
+| `--fix-min-gap SECONDS` | the gap of `--fix-overlaps` and `--fix-min-duration` |
 
 ```sh
 ffmpeg -i movie.mp4 -vf "select='gt(scene,0.3)',showinfo" -f null - 2> scenes.log

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
+use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Exceptions\SubtitleToolboxException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\ParseWarning;
@@ -71,7 +72,7 @@ abstract class FileCommand extends Command
             Option::value("from", "FORMAT", "Input format. Default: detected from the content, else taken from the file extension. Chapters and cloud speech JSON need it."),
             Option::value("encoding", "NAME", "Encoding of the input, for example Windows-1252. Default: UTF-8. A BOM in the input overrides it."),
             Option::flag("lenient", "Skip or repair broken cues and print a warning for each. SCC, PGS, VobSub and chapter input ignore it."),
-            Option::value("input-fps", "RATE", "Frame rate of a MicroDVD input without a {1}{1}<fps> first line."),
+            Option::value("input-fps", "RATE", "Frame rate of a MicroDVD input without a {1}{1}<fps> first line, and of CSV or TSV times in hh:mm:ss:ff."),
             Option::value("fps", "RATE", $this->fpsDescription()),
             Option::flag("word-timestamps", "Keep the word times of speech-to-text JSON, YouTube timed text and podcast transcript input."),
             Option::value("track", "NUMBER", "Subtitle track of an MKV or WebM input. Needed when the file has several. \"info\" lists them."),
@@ -191,7 +192,7 @@ abstract class FileCommand extends Command
                 $this->succeeded++;
             } catch (\Exception $exception) {
                 $this->failed++;
-                $console->err(self::label($input) . ": " . $exception->getMessage() . "\n");
+                $console->err(self::label($input) . ": " . self::cliMessage($exception->getMessage(), "--track", "--from") . "\n");
                 if (!$arguments->has("keep-going")) {
                     break;
                 }
@@ -305,20 +306,16 @@ abstract class FileCommand extends Command
     {
         $this->parseWarnings = [];
         $track               = $arguments->positiveInt("track");
-        if ($input === self::DASH) {
-            $subtitle = $this->readStdin($track, $console);
-        } else {
+        if ($input !== self::DASH) {
             if (!is_file($input)) {
                 self::fail("The file does not exist.");
             }
-            if ($track === null && $this->listTracks($input, $console)) {
-                return null;
-            }
-            $subtitle = match (true) {
-                $track !== null            => Subtitle::loadTrack($input, $track, $this->readOptions),
-                $this->fromFormat !== null => Subtitle::load($input, $this->fromFormat, $this->readOptions),
-                default                    => Subtitle::loadAutoDetectFormat($input, $this->readOptions),
-            };
+            $subtitle = $this->readPath($input, $input, $track, $console);
+        } else {
+            $subtitle = $this->readStdin($track, $console);
+        }
+        if ($subtitle === null) {
+            return null;
         }
         // An MKV or WebM input has an extension of no subtitle format, so the output gets the extension of its format.
         $this->fromContainer = $track !== null || ($input !== self::DASH && Format::fromPath($input) === null);
@@ -333,10 +330,40 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Reads a file other than the input, such as a reference, without --from and --track. Detects the format unless
-     * $format or $track is given.
+     * Rewords a library message that names a PHP method, class or option property, so that it names CLI options.
+     * $track and $from are the options that pick the track and the format of the file, or null when it has none.
      */
-    protected function loadOtherFile(string $path, ?Format $format = null, ?int $track = null): Subtitle
+    public static function cliMessage(string $message, ?string $track, ?string $from): string
+    {
+        $pickTrack  = $track === null ? "Write one of them to a subtitle file with convert --track N first:" : "Pass $track N with one of them:";
+        $pickFormat = $from === null
+            ? "Write it to a subtitle file with convert --from FORMAT first. Chapters and cloud speech-to-text JSON always need --from, for example --from deepgram."
+            : "Pass $from FORMAT. Chapters and cloud speech-to-text JSON always need it, for example $from deepgram.";
+        $message    = preg_replace(
+            '/^(\w+ \(Error #\d+\): )?.+ is an MKV or WebM file\. Call loadTrack\(\) with a track number\.$/s',
+            '$1The input is an MKV or WebM file. ' . ($track === null ? "Write one track to a subtitle file with convert --track N first." : "Pass $track N."),
+            $message
+        ) ?? $message;
+
+        return strtr($message, [
+            "Call loadTrack() with one of them:"                                => $pickTrack,
+            "Call load() with a format. Chapters and cloud speech-to-text JSON always need one, for example Format::Deepgram."       => $pickFormat,
+            "Call fromString() with a format. Chapters and cloud speech-to-text JSON always need one, for example Format::Deepgram." => $pickFormat,
+            "Pass MicroDvdOptions::frameRate."                                  => "Pass --fps or --output-fps.",
+            "Pass IttOptions::frameRate."                                       => "Pass --fps or --output-fps.",
+            "Set ReadOptions::\$fps or start the file with {1}{1}<fps>."       => "Pass --fps or --input-fps, or start the file with {1}{1}<fps>.",
+            "Pass the frame rate in CsvColumns."                                => "Pass --fps or --input-fps.",
+            "Call wrapLines(32, 4) first."                                      => "Pass --fix-wrap 32 --fix-max-lines 4.",
+        ]);
+    }
+
+
+    /**
+     * Reads a file other than the input, such as a reference, without --from and --track. Detects the format unless
+     * $format or $track is given. $trackOption and $fromOption name the options that set $track and $format.
+     */
+    protected function loadOtherFile(string $path, ?Format $format = null, ?int $track = null, ?string $trackOption = null,
+                                     ?string $fromOption = null): Subtitle
     {
         if (!is_file($path)) {
             self::fail("$path: The file does not exist.");
@@ -349,7 +376,7 @@ abstract class FileCommand extends Command
                 default          => Subtitle::loadAutoDetectFormat($path, $this->readOptions),
             };
         } catch (SubtitleToolboxException $exception) {
-            return self::fail("$path: " . $exception->getMessage());
+            return self::fail("$path: " . self::cliMessage($exception->getMessage(), $trackOption, $fromOption));
         }
     }
 
@@ -359,28 +386,47 @@ abstract class FileCommand extends Command
      */
     protected function loadSecondFile(string $path, Arguments $arguments): Subtitle
     {
-        return $this->loadOtherFile($path, $this->secondFormat, $arguments->positiveInt("track2"));
+        return $this->loadOtherFile($path, $this->secondFormat, $arguments->positiveInt("track2"), "--track2", "--from2");
     }
 
 
     /**
-     * Handles an MKV or WebM input without --track. Returns false to read its only subtitle track.
+     * Handles the MKV or WebM file at $path without --track. $input is the argument that named it. Returns false to
+     * read its only subtitle track.
      */
-    protected function listTracks(string $input, Console $console): bool
+    protected function listTracks(string $path, string $input, Console $console): bool
     {
         return false;
     }
 
 
-    private function readStdin(?int $track, Console $console): Subtitle
+    /**
+     * Returns null when listTracks() handled an MKV or WebM file.
+     */
+    private function readPath(string $path, string $input, ?int $track, Console $console): ?Subtitle
+    {
+        if ($track === null && $this->listTracks($path, $input, $console)) {
+            return null;
+        }
+
+        return match (true) {
+            $track !== null            => Subtitle::loadTrack($path, $track, $this->readOptions),
+            $this->fromFormat !== null => Subtitle::load($path, $this->fromFormat, $this->readOptions),
+            default                    => Subtitle::loadAutoDetectFormat($path, $this->readOptions),
+        };
+    }
+
+
+    private function readStdin(?int $track, Console $console): ?Subtitle
     {
         $content = $console->readStdin();
-        if ($track !== null) {
+        if ($track !== null || str_starts_with($content, MatroskaReader::EBML_MAGIC)) {
+            // The track list and loadTrack() need a file.
             $path = tempnam(sys_get_temp_dir(), Application::NAME . "-");
             try {
                 file_put_contents($path, $content);
 
-                return Subtitle::loadTrack($path, $track, $this->readOptions);
+                return $this->readPath($path, self::DASH, $track, $console);
             } finally {
                 @unlink($path);
             }

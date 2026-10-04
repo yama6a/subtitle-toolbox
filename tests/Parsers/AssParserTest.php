@@ -275,4 +275,20 @@ class AssParserTest extends TestCase
     {
         return $this->parseEvents(self::EVENTS_HEADER . "Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,$text\n")->getCues()[0];
     }
+
+
+    public function testABadEventTimeThrowsWithItsLineNumber(): void
+    {
+        // Line 11 of the file is a short event, which throws first. Without it, line 12 holds the bad time.
+        $content = str_replace("Dialogue: 0,0:00:04.00,0:00:06.00,Default\r\n", "\r\n",
+                               file_get_contents(__DIR__ . "/../files/lenient/broken_events.ass"));
+
+        try {
+            (new AssParser())->parse($content, new ReadOptions());
+            $this->fail("No exception");
+        } catch (ParsingException $exception) {
+            $this->assertSame(12, $exception->getLineNumber());
+            $this->assertStringEndsWith("The time of at least one event could not be parsed: 0:00:0x.00 (line 12)", $exception->getMessage());
+        }
+    }
 }

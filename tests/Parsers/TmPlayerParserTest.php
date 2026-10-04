@@ -149,8 +149,8 @@ class TmPlayerParserTest extends TestCase
         $this->assertSame([[2.0, 9.0, "The museum opens at ten."], [9.0, 14.0, "The cafe is on the top floor."]], array_map($this->row(...), $subtitle->getCues()));
         $this->assertSame(
             [
-                [1, 0, ParseWarning::SKIPPED, "Line 1 is not a TMPlayer line: Movie.Name.2004.DVDRip (line 1)"],
-                [3, 2, ParseWarning::SKIPPED, "Line 3 is not a TMPlayer line: 00:0x:06:Entry is free on Mondays. (line 3)"],
+                [1, 0, ParseWarning::SKIPPED, "Line 1 is not a TMPlayer line: Movie.Name.2004.DVDRip"],
+                [3, 2, ParseWarning::SKIPPED, "Line 3 is not a TMPlayer line: 00:0x:06:Entry is free on Mondays."],
             ],
             array_map(fn (ParseWarning $warning): array => [$warning->lineNumber, $warning->blockIndex, $warning->action, $warning->message], $subtitle->getParseWarnings())
         );

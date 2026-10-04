@@ -40,7 +40,7 @@ trait Validation
             if ($rules->noIndexGaps && $cueIndex !== $expectedIndex) {
                 $results[] = new ValidationResult($cueIndex, ValidationResult::RULE_INDEX_GAP, $expectedIndex, null);
             }
-            $expectedIndex++;
+            $expectedIndex = $cueIndex + 1;
 
             if ($rules->noUnsortedCues && $previousStart !== null && $cue->getStart() < $previousStart) {
                 $results[] = new ValidationResult($cueIndex, ValidationResult::RULE_UNSORTED_CUES,

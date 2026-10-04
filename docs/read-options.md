@@ -38,7 +38,7 @@ $table = Subtitle::fromString(file_get_contents('lines.csv'), Format::Csv,
 
 | Class | Formats | Fields |
 |:--- |:--- |:--- |
-| `CsvReadOptions` | CSV, TSV | `columns`: a `CsvColumns` layout, null reads the header names. `delimiter`: `,`, `;` or a tab, null detects it |
+| `CsvReadOptions` | CSV, TSV | `columns`: a `CsvColumns` layout, null reads the header names. `delimiter`: `,`, `;` or a tab, null detects it. Times in `hh:mm:ss:ff` take the frame rate of `CsvColumns`, else `ReadOptions::$fps` |
 | `SccReadOptions` | SCC | `channel`: 1 reads CC1 and CC3, 2 reads CC2 and CC4 |
 | `EbuStlReadOptions` | EBU STL | `subtractStartOfProgramme`: subtracts the TCP time code from every cue time |
 | `PodcastTranscriptReadOptions` | Podcasting 2.0 transcript | `keepSegments`: one cue per segment, also for a segment with one word |

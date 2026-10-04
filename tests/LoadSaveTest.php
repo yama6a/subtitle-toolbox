@@ -201,6 +201,24 @@ class LoadSaveTest extends TestCase
     }
 
 
+    public function testVobSubFindsTheIdxFileNextToASubFileWithoutExtension(): void
+    {
+        $idx = file_get_contents(self::FILES . "vobsub/text-pal.idx");
+        $sub = file_get_contents(self::FILES . "vobsub/text-pal.sub");
+        file_put_contents("$this->dir/movie", $sub);
+        file_put_contents("$this->dir/movie.idx", $idx);
+        file_put_contents("$this->dir/other", $sub);
+
+        $this->assertSame(
+            Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions($idx)))->toArray(),
+            Subtitle::load("$this->dir/movie", Format::VobSub)->toArray()
+        );
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("VobSub needs the .idx file next to $this->dir/other, but $this->dir/other.idx does not exist.");
+        Subtitle::load("$this->dir/other", Format::VobSub);
+    }
+
+
     public function testVobSubKeepsTheTrackAndLanguageOfTheOptions(): void
     {
         $idx  = file_get_contents(self::FILES . "vobsub/two-tracks-pal.idx");
