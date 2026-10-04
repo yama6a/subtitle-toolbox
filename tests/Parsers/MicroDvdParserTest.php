@@ -38,7 +38,7 @@ class MicroDvdParserTest extends TestCase
     #[DataProvider("realFiles")]
     public function testRealFileParses(string $file, float $frameRate, int $cueCount, array $first, array $last): void
     {
-        $subtitle = (new MicroDvdParser())->parse(file_get_contents(__DIR__ . "/../files/microdvd/real/$file"), new ReadOptions(fps: $frameRate));
+        $subtitle = (new MicroDvdParser())->parse(file_get_contents(__DIR__ . "/../files/microdvd/real/$file"), new ReadOptions(format: new MicroDvdReadOptions($frameRate)));
         $cues     = $subtitle->getCues();
 
         $this->assertSame($cueCount, count($cues));
@@ -55,7 +55,7 @@ class MicroDvdParserTest extends TestCase
         $this->assertSame(4, count($cues));
         $this->assertSame(1.001, $cues[0]->getStart());
         $this->assertSame(3.003, $cues[0]->getEnd());
-        $this->assertSame(["frameRate" => 23.976], $subtitle->getFormatData("sub"));
+        $this->assertSame(["frameRate" => 23.976], $subtitle->getFormatData("microdvd"));
     }
 
 
@@ -74,15 +74,15 @@ class MicroDvdParserTest extends TestCase
     {
         $cues = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/microdvd/valid.sub"), Format::MicroDvd)->getCues();
 
-        $this->assertSame("{f:Arial}{s:20}", $cues[2]->getFormatData("sub")["lines"][0]["otherCodes"]);
-        $this->assertSame("", $cues[2]->getFormatData("sub")["lines"][1]["otherCodes"]);
-        $this->assertSame("{P:0}", $cues[3]->getFormatData("sub")["lines"][0]["otherCodes"]);
+        $this->assertSame("{f:Arial}{s:20}", $cues[2]->getFormatData("microdvd")["lines"][0]["otherCodes"]);
+        $this->assertSame("", $cues[2]->getFormatData("microdvd")["lines"][1]["otherCodes"]);
+        $this->assertSame("{P:0}", $cues[3]->getFormatData("microdvd")["lines"][0]["otherCodes"]);
     }
 
 
     public function testLowerCaseColorOverridesUpperCaseColorOnItsLine(): void
     {
-        $subtitle = (new MicroDvdParser())->parse('{0}{25}{C:$0000FF}{Y:i}One|{c:$00FF00}{y:b}Two', new ReadOptions(fps: 25));
+        $subtitle = (new MicroDvdParser())->parse('{0}{25}{C:$0000FF}{Y:i}One|{c:$00FF00}{y:b}Two', new ReadOptions(format: new MicroDvdReadOptions(25)));
 
         $this->assertSame(
             ["<font color=\"#ff0000\"><i>One</i></font>", "<font color=\"#00ff00\"><b><i>Two</i></b></font>"],
@@ -93,7 +93,7 @@ class MicroDvdParserTest extends TestCase
 
     public function testCodesInsideTheLineStayText(): void
     {
-        $subtitle = (new MicroDvdParser())->parse("{0}{25}Hello, {y:i}world", new ReadOptions(fps: 25));
+        $subtitle = (new MicroDvdParser())->parse("{0}{25}Hello, {y:i}world", new ReadOptions(format: new MicroDvdReadOptions(25)));
 
         $this->assertSame(["Hello, {y:i}world"], $subtitle->getCues()[0]->getLines());
     }
@@ -101,7 +101,7 @@ class MicroDvdParserTest extends TestCase
 
     public function testLatin1TextKeepsItsBytes(): void
     {
-        $subtitle = (new MicroDvdParser())->parse("{0}{25}{y:i}caf\xE9 & bread|<3 jam", new ReadOptions(fps: 25));
+        $subtitle = (new MicroDvdParser())->parse("{0}{25}{y:i}caf\xE9 & bread|<3 jam", new ReadOptions(format: new MicroDvdReadOptions(25)));
 
         $this->assertSame(["<i>caf\xE9 &amp; bread</i>", "&lt;3 jam"], $subtitle->getCues()[0]->getLines());
     }
@@ -109,7 +109,7 @@ class MicroDvdParserTest extends TestCase
 
     public function testConstructorFrameRateWinsOverFrameRateLine(): void
     {
-        $subtitle = (new MicroDvdParser())->parse("{1}{1}23.976\n{25}{50}Hello", new ReadOptions(fps: 25));
+        $subtitle = (new MicroDvdParser())->parse("{1}{1}23.976\n{25}{50}Hello", new ReadOptions(format: new MicroDvdReadOptions(25)));
 
         $this->assertSame(1, count($subtitle->getCues()));
         $this->assertSame(1.0, $subtitle->getCues()[0]->getStart());

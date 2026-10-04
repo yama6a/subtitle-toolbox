@@ -113,7 +113,7 @@ class LyricsParserTest extends TestCase
         );
         $this->assertSame(
             ["idTags" => ["by" => "Creator of the LRC file", "length" => "How long the song is"]],
-            $subtitle->getFormatData(LyricsParser::FORMAT)
+            $subtitle->getFormatData(LyricsParser::FORMAT_DATA_KEY)
         );
     }
 
@@ -161,7 +161,7 @@ class LyricsParserTest extends TestCase
         $this->assertSame(16.7, $subtitle->getCues()[0]->getEnd());
         $this->assertSame(16.7, $subtitle->getCues()[1]->getStart());
         $this->assertSame("Second <00:00:17.500>word", $subtitle->getCues()[1]->getText());
-        $this->assertSame([], $subtitle->getFormatData(LyricsParser::FORMAT));
+        $this->assertSame([], $subtitle->getFormatData(LyricsParser::FORMAT_DATA_KEY));
     }
 
 
@@ -192,7 +192,7 @@ class LyricsParserTest extends TestCase
 ", Format::Lyrics);
 
         $this->assertSame(12.0, $subtitle->getCues()[0]->getStart());
-        $this->assertSame(["idTags" => ["offset" => "soon"]], $subtitle->getFormatData(LyricsParser::FORMAT));
+        $this->assertSame(["idTags" => ["offset" => "soon"]], $subtitle->getFormatData(LyricsParser::FORMAT_DATA_KEY));
     }
 
 
@@ -319,7 +319,7 @@ class LyricsParserTest extends TestCase
             Format::Lyrics);
 
         $this->assertSame("Fish & Chips", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
-        $this->assertSame(["idTags" => ["re" => "<Editor>"]], $subtitle->getFormatData(LyricsParser::FORMAT));
+        $this->assertSame(["idTags" => ["re" => "<Editor>"]], $subtitle->getFormatData(LyricsParser::FORMAT_DATA_KEY));
         $this->assertSame("a < b & c", $subtitle->getComments()[0]["text"]);
     }
 
@@ -396,7 +396,7 @@ class LyricsParserTest extends TestCase
         $this->assertSame("Writer of the words", $subtitle->getMetadata(Subtitle::METADATA_AUTHOR));
         $this->assertSame(
             ["length", "by", "offset", "re", "ve"],
-            array_keys($subtitle->getFormatData(LyricsParser::FORMAT)["idTags"])
+            array_keys($subtitle->getFormatData(LyricsParser::FORMAT_DATA_KEY)["idTags"])
         );
     }
 
@@ -413,7 +413,7 @@ class LyricsParserTest extends TestCase
                 $subtitle->getCues()
             ),
             $metadata,
-            $subtitle->getFormatData(LyricsParser::FORMAT),
+            $subtitle->getFormatData(LyricsParser::FORMAT_DATA_KEY),
             $subtitle->getComments(),
         ];
     }

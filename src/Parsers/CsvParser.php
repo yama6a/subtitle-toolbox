@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
@@ -13,14 +14,15 @@ use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class CsvParser extends SubtitleParser
+final class CsvParser extends SubtitleParser
 {
-    public const FORMAT_DATA_KEY = "csv";
+    public const FORMAT_DATA_KEY = Format::Csv->value;
     public const DELIMITERS      = [",", ";", "\t"];
 
     private CsvColumns $columns;
 
 
+    /** @internal */
     public static function checkDelimiter(mixed $delimiter): void
     {
         if (!in_array($delimiter, self::DELIMITERS, true)) {
@@ -49,7 +51,7 @@ class CsvParser extends SubtitleParser
         $roles  = $this->resolveRoles($header);
 
         $subtitle   = new Subtitle();
-        $rate       = $this->columns->frameRate ?? $this->options->fps;
+        $rate       = $this->formatOptions()->frameRate;
         $frameRate  = $rate === null ? null : new FrameRate($rate);
         $timeFormat = null;
         $openEnds   = [];
@@ -104,7 +106,7 @@ class CsvParser extends SubtitleParser
     /**
      * Returns the delimiter that occurs most often in the first record, outside quotes. A comma wins a tie.
      */
-    public static function detectDelimiter(string $content): string
+    private static function detectDelimiter(string $content): string
     {
         $counts = array_fill_keys(self::DELIMITERS, 0);
         $quoted = false;
@@ -130,7 +132,7 @@ class CsvParser extends SubtitleParser
      *
      * @return list<array{int, list<string>}>
      */
-    public static function records(string $content, string $delimiter): array
+    private static function records(string $content, string $delimiter): array
     {
         $records = [];
         $cells   = [];
@@ -184,7 +186,7 @@ class CsvParser extends SubtitleParser
     /**
      * Reads seconds, hh:mm:ss.mmm, hh:mm:ss,mmm or hh:mm:ss:ff. Frames need a frame rate.
      */
-    public static function parseTime(string $time, ?FrameRate $frameRate, ?int $lineNumber = null): float
+    private static function parseTime(string $time, ?FrameRate $frameRate, ?int $lineNumber = null): float
     {
         if (preg_match('/^\d+(?:\.\d+)?$/', $time)) {
             return (float) $time;
@@ -202,7 +204,7 @@ class CsvParser extends SubtitleParser
 
         throw new ParsingException(
             substr_count($time, ":") === 3
-                ? "The time \"$time\" counts frames. Pass the frame rate in CsvColumns."
+                ? "The time \"$time\" counts frames. Pass CsvReadOptions::frameRate."
                 : "The time \"$time\" is not seconds, hh:mm:ss.mmm, hh:mm:ss,mmm or hh:mm:ss:ff.",
             $lineNumber
         );

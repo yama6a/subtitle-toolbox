@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Formatters\Options\AssKaraokeTag;
 use SubtitleToolbox\Formatters\Options\AssWriteOptions;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\AssFormatLines;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -70,9 +71,9 @@ final class AssFormatter extends SubtitleFormatter
             "scriptInfoComments" => [],
             "scriptInfo"         => self::DEFAULT_SCRIPT_INFO,
             "stylesSection"      => "V4+ Styles",
-            "styleFormat"        => AssParser::ASS_STYLE_FORMAT,
-            "styles"             => [array_combine(AssParser::ASS_STYLE_FORMAT, self::DEFAULT_STYLE)],
-            "eventFormat"        => AssParser::ASS_EVENT_FORMAT,
+            "styleFormat"        => AssFormatLines::ASS_STYLE_FORMAT,
+            "styles"             => [array_combine(AssFormatLines::ASS_STYLE_FORMAT, self::DEFAULT_STYLE)],
+            "eventFormat"        => AssFormatLines::ASS_EVENT_FORMAT,
             "commentEvents"      => [],
             "sections"           => [],
         ];
@@ -96,7 +97,7 @@ final class AssFormatter extends SubtitleFormatter
 
     private function styleLines(array $data): array
     {
-        $format = $data["styleFormat"] ?? AssParser::ASS_STYLE_FORMAT;
+        $format = $data["styleFormat"] ?? AssFormatLines::ASS_STYLE_FORMAT;
         $lines  = ["Format: " . implode(", ", $format)];
         foreach ($data["styles"] ?? [] as $style) {
             $lines[] = "Style: " . implode(",", array_map(fn (string $field): string => $style[$field] ?? "", $format));
@@ -108,7 +109,7 @@ final class AssFormatter extends SubtitleFormatter
 
     private function eventLines(Subtitle $subtitle, array $data, bool $stripAll, AssKaraokeTag $karaokeTag): array
     {
-        $format        = $data["eventFormat"] ?? AssParser::ASS_EVENT_FORMAT;
+        $format        = $data["eventFormat"] ?? AssFormatLines::ASS_EVENT_FORMAT;
         $isSsa         = $this->isSsa($data);
         $commentEvents = $data["commentEvents"] ?? [];
         $comments      = $subtitle->getComments();

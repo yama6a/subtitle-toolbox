@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
-class DeepgramParser extends SubtitleParser
+final class DeepgramParser extends SubtitleParser
 {
     use WordGrouping;
 
-    public const FORMAT_DATA_KEY = "deepgram";
+    public const FORMAT_DATA_KEY = Format::Deepgram->value;
 
 
     /**
@@ -61,7 +62,7 @@ class DeepgramParser extends SubtitleParser
                 $text  = $this->text($utterance, "transcript", $path);
                 $words = $this->readWords(self::listOrEmpty($utterance["words"] ?? null), "$path.words");
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($utterance)]);
+                $this->fail($exception, null, $index, [RawJson::encode($utterance)]);
                 continue;
             }
 
@@ -103,7 +104,7 @@ class DeepgramParser extends SubtitleParser
                         $end   = $this->seconds($sentence["end"] ?? null, "$sentencePath.end");
                         $text  = $this->text($sentence, "text", $sentencePath);
                     } catch (ParsingException $exception) {
-                        $this->fail($exception, 0, $sentenceIndex, [RawJson::encode($sentence)]);
+                        $this->fail($exception, null, $sentenceIndex, [RawJson::encode($sentence)]);
                         continue;
                     }
 
@@ -131,7 +132,7 @@ class DeepgramParser extends SubtitleParser
                 $start = $this->seconds($word["start"] ?? null, "{$path}[$index].start");
                 $end   = $this->seconds($word["end"] ?? null, "{$path}[$index].end");
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($word)]);
+                $this->fail($exception, null, $index, [RawJson::encode($word)]);
                 continue;
             }
 

@@ -23,6 +23,7 @@ use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\Ocr\TesseractOcrEngine;
 use SubtitleToolbox\Parsers\CsvColumns;
 use SubtitleToolbox\Parsers\CsvReadOptions;
+use SubtitleToolbox\Parsers\MicroDvdReadOptions;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Profanity\MuteRange;
 use SubtitleToolbox\Profanity\ProfanityFilter;
@@ -721,7 +722,7 @@ class BinaryTest extends TestCase
 
     public function testRetimeChangesTheFrameRateAndTheFormat(): void
     {
-        $expected = Subtitle::fromString($this->file("frames.sub"), Format::MicroDvd, new ReadOptions(fps: 25))
+        $expected = Subtitle::fromString($this->file("frames.sub"), Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)))
             ->convertFrameRate(25, 23.976)
             ->toString(Format::WebVtt);
 
@@ -1166,7 +1167,7 @@ class BinaryTest extends TestCase
     public function testInputFpsReadsCsvTimesInFrames(): void
     {
         copy(self::FILES . "csv/own_frame_times.csv", "$this->dir/frames.csv");
-        $expected = Subtitle::fromString($this->file("frames.csv"), Format::Csv, new ReadOptions(format: new CsvReadOptions(new CsvColumns(frameRate: 25))));
+        $expected = Subtitle::fromString($this->file("frames.csv"), Format::Csv, new ReadOptions(format: new CsvReadOptions(frameRate: 25)));
 
         $this->assertSame([0, $expected->toString(Format::SubRip), ""], $this->runBinary(["convert", "frames.csv", "--to", "srt", "-o", "-", "--input-fps", "25"]));
         $this->assertSame([0, str_replace("\r\n", "\n", $this->file("frames.csv")), ""],
@@ -1507,9 +1508,9 @@ class BinaryTest extends TestCase
         ));
         $shotChanges = ShotChanges::fromFfmpegLog($this->file("scenes.log"));
 
-        $expected = Subtitle::fromString($this->file("garden.sub"), Format::MicroDvd, new ReadOptions(fps: 25));
+        $expected = Subtitle::fromString($this->file("garden.sub"), Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)));
         ShotChangeTiming::apply($expected, new ShotChangeOptions(frameRate: 24, shotChanges: $shotChanges));
-        $readAt24 = Subtitle::fromString($this->file("garden.sub"), Format::MicroDvd, new ReadOptions(fps: 24));
+        $readAt24 = Subtitle::fromString($this->file("garden.sub"), Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(24)));
         ShotChangeTiming::apply($readAt24, new ShotChangeOptions(frameRate: 24, shotChanges: $shotChanges));
 
         $this->assertNotSame($readAt24->toString(Format::SubRip), $expected->toString(Format::SubRip));
@@ -1559,7 +1560,7 @@ class BinaryTest extends TestCase
         $this->assertStringContainsString("Next stop: Central Station.", $expected);
         $this->assertSame([1, $expected, ""], $this->runBinary(["diff", "movie.mkv", "movie.mkv", "--track", "3", "--track2", "8"]));
 
-        $frames   = Subtitle::load(self::FIXTURES . "frames.sub", Format::MicroDvd, new ReadOptions(fps: 25));
+        $frames   = Subtitle::load(self::FIXTURES . "frames.sub", Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)));
         $expected = SubtitleDiff::toText(SubtitleDiff::compare(Subtitle::load(self::FIXTURES . "trip.srt", Format::SubRip), $frames));
         $this->assertSame([1, $expected, ""], $this->runBinary(["diff", "trip.srt", "frames.sub", "--from2", "microdvd", "--input-fps", "25"]));
         $this->assertSame([1, ""], array_slice($this->runBinary(["diff", "trip.srt", "frames.sub", "--from2", "subviewer"]), 0, 2));

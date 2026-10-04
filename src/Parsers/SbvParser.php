@@ -11,7 +11,7 @@ use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class SbvParser extends SubtitleParser
+final class SbvParser extends SubtitleParser
 {
     protected function read(string $rawSubtitle): Subtitle
     {

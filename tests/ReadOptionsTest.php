@@ -11,6 +11,8 @@ use SubtitleToolbox\Parsers\ChapterReadOptions;
 use SubtitleToolbox\Parsers\CsvColumns;
 use SubtitleToolbox\Parsers\CsvReadOptions;
 use SubtitleToolbox\Parsers\FormatReadOptions;
+use SubtitleToolbox\Parsers\MicroDvdReadOptions;
+use SubtitleToolbox\Parsers\SamiReadOptions;
 use SubtitleToolbox\Parsers\SccReadOptions;
 use SubtitleToolbox\Parsers\VobSubReadOptions;
 
@@ -24,7 +26,7 @@ class ReadOptionsTest extends TestCase
      */
     public static function lastCuesWithoutEnd(): array
     {
-        $dubbing = new CsvReadOptions(new CsvColumns(start: "Start TC", text: "Text", speaker: "Character", frameRate: 25));
+        $dubbing = new CsvReadOptions(new CsvColumns(start: "Start TC", text: "Text", speaker: "Character"), frameRate: 25);
 
         return [
             "TMPlayer"                  => [Format::TmPlayer, "tmplayer/real/tmplayer_crlf.txt", null, 3600.0],
@@ -78,11 +80,11 @@ class ReadOptionsTest extends TestCase
     public static function realFilesWithOptions(): array
     {
         return [
-            "MicroDVD frame rate"    => ["microdvd_subsrt_sample", Format::MicroDvd, "microdvd/real/subsrt_sample.sub", new ReadOptions(fps: 23.976)],
+            "MicroDVD frame rate"    => ["microdvd_subsrt_sample", Format::MicroDvd, "microdvd/real/subsrt_sample.sub", new ReadOptions(format: new MicroDvdReadOptions(23.976))],
             "encoding"               => ["french_windows_1252", Format::SubRip, "encoding/french-windows-1252.srt", new ReadOptions(encoding: "Windows-1252")],
             "Whisper word times"     => ["whisper_word_timestamps", Format::Whisper, "whisper/real/openai_whisper_word_timestamps.json", new ReadOptions(wordTimestamps: true)],
             "WhisperX speakers"      => ["whisperx_speaker_voices", Format::Whisper, "whisper/real/whisperx_diarize.json", new ReadOptions(speakerVoices: true)],
-            "SAMI language class"    => ["sami_multi_language_frcc", Format::Sami, "sami/real/multi_language.smi", new ReadOptions(lastCueDuration: 10, language: "FRCC")],
+            "SAMI language class"    => ["sami_multi_language_frcc", Format::Sami, "sami/real/multi_language.smi", new ReadOptions(lastCueDuration: 10, format: new SamiReadOptions("FRCC"))],
             "CSV delimiter"          => ["csv_excel_de_semicolon", Format::Csv, "csv/real/excel_de_semicolon.csv", new ReadOptions(lastCueDuration: 10, format: new CsvReadOptions(delimiter: ";"))],
             "SCC channel"            => ["scc_rollup_news_ndf", Format::Scc, "scc/real/rollup_news_ndf.scc", new ReadOptions(lastCueDuration: 4, format: new SccReadOptions(channel: 1))],
         ];

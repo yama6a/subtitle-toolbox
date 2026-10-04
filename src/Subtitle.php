@@ -87,7 +87,7 @@ class Subtitle implements \IteratorAggregate, \Countable
 
     /**
      * Reads the file at $path in $format. For Format::VobSub, $path is the .idx or the .sub file, and the other file
-     * must lie next to it. An MKV or WebM file throws, see loadTrack().
+     * must lie next to it. Its content replaces VobSubReadOptions::$idx. An MKV or WebM file throws, see loadTrack().
      */
     public static function load(string $path, Format $format, ?ReadOptions $options = null): self
     {
@@ -104,16 +104,23 @@ class Subtitle implements \IteratorAggregate, \Countable
         $other     = self::pairedFile($path, $isIdx ? "sub" : "idx");
         [$idxPath, $subPath] = $isIdx ? [$path, $other] : [$other, $path];
 
+        $given = $options->format;
+        // The parser throws for the options of another format.
+        if ($given !== null && !$given instanceof VobSubReadOptions) {
+            return self::parseUtf8(self::readFile($subPath), Format::VobSub, $options);
+        }
+
         $vobSubOptions = new ReadOptions(
             encoding: $options->encoding,
             lenient: $options->lenient,
-            fps: $options->fps,
             wordTimestamps: $options->wordTimestamps,
             speakerVoices: $options->speakerVoices,
             lastCueDuration: $options->lastCueDuration,
-            track: $options->track,
-            language: $options->language,
-            format: new VobSubReadOptions(StringHelpers::convertToUtf8(self::readFile($idxPath), $options->encoding)),
+            format: new VobSubReadOptions(
+                StringHelpers::convertToUtf8(self::readFile($idxPath), $options->encoding),
+                $given?->track,
+                $given?->language,
+            ),
         );
 
         return self::parseUtf8(self::readFile($subPath), Format::VobSub, $vobSubOptions);
@@ -404,7 +411,7 @@ class Subtitle implements \IteratorAggregate, \Countable
                 ?? throw new InvalidArgumentException("MicroDVD output needs the frame rate of the video. Pass MicroDvdWriteOptions::frameRate."));
         }
         if ($format === Format::Itt && ($formatOptions === null || ($formatOptions instanceof IttWriteOptions && $formatOptions->frameRate === null))
-            && !isset($this->getFormatData(IttParser::FORMAT)["frameRate"])) {
+            && !isset($this->getFormatData(IttParser::FORMAT_DATA_KEY)["frameRate"])) {
             throw new InvalidArgumentException("iTT output needs the frame rate of the video. Pass IttWriteOptions::frameRate.");
         }
 

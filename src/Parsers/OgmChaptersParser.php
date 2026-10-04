@@ -12,7 +12,7 @@ use SubtitleToolbox\SubtitleCue;
 
 // Spec: https://mkvtoolnix.download/doc/mkvmerge.html#mkvmerge.chapters.simple. The line patterns are the ones
 // of parse_simple() in mkvtoolnix src/common/chapters/chapters.cpp.
-class OgmChaptersParser extends SubtitleParser
+final class OgmChaptersParser extends SubtitleParser
 {
     private const TIMESTAMP_LINE = '/^CHAPTER\d+\s*=\s*(\d+)\s*:\s*(\d+)\s*:\s*(\d+)\s*[.,]\s*(\d{1,9})/';
     private const NAME_LINE      = '/^CHAPTER\d+NAME\s*=(.*)$/';

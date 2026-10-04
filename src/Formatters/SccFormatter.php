@@ -39,7 +39,7 @@ final class SccFormatter extends SubtitleFormatter
      */
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $dropFrame = $this->formatOptions($options)?->dropFrame ?? $subtitle->getFormatData(SccParser::FORMAT)["dropFrame"] ?? true;
+        $dropFrame = $this->formatOptions($options)?->dropFrame ?? $subtitle->getFormatData(SccParser::FORMAT_DATA_KEY)["dropFrame"] ?? true;
 
         $cues = $subtitle->getCues();
         uasort($cues, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());
@@ -287,7 +287,7 @@ final class SccFormatter extends SubtitleFormatter
     {
         $count     = count($cells);
         $alignment = $cue->getAlignment() ?? 2;
-        $stored    = $cue->getFormatData(SccParser::FORMAT);
+        $stored    = $cue->getFormatData(SccParser::FORMAT_DATA_KEY);
         $rows      = $stored["rows"] ?? null;
         $columns   = $stored["columns"] ?? null;
         $storedOk  = is_array($rows) && is_array($columns) && count($rows) === $count && count($columns) === $count

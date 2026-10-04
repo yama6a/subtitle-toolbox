@@ -13,6 +13,7 @@ use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Exceptions\UnknownFormatException;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
+use SubtitleToolbox\Parsers\MicroDvdReadOptions;
 use SubtitleToolbox\Parsers\VobSubReadOptions;
 
 class LoadSaveTest extends TestCase
@@ -180,7 +181,7 @@ class LoadSaveTest extends TestCase
 
     public function testMicroDvdWithTheFrameRateOfTheOptions(): void
     {
-        $subtitle = Subtitle::load(self::FILES . "cli/frames.sub", Format::MicroDvd, new ReadOptions(fps: 25));
+        $subtitle = Subtitle::load(self::FILES . "cli/frames.sub", Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)));
 
         $this->assertSame(Format::MicroDvd, $subtitle->getFormat());
         $this->assertSame(1.0, $subtitle->getCues()[0]->getStart());
@@ -225,15 +226,15 @@ class LoadSaveTest extends TestCase
         $sub  = file_get_contents(self::FILES . "vobsub/two-tracks-pal.sub");
         $path = self::FILES . "vobsub/two-tracks-pal.idx";
 
-        $second = Subtitle::load($path, Format::VobSub, new ReadOptions(track: 1));
+        $second = Subtitle::load($path, Format::VobSub, new ReadOptions(format: new VobSubReadOptions(track: 1)));
         $this->assertSame(
-            Subtitle::fromString($sub, Format::VobSub, new ReadOptions(track: 1, format: new VobSubReadOptions($idx)))->toArray(),
+            Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions($idx, track: 1)))->toArray(),
             $second->toArray()
         );
         $this->assertNotSame(Subtitle::load($path, Format::VobSub)->toArray(), $second->toArray());
 
         $language = $second->getMetadata(Subtitle::METADATA_LANGUAGE);
-        $this->assertSame($second->toArray(), Subtitle::load($path, Format::VobSub, new ReadOptions(language: $language))->toArray());
+        $this->assertSame($second->toArray(), Subtitle::load($path, Format::VobSub, new ReadOptions(format: new VobSubReadOptions(language: $language)))->toArray());
     }
 
 
@@ -272,7 +273,7 @@ class LoadSaveTest extends TestCase
 
     public function testSaveMicroDvdTakesTheFrameRateFromTheOptionsThenFromTheFormatData(): void
     {
-        $withFrameRate = Subtitle::load(self::FILES . "cli/frames.sub", Format::MicroDvd, new ReadOptions(fps: 25));
+        $withFrameRate = Subtitle::load(self::FILES . "cli/frames.sub", Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)));
         $withFrameRate->save("$this->dir/x.sub");
         $this->assertSame(
             $withFrameRate->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(25))),

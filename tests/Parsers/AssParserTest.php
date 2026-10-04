@@ -126,7 +126,7 @@ class AssParserTest extends TestCase
         $data     = $subtitle->getFormatData("ass");
 
         $this->assertSame("V4 Styles", $data["stylesSection"]);
-        $this->assertSame(AssParser::SSA_EVENT_FORMAT, $data["eventFormat"]);
+        $this->assertSame(AssFormatLines::SSA_EVENT_FORMAT, $data["eventFormat"]);
         $this->assertSame("-2147483640", $data["styles"][0]["BackColour"]);
         $this->assertSame(8, $cues[1]->getAlignment());
         $this->assertSame("Marked=1", $cues[2]->getFormatData("ass")["fields"]["Marked"]);
@@ -235,7 +235,7 @@ class AssParserTest extends TestCase
         $subtitle = $this->parseEvents("[Script Info]\nScriptType: v4.00\n\n[Events]\nDialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hi\n");
 
         $this->assertSame(["Hi"], $subtitle->getCues()[0]->getLines());
-        $this->assertSame(AssParser::SSA_EVENT_FORMAT, $subtitle->getFormatData("ass")["eventFormat"]);
+        $this->assertSame(AssFormatLines::SSA_EVENT_FORMAT, $subtitle->getFormatData("ass")["eventFormat"]);
     }
 
 

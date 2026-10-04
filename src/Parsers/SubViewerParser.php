@@ -5,15 +5,16 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class SubViewerParser extends SubtitleParser
+final class SubViewerParser extends SubtitleParser
 {
-    public const FORMAT = "subviewer";
+    public const FORMAT_DATA_KEY = Format::SubViewer->value;
 
     public const START_SCRIPT = "******** START SCRIPT ********";
 
@@ -126,7 +127,7 @@ class SubViewerParser extends SubtitleParser
             $subtitle->addCue($cue, false);
         }
 
-        $subtitle->setFormatData(self::FORMAT, ["version" => 1, "header" => $header]);
+        $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["version" => 1, "header" => $header]);
 
         return $subtitle->reIndexCues();
     }
@@ -207,7 +208,7 @@ class SubViewerParser extends SubtitleParser
         $this->addCueWithText($subtitle, $cue);
         $this->warnSkipped($skipped);
 
-        $subtitle->setFormatData(self::FORMAT, array_filter(
+        $subtitle->setFormatData(self::FORMAT_DATA_KEY, array_filter(
             ["version" => 2, "header" => $header, "style" => $style],
             fn ($value): bool => $value !== null
         ));

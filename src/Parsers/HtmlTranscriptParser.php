@@ -10,7 +10,7 @@ use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class HtmlTranscriptParser extends SubtitleParser
+final class HtmlTranscriptParser extends SubtitleParser
 {
     private const ELEMENT = '/<(cite|time|p)(?:\s[^>]*)?>(.*?)<\/\1\s*>/is';
 

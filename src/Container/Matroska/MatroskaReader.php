@@ -8,6 +8,7 @@ use Generator;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\AssFormatLines;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\SubRipParser;
@@ -617,7 +618,7 @@ final class MatroskaReader
     private function assFile(MatroskaTrack $track, string $codecPrivate, array $cues): string
     {
         $header = rtrim(StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($codecPrivate))) . "\n";
-        $format = $track->codecId === self::CODEC_SSA ? AssParser::SSA_EVENT_FORMAT : AssParser::ASS_EVENT_FORMAT;
+        $format = $track->codecId === self::CODEC_SSA ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT;
         if (!preg_match('/^\[Events\][ \t]*$/mi', $header)) {
             $header .= "\n[Events]\nFormat: " . implode(", ", $format) . "\n";
         } elseif (preg_match('/^\[Events\][ \t]*\n(?:(?!\[).*\n)*?Format:(.*)$/mi', $header, $matches)) {

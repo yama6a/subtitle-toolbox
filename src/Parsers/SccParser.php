@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Encoding\Cea608;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -18,9 +19,9 @@ use SubtitleToolbox\SubtitleCue;
  * @see http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
  * @see https://www.govinfo.gov/content/pkg/CFR-2010-title47-vol1/xml/CFR-2010-title47-vol1-sec15-119.xml
  */
-class SccParser extends SubtitleParser
+final class SccParser extends SubtitleParser
 {
-    public const FORMAT = "scc";
+    public const FORMAT_DATA_KEY = Format::Scc->value;
     public const HEADER = "Scenarist_SCC V1.0";
 
     public const MODE_POP_ON   = "pop-on";
@@ -93,7 +94,7 @@ class SccParser extends SubtitleParser
 
         $subtitle = new Subtitle();
         if ($dropFrame !== null) {
-            $subtitle->setFormatData(self::FORMAT, ["dropFrame" => $dropFrame]);
+            $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["dropFrame" => $dropFrame]);
         }
         foreach ($states as $idx => $state) {
             if ($state["lines"] === []) {
@@ -108,7 +109,7 @@ class SccParser extends SubtitleParser
 
             $cue = new SubtitleCue($start, $end, array_column($state["lines"], "text"));
             $cue->setAlignment($state["lines"][0]["row"] <= 4 ? 8 : null);
-            $cue->setFormatData(self::FORMAT, [
+            $cue->setFormatData(self::FORMAT_DATA_KEY, [
                 "mode"    => $state["mode"],
                 "rows"    => array_column($state["lines"], "row"),
                 "columns" => array_column($state["lines"], "column"),

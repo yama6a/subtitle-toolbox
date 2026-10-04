@@ -37,11 +37,11 @@ class VobSubParserTest extends TestCase
 
     private function parseFixture(string $name, int|string|null $track = null): Subtitle
     {
-        $options = new ReadOptions(
+        $options = new ReadOptions(format: new VobSubReadOptions(
+            file_get_contents(self::DIR . "$name.idx"),
             track: is_int($track) ? $track : null,
             language: is_string($track) ? $track : null,
-            format: new VobSubReadOptions(file_get_contents(self::DIR . "$name.idx")),
-        );
+        ));
 
         return (new VobSubParser())->parse(file_get_contents(self::DIR . "$name.sub"), $options);
     }
@@ -324,7 +324,7 @@ class VobSubParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage($message);
 
-        (new VobSubParser())->parse("", new ReadOptions(language: $language, format: new VobSubReadOptions($idx)));
+        (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions($idx, language: $language)));
     }
 
 
@@ -333,12 +333,12 @@ class VobSubParserTest extends TestCase
         $idx = file_get_contents(self::DIR . "two-tracks-pal.idx");
         $sub = file_get_contents(self::DIR . "two-tracks-pal.sub");
 
-        $byIndex = (new VobSubParser())->parse($sub, new ReadOptions(track: 1, format: new VobSubReadOptions($idx)));
+        $byIndex = (new VobSubParser())->parse($sub, new ReadOptions(format: new VobSubReadOptions($idx, track: 1)));
         $this->assertSame("de", $byIndex->getMetadata(Subtitle::METADATA_LANGUAGE));
 
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The .idx content has no track with index 1 and language \"en\".");
-        (new VobSubParser())->parse($sub, new ReadOptions(track: 1, language: "en", format: new VobSubReadOptions($idx)));
+        (new VobSubParser())->parse($sub, new ReadOptions(format: new VobSubReadOptions($idx, 1, "en")));
     }
 
 

@@ -5,30 +5,21 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class AssParser extends SubtitleParser
+final class AssParser extends SubtitleParser
 {
-    public const FORMAT_DATA_KEY = "ass";
+    public const FORMAT_DATA_KEY = Format::Ass->value;
 
-    public const ASS_STYLE_FORMAT = [
-        "Name", "Fontname", "Fontsize", "PrimaryColour", "SecondaryColour", "OutlineColour", "BackColour",
-        "Bold", "Italic", "Underline", "StrikeOut", "ScaleX", "ScaleY", "Spacing", "Angle",
-        "BorderStyle", "Outline", "Shadow", "Alignment", "MarginL", "MarginR", "MarginV", "Encoding",
-    ];
-
-    public const SSA_STYLE_FORMAT = [
+    private const SSA_STYLE_FORMAT = [
         "Name", "Fontname", "Fontsize", "PrimaryColour", "SecondaryColour", "TertiaryColour", "BackColour",
         "Bold", "Italic", "BorderStyle", "Outline", "Shadow", "Alignment", "MarginL", "MarginR", "MarginV",
         "AlphaLevel", "Encoding",
     ];
-
-    public const ASS_EVENT_FORMAT = ["Layer", "Start", "End", "Style", "Name", "MarginL", "MarginR", "MarginV", "Effect", "Text"];
-
-    public const SSA_EVENT_FORMAT = ["Marked", "Start", "End", "Style", "Name", "MarginL", "MarginR", "MarginV", "Effect", "Text"];
 
     // Legacy SSA codes: 1 to 3 are bottom, +4 is top, +8 is middle.
     private const LEGACY_ALIGNMENTS = [1 => 1, 2 => 2, 3 => 3, 5 => 7, 6 => 8, 7 => 9, 9 => 4, 10 => 5, 11 => 6];
@@ -91,7 +82,7 @@ class AssParser extends SubtitleParser
             throw new ParsingException("The subtitle has no [Events] section!");
         }
 
-        $data["eventFormat"] ??= $this->isSsa($data) ? self::SSA_EVENT_FORMAT : self::ASS_EVENT_FORMAT;
+        $data["eventFormat"] ??= $this->isSsa($data) ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT;
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, $data);
 
         return $subtitle->reIndexCues();
@@ -125,7 +116,7 @@ class AssParser extends SubtitleParser
         if (strcasecmp($type, "Format") === 0) {
             $data["styleFormat"] = array_map("trim", explode(",", $value));
         } elseif (strcasecmp($type, "Style") === 0) {
-            $data["styleFormat"] ??= strcasecmp($section, "V4 Styles") === 0 ? self::SSA_STYLE_FORMAT : self::ASS_STYLE_FORMAT;
+            $data["styleFormat"] ??= strcasecmp($section, "V4 Styles") === 0 ? self::SSA_STYLE_FORMAT : AssFormatLines::ASS_STYLE_FORMAT;
             $data["styles"][]      = $this->combine($data["styleFormat"], $value, true);
         }
     }
@@ -156,7 +147,7 @@ class AssParser extends SubtitleParser
 
     private function readEvent(Subtitle $subtitle, array &$data, string $line, int $lineNumber, string $value, bool $isComment): void
     {
-        $format = $data["eventFormat"] ?? ($this->isSsa($data) ? self::SSA_EVENT_FORMAT : self::ASS_EVENT_FORMAT);
+        $format = $data["eventFormat"] ?? ($this->isSsa($data) ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT);
         $fields = $this->combine($format, $value, false);
         if ($fields === null) {
             throw new ParsingException("Line $lineNumber has fewer fields than the Format line of the [Events] section: $line", $lineNumber);

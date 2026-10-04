@@ -86,6 +86,8 @@ abstract class SubtitleParser
      * Returns the warnings of the last read in lenient mode.
      *
      * @return list<ParseWarning>
+     *
+     * @internal
      */
     public function getWarnings(): array
     {
@@ -98,7 +100,7 @@ abstract class SubtitleParser
      *
      * @param list<string> $block
      */
-    protected function fail(ParsingException $exception, int $lineNumber, int $blockIndex, array $block): void
+    protected function fail(ParsingException $exception, ?int $lineNumber, ?int $blockIndex, array $block): void
     {
         if (!$this->lenient) {
             throw $exception;
@@ -111,7 +113,7 @@ abstract class SubtitleParser
     /**
      * @param list<string> $block
      */
-    protected function warn(string $message, int $lineNumber, int $blockIndex, array $block, string $action): void
+    protected function warn(string $message, ?int $lineNumber, ?int $blockIndex, array $block, string $action): void
     {
         $this->warnings[] = new ParseWarning($message, $lineNumber, $blockIndex, $block, $action);
     }

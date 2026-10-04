@@ -6,19 +6,26 @@ namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class MicroDvdParser extends SubtitleParser
+final class MicroDvdParser extends SubtitleParser
 {
-    public const FORMAT_DATA_KEY = "sub";
+    public const FORMAT_DATA_KEY = Format::MicroDvd->value;
 
     private const STYLE_TAGS = ["b", "i", "u", "s"];
 
     private const CUE_REGEX = '/^\{(\d+)\}\{(\d+)\}(.*)$/';
+
+
+    protected static function formatOptionsClass(): string
+    {
+        return MicroDvdReadOptions::class;
+    }
 
 
     protected function read(string $rawSubtitle): Subtitle
@@ -34,7 +41,7 @@ class MicroDvdParser extends SubtitleParser
             $rawLines = $this->skipLinesWithoutFrames($rawLines);
         }
 
-        $frameRate = $this->options->fps;
+        $frameRate = $this->formatOptions()->frameRate;
         $firstLine = reset($rawLines);
         if ($firstLine !== false && preg_match('/^\{1\}\{1\}(\d+(?:\.\d+)?)$/', $firstLine, $matches)) {
             $frameRate ??= (float) $matches[1];
@@ -42,7 +49,7 @@ class MicroDvdParser extends SubtitleParser
         }
 
         if ($frameRate === null) {
-            throw new ParsingException("The frame rate is unknown. Set ReadOptions::\$fps or start the file with {1}{1}<fps>.");
+            throw new ParsingException("The frame rate is unknown. Set MicroDvdReadOptions::frameRate or start the file with {1}{1}<fps>.");
         }
 
         try {

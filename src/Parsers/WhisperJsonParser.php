@@ -6,14 +6,15 @@ namespace SubtitleToolbox\Parsers;
 
 use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class WhisperJsonParser extends SubtitleParser
+final class WhisperJsonParser extends SubtitleParser
 {
-    public const FORMAT_DATA_KEY = "whisper";
+    public const FORMAT_DATA_KEY = Format::Whisper->value;
 
     // TO_LANGUAGE_CODE of openai/whisper, whisper/tokenizer.py. The OpenAI API returns these names in verbose_json.
     private const LANGUAGE_CODES = [
@@ -107,7 +108,7 @@ class WhisperJsonParser extends SubtitleParser
                 $end   = $this->seconds($segment, "end", $path);
                 $text  = $this->text($segment, $path);
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($segment)]);
+                $this->fail($exception, null, $index, [RawJson::encode($segment)]);
                 continue;
             }
             $words = is_array($segment["words"] ?? null) ? $segment["words"] : [];
@@ -147,7 +148,7 @@ class WhisperJsonParser extends SubtitleParser
                 $end   = round($this->seconds($offsets, "to", "$path.offsets") / 1000, 3);
                 $text  = $this->text($segment, $path);
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($segment)]);
+                $this->fail($exception, null, $index, [RawJson::encode($segment)]);
                 continue;
             }
 

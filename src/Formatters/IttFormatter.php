@@ -10,6 +10,7 @@ use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\IttParser;
+use SubtitleToolbox\Parsers\TtmlNamespaces;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -53,7 +54,7 @@ final class IttFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
         $fps                      = $this->formatOptions($options)?->frameRate;
-        [$frameRate, $multiplier] = $this->frameRateParameters($subtitle->getFormatData(IttParser::FORMAT), $fps);
+        [$frameRate, $multiplier] = $this->frameRateParameters($subtitle->getFormatData(IttParser::FORMAT_DATA_KEY), $fps);
         $rate                     = new FrameRate((float) $frameRate * $this->multiplierFactor($multiplier));
 
         $ttml = $this->toTtmlSubtitle($subtitle);
@@ -62,13 +63,13 @@ final class IttFormatter extends SubtitleFormatter
         $document = new DOMDocument();
         $document->loadXML($xml, LIBXML_NONET);
         $root = $document->documentElement;
-        $root->setAttributeNS(TtmlParser::PARAMETER_NAMESPACES[0], "ttp:timeBase", "smpte");
-        $root->setAttributeNS(TtmlParser::PARAMETER_NAMESPACES[0], "ttp:frameRate", $frameRate);
-        $root->setAttributeNS(TtmlParser::PARAMETER_NAMESPACES[0], "ttp:frameRateMultiplier", $multiplier);
-        $root->setAttributeNS(TtmlParser::PARAMETER_NAMESPACES[0], "ttp:dropMode", "nonDrop");
+        $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:timeBase", "smpte");
+        $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:frameRate", $frameRate);
+        $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:frameRateMultiplier", $multiplier);
+        $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:dropMode", "nonDrop");
 
         $cues       = $ttml->getCues();
-        $paragraphs = $document->getElementsByTagNameNS(TtmlParser::NAMESPACE_TTML, "p");
+        $paragraphs = $document->getElementsByTagNameNS(TtmlNamespaces::TTML, "p");
         foreach ($paragraphs as $idx => $paragraph) {
             $begin = $rate->secondsToFrames(max(0.0, $cues[$idx]->getStart()));
             $end   = max($begin + 1, $rate->secondsToFrames(max(0.0, $cues[$idx]->getEnd())));
@@ -120,9 +121,9 @@ final class IttFormatter extends SubtitleFormatter
         $ttml = new Subtitle();
         $ttml->setMetadata(Subtitle::METADATA_LANGUAGE, $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
         $ttml->setMetadata(Subtitle::METADATA_TITLE, $subtitle->getMetadata(Subtitle::METADATA_TITLE));
-        $ttml->setFormatData(TtmlParser::FORMAT, [
-            "namespace"  => TtmlParser::NAMESPACE_TTML,
-            "namespaces" => ["ttp" => TtmlParser::PARAMETER_NAMESPACES[0]],
+        $ttml->setFormatData(TtmlParser::FORMAT_DATA_KEY, [
+            "namespace"  => TtmlNamespaces::TTML,
+            "namespaces" => ["ttp" => TtmlNamespaces::PARAMETER[0]],
             "head"       => self::HEAD,
             "body"       => ["style" => "normal"],
         ]);
@@ -132,7 +133,7 @@ final class IttFormatter extends SubtitleFormatter
             $copy  = (new SubtitleCue($cue->getStart(), $cue->getEnd(), $lines))
                 ->setIdentifier($cue->getIdentifier())
                 ->setForced($cue->isForced());
-            $copy->setFormatData(TtmlParser::FORMAT, [
+            $copy->setFormatData(TtmlParser::FORMAT_DATA_KEY, [
                 "attributes" => ["region" => in_array($cue->getAlignment(), [7, 8, 9], true) ? "top" : "bottom"],
             ]);
             $ttml->addCue($copy, false);

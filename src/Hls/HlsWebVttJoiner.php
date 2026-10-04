@@ -39,13 +39,13 @@ final class HlsWebVttJoiner
             }
         }
 
-        return $joined->setFormatData(WebVttParser::FORMAT, $fileData ?? [])->reIndexCues()->removeDuplicateCues();
+        return $joined->setFormatData(WebVttParser::FORMAT_DATA_KEY, $fileData ?? [])->reIndexCues()->removeDuplicateCues();
     }
 
 
     private static function withoutTimestampMap(Subtitle $segment): array
     {
-        $fileData                = $segment->getFormatData(WebVttParser::FORMAT);
+        $fileData                = $segment->getFormatData(WebVttParser::FORMAT_DATA_KEY);
         $fileData["headerLines"] = array_values(array_filter(
             $fileData["headerLines"] ?? [],
             fn (string $line): bool => !TimestampMap::isHeader($line)

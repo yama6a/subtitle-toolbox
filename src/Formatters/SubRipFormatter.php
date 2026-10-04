@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -77,7 +78,7 @@ final class SubRipFormatter extends SubtitleFormatter
 
     private function formatCoordinates(SubtitleCue $cue): string
     {
-        $coordinates = $cue->getFormatData("srt")["coordinates"] ?? null;
+        $coordinates = $cue->getFormatData(SubRipParser::FORMAT_DATA_KEY)["coordinates"] ?? null;
         if (!is_array($coordinates)) {
             return "";
         }

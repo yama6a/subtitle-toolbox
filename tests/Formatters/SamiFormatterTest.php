@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\SamiParser;
+use SubtitleToolbox\Parsers\SamiReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -35,7 +36,7 @@ class SamiFormatterTest extends TestCase
     #[DataProvider("realFiles")]
     public function testRealFileRoundTrips(string $file, ?string $class): void
     {
-        $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . $file), new ReadOptions(language: $class));
+        $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . $file), new ReadOptions(format: new SamiReadOptions($class)));
         $output   = $subtitle->toString(Format::Sami);
         $reparsed = Subtitle::fromString($output, Format::Sami);
 
@@ -47,7 +48,7 @@ class SamiFormatterTest extends TestCase
 
     public function testWritesTheChosenClassOnly(): void
     {
-        $output = (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(language: "FRCC"))->toString(Format::Sami);
+        $output = (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(format: new SamiReadOptions("FRCC")))->toString(Format::Sami);
 
         $this->assertSame(
             "<SAMI>\n<HEAD>\n<TITLE>Bakery Tour</TITLE>\n<STYLE TYPE=\"text/css\">\n<!--\n" .

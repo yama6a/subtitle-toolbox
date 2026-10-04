@@ -87,7 +87,7 @@ class CsvFormatterTest extends TestCase
     public function testFrameRateOptionWinsOverTheParsedFrameRate(): void
     {
         $file     = file_get_contents(__DIR__ . "/../files/csv/real/dubbing_script.csv");
-        $subtitle = (new CsvParser())->parse($file, new ReadOptions(format: new CsvReadOptions(new CsvColumns(start: "Start TC", text: "Text", speaker: "Character", frameRate: 25))));
+        $subtitle = (new CsvParser())->parse($file, new ReadOptions(format: new CsvReadOptions(new CsvColumns(start: "Start TC", text: "Text", speaker: "Character"), frameRate: 25)));
 
         $this->assertStringContainsString("\n10:00:05:19,BEN,- I have one.,\n",
                                           $subtitle->toString(Format::Csv, new WriteOptions(format: new CsvWriteOptions(frameRate: 24))));

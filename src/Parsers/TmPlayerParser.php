@@ -10,7 +10,7 @@ use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class TmPlayerParser extends SubtitleParser
+final class TmPlayerParser extends SubtitleParser
 {
     private const LINE_REGEX = '/^(\d+):([0-5]\d):([0-5]\d)(?:,(\d+))?[:=](.*)$/';
 

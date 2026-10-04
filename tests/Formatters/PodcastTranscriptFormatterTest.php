@@ -61,8 +61,8 @@ class PodcastTranscriptFormatterTest extends TestCase
     public function testWritesTheFormatDataBackAndPrettyPrints(): void
     {
         $subtitle = new Subtitle();
-        $subtitle->setFormatData("podcast", ["version" => "1.0.1", "language" => "en"]);
-        $subtitle->addCue((new SubtitleCue(0, 1.25, "Hi"))->setFormatData("podcast", ["confidence" => 0.9]));
+        $subtitle->setFormatData("podcast-transcript", ["version" => "1.0.1", "language" => "en"]);
+        $subtitle->addCue((new SubtitleCue(0, 1.25, "Hi"))->setFormatData("podcast-transcript", ["confidence" => 0.9]));
 
         $this->assertSame(
             "{\r\n    \"version\": \"1.0.1\",\r\n    \"segments\": [\r\n        {\r\n            \"startTime\": 0.0,\r\n" .

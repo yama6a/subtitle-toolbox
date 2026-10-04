@@ -10,7 +10,7 @@ use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class Mpl2Parser extends SubtitleParser
+final class Mpl2Parser extends SubtitleParser
 {
     private const CUE_REGEX = '/^\[(\d+)\]\[(\d+)\](.*)$/';
 

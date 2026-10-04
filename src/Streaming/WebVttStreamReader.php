@@ -11,40 +11,25 @@ use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
 
-class WebVttStreamReader implements CueStreamReader
+final class WebVttStreamReader implements CueStreamReader
 {
     private WebVttParser $parser;
 
     private array $header = [];
 
-    private bool $lenient = false;
-
     /** @var list<ParseWarning> */
     private array $warnings = [];
 
 
-    public function __construct()
+    /**
+     * The reader uses ReadOptions::$lenient and ignores the other fields.
+     */
+    public function __construct(private readonly ReadOptions $options = new ReadOptions())
     {
-        $this->parser = new WebVttParser();
+        $this->parser = (new WebVttParser())->useOptions($options);
     }
 
 
-    /**
-     * Makes the reader skip or repair a broken block and record a ParseWarning instead of throwing, as WebVttParser does.
-     */
-    public function setLenient(bool $lenient = true): static
-    {
-        $this->lenient = $lenient;
-
-        return $this;
-    }
-
-
-    /**
-     * Returns the warnings of the current or last read() so far.
-     *
-     * @return list<ParseWarning>
-     */
     public function getWarnings(): array
     {
         $warnings = array_merge($this->parser->getWarnings(), $this->warnings);
@@ -56,7 +41,7 @@ class WebVttStreamReader implements CueStreamReader
 
     public function read($stream): Generator
     {
-        $this->parser   = (new WebVttParser())->useOptions(new ReadOptions(lenient: $this->lenient));
+        $this->parser   = (new WebVttParser())->useOptions($this->options);
         $this->header   = [];
         $this->warnings = [];
         $seenCue        = false;
@@ -96,7 +81,7 @@ class WebVttStreamReader implements CueStreamReader
                         throw new ParsingException("Block #$idx doesn't match anything that we can parse as a WebVTT cue!");
                 }
             } catch (ParsingException $exception) {
-                if (!$this->lenient) {
+                if (!$this->options->lenient) {
                     throw $exception;
                 }
                 $this->warnings[] = ParseWarning::skipped($exception, $lineNumber, $idx, $rawLines);

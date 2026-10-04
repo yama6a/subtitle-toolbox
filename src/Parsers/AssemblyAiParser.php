@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
-class AssemblyAiParser extends SubtitleParser
+final class AssemblyAiParser extends SubtitleParser
 {
     use WordGrouping;
 
-    public const FORMAT_DATA_KEY = "assemblyai";
+    public const FORMAT_DATA_KEY = Format::AssemblyAi->value;
 
     private const MILLISECONDS = 0.001;
 
@@ -60,7 +61,7 @@ class AssemblyAiParser extends SubtitleParser
                 $text  = $this->text($utterance, "text", $path);
                 $words = $this->readWords(self::listOrEmpty($utterance["words"] ?? null), "$path.words");
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($utterance)]);
+                $this->fail($exception, null, $index, [RawJson::encode($utterance)]);
                 continue;
             }
 
@@ -84,7 +85,7 @@ class AssemblyAiParser extends SubtitleParser
                 $start = $this->seconds($word["start"] ?? null, "{$path}[$index].start", self::MILLISECONDS);
                 $end   = $this->seconds($word["end"] ?? null, "{$path}[$index].end", self::MILLISECONDS);
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($word)]);
+                $this->fail($exception, null, $index, [RawJson::encode($word)]);
                 continue;
             }
 

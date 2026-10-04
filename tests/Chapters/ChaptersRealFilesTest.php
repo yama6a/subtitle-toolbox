@@ -118,13 +118,13 @@ class ChaptersRealFilesTest extends TestCase
 
         $this->assertSame("Episode 7 - Making Progress", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
         $this->assertSame("John Doe", $subtitle->getMetadata(Subtitle::METADATA_AUTHOR));
-        $this->assertSame(["version" => "1.2.0", "podcastName" => "John's Awesome Podcast"], $subtitle->getFormatData("chapters"));
+        $this->assertSame(["version" => "1.2.0", "podcastName" => "John's Awesome Podcast"], $subtitle->getFormatData("podcast"));
         $this->assertSame([], $silent->getLines());
         $this->assertSame([
             "img"      => "https://example.com/images/parisfrance.jpg",
             "toc"      => false,
             "location" => ["name" => "Eiffel Tower, Paris", "geo" => "geo:42.3417649,-70.9661596"],
-        ], $silent->getFormatData("chapters"));
+        ], $silent->getFormatData("podcast"));
     }
 
 
@@ -144,10 +144,10 @@ class ChaptersRealFilesTest extends TestCase
     {
         $subtitle = $this->parse("ffmetadata/real/m4b_audiobook.ffmeta", Format::FfMetadata);
 
-        $this->assertSame("Read by the author\nRecorded in 2023", $subtitle->getFormatData("ffmetadata")["tags"]["comment"]);
-        $this->assertSame([["handler_name" => "SoundHandler", "vendor_id" => "[0][0][0][0]"]], $subtitle->getFormatData("ffmetadata")["streams"]);
+        $this->assertSame("Read by the author\nRecorded in 2023", $subtitle->getFormatData("ffmeta")["tags"]["comment"]);
+        $this->assertSame([["handler_name" => "SoundHandler", "vendor_id" => "[0][0][0][0]"]], $subtitle->getFormatData("ffmeta")["streams"]);
         $this->assertSame("Jane Doe", $subtitle->getMetadata(Subtitle::METADATA_ARTIST));
-        $this->assertSame(["timeBase" => "1/44100", "tags" => []], $subtitle->getCues()[1]->getFormatData("ffmetadata"));
+        $this->assertSame(["timeBase" => "1/44100", "tags" => []], $subtitle->getCues()[1]->getFormatData("ffmeta"));
     }
 
 

@@ -9,7 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
-use SubtitleToolbox\Parsers\EbuStlParser;
+use SubtitleToolbox\Parsers\EbuStl;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -32,7 +32,7 @@ class EbuStlFormatterTest extends TestCase
             ->setMetadata(Subtitle::METADATA_LANGUAGE, "en-GB");
 
         $stl = $subtitle->toString(Format::EbuStl);
-        $gsi = EbuStlParser::readGsi(substr($stl, 0, 1024));
+        $gsi = EbuStl::readGsi(substr($stl, 0, 1024));
 
         $this->assertSame(1024 + 2 * 128, strlen($stl));
         $this->assertSame(

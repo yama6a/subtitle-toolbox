@@ -205,7 +205,7 @@ class FormatTest extends TestCase
                 continue;
             }
             foreach ((new \ReflectionClass($class))->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
-                // getFormatData() and setFormatData() take a format data key such as "smi", not a format name.
+                // getFormatData() and setFormatData() take a format data key string such as "sami", not a Format.
                 if (in_array($method->getName(), ["getFormatData", "setFormatData"], true)) {
                     continue;
                 }

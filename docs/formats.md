@@ -276,8 +276,8 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWrite
 ```
 
 - **Frame rate**: `ReadOptions::$fps` wins over a `{1}{1}<fps>` first line. The parser never reads that line as a cue. Without either, the parser throws `ParsingException`.
-- `$subtitle->getFormatData('sub')['frameRate']` returns the frame rate that the parser used.
-- **Control codes**: `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` become core markup. The parser reads the codes at the start of each `|`-separated line. A code later in the line stays text. A lower-case code styles one line. An upper-case code styles the whole cue. The `sub` format data keeps other control codes.
+- `$subtitle->getFormatData('microdvd')['frameRate']` returns the frame rate that the parser used.
+- **Control codes**: `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` become core markup. The parser reads the codes at the start of each `|`-separated line. A code later in the line stays text. A lower-case code styles one line. An upper-case code styles the whole cue. The `microdvd` format data keeps other control codes.
 - **Output**: the formatter writes control codes only for tags that wrap a whole line. It strips other tags. An unchanged cue keeps its original control codes.
 
 ## MPL2 and TMPlayer
@@ -333,7 +333,7 @@ use SubtitleToolbox\Subtitle;
 $subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami);   // the first class of the STYLE block
 $subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami, new ReadOptions(language: 'FRCC'));   // the FRCC class
 $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);                              // 'fr-FR', from the lang property of .FRCC
-$subtitle->getFormatData('smi');                                                  // keys style, class and samiParam
+$subtitle->getFormatData('sami');                                                 // keys style, class and samiParam
 ```
 
 - **Language class**: a SAMI file holds one CSS class per language, for example `.FRCC { Name: French; lang: fr-FR; }`. The parser reads the class in `ReadOptions::$language`, else the first class of the STYLE block. Without a STYLE block, it reads the first class that a `<P>` uses. A `<P>` without a class belongs to every class.
