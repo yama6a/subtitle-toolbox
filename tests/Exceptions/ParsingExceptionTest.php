@@ -8,7 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
-use SubtitleToolbox\Parsers\MicroDvdReadOptions;
+use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\SubtitleParser;
 use SubtitleToolbox\Parsers\SubViewerParser;

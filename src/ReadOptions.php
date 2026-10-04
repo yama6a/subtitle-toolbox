@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Parsers\FormatReadOptions;
+use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 
 /**
  * The format-neutral settings of one read. Each parser ignores the fields it does not use. $format holds the

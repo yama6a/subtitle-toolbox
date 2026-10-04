@@ -7,11 +7,11 @@ namespace SubtitleToolbox;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Parsers\CsvColumns;
+use SubtitleToolbox\Parsers\Options\CsvColumns;
 use SubtitleToolbox\Parsers\CsvParser;
-use SubtitleToolbox\Parsers\CsvReadOptions;
+use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\MicroDvdParser;
-use SubtitleToolbox\Parsers\MicroDvdReadOptions;
+use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\ReadOptions;
 
 class ArrayConversionTest extends TestCase

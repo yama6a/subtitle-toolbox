@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use Generator;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;

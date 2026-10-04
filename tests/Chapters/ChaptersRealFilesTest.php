@@ -8,7 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
-use SubtitleToolbox\Parsers\ChapterReadOptions;
+use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
 use SubtitleToolbox\Parsers\YouTubeChaptersParser;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;

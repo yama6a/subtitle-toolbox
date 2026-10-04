@@ -7,14 +7,14 @@ namespace SubtitleToolbox;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Parsers\ChapterReadOptions;
-use SubtitleToolbox\Parsers\CsvColumns;
-use SubtitleToolbox\Parsers\CsvReadOptions;
-use SubtitleToolbox\Parsers\FormatReadOptions;
-use SubtitleToolbox\Parsers\MicroDvdReadOptions;
-use SubtitleToolbox\Parsers\SamiReadOptions;
-use SubtitleToolbox\Parsers\SccReadOptions;
-use SubtitleToolbox\Parsers\VobSubReadOptions;
+use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
+use SubtitleToolbox\Parsers\Options\CsvColumns;
+use SubtitleToolbox\Parsers\Options\CsvReadOptions;
+use SubtitleToolbox\Parsers\Options\FormatReadOptions;
+use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
+use SubtitleToolbox\Parsers\Options\SamiReadOptions;
+use SubtitleToolbox\Parsers\Options\SccReadOptions;
+use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 
 class ReadOptionsTest extends TestCase
 {

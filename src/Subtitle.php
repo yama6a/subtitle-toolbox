@@ -22,7 +22,7 @@ use SubtitleToolbox\Ocr\OcrEngine;
 use SubtitleToolbox\Ocr\OcrRunner;
 use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
-use SubtitleToolbox\Parsers\VobSubReadOptions;
+use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 
 
 class Subtitle implements \IteratorAggregate, \Countable

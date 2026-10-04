@@ -109,7 +109,7 @@ A podcast feed links a transcript per episode with the `<podcast:transcript>` ta
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\PodcastTranscriptWriteOptions;
-use SubtitleToolbox\Parsers\PodcastTranscriptReadOptions;
+use SubtitleToolbox\Parsers\Options\PodcastTranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;

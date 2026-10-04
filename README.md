@@ -36,7 +36,7 @@ $subtitle->save('movie.vtt');                                   // WebVTT, from 
 ```
 
 - **Format**: the enum `Format` names each format, for example `Format::SubRip`. `Subtitle::loadAutoDetectFormat('movie.srt')` detects the format from the content. See [load and save](docs/formats.md#load-and-save) and [detection](docs/detection.md).
-- **Read options**: `Subtitle::fromString($content, Format::SubRip, new ReadOptions(encoding: 'Windows-1252'))` converts the input to UTF-8. `ReadOptions` holds every parser setting. See [read options](docs/read-options.md) and [encodings](docs/encodings.md).
+- **Read options**: `Subtitle::fromString($content, Format::SubRip, new ReadOptions(encoding: 'Windows-1252'))` converts the input to UTF-8. `ReadOptions` holds the parser settings. See [read options](docs/read-options.md) and [encodings](docs/encodings.md).
 - **Errors**: every exception implements `SubtitleToolboxException`. See [errors](docs/errors.md).
 
 ## Supported formats

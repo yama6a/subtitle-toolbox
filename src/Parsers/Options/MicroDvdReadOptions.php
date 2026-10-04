@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SubtitleToolbox\Parsers;
+namespace SubtitleToolbox\Parsers\Options;
 
 use SubtitleToolbox\FrameRate;
 

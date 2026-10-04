@@ -10,10 +10,10 @@ use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
-use SubtitleToolbox\Parsers\CsvColumns;
-use SubtitleToolbox\Parsers\CsvReadOptions;
-use SubtitleToolbox\Parsers\MicroDvdReadOptions;
-use SubtitleToolbox\Parsers\PodcastTranscriptReadOptions;
+use SubtitleToolbox\Parsers\Options\CsvColumns;
+use SubtitleToolbox\Parsers\Options\CsvReadOptions;
+use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
+use SubtitleToolbox\Parsers\Options\PodcastTranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 
 class TimecodeTest extends TestCase

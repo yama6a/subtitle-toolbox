@@ -81,7 +81,7 @@ php subtitle-toolbox.phar --version
 ## Frame rates
 | Option | Sets | Commands |
 |:--- |:--- |:--- |
-| `--input-fps RATE` | the frame rate of a MicroDVD input without a `{1}{1}<fps>` first line, and of CSV or TSV times in `hh:mm:ss:ff`, as `ReadOptions::$fps` | all that read a file |
+| `--input-fps RATE` | the frame rate of a MicroDVD input without a `{1}{1}<fps>` first line, and of CSV or TSV times in `hh:mm:ss:ff`, as `MicroDvdReadOptions::$frameRate` and `CsvReadOptions::$frameRate` | all that read a file |
 | `--output-fps RATE` | the frame rate of MicroDVD and iTT output, as `MicroDvdWriteOptions::$frameRate` and `IttWriteOptions::$frameRate` | all that write a file |
 | `--video-fps RATE` | the frame rate of the video for the frame rules, see [Timing](#timing) and [Validate](#validate) | `convert`, `validate` |
 | `--fps RATE` | each of the 3 options above that the command has | all that read a file |

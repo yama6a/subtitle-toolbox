@@ -10,6 +10,7 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\Options\EbuStlReadOptions;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;

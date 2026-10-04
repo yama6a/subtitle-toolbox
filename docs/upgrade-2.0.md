@@ -22,7 +22,7 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions; // and the other classes and enums of the write options table
-use SubtitleToolbox\Parsers\CsvReadOptions;             // and the other classes of the read options table
+use SubtitleToolbox\Parsers\Options\CsvReadOptions;  // and the other classes of the read options table
 use SubtitleToolbox\Speakers\SpeakerLabelOptions;
 use SubtitleToolbox\Speakers\SpeakerStyle;
 use SubtitleToolbox\Validation\ValidationRules;
@@ -51,10 +51,17 @@ use SubtitleToolbox\Validation\ValidationRules;
 | `MatroskaReader::open('movie.mkv')->extract(3)` | `Subtitle::loadTrack('movie.mkv', 3)` |
 | `MatroskaReader::open('movie.mkv')->getSubtitleTracks()` | `Subtitle::tracks('movie.mkv')` |
 | `MatroskaReader::DEFAULT_LAST_CUE_DURATION` | `ReadOptions::$lastCueDuration`, 5 s by default |
-| `(new VobSubParser(file_get_contents('movie.idx'), 'de'))->parse(file_get_contents('movie.sub'))` | `Subtitle::load('movie.idx', Format::VobSub, new ReadOptions(language: 'de'))`. It reads the `.sub` file next to the `.idx` file |
+| `(new VobSubParser(file_get_contents('movie.idx'), 'de'))->parse(file_get_contents('movie.sub'))` | `Subtitle::load('movie.idx', Format::VobSub, new ReadOptions(format: new VobSubReadOptions(language: 'de')))`. It reads the `.sub` file next to the `.idx` file |
 | `new SubRipStreamWriter($stream, [SubtitleFormatter::OPTION_LINE_ENDING => "\r\n"])` | `new SubRipStreamWriter($stream, new WriteOptions(lineEnding: LineEnding::Crlf))`. `WebVttStreamWriter` takes the options as its third argument |
 | a parser or formatter object, for example `(new SubRipParser())->parse($content)` | the classes stay public. `parse()` takes `(string $content, ReadOptions $options)`, `format()` takes `(Subtitle $subtitle, WriteOptions $options)` |
+| a class that extends a parser, such as `class MyParser extends SubRipParser` | every parser except `SubtitleParser` is `final`. Call the parser from your own class and change the `Subtitle` that `parse()` returns |
 | a class that extends a formatter, such as `class MyFormatter extends SubRipFormatter` | every formatter except `SubtitleFormatter` is `final`. Call the formatter from your own class and change the string that `format()` returns |
+| `SubRipParser::splitIntoBlocks()`, `parseBlock()`, `parseCueBlock()`, and the same `WebVttParser` methods with `numberedBlocks()`, `parseHeader()` and `parseSettings()` | `@internal`. Read one cue at a time with `SubRipStreamReader` or `WebVttStreamReader` |
+| `CsvParser::detectDelimiter()`, `records()`, `parseTime()` | private. `parse()` keeps the detected delimiter in `getFormatData('csv')['delimiter']` |
+| the constants and static helpers of `EbuStlParser`, such as `GSI_FIELDS`, `LANGUAGES` and `readGsi()` | `@internal` |
+| the namespace constants of `TtmlParser`, such as `NAMESPACE_TTML` | `@internal` |
+| `AssParser::ASS_STYLE_FORMAT`, `SSA_STYLE_FORMAT`, `ASS_EVENT_FORMAT`, `SSA_EVENT_FORMAT` | `@internal` or private. `getFormatData('ass')['styleFormat']` and `['eventFormat']` hold the fields of a parsed file |
+| `LyricsParser::REGEX` | removed |
 | `SubRipFormatter::formatCueBlock()`, `WebVttFormatter::formatCueBlock()` | `@internal`. Write one cue at a time with `SubRipStreamWriter` or `WebVttStreamWriter` |
 | `PodcastTranscriptFormatter::segments()` | `@internal`. Read the `segments` key of `json_decode($subtitle->toString(Format::PodcastTranscript), true)` |
 | `MpSubFormatter::MPSUB_HEADER` | removed. `(new Subtitle())->toString(Format::MpSub)` returns the header without metadata, after a UTF-8 BOM |
@@ -68,21 +75,23 @@ No parser constructor takes an argument. Pass the setting to `ReadOptions`.
 | 1.x | 2.0 |
 |:--- |:--- |
 | `(new SubRipParser())->setLenient()` | `new ReadOptions(lenient: true)` |
+| `(new SubRipStreamReader())->setLenient()`, the same for `WebVttStreamReader` | `new SubRipStreamReader(new ReadOptions(lenient: true))`. `getWarnings()` is part of the `CueStreamReader` interface |
 | `$parser->getWarnings()` | `$subtitle->getParseWarnings()` |
-| `new MicroDvdParser(23.976)` | `new ReadOptions(fps: 23.976)` |
-| `new SamiParser('ENUSCC', 10)` | `new ReadOptions(language: 'ENUSCC', lastCueDuration: 10)` |
-| `new VobSubParser($idx, 'de')`, `new VobSubParser($idx, 1)` | `new ReadOptions(language: 'de', format: new VobSubReadOptions($idx))`, `new ReadOptions(track: 1, format: new VobSubReadOptions($idx))` |
+| `new MicroDvdParser(23.976)` | `new ReadOptions(format: new MicroDvdReadOptions(frameRate: 23.976))` |
+| `new SamiParser('ENUSCC', 10)` | `new ReadOptions(lastCueDuration: 10, format: new SamiReadOptions(language: 'ENUSCC'))` |
+| `new VobSubParser($idx, 'de')`, `new VobSubParser($idx, 1)` | `new ReadOptions(format: new VobSubReadOptions($idx, language: 'de'))`, `new ReadOptions(format: new VobSubReadOptions($idx, track: 1))` |
 | `new TmPlayerParser(4)`, `new SubViewerParser(10)`, `new LyricsParser(10)`, `new PgsParser(5)`, `new HtmlTranscriptParser(10)` | `new ReadOptions(lastCueDuration: 4)` and so on |
 | `TmPlayerParser::DEFAULT_LAST_CUE_DURATION` and the same constant of 4 other parsers | `ReadOptions::$lastCueDuration`, 5 s for every format |
 | `new WhisperJsonParser([WhisperJsonParser::OPTION_WORD_TIMESTAMPS => true])` | `new ReadOptions(wordTimestamps: true)`. The same for the YouTube, Podcasting 2.0 and cloud speech parsers |
 | `new DeepgramParser([DeepgramParser::OPTION_SPEAKER_VOICES => true])` | `new ReadOptions(speakerVoices: true)`. The same for Whisper and the other cloud speech parsers |
 | `new PodcastTranscriptParser([PodcastTranscriptParser::OPTION_KEEP_SEGMENTS => true], 10)` | `new ReadOptions(lastCueDuration: 10, format: new PodcastTranscriptReadOptions(keepSegments: true))` |
 | `new CsvParser($columns, ';', 10)` | `new ReadOptions(lastCueDuration: 10, format: new CsvReadOptions($columns, ';'))` |
+| `new CsvColumns(start: 'TC', frameRate: 25)` | `new CsvReadOptions(new CsvColumns(start: 'TC'), frameRate: 25)` |
 | `new SccParser(2)` | `new ReadOptions(format: new SccReadOptions(channel: 2))` |
 | `new EbuStlParser(true)` | `new ReadOptions(format: new EbuStlReadOptions(subtractStartOfProgramme: true))` |
 | `new FfMetadataChaptersParser(3600)`, and the YouTube, Podcasting 2.0 and OGM chapter parsers | `new ReadOptions(format: new ChapterReadOptions(mediaDuration: 3600))` |
 
-The per-format read classes are in `SubtitleToolbox\Parsers`.
+The per-format read classes and `CsvColumns` are in `SubtitleToolbox\Parsers\Options`. Each class name except `CsvColumns` ends in `ReadOptions`.
 
 ## Write options
 Every `OPTION_*` constant of the formatters is gone. The per-format classes are in `SubtitleToolbox\Formatters\Options`. Each class name ends in `WriteOptions`, and each `frameRate` field is a `float`.
@@ -205,8 +214,11 @@ These changes alter the output or the exit code of a call that needs no other ch
 | CLI inputs | `--force` let a command write over its input | a command never overwrites an input without `--in-place`, also not with `--force`. That file fails | `--in-place` |
 | Unknown options | before 1.70.5, a misspelled key or a key of another format was ignored. 1.70.5 and later threw `InvalidArgumentException` | a misspelled field, such as `new WriteOptions(lineEndings: LineEnding::Crlf)`, is a PHP `Error` for an unknown named parameter. An options class of another format, such as `new CsvWriteOptions()` for SubRip output, throws `InvalidArgumentException`. Read classes follow the same rule | fix the name, or pass the class of the format |
 | Strict types | the library converted scalar values | every file declares `strict_types`. A `mapText()`, `mapLines()`, `Markup::mapTextRuns()` or `ProfanityOptions` mask callback must return a string, else it throws `TypeError`. `GlyphOcrEngine` options need their exact types, for example `['inkThreshold' => 128]` | return the documented type |
-| CSV and TSV times in `hh:mm:ss:ff` | `CsvParser` threw `ParsingException` without `CsvColumns(frameRate:)`, and the CLI could not read such a file | `CsvParser` takes the frame rate of `ReadOptions::$fps` when `CsvColumns` has none. The CLI `--input-fps` and `--fps` set it | pass `CsvColumns(frameRate:)`, which wins |
+| CSV and TSV times in `hh:mm:ss:ff` | the CLI could not read such a file | the CLI `--input-fps` and `--fps` set `CsvReadOptions::$frameRate` | nothing |
 | JSON output of text that is not UTF-8 | `JsonFormatter` and the Podcasting 2.0 formatters threw `JsonException` | they throw `InvalidArgumentException`, with the `JsonException` as its previous exception | catch `InvalidArgumentException` or `SubtitleToolboxException` |
+| `ParseWarning::$lineNumber`, `$blockIndex` | 0 for a warning without a line, -1 for a library JSON field outside the cues | null in both cases | test for null |
+| Format data keys | `getFormatData('sub')`, `'smi'`, `'ffmetadata'`, `'chapters'` for Podcasting 2.0 chapters, `'podcast'` for Podcasting 2.0 transcripts | the key is the value of the `Format` case: `'microdvd'`, `'sami'`, `'ffmeta'`, `'podcast'`, `'podcast-transcript'`. Each parser holds it in `FORMAT_DATA_KEY`, also the parsers that had `FORMAT` | use `MicroDvdParser::FORMAT_DATA_KEY` and the other constants |
+| Library JSON with the old format data keys | `fromArray()` and `JsonParser` read them | they keep the data under the old key, and no formatter reads it. Old `podcast` data of a transcript becomes Podcasting 2.0 chapter data | rename the keys in the JSON before you read it |
 | `ParseWarning::$message` | ended with " (line N)" for MicroDVD, MPSub, MPL2, TMPlayer, ASS, SubViewer, CSV, YouTube XML and HTML | holds no line suffix. `$lineNumber` holds the line | read `$lineNumber` |
 | Word timestamps | `shift()`, `scale()`, `convertFrameRate()`, `syncByTwoPoints()`, `merge()` with an offset, `slice()` with `$moveToZero`, `ReferenceSync` and the CLI `retime` and `sync` kept the word timestamps in the cue text, such as `<00:00:02.000>`, at their old times | they move the word timestamps with the cues. Mute ranges of the profanity filter and the WebVTT, LRC and ASS karaoke output use the moved times | nothing. The 1.x times were wrong |
 | Library JSON format data | `JsonParser` and `fromArray()` took any value in the format data. A formatter then failed with a PHP `TypeError` or `Error` | they throw `ParsingException` with the path of a format data field of the wrong type, for example `formatData.scc.dropFrame`. A lenient `JsonParser` drops the bad format data of that format, or skips the cue | fix the field |

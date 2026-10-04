@@ -17,7 +17,7 @@ $writer->close();
 - **Same result**: the readers and writers give the same cues and output bytes as `SubRipParser`, `WebVttParser`, `SubRipFormatter` and `WebVttFormatter`, with the same options.
 - **Order**: the readers yield cues in file order. They do not sort the cues by start time, as `Subtitle` does.
 - **Errors**: a reader throws `ParsingException` at the first block that the parser rejects. It has yielded the cues before that block. A path that does not open, a write to a closed writer, and a stream that rejects writes throw `InvalidArgumentException`.
-- **Lenient mode**: the readers have `setLenient()` and `getWarnings()`, see [lenient-parsing.md](lenient-parsing.md). During the read, `getWarnings()` holds the warnings of the blocks read so far.
+- **Lenient mode**: `new SubRipStreamReader(new ReadOptions(lenient: true))` skips or repairs a broken block, see [lenient-parsing.md](lenient-parsing.md). The readers use only `lenient` of `ReadOptions`. During the read, `getWarnings()` of `CueStreamReader` holds the warnings of the blocks read so far.
 - **Line endings**: a line ends at LF, CR LF or CR CR LF. A file with only CR line endings is one line for `fgets()`, so it takes memory for the whole file.
 - **WebVTT header**: `WebVttStreamReader::getHeader()` returns the header text, the header lines, and the `STYLE` and `REGION` blocks after the first cue. Pass this array to the `WebVttStreamWriter` constructor.
 - **Comments**: `WebVttStreamReader` skips `NOTE` blocks. `WebVttStreamWriter` writes no comments.

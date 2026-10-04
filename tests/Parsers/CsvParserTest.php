@@ -9,8 +9,9 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
+use SubtitleToolbox\Parsers\Options\CsvColumns;
 use SubtitleToolbox\ParseWarning;
-use SubtitleToolbox\Parsers\CsvReadOptions;
+use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\SubtitleCue;
 

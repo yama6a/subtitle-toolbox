@@ -13,7 +13,7 @@ A chapter list names the parts of a video or a podcast episode. Each chapter is 
 ```php
 use SubtitleToolbox\Chapters\YouTubeChapters;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Parsers\ChapterReadOptions;
+use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 

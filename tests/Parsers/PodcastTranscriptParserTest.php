@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\ParseWarning;
-use SubtitleToolbox\Parsers\PodcastTranscriptReadOptions;
+use SubtitleToolbox\Parsers\Options\PodcastTranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;

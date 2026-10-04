@@ -13,8 +13,8 @@ use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Exceptions\UnknownFormatException;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
-use SubtitleToolbox\Parsers\MicroDvdReadOptions;
-use SubtitleToolbox\Parsers\VobSubReadOptions;
+use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
+use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 
 class LoadSaveTest extends TestCase
 {

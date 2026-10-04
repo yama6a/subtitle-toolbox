@@ -6,7 +6,7 @@ namespace SubtitleToolbox;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Parsers\PodcastTranscriptReadOptions;
+use SubtitleToolbox\Parsers\Options\PodcastTranscriptReadOptions;
 
 class OptionFlagsTest extends TestCase
 {

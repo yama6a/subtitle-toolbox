@@ -10,6 +10,8 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\Options\CsvColumns;
+use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
