@@ -553,6 +553,24 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testMuteRangesHoldTheTimesAfterTheTimingEdits(): void
+    {
+        copy(self::FILES . "profanity/keys.srt", "$this->dir/keys.srt");
+        copy(self::FILES . "profanity/words.txt", "$this->dir/words.txt");
+        $subtitle = Subtitle::load("$this->dir/keys.srt", Format::SubRip)->shift(100);
+        $subtitle->extendShortCues(3);
+        $ranges   = ProfanityFilter::apply($subtitle, new ProfanityOptions(wordFile: "$this->dir/words.txt"))->muteRanges;
+
+        [$code, , $stderr] = $this->runBinary(["convert", "keys.srt", "out.srt", "--shift", "100", "--fix-min-duration", "3",
+                                               "--mask-words", "words.txt", "--mute-edl", "keys.edl", "--mute-filter", "keys.af"]);
+        $this->assertSame([0, ""], [$code, $stderr]);
+        $this->assertSame("103.400 105.500 1\n108.000 109.100 1\n111.500 116.200 1\n", $this->file("keys.edl"));
+        $this->assertSame(MuteRange::toEdl($ranges), $this->file("keys.edl"));
+        $this->assertSame(MuteRange::toFfmpegVolumeFilter($ranges) . "\n", $this->file("keys.af"));
+        $this->assertSame($subtitle->toString(Format::SubRip), $this->file("out.srt"));
+    }
+
+
     public function testKaraoke(): void
     {
         copy(self::FILES . "whisper/real/openai_whisper_word_timestamps.json", "$this->dir/song.json");

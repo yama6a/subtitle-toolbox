@@ -143,7 +143,7 @@ class ApplicationTest extends TestCase
         $this->assertMatchesRegularExpression('/^  --language CODE +/m', $stdout);
         $this->assertDoesNotMatchRegularExpression('/^  --(ocr|sdh|fix-wrap|shift|karaoke)\b/m', $stdout);
         preg_match_all('/^  ([a-z]+) {2,}[A-Z]/m', $stdout, $groups);
-        $this->assertSame(["ocr", "forced", "errors", "sdh", "replace", "text", "masking", "structure", "retime", "snap", "timing", "karaoke", "ass"],
+        $this->assertSame(["ocr", "forced", "errors", "sdh", "replace", "text", "structure", "retime", "snap", "timing", "masking", "karaoke", "ass"],
                           $groups[1]);
         $this->assertSame([0, $stdout, ""], self::runApplication(["help", "convert"]));
     }
@@ -176,8 +176,8 @@ class ApplicationTest extends TestCase
 
     public function testConvertHelpOfAnUnknownGroupListsTheGroups(): void
     {
-        $expected = [2, "", "Error: Unknown option group \"timings\". The groups are ocr, forced, errors, sdh, replace, text, masking, structure, " .
-                            "retime, snap, timing, karaoke, ass, and all for every option.\nRun \"subtitle-toolbox help convert\" for the usage.\n"];
+        $expected = [2, "", "Error: Unknown option group \"timings\". The groups are ocr, forced, errors, sdh, replace, text, structure, " .
+                            "retime, snap, timing, masking, karaoke, ass, and all for every option.\nRun \"subtitle-toolbox help convert\" for the usage.\n"];
 
         $this->assertSame($expected, self::runApplication(["convert", "--help", "timings"]));
         $this->assertSame($expected, self::runApplication(["help", "convert", "timings"]));

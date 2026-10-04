@@ -160,11 +160,12 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --fix-common-errors --in-place
 | 1. Read | | input options | |
 | 2. OCR | `ocr` | `--ocr` | the later steps need text |
 | 3. Forced | `forced` | `--forced-only` | |
-| 4. Text | `errors`, `sdh`, `replace`, `text`, `masking` | `--fix-common-errors`, `--sdh`, `--replace`, `--strip-tags`, `--case`, `--speakers`, `--mask-words` | SDH changes the line lengths, so it runs before wrapping |
+| 4. Text | `errors`, `sdh`, `replace`, `text` | `--fix-common-errors`, `--sdh`, `--replace`, `--strip-tags`, `--case`, `--speakers` | SDH changes the line lengths, so it runs before wrapping |
 | 5. Structure | `structure` | `--fix-resegment`, `--fix-unwrap`, `--fix-merge-short`, `--fix-split-long`, `--fix-wrap`, `--fix-merge-duplicates` | |
 | 6. Timing | `retime`, `snap`, `timing` | `--shift`, `--scale`, `--from-fps` and `--to-fps`, `--snap-shot-changes`, `--fix-overlaps`, `--fix-min-duration` | splits in step 5 create new cues |
-| 7. Karaoke | `karaoke` | `--karaoke` | it multiplies the cues |
-| 8. Write | `ass` | output options, `--ass-karaoke-tag` | |
+| 7. Masking | `masking` | `--mask-words` | the mute ranges of `--mute-edl` and `--mute-filter` need the final times |
+| 8. Karaoke | `karaoke` | `--karaoke` | it multiplies the cues |
+| 9. Write | `ass` | output options, `--ass-karaoke-tag` | |
 
 ### OCR and forced cues
 | Option | Effect |
@@ -208,7 +209,7 @@ vendor/bin/subtitle-toolbox convert movie.srt clean.srt --mask-words words.txt -
 ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 ```
 
-- **Mute files**: they need `--mask-words` and one input file. Without `--force`, the tool does not overwrite them.
+- **Mute files**: they need `--mask-words` and one input file. They hold the times after `--shift`, `--scale`, snapping and the timing fixes. Without `--force`, the tool does not overwrite them.
 - **No match**: the filter file is empty. Then leave out `-af`.
 
 ### Structure
