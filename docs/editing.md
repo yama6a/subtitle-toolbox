@@ -20,7 +20,7 @@ $subtitle->syncByTwoPoints(10, 12, 6260, 6005);      // 10 s becomes 12 s, 6260 
 ```
 
 - **Negative times**: a start or end time that becomes negative becomes 0. The cue stays in the subtitle.
-- **Word timestamps**: these 4 methods also move the word timestamps in the cue text, such as `<00:00:02.000>`. `merge()` with an offset and `slice()` with `$moveToZero` move them too. A word timestamp that becomes negative becomes 0.
+- **Word timestamps**: these 4 methods also move the word timestamps in the cue text, such as `<00:00:02.000>`. `merge()` with an offset and `withSlice()` with `$moveToZero` move them too. A word timestamp that becomes negative becomes 0.
 - **Cue boundaries**: `fixOverlaps()`, `extendShortCues()`, the [shot change timing](#shot-changes-and-gaps) and the snap of `DualSubtitle` move a start or end time without moving the speech, so the word timestamps keep their times.
 - **Speech-to-text format data**: the format data of Whisper, Deepgram, AssemblyAI, AWS Transcribe and Google input is a copy of the source file and keeps its times. Read the word times from the word timestamps in the cue text.
 - **Other ways to sync**: [sync.md](sync.md) finds the offset and scale from a reference subtitle or the speech in the audio.
@@ -28,7 +28,7 @@ $subtitle->syncByTwoPoints(10, 12, 6260, 6005);      // 10 s becomes 12 s, 6260 
 ## Merge, slice, split and join
 ```php
 $part1->merge($part2, 3130);                    // appends part 2, 3130 s later
-$clip = $subtitle->slice(600, 1200, true);      // a new Subtitle with the cues from 600 s to 1200 s, moved to start at 0
+$clip = $subtitle->withSlice(600, 1200, true);  // a new Subtitle with the cues from 600 s to 1200 s, moved to start at 0
 $subtitle->splitCue(4, 63.5, 1);                // cue 4 becomes two cues at 63.5 s, line 1 in the first
 $subtitle->joinCues(4, 5);                      // one cue with the lines of cue 4 and 5
 $subtitle->removeDuplicateCues();               // joins touching cues with the same text
@@ -145,10 +145,10 @@ $shotChanges = ShotChanges::fromText("12.5\n00:01:02.500\n70\n");               
 $report = ShotChangeTiming::apply($subtitle, new ShotChangeOptions(
     frameRate: 24,
     shotChanges: $shotChanges,   // seconds. Without shot changes, apply() only closes small gaps.
-    snapWindow: 12,        // frames, default half a second: 12 at 23.976, 24 and 25 fps, 15 at 29.97 fps
-    minGapFrames: 2,       // frames between a cue and the next cue or shot change, default 2
-    chain: true,           // true (default) closes small gaps, false keeps them
-    minDuration: 20,       // frames, default 20
+    snapWindowFrames: 12,        // frames, default half a second: 12 at 23.976, 24 and 25 fps, 15 at 29.97 fps
+    minGapFrames: 2,             // frames between a cue and the next cue or shot change, default 2
+    chain: true,                 // true (default) closes small gaps, false keeps them
+    minDurationFrames: 20,       // frames, default 20
 ));
 $report->movedStarts;   // the cue starts that moved by one frame or more
 $report->movedEnds;     // the cue ends that moved by one frame or more
@@ -156,12 +156,12 @@ $report->movedEnds;     // the cue ends that moved by one frame or more
 
 | Rule | Before, at 24 fps | After |
 |:--- |:--- |:--- |
-| An in-time up to `snapWindow` frames after a shot change moves to the shot change. | shot change 62.500, cue starts 62.708 | starts 62.500 |
-| An out-time up to `snapWindow` frames before a shot change ends `minGapFrames` before it. | shot change 70.000, cue ends 69.750 | ends 69.917 |
-| **Chaining**: a gap of more than `minGapFrames` and less than `snapWindow` frames closes to `minGapFrames`. The earlier cue ends later. | cue A ends 10.000, cue B starts 10.292 | A ends 10.208 |
+| An in-time up to `snapWindowFrames` frames after a shot change moves to the shot change. | shot change 62.500, cue starts 62.708 | starts 62.500 |
+| An out-time up to `snapWindowFrames` frames before a shot change ends `minGapFrames` before it. | shot change 70.000, cue ends 69.750 | ends 69.917 |
+| **Chaining**: a gap of more than `minGapFrames` and less than `snapWindowFrames` frames closes to `minGapFrames`. The earlier cue ends later. | cue A ends 10.000, cue B starts 10.292 | A ends 10.208 |
 
 - **Frames**: all cue times of the result fall on frames of `frameRate`, rounded to milliseconds.
-- **Blocked moves**: a move does not happen when it makes a cue shorter than `minDuration`. It also does not happen when it brings the cue closer than `minGapFrames` to the cue before or after it. A move that makes a short cue longer still happens.
+- **Blocked moves**: a move does not happen when it makes a cue shorter than `minDurationFrames`. It also does not happen when it brings the cue closer than `minGapFrames` to the cue before or after it. A move that makes a short cue longer still happens.
 - **Chaining across a cut**: `apply()` does not chain a gap that holds a shot change. Without `shotChanges`, it chains every small gap.
 - **Input**: `fromFfmpegLog()` reads the `pts_time:` values. `fromText()` reads one time per line, in seconds or as `hh:mm:ss.mmm`, and skips empty lines. Both return the times sorted, without duplicates.
 
@@ -176,8 +176,8 @@ use SubtitleToolbox\Dual\DualSubtitleOptions;
 $english = Subtitle::fromStringAutoDetectFormat(file_get_contents('movie.en.srt'));
 $german  = Subtitle::fromStringAutoDetectFormat(file_get_contents('movie.de.srt'));
 
-$dual = DualSubtitle::merge($english, $german, new DualSubtitleOptions(secondaryStyle: 'i'));
-$dual = DualSubtitle::merge($english, $german, new DualSubtitleOptions(
+$dual = DualSubtitle::fromPair($english, $german, new DualSubtitleOptions(secondaryStyle: 'i'));
+$dual = DualSubtitle::fromPair($english, $german, new DualSubtitleOptions(
     mode: DualSubtitleMode::TopBottom,              // English at the bottom, German at the top
     snapTolerance: 0.25,                            // seconds
     secondaryStyle: 'font color="#ffff00"',
@@ -192,5 +192,5 @@ $dual = DualSubtitle::merge($english, $german, new DualSubtitleOptions(
 
 - **Stack**: each secondary cue joins the primary cue that it overlaps most. The joined cue spans from the earlier start to the later end. A cue without an overlap stays a cue of its own.
 - **Top and bottom**: a secondary start or end time moves to the closest primary start or end time within `snapTolerance`. So the two languages appear and disappear together. A cue keeps its times when both would move to the same time.
-- **Secondary style**: a core markup tag, such as `i` or `font color="#ffff00"`, around each secondary line. WebVTT has no font colour, so its formatter drops the `font` tag.
+- **Secondary style**: a core markup tag, such as `i` or `font color="#ffff00"`, around each secondary line. WebVTT has no font color, so its formatter drops the `font` tag.
 - **Copied data**: the result is a new `Subtitle`. Metadata, comments and format data come from the primary subtitle. The secondary cues lose their identifiers and format data. The language becomes `en+de` when both subtitles have a language.

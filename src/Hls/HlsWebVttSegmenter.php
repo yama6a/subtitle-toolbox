@@ -20,7 +20,7 @@ final class HlsWebVttSegmenter
      *
      * @see https://datatracker.ietf.org/doc/html/rfc8216#section-3.5
      */
-    public static function segment(Subtitle $subtitle, HlsSegmentOptions $options = new HlsSegmentOptions()): HlsWebVttResult
+    public static function segment(Subtitle $subtitle, HlsSegmentOptions $options = new HlsSegmentOptions()): HlsWebVttRendition
     {
         $cues        = array_values($subtitle->getCues());
         $totalMillis = $options->mediaDuration === null
@@ -52,7 +52,7 @@ final class HlsWebVttSegmenter
         $order = array_keys($starts);
         usort($order, fn (int $first, int $second): int => [$starts[$first], $first] <=> [$starts[$second], $second]);
 
-        $segmentMillis = HlsWebVttResult::segmentMillis($options);
+        $segmentMillis = $options->segmentMilliseconds();
         $segments      = function () use ($fileData, $starts, $ends, $shifted, $order, $options, $segmentMillis, $totalMillis): Generator {
             $empty  = null;
             $next   = 0;
@@ -77,7 +77,7 @@ final class HlsWebVttSegmenter
             }
         };
 
-        return new HlsWebVttResult($segments, $options, $totalMillis);
+        return new HlsWebVttRendition($segments, $options, $totalMillis);
     }
 
 

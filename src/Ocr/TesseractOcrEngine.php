@@ -69,7 +69,7 @@ final class TesseractOcrEngine implements OcrEngine
     }
 
 
-    public function recognize(CueImage $image, ?string $language): OcrResult
+    public function recognize(CueImage $image, ?string $language): RecognizedText
     {
         $language ??= $this->language;
         $this->requireLanguages($language);
@@ -94,8 +94,10 @@ final class TesseractOcrEngine implements OcrEngine
 
     /**
      * Builds the result from the TSV output of tesseract: one line of text per text line, and the mean word confidence.
+     *
+     * @internal
      */
-    public static function fromTsv(string $tsv): OcrResult
+    public static function fromTsv(string $tsv): RecognizedText
     {
         $lines       = [];
         $confidences = [];
@@ -109,7 +111,7 @@ final class TesseractOcrEngine implements OcrEngine
             $confidences[] = max(0.0, min(100.0, (float)$columns[10])) / 100;
         }
 
-        return new OcrResult(array_values(array_map(fn (array $words): string => implode(" ", $words), $lines)),
+        return new RecognizedText(array_values(array_map(fn (array $words): string => implode(" ", $words), $lines)),
                              $confidences === [] ? null : array_sum($confidences) / count($confidences));
     }
 

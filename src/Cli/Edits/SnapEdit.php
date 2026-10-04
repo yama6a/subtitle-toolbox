@@ -70,10 +70,10 @@ final class SnapEdit extends Edit
             return new self(new ShotChangeOptions(
                 frameRate: $videoFps,
                 shotChanges: $path === null ? [] : self::loadShotChanges($path),
-                snapWindow: self::frames($arguments, "snap-window-frames"),
+                snapWindowFrames: self::frames($arguments, "snap-window-frames"),
                 minGapFrames: self::frames($arguments, "snap-min-gap-frames") ?? 2,
                 chain: !$arguments->has("snap-no-chain"),
-                minDuration: self::frames($arguments, "snap-min-duration-frames") ?? 20,
+                minDurationFrames: self::frames($arguments, "snap-min-duration-frames") ?? 20,
             ));
         } catch (InvalidArgumentException $exception) {
             return Command::fail($exception->getMessage());

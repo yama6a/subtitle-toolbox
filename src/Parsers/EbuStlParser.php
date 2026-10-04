@@ -145,7 +145,7 @@ final class EbuStlParser extends SubtitleParser
     {
         foreach ([5, 9] as $offset) {
             [$hours, $minutes, $seconds, $frames] = array_map("ord", str_split(substr($header, $offset, 4)));
-            if ($hours > 23 || $minutes > 59 || $seconds > 59 || $frames >= $frameRate->getFps()) {
+            if ($hours > 23 || $minutes > 59 || $seconds > 59 || $frames >= $frameRate->getFramesPerSecond()) {
                 return false;
             }
         }

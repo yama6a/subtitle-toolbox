@@ -12,6 +12,6 @@ enum SpeakerStyle
     /** A dialogue dash before the first line of each speaker, in cues with two or more speakers. */
     case DialogueDashes;
 
-    /** A <font color> tag around each line, one colour per speaker. */
-    case Colours;
+    /** A <font color> tag around each line, one color per speaker. */
+    case Colors;
 }

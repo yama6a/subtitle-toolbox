@@ -107,7 +107,7 @@ class GlyphOcrEngineTest extends TestCase
 
     public function testItalicWordsBecomeOneItalicRun(): void
     {
-        $result = GlyphOcrEngine::toOcrResult(new RecognitionResult([
+        $result = GlyphOcrEngine::toRecognizedText(new RecognitionResult([
             self::line("The wind turns", "II.IIIII.IIIII"),
             self::line("Snow is here.", "IIII.I...I..."),
             self::line("one more word", "...I.IIII.III"),
@@ -119,7 +119,7 @@ class GlyphOcrEngineTest extends TestCase
 
     public function testEscapesMarkupCharactersAndUsesTheMeanConfidence(): void
     {
-        $result = GlyphOcrEngine::toOcrResult(new RecognitionResult([
+        $result = GlyphOcrEngine::toRecognizedText(new RecognitionResult([
             new RecognizedLine([self::char("<", false, 0.5), self::char("&", false, 1.0), self::char(" "),
                                 self::char("b", false, 0.6)]),
         ]));

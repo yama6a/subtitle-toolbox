@@ -25,7 +25,7 @@ $subtitle->toString(Format::SubRip, new WriteOptions(skipImageCues: true));   //
 - **Text formats**: `toString()` throws `ImageCueWithoutTextException` for an image cue without text. So a file without OCR fails at once, and does not become a valid file with missing cues.
 - **After OCR**: the cue keeps its image, so `PgsFormatter` can still write it.
 - **Language**: `recognizeText()` passes the language code to the engine as it is. Use a code that the engine knows, for example `eng` for Tesseract.
-- **Confidence**: `(new OcrRunner($engine))->run($subtitle, 'eng')` does the same as `recognizeText()` and returns the `OcrResult` of each cue by cue index.
+- **Confidence**: `(new OcrRunner($engine))->run($subtitle, 'eng')` does the same as `recognizeText()`. It returns an `OcrReport` whose `texts` hold the `RecognizedText` of each cue by cue index.
 - **Forced flag**: `CueImage::toCue()` sets the forced flag of the cue from the `forced` field of the image. OCR keeps the flag.
 - **PNG**: `PngEncoder::encode($width, $height, $pixels)` makes a PNG from a list of `0xRRGGBBAA` integers. It needs no ext-gd. It compresses with ext-zlib when it is loaded, and else writes larger, uncompressed PNG files. `PngDecoder::decode($png)` returns the width, the height and the pixels of a PNG without interlacing. It needs ext-zlib.
 - **Size limit**: an image is at most 7,680 pixels wide or high and has at most 8,294,400 pixels, the pixels of a 3840x2160 frame. A larger PGS object or VobSub bitmap throws `ParsingException`. `new CueImage()` and `PngDecoder::decode()` throw `InvalidArgumentException`. The limits are `CueImage::MAX_SIDE` and `CueImage::MAX_PIXELS`. A full 3840x2160 image needs about 330 MB of PHP memory to encode and decode, so raise `memory_limit` for such files.
@@ -52,7 +52,7 @@ file_put_contents('movie.synced.sup', $subtitle->toString(Format::Pgs));
 - **Errors**: the parser skips segments of unknown types. It throws `ParsingException` for a segment without the `PG` bytes, a cut-off segment, and a bitmap with too few pixels.
 - **Formatter**: `PgsFormatter` writes image cues back to a `.sup` file. So you can retime, cut or filter a PGS file without OCR. It also converts VobSub to PGS. It does not render text, and throws `InvalidArgumentException` for a cue without an image.
 - **Overlaps**: the formatter writes the cues in start order. A cue that starts before the previous cue ends replaces it on screen.
-- **Colours**: the formatter reduces an image with more than 255 colours. A colour channel can change by 1.
+- **Colors**: the formatter reduces an image with more than 255 colors. A color channel can change by 1.
 - **Round trip**: a PGS file that `PgsParser` reads and `PgsFormatter` writes gives the same pixels, positions and times to 1 ms. Two cues with the same image, where the second starts at the end of the first, come back as one cue.
 - **Speed**: parsing or writing a 1,500-cue file takes about 20 s on PHP 8.5. The PNG compression takes most of this time.
 
@@ -77,8 +77,8 @@ $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);   // "de", from the id line
 - **Parse**: pass the `.sub` content and a `VobSubReadOptions` with the `.idx` content. Without it, the parser throws `InvalidArgumentException`. Format detection does not know VobSub, because it sees only one file. The command line tool takes the `.idx` file as input and reads the `.sub` file next to it.
 - **Cues**: the image has the size and the position of the display area, on a screen of the `.idx` size. A subpicture with the forced start command sets `forced`.
 - **Times**: a cue starts at its `timestamp`, plus the `delay` lines of its track. It ends at the stop command of the subpicture. A subpicture without a stop command ends at the next one, at most `ReadOptions::$lastCueDuration` later, 5 s by default.
-- **Colours**: the `.idx` palette and a `custom colors: ON` line apply.
-- **Limits**: the parser reads one image per subpicture. Colour and contrast changes after the start command do not apply. The parser ignores the `org`, `scale`, `align`, `fadein/out` and `time offset` player settings.
+- **Colors**: the `.idx` palette and a `custom colors: ON` line apply.
+- **Limits**: the parser reads one image per subpicture. Color and contrast changes after the start command do not apply. The parser ignores the `org`, `scale`, `align`, `fadein/out` and `time offset` player settings.
 - **No formatter**: convert VobSub to PGS with `PgsFormatter`, or to text after OCR.
 
 ## Choosing an engine
@@ -160,9 +160,9 @@ file_put_contents('movie.srt', $subtitle->toString(Format::SubRip));
 - **One engine per stream**: the engine learns the glyph heights from the cues it reads. So use a new engine for each subtitle stream.
 - **Italic**: a word becomes italic when most of its characters match italic glyphs.
 - **Language**: the engine ignores the language argument. The database sets the characters it knows.
-- **Confidence**: the `OcrResult` confidence is the mean confidence of the glyphs of the cue. A glyph that matches nothing reads as `*` with confidence 0.
+- **Confidence**: the `RecognizedText` confidence is the mean confidence of the glyphs of the cue. A glyph that matches nothing reads as `*` with confidence 0.
 - **I and l**: most sans-serif fonts draw capital I and lower case l as the same bar. The engine compares each bar with the capitals and the ascenders of its line, so it reads both letters correctly in the test files. The recognizer option `lineContext` controls this and is on by default. Fix remaining errors with [`CommonErrorFixer`](text.md#fixing-common-errors).
-- **Limits**: the text must have one colour on a transparent or dark background.
+- **Limits**: the text must have one color on a transparent or dark background.
 - **Accuracy**: the default database reads the 1080p Blu-ray test file in Liberation Sans with 100% correct characters, and small DVD text with 98%. Other fonts give more errors. Training a database for the font of your file fixes most of them.
 - **Speed and memory**: OCR of a 1,500-cue 1080p PGS file takes about 2 minutes on one core with PHP 8.5. It needs up to 170 MB of memory. Raise `memory_limit` above the default 128 MB for a long file.
 
@@ -202,15 +202,15 @@ An engine is a class that implements `OcrEngine`. This example sends each image 
 ```php
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\OcrEngine;
-use SubtitleToolbox\Ocr\OcrResult;
+use SubtitleToolbox\Ocr\RecognizedText;
 
 final class WebServiceEngine implements OcrEngine
 {
-    public function recognize(CueImage $image, ?string $language): OcrResult
+    public function recognize(CueImage $image, ?string $language): RecognizedText
     {
         $text = $this->client->post('/ocr', ['image' => base64_encode($image->png), 'language' => $language]);
 
-        return new OcrResult(explode("\n", trim($text)));
+        return new RecognizedText(explode("\n", trim($text)));
     }
 }
 
@@ -218,4 +218,4 @@ $subtitle->recognizeText(new WebServiceEngine(), 'eng');
 ```
 
 - **Lines**: the engine returns plain text or core markup, for example `<i>` for italic text. Empty lines are dropped.
-- **Confidence**: pass a value from 0 to 1 as the second argument of `OcrResult`, or leave it null.
+- **Confidence**: pass a value from 0 to 1 as the second argument of `RecognizedText`, or leave it null.

@@ -6,7 +6,7 @@ namespace SubtitleToolbox\Ocr;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
-final class OcrResult
+final class RecognizedText
 {
     /**
      * Holds the recognized text lines and the confidence of the engine from 0 to 1, or null when it gives none.

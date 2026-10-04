@@ -69,10 +69,10 @@ final class Timecode
      */
     public static function frameNumber(int $frame, FrameRate $frameRate, bool $dropFrame = false): array
     {
-        $labels = (int) round($frameRate->getFps());
+        $labels = (int) round($frameRate->getFramesPerSecond());
         if ($dropFrame) {
             if ($labels !== 30 && $labels !== 60) {
-                throw new InvalidArgumentException("Drop-frame time code needs 29.97 or 59.94 fps, got {$frameRate->getFps()}.");
+                throw new InvalidArgumentException("Drop-frame time code needs 29.97 or 59.94 fps, got {$frameRate->getFramesPerSecond()}.");
             }
 
             $dropped       = intdiv($labels, 15);
@@ -97,7 +97,7 @@ final class Timecode
         $milliseconds = self::totalMilliseconds($seconds);
         $whole        = intdiv($milliseconds, 1000);
         $frame        = $frameRate->secondsToFrames($milliseconds % 1000 / 1000);
-        if ($frame >= round($frameRate->getFps())) {
+        if ($frame >= round($frameRate->getFramesPerSecond())) {
             $whole++;
             $frame = 0;
         }

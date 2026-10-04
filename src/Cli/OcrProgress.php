@@ -6,7 +6,7 @@ namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\OcrEngine;
-use SubtitleToolbox\Ocr\OcrResult;
+use SubtitleToolbox\Ocr\RecognizedText;
 
 final class OcrProgress implements OcrEngine
 {
@@ -28,7 +28,7 @@ final class OcrProgress implements OcrEngine
     }
 
 
-    public function recognize(CueImage $image, ?string $language): OcrResult
+    public function recognize(CueImage $image, ?string $language): RecognizedText
     {
         $result = $this->engine->recognize($image, $language);
 

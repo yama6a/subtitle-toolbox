@@ -30,7 +30,7 @@ final class MicroDvdFormatter extends SubtitleFormatter
 
         $output = "";
         if ($microDvd->writeFrameRateLine) {
-            $output .= "{1}{1}" . $frameRate->getFps() . LineEnding::Lf->value;
+            $output .= "{1}{1}" . $frameRate->getFramesPerSecond() . LineEnding::Lf->value;
         }
 
         foreach ($subtitle->getCues() as $cue) {

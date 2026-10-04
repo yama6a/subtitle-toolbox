@@ -31,7 +31,7 @@ class LineWrapperTest extends TestCase
     public function testBreaksCjkTextAtSpaces(): void
     {
         $this->assertSame(["東京は 今日とても", "暑いですね 本当に"], LineWrapper::wrap(["東京は 今日とても 暑いですね 本当に"], 10, 2));
-        $this->assertSame(18, LineWrapper::characters(["東京は 今日とても", "暑いですね 本当に"]));
+        $this->assertSame(18, LineWrapper::visibleCharacters(["東京は 今日とても", "暑いですね 本当に"]));
     }
 
 
@@ -55,10 +55,10 @@ class LineWrapperTest extends TestCase
     public function testTagsCountNoCharactersAndEntitiesCountOne(): void
     {
         $this->assertSame([["text" => "<i>Tom", "length" => 3], ["text" => "&amp;</i>", "length" => 1], ["text" => "Jerry", "length" => 5]],
-                          LineWrapper::words("<i>Tom &amp;</i> Jerry"));
+                          LineWrapper::measuredWords("<i>Tom &amp;</i> Jerry"));
         $this->assertTrue(LineWrapper::fits(['<font color="#ffff00">Tom &amp; Jerry</font>'], 11, 1));
         $this->assertFalse(LineWrapper::fits(['<font color="#ffff00">Tom &amp; Jerry</font>'], 10, 1));
-        $this->assertSame(4, LineWrapper::characters(["<i>ab</i>", "c&amp;"]));
+        $this->assertSame(4, LineWrapper::visibleCharacters(["<i>ab</i>", "c&amp;"]));
     }
 
 

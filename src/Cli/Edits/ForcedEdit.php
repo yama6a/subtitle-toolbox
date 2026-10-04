@@ -37,6 +37,6 @@ final class ForcedEdit extends Edit
 
     public function apply(Subtitle $subtitle, Console $console, string $label): Subtitle
     {
-        return $subtitle->onlyForced();
+        return $subtitle->withForcedCuesOnly();
     }
 }

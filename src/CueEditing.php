@@ -51,7 +51,7 @@ trait CueEditing
      * Returns a copy with the cues from $from to $to seconds, cut at both times, and the comments before these cues.
      * $moveToZero moves the times and word timestamps back by $from.
      */
-    public function slice(float $from, float $to, bool $moveToZero = false): self
+    public function withSlice(float $from, float $to, bool $moveToZero = false): self
     {
         if ($from > $to) {
             throw new InvalidArgumentException("The slice start $from must not be after the slice end $to.");
@@ -80,7 +80,7 @@ trait CueEditing
     /**
      * Returns a copy with copies of the forced cues and the comments before these cues.
      */
-    public function onlyForced(): self
+    public function withForcedCuesOnly(): self
     {
         $copies = new \SplObjectStorage();
         foreach ($this->cues as $cue) {

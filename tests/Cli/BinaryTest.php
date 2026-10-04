@@ -436,7 +436,7 @@ class BinaryTest extends TestCase
     public function testForcedOnly(): void
     {
         copy(__DIR__ . "/../files/forced/forced_signs_2398.itt", "$this->dir/signs.itt");
-        $expected = Subtitle::fromStringAutoDetectFormat($this->file("signs.itt"))->onlyForced()->toString(Format::SubRip);
+        $expected = Subtitle::fromStringAutoDetectFormat($this->file("signs.itt"))->withForcedCuesOnly()->toString(Format::SubRip);
 
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "signs.itt", "signs.srt", "--forced-only"]);
 
@@ -924,7 +924,7 @@ class BinaryTest extends TestCase
         $this->assertSame("trip.srt", $info["file"]);
         $this->assertSame("srt", $info["format"]);
         $this->assertSame(3, $info["statistics"]["cueCount"]);
-        $this->assertSame(3, $info["statistics"]["mostUsedWords"]["the"]);
+        $this->assertSame(["word" => "the", "count" => 3], $info["statistics"]["mostUsedWords"][0]);
 
         [$code, $stdout, $stderr] = $this->runBinary(["info", "trip.srt", "shop.vtt", "broken.srt", "--json", "--keep-going"]);
         $list = json_decode($stdout, true);
@@ -1216,7 +1216,7 @@ class BinaryTest extends TestCase
     {
         copy(self::FILES . "vobsub/two-tracks-pal.idx", "$this->dir/movie.idx");
         copy(self::FILES . "vobsub/two-tracks-pal.sub", "$this->dir/movie.sub");
-        $forced = Subtitle::load("$this->dir/movie.idx", Format::VobSub)->onlyForced();
+        $forced = Subtitle::load("$this->dir/movie.idx", Format::VobSub)->withForcedCuesOnly();
 
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "movie.idx", "--to", "srt", "-o", "-", "--ocr", "--ocr-engine", "glyph", "--forced-only"]);
         $this->assertSame([0, "movie.idx: OCR 1/1\n"], [$code, $stderr]);
@@ -1482,7 +1482,7 @@ class BinaryTest extends TestCase
 
         $expected = Subtitle::fromStringAutoDetectFormat($this->file("garden.srt"));
         ShotChangeTiming::apply($expected, new ShotChangeOptions(frameRate: 24, shotChanges: ShotChanges::fromText($this->file("scenes.txt")),
-                                                                 snapWindow: 6, minGapFrames: 3, chain: false, minDuration: 12));
+                                                                 snapWindowFrames: 6, minGapFrames: 3, chain: false, minDurationFrames: 12));
         $this->assertSame([0, $expected->toString(Format::SubRip), ""], $this->runBinary([
             "convert", "garden.srt", "--to", "srt", "-o", "-", "--video-fps", "24", "--snap-shot-changes", "scenes.txt", "--snap-window-frames", "6",
             "--snap-min-gap-frames", "3", "--snap-no-chain", "--snap-min-duration-frames", "12",
@@ -1590,7 +1590,7 @@ class BinaryTest extends TestCase
         $english = Subtitle::fromStringAutoDetectFormat($this->file("en.srt"));
         $german  = $this->file("de.srt");
 
-        $merged = DualSubtitle::merge($english, MatroskaReader::open(self::FILES . "mkv/text_tracks.mkv")->extract(3), new DualSubtitleOptions());
+        $merged = DualSubtitle::fromPair($english, MatroskaReader::open(self::FILES . "mkv/text_tracks.mkv")->extract(3), new DualSubtitleOptions());
         $this->assertSame([0, $merged->toString(Format::SubRip), ""], $this->runBinary(["dual", "en.srt", "movie.mkv", "--track2", "3"]));
 
         [, $stack] = $this->runBinary(["dual", "en.srt", "de.srt"]);
@@ -1620,7 +1620,7 @@ class BinaryTest extends TestCase
             $this->runBinary(["dual", "en.srt", "de.srt", "--mode", "top-bottom", "--secondary-style", 'font color="#ffff00"', "--to", "ass"])
         );
 
-        $merged = DualSubtitle::merge(Subtitle::fromStringAutoDetectFormat($this->file("en.srt")), Subtitle::fromStringAutoDetectFormat($this->file("de.srt")),
+        $merged = DualSubtitle::fromPair(Subtitle::fromStringAutoDetectFormat($this->file("en.srt")), Subtitle::fromStringAutoDetectFormat($this->file("de.srt")),
                                       new DualSubtitleOptions(mode: DualSubtitleMode::TopBottom, snapTolerance: 0.5, secondaryAlignment: 7));
         $this->assertSame([0, $merged->toString(Format::SubRip), ""], $this->runBinary([
             "dual", "en.srt", "de.srt", "--mode", "top-bottom", "--snap-tolerance", "0.5", "--secondary-alignment", "7",

@@ -87,7 +87,7 @@ $subtitle->getFormatData('youtube')['format'];                               // 
 - **Automatic captions**: the parser skips the events that only add a line break. A cue in a window ends where the next cue of the same window starts, so the rolling cues do not stack.
 - **Word timestamps**: off by default. With `ReadOptions::$wordTimestamps`, each segment of a cue gets a core word timestamp. This needs at least one segment of the cue with a time. srv1 and srv2 have no word times.
 - **Alignment**: from the anchor point of the window position of a cue. Anchor point 0 is top left and becomes alignment 7. A cue without its own window position, such as an automatic caption, has no alignment.
-- **Pens**: the pen colour becomes `<font color>`. Bold, italic and underline become `<b>`, `<i>` and `<u>`.
+- **Pens**: the pen color becomes `<font color>`. Bold, italic and underline become `<b>`, `<i>` and `<u>`.
 - **Format data**: the subtitle keeps the `format` name, and the head elements and windows of the file. Each cue keeps the other fields of its event or `<p>`, and the other fields of its segments in `segments`.
 
 ## Podcast transcripts

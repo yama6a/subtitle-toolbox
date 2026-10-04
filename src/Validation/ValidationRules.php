@@ -64,7 +64,7 @@ final class ValidationRules
     /**
      * Returns the limits of the Netflix English (USA) Timed Text Style Guide for adult programs at the given frame rate.
      */
-    public static function netflixEnglish(float $fps): self
+    public static function netflixEnglish(float $frameRate): self
     {
         return new self(
             maxCharactersPerSecond: 20,
@@ -72,7 +72,7 @@ final class ValidationRules
             maxLinesPerCue: 2,
             minDuration: 5 / 6,
             maxDuration: 7,
-            minGap: (new FrameRate($fps))->framesToSeconds(2),
+            minGap: (new FrameRate($frameRate))->framesToSeconds(2),
             noOverlap: true,
         );
     }

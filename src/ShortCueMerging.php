@@ -53,7 +53,7 @@ trait ShortCueMerging
     private static function shortCueMergingIsShort(SubtitleCue $cue, MergeShortCuesOptions $options): bool
     {
         return round($cue->getEnd() - $cue->getStart(), 3) < round($options->minDuration, 3)
-            || ($options->minCharacters !== null && LineWrapper::characters($cue->getLines()) < $options->minCharacters);
+            || ($options->minCharacters !== null && LineWrapper::visibleCharacters($cue->getLines()) < $options->minCharacters);
     }
 
 
@@ -91,7 +91,7 @@ trait ShortCueMerging
             return $lines;
         }
 
-        $characters = LineWrapper::characters($lines);
+        $characters = LineWrapper::visibleCharacters($lines);
         if ($characters > 0 && ($duration > 0 ? $characters / $duration : INF) > $options->maxCharactersPerSecond) {
             return null;
         }

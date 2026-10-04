@@ -225,7 +225,7 @@ final class Resegmenter
             return true;
         }
 
-        $characters = LineWrapper::characters($lines);
+        $characters = LineWrapper::visibleCharacters($lines);
 
         return $characters === 0 || ($duration > 0 ? $characters / $duration : INF) <= $options->maxCharactersPerSecond;
     }
@@ -255,11 +255,11 @@ final class Resegmenter
         $pieces = [];
         $prefix = "";
         foreach ($cue->getLines() as $line) {
-            foreach (LineWrapper::words($line) as $wordIndex => $word) {
+            foreach (LineWrapper::measuredWords($line) as $wordIndex => $word) {
                 $separator = $wordIndex > 0 ? " " : ($pieces === [] ? "" : "\n");
                 foreach (self::splitWord($word["text"]) as $partIndex => $text) {
                     $piece = ["text"      => $text,
-                              "length"    => LineWrapper::length(LineWrapper::words($text)),
+                              "length"    => LineWrapper::length(LineWrapper::measuredWords($text)),
                               "separator" => $partIndex === 0 ? $separator : ""];
 
                     // A word of tags only, such as "</i>" after a space, joins its neighbour, so that no cue holds only tags.

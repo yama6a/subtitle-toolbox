@@ -69,8 +69,8 @@ final class TextEdit extends Edit
         return new self($arguments->has("strip-tags"), $case, $arguments->value("language"), match ($speakers) {
             "prefix"      => new SpeakerLabelOptions(to: SpeakerStyle::Prefix),
             "dashes"      => new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes),
-            "colours"     => new SpeakerLabelOptions(to: SpeakerStyle::Colours),
-            "from-prefix" => new SpeakerLabelOptions(from: SpeakerStyle::Prefix),
+            "colours"     => new SpeakerLabelOptions(to: SpeakerStyle::Colors),
+            "from-prefix" => new SpeakerLabelOptions(readPrefixes: true),
             null          => null,
         });
     }

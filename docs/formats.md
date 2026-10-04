@@ -120,7 +120,7 @@ $subtitle->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(ka
 | Input | Parser result | Formatter output |
 |:--- |:--- |:--- |
 | `{\b1}`, `{\i1}`, `{\u1}`, `{\s1}`, their `0` forms and `\r` | `<b>`, `<i>`, `<u>`, `<s>` and their closing tags | the same override tags |
-| `{\c&H0000FF&}` or `{\1c&H0000FF&}`, colour as BGR | `<font color="#ff0000">` | `{\c&H0000FF&}`, `{\c}` at `</font>` |
+| `{\c&H0000FF&}` or `{\1c&H0000FF&}`, color as BGR | `<font color="#ff0000">` | `{\c&H0000FF&}`, `{\c}` at `</font>` |
 | `{\an8}`, SSA `{\a6}` | alignment 8. The first tag wins. | `{\an8}` in ASS, `{\a6}` in SSA. Nothing for `null`. |
 | Name field `Fred` | `<v Fred>` at the start of the first line | the Name field, only the first speaker of a cue |
 | `{\k50}`, `{\kf50}`, `{\K50}`, `{\ko50}` in centiseconds | a word timestamp at the start time of each syllable | `{\k}`, or the tag of `AssWriteOptions::$karaokeTag`. The last syllable lasts until the cue end. |
@@ -208,7 +208,7 @@ $subtitle->toString(Format::EbuStl, new WriteOptions(format: new EbuStlWriteOpti
 - **Times**: the disk format code `STL25.01` or `STL30.01` sets the frame rate. By default, the parser keeps the time codes of the file.
 - **Start of programme**: `EbuStlReadOptions(subtractStartOfProgramme: true)` subtracts the TCP time code, for example `10:00:00:00`. A time before it becomes 0. The formatter adds TCP again.
 - **Characters**: the parser reads the character code tables 00 (ISO 6937) and 01 to 04 (ISO 8859-5, -6, -7 and -8). It needs no `mbstring` or `iconv`. The formatter writes `?` for a character outside the table.
-- **Styles**: italics, underline and the 8 teletext colours become `<i>`, `<u>` and `<font color>`, and back. White gives no tag. The formatter drops other colours.
+- **Styles**: italics, underline and the 8 teletext colors become `<i>`, `<u>` and `<font color>`, and back. White gives no tag. The formatter drops other colors.
 - **Blocks**: the parser joins the TTI blocks of one subtitle and skips user data blocks. A subtitle with the comment flag becomes a comment. The formatter splits long text into extension blocks.
 - **Alignment**: the justification code gives the column. The vertical position gives the row: the top, middle or bottom third of the rows.
 - **Metadata**: the title is the OPT field. The language is the LC field, for example `09` is `en`.
@@ -235,7 +235,7 @@ Subtitle::fromStringAutoDetectFormat($srt)->toString(Format::Itt, new WriteOptio
 - **Frame rate**: the formatter takes it from `IttWriteOptions::$frameRate`, else from the `itt` format data. `IttWriteOptions` accepts 23.976, 24, 25, 29.97 and 30. Without a frame rate, the formatter throws `InvalidArgumentException`.
 - **Times**: a time such as `00:00:01:12` is an SMPTE time code at the effective frame rate. So at 29.97 fps `01:00:00:00` is 3603.6 s. The formatter rounds each time to the nearest frame and gives each cue at least one frame. It always writes `ttp:dropMode="nonDrop"`.
 - **Apple limits**: one `div`, `sansSerif` as the only font family, and a fixed `<head>` with the `top` and `bottom` regions. Alignment 7, 8 and 9 go to `top`, all others to `bottom`. The formatter does not keep the `<head>` or the attributes of the input file.
-- **Markup**: the formatter writes `<b>`, `<i>`, `<u>` and `<font color>` as `tts:` attributes on `<span>`. It writes a colour only as `#rrggbb` or a TTML colour name, and drops an alpha channel. It strips `<s>`, `<v>` and word timestamps.
+- **Markup**: the formatter writes `<b>`, `<i>`, `<u>` and `<font color>` as `tts:` attributes on `<span>`. It writes a color only as `#rrggbb` or a TTML color name, and drops an alpha channel. It strips `<s>`, `<v>` and word timestamps.
 - **Forced cues**: see [subtitle.md](subtitle.md#forced-cues).
 
 ## LRC
@@ -342,7 +342,7 @@ $subtitle->getFormatData('sami');                                               
 
 - **Language class**: a SAMI file holds one CSS class per language, for example `.FRCC { Name: French; lang: fr-FR; }`. The parser reads the class in `SamiReadOptions::$language`, else the first class of the STYLE block. Without a STYLE block, it reads the first class that a `<P>` uses. A `<P>` without a class belongs to every class.
 - **End times**: a cue ends at the next `SYNC` that has a `<P>` of the same class, or no `<P>` at all. A `SYNC` with only `&nbsp;` ends a cue and starts none. The last cue lasts `ReadOptions::$lastCueDuration`, 5 s by default.
-- **Text**: a line break in the file is a space, as in HTML. Only `<br>` starts a new cue line. `<b>`, `<i>`, `<u>`, `<s>`, `<strike>` and `<font color>` become core markup. `<font color>` accepts `#rrggbb`, `rrggbb` and the 16 colour names of HTML 4. The parser drops other tags from the cue text.
+- **Text**: a line break in the file is a space, as in HTML. Only `<br>` starts a new cue line. `<b>`, `<i>`, `<u>`, `<s>`, `<strike>` and `<font color>` become core markup. `<font color>` accepts `#rrggbb`, `rrggbb` and the 16 color names of HTML 4. The parser drops other tags from the cue text.
 - **Formatter**: it keeps `<b>`, `<i>`, `<u>`, `<s>` and `<font>` and strips all other tags. It writes the stored `<TITLE>`, STYLE block and `<SAMIParam>`, without the rules of the other language classes. Without a stored block, it names the class after the language metadata, for example `KOKRCC` for `ko-KR`, or `SUBTTL` without a language.
 - **Timing**: the formatter writes a `&nbsp;` SYNC after each cue that has a gap before the next cue. A cue that overlaps the next cue ends where the next cue starts. An unchanged cue keeps the HTML of its `<P>`.
 - **Encoding**: the parser reads UTF-8 only. It throws `ParsingException` for other encodings. For a file in EUC-KR or CP949, pass `ReadOptions::$encoding`, see [encodings.md](encodings.md).
@@ -379,7 +379,7 @@ $subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dr
 - **Damaged data**: the parser ignores the second copy of a doubled control code and drops a byte with a parity error. It skips data channel 2, XDS packets and text mode.
 - **Position**: rows 1 to 4 give alignment 8, and all other rows give `null`. The `scc` format data keeps the row and column of each line. The formatter writes them back when they still fit the cue. Else it places the lines by the alignment, at the bottom and centred by default.
 - **Timing of the formatter**: it loads each caption before the cue start, so the caption shows on the first frame of the cue. When the frames after the previous caption are too few for the load, the caption shows late. Of two overlapping cues, the later one replaces the earlier one.
-- **Markup**: styles become `<i>`, `<u>` and `<font color>` with `#ffffff`, `#00ff00`, `#0000ff`, `#00ffff`, `#ff0000`, `#ffff00` and `#ff00ff`, and back. The formatter writes other colours as white and strips all other tags. A style change inside a word adds a space.
+- **Markup**: styles become `<i>`, `<u>` and `<font color>` with `#ffffff`, `#00ff00`, `#0000ff`, `#00ffff`, `#ff0000`, `#ffff00` and `#ff00ff`, and back. The formatter writes other colors as white and strips all other tags. A style change inside a word adds a space.
 - **Limits**: the formatter throws `InvalidArgumentException` for more than 4 lines, more than 32 characters per line, or a character outside the CEA-608 character sets. Call `wrapLines(32, 4)` first.
 
 ## SubRip
@@ -431,7 +431,7 @@ $subtitle->toString(Format::Ttml);
 
 - **Time expressions**: `00:00:01.500`, `00:00:01:12` with frames, and `1.5s`, `1500ms`, `36f`, `15000000t`. Frames use `ttp:frameRate` and `ttp:frameRateMultiplier`, 30 fps by default. Ticks use `ttp:tickRate`. The parser adds the `begin` of the parent `body` and `div` elements. The formatter writes `00:00:01.500`.
 - **End times**: a paragraph without `end` or `dur` ends with its parent. Without any end, the parser throws `ParsingException`.
-- **Styles**: the parser resolves the `style` references and the inline `tts:` attributes of `<p>` and `<span>`. Bold, italic, oblique, underline, line-through and the text colour become core markup. White text gives no `<font>` tag. The formatter writes each tag as a `<span>` with an inline style.
+- **Styles**: the parser resolves the `style` references and the inline `tts:` attributes of `<p>` and `<span>`. Bold, italic, oblique, underline, line-through and the text color become core markup. White text gives no `<font>` tag. The formatter writes each tag as a `<span>` with an inline style.
 - **Speakers**: `ttm:agent` becomes `<v Name>`, with the name from the `ttm:name` of the agent. The formatter adds a `ttm:agent` element to the head for a new name.
 - **Alignment**: the parser maps the region to an alignment only for `tts:textAlign` `left`, `center` or `right`. A text anchor in the top third of the screen gives the top row, in the bottom third the bottom row.
 - **Regions from alignment**: a cue without a stored `region` gets a region such as `topCenter` that matches its alignment. A subtitle from another format gets `bottomCenter` for cues without alignment. The stored `region` wins over the alignment.

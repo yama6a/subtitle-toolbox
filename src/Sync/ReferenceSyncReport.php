@@ -4,45 +4,22 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Sync;
 
-
-final class SyncResult
+final class ReferenceSyncReport
 {
     /**
+     * @internal ReferenceSync::apply() creates the report.
+     *
+     * @param float                                   $offset     the seconds to add to each time after the scale, in the first part when the sync split the target
+     * @param float                                   $scale      the factor to multiply each time with before the offset
+     * @param float                                   $score      the cue time that both files share after the sync, divided by the cue time of either file, from 0 to 1
      * @param list<array{from: float, offset: float}> $splitParts
      */
     public function __construct(
-        private readonly float $offset,
-        private readonly float $scale,
-        private readonly float $score,
+        public readonly float $offset,
+        public readonly float $scale,
+        public readonly float $score,
         private readonly array $splitParts = [],
     ) {
-    }
-
-
-    /**
-     * Returns the seconds to add to each time after the scale, in the first part when the result has splits.
-     */
-    public function getOffset(): float
-    {
-        return $this->offset;
-    }
-
-
-    /**
-     * Returns the factor to multiply each time with before the offset.
-     */
-    public function getScale(): float
-    {
-        return $this->scale;
-    }
-
-
-    /**
-     * Returns the cue time that both files share after the sync, divided by the cue time of either file, from 0 to 1.
-     */
-    public function getScore(): float
-    {
-        return $this->score;
     }
 
 

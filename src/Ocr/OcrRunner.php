@@ -16,10 +16,8 @@ final class OcrRunner
 
     /**
      * Sets the lines of every image cue without text to the text that the engine reads, and keeps the images.
-     *
-     * @return array<int, OcrResult> the results by cue index
      */
-    public function run(Subtitle $subtitle, ?string $language = null): array
+    public function run(Subtitle $subtitle, ?string $language = null): OcrReport
     {
         $results = [];
         foreach ($subtitle->getCues() as $cueIndex => $cue) {
@@ -29,6 +27,6 @@ final class OcrRunner
             }
         }
 
-        return $results;
+        return new OcrReport($results);
     }
 }

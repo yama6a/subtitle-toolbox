@@ -153,7 +153,7 @@ final class SccFormatter extends SubtitleFormatter
 
 
     /**
-     * Splits a line of core markup into characters with their colour, italics and underline, without the spaces at both ends.
+     * Splits a line of core markup into characters with their color, italics and underline, without the spaces at both ends.
      *
      * @return list<array{char: string, color: int, italic: bool, underline: bool}>
      */
@@ -256,8 +256,8 @@ final class SccFormatter extends SubtitleFormatter
 
 
     /**
-     * Returns the second bytes of the mid-row codes that change the style. A colour code turns italics off,
-     * and the italics code keeps the colour, as 47 CFR 15.119 (h)(1)(ii) says.
+     * Returns the second bytes of the mid-row codes that change the style. A color code turns italics off,
+     * and the italics code keeps the color, as 47 CFR 15.119 (h)(1)(ii) says.
      *
      * @return list<int>
      */

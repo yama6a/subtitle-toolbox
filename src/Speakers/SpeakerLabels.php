@@ -13,8 +13,8 @@ use SubtitleToolbox\SubtitleCue;
 
 final class SpeakerLabels
 {
-    /** White, yellow, cyan and green, the speaker colours of the BBC Subtitle Guidelines, in their order of use. */
-    public const BBC_COLOURS = ["#ffffff", "#ffff00", "#00ffff", "#00ff00"];
+    /** White, yellow, cyan and green, the speaker colors of the BBC Subtitle Guidelines, in their order of use. */
+    public const BBC_COLORS = ["#ffffff", "#ffff00", "#00ffff", "#00ff00"];
 
     private const VOICE       = '/^<v(\.[^\s>]*)?(?:\s+([^>]*))?>$/';
     private const VOICE_END   = '/^<\/v\s*>$/';
@@ -52,16 +52,16 @@ final class SpeakerLabels
     {
         $before = array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $subtitle->getCues());
 
-        if ($options->from === SpeakerStyle::Prefix) {
-            self::fromPrefix($subtitle, $options->upperCaseOnly);
+        if ($options->readPrefixes) {
+            self::fromPrefix($subtitle, $options->readUpperCaseOnly);
         }
         if ($options->rename !== []) {
             self::rename($subtitle, $options->rename);
         }
         match ($options->to) {
-            SpeakerStyle::Prefix         => self::toPrefix($subtitle, $options->upperCase, $options->separator),
+            SpeakerStyle::Prefix         => self::toPrefix($subtitle, $options->writeUpperCase, $options->separator),
             SpeakerStyle::DialogueDashes => self::toDialogueDashes($subtitle, $options->dash),
-            SpeakerStyle::Colours        => self::toColours($subtitle, $options->colours),
+            SpeakerStyle::Colors        => self::toColors($subtitle, $options->colors),
             null                         => null,
         };
 
@@ -128,15 +128,15 @@ final class SpeakerLabels
 
     /**
      * Replaces the <v> tags with a <font color> tag around each line of the speaker. Each speaker gets the next
-     * colour in the order of the first cue of each speaker. After the last colour, the list starts again.
+     * color in the order of the first cue of each speaker. After the last color, the list starts again.
      *
-     * @param list<string> $colours
+     * @param list<string> $colors
      */
-    private static function toColours(Subtitle $subtitle, array $colours): void
+    private static function toColors(Subtitle $subtitle, array $colors): void
     {
         $assigned = [];
         foreach (array_keys(self::list($subtitle)) as $index => $speaker) {
-            $assigned[$speaker] = strtolower($colours[$index % count($colours)]);
+            $assigned[$speaker] = strtolower($colors[$index % count($colors)]);
         }
 
         self::convert($subtitle, fn (array $lines): array => array_map(

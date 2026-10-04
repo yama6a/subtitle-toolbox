@@ -12,7 +12,7 @@ final class DualSubtitle
     /**
      * Returns a new subtitle with the cues of both inputs. Metadata, comments and format data come from $primary.
      */
-    public static function merge(Subtitle $primary, Subtitle $secondary, DualSubtitleOptions $options): Subtitle
+    public static function fromPair(Subtitle $primary, Subtitle $secondary, DualSubtitleOptions $options): Subtitle
     {
         $primaryCues   = array_map(fn (SubtitleCue $cue): SubtitleCue => clone $cue, $primary->getCues());
         $secondaryCues = array_map(
@@ -28,7 +28,7 @@ final class DualSubtitle
         usort($cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
 
         // A slice that keeps no cue is a copy of the metadata and format data without cues and comments.
-        $result = $primary->slice(INF, INF);
+        $result = $primary->withSlice(INF, INF);
         $result->addCues($cues);
         foreach ($primary->getComments() as $comment) {
             $result->addComment($comment["text"], self::findNewIndex($primaryCues, $cues, $comment["beforeCueIndex"]));

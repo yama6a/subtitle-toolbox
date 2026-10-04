@@ -26,7 +26,7 @@ final class LineWrapper
     {
         $segments = [];
         foreach ($keepDialogueLines ? $lines : [implode(" ", $lines)] as $line) {
-            $words = self::words($line);
+            $words = self::measuredWords($line);
             if ($words === []) {
                 continue;
             }
@@ -73,7 +73,7 @@ final class LineWrapper
             return false;
         }
         foreach ($lines as $line) {
-            if (self::length(self::words($line)) > $maxCharsPerLine) {
+            if (self::length(self::measuredWords($line)) > $maxCharsPerLine) {
                 return false;
             }
         }
@@ -87,7 +87,7 @@ final class LineWrapper
      *
      * @param array<string> $lines
      */
-    public static function characters(array $lines): int
+    public static function visibleCharacters(array $lines): int
     {
         return array_sum(array_map(fn (string $line): int => Markup::visibleLength($line), $lines));
     }
@@ -98,7 +98,7 @@ final class LineWrapper
      *
      * @return list<array{text: string, length: int}>
      */
-    public static function words(string $text): array
+    public static function measuredWords(string $text): array
     {
         $entity = self::ENTITY;
         $tokens = preg_split("/(<[^>]*>|$entity| )/", $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);

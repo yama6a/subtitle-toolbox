@@ -10,7 +10,7 @@ use SubtitleToolbox\Markup;
 final class DualSubtitleOptions
 {
     /**
-     * Creates the options for DualSubtitle::merge(), for example new DualSubtitleOptions(secondaryStyle: "i").
+     * Creates the options for DualSubtitle::fromPair(), for example new DualSubtitleOptions(secondaryStyle: "i").
      */
     public function __construct(
         public readonly DualSubtitleMode $mode = DualSubtitleMode::Stack,

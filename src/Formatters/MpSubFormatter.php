@@ -61,7 +61,7 @@ final class MpSubFormatter extends SubtitleFormatter
                 $headers[$key] = $value;
             }
         }
-        $headers["FORMAT"] = $frameRate === null ? "TIME" : (string)(int)$frameRate->getFps();
+        $headers["FORMAT"] = $frameRate === null ? "TIME" : (string)(int)$frameRate->getFramesPerSecond();
         $headers["NOTE"]   = $formatData["NOTE"] ?? self::DEFAULT_NOTE;
 
         $header = "";

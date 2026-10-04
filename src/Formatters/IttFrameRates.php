@@ -20,12 +20,12 @@ final class IttFrameRates
 
 
     /**
-     * Returns the key of PARAMETERS within 0.01 of $fps, or null.
+     * Returns the key of PARAMETERS within 0.01 of $frameRate, or null.
      */
-    public static function supported(float $fps): ?string
+    public static function supported(float $frameRate): ?string
     {
         foreach (array_keys(self::PARAMETERS) as $supported) {
-            if (abs($fps - (float) $supported) < 0.01) {
+            if (abs($frameRate - (float) $supported) < 0.01) {
                 return (string) $supported;
             }
         }

@@ -167,7 +167,7 @@ class SpeakerLabelsTest extends TestCase
     {
         $this->assertSame([$expected], self::lines(self::apply(self::subtitle($text), new SpeakerLabelOptions(
             to: SpeakerStyle::Prefix,
-            upperCase: $upperCase,
+            writeUpperCase: $upperCase,
             separator: $separator,
         ))));
     }
@@ -213,7 +213,7 @@ class SpeakerLabelsTest extends TestCase
     {
         $subtitle = self::voices();
 
-        SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Colours));
+        SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Colors));
         $this->assertSame(file_get_contents(self::FILES . "voices_colours.srt"), $subtitle->toString(Format::SubRip, self::noBom()));
     }
 
@@ -229,7 +229,7 @@ class SpeakerLabelsTest extends TestCase
             ['<font color="#00ff00">4</font>'],
             ['<font color="#ffffff">5</font>'],
             ['<font color="#ffffff">6</font>', '<font color="#ffff00">7</font>'],
-        ], self::lines(self::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Colours))));
+        ], self::lines(self::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Colors))));
     }
 
 
@@ -239,7 +239,7 @@ class SpeakerLabelsTest extends TestCase
 
         $this->assertSame([['<font color="#ff0000">Hi.</font>', '<font color="#ff0000">there</font>'], ["No speaker."],
                            ['<font color="#00ff00">Bye.</font>']],
-                          self::lines(self::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Colours, colours: ["#FF0000", "#00ff00"]))));
+                          self::lines(self::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Colors, colors: ["#FF0000", "#00ff00"]))));
     }
 
 
@@ -262,15 +262,7 @@ class SpeakerLabelsTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new SpeakerLabelOptions(to: SpeakerStyle::Colours, colours: $colours);
-    }
-
-
-    public function testOptionsReadLabelsOnlyFromPrefixes(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-
-        new SpeakerLabelOptions(from: SpeakerStyle::DialogueDashes);
+        new SpeakerLabelOptions(to: SpeakerStyle::Colors, colors: $colours);
     }
 
 
@@ -278,7 +270,7 @@ class SpeakerLabelsTest extends TestCase
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "sdh_labels.srt"), Format::SubRip);
 
-        SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(from: SpeakerStyle::Prefix));
+        SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(readPrefixes: true));
         $this->assertSame(file_get_contents(self::FILES . "sdh_labels_voices.vtt"), $subtitle->toString(Format::WebVtt, self::noBom()));
     }
 
@@ -314,8 +306,8 @@ class SpeakerLabelsTest extends TestCase
     public function testFromPrefix(string $text, bool $upperCaseOnly, array $expected): void
     {
         $this->assertSame([$expected], self::lines(self::apply(self::subtitle($text), new SpeakerLabelOptions(
-            from: SpeakerStyle::Prefix,
-            upperCaseOnly: $upperCaseOnly,
+            readPrefixes: true,
+            readUpperCaseOnly: $upperCaseOnly,
         ))));
     }
 
@@ -324,7 +316,7 @@ class SpeakerLabelsTest extends TestCase
     {
         $subtitle = self::subtitle("JOHN: Hi.", "DR. O'NEIL: Yes.\nMARY: No.");
 
-        SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(from: SpeakerStyle::Prefix, to: SpeakerStyle::Prefix));
+        SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(readPrefixes: true, to: SpeakerStyle::Prefix));
 
         $this->assertSame([["JOHN: Hi."], ["DR. O'NEIL: Yes.", "MARY: No."]], self::lines($subtitle));
     }
@@ -332,7 +324,7 @@ class SpeakerLabelsTest extends TestCase
 
     public function testVoicesSurviveWebVttAndTtml(): void
     {
-        $subtitle = self::apply(self::subtitle("DR. O'NEIL: Yes.\nMARY: No."), new SpeakerLabelOptions(from: SpeakerStyle::Prefix));
+        $subtitle = self::apply(self::subtitle("DR. O'NEIL: Yes.\nMARY: No."), new SpeakerLabelOptions(readPrefixes: true));
 
         $vtt  = Subtitle::fromString($subtitle->toString(Format::WebVtt), Format::WebVtt);
         $ttml = Subtitle::fromString($subtitle->toString(Format::Ttml), Format::Ttml);

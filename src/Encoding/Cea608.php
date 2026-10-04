@@ -34,7 +34,7 @@ final class Cea608
     public const ROWS    = 15;
     public const COLUMNS = 32;
 
-    /** The colours of preamble address codes and mid-row codes by their 3-bit index. */
+    /** The colors of preamble address codes and mid-row codes by their 3-bit index. */
     public const COLORS = ["#ffffff", "#00ff00", "#0000ff", "#00ffff", "#ff0000", "#ffff00", "#ff00ff"];
 
     public const WHITE = 0;
@@ -174,7 +174,7 @@ final class Cea608
 
     /**
      * Returns the 7-bit bytes of the preamble address code for a row from 1 to 15 and a column from 0 to 28 in steps of 4.
-     * Only column 0 can set a colour other than white or italics.
+     * Only column 0 can set a color other than white or italics.
      *
      * @return array{int, int}
      */
@@ -200,7 +200,7 @@ final class Cea608
 
 
     /**
-     * Decodes the second byte of a mid-row code. The colour is null for the italics code, which keeps the colour.
+     * Decodes the second byte of a mid-row code. The color is null for the italics code, which keeps the color.
      *
      * @return array{color: ?int, italic: bool, underline: bool}
      */
@@ -217,7 +217,7 @@ final class Cea608
 
 
     /**
-     * Returns the second byte of the mid-row code for a colour, or for italics when $color is null.
+     * Returns the second byte of the mid-row code for a color, or for italics when $color is null.
      */
     public static function encodeMidRow(?int $color, bool $underline): int
     {

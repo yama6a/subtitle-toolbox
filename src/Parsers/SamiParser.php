@@ -21,7 +21,7 @@ final class SamiParser extends SubtitleParser
 
     private const STYLE_TAGS = ["b" => "b", "i" => "i", "u" => "u", "s" => "s", "strike" => "s"];
 
-    // The 16 colour names of HTML 4.01, section 6.5.
+    // The 16 color names of HTML 4.01, section 6.5.
     private const COLOR_NAMES = [
         "black"  => "#000000", "silver" => "#c0c0c0", "gray"   => "#808080", "white"   => "#ffffff",
         "maroon" => "#800000", "red"    => "#ff0000", "purple" => "#800080", "fuchsia" => "#ff00ff",

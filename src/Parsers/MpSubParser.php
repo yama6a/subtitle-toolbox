@@ -188,6 +188,6 @@ final class MpSubParser extends SubtitleParser
         }
 
         // FrameRate::framesToSeconds() accepts only whole frames, but MPSub files may hold fractional frames.
-        return $value / $frameRate->getFps();
+        return $value / $frameRate->getFramesPerSecond();
     }
 }

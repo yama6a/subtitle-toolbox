@@ -16,7 +16,7 @@ use SubtitleToolbox\SubtitleCue;
  * Segment layout: http://blog.thescorpius.com/index.php/2017/07/15/presentation-graphic-stream-sup-files-bluray-subtitle-format/
  * Composition states, cropping and the forced flag: US patent application US 2009/0185789 A1,
  * https://patents.google.com/patent/US20090185789A1/en
- * Run-length decoding and the colour matrix by video height: FFmpeg libavcodec/pgssubdec.c,
+ * Run-length decoding and the color matrix by video height: FFmpeg libavcodec/pgssubdec.c,
  * https://github.com/FFmpeg/FFmpeg/blob/5d4d3bdc61412641883a45e060e810f80ea7f4b5/libavcodec/pgssubdec.c
  * Position of a cropped object: libbluray graphics_controller.c,
  * https://code.videolan.org/videolan/libbluray/-/blob/0247557842050c8dfc0ae9293d76c3fb7386429a/src/libbluray/decoders/graphics_controller.c

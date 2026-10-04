@@ -1,15 +1,15 @@
 # Cue text
 
 ## Text runs
-Most methods on this page see only the **text runs** of a cue: the text between tags, with `&lt;`, `&gt;` and `&amp;` decoded. So a search for `&` finds `&amp;`, and a search for `font` finds no markup. The result gets escaped again, so a replacement cannot add tags. A match cannot cross a tag: `Colour` does not match `<i>Col</i>our`.
+Most methods on this page see only the **text runs** of a cue: the text between tags, with `&lt;`, `&gt;` and `&amp;` decoded. So a search for `&` finds `&amp;`, and a search for `font` finds no markup. The result gets escaped again, so a replacement cannot add tags. A match cannot cross a tag: `Color` does not match `<i>Col</i>our`.
 
 ## Transforms
 ```php
 use SubtitleToolbox\SubtitleCue;
 
-$subtitle->replaceText('Colour', 'Color');               // '<i>Colour</i> me' becomes '<i>Color</i> me'
+$subtitle->replaceText('Color', 'Color');               // '<i>Color</i> me' becomes '<i>Color</i> me'
 $subtitle->replaceText('/\.{4,}/', '...', true);         // a regex with delimiters, '$1' works in the replacement
-$subtitle->replaceText('colour', 'color', false, false); // case-insensitive
+$subtitle->replaceText('color', 'color', false, false); // case-insensitive
 $subtitle->stripFormatting();                            // '<b>Run</b>, now!' becomes 'Run, now!'
 $subtitle->stripFormatting(['i']);                       // keeps <i>, removes all other tags
 $subtitle->changeCase('sentence');                       // 'WHERE ARE YOU? HOME.' becomes 'Where are you? Home.'
@@ -80,15 +80,15 @@ $report->changedCues;                              // the cues whose lines chang
 $subtitle->toString(Format::SubRip);
 ```
 
-`apply()` runs the steps that the options ask for, in this order: `from`, `rename`, `to`.
+`apply()` runs the steps that the options ask for, in this order: `readPrefixes`, `rename`, `to`.
 
 | Option | Input | Output |
 |:--- |:--- |:--- |
-| `from: SpeakerStyle::Prefix`, with `upperCaseOnly`, default `true` | `JOHN: Hi.` | `<v John>Hi.` |
+| `readPrefixes: true`, with `readUpperCaseOnly`, default `true` | `JOHN: Hi.` | `<v John>Hi.` |
 | `rename: ['SPEAKER_00' => 'Anna']` | `<v SPEAKER_00>` | `<v Anna>` |
-| `to: SpeakerStyle::Prefix`, with `upperCase`, default `true`, and `separator`, default `': '` | `<v Anna>Where were you?` | `ANNA: Where were you?` |
+| `to: SpeakerStyle::Prefix`, with `writeUpperCase`, default `true`, and `separator`, default `': '` | `<v Anna>Where were you?` | `ANNA: Where were you?` |
 | `to: SpeakerStyle::DialogueDashes`, with `dash`, default `'- '` | `<v Anna>Where?` and `<v Ben>Home.` in one cue | `- Where?` and `- Home.` |
-| `to: SpeakerStyle::Colours`, with `colours`, default `SpeakerLabels::BBC_COLOURS` | `<v Anna>Where?` and `<v Ben>Home.` | `<font color="#ffffff">Where?</font>` and `<font color="#ffff00">Home.</font>` |
+| `to: SpeakerStyle::Colors`, with `colors`, default `SpeakerLabels::BBC_COLORS` | `<v Anna>Where?` and `<v Ben>Home.` | `<font color="#ffffff">Where?</font>` and `<font color="#ffff00">Home.</font>` |
 
 | Format | Reads `<v>` from | Writes `<v>` as |
 |:--- |:--- |:--- |
@@ -101,15 +101,15 @@ $subtitle->toString(Format::SubRip);
 | Whisper JSON | the segment `speaker`, with `ReadOptions::$speakerVoices` | no formatter |
 | Cloud speech-to-text JSON | the speaker labels of the service, with `ReadOptions::$speakerVoices` | no formatter |
 | JSON | the cue lines | the cue lines |
-| all other formats, iTT too | no speaker | nothing. Convert with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colours` first |
+| all other formats, iTT too | no speaker | nothing. Convert with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colors` first |
 
 - **Speaker**: a `<v>` tag sets the speaker until `</v>`, the next `<v>` tag or the end of the cue.
 - **New line**: where the speaker changes in the middle of a line, the converters start a new line. Style tags such as `<i>` close at the end of the first line and open again on the next.
-- **Prefix**: every cue repeats the name of its speaker. `upperCase: false` keeps the name as it is.
+- **Prefix**: every cue repeats the name of its speaker. `writeUpperCase: false` keeps the name as it is.
 - **Dashes**: only cues with two or more speakers get dashes. Text without a speaker counts as one speaker. A line that already starts with `-` gets no second dash.
-- **Colours**: the BBC order is white, yellow, cyan and green, from the [BBC Subtitle Guidelines](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/). Each speaker gets the next colour in the order of its first cue. The fifth speaker gets the first colour again. A colour that is not `#rrggbb` throws `InvalidArgumentException`.
+- **Colors**: the BBC order is white, yellow, cyan and green, from the [BBC Subtitle Guidelines](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/). Each speaker gets the next color in the order of its first cue. The fifth speaker gets the first color again. A color that is not `#rrggbb` throws `InvalidArgumentException`.
 - **From**: `from` takes only `SpeakerStyle::Prefix`. Another style throws `InvalidArgumentException`.
-- **Labels**: `from: SpeakerStyle::Prefix` uses the `speakerLabels` rule of `HearingImpairedOptions`. With `upperCaseOnly: false`, it also reads `Baker:` and `Note:`.
+- **Labels**: `readPrefixes: true` uses the `speakerLabels` rule of `HearingImpairedOptions`. With `readUpperCaseOnly: false`, it also reads `Baker:` and `Note:`.
 - **Label names**: an upper case label becomes title case, so `DR. O'NEIL:` becomes `<v Dr. O'Neil>`. The dash before a label goes. A label on a line of its own names the speaker of the next line.
 - **Whisper**: the `speaker` field also stays in the cue format data. whisper.cpp `-di` writes the speakers `0` and `1`, and `?` when it cannot tell. The parser ignores the speaker of each WhisperX word.
 - **Names**: the `list()` key of a speaker such as `0` is an int. A quote in a name stays a raw character, see [markup.md](markup.md).

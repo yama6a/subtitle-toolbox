@@ -151,7 +151,7 @@ class CueEditingTest extends TestCase
         $subtitle = $this->parseHarbourTour();
         $original = $subtitle->toString(Format::WebVtt);
 
-        $slice = $subtitle->slice(6, 16, true);
+        $slice = $subtitle->withSlice(6, 16, true);
 
         $this->assertNotSame($subtitle, $slice);
         $this->assertSame(file_get_contents(self::DIR . "harbour_tour_slice.vtt"), $slice->toString(Format::WebVtt));
@@ -166,7 +166,7 @@ class CueEditingTest extends TestCase
             ->setFormatData("vtt", ["header" => "clip"]);
         $subtitle->getCues()[1]->setFormatData("vtt", ["line" => "0"])->setIdentifier("middle");
 
-        $slice = $subtitle->slice(2, 8);
+        $slice = $subtitle->withSlice(2, 8);
 
         $this->assertSame([[2.0, 3.0, "one"], [4.0, 6.0, "two"], [7.0, 8.0, "three"]], $this->describeCues($slice));
         $this->assertSame(["title" => "Clip"], $slice->getAllMetadata());
@@ -182,7 +182,7 @@ class CueEditingTest extends TestCase
     {
         $subtitle = $this->makeSubtitle([[1, 2, "before"], [2, 3, "inside"], [3, 4, "after"]]);
 
-        $this->assertSame([[2.0, 3.0, "inside"]], $this->describeCues($subtitle->slice(2, 3)));
+        $this->assertSame([[2.0, 3.0, "inside"]], $this->describeCues($subtitle->withSlice(2, 3)));
     }
 
 
@@ -194,11 +194,11 @@ class CueEditingTest extends TestCase
 
         $this->assertSame(
             [["text" => "last", "beforeCueIndex" => 1]],
-            $subtitle->slice(2.5, 10, true)->getComments()
+            $subtitle->withSlice(2.5, 10, true)->getComments()
         );
         $this->assertSame(
             [["text" => "first", "beforeCueIndex" => 0]],
-            $subtitle->slice(0, 2.5)->getComments()
+            $subtitle->withSlice(0, 2.5)->getComments()
         );
     }
 
@@ -207,7 +207,7 @@ class CueEditingTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("The slice start 5 must not be after the slice end 4.");
-        $this->makeSubtitle([[1, 2, "one"]])->slice(5, 4);
+        $this->makeSubtitle([[1, 2, "one"]])->withSlice(5, 4);
     }
 
 

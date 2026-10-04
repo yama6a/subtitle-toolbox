@@ -8,7 +8,7 @@ Cue lines hold HTML-like inline tags, the **core markup**. Parsers convert the s
 | `<i>` | italic |
 | `<u>` | underline |
 | `<s>` | strikethrough |
-| `<font color="#ff0000">` | text colour |
+| `<font color="#ff0000">` | text color |
 | `<v Fred>` | speaker, see [text.md](text.md#speakers) |
 | `<00:01:02.500>` | word timestamp, the time a word is spoken |
 

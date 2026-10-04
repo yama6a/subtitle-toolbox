@@ -48,6 +48,15 @@ final class HlsSegmentOptions
 
 
     /**
+     * @internal
+     */
+    public function segmentMilliseconds(): int
+    {
+        return (int) round($this->segmentDuration * 1000);
+    }
+
+
+    /**
      * Returns the file name of the segment with the 0-based number $index.
      */
     public function fileName(int $index): string

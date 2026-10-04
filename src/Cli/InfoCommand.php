@@ -86,7 +86,7 @@ class InfoCommand extends ReportCommand
         $range = fn (array $values): string => "min " . self::number($values["min"]) . ", average " .
                                                self::number($values["average"]) . ", max " . self::number($values["max"]);
         $words = [];
-        foreach ($statistics->getMostUsedWords(10) as $word => $count) {
+        foreach ($statistics->getMostUsedWords(10) as ["word" => $word, "count" => $count]) {
             $words[] = "$word ($count)";
         }
 
@@ -111,7 +111,7 @@ class InfoCommand extends ReportCommand
             "Characters per second" => $range($statistics->getCharactersPerSecond()),
             "Words per minute"      => $range($statistics->getWordsPerMinute()),
             "Characters per line"   => $range($statistics->getCharactersPerLine()),
-            "Gap"                   => $range($statistics->getGap()) . " s",
+            "Gap"                   => $range($statistics->getGaps()) . " s",
             "Most used words"       => implode(", ", $words),
         ];
         foreach ($subtitle->getAllMetadata() as $key => $value) {
@@ -124,8 +124,7 @@ class InfoCommand extends ReportCommand
             $text .= "  " . str_pad("$name:", $width + 1) . " $value\n";
         }
 
-        $data                  = $statistics->toArray();
-        $data["mostUsedWords"] = (object)$data["mostUsedWords"];
+        $data = $statistics->toArray();
         $this->emit($console, ($this->succeeded > 0 ? "\n" : "") . $text, [
             "file"       => self::label($input),
             "format"     => $format->value,

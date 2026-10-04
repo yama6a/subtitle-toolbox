@@ -9,42 +9,37 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 final class SpeakerLabelOptions
 {
     /** @var list<string> */
-    public readonly array $colours;
+    public readonly array $colors;
 
 
     /**
      * Creates the settings for SpeakerLabels::apply().
      *
-     * $from SpeakerStyle::Prefix turns a label such as "JOHN: " at the start of a line, or after its dialogue dash,
-     * into <v John>. $upperCaseOnly applies to it. $rename maps speaker names of the <v> tags to new names, for example
-     * ["SPEAKER_00" => "Anna"]. $to writes the <v> tags in another style. $upperCase and $separator apply to
-     * SpeakerStyle::Prefix, $dash to SpeakerStyle::DialogueDashes and $colours to SpeakerStyle::Colours. After the last
-     * colour, the list starts again.
-     *
-     * @param array<string, string> $rename
-     * @param list<string>          $colours
+     * @param bool                  $readPrefixes      turn a label such as "JOHN: " at the start of a line, or after its dialogue dash, into <v John>
+     * @param ?SpeakerStyle         $to                write the <v> tags in this style
+     * @param array<string, string> $rename            new names for the speakers of the <v> tags, for example ["SPEAKER_00" => "Anna"]
+     * @param bool                  $writeUpperCase    write the names of SpeakerStyle::Prefix in upper case
+     * @param string                $separator         the text after the name of SpeakerStyle::Prefix
+     * @param string                $dash              the dash of SpeakerStyle::DialogueDashes
+     * @param list<string>          $colors            the colors of SpeakerStyle::Colors. After the last color, the list starts again
+     * @param bool                  $readUpperCaseOnly read only labels in upper case with $readPrefixes
      */
     public function __construct(
-        public readonly ?SpeakerStyle $from = null,
+        public readonly bool $readPrefixes = false,
         public readonly ?SpeakerStyle $to = null,
         public readonly array $rename = [],
-        public readonly bool $upperCase = true,
+        public readonly bool $writeUpperCase = true,
         public readonly string $separator = ": ",
         public readonly string $dash = "- ",
-        array $colours = SpeakerLabels::BBC_COLOURS,
-        public readonly bool $upperCaseOnly = true,
+        array $colors = SpeakerLabels::BBC_COLORS,
+        public readonly bool $readUpperCaseOnly = true,
     ) {
-        if ($from !== null && $from !== SpeakerStyle::Prefix) {
-            throw new InvalidArgumentException("Speaker labels can only be read from SpeakerStyle::Prefix, got " .
-                                               "SpeakerStyle::$from->name.");
+        $colors = array_values($colors);
+        $valid  = array_filter($colors, fn (mixed $color): bool =>
+            is_string($color) && preg_match('/^#[0-9a-fA-F]{6}$/', $color) === 1);
+        if ($colors === [] || count($valid) !== count($colors)) {
+            throw new InvalidArgumentException("The speaker colors must be a non-empty list of colors such as \"#ffff00\".");
         }
-
-        $colours = array_values($colours);
-        $valid   = array_filter($colours, fn (mixed $colour): bool =>
-            is_string($colour) && preg_match('/^#[0-9a-fA-F]{6}$/', $colour) === 1);
-        if ($colours === [] || count($valid) !== count($colours)) {
-            throw new InvalidArgumentException("The speaker colours must be a non-empty list of colours such as \"#ffff00\".");
-        }
-        $this->colours = $colours;
+        $this->colors = $colors;
     }
 }

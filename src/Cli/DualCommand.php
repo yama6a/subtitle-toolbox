@@ -112,6 +112,6 @@ class DualCommand extends WriteCommand
     {
         $secondary = $this->loadSecondFile($arguments->positionals[1], $arguments);
 
-        parent::process($input, DualSubtitle::merge($subtitle, $secondary, $this->dualOptions), $format, $arguments, $console);
+        parent::process($input, DualSubtitle::fromPair($subtitle, $secondary, $this->dualOptions), $format, $arguments, $console);
     }
 }

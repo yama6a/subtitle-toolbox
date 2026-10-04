@@ -548,7 +548,7 @@ final class TtmlParser extends SubtitleParser
                     break;
                 case "color":
                     $color          = $this->normalizeColor($value);
-                    // White is the default text colour of every player, so it adds no markup.
+                    // White is the default text color of every player, so it adds no markup.
                     $style["color"] = $color === "#ffffff" ? null : $color;
                     break;
             }
