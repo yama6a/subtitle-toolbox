@@ -181,15 +181,69 @@ class ApplicationTest extends TestCase
             [2, "", "Error: --shift-after needs --shift.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
             self::runApplication(["retime", "-", "--scale", "2", "--shift-after", "1"])
         );
-        $this->assertSame(
-            [2, "", "shift is deprecated. Use: subtitle-toolbox retime -\n" .
-                    "Error: Pass --by SECONDS.\nRun \"subtitle-toolbox help shift\" for the usage.\n"],
-            self::runApplication(["shift", "-"])
-        );
-        $this->assertSame(
-            [2, "", "fps was removed. Use: subtitle-toolbox retime - --to-fps 25\n"],
-            self::runApplication(["sync-fps", "-", "--to", "25"])
-        );
+    }
+
+
+    public function testCommandsThatTwoPointZeroRemovedAreUnknown(): void
+    {
+        foreach (["shift", "scale", "fps", "sync-fps", "fix", "strip-sdh", "snap"] as $command) {
+            $this->assertSame(
+                [2, "", "Error: Unknown command \"$command\".\nRun \"subtitle-toolbox help\" for the usage.\n"],
+                self::runApplication([$command, "-", "--by", "1"])
+            );
+            $this->assertDoesNotMatchRegularExpression("/^  $command +\\S/m", self::runApplication(["--help"])[1]);
+        }
+    }
+
+
+    public function testConvertHelpListsTheOptionGroupsInTheRunOrder(): void
+    {
+        [$code, $stdout, $stderr] = self::runApplication(["convert", "--help"]);
+
+        $this->assertSame([0, ""], [$code, $stderr]);
+        $this->assertStringStartsWith("Usage: subtitle-toolbox convert <input> <output> [options]\n", $stdout);
+        $this->assertMatchesRegularExpression('/^  --encoding NAME +/m', $stdout);
+        $this->assertMatchesRegularExpression('/^  --language CODE +/m', $stdout);
+        $this->assertDoesNotMatchRegularExpression('/^  --(ocr|sdh|fix-wrap|shift|karaoke)\b/m', $stdout);
+        preg_match_all('/^  ([a-z]+) {2,}[A-Z]/m', $stdout, $groups);
+        $this->assertSame(["ocr", "forced", "errors", "sdh", "replace", "text", "masking", "structure", "retime", "snap", "timing", "karaoke", "ass"],
+                          $groups[1]);
+        $this->assertSame([0, $stdout, ""], self::runApplication(["help", "convert"]));
+    }
+
+
+    public function testConvertHelpOfOneGroupListsItsOptions(): void
+    {
+        $sdh = "sdh: Remove hearing-impaired annotations.\n" .
+               "  --sdh                       Remove hearing-impaired annotations such as [DOOR SLAMS], (laughs) and JOHN:. A cue with no text left goes.\n";
+
+        $this->assertStringStartsWith($sdh, self::runApplication(["convert", "--help", "sdh"])[1]);
+        $this->assertSame(self::runApplication(["convert", "--help", "sdh"]), self::runApplication(["convert", "-h", "sdh"]));
+        $this->assertSame(self::runApplication(["convert", "--help", "sdh"]), self::runApplication(["help", "convert", "sdh"]));
+        $this->assertSame(9, substr_count(self::runApplication(["convert", "--help", "sdh"])[1], "\n"));
+    }
+
+
+    public function testConvertHelpAllListsEachOptionOnceUnderItsGroup(): void
+    {
+        [$code, $stdout, $stderr] = self::runApplication(["convert", "--help", "all"]);
+
+        $this->assertSame([0, ""], [$code, $stderr]);
+        $this->assertStringStartsWith(strstr(self::runApplication(["convert", "--help"])[1], "\nOption groups", true), $stdout);
+        $this->assertStringContainsString("\nretime: Shift and scale the times, or change the frame rate.\n  --shift SECONDS ", $stdout);
+        foreach ((new ConvertCommand())->options() as $option) {
+            $this->assertSame(1, preg_match_all('/^  ' . preg_quote($option->synopsis(), "/") . ' /m', $stdout), "--$option->name");
+        }
+    }
+
+
+    public function testConvertHelpOfAnUnknownGroupListsTheGroups(): void
+    {
+        $expected = [2, "", "Error: Unknown option group \"timings\". The groups are ocr, forced, errors, sdh, replace, text, masking, structure, " .
+                            "retime, snap, timing, karaoke, ass, and all for every option.\nRun \"subtitle-toolbox help convert\" for the usage.\n"];
+
+        $this->assertSame($expected, self::runApplication(["convert", "--help", "timings"]));
+        $this->assertSame($expected, self::runApplication(["help", "convert", "timings"]));
     }
 
 
@@ -332,36 +386,6 @@ class ApplicationTest extends TestCase
         $this->assertSame([0, $expected->toString(Format::SubRip), ""], [$code, $stdout, $stderr]);
         $this->assertStringContainsString("\nWE NEED TWO T****** FOR\n", $stdout);
         $this->assertStringContainsString("\n(SIGHS) [LATE]\nTOO LATE.\n", $stdout);
-    }
-
-
-    public function testRemovedCommandsPrintTheConvertCall(): void
-    {
-        $this->assertSame([2, "", "fix was removed. Use: subtitle-toolbox convert tests/files/cli/trip.srt --fix-overlaps\n"],
-                          self::runApplication(["fix", "tests/files/cli/trip.srt", "--overlaps"]));
-        $this->assertSame(
-            [2, "", "fix was removed. Use: subtitle-toolbox convert a.srt --fix-common-errors --language en --fix-replace-list list.xml --fix-list " .
-                    "--fix-resegment --fix-max-word-gap=0.3 --fix-max-cpl 30 --fix-max-lines 1 --fix-min-duration 1 --fix-min-gap 0.1 " .
-                    "--fix-unwrap --fix-merge-short --fix-split-long --fix-wrap 30 --fix-merge-duplicates -o out.srt --line-ending crlf --force\n"],
-            self::runApplication(["fix", "a.srt", "--common-errors", "--language", "en", "--replace-list", "list.xml", "--list-fixes", "--resegment",
-                                  "--max-word-gap=0.3", "--max-cpl", "30", "--max-lines", "1", "--min-duration", "1", "--min-gap", "0.1", "--unwrap",
-                                  "--merge-short", "--split-long", "--wrap", "30", "--merge-duplicates", "-o", "out.srt", "--line-ending", "crlf", "--force"])
-        );
-        $this->assertSame(
-            [2, "", "strip-sdh was removed. Use: subtitle-toolbox convert movie.srt --sdh --sdh-keep-square-brackets --sdh-keep-parentheses " .
-                    "--sdh-keep-speaker-labels --sdh-keep-music-lines --sdh-any-case-labels --sdh-lyrics --sdh-brackets '{}' --to vtt\n"],
-            self::runApplication(["strip-sdh", "movie.srt", "--keep-square-brackets", "--keep-parentheses", "--keep-speaker-labels",
-                                  "--keep-music-lines", "--any-case-labels", "--lyrics", "--brackets", "{}", "--to", "vtt"])
-        );
-        $this->assertSame([2, "", "strip-sdh was removed. Use: subtitle-toolbox convert - --sdh\n"], self::runApplication(["strip-sdh", "-"]));
-        $this->assertSame(
-            [2, "", "snap was removed. Use: subtitle-toolbox convert movie.srt --video-fps 24 --snap-shot-changes scenes.log --snap-window-frames 6 " .
-                    "--snap-min-gap-frames 2 --snap-min-duration-frames 12 --snap-no-chain\n"],
-            self::runApplication(["snap", "movie.srt", "--video-fps", "24", "--shot-changes", "scenes.log", "--snap-window", "6",
-                                  "--min-gap-frames", "2", "--min-duration-frames", "12", "--no-chain"])
-        );
-        $this->assertSame([2, "", "snap was removed. Use: subtitle-toolbox convert movie.srt --snap-min-gap-frames 2 --fps 24\n"],
-                          self::runApplication(["snap", "movie.srt", "--fps", "24"]));
     }
 
 

@@ -23,6 +23,18 @@ final class CommonErrorEdit extends Edit
     }
 
 
+    public static function group(): string
+    {
+        return "errors";
+    }
+
+
+    public static function summary(): string
+    {
+        return "Fix spacing, punctuation and OCR errors.";
+    }
+
+
     public static function options(): array
     {
         return [

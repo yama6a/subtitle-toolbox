@@ -35,6 +35,18 @@ final class MaskingEdit extends Edit
     }
 
 
+    public static function group(): string
+    {
+        return "masking";
+    }
+
+
+    public static function summary(): string
+    {
+        return "Mask words and write the mute times for players.";
+    }
+
+
     public static function options(): array
     {
         return [

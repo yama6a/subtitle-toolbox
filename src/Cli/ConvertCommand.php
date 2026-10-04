@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Cli\Edits\AssOutput;
+use SubtitleToolbox\Cli\Edits\Edit;
 use SubtitleToolbox\Cli\Edits\EditPipeline;
 use SubtitleToolbox\Cli\Edits\MaskingEdit;
 use SubtitleToolbox\Format;
@@ -42,11 +43,65 @@ class ConvertCommand extends WriteCommand
                "file, and its extension sets the format. Without --to, the output keeps the input format. Without --output,\n" .
                "--output-dir or --in-place, one input file goes to standard output, and several go next to their input\n" .
                "files, with the extension of the output format. An input argument can be a file, a directory, a glob such\n" .
-               "as \"season1/*.srt\", or -.\n\n" .
-               "convert runs the edits in this order: --ocr, --forced-only, --fix-common-errors, --sdh, --replace,\n" .
-               "--strip-tags, --case, --speakers, --mask-words, the structure fixes from --fix-resegment to\n" .
-               "--fix-merge-duplicates, --shift, --scale, --from-fps and --to-fps, --snap-shot-changes, --fix-overlaps,\n" .
-               "--fix-min-duration, --karaoke.";
+               "as \"season1/*.srt\", or -.";
+    }
+
+
+    /**
+     * Prints the common options and the group list, the options of the group $topic, or with "all" every option.
+     */
+    public function help(?string $topic = null): string
+    {
+        $groups = [];
+        foreach ([...EditPipeline::edits(), AssOutput::class] as $class) {
+            $groups[$class::group()] = $class;
+        }
+
+        $common = $this->helpHeader() . "\nOptions:\n" . self::optionList([...$this->commonOptions(), Option::flag("help", "Show this help.", "h")]);
+        if ($topic === null) {
+            $width = max(array_map("strlen", array_keys($groups)));
+            $list  = "";
+            foreach ($groups as $name => $class) {
+                $list .= "  " . str_pad($name, $width) . "  " . $class::summary() . "\n";
+            }
+
+            return "$common\nOption groups, in the order that convert runs their edits:\n$list\n" .
+                   "Run \"" . Application::NAME . " convert --help GROUP\" for the options of a group,\n" .
+                   "or \"" . Application::NAME . " convert --help all\" for all options.\n";
+        }
+        if ($topic === "all") {
+            return $common . implode("", array_map(fn (string $class): string => "\n" . self::groupHelp($class), $groups));
+        }
+        if (!isset($groups[$topic])) {
+            self::fail("Unknown option group \"$topic\". The groups are " . implode(", ", array_keys($groups)) . ", and all for every option.");
+        }
+
+        return self::groupHelp($groups[$topic]);
+    }
+
+
+    /**
+     * @param class-string<Edit>|class-string<AssOutput> $class
+     */
+    private static function groupHelp(string $class): string
+    {
+        return $class::group() . ": " . $class::summary() . "\n" . self::optionList($class::options());
+    }
+
+
+    /**
+     * @return list<Option>
+     */
+    private function commonOptions(): array
+    {
+        return [...$this->outputOptions(), ...$this->inputOptions(), self::languageOption()];
+    }
+
+
+    private static function languageOption(): Option
+    {
+        return Option::value("language", "CODE", "Language for --case and --fix-common-errors, for example en, de-AT or tr. " .
+                                               "--fix-common-errors takes the language of the input without it.");
     }
 
 
@@ -58,7 +113,12 @@ class ConvertCommand extends WriteCommand
 
     protected function commandOptions(): array
     {
-        return [...EditPipeline::options(), ...AssOutput::options()];
+        $options = [self::languageOption()];
+        foreach ([...EditPipeline::edits(), AssOutput::class] as $class) {
+            array_push($options, ...$class::options());
+        }
+
+        return $options;
     }
 
 

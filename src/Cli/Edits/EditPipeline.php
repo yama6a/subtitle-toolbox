@@ -7,7 +7,6 @@ namespace SubtitleToolbox\Cli\Edits;
 use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
-use SubtitleToolbox\Cli\Option;
 use SubtitleToolbox\Subtitle;
 
 /**
@@ -46,20 +45,11 @@ final class EditPipeline
 
 
     /**
-     * @return list<Option>
+     * @return list<class-string<Edit>> the edits in the order that convert runs them
      */
-    public static function options(): array
+    public static function edits(): array
     {
-        $options = [];
-        foreach (self::EDITS as $edit) {
-            array_push($options, ...$edit::options());
-            if ($edit === TextEdit::class) {
-                $options[] = Option::value("language", "CODE", "Language for --case and --fix-common-errors, for example en, de-AT or tr. " .
-                                                               "--fix-common-errors takes the language of the input without it.");
-            }
-        }
-
-        return $options;
+        return self::EDITS;
     }
 
 

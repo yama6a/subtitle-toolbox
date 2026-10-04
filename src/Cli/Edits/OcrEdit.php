@@ -33,6 +33,18 @@ final class OcrEdit extends Edit
     }
 
 
+    public static function group(): string
+    {
+        return "ocr";
+    }
+
+
+    public static function summary(): string
+    {
+        return "Read the text of image cues with OCR.";
+    }
+
+
     public static function options(): array
     {
         return [

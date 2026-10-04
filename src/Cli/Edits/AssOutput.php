@@ -23,6 +23,18 @@ final class AssOutput
     }
 
 
+    public static function group(): string
+    {
+        return "ass";
+    }
+
+
+    public static function summary(): string
+    {
+        return "Set how ASS output writes word timestamps.";
+    }
+
+
     /**
      * @return list<Option>
      */

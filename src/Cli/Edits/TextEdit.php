@@ -29,6 +29,18 @@ final class TextEdit extends Edit
     }
 
 
+    public static function group(): string
+    {
+        return "text";
+    }
+
+
+    public static function summary(): string
+    {
+        return "Remove tags, change the case, convert speaker labels.";
+    }
+
+
     public static function options(): array
     {
         return [

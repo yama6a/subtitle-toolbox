@@ -20,6 +20,18 @@ final class KaraokeEdit extends Edit
     }
 
 
+    public static function group(): string
+    {
+        return "karaoke";
+    }
+
+
+    public static function summary(): string
+    {
+        return "Write one cue per word timestamp.";
+    }
+
+
     public static function options(): array
     {
         return [

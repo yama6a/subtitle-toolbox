@@ -16,6 +16,18 @@ use SubtitleToolbox\Subtitle;
 abstract class Edit
 {
     /**
+     * Returns the name of the option group in the help of convert, for "convert --help GROUP".
+     */
+    abstract public static function group(): string;
+
+
+    /**
+     * Returns the one-line description of the option group in the help of convert.
+     */
+    abstract public static function summary(): string;
+
+
+    /**
      * @return list<Option>
      */
     abstract public static function options(): array;
