@@ -45,6 +45,12 @@ class DiffCommand extends ReportCommand
     }
 
 
+    protected function jsonDescription(): string
+    {
+        return "Print the differences as one JSON object.";
+    }
+
+
     protected function commandOptions(): array
     {
         return [

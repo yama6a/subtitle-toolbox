@@ -227,6 +227,16 @@ class ApplicationTest extends TestCase
     }
 
 
+    public function testHelpDescribesTheDiffExitCodeAndJson(): void
+    {
+        $this->assertStringContainsString("\nExit codes: 0 success, 1 a file failed, broke a validation rule or differs in diff, 2 invalid arguments.\n",
+                                          self::runApplication(["--help"])[1]);
+        $this->assertMatchesRegularExpression('/^  --json +Print the differences as one JSON object\.$/m', self::runApplication(["diff", "--help"])[1]);
+        $this->assertMatchesRegularExpression('/^  --json +Print JSON: one object for one input file, a list of objects for several\.$/m',
+                                              self::runApplication(["info", "--help"])[1]);
+    }
+
+
     public function testFileErrorsExitWith1(): void
     {
         $this->assertSame([1, "", "stdin: UnknownFormatException (Error #106): Format detection found no subtitle format. Pass --from FORMAT. " .

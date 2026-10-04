@@ -164,7 +164,7 @@ class Application
             Run "$name help <command>" or "$name <command> --help" for the options of a command.
             A file argument of - reads standard input. --output - writes standard output.
 
-            Exit codes: 0 success, 1 a file failed or broke a validation rule, 2 invalid arguments.
+            Exit codes: 0 success, 1 a file failed, broke a validation rule or differs in diff, 2 invalid arguments.
             Options: -h, --help shows this help, -V, --version prints the version.
 
             HELP;
