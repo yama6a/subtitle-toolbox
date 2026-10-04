@@ -54,7 +54,7 @@ $subtitle->save('movie.txt', Format::WebVtt);         // the format argument win
 - **MKV and WebM**: `load()` throws for them. `loadAutoDetectFormat()` reads a file with exactly 1 subtitle track and throws with the track list for other files.
 - **`getFormat()`**: null for a subtitle from `new Subtitle()` or `fromArray()`. For an MKV track, it is the format of the codec, for example `Format::SubRip`.
 - **`save()`**: writes the format argument, else the format of the extension. It throws `InvalidFormatterException` for an unknown extension.
-- **Frame rate**: MicroDVD and iTT output take the frame rate from `MicroDvdOptions::$frameRate` or `IttOptions::$frameRate`, else from the data of a MicroDVD or iTT input. Else `toString()` and `save()` throw `InvalidArgumentException`.
+- **Frame rate**: MicroDVD output takes the frame rate from `MicroDvdOptions::$frameRate`, else from a MicroDVD input. iTT output takes it from `IttOptions::$frameRate`, else from an iTT input. Else `toString()` and `save()` throw `InvalidArgumentException`.
 - **CSV and TSV**: TSV output has tabs. CSV output from a TSV input has commas. A `CsvOptions::$delimiter` wins.
 
 ## Write options
@@ -91,7 +91,7 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdOptio
 | `SubViewerOptions` | SubViewer | `version` |
 
 - **Line endings**: every formatter writes LF by default.
-- **BOM**: ASS, CSV, LRC, MPSub, SubRip and WebVTT write a UTF-8 BOM by default. The other formatters do not.
+- **BOM**: ASS, CSV, TSV, LRC, MPSub, SubRip and WebVTT write a UTF-8 BOM by default. The other formatters do not.
 - **Strip all tags**: ASS, EBU STL, iTT, MicroDVD, SAMI, SubRip, TTML and WebVTT read `stripTags`.
 - **Image cues**: see [ocr.md](ocr.md#image-cues).
 - **Precedence**: a field that you set wins over the format data of the subtitle. For example, `IttOptions(frameRate: 25)` wins over the frame rate that `IttParser` stored. A field left at `null` takes the stored value.
@@ -147,6 +147,7 @@ use SubtitleToolbox\Formatters\Options\CsvOptions;
 use SubtitleToolbox\Parsers\CsvColumns;
 use SubtitleToolbox\Parsers\CsvReadOptions;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.csv'), Format::Csv);   // headers start, end, text, ...
@@ -176,7 +177,7 @@ $csv = $english->toString(Format::Csv, new WriteOptions(format: new CsvOptions(
 - **Times**: seconds such as `62.5`, `00:01:02.500`, `00:01:02,500`, and `00:01:02:12` with frames. Frames need `frameRate`.
 - **Output times**: the formatter writes the format of the first parsed start time, else `hh:mm:ss.mmm`. `CsvOptions::$timeFormat` takes a case of the enum `CsvTimeFormat`, for example `CsvTimeFormat::Comma`. `CsvTimeFormat::Frames` writes `hh:mm:ss:ff` and needs `CsvOptions::$frameRate` or a parsed frame rate.
 - **No end column**: a cue without an end time ends at the next later start. The last such cue lasts `ReadOptions::$lastCueDuration`, 5 s by default.
-- **Layout**: a subtitle from `CsvParser` keeps its columns, header names, delimiter and time format. So an unchanged table comes out byte for byte. A subtitle from another format gets the columns `identifier` when a cue has one, `start`, `end`, `speaker` when a cue has a `<v>` tag, and `text`.
+- **Layout**: a subtitle from `CsvParser` keeps its columns, header names, delimiter and time format. So an unchanged table comes out byte for byte. A subtitle from another format gets the columns `start`, `end` and `text`. `identifier` comes first when a cue has one. `speaker` comes before `text` when a cue has a `<v>` tag.
 - **Bilingual table**: `secondText` adds a column after `text`. Each row gets the cue of the second subtitle that overlaps the row most. When one second cue is the best match of several rows, only the first of them gets it.
 - **Output**: a UTF-8 BOM by default, because Excel needs it to read UTF-8. `WriteOptions(bom: false)` leaves it out. `lineEnding` ends the rows. A line break inside a cell stays LF, as Excel writes it.
 - **Formula injection**: `escapeFormulas: true` puts `'` before a cell that starts with `=`, `+`, `-` or `@`. Then a spreadsheet does not run the cell as a formula. It is off by default, because dialogue lines start with `-` and the option changes them.
@@ -190,6 +191,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\EbuStlOptions;
 use SubtitleToolbox\Parsers\EbuStlReadOptions;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('news.stl'));  // detects EBU STL
@@ -216,6 +218,7 @@ Apple TV and the iTunes Store take subtitles as iTunes Timed Text (iTT). iTT is 
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\IttOptions;
+use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.itt'), Format::Itt);
@@ -237,6 +240,7 @@ LRC holds song lyrics with a time per line.
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('song.lrc'), Format::Lyrics, new ReadOptions(lastCueDuration: 4));
 $subtitle->getMetadata(Subtitle::METADATA_TITLE);                          // from [ti:]
@@ -257,6 +261,7 @@ MicroDVD counts time in video frames, so the parser and the formatter need the f
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::MicroDvd, new ReadOptions(fps: 23.976));
@@ -279,6 +284,7 @@ Both formats are common in Polish subtitle downloads and use the `.txt` extensio
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('film.txt'), new ReadOptions(encoding: 'Windows-1250'));   // detects MPL2 or TMPlayer
 $subtitle = Subtitle::fromString(file_get_contents('film.txt'), Format::TmPlayer, new ReadOptions(lastCueDuration: 3));
@@ -303,6 +309,7 @@ $subtitle->toString(Format::TmPlayer);                                     // 00
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\MpSubOptions;
+use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.mpsub'), Format::MpSub);
@@ -319,6 +326,7 @@ $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubOptions(fra
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami);   // the first class of the STYLE block
 $subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami, new ReadOptions(language: 'FRCC'));   // the FRCC class
@@ -347,6 +355,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\SccOptions;
 use SubtitleToolbox\Parsers\SccReadOptions;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('show.scc'));  // detects SCC
@@ -384,6 +393,7 @@ SubViewer 1 and 2 are `.sub` formats from older DivX releases and DVD rippers. O
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\SubViewerOptions;
+use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::SubViewer);
@@ -404,6 +414,7 @@ TTML covers TTML 1, TTML 2, IMSC and DFXP files.
 
 ```php
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.ttml'), Format::Ttml);
 $subtitle->getFormatData('ttml')['head'];              // <head> without ttm:title, as XML

@@ -50,7 +50,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 - **No line numbers**: binary EBU STL and the JSON formats have no line numbers, so their warnings have `lineNumber` 0. The YouTube XML formats report the line of the XML element.
 - **Warnings**: `Subtitle::getParseWarnings()` returns the warnings of the read that made the subtitle.
 - **Not the format**: lenient mode still throws for a WebVTT file without `WEBVTT`. SubRip and SBV have no signature, so a file without one readable cue gives no cues and warnings.
-- **Whole-file errors**: lenient mode still throws for a problem outside one cue. Examples are invalid XML in TTML, invalid JSON, a SAMI file that is not UTF-8, an ASS file without `[Events]` and a MicroDVD file without a frame rate.
+- **Whole-file errors**: lenient mode still throws for a problem outside one cue. Examples are invalid XML in TTML and invalid JSON. Other examples are a SAMI file that is not UTF-8, an ASS file without `[Events]` and a MicroDVD file without a frame rate.
 - **Strict mode without an exception**: the LRC parser drops a line with a bad time tag. The EBU STL parser reads a time code out of range as it is. In lenient mode, both record a warning, and the EBU STL parser also skips the subtitle.
 - **Stream readers**: `SubRipStreamReader` and `WebVttStreamReader` have `setLenient()` and `getWarnings()`. They give the same cues and warnings as a lenient `Subtitle::fromString()`.
 - **Command line tool**: `--lenient` turns on lenient mode and prints each warning to standard error.

@@ -12,7 +12,7 @@ $subtitle = Subtitle::loadAutoDetectFormat('upload.sub');                       
 Format::fromPath('upload.sub');                                                     // Format::MicroDvd, from the extension only
 ```
 
-Detection ignores a UTF-8 BOM and leading blank lines. It tries subtitle formats only.
+Detection ignores a UTF-8 BOM and leading blank lines. It tries only formats whose `isAutoDetected()` is true.
 
 Content that starts with `{` and is a JSON object goes to the JSON checks. Detection reads the top-level keys in this order and takes the first match:
 
@@ -47,9 +47,9 @@ Other content goes to the signatures of the text and binary formats. Detection c
 | 16 | `TmPlayer` | `00:00:01:`, `0:00:01=` or `00:00:01,1=` |
 | 17 | `HtmlTranscript` | a tag at the start, and a `<cite>` and a `<time>` element |
 
-- **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line looks like SubRip, so it detects as SubRip.
+- **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line but with cue numbers looks like SubRip, so it detects as SubRip.
 - **`.sub` files**: SBV has three digits after the dot, SubViewer 2 has two.
 - **MicroDVD**: detection does not find the frame rate. `fromStringAutoDetectFormat()` throws `ParsingException` for a MicroDVD file without a `{1}{1}<fps>` first line. Then pass the frame rate: `Subtitle::fromString($content, Format::MicroDvd, new ReadOptions(fps: 23.976))`.
 - **iTT**: an iTT file detects as `Format::Ttml`. Pass `Format::Itt` to keep the iTT format data.
 - **No signature**: CSV and TSV. Pass `Format::Csv` or `Format::Tsv`, see [formats.md](formats.md#csv-and-tsv). VobSub needs its `.idx` file, see [ocr.md](ocr.md#vobsub).
-- **Not detected**: chapters and cloud speech-to-text JSON look like other formats. `Format::detect()` returns null for them, and `isAutoDetected()` is false. Pass the format, for example `Subtitle::fromString($json, Format::Deepgram)`. `Format::fromPath()` still finds them by their extension, for example `.ffmeta`. The command line tool needs `--from` for them, for example `--from deepgram`.
+- **Not detected**: chapters and cloud speech-to-text JSON look like other formats. `Format::detect()` returns null for them, and `isAutoDetected()` is false. Pass the format, for example `Subtitle::fromString($json, Format::Deepgram)`. `Format::fromPath()` finds only FFmpeg metadata, by its `.ffmeta` extension. The other formats share `.json` or `.txt` with formats that come first. The command line tool needs `--from` for them, for example `--from deepgram`.

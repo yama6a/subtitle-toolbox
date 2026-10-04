@@ -1,6 +1,6 @@
 # Transcripts
 
-Speech-to-text tools, YouTube and podcast apps use their own transcript formats. The parsers on this page turn them into cues, so you can write SubRip or WebVTT. All parsers read only. The podcast transcript formats and plain text can also be written.
+Speech-to-text tools, YouTube and podcast apps use their own transcript formats. The parsers on this page turn them into cues, so you can write SubRip or WebVTT. Whisper, cloud speech-to-text and YouTube formats are read only. The library also writes the podcast transcript formats and plain text.
 
 ## Whisper JSON
 A speech-to-text tool based on OpenAI Whisper writes a JSON transcript.
@@ -37,6 +37,7 @@ Amazon Transcribe, Deepgram, AssemblyAI and Google Cloud Speech-to-Text return a
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString($transcribeJson, Format::AwsTranscribe);    // format detection does not find cloud speech JSON
 $subtitle = Subtitle::fromString($deepgramResponseBody, Format::Deepgram, new ReadOptions(wordTimestamps: true, speakerVoices: true));
@@ -60,7 +61,7 @@ $subtitle->getCues()[2]->getFormatData('deepgram')['confidence'];            // 
 - **AssemblyAI**: the language `en_us` becomes `en-US`.
 - **Google**: the parser reads the V1 and V2 field names, and a long-running operation from `operations.get` through its `response`.
 - **Format data**: the subtitle keeps the top-level fields except the transcript text and the lists of words and segments. Each cue keeps the fields of its segment, utterance or result except the times and the text. Its words with their confidence are in `items` for Amazon Transcribe and in `words` for the other services.
-- **Errors**: each parser throws `ParsingException` for JSON without the list it needs: `results.items` for Amazon Transcribe, `results.channels` for Deepgram, `words` or `utterances` for AssemblyAI and `results` for Google.
+- **Errors**: each parser throws `ParsingException` for JSON without the list it needs. Amazon Transcribe needs `results.items`, Deepgram `results.channels`, AssemblyAI `words` or `utterances`, and Google `results`.
 
 ## YouTube timed text
 yt-dlp and youtube-transcript-api download YouTube captions as json3, srv3 or the older transcript XML. json3 and srv3 keep the time of each word of automatic captions. WebVTT downloads lose it.
@@ -68,6 +69,7 @@ yt-dlp and youtube-transcript-api download YouTube captions as json3, srv3 or th
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('video.en.json3'), Format::YouTube);
 $subtitle = Subtitle::fromString(file_get_contents('video.en.srv3'), Format::YouTube, new ReadOptions(wordTimestamps: true));
@@ -83,7 +85,7 @@ $subtitle->getFormatData('youtube')['format'];                               // 
 | srv1 and transcript XML | `<transcript><text start="1.2" dur="2.3">Hello world</text></transcript>` |
 
 - **Automatic captions**: the parser skips the events that only add a line break. A cue in a window ends where the next cue of the same window starts, so the rolling cues do not stack.
-- **Word timestamps**: off by default. With `ReadOptions::$wordTimestamps`, each segment of a cue gets a core word timestamp, but only when at least one segment of the cue has a time. srv1 and srv2 have no word times.
+- **Word timestamps**: off by default. With `ReadOptions::$wordTimestamps`, each segment of a cue gets a core word timestamp. This needs at least one segment of the cue with a time. srv1 and srv2 have no word times.
 - **Alignment**: from the anchor point of the window position of a cue. Anchor point 0 is top left and becomes alignment 7. A cue without its own window position, such as an automatic caption, has no alignment.
 - **Pens**: the pen colour becomes `<font color>`. Bold, italic and underline become `<b>`, `<i>` and `<u>`.
 - **Format data**: the subtitle keeps the `format` name, and the head elements and windows of the file. Each cue keeps the other fields of its event or `<p>`, and the other fields of its segments in `segments`.
@@ -109,6 +111,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\PodcastTranscriptOptions;
 use SubtitleToolbox\Parsers\PodcastTranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString($whisperJson, Format::Whisper, new ReadOptions(wordTimestamps: true));
