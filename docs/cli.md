@@ -49,6 +49,7 @@ php subtitle-toolbox.phar --version
 - **Help**: `subtitle-toolbox help CMD` and `subtitle-toolbox CMD --help` list the options of a command. For `convert`, they list the common options and the option groups, see [Order](#order).
 - **Version**: `subtitle-toolbox --version` prints the installed release, for example `2.0.0`, or `dev` in a Git checkout.
 - **Exit code**: 0 when all files succeed, 1 when a file fails, breaks a validation rule or differs in `diff`, 2 for invalid arguments.
+- **Messages**: where a library message names a PHP method or option, the tool names the CLI option. For example "Call loadTrack() with one of them" becomes "Pass --track N with one of them".
 
 ## Input and output
 - **Inputs**: a file, a directory, a glob such as `"season1/*.srt"`, or `-` for standard input. A directory gives its files with a known extension.
@@ -79,7 +80,7 @@ php subtitle-toolbox.phar --version
 ## Frame rates
 | Option | Sets | Commands |
 |:--- |:--- |:--- |
-| `--input-fps RATE` | the frame rate of a MicroDVD input without a `{1}{1}<fps>` first line, as `ReadOptions::$fps` | all that read a file |
+| `--input-fps RATE` | the frame rate of a MicroDVD input without a `{1}{1}<fps>` first line, and of CSV or TSV times in `hh:mm:ss:ff`, as `ReadOptions::$fps` | all that read a file |
 | `--output-fps RATE` | the frame rate of MicroDVD and iTT output, as `MicroDvdOptions::$frameRate` and `IttOptions::$frameRate` | all that write a file |
 | `--video-fps RATE` | the frame rate of the video for the frame rules, see [Timing](#timing) and [Validate](#validate) | `convert`, `validate` |
 | `--fps RATE` | each of the 3 options above that the command has | all that read a file |

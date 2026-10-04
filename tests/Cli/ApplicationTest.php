@@ -210,8 +210,8 @@ class ApplicationTest extends TestCase
 
     public function testFileErrorsExitWith1(): void
     {
-        $this->assertSame([1, "", "stdin: UnknownFormatException (Error #106): Format detection found no subtitle format. Call fromString() " .
-                                  "with a format. Chapters and cloud speech-to-text JSON always need one, for example Format::Deepgram.\n"],
+        $this->assertSame([1, "", "stdin: UnknownFormatException (Error #106): Format detection found no subtitle format. Pass --from FORMAT. " .
+                                  "Chapters and cloud speech-to-text JSON always need it, for example --from deepgram.\n"],
                           self::runApplication(["info", "-"], "hello"));
         $this->assertSame([1, "", "stdin: VobSub needs the path of the .idx file. Standard input does not work.\n"],
                           self::runApplication(["info", "-", "--from", "vobsub"], "hello"));
@@ -223,11 +223,11 @@ class ApplicationTest extends TestCase
         $chapters = __DIR__ . "/../files/chapters/ffmetadata/real/m4b_audiobook.ffmeta";
         $deepgram = file_get_contents(__DIR__ . "/../files/deepgram/real/pool_utterances_diarize.json");
 
-        $unknown = "UnknownFormatException (Error #106): Format detection found no subtitle format. Call %s with a format. " .
-                   "Chapters and cloud speech-to-text JSON always need one, for example Format::Deepgram.\n";
+        $unknown = "UnknownFormatException (Error #106): Format detection found no subtitle format. Pass --from FORMAT. " .
+                   "Chapters and cloud speech-to-text JSON always need it, for example --from deepgram.\n";
 
-        $this->assertSame([1, "", "$chapters: " . sprintf($unknown, "load()")], self::runApplication(["info", $chapters]));
-        $this->assertSame([1, "", "stdin: " . sprintf($unknown, "fromString()")], self::runApplication(["info", "-"], $deepgram));
+        $this->assertSame([1, "", "$chapters: $unknown"], self::runApplication(["info", $chapters]));
+        $this->assertSame([1, "", "stdin: $unknown"], self::runApplication(["info", "-"], $deepgram));
 
         [$code, $stdout] = self::runApplication(["info", $chapters, "--from", "ffmeta"]);
         $this->assertSame(0, $code);
