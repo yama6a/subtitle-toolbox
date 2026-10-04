@@ -1,6 +1,6 @@
 # Encodings and line endings
 
-The library works in UTF-8. `Subtitle::fromString()` and `Subtitle::fromStringAutoDetectFormat()` convert other encodings on input.
+The library works in UTF-8. The `load` and `fromString` functions of `Subtitle` convert other encodings on input.
 
 ```php
 use SubtitleToolbox\Format;
@@ -18,4 +18,4 @@ StringHelpers::isValidUtf8(file_get_contents('movie.srt'));   // false for a Win
 - **Parsers called directly**: only the `Subtitle` functions convert. Before `(new SamiParser())->parse($content, new ReadOptions())`, call `StringHelpers::convertToUtf8($content, 'CP949')`.
 - **Source encodings**: the conversion uses the PHP extension iconv. It accepts the names that the iconv of the system knows, for example `Windows-1251`, `ISO-8859-15`, `Shift_JIS` or `EUC-KR`. `new ReadOptions()` throws `InvalidArgumentException` for an unknown name. A byte that is invalid in the encoding throws `ParsingException`.
 - **EBU STL**: the binary file holds its own character tables. Pass its bytes without a source encoding.
-- **Output**: line endings and the UTF-8 BOM of the output are formatter options, see [formats.md](formats.md#options-for-all-formatters).
+- **Output**: line endings and the UTF-8 BOM of the output are formatter options, see [formats.md](formats.md#write-options).
