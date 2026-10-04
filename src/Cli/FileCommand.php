@@ -190,9 +190,9 @@ abstract class FileCommand extends Command
                     $this->process($input, $read[0], $read[1], $arguments, $console);
                 }
                 $this->succeeded++;
-            } catch (\Exception $exception) {
+            } catch (\Throwable $exception) {
                 $this->failed++;
-                $console->err(self::label($input) . ": " . self::cliMessage($exception->getMessage(), "--track", "--from") . "\n");
+                $console->err(self::label($input) . ": " . self::cliMessage(self::throwableMessage($exception), "--track", "--from") . "\n");
                 if (!$arguments->has("keep-going")) {
                     break;
                 }
@@ -333,6 +333,17 @@ abstract class FileCommand extends Command
      * Rewords a library message that names a PHP method, class or option property, so that it names CLI options.
      * $track and $from are the options that pick the track and the format of the file, or null when it has none.
      */
+    /**
+     * Returns the message of a library exception, which names its class, or the class and message of another error.
+     */
+    public static function throwableMessage(\Throwable $throwable): string
+    {
+        return $throwable instanceof SubtitleToolboxException
+            ? $throwable->getMessage()
+            : $throwable::class . ": " . $throwable->getMessage();
+    }
+
+
     public static function cliMessage(string $message, ?string $track, ?string $from): string
     {
         $pickTrack  = $track === null ? "Write one of them to a subtitle file with convert --track N first:" : "Pass $track N with one of them:";

@@ -31,7 +31,7 @@ final class MatroskaTrack
         return implode(", ", array_filter([
             $this->codecId,
             $this->language,
-            $this->name === null ? null : json_encode($this->name, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            $this->name === null ? null : json_encode($this->name, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE),
             $this->default ? "default" : null,
             $this->forced ? "forced" : null,
         ]));

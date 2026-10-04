@@ -314,6 +314,25 @@ class Markup
 
 
     /**
+     * Replaces each core word timestamp in $text with the timestamp of $map(seconds). A time below 0 becomes 0.
+     *
+     * @param callable(float): float $map
+     */
+    public static function mapWordTimestamps(string $text, callable $map): string
+    {
+        if (!str_contains($text, "<")) {
+            return $text;
+        }
+
+        return preg_replace_callback(
+            self::WORD_TIMESTAMP_REGEX,
+            fn (array $match): string => "<" . self::coreTimestamp(max(0.0, $map(self::wordTimestampSeconds($match[1])))) . ">",
+            $text
+        ) ?? $text;
+    }
+
+
+    /**
      * Formats seconds as the body of a core word timestamp, for example 62.5 becomes "00:01:02.500".
      */
     public static function coreTimestamp(float $seconds): string

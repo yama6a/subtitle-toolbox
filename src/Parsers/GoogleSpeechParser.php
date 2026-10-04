@@ -63,9 +63,12 @@ class GoogleSpeechParser extends SubtitleParser
         $previousEnd = 0.0;
         foreach ($results as $index => $result) {
             $path        = "results[$index]";
-            $alternative = is_array($result) ? $result["alternatives"][0] ?? null : null;
+            $alternative = is_array($result) && is_array($result["alternatives"][0] ?? null) ? $result["alternatives"][0] : null;
             $resultEnd   = is_array($result) ? self::duration($result["resultEndTime"] ?? $result["resultEndOffset"] ?? null) : null;
             try {
+                if (is_array($result) && isset($result["alternatives"]) && $alternative === null && $result["alternatives"] !== []) {
+                    throw new ParsingException("The field $path.alternatives must be a list of objects.");
+                }
                 $words = $this->readWords(self::listOrEmpty($alternative["words"] ?? null), "$path.alternatives[0].words");
                 $end   = $words === [] ? $this->seconds($resultEnd, "$path.resultEndTime") : $words[count($words) - 1]["end"];
                 $start = $words === [] ? $previousEnd : $words[0]["start"];
@@ -74,7 +77,7 @@ class GoogleSpeechParser extends SubtitleParser
                 $this->fail($exception, 0, $index, [RawJson::encode($result)]);
                 continue;
             }
-            $previousEnd = is_int($resultEnd) || is_float($resultEnd) ? round($resultEnd, 3) : $end;
+            $previousEnd = is_int($resultEnd) || (is_float($resultEnd) && is_finite($resultEnd)) ? round($resultEnd, 3) : $end;
 
             $formatData = array_diff_key($result, ["alternatives" => true]) + array_diff_key($alternative ?? [], ["transcript" => true]);
             $cue        = $this->cue($start, $end, $text, $words, null, $formatData);

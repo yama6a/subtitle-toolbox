@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Hls;
 
+use Generator;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\WebVttParser;
@@ -15,14 +16,14 @@ final class HlsWebVttSegmenter
 {
     /**
      * Cuts the subtitle into WebVTT segments with an X-TIMESTAMP-MAP header, and lists them in a VOD playlist.
+     * The result writes each segment when the caller reads it, so the memory does not grow with the media duration.
      *
      * @see https://datatracker.ietf.org/doc/html/rfc8216#section-3.5
      */
     public static function segment(Subtitle $subtitle, HlsSegmentOptions $options = new HlsSegmentOptions()): HlsWebVttResult
     {
-        $cues          = array_values($subtitle->getCues());
-        $segmentMillis = (int) round($options->segmentDuration * 1000);
-        $totalMillis   = $options->mediaDuration === null
+        $cues        = array_values($subtitle->getCues());
+        $totalMillis = $options->mediaDuration === null
             ? (int) max([0, ...array_map(fn (SubtitleCue $cue): float => round($cue->getEnd() * 1000), $cues)])
             : (int) round($options->mediaDuration * 1000);
         if ($totalMillis === 0) {
@@ -39,27 +40,56 @@ final class HlsWebVttSegmenter
             ),
         ];
 
-        $segments  = [];
-        $durations = [];
-        for ($startMillis = 0, $index = 0; $startMillis < $totalMillis; $startMillis += $segmentMillis, $index++) {
-            $endMillis = min($startMillis + $segmentMillis, $totalMillis);
-            $segment   = (new Subtitle())->setFormatData(WebVttParser::FORMAT, $fileData);
-            foreach ($cues as $cueIndex => $cue) {
-                $cueStart = (int) round($cue->getStart() * 1000);
-                $cueEnd   = (int) round($cue->getEnd() * 1000);
-                $isEmpty  = $cueEnd === $cueStart;
-                if ($cueStart < $endMillis && ($cueEnd > $startMillis || ($isEmpty && $cueStart >= $startMillis))) {
-                    // RFC 8216 section 3.5: a cue keeps its full time range in every segment it overlaps.
-                    $segment->addCue((clone $cue)->setIdentifier($cue->getIdentifier() ?? (string) ($cueIndex + 1)), false);
-                }
-            }
+        $starts = array_map(fn (SubtitleCue $cue): int => (int) round($cue->getStart() * 1000), $cues);
+        $ends   = array_map(fn (SubtitleCue $cue): int => (int) round($cue->getEnd() * 1000), $cues);
+        $copy   = new Subtitle();
+        foreach ($cues as $cueIndex => $cue) {
+            $copy->addCue((clone $cue)->setIdentifier($cue->getIdentifier() ?? (string) ($cueIndex + 1)), false);
+        }
+        $shifted = array_values($copy->shift($options->local)->getCues());
 
-            $name             = $options->fileName($index);
-            $segments[$name]  = $segment->shift($options->local)
-                                        ->toString(Format::WebVtt, new WriteOptions(bom: false));
-            $durations[$name] = ($endMillis - $startMillis) / 1000.0;
+        $order = array_keys($starts);
+        usort($order, fn (int $first, int $second): int => [$starts[$first], $first] <=> [$starts[$second], $second]);
+
+        $segmentMillis = HlsWebVttResult::segmentMillis($options);
+        $segments      = function () use ($fileData, $starts, $ends, $shifted, $order, $options, $segmentMillis, $totalMillis): Generator {
+            $empty  = null;
+            $next   = 0;
+            $active = [];
+            for ($startMillis = 0, $index = 0; $startMillis < $totalMillis; $startMillis += $segmentMillis, $index++) {
+                $endMillis = min($startMillis + $segmentMillis, $totalMillis);
+                for (; $next < count($order) && $starts[$order[$next]] < $endMillis; $next++) {
+                    $active[$order[$next]] = true;
+                }
+                foreach (array_keys($active) as $cueIndex) {
+                    $isEmpty = $ends[$cueIndex] === $starts[$cueIndex];
+                    // RFC 8216 section 3.5: a cue keeps its full time range in every segment it overlaps.
+                    if ($ends[$cueIndex] <= $startMillis && !($isEmpty && $starts[$cueIndex] >= $startMillis)) {
+                        unset($active[$cueIndex]);
+                    }
+                }
+                ksort($active);
+
+                yield $options->fileName($index) => $active === []
+                    ? $empty ??= self::write($fileData, [])
+                    : self::write($fileData, array_intersect_key($shifted, $active));
+            }
+        };
+
+        return new HlsWebVttResult($segments, $options, $totalMillis);
+    }
+
+
+    /**
+     * @param array<int, SubtitleCue> $cues
+     */
+    private static function write(array $fileData, array $cues): string
+    {
+        $segment = (new Subtitle())->setFormatData(WebVttParser::FORMAT, $fileData);
+        foreach ($cues as $cue) {
+            $segment->addCue($cue, false);
         }
 
-        return new HlsWebVttResult($segments, $durations);
+        return $segment->toString(Format::WebVtt, new WriteOptions(bom: false));
     }
 }

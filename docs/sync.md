@@ -26,6 +26,7 @@ ReferenceSync::apply($german, new ReferenceSyncOptions(
 - **Matching**: only the cue times count, not the text. The idea comes from [alass](https://github.com/kaegi/alass).
 - **Scale factors**: 1, 24/23.976, 25/24 and 25/23.976 and their inverses. Other factors are not found. One scale applies to the whole file.
 - **Offsets**: the search finds offsets between `minOffset` and `maxOffset`, to 0.01 s.
+- **Limits**: `minOffset` and `maxOffset` are from -86,400 to 86,400 s and at most 7,200 s apart. `maxSplits` is from 0 to 10. A larger value throws `InvalidArgumentException`, because the split search needs memory for each 0.1 s of the offset range. 10 splits over 7,200 s take about 40 s.
 - **Score**: from 0 to 1. A score below 0.5 means the files likely do not match. Missing and extra cues lower the score. The result stays correct while most cues match.
 - **Speed**: 2,000 cues against 2,000 cues take about 0.5 s.
 

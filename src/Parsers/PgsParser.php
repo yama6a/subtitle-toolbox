@@ -186,6 +186,10 @@ class PgsParser extends SubtitleParser
                 throw new ParsingException("The first definition segment of object $id is cut off.");
             }
             ["width" => $width, "height" => $height] = unpack("nwidth/nheight", $data, 7);
+            $tooLarge = CueImage::sizeLimitError($width, $height);
+            if ($tooLarge !== null) {
+                throw new ParsingException("Object $id cannot be read: $tooLarge");
+            }
             $this->objects[$id] = ["width" => $width, "height" => $height, "rle" => substr($data, 11)];
         } elseif (isset($this->objects[$id])) {
             $this->objects[$id]["rle"] .= substr($data, 4);
@@ -314,6 +318,10 @@ class PgsParser extends SubtitleParser
         $bottom = max(array_map(fn (array $part): int => $part["y"] + $part["height"], $parts));
         $width  = $right - $left;
         $height = $bottom - $top;
+        $tooLarge = CueImage::sizeLimitError($width, $height);
+        if ($tooLarge !== null) {
+            throw new ParsingException("The objects of one display set cannot be joined: $tooLarge");
+        }
 
         if (count($parts) === 1) {
             return [$left, $top, $width, $height, $parts[0]["rgba"]];
@@ -342,9 +350,11 @@ class PgsParser extends SubtitleParser
     {
         $rle    = $object["rle"];
         $length = strlen($rle);
+        $size   = $object["width"] * $object["height"];
         $pixels = "";
         $offset = 0;
-        while ($offset < $length) {
+        // A run fills up to 16,383 pixels, so the runs after the last pixel of the object could take gigabytes.
+        while ($offset < $length && strlen($pixels) < 4 * $size) {
             $byte = $rle[$offset++];
             if ($byte !== "\0") {
                 $pixels .= $colors[$byte];
@@ -360,7 +370,6 @@ class PgsParser extends SubtitleParser
             $pixels .= str_repeat($colors[$color], $run);
         }
 
-        $size = $object["width"] * $object["height"];
         if (strlen($pixels) < 4 * $size) {
             throw new ParsingException("Object $id at $time s has " . strlen($pixels) / 4 . " pixels of run-length data, " .
                                        "but its size of {$object["width"]}x{$object["height"]} needs $size.");

@@ -38,19 +38,19 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | TTML, iTT | a `<p>` with a bad time or without an end time | `<p>` elements |
 | EBU STL | a subtitle with a time code out of range, a cut-off last TTI block | TTI blocks |
 | CSV, TSV | a row with a bad time | rows after the header, without empty rows |
-| JSON | a cue with a bad field | cues |
-| Whisper JSON | a segment without `start`, `end` or `text` | segments |
+| JSON | a cue with a bad field. A bad metadata field, a bad comment and the bad format data of one format of the file get dropped with `blockIndex` -1 | cues |
+| Whisper JSON | a segment without `start`, `end` or `text`, or with a time that is not a finite number | segments |
 | YouTube timed text | an event or element with a bad time | events or elements |
-| Amazon Transcribe, Deepgram, AssemblyAI, Google | a word, segment, utterance, sentence or result with a bad time or text | the index in its list |
+| Amazon Transcribe, Deepgram, AssemblyAI, Google | a word, segment, utterance, sentence or result with a bad time or text, a Google result whose `alternatives` is not a list of objects | the index in its list |
 | Podcasting 2.0 transcript JSON | a segment with a bad field | segments |
 | HTML transcript | a paragraph with a bad time or without a `<time>` | the paragraphs that each `<cite>` or `<time>` starts |
 
 - **Ignored**: the SCC, PGS and VobSub parsers and the chapter parsers ignore `ReadOptions::$lenient` and always throw.
-- **`ParseWarning`**: `message`, the 1-based `lineNumber`, the 0-based `blockIndex`, the trimmed lines of the `block`, and the `action`, `ParseWarning::SKIPPED` or `ParseWarning::REPAIRED`. A skipped block reports its first line. A repair reports the line where the parser split or read the cue.
+- **`ParseWarning`**: `message`, the 1-based `lineNumber`, the 0-based `blockIndex` or -1 for a library JSON field outside the cues, the trimmed lines of the `block`, and the `action`, `ParseWarning::SKIPPED` or `ParseWarning::REPAIRED`. A skipped block reports its first line. A repair reports the line where the parser split or read the cue.
 - **No line numbers**: binary EBU STL and the JSON formats have no line numbers, so their warnings have `lineNumber` 0. The YouTube XML formats report the line of the XML element.
 - **Warnings**: `Subtitle::getParseWarnings()` returns the warnings of the read that made the subtitle.
 - **Not the format**: lenient mode still throws for a WebVTT file without `WEBVTT`. SubRip and SBV have no signature, so a file without one readable cue gives no cues and warnings.
-- **Whole-file errors**: lenient mode still throws for a problem outside one cue. Examples are invalid XML in TTML and invalid JSON. Other examples are a SAMI file that is not UTF-8, an ASS file without `[Events]` and a MicroDVD file without a frame rate.
+- **Whole-file errors**: lenient mode still throws for a problem outside one cue. Examples are invalid XML in TTML, invalid JSON, and a Whisper `segments` or YouTube `events` field that is an object, not a list. Other examples are a SAMI file that is not UTF-8, an ASS file without `[Events]` and a MicroDVD file without a frame rate.
 - **Strict mode without an exception**: the LRC parser drops a line with a bad time tag. The EBU STL parser reads a time code out of range as it is. In lenient mode, both record a warning, and the EBU STL parser also skips the subtitle.
 - **Stream readers**: `SubRipStreamReader` and `WebVttStreamReader` have `setLenient()` and `getWarnings()`. They give the same cues and warnings as a lenient `Subtitle::fromString()`.
 - **Command line tool**: `--lenient` turns on lenient mode and prints each warning to standard error.

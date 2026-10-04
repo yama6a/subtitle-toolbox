@@ -100,24 +100,37 @@ class HlsCommand extends FileCommand
     {
         $result    = HlsWebVttSegmenter::segment($subtitle, $this->segmentOptions);
         $directory = rtrim($this->directory, "/\\");
-        $files     = [...$result->getSegments(), $this->playlist => $result->getPlaylist()];
 
         if (!$arguments->has("force")) {
-            foreach (array_keys($files) as $name) {
-                if (file_exists("$directory/$name")) {
-                    self::fail("$directory/$name exists. Pass --force to overwrite it.");
-                }
+            foreach ($result->getDurations() as $name => $duration) {
+                self::failIfExists("$directory/$name");
             }
+            self::failIfExists("$directory/$this->playlist");
         }
         if (!is_dir($directory) && !@mkdir($directory, 0777, true)) {
             self::fail("Cannot create the directory $directory.");
         }
-        foreach ($files as $name => $content) {
-            if (@file_put_contents("$directory/$name", $content) === false) {
-                self::fail("Cannot write $directory/$name.");
-            }
+        foreach ($result->getSegments() as $name => $content) {
+            self::writeFile("$directory/$name", $content);
         }
+        self::writeFile("$directory/$this->playlist", $result->getPlaylist());
 
-        $console->out(self::label($input) . " -> $directory/$this->playlist, " . count($result->getSegments()) . " segments\n");
+        $console->out(self::label($input) . " -> $directory/$this->playlist, " . $result->getSegmentCount() . " segments\n");
+    }
+
+
+    private static function failIfExists(string $path): void
+    {
+        if (file_exists($path)) {
+            self::fail("$path exists. Pass --force to overwrite it.");
+        }
+    }
+
+
+    private static function writeFile(string $path, string $content): void
+    {
+        if (@file_put_contents($path, $content) === false) {
+            self::fail("Cannot write $path.");
+        }
     }
 }

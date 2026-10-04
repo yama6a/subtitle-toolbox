@@ -112,7 +112,7 @@ class PodcastTranscriptParser extends SubtitleParser
 
         foreach (["startTime" => "a number", "endTime" => "a number", "speaker" => "a string", "body" => "a string"] as $key => $type) {
             $value = $segment[$key] ?? null;
-            $valid = $type === "a string" ? is_string($value) : is_int($value) || is_float($value);
+            $valid = $type === "a string" ? is_string($value) : is_int($value) || (is_float($value) && is_finite($value));
             if (!$valid && ($key === "startTime" || $value !== null)) {
                 throw new ParsingException("The field $path.$key must be $type.");
             }

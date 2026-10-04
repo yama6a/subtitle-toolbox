@@ -102,7 +102,8 @@ trait ArrayConversion
             throw new ParsingException("The field $path must be an object.");
         }
         foreach (["start", "end"] as $key) {
-            if (!is_int($cueData[$key] ?? null) && !is_float($cueData[$key] ?? null)) {
+            $time = $cueData[$key] ?? null;
+            if (!is_int($time) && (!is_float($time) || !is_finite($time))) {
                 throw new ParsingException("The field $path.$key must be a number.");
             }
         }
@@ -151,6 +152,7 @@ trait ArrayConversion
             if (!is_array($value)) {
                 throw new ParsingException("The field $pathPrefix$key.$format must be an object.");
             }
+            FormatDataSchema::check((string) $format, $value, "$pathPrefix$key.$format", $pathPrefix !== "");
         }
 
         return $formatData;

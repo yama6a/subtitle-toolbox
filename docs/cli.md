@@ -49,6 +49,7 @@ php subtitle-toolbox.phar --version
 - **Help**: `subtitle-toolbox help CMD` and `subtitle-toolbox CMD --help` list the options of a command. For `convert`, they list the common options and the option groups, see [Order](#order).
 - **Version**: `subtitle-toolbox --version` prints the installed release, for example `2.0.0`, or `dev` in a Git checkout.
 - **Exit code**: 0 when all files succeed, 1 when a file fails, breaks a validation rule or differs in `diff`, 2 for invalid arguments.
+- **Failures**: a failed file prints `FILE: MESSAGE` to standard error. The message of a library exception starts with its class, for example `ParsingException (Error #100):`. Any other PHP error prints its class and message, for example `movie.json: TypeError: ...`, and fails that file with exit code 1. An error outside a file prints `Error: CLASS: MESSAGE` and exits with code 1.
 - **Messages**: where a library message names a PHP method or option, the tool names the CLI option. For example "Call loadTrack() with one of them" becomes "Pass --track N with one of them".
 
 ## Input and output
@@ -125,7 +126,7 @@ movie.mkv
 - **Errors**: `S_VOBSUB` tracks, bzlib and LZO compression and encryption fail, see [mkv.md](mkv.md).
 
 ## Retime
-`retime` changes the cue times with one or more edits. It applies them in this order: `--shift`, `--scale`, then `--from-fps` and `--to-fps`.
+`retime` changes the cue times with one or more edits. It applies them in this order: `--shift`, `--scale`, then `--from-fps` and `--to-fps`. The word timestamps in the cue text move with the cues.
 
 ```sh
 vendor/bin/subtitle-toolbox retime trip.srt --shift -1.5 --scale 1.001 -o trip.fixed.srt
@@ -182,7 +183,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --fix-common-errors --in-place
 |:--- |:--- |
 | `--fix-common-errors` | [`CommonErrorFixer::apply()`](text.md#fixing-common-errors) with all default fixes |
 | `--fix-replace-list FILE` | adds a Subtitle Edit OCR replace list to `--fix-common-errors` |
-| `--fix-list` | prints each change of `--fix-common-errors` to standard error, for example `movie.srt: cue 15: ocrLowercaseL: "lt's late." -> "It's late."` |
+| `--fix-list` | prints each change of `--fix-common-errors` to standard error, for example `movie.srt: cue 15: ocrLowercaseL: "lt's late." -> "It's late."`. A byte that is not valid UTF-8 prints as U+FFFD |
 | `--sdh` | removes everything that [`HearingImpairedRemover::apply()`](text.md#hearing-impaired-annotations) removes by default. A cue with no text left goes |
 | `--sdh-keep-square-brackets`, `--sdh-keep-parentheses`, `--sdh-keep-speaker-labels`, `--sdh-keep-music-lines` | turns off one rule of `--sdh` |
 | `--sdh-any-case-labels` | also removes speaker labels that are not upper case, such as `Baker:` |
@@ -299,9 +300,9 @@ movie.de.srt: scale 1.04271, offset -2.3 s, score 0.89
 |:--- |:--- |
 | `--reference FILE` | the subtitle in sync with the video, in any format that the tool reads. A Whisper JSON transcript of the audio also works |
 | `--silence-log FILE`, `--media-duration SECONDS` | the speech in an FFmpeg `silencedetect` log as the reference, with [`SpeechReference`](sync.md#sync-to-speech) |
-| `--min-offset SECONDS`, `--max-offset SECONDS` | `minOffset` and `maxOffset`, default -60 and 60 |
+| `--min-offset SECONDS`, `--max-offset SECONDS` | `minOffset` and `maxOffset`, default -60 and 60. From -86400 to 86400 and at most 7200 apart, see [sync.md](sync.md#sync-to-a-reference-subtitle) |
 | `--no-scale` | `searchScale: false` |
-| `--max-splits N`, `--split-penalty SCORE` | `maxSplits`, default 0, and `splitPenalty`, default 0.1 |
+| `--max-splits N`, `--split-penalty SCORE` | `maxSplits` from 0 to 10, default 0, and `splitPenalty`, default 0.1 |
 
 - **Score**: below 0.5, the tool also prints that the files likely do not match. The exit code stays 0.
 - **Splits**: for each part, the tool prints a line such as `movie.de.srt: from 414.32 s: offset 147.7 s`.

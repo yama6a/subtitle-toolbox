@@ -139,6 +139,20 @@ class SubtitleCue
     }
 
 
+    /**
+     * Replaces the time of each word timestamp in the lines, such as <00:00:02.000>, with $map(seconds).
+     * A time below 0 becomes 0.
+     *
+     * @param callable(float): float $map
+     */
+    public function mapWordTimestamps(callable $map): self
+    {
+        $this->lines = array_map(fn (string $line): string => Markup::mapWordTimestamps($line, $map), $this->lines);
+
+        return $this;
+    }
+
+
     public function getIdentifier(): ?string
     {
         return $this->identifier;
