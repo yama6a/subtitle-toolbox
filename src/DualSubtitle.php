@@ -26,9 +26,7 @@ final class DualSubtitle
 
         // A slice that keeps no cue is a copy of the metadata and format data without cues and comments.
         $result = $primary->slice(INF, INF);
-        foreach ($cues as $cue) {
-            $result->addCue($cue, false);
-        }
+        $result->addCues($cues);
         foreach ($primary->getComments() as $comment) {
             $result->addComment($comment["text"], self::findNewIndex($primaryCues, $cues, $comment["beforeCueIndex"]));
         }

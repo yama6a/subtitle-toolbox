@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
@@ -17,7 +17,7 @@ final class Mpl2Formatter extends SubtitleFormatter
         foreach ($subtitle->getCues() as $cue) {
             $output .= "[" . (int) round($cue->getStart() * 10) . "][" . (int) round($cue->getEnd() * 10) . "]" .
                        implode("|", self::linesWithItalics($cue->getLines())) .
-                       StringHelpers::UNIX_LINE_ENDING;
+                       LineEnding::Lf->value;
         }
 
         return $this->applyOutputOptions($output, $options);

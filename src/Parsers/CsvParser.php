@@ -53,6 +53,7 @@ final class CsvParser extends SubtitleParser
         $roles  = $this->resolveRoles($header);
 
         $subtitle   = new Subtitle();
+        $parsedCues = [];
         $rate       = $this->formatOptions()->frameRate;
         $frameRate  = $rate === null ? null : new FrameRate($rate);
         $timeFormat = null;
@@ -87,9 +88,9 @@ final class CsvParser extends SubtitleParser
             if ($end === null) {
                 $openEnds[] = $cue;
             }
-            $subtitle->addCue($cue, false);
+            $parsedCues[] = $cue;
         }
-        $subtitle->reIndexCues();
+        $subtitle->addCues($parsedCues);
         $this->closeOpenEnds($subtitle, $openEnds);
 
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, [

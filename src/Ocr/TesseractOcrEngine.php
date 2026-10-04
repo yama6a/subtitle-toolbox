@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Ocr;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\OcrException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngDecoder;
 use SubtitleToolbox\Markup;
@@ -83,8 +84,8 @@ final class TesseractOcrEngine implements OcrEngine
             unlink($file);
         }
         if ($code !== 0) {
-            throw new InvalidArgumentException("Cannot read the cue image at {$image->x}, {$image->y} - tesseract " .
-                                               "exits with code $code: " . trim($error));
+            throw new OcrException("Cannot read the cue image at {$image->x}, {$image->y} - tesseract " .
+                                   "exits with code $code: " . trim($error));
         }
 
         return self::fromTsv($output);
@@ -117,8 +118,8 @@ final class TesseractOcrEngine implements OcrEngine
     {
         if (!isset(self::$languages[$this->program])) {
             if (!self::isInstalled($this->program)) {
-                throw new InvalidArgumentException("Cannot run OCR with Tesseract - the program \"$this->program\" is " .
-                                                   "missing! " . self::INSTALL_HINT);
+                throw new OcrException("Cannot run OCR with Tesseract - the program \"$this->program\" is " .
+                                       "missing! " . self::INSTALL_HINT);
             }
             [, $output, $error]              = self::run([$this->program, "--list-langs"]);
             $lines                           = array_map(trim(...), explode("\n", trim($output . $error)));
@@ -127,11 +128,11 @@ final class TesseractOcrEngine implements OcrEngine
 
         $missing = array_diff(explode("+", $language), self::$languages[$this->program]);
         if ($missing !== []) {
-            throw new InvalidArgumentException("Cannot run OCR with Tesseract in the language \"$language\" - the " .
-                                               "language data of " . implode(", ", $missing) . " is missing! Install " .
-                                               "it, for example with apt install tesseract-ocr-" . reset($missing) .
-                                               ". The installed languages are: " .
-                                               implode(", ", self::$languages[$this->program]) . ".");
+            throw new OcrException("Cannot run OCR with Tesseract in the language \"$language\" - the " .
+                                   "language data of " . implode(", ", $missing) . " is missing! Install " .
+                                   "it, for example with apt install tesseract-ocr-" . reset($missing) .
+                                   ". The installed languages are: " .
+                                   implode(", ", self::$languages[$this->program]) . ".");
         }
     }
 

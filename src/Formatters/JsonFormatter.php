@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Formatters\Options\JsonWriteOptions;
-use SubtitleToolbox\StringHelpers;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
@@ -34,7 +34,7 @@ final class JsonFormatter extends SubtitleFormatter implements ImageFormatter
 
         $flags = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
         $output = $json->prettyPrint
-            ? JsonOutput::encode($array, $flags | JSON_PRETTY_PRINT) . StringHelpers::UNIX_LINE_ENDING
+            ? JsonOutput::encode($array, $flags | JSON_PRETTY_PRINT) . LineEnding::Lf->value
             : JsonOutput::encode($array, $flags);
 
         return $this->applyOutputOptions($output, $options);

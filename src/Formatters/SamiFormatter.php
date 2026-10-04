@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\SamiParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -28,7 +28,7 @@ final class SamiFormatter extends SubtitleFormatter
         $class    = isset($data["style"]) || isset($data["class"]) ? ($data["class"] ?? null) : $this->classFor($language);
         $style    = isset($data["style"]) ? $this->keepOnlyClass($data["style"], $class) : $this->defaultStyle($class, $language);
         $title    = $subtitle->getMetadata(Subtitle::METADATA_TITLE);
-        $eol      = StringHelpers::UNIX_LINE_ENDING;
+        $eol      = LineEnding::Lf->value;
 
         $output = "<SAMI>$eol<HEAD>$eol";
         if ($title !== null) {
@@ -121,7 +121,7 @@ final class SamiFormatter extends SubtitleFormatter
 
     private function defaultStyle(?string $class, ?string $language): string
     {
-        $eol   = StringHelpers::UNIX_LINE_ENDING;
+        $eol   = LineEnding::Lf->value;
         $rules = $language === null ? "Name: Subtitles;" : "Name: $language; lang: $language;";
 
         return "<!--{$eol}P { font-family: Arial; text-align: center; }$eol.$class { $rules }$eol-->";

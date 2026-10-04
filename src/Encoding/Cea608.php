@@ -12,8 +12,10 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
  * @see https://www.govinfo.gov/content/pkg/CFR-2010-title47-vol1/xml/CFR-2010-title47-vol1-sec15-119.xml
  * @see http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/CC_CHARS.HTML
  * @see http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
+ *
+ * @internal
  */
-class Cea608
+final class Cea608
 {
     public const RESUME_CAPTION_LOADING   = 0x20;
     public const BACKSPACE                = 0x21;

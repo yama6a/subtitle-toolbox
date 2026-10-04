@@ -32,7 +32,8 @@ final class YouTubeTimedTextParser extends SubtitleParser
         $content        = ltrim(StringHelpers::removeUtf8Bom($rawSubtitle));
         [$fileData, $captions] = str_starts_with($content, "{") ? $this->readJson($content) : $this->readXml($content);
 
-        $subtitle = new Subtitle();
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, $fileData);
         foreach ($this->endAtNextCaption($captions) as $caption) {
             $cue = new SubtitleCue($caption["start"], $caption["end"], explode("\n", $this->markup($caption["segments"], $caption["start"])));
@@ -43,10 +44,10 @@ final class YouTubeTimedTextParser extends SubtitleParser
             if ($caption["formatData"] !== []) {
                 $cue->setFormatData(self::FORMAT_DATA_KEY, $caption["formatData"]);
             }
-            $subtitle->addCue($cue, false);
+            $parsedCues[] = $cue;
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 

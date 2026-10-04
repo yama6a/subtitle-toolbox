@@ -8,6 +8,9 @@ use ArrayIterator;
 use Iterator;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
+/**
+ * @internal
+ */
 trait CueLookup
 {
     private ?array $cueLookupIndex = null;
@@ -76,14 +79,14 @@ trait CueLookup
 
 
     /**
-     * Removes the cues for which $fn returns false and moves the comments before the removed cues to the next kept cue.
+     * Removes the cues for which $predicate returns true and moves the comments before the removed cues to the next kept cue.
      *
-     * @param callable(SubtitleCue): bool $fn
+     * @param callable(SubtitleCue): bool $predicate
      */
-    public function filterCues(callable $fn): self
+    public function removeCuesWhere(callable $predicate): self
     {
         foreach ($this->cues as $index => $cue) {
-            if (!$fn($cue)) {
+            if ($predicate($cue)) {
                 unset($this->cues[$index]);
             }
         }

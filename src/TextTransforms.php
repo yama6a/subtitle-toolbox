@@ -6,6 +6,9 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
+/**
+ * @internal
+ */
 trait TextTransforms
 {
     /**
@@ -160,22 +163,17 @@ trait TextTransforms
      */
     private function textTransformsMapCues(callable $fn): self
     {
-        $removed = false;
-        foreach ($this->cues as $index => $cue) {
+        $emptied = new \SplObjectStorage();
+        foreach ($this->cues as $cue) {
             $hadText = Markup::hasVisibleText($cue->getLines());
             $cue->setLinesByArray($fn($cue));
 
             if ($hadText && !Markup::hasVisibleText($cue->getLines())) {
-                $this->removeCue($index, false);
-                $removed = true;
+                $emptied[$cue] = true;
             }
         }
 
-        if ($removed) {
-            $this->reIndexCues();
-        }
-
-        return $this;
+        return $emptied->count() === 0 ? $this : $this->removeCuesWhere(fn (SubtitleCue $cue): bool => isset($emptied[$cue]));
     }
 
 

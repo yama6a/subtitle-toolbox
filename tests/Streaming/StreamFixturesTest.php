@@ -110,9 +110,11 @@ class StreamFixturesTest extends TestCase
         $parsed   = (new WebVttParser())->parse(file_get_contents($path), new ReadOptions());
         $header   = $parsed->getFormatData(WebVttParser::FORMAT_DATA_KEY);
         $subtitle = (new Subtitle())->setFormatData(WebVttParser::FORMAT_DATA_KEY, $header);
+        $cues     = [];
         foreach ($parsed->getCues() as $cue) {
-            $subtitle->addCue($cue, false);
+            $cues[] = $cue;
         }
+        $subtitle->addCues($cues);
 
         foreach (self::optionSets() as $name => $options) {
             $stream = fopen("php://memory", "w+b");

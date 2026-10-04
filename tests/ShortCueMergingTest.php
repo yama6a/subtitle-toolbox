@@ -193,8 +193,8 @@ class ShortCueMergingTest extends TestCase
     public function testWalksTheCuesInTimeOrder(): void
     {
         $subtitle = new Subtitle();
-        $subtitle->addCue(new SubtitleCue(0.5, 1, "two"), false);
-        $subtitle->addCue(new SubtitleCue(0, 0.5, "One"), false);
+        $subtitle->addCue(new SubtitleCue(0.5, 1, "two"));
+        $subtitle->addCue(new SubtitleCue(0, 0.5, "One"));
 
         $this->assertSame([[0.0, 1.0, "One two"]], $this->describeCues($subtitle->mergeShortCues(new MergeShortCuesOptions())));
     }

@@ -66,8 +66,9 @@ final class WhisperJsonParser extends SubtitleParser
             default                                  => throw new ParsingException("The JSON has no \"segments\" or \"transcription\" list."),
         };
 
-        $subtitle = new Subtitle();
-        $language = $data["language"] ?? $data["result"]["language"] ?? null;
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
+        $language   = $data["language"] ?? $data["result"]["language"] ?? null;
         if (is_string($language) && $language !== "") {
             $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, self::LANGUAGE_CODES[strtolower($language)] ?? $language);
         }
@@ -87,10 +88,10 @@ final class WhisperJsonParser extends SubtitleParser
             }
 
             $cue = new SubtitleCue($start, $end, $markup);
-            $subtitle->addCue($cue->setFormatData(self::FORMAT_DATA_KEY, $formatData), false);
+            $parsedCues[] = $cue->setFormatData(self::FORMAT_DATA_KEY, $formatData);
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 

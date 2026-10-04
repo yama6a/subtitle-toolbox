@@ -18,9 +18,9 @@ final class ProfanityFilter
      */
     public static function apply(Subtitle $subtitle, ProfanityOptions $options): ProfanityReport
     {
-        $pattern = self::pattern($options->words);
-        $ranges  = [];
-        $removed = false;
+        $pattern     = self::pattern($options->words);
+        $ranges      = [];
+        $removedCues = new \SplObjectStorage();
 
         foreach ($subtitle->getCues() as $index => $cue) {
             $lines = array_values($cue->getLines());
@@ -36,13 +36,12 @@ final class ProfanityFilter
             $hadText = Markup::hasVisibleText($lines);
             $cue->setLinesByArray($changed);
             if ($hadText && !Markup::hasVisibleText($cue->getLines())) {
-                $subtitle->removeCue($index, false);
-                $removed = true;
+                $removedCues[$cue] = true;
             }
         }
 
-        if ($removed) {
-            $subtitle->reIndexCues();
+        if ($removedCues->count() > 0) {
+            $subtitle->removeCuesWhere(fn (SubtitleCue $cue): bool => isset($removedCues[$cue]));
         }
 
         return new ProfanityReport(self::join($ranges, $options->padding));

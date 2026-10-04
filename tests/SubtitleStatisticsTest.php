@@ -17,9 +17,11 @@ class SubtitleStatisticsTest extends TestCase
     private function makeSubtitle(array $cues): Subtitle
     {
         $subtitle = new Subtitle();
+        $added    = [];
         foreach ($cues as [$start, $end, $lines]) {
-            $subtitle->addCue(new SubtitleCue($start, $end, $lines), false);
+            $added[] = new SubtitleCue($start, $end, $lines);
         }
+        $subtitle->addCues($added);
 
         return $subtitle;
     }

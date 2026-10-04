@@ -14,6 +14,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\OcrException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
@@ -173,7 +174,7 @@ class GlyphOcrEngineTest extends TestCase
 
     public function testImageThatIsNoPngThrows(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(OcrException::class);
         $this->expectExceptionMessage("Cannot read the cue image at 3, 4 - the recognizer says: Cannot decode the PNG");
 
         (new GlyphOcrEngine())->recognize(new CueImage("no png", 3, 4, 1, 1, 720, 576), null);

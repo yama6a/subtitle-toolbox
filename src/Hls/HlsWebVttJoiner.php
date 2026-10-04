@@ -23,6 +23,7 @@ final class HlsWebVttJoiner
         $joined   = new Subtitle();
         $fileData = null;
         $seen     = [];
+        $cues     = [];
         foreach ($segments as $content) {
             $segment = Subtitle::fromString($content, Format::WebVtt);
             // RFC 8216 section 3.5: without the header, cue time 0 maps to MPEG-2 timestamp 0.
@@ -34,12 +35,12 @@ final class HlsWebVttJoiner
                 $key = $cue->getStart() . "|" . $cue->getEnd() . "|" . $cue->getText();
                 if (!isset($seen[$key])) {
                     $seen[$key] = true;
-                    $joined->addCue($cue, false);
+                    $cues[] = $cue;
                 }
             }
         }
 
-        return $joined->setFormatData(WebVttParser::FORMAT_DATA_KEY, $fileData ?? [])->reIndexCues()->removeDuplicateCues();
+        return $joined->setFormatData(WebVttParser::FORMAT_DATA_KEY, $fileData ?? [])->addCues($cues)->removeDuplicateCues();
     }
 
 

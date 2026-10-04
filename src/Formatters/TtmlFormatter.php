@@ -8,10 +8,10 @@ use DOMDocument;
 use DOMElement;
 use DOMNode;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\TtmlNamespaces;
 use SubtitleToolbox\Parsers\TtmlParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -19,7 +19,7 @@ use SubtitleToolbox\WriteOptions;
 
 final class TtmlFormatter extends SubtitleFormatter
 {
-    private const NL = StringHelpers::UNIX_LINE_ENDING;
+    private const NL = LineEnding::Lf->value;
 
     // The formatter writes media times, so these parameters no longer apply.
     private const SKIPPED_ROOT_PARAMETERS = ["timeBase", "clockMode", "dropMode", "markerMode"];

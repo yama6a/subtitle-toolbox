@@ -6,7 +6,7 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
-class FrameRate
+final class FrameRate
 {
     protected float $fps;
 

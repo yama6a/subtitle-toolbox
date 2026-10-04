@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
-class SubtitleStatistics
+final class SubtitleStatistics
 {
     private int $cueCount           = 0;
     private int $wordCount          = 0;

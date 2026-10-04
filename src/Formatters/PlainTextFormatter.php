@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Formatters\Options\PlainTextWriteOptions;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
@@ -37,16 +37,16 @@ final class PlainTextFormatter extends SubtitleFormatter
             if ($latestEnd === null || $cue->getStart() - $latestEnd >= $plainText->paragraphGap) {
                 $paragraphs[] = ["start" => $cue->getStart(), "cues" => []];
             }
-            $paragraphs[count($paragraphs) - 1]["cues"][] = implode($plainText->joinLines ? " " : StringHelpers::UNIX_LINE_ENDING, $lines);
+            $paragraphs[count($paragraphs) - 1]["cues"][] = implode($plainText->joinLines ? " " : LineEnding::Lf->value, $lines);
             $latestEnd = max($latestEnd ?? $cue->getEnd(), $cue->getEnd());
         }
 
         $blocks = array_map(fn (array $paragraph): string =>
             ($plainText->withTimes ? sprintf("[%02d:%02d:%02d] ", ...Timecode::seconds(floor($paragraph["start"]))) : "") .
-            implode($plainText->joinCues ? " " : StringHelpers::UNIX_LINE_ENDING, $paragraph["cues"]) .
-            StringHelpers::UNIX_LINE_ENDING, $paragraphs);
+            implode($plainText->joinCues ? " " : LineEnding::Lf->value, $paragraph["cues"]) .
+            LineEnding::Lf->value, $paragraphs);
 
-        return $this->applyOutputOptions(implode(StringHelpers::UNIX_LINE_ENDING, $blocks), $options);
+        return $this->applyOutputOptions(implode(LineEnding::Lf->value, $blocks), $options);
     }
 
 

@@ -22,9 +22,11 @@ class ValidationTest extends TestCase
     private function makeSubtitle(array $cues): Subtitle
     {
         $subtitle = new Subtitle();
+        $added    = [];
         foreach ($cues as [$start, $end, $lines]) {
-            $subtitle->addCue(new SubtitleCue($start, $end, $lines), false);
+            $added[] = new SubtitleCue($start, $end, $lines);
         }
+        $subtitle->addCues($added);
 
         return $subtitle;
     }
@@ -462,22 +464,5 @@ class ValidationTest extends TestCase
             [0, ValidationResult::RULE_ALLOWED_CHARACTERS, 3, null],
             [0, ValidationResult::RULE_NO_ALL_CAPS_LINES, 1, null],
         ], $this->toArrays($subtitle->validate($rules)));
-    }
-
-
-    public function testAMissingCueIndexIsReportedOnce(): void
-    {
-        $subtitle = Subtitle::load(__DIR__ . "/files/profanity/keys.srt", Format::SubRip);
-        $count    = count($subtitle->getCues());
-        $subtitle->removeCue(1, false);
-
-        $gaps = array_values(array_filter(
-            $subtitle->validate(new ValidationRules(noIndexGaps: true)),
-            fn (ValidationResult $result): bool => $result->getRule() === ValidationResult::RULE_INDEX_GAP
-        ));
-
-        $this->assertGreaterThan(3, $count);
-        $this->assertCount(1, $gaps);
-        $this->assertSame([2, 1], [$gaps[0]->getCueIndex(), $gaps[0]->getValue()]);
     }
 }

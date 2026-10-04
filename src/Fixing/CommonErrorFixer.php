@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Fixing;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 
 /**
  * The replace list rules port GetReplaceWord(), StripAffixes(), ReplaceWord() and SkipAddLineEnding() of
@@ -49,11 +50,11 @@ final class CommonErrorFixer
      */
     public static function apply(Subtitle $subtitle, CommonErrorOptions $options): CommonErrorReport
     {
-        $language   = self::language($options->language ?? $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
-        $cues       = $subtitle->getCues();
-        $indexes    = array_keys($cues);
-        $fixes      = [];
-        $removed    = false;
+        $language    = self::language($options->language ?? $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $cues        = $subtitle->getCues();
+        $indexes     = array_keys($cues);
+        $fixes       = [];
+        $removedCues = new \SplObjectStorage();
 
         foreach ($indexes as $position => $index) {
             $cue   = $cues[$index];
@@ -79,13 +80,12 @@ final class CommonErrorFixer
             }
             $cue->setLinesByArray($lines);
             if (Markup::plainLines($cue->getLines()) === [] && Markup::plainLines($original) !== []) {
-                $subtitle->removeCue($index, false);
-                $removed = true;
+                $removedCues[$cue] = true;
             }
         }
 
-        if ($removed) {
-            $subtitle->reIndexCues();
+        if ($removedCues->count() > 0) {
+            $subtitle->removeCuesWhere(fn (SubtitleCue $cue): bool => isset($removedCues[$cue]));
         }
 
         return new CommonErrorReport($fixes);

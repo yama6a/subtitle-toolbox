@@ -42,11 +42,7 @@ final class AssemblyAiParser extends SubtitleParser
         }
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, array_diff_key($data, array_flip(["text", "words", "utterances"])));
 
-        foreach ($cues as $cue) {
-            $subtitle->addCue($cue, false);
-        }
-
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($cues);
     }
 
 

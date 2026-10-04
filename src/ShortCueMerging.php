@@ -6,6 +6,9 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Image\CueImage;
 
+/**
+ * @internal
+ */
 trait ShortCueMerging
 {
     /**

@@ -238,9 +238,11 @@ class ChapterFormatsTest extends TestCase
     private function chapters(array $chapters): Subtitle
     {
         $subtitle = new Subtitle();
+        $cues     = [];
         foreach ($chapters as [$start, $end, $text]) {
-            $subtitle->addCue(new SubtitleCue($start, $end, $text), false);
+            $cues[] = new SubtitleCue($start, $end, $text);
         }
+        $subtitle->addCues($cues);
 
         return $subtitle;
     }

@@ -118,6 +118,7 @@ class ThrowSitesTest extends TestCase
         InvalidArgumentException::class     => 104,
         CueNotFoundException::class         => 105,
         UnknownFormatException::class       => 106,
+        OcrException::class                 => 107,
     ];
 
     private const IDX = "# VobSub index file, v7 (do not modify this line!)\nsize: 720x576\n" .
@@ -232,6 +233,7 @@ class ThrowSitesTest extends TestCase
     {
         $invalid  = [\InvalidArgumentException::class, InvalidArgumentException::class];
         $parsing  = [ParsingException::class, ParsingException::class];
+        $ocr      = [\RuntimeException::class, OcrException::class];
         $imageCue = (new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(1, 2));
 
         $cue = ["start" => 1, "end" => 2, "lines" => ["text"]];
@@ -383,7 +385,7 @@ class ThrowSitesTest extends TestCase
             "Ocr/GlyphOcrEngine.php: unknown option"        => [fn () => new GlyphOcrEngine(null, ["speed" => 2]), ...$invalid],
             "Ocr/GlyphOcrEngine.php: invalid option"        => [fn () => new GlyphOcrEngine(null, ["inkThreshold" => 0]), ...$invalid],
             "Ocr/GlyphOcrEngine.php: no PNG"                => [fn () => (new GlyphOcrEngine())
-                ->recognize(new CueImage("png", 0, 0, 1, 1, 1, 1), null), ...$invalid],
+                ->recognize(new CueImage("png", 0, 0, 1, 1, 1, 1), null), ...$ocr],
             "Ocr/GlyphOcrEngine.php: package missing"       => [fn () => (new \ReflectionMethod(GlyphOcrEngine::class, "requireClass"))
                 ->invoke(null, "GlyphOcr\\Missing"), ...$invalid],
             "Ocr/OcrEngineChooser.php: unknown engine"      => [fn () => OcrEngineChooser::choose("easyocr"), ...$invalid],
@@ -393,9 +395,9 @@ class ThrowSitesTest extends TestCase
             "Ocr/TesseractOcrEngine.php: scale 0.5"         => [fn () => new TesseractOcrEngine(scale: 0.5), ...$invalid],
             "Ocr/TesseractOcrEngine.php: threshold 0"       => [fn () => new TesseractOcrEngine(threshold: 0), ...$invalid],
             "Ocr/TesseractOcrEngine.php: program missing"   => [fn () => (new TesseractOcrEngine(program: __DIR__ . "/none"))
-                ->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), null), ...$invalid],
+                ->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), null), ...$ocr],
             "Ocr/TesseractOcrEngine.php: language missing"  => [fn () => (new TesseractOcrEngine(program: self::FAKE_TESSERACT))
-                ->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), "xyz"), ...$invalid],
+                ->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), "xyz"), ...$ocr],
             "Ocr/TesseractOcrEngine.php: program fails"     => [function (): void {
                 putenv("FAKE_TESSERACT_FAIL=1");
                 try {
@@ -403,7 +405,7 @@ class ThrowSitesTest extends TestCase
                 } finally {
                     putenv("FAKE_TESSERACT_FAIL");
                 }
-            }, ...$invalid],
+            }, ...$ocr],
             "Parsers/AssParser.php: no events section"      => [fn () => (new AssParser())->parse("[Script Info]\nTitle: x\n", new ReadOptions()), ...$parsing],
             "Parsers/AssParser.php: too few fields"         => [fn () => (new AssParser())->parse("[Events]\nFormat: Layer, Start, End, Text\n" .
                                                                                                   "Dialogue: 0,0:00:01.00\n", new ReadOptions()), ...$parsing],
@@ -612,6 +614,7 @@ class ThrowSitesTest extends TestCase
                 self::stream("WEBVTT\n\ntext\nmore"))), ...$parsing],
             "StringHelpers.php: unknown encoding"           => [fn () => StringHelpers::convertToUtf8("text", "NO-SUCH-ENCODING"),
                                                                 ...$parsing],
+            "Subtitle.php: addCues no cue"                 => [fn () => (new Subtitle())->addCues([5]), ...$invalid],
             "Subtitle.php: unknown format"                  => [fn () => Subtitle::fromStringAutoDetectFormat("text"),
                                                                 InvalidParserException::class, UnknownFormatException::class],
             "Subtitle.php: unknown format of a file"        => [fn () => Subtitle::loadAutoDetectFormat(self::FILES . "chapters/ffmetadata/real/m4b_audiobook.ffmeta"),
@@ -639,7 +642,6 @@ class ThrowSitesTest extends TestCase
             "Subtitle.php: remove a missing cue"            => [fn () => self::subtitle()->removeCue(9),
                                                                 \RuntimeException::class, CueNotFoundException::class],
             "Subtitle.php: negative comment index"          => [fn () => self::subtitle()->addComment("note", -1), ...$invalid],
-            "SubtitleCue.php: lines of the wrong type"      => [fn () => (new SubtitleCue())->setLines(5), ...$invalid],
             "SubtitleCue.php: alignment 10"                 => [fn () => (new SubtitleCue())->setAlignment(10), ...$invalid],
             "Sync/ReferenceSyncOptions.php: offset beyond a day" => [fn () => new ReferenceSyncOptions(new Subtitle(), maxOffset: 1e20), ...$invalid],
             "Sync/ReferenceSyncOptions.php: offset range too wide" => [fn () => new ReferenceSyncOptions(new Subtitle(), -5000, 5000), ...$invalid],

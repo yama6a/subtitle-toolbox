@@ -47,7 +47,8 @@ final class PodcastTranscriptParser extends SubtitleParser
             throw new ParsingException("The JSON has no \"segments\" list.");
         }
 
-        $subtitle = new Subtitle();
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, array_diff_key($data, ["segments" => true]));
 
         foreach ($this->groups($this->readSegments($data["segments"])) as $group) {
@@ -66,10 +67,10 @@ final class PodcastTranscriptParser extends SubtitleParser
             if (count($group) === 1 && $group[0]["other"] !== []) {
                 $cue->setFormatData(self::FORMAT_DATA_KEY, $group[0]["other"]);
             }
-            $subtitle->addCue($cue, false);
+            $parsedCues[] = $cue;
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 

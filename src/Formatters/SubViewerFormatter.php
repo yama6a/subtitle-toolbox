@@ -6,9 +6,9 @@ namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Formatters\Options\SubViewerVersion;
 use SubtitleToolbox\Formatters\Options\SubViewerWriteOptions;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\SubViewerParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
@@ -40,9 +40,9 @@ final class SubViewerFormatter extends SubtitleFormatter
 
         $output = "";
         foreach ($header as $tag => $value) {
-            $output .= "[$tag]" . StringHelpers::UNIX_LINE_ENDING . ($value === "" ? "" : $value . StringHelpers::UNIX_LINE_ENDING);
+            $output .= "[$tag]" . LineEnding::Lf->value . ($value === "" ? "" : $value . LineEnding::Lf->value);
         }
-        $output .= SubViewerParser::START_SCRIPT . StringHelpers::UNIX_LINE_ENDING;
+        $output .= SubViewerParser::START_SCRIPT . LineEnding::Lf->value;
 
         foreach ($subtitle->getCues() as $cue) {
             $lines = Markup::plainLines($cue->getLines());
@@ -51,27 +51,27 @@ final class SubViewerFormatter extends SubtitleFormatter
                 continue;
             }
 
-            $output .= sprintf("[%02d:%02d:%02d]", ...Timecode::seconds($cue->getStart())) . StringHelpers::UNIX_LINE_ENDING .
-                       implode("|", $lines) . StringHelpers::UNIX_LINE_ENDING .
-                       sprintf("[%02d:%02d:%02d]", ...Timecode::seconds($cue->getEnd())) . StringHelpers::UNIX_LINE_ENDING .
-                       StringHelpers::UNIX_LINE_ENDING;
+            $output .= sprintf("[%02d:%02d:%02d]", ...Timecode::seconds($cue->getStart())) . LineEnding::Lf->value .
+                       implode("|", $lines) . LineEnding::Lf->value .
+                       sprintf("[%02d:%02d:%02d]", ...Timecode::seconds($cue->getEnd())) . LineEnding::Lf->value .
+                       LineEnding::Lf->value;
         }
 
-        return $output . "[end]" . StringHelpers::UNIX_LINE_ENDING . "******** END SCRIPT ********" . StringHelpers::UNIX_LINE_ENDING;
+        return $output . "[end]" . LineEnding::Lf->value . "******** END SCRIPT ********" . LineEnding::Lf->value;
     }
 
 
     private function formatVersion2(Subtitle $subtitle): string
     {
-        $output = "[INFORMATION]" . StringHelpers::UNIX_LINE_ENDING;
+        $output = "[INFORMATION]" . LineEnding::Lf->value;
         foreach ($this->headerTags($subtitle, self::VERSION_2_DEFAULT_HEADER) as $tag => $value) {
-            $output .= "[$tag]$value" . StringHelpers::UNIX_LINE_ENDING;
+            $output .= "[$tag]$value" . LineEnding::Lf->value;
         }
-        $output .= "[END INFORMATION]" . StringHelpers::UNIX_LINE_ENDING . "[SUBTITLE]" . StringHelpers::UNIX_LINE_ENDING;
+        $output .= "[END INFORMATION]" . LineEnding::Lf->value . "[SUBTITLE]" . LineEnding::Lf->value;
 
         $style = $subtitle->getFormatData(SubViewerParser::FORMAT_DATA_KEY)["style"] ?? null;
         if ($style !== null) {
-            $output .= $style . StringHelpers::UNIX_LINE_ENDING;
+            $output .= $style . LineEnding::Lf->value;
         }
 
         $blocks = [];
@@ -83,11 +83,11 @@ final class SubViewerFormatter extends SubtitleFormatter
             }
 
             $blocks[] = sprintf("%02d:%02d:%02d.%02d,%02d:%02d:%02d.%02d", ...Timecode::centiseconds($cue->getStart()), ...Timecode::centiseconds($cue->getEnd())) .
-                        StringHelpers::UNIX_LINE_ENDING .
-                        implode("[br]", $lines) . StringHelpers::UNIX_LINE_ENDING;
+                        LineEnding::Lf->value .
+                        implode("[br]", $lines) . LineEnding::Lf->value;
         }
 
-        return $output . implode(StringHelpers::UNIX_LINE_ENDING, $blocks);
+        return $output . implode(LineEnding::Lf->value, $blocks);
     }
 
 

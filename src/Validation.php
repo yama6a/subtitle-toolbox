@@ -8,6 +8,9 @@ use SubtitleToolbox\Validation\TextChecks;
 use SubtitleToolbox\Validation\ValidationResult;
 use SubtitleToolbox\Validation\ValidationRules;
 
+/**
+ * @internal
+ */
 trait Validation
 {
     /**

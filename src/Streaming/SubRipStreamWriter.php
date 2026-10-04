@@ -9,7 +9,7 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
 
-class SubRipStreamWriter implements CueStreamWriter
+final class SubRipStreamWriter implements CueStreamWriter
 {
     /** @var resource|null */
     private $handle;

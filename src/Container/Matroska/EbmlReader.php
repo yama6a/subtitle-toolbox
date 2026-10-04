@@ -8,6 +8,8 @@ use SubtitleToolbox\Exceptions\ParsingException;
 
 /**
  * Reads EBML elements (RFC 8794) from a seekable stream without loading more than one element header at a time.
+ *
+ * @internal
  */
 final class EbmlReader
 {

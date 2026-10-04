@@ -10,7 +10,7 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
 
-class WebVttStreamWriter implements CueStreamWriter
+final class WebVttStreamWriter implements CueStreamWriter
 {
     /** @var resource|null */
     private $handle;

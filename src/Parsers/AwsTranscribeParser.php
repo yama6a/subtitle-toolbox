@@ -42,11 +42,7 @@ final class AwsTranscribeParser extends SubtitleParser
         }
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, $fileData);
 
-        foreach ($cues as $cue) {
-            $subtitle->addCue($cue, false);
-        }
-
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($cues);
     }
 
 

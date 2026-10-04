@@ -21,26 +21,25 @@ final class HearingImpairedRemover
     public static function apply(Subtitle $subtitle, HearingImpairedOptions $options): HearingImpairedReport
     {
         $removedLines = 0;
-        $removedCues  = 0;
+        $removedCues  = new \SplObjectStorage();
         foreach ($subtitle->getCues() as $index => $cue) {
             $before  = array_values($cue->getLines());
             $hadText = Markup::hasVisibleText($before);
             $cue->setLinesByArray(self::removeFromLines($before, $options));
 
             if ($hadText && !Markup::hasVisibleText($cue->getLines())) {
-                $subtitle->removeCue($index, false);
+                $removedCues[$cue] = true;
                 $removedLines += count($before);
-                $removedCues++;
             } else {
                 $removedLines += max(0, count($before) - count($cue->getLines()));
             }
         }
 
-        if ($removedCues > 0) {
-            $subtitle->reIndexCues();
+        if ($removedCues->count() > 0) {
+            $subtitle->removeCuesWhere(fn (SubtitleCue $cue): bool => isset($removedCues[$cue]));
         }
 
-        return new HearingImpairedReport($removedLines, $removedCues);
+        return new HearingImpairedReport($removedLines, $removedCues->count());
     }
 
 

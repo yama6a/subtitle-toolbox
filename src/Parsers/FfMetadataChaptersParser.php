@@ -144,6 +144,7 @@ final class FfMetadataChaptersParser extends SubtitleParser
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["tags" => $global, "streams" => $streams]);
 
         usort($chapters, fn (array $a, array $b): int => $a["start"] <=> $b["start"]);
+        $parsedCues = [];
         foreach ($chapters as $index => $chapter) {
             $nextStart = $chapters[$index + 1]["start"] ?? null;
             $end       = $chapter["end"] ?? $nextStart ?? max($chapter["start"], $this->formatOptions()->mediaDuration ?? 0);
@@ -154,9 +155,9 @@ final class FfMetadataChaptersParser extends SubtitleParser
                 "timeBase" => $chapter["timeBase"],
                 "tags"     => array_diff_key($chapter["tags"], ["title" => true]),
             ]);
-            $subtitle->addCue($cue, false);
+            $parsedCues[] = $cue;
         }
 
-        return $subtitle;
+        return $subtitle->addCues($parsedCues);
     }
 }

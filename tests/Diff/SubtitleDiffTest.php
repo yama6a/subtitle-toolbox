@@ -29,9 +29,11 @@ class SubtitleDiffTest extends TestCase
     private function makeSubtitle(array $cues): Subtitle
     {
         $subtitle = new Subtitle();
+        $added    = [];
         foreach ($cues as [$start, $end, $text]) {
-            $subtitle->addCue(new SubtitleCue($start, $end, $text), false);
+            $added[] = new SubtitleCue($start, $end, $text);
         }
+        $subtitle->addCues($added);
 
         return $subtitle;
     }
@@ -203,17 +205,6 @@ class SubtitleDiffTest extends TestCase
             [CueDifference::KIND_REMOVED, 0, null],
             [CueDifference::KIND_ADDED, null, 0],
         ], $this->summarize(SubtitleDiff::compare($old, $new)));
-    }
-
-
-    public function testIndexesAreCueKeys(): void
-    {
-        $old = $this->makeSubtitle([[1, 2, "One."], [3, 4, "Two."], [5, 6, "Three."]]);
-        $new = $this->makeSubtitle([[1, 2, "One."], [3, 4, "Two."], [5, 6, "Three!"]]);
-        $old->removeCue(0, false);
-        $new->removeCue(0, false);
-
-        $this->assertSame([[CueDifference::KIND_TEXT_CHANGED, 2, 2]], $this->summarize(SubtitleDiff::compare($old, $new)));
     }
 
 

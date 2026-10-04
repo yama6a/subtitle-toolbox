@@ -61,8 +61,9 @@ final class EbuStlParser extends SubtitleParser
         $sets      = self::readSubtitleSets(substr($rawSubtitle, EbuStl::GSI_BLOCK_SIZE));
         $maxRow    = EbuStl::maxRow($gsi);
 
-        $subtitle = new Subtitle();
-        $title    = rtrim($gsi["OPT"], " \0");
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
+        $title      = rtrim($gsi["OPT"], " \0");
         $subtitle->setMetadata(Subtitle::METADATA_TITLE, $title === "" ? null : $title);
         $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, EbuStl::LANGUAGES[strtoupper($gsi["LC"])] ?? null);
 
@@ -78,7 +79,7 @@ final class EbuStlParser extends SubtitleParser
             if (ord($header[15]) === 1) {
                 $lines = array_filter(array_map("trim", $lines), fn (string $line): bool => $line !== "");
                 $text  = Markup::plainText(implode("\n", $lines));
-                $subtitle->addComment($text, count($subtitle->getCues()));
+                $subtitle->addComment($text, count($parsedCues));
                 $comments[] = ["text" => $text, "blocks" => $hexes];
                 continue;
             }
@@ -110,9 +111,9 @@ final class EbuStlParser extends SubtitleParser
                 "text"                => $cue->getText(),
                 "blocks"              => $hexes,
             ]);
-            $subtitle->addCue($cue, false);
+            $parsedCues[] = $cue;
         }
-        $subtitle->reIndexCues();
+        $subtitle->addCues($parsedCues);
 
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, [
             "gsi"                        => $gsi,

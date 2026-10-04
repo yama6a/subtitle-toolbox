@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use Generator;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
@@ -25,15 +26,16 @@ final class SubRipParser extends SubtitleParser
         $this->warnings = [];
         $rawSubtitle    = StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle));
 
-        $subtitle = new Subtitle();
-        $index    = 0;
-        foreach ($this->splitIntoBlocks(explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle)) as $lineNumber => $rawLines) {
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
+        $index      = 0;
+        foreach ($this->splitIntoBlocks(explode(LineEnding::Lf->value, $rawSubtitle)) as $lineNumber => $rawLines) {
             foreach ($this->parseBlock($rawLines, $index++, $lineNumber) as $cue) {
-                $subtitle->addCue($cue, false);
+                $parsedCues[] = $cue;
             }
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 

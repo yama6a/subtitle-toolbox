@@ -21,14 +21,20 @@ class CueLookupTest extends TestCase
     }
 
 
-    private function makeSubtitle(array $times, bool $reIndex = true): Subtitle
+    /**
+     * Keeps the cues in the order of $times when $sorted is false.
+     */
+    private function makeSubtitle(array $times, bool $sorted = true): Subtitle
     {
-        $subtitle = new Subtitle();
-        foreach ($times as $index => [$start, $end]) {
-            $subtitle->addCue(new SubtitleCue($start, $end, "text$index"), $reIndex);
+        $subtitle = (new Subtitle())->addCues(array_map(
+            fn (int $index): SubtitleCue => new SubtitleCue($index, $index, "text$index"),
+            array_keys($times)
+        ));
+        foreach ($subtitle->getCues() as $index => $cue) {
+            $cue->setStart($times[$index][0])->setEnd($times[$index][1]);
         }
 
-        return $subtitle;
+        return $sorted ? $subtitle->reIndexCues() : $subtitle;
     }
 
 
@@ -37,16 +43,15 @@ class CueLookupTest extends TestCase
      */
     private function makeLargeSubtitle(): Subtitle
     {
-        $subtitle = new Subtitle();
-        $subtitle->addCue(new SubtitleCue(0, 25000, "background"), false);
+        $cues = [new SubtitleCue(0, 25000, "background")];
         for ($cue = 0; $cue < 10000; $cue++) {
-            $subtitle->addCue(new SubtitleCue($cue * 2.5, $cue * 2.5 + 2, "line $cue"), false);
+            $cues[] = new SubtitleCue($cue * 2.5, $cue * 2.5 + 2, "line $cue");
             if ($cue % 100 === 0) {
-                $subtitle->addCue(new SubtitleCue($cue * 2.5 + 1, $cue * 2.5 + 31, "sign $cue"), false);
+                $cues[] = new SubtitleCue($cue * 2.5 + 1, $cue * 2.5 + 31, "sign $cue");
             }
         }
 
-        return $subtitle->reIndexCues();
+        return (new Subtitle())->addCues($cues);
     }
 
 
@@ -71,20 +76,6 @@ class CueLookupTest extends TestCase
         $this->assertSame(7, count($subtitle));
         $this->assertSame($subtitle->getCues(), iterator_to_array($subtitle));
         $this->assertSame([0, 1, 2, 3, 4, 5, 6], array_keys(iterator_to_array($subtitle)));
-    }
-
-
-    public function testIterateYieldsIndexOrderAfterRemovalWithoutReIndex(): void
-    {
-        $subtitle = $this->makeSubtitle([[1, 2], [3, 4], [5, 6]])->removeCue(1, false);
-
-        $indexes = [];
-        foreach ($subtitle as $index => $cue) {
-            $indexes[$index] = $cue->getText();
-        }
-
-        $this->assertSame([0 => "text0", 2 => "text2"], $indexes);
-        $this->assertCount(2, $subtitle);
     }
 
 
@@ -215,7 +206,7 @@ class CueLookupTest extends TestCase
         $subtitle = $this->parseHarbourTour();
         $this->assertNull($subtitle->getCueIndexAt(30));
 
-        $subtitle->addCue(new SubtitleCue(29, 31, "late"), false);
+        $subtitle->addCue(new SubtitleCue(29, 31, "late"));
 
         $this->assertSame(6, $subtitle->getCueIndexAt(30));
     }
@@ -226,10 +217,10 @@ class CueLookupTest extends TestCase
         $subtitle = $this->parseHarbourTour();
         $this->assertSame(0, $subtitle->getCueIndexAt(2));
 
-        $subtitle->removeCue(0, false);
+        $subtitle->removeCue(0);
 
         $this->assertNull($subtitle->getCueIndexAt(2));
-        $this->assertSame(1, $subtitle->getCueIndexAt(5));
+        $this->assertSame(0, $subtitle->getCueIndexAt(5));
     }
 
 
@@ -278,7 +269,7 @@ class CueLookupTest extends TestCase
     {
         $subtitle = $this->parseHarbourTour();
 
-        $result = $subtitle->filterCues(fn (SubtitleCue $cue): bool => !str_contains($cue->getText(), "Guide"));
+        $result = $subtitle->removeCuesWhere(fn (SubtitleCue $cue): bool => str_contains($cue->getText(), "Guide"));
 
         $this->assertSame($subtitle, $result);
         $this->assertSame([0, 1, 2, 3], array_keys($subtitle->getCues()));
@@ -303,7 +294,7 @@ class CueLookupTest extends TestCase
     {
         $subtitle = $this->parseSigns();
 
-        $subtitle->filterCues(fn (SubtitleCue $cue): bool => $cue->getEnd() - $cue->getStart() >= 3.5);
+        $subtitle->removeCuesWhere(fn (SubtitleCue $cue): bool => $cue->getEnd() - $cue->getStart() < 3.5);
 
         $this->assertSame([[5.0, 9.0], [5.0, 9.0]], array_map(
             fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()],

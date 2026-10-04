@@ -128,6 +128,7 @@ final class IttFormatter extends SubtitleFormatter
             "body"       => ["style" => "normal"],
         ]);
 
+        $copies = [];
         foreach ($subtitle->getCues() as $cue) {
             $lines = array_map(fn (string $line): string => $this->keepSupportedMarkup($line), $cue->getLines());
             $copy  = (new SubtitleCue($cue->getStart(), $cue->getEnd(), $lines))
@@ -136,9 +137,9 @@ final class IttFormatter extends SubtitleFormatter
             $copy->setFormatData(TtmlParser::FORMAT_DATA_KEY, [
                 "attributes" => ["region" => in_array($cue->getAlignment(), [7, 8, 9], true) ? "top" : "bottom"],
             ]);
-            $ttml->addCue($copy, false);
+            $copies[] = $copy;
         }
-        $ttml->reIndexCues();
+        $ttml->addCues($copies);
 
         return $ttml;
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\StringHelpers;
@@ -23,10 +24,10 @@ final class LyricsFormatter extends SubtitleFormatter
         foreach ($cues as $cueIndex => $cue) {
             $output .= $this->formatComments($comments, $cueIndex, $cueIndex);
             $output .= $this->formatCue($cue);
-            $output .= StringHelpers::UNIX_LINE_ENDING;
+            $output .= LineEnding::Lf->value;
 
             if ($cue->getFormatData(LyricsParser::FORMAT_DATA_KEY)["endLine"] ?? false) {
-                $output .= $this->stamp($cue->getEnd()) . StringHelpers::UNIX_LINE_ENDING;
+                $output .= $this->stamp($cue->getEnd()) . LineEnding::Lf->value;
             }
         }
         $output .= $this->formatComments($comments, count($cues), PHP_INT_MAX);
@@ -47,7 +48,7 @@ final class LyricsFormatter extends SubtitleFormatter
 
         $output = "";
         foreach ($tags as $tag => $value) {
-            $output .= "[" . $tag . ":" . Markup::toSingleLine($value) . "]" . StringHelpers::UNIX_LINE_ENDING;
+            $output .= "[" . $tag . ":" . Markup::toSingleLine($value) . "]" . LineEnding::Lf->value;
         }
 
         return $output;
@@ -62,7 +63,7 @@ final class LyricsFormatter extends SubtitleFormatter
         $output = "";
         foreach ($comments as $comment) {
             if ($comment["beforeCueIndex"] >= $fromCueIndex && $comment["beforeCueIndex"] <= $toCueIndex) {
-                $output .= "[#:" . Markup::toSingleLine($comment["text"]) . "]" . StringHelpers::UNIX_LINE_ENDING;
+                $output .= "[#:" . Markup::toSingleLine($comment["text"]) . "]" . LineEnding::Lf->value;
             }
         }
 

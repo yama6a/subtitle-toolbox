@@ -13,6 +13,7 @@ use GlyphOcr\Recognizer;
 use ReflectionMethod;
 use ReflectionParameter;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\OcrException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Markup;
 use WeakReference;
@@ -62,8 +63,8 @@ final class GlyphOcrEngine implements OcrEngine
         try {
             $result = $this->recognizer->recognize(Image::fromPng($image->png));
         } catch (GlyphOcrException $exception) {
-            throw new InvalidArgumentException("Cannot read the cue image at {$image->x}, {$image->y} - the " .
-                                               "recognizer says: " . $exception->getMessage(), $exception);
+            throw new OcrException("Cannot read the cue image at {$image->x}, {$image->y} - the " .
+                                   "recognizer says: " . $exception->getMessage(), $exception);
         }
 
         return self::toOcrResult($result);

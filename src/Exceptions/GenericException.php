@@ -4,31 +4,17 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Exceptions;
 
+/**
+ * GenericException starts the message with the short class name and the code, for example "ParsingException (Error #100): ".
+ */
 abstract class GenericException extends \RuntimeException implements SubtitleToolboxException
 {
-    /**
-     * GenericException constructor.
-     *
-     * @param $message
-     */
-    public function __construct($message)
+    protected const CODE = 0;
+
+
+    public function __construct(string $message, ?\Throwable $previous = null)
     {
-        parent::__construct($this->getClassName() . " (Error #{$this->getErrorCode()}): " . $message, $this->getErrorCode());
+        $className = substr(strrchr("\\" . static::class, "\\"), 1);
+        parent::__construct("$className (Error #" . static::CODE . "): " . $message, static::CODE, $previous);
     }
-
-
-    /**
-     * Returns the name of the Exception class without its full namespace
-     *
-     * @return string
-     */
-    private function getClassName(): string
-    {
-        $classNameArray = explode('\\', static::class);
-
-        return array_pop($classNameArray);
-    }
-
-
-    abstract public function getErrorCode(): int;
 }

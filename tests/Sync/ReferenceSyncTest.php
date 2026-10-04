@@ -29,12 +29,14 @@ class ReferenceSyncTest extends TestCase
         mt_srand($seed);
         $subtitle = new Subtitle();
         $time     = 1.0;
+        $cues     = [];
         for ($index = 0; $index < $cueCount; $index++) {
             $time     += mt_rand(500, 4000) / 1000;
             $duration  = mt_rand(1000, 5000) / 1000;
-            $subtitle->addCue(new SubtitleCue($time, $time + $duration, "text$index"), false);
+            $cues[] = new SubtitleCue($time, $time + $duration, "text$index");
             $time     += $duration;
         }
+        $subtitle->addCues($cues);
 
         return $subtitle;
     }

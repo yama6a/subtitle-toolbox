@@ -11,7 +11,6 @@ use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
-use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Exceptions\UnknownFormatException;
 use SubtitleToolbox\Formatters\ImageFormatter;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
@@ -25,7 +24,7 @@ use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 
 
-class Subtitle implements \IteratorAggregate, \Countable
+final class Subtitle implements \IteratorAggregate, \Countable
 {
     use Retiming;
     use Validation;
@@ -36,8 +35,8 @@ class Subtitle implements \IteratorAggregate, \Countable
     use ArrayConversion;
     use ShortCueMerging;
 
-    /** @var array|SubtitleCue[] */
-    protected $cues;
+    /** @var array<int, SubtitleCue> */
+    private array $cues = [];
 
     public const METADATA_TITLE    = "title";
     public const METADATA_AUTHOR   = "author";
@@ -46,24 +45,18 @@ class Subtitle implements \IteratorAggregate, \Countable
     public const METADATA_LANGUAGE = "language";
 
     /** @var array<string, string> */
-    protected array $metadata = [];
+    private array $metadata = [];
 
     /** @var list<array{text: string, beforeCueIndex: int}> */
-    protected array $comments = [];
+    private array $comments = [];
 
     /** @var array<string, array> */
-    protected array $formatData = [];
+    private array $formatData = [];
 
     /** @var list<ParseWarning> */
-    protected array $parseWarnings = [];
+    private array $parseWarnings = [];
 
-    protected ?Format $format = null;
-
-
-    public function __construct()
-    {
-        $this->cues = [];
-    }
+    private ?Format $format = null;
 
 
     /**
@@ -426,7 +419,7 @@ class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * @return array|SubtitleCue[]
+     * @return array<int, SubtitleCue>
      */
     public function getCues(): array
     {
@@ -434,19 +427,37 @@ class Subtitle implements \IteratorAggregate, \Countable
     }
 
 
-    public function addCue(SubtitleCue $cue, bool $reIndexAfterAdding = true): self
+    /**
+     * Adds the cue and sorts the cues by start time.
+     */
+    public function addCue(SubtitleCue $cue): self
     {
-        $this->cues[] = $cue;
-
-        if ($reIndexAfterAdding) {
-            $this->reIndexCues();
-        }
-
-        return $this;
+        return $this->addCues([$cue]);
     }
 
 
-    public function removeCue(int $cueIndex, bool $reIndexAfterRemoval = true): self
+    /**
+     * Adds the cues and sorts all cues by start time once.
+     *
+     * @param iterable<SubtitleCue> $cues
+     */
+    public function addCues(iterable $cues): self
+    {
+        foreach ($cues as $cue) {
+            if (!$cue instanceof SubtitleCue) {
+                throw new InvalidArgumentException("addCues() takes SubtitleCue objects only, got " . get_debug_type($cue) . ".");
+            }
+            $this->cues[] = $cue;
+        }
+
+        return $this->reIndexCues();
+    }
+
+
+    /**
+     * Removes the cue at $cueIndex and numbers the remaining cues from 0 again.
+     */
+    public function removeCue(int $cueIndex): self
     {
         if (!array_key_exists($cueIndex, $this->cues)) {
             throw new CueNotFoundException("Cannot remove cue $cueIndex - cue not found!");
@@ -454,14 +465,13 @@ class Subtitle implements \IteratorAggregate, \Countable
 
         unset($this->cues[$cueIndex]);
 
-        if ($reIndexAfterRemoval) {
-            $this->reIndexCues();
-        }
-
-        return $this;
+        return $this->reIndexCues();
     }
 
 
+    /**
+     * Sorts the cues by start time and numbers them from 0. Each comment stays before its cue.
+     */
     public function reIndexCues(): self
     {
         $commentCues = array_map(

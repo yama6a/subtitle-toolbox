@@ -18,13 +18,15 @@ function buildSubtitle(int $cueCount): Subtitle
     $source   = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/real/language_subtitles_dots_tester.srt"), Format::SubRip);
     $subtitle = new Subtitle();
     // Adding with a sort per cue, as the parsers do, takes minutes at 20,000 cues, so this sorts once.
-    for ($copy = 0; count($subtitle) < $cueCount; $copy++) {
+    $cues = [];
+    for ($copy = 0; count($cues) < $cueCount; $copy++) {
         foreach ($source->getCues() as $cue) {
-            if (count($subtitle) < $cueCount) {
-                $subtitle->addCue(new SubtitleCue($cue->getStart() + $copy * 10, $cue->getEnd() + $copy * 10, $cue->getLines()), false);
+            if (count($cues) < $cueCount) {
+                $cues[] = new SubtitleCue($cue->getStart() + $copy * 10, $cue->getEnd() + $copy * 10, $cue->getLines());
             }
         }
     }
+    $subtitle->addCues($cues);
 
     return $subtitle->reIndexCues();
 }

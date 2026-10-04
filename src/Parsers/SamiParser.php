@@ -47,6 +47,7 @@ final class SamiParser extends SubtitleParser
         }
 
         $subtitle   = new Subtitle();
+        $parsedCues = [];
         $formatData = [];
 
         if (preg_match('/<TITLE\b[^>]*>(.*?)<\/TITLE\s*>/is', $rawSubtitle, $matches) && trim($matches[1]) !== "") {
@@ -81,7 +82,7 @@ final class SamiParser extends SubtitleParser
             }
 
             if ($openCue !== null) {
-                $subtitle->addCue($openCue->setEnd($sync["start"]), false);
+                $parsedCues[] = $openCue->setEnd($sync["start"]);
                 $openCue = null;
             }
 
@@ -98,10 +99,10 @@ final class SamiParser extends SubtitleParser
         }
 
         if ($openCue !== null) {
-            $subtitle->addCue($openCue->setEnd($openCue->getStart() + $this->options->lastCueDuration), false);
+            $parsedCues[] = $openCue->setEnd($openCue->getStart() + $this->options->lastCueDuration);
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 

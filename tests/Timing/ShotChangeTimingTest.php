@@ -20,9 +20,11 @@ class ShotChangeTimingTest extends TestCase
     private function makeSubtitle(float $fps, array $frames): Subtitle
     {
         $subtitle = new Subtitle();
+        $cues     = [];
         foreach ($frames as $index => [$start, $end]) {
-            $subtitle->addCue(new SubtitleCue($start / $fps, $end / $fps, "cue $index"));
+            $cues[] = new SubtitleCue($start / $fps, $end / $fps, "cue $index");
         }
+        $subtitle->addCues($cues);
 
         return $subtitle;
     }
@@ -227,12 +229,14 @@ class ShotChangeTimingTest extends TestCase
         $subtitle = new Subtitle();
         $shots    = [];
         $time     = 1.0;
+        $cues     = [];
         for ($index = 0; $index < 200; $index++) {
             $start  = $time + mt_rand(0, 900) / 1000;
             $time   = $start + mt_rand(500, 4000) / 1000;
             $shots[] = $start + mt_rand(-600, 600) / 1000;
-            $subtitle->addCue(new SubtitleCue($start, $time, "cue $index"), false);
+            $cues[] = new SubtitleCue($start, $time, "cue $index");
         }
+        $subtitle->addCues($cues);
 
         ShotChangeTiming::apply($subtitle, new ShotChangeOptions($fps, shotChanges: $shots));
 
@@ -250,8 +254,9 @@ class ShotChangeTimingTest extends TestCase
 
     public function testCuesOutOfOrderAreHandledInStartOrder(): void
     {
-        $subtitle = new Subtitle();
-        $subtitle->addCue(new SubtitleCue(10.292, 12), false)->addCue(new SubtitleCue(8, 10), false);
+        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2), new SubtitleCue(3, 4)]);
+        $subtitle->getCues()[0]->setStart(10.292)->setEnd(12);
+        $subtitle->getCues()[1]->setStart(8)->setEnd(10);
 
         ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24));
 

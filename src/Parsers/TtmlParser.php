@@ -97,11 +97,12 @@ final class TtmlParser extends SubtitleParser
         }
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, $fileData);
 
+        $cues = [];
         if ($body !== null) {
-            $this->readContainer($subtitle, $body, 0.0, null, null, null, false, [], null);
+            $this->readContainer($cues, $body, 0.0, null, null, null, false, [], null);
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($cues);
     }
 
 
@@ -206,8 +207,11 @@ final class TtmlParser extends SubtitleParser
     /**
      * @see https://www.w3.org/TR/ttml2/#timing-time-intervals
      */
+    /**
+     * @param list<SubtitleCue> $cues
+     */
     private function readContainer(
-        Subtitle $subtitle,
+        array &$cues,
         DOMElement $container,
         float $parentBegin,
         ?float $parentEnd,
@@ -231,7 +235,7 @@ final class TtmlParser extends SubtitleParser
 
         foreach ($container->childNodes as $child) {
             if ($this->isTtElement($child, "div")) {
-                $this->readContainer($subtitle, $child, $begin, $end, $region, $textAlign, $preserveSpace, $divAttributes, $forced);
+                $this->readContainer($cues, $child, $begin, $end, $region, $textAlign, $preserveSpace, $divAttributes, $forced);
             } elseif ($this->isTtElement($child, "p")) {
                 try {
                     $cue = $this->readParagraph($child, $begin, $end, $region, $textAlign, $preserveSpace, $forced);
@@ -243,7 +247,7 @@ final class TtmlParser extends SubtitleParser
                 if ($divAttributes !== []) {
                     $cue->setFormatData(self::FORMAT_DATA_KEY, [...$cue->getFormatData(self::FORMAT_DATA_KEY), "div" => $divAttributes]);
                 }
-                $subtitle->addCue($cue, false);
+                $cues[] = $cue;
             }
         }
     }

@@ -6,30 +6,31 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
-class SubtitleCue
+final class SubtitleCue
 {
-    /** @var float */
-    protected $start;
+    private float $start = 0;
 
-    /** @var float */
-    protected $end;
+    private float $end = 0;
 
-    /** @var array|string[] */
-    protected $lines;
+    /** @var list<string> */
+    private array $lines = [];
 
-    protected ?string $identifier = null;
+    private ?string $identifier = null;
 
-    protected ?int $alignment = null;
+    private ?int $alignment = null;
 
-    protected bool $forced = false;
+    private bool $forced = false;
 
     /** @var array<string, array> */
-    protected array $formatData = [];
+    private array $formatData = [];
 
     private static int $timeEdits = 0;
 
 
-    public function __construct(float $start = 0, float $end = 0, $lines = "")
+    /**
+     * @param string|list<string> $lines
+     */
+    public function __construct(float $start = 0, float $end = 0, string|array $lines = "")
     {
         $this->setStart($start);
         $this->setEnd($end);
@@ -79,7 +80,7 @@ class SubtitleCue
 
 
     /**
-     * @return array|string[]
+     * @return list<string>
      */
     public function getLines(): array
     {
@@ -87,22 +88,20 @@ class SubtitleCue
     }
 
 
-    public function setLines($lines): self
+    /**
+     * Sets the lines from a list, or from a string with one line per "\n".
+     *
+     * @param string|list<string> $lines
+     */
+    public function setLines(string|array $lines): self
     {
-        return match (true) {
-            is_array($lines)  => $this->setLinesByArray($lines),
-            is_string($lines) => $this->setLinesByString($lines),
-            default           => throw new InvalidArgumentException(
-                "Can only set cue-text by string or array! " .
-                "Tried to set cue-text of cue [{$this->getStart()} >>> {$this->getEnd()}] by " .
-                (is_object($lines) ? $lines::class : gettype($lines))),
-        };
+        return is_array($lines) ? $this->setLinesByArray($lines) : $this->setLinesByString($lines);
     }
 
 
     public function setLinesByString(string $lines): self
     {
-        $this->setLinesByArray(explode(StringHelpers::UNIX_LINE_ENDING, $lines));
+        $this->setLinesByArray(explode(LineEnding::Lf->value, $lines));
 
         return $this;
     }
@@ -112,7 +111,7 @@ class SubtitleCue
     {
         $this->lines = [];
         foreach ($lines as $line) {
-            $line = StringHelpers::cleanString($line); // remove empty lines and such stuff
+            $line = StringHelpers::cleanString($line);
             if ($line !== "") {
                 $this->lines[] = $line;
             }
@@ -124,7 +123,7 @@ class SubtitleCue
 
     public function getText(): string
     {
-        return implode(StringHelpers::UNIX_LINE_ENDING, $this->lines);
+        return implode(LineEnding::Lf->value, $this->lines);
     }
 
 

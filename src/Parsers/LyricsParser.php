@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Format;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
@@ -35,17 +36,18 @@ final class LyricsParser extends SubtitleParser
         $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
         $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
         if ($this->lenient) {
-            $this->warnBrokenTimeTags(explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle));
+            $this->warnBrokenTimeTags(explode(LineEnding::Lf->value, $rawSubtitle));
         }
         $rawSubtitle = StringHelpers::normalizeSpaces($rawSubtitle);
         $rawSubtitle = StringHelpers::removeEmptyLines($rawSubtitle);
         $rawSubtitle = StringHelpers::trimEachLine($rawSubtitle);
 
-        $lines    = explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle);
-        $subtitle = new Subtitle();
-        $offset   = $this->findOffset($lines);
-        $idTags   = [];
-        $timeline = [];
+        $lines      = explode(LineEnding::Lf->value, $rawSubtitle);
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
+        $offset     = $this->findOffset($lines);
+        $idTags     = [];
+        $timeline   = [];
 
         foreach ($lines as $currentLine) {
             if (preg_match(self::TIMESTAMP_LINE_REGEX, $currentLine, $matches)) {
@@ -57,14 +59,14 @@ final class LyricsParser extends SubtitleParser
                     $start = $this->toSeconds($timestamp, $offset);
                     $cue   = $text === "" ? null : new SubtitleCue($start, $start, $text);
                     if ($cue !== null) {
-                        $subtitle->addCue($cue, false);
+                        $parsedCues[] = $cue;
                     }
                     $timeline[] = ["time" => $start, "cue" => $cue];
                 }
                 continue;
             }
 
-            $this->addIdTag($subtitle, $idTags, $currentLine);
+            $this->addIdTag($subtitle, $idTags, $currentLine, count($parsedCues));
         }
 
         if ($idTags !== []) {
@@ -72,7 +74,7 @@ final class LyricsParser extends SubtitleParser
         }
 
         $this->assignEndTimes($timeline);
-        $subtitle->reIndexCues();
+        $subtitle->addCues($parsedCues);
 
         return $subtitle;
     }
@@ -120,7 +122,7 @@ final class LyricsParser extends SubtitleParser
     /**
      * @param array<string, string> $idTags
      */
-    private function addIdTag(Subtitle $subtitle, array &$idTags, string $line): void
+    private function addIdTag(Subtitle $subtitle, array &$idTags, string $line, int $cueCount): void
     {
         if (!preg_match(self::ID_TAG_REGEX, $line, $matches)) {
             return;
@@ -130,7 +132,7 @@ final class LyricsParser extends SubtitleParser
         $value = trim($matches[2]);
 
         if ($tag === "#") {
-            $subtitle->addComment($value, count($subtitle->getCues()));
+            $subtitle->addComment($value, $cueCount);
         } elseif (array_key_exists($tag, self::METADATA_TAGS)) {
             $subtitle->setMetadata(self::METADATA_TAGS[$tag], $value);
         } elseif ($tag !== "offset" || !preg_match(self::OFFSET_REGEX, $value)) {

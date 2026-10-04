@@ -8,9 +8,9 @@ use SubtitleToolbox\Encoding\Cea608;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\SccParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -437,11 +437,11 @@ final class SccFormatter extends SubtitleFormatter
             $previous = $frame;
         }
 
-        $output = SccParser::HEADER . StringHelpers::UNIX_LINE_ENDING . StringHelpers::UNIX_LINE_ENDING;
+        $output = SccParser::HEADER . LineEnding::Lf->value . LineEnding::Lf->value;
         foreach ($lines as $line) {
-            $output .= $line . StringHelpers::UNIX_LINE_ENDING . StringHelpers::UNIX_LINE_ENDING;
+            $output .= $line . LineEnding::Lf->value . LineEnding::Lf->value;
         }
 
-        return rtrim($output, StringHelpers::UNIX_LINE_ENDING) . StringHelpers::UNIX_LINE_ENDING;
+        return rtrim($output, LineEnding::Lf->value) . LineEnding::Lf->value;
     }
 }

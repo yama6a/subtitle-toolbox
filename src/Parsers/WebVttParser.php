@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use Generator;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -38,11 +39,12 @@ final class WebVttParser extends SubtitleParser
             throw new ParsingException("The file doesn't start with the string WEBVTT!");
         }
 
-        $lines    = array_merge(array_fill(0, $leadingLines, ""), explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle));
-        $subtitle = new Subtitle();
-        $fileData = [];
-        $seenCue  = false;
-        $count    = 0;
+        $lines      = array_merge(array_fill(0, $leadingLines, ""), explode(LineEnding::Lf->value, $rawSubtitle));
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
+        $fileData   = [];
+        $seenCue    = false;
+        $count      = 0;
         foreach ($this->numberedBlocks($lines) as $lineNumber => $rawLines) {
             $idx = $count++;
             if ($idx === 0) {
@@ -54,14 +56,14 @@ final class WebVttParser extends SubtitleParser
             try {
                 switch (true) {
                     case str_contains($rawLines[0], "-->") || str_contains($rawLines[1] ?? "", "-->"):
-                        $subtitle->addCue($this->parseCueBlock($rawLines, $idx), false);
+                        $parsedCues[] = $this->parseCueBlock($rawLines, $idx);
                         $seenCue = true;
                         break;
                     case $this->startsWithKeyword($firstLine, "NOTE"):
-                        $subtitle->addComment($this->parseComment($rawLines), count($subtitle->getCues()));
+                        $subtitle->addComment($this->parseComment($rawLines), count($parsedCues));
                         break;
                     case !$seenCue && $firstLine === "STYLE":
-                        $fileData["styles"][] = implode(StringHelpers::UNIX_LINE_ENDING, array_slice($rawLines, 1));
+                        $fileData["styles"][] = implode(LineEnding::Lf->value, array_slice($rawLines, 1));
                         break;
                     case !$seenCue && $firstLine === "REGION":
                         $fileData["regions"][] = $this->parseSettings(
@@ -80,7 +82,7 @@ final class WebVttParser extends SubtitleParser
             }
         }
 
-        return $subtitle->reIndexCues()->setFormatData(self::FORMAT_DATA_KEY, $fileData);
+        return $subtitle->addCues($parsedCues)->setFormatData(self::FORMAT_DATA_KEY, $fileData);
     }
 
 
@@ -340,7 +342,7 @@ final class WebVttParser extends SubtitleParser
         $rawLines[0] = substr(trim($rawLines[0]), 4);
         $lines       = array_filter(array_map("trim", $rawLines), fn (string $line): bool => $line !== "");
 
-        return implode(StringHelpers::UNIX_LINE_ENDING, $lines);
+        return implode(LineEnding::Lf->value, $lines);
     }
 
 

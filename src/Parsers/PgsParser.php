@@ -61,10 +61,14 @@ final class PgsParser extends SubtitleParser
 
     private Subtitle $subtitle;
 
+    /** @var list<SubtitleCue> */
+    private array $cues = [];
+
 
     protected function read(string $rawSubtitle): Subtitle
     {
         $this->subtitle     = new Subtitle();
+        $this->cues         = [];
         $this->palettes     = [];
         $this->objects      = [];
         $this->windows      = [];
@@ -104,7 +108,7 @@ final class PgsParser extends SubtitleParser
             $this->addCue($this->shownImage["start"] + $this->options->lastCueDuration);
         }
 
-        return $this->subtitle->reIndexCues();
+        return $this->subtitle->addCues($this->cues);
     }
 
 
@@ -226,7 +230,7 @@ final class PgsParser extends SubtitleParser
             $cue->setAlignment(8);
         }
 
-        $this->subtitle->addCue($cue, false);
+        $this->cues[] = $cue;
         $this->shownImage = null;
     }
 
