@@ -26,8 +26,6 @@ jobs:
 
   php:
     uses: yama6a/gha/.github/workflows/php-ci.yaml@v2
-    with:
-      extensions: curl # the translate engines need it, so CurlHttpClientTest and the translate tests run
 
   phar:
     runs-on: ubuntu-26.04-arm

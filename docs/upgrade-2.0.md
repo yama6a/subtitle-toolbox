@@ -6,7 +6,7 @@
 composer require ymakhloufi/subtitle-toolbox:^2.0
 ```
 
-2.0 has the same requirements as 1.x: PHP 8.2 or later, `ext-dom` and `ext-iconv`. The new DeepL and Google engines need `ext-curl`.
+2.0 has the same requirements as 1.x: PHP 8.2 or later, `ext-dom` and `ext-iconv`.
 
 ## New names
 The calls below use these imports:
@@ -160,8 +160,6 @@ See [cli.md](cli.md) for every command and option.
 | `convert movie.srt --to vtt` to write `movie.vtt` | `convert movie.srt --to vtt -o movie.vtt` |
 | `convert call.json --to srt` for Deepgram JSON | `convert call.json --from deepgram --to srt`. Chapters and cloud speech JSON always need `--from` |
 | none | `diff` and `dual` read the second file with `--from2` and `--track2`. `convert` and `dual` take `--in-place`. `diff`, `dual` and `hls` take `--keep-going` |
-
-The new `translate` command translates with DeepL or Google, see [cli.md](cli.md#translate).
 
 ### Removed commands
 2.0 removes the commands `shift`, `scale`, `fps` with its alias `sync-fps`, `fix`, `strip-sdh` and `snap`. They fail like any unknown command: exit code 2 and a pointer to the command list. Use the `retime` or `convert` call of the table.

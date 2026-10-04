@@ -39,8 +39,6 @@ use SubtitleToolbox\HearingImpairedOptions;
 use SubtitleToolbox\Hls\HlsSegmentOptions;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\Hls\TimestampMap;
-use SubtitleToolbox\Http\CurlHttpClient;
-use SubtitleToolbox\Http\FakeHttpClient;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PaletteReducer;
 use SubtitleToolbox\Image\PngDecoder;
@@ -98,8 +96,6 @@ use SubtitleToolbox\Sync\SpeechReference;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\Timing\ShotChanges;
-use SubtitleToolbox\Translation\DeepLEngine;
-use SubtitleToolbox\Translation\GoogleTranslateEngine;
 use SubtitleToolbox\Translation\TranslationEngine;
 use SubtitleToolbox\Translation\TranslationOptions;
 use SubtitleToolbox\Translation\TranslationRunner;
@@ -107,7 +103,6 @@ use SubtitleToolbox\Validation\ValidationRules;
 use SubtitleToolbox\WriteOptions;
 
 require_once __DIR__ . "/../files/mkv/generator/MkvFixtureWriter.php";
-require_once __DIR__ . "/../Http/FakeHttpClient.php";
 
 class ThrowSitesTest extends TestCase
 {
@@ -121,7 +116,6 @@ class ThrowSitesTest extends TestCase
         InvalidArgumentException::class     => 104,
         CueNotFoundException::class         => 105,
         UnknownFormatException::class       => 106,
-        TranslationException::class         => 107,
     ];
 
     private const IDX = "# VobSub index file, v7 (do not modify this line!)\nsize: 720x576\n" .
@@ -212,16 +206,6 @@ class ThrowSitesTest extends TestCase
         $file   = MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT, $tracks . $clusters);
 
         return MatroskaReader::open(self::stream($cut === "" ? $file : substr($file, 0, -strlen($cut))));
-    }
-
-
-    private static function closedPortUrl(): string
-    {
-        $socket = stream_socket_server("tcp://127.0.0.1:0");
-        $name   = stream_socket_get_name($socket, false);
-        fclose($socket);
-
-        return "http://$name/";
     }
 
 
@@ -652,23 +636,6 @@ class ThrowSitesTest extends TestCase
             "Timing/ShotChangeOptions.php: negative minimum duration" => [fn () => new ShotChangeOptions(24, minDuration: -1),
                                                                 ...$invalid],
             "Timing/ShotChanges.php: line without a time"   => [fn () => ShotChanges::fromText("abc"), ...$parsing],
-            "Http/CurlHttpClient.php: no curl extension"    => [fn () => new class extends CurlHttpClient {
-                protected function curlLoaded(): bool
-                {
-                    return false;
-                }
-            }, \RuntimeException::class, TranslationException::class],
-            "Http/CurlHttpClient.php: no connection"        => [fn () => (new CurlHttpClient())->post(self::closedPortUrl(), [], ""),
-                                                                \RuntimeException::class, TranslationException::class],
-            "Translation/DeepLEngine.php: HTTP 403"         => [fn () => (new DeepLEngine("key", null, new FakeHttpClient([[403, ""]])))
-                                                                ->translate(["a"], "en", "de"), \RuntimeException::class, TranslationException::class],
-            "Translation/DeepLEngine.php: no translations"  => [fn () => (new DeepLEngine("key", null, new FakeHttpClient([[200, "{}"]])))
-                                                                ->translate(["a"], "en", "de"), \RuntimeException::class, TranslationException::class],
-            "Translation/GoogleTranslateEngine.php: HTTP 403" => [fn () => (new GoogleTranslateEngine("key", null, new FakeHttpClient([[403, ""]])))
-                                                                ->translate(["a"], "en", "fr"), \RuntimeException::class, TranslationException::class],
-            "Translation/GoogleTranslateEngine.php: no translations" => [fn () => (new GoogleTranslateEngine("key", null,
-                                                                new FakeHttpClient([[200, "{}"]])))->translate(["a"], "en", "fr"),
-                                                                \RuntimeException::class, TranslationException::class],
             "Translation/TranslationOptions.php: cue limit 0" => [fn () => new TranslationOptions(maxCuesPerSentence: 0), ...$invalid],
             "Translation/TranslationOptions.php: character limit 0" => [fn () => new TranslationOptions(maxCharactersPerRequest: 0), ...$invalid],
             "Translation/TranslationRunner.php: no translations" => [fn () => (new TranslationRunner(new class implements TranslationEngine {

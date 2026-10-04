@@ -15,7 +15,7 @@
 | [validation.md](validation.md) | reading speed, line length and timing rules, Netflix and BBC presets |
 | [sync.md](sync.md) | sync to a reference subtitle or to the speech in the audio |
 | [compare.md](compare.md) | the differences between two versions of a subtitle |
-| [translation.md](translation.md) | machine translation with DeepL, Google or your own engine |
+| [translation.md](translation.md) | machine translation with an engine of your choice |
 | [streaming.md](streaming.md) | SRT and WebVTT files too large for memory |
 | [hls.md](hls.md) | WebVTT segments and playlists for HTTP Live Streaming |
 | [detection.md](detection.md) | how `Format::detect()` finds the format |
