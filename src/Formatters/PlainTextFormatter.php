@@ -4,24 +4,24 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
-use SubtitleToolbox\Formatters\Options\PlainTextOptions;
+use SubtitleToolbox\Formatters\Options\PlainTextWriteOptions;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
-class PlainTextFormatter extends SubtitleFormatter
+final class PlainTextFormatter extends SubtitleFormatter
 {
-    protected const FORMAT_OPTIONS = PlainTextOptions::class;
+    protected const FORMAT_OPTIONS = PlainTextWriteOptions::class;
 
 
     /**
-     * Writes the text of the cues without markup and entities, in paragraphs that a gap of PlainTextOptions::$paragraphGap seconds starts.
+     * Writes the text of the cues without markup and entities, in paragraphs that a gap of PlainTextWriteOptions::$paragraphGap seconds starts.
      */
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $plainText = $this->formatOptions($options) ?? new PlainTextOptions();
+        $plainText = $this->formatOptions($options) ?? new PlainTextWriteOptions();
 
         $paragraphs = [];
         $latestEnd  = null;

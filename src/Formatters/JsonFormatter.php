@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
-use SubtitleToolbox\Formatters\Options\JsonOptions;
+use SubtitleToolbox\Formatters\Options\JsonWriteOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
-class JsonFormatter extends SubtitleFormatter implements ImageFormatter
+final class JsonFormatter extends SubtitleFormatter implements ImageFormatter
 {
-    protected const FORMAT_OPTIONS = JsonOptions::class;
+    protected const FORMAT_OPTIONS = JsonWriteOptions::class;
 
 
     /**
@@ -19,7 +19,7 @@ class JsonFormatter extends SubtitleFormatter implements ImageFormatter
      */
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $json  = $this->formatOptions($options) ?? new JsonOptions();
+        $json  = $this->formatOptions($options) ?? new JsonWriteOptions();
         $array = $subtitle->toArray($json->withFormatData);
 
         $array["metadata"] = (object)$array["metadata"];

@@ -6,7 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Encoding\Cea608;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Formatters\Options\SccOptions;
+use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\SccParser;
@@ -21,9 +21,9 @@ use SubtitleToolbox\WriteOptions;
  *
  * @see http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
  */
-class SccFormatter extends SubtitleFormatter
+final class SccFormatter extends SubtitleFormatter
 {
-    protected const FORMAT_OPTIONS = SccOptions::class;
+    protected const FORMAT_OPTIONS = SccWriteOptions::class;
 
     private const MAX_LINES = 4;
 

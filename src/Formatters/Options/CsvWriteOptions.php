@@ -5,15 +5,13 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters\Options;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Formatters\CsvTimeFormat;
-use SubtitleToolbox\Formatters\FormatWriteOptions;
 use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Subtitle;
 
 /**
  * A null field takes the value that CsvParser stored, else the default of the format.
  */
-final class CsvOptions implements FormatWriteOptions
+final class CsvWriteOptions implements FormatWriteOptions
 {
     public function __construct(
         public readonly ?string $delimiter = null,           // ",", ";" or "\t", default ","

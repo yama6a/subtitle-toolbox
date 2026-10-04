@@ -10,7 +10,7 @@ use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
-class PodcastChaptersFormatter extends SubtitleFormatter
+final class PodcastChaptersFormatter extends SubtitleFormatter
 {
     private const VERSION = "1.2.0";
 

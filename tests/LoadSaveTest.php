@@ -11,8 +11,8 @@ use SubtitleToolbox\Container\Matroska\MatroskaTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Exceptions\UnknownFormatException;
-use SubtitleToolbox\Formatters\Options\CsvOptions;
-use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
+use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
+use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Parsers\VobSubReadOptions;
 
 class LoadSaveTest extends TestCase
@@ -249,7 +249,7 @@ class LoadSaveTest extends TestCase
         $this->assertStringContainsString("\t", strtok(file_get_contents("$this->dir/x.tsv"), "\n"));
         $this->assertSame(
             file_get_contents("$this->dir/x.csv"),
-            $subtitle->toString(Format::Csv, new WriteOptions(format: new CsvOptions(delimiter: ",")))
+            $subtitle->toString(Format::Csv, new WriteOptions(format: new CsvWriteOptions(delimiter: ",")))
         );
 
         $semicolons = Subtitle::loadAutoDetectFormat(self::FILES . "csv/real/excel_de_semicolon.csv");
@@ -275,14 +275,14 @@ class LoadSaveTest extends TestCase
         $withFrameRate = Subtitle::load(self::FILES . "cli/frames.sub", Format::MicroDvd, new ReadOptions(fps: 25));
         $withFrameRate->save("$this->dir/x.sub");
         $this->assertSame(
-            $withFrameRate->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdOptions(25))),
+            $withFrameRate->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(25))),
             file_get_contents("$this->dir/x.sub")
         );
-        $withFrameRate->save("$this->dir/y.sub", options: new WriteOptions(format: new MicroDvdOptions(50)));
+        $withFrameRate->save("$this->dir/y.sub", options: new WriteOptions(format: new MicroDvdWriteOptions(50)));
         $this->assertStringStartsWith("{50}{150}", file_get_contents("$this->dir/y.sub"));
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("MicroDvdOptions::frameRate");
+        $this->expectExceptionMessage("MicroDvdWriteOptions::frameRate");
         Subtitle::load(self::FILES . "cli/trip.srt", Format::SubRip)->save("$this->dir/z.sub");
     }
 
@@ -294,7 +294,7 @@ class LoadSaveTest extends TestCase
         $this->assertSame($itt->toString(Format::Itt), file_get_contents("$this->dir/x.itt"));
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("IttOptions::frameRate");
+        $this->expectExceptionMessage("IttWriteOptions::frameRate");
         Subtitle::load(self::FILES . "cli/trip.srt", Format::SubRip)->save("$this->dir/x.itt");
     }
 

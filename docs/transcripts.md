@@ -108,14 +108,14 @@ A podcast feed links a transcript per episode with the `<podcast:transcript>` ta
 
 ```php
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\Options\PodcastTranscriptOptions;
+use SubtitleToolbox\Formatters\Options\PodcastTranscriptWriteOptions;
 use SubtitleToolbox\Parsers\PodcastTranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString($whisperJson, Format::Whisper, new ReadOptions(wordTimestamps: true));
-$json     = $subtitle->toString(Format::PodcastTranscript, new WriteOptions(format: new PodcastTranscriptOptions(wordSegments: true)));
+$json     = $subtitle->toString(Format::PodcastTranscript, new WriteOptions(format: new PodcastTranscriptWriteOptions(wordSegments: true)));
 $html     = $subtitle->toString(Format::HtmlTranscript);
 $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('episode.json'));   // detects a Podcasting 2.0 transcript
 $subtitle = Subtitle::fromString($json, Format::PodcastTranscript, new ReadOptions(format: new PodcastTranscriptReadOptions(keepSegments: true)));
@@ -125,9 +125,9 @@ $subtitle = Subtitle::fromString($json, Format::PodcastTranscript, new ReadOptio
 |:--- |:--- |:--- |
 | `PodcastTranscriptReadOptions` | `keepSegments` | one cue per segment. By default, segments of one word join into a cue |
 | `ReadOptions` | `wordTimestamps` | a core word timestamp before each word of a joined cue |
-| `PodcastTranscriptOptions` | `wordSegments` | one segment per core word timestamp, for the word highlight of the apps. By default, one segment per cue |
-| `PodcastTranscriptOptions` | `prettyPrint` | indents with 4 spaces and ends with a newline |
-| `HtmlTranscriptOptions` | `paragraphGap` | the gap in seconds that starts a new paragraph, 2.0 by default |
+| `PodcastTranscriptWriteOptions` | `wordSegments` | one segment per core word timestamp, for the word highlight of the apps. By default, one segment per cue |
+| `PodcastTranscriptWriteOptions` | `prettyPrint` | indents with 4 spaces and ends with a newline |
+| `HtmlTranscriptWriteOptions` | `paragraphGap` | the gap in seconds that starts a new paragraph, 2.0 by default |
 
 - **Speakers**: the `speaker` of a segment and the name in `<cite>` become `<v Name>`, and back. A cue with two `<v>` speakers gives one segment per speaker, both with the times of the cue.
 - **Joined words**: the parser joins a segment of one word with the next segment of the same speaker. It stops after a word that ends with `.`, `?`, `!` or the ellipsis U+2026. A segment with a space in its body stays one cue.
@@ -150,13 +150,13 @@ Home.
 
 ```php
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\Options\PlainTextOptions;
+use SubtitleToolbox\Formatters\Options\PlainTextWriteOptions;
 use SubtitleToolbox\WriteOptions;
 
-$text = $subtitle->toString(Format::PlainText, new WriteOptions(format: new PlainTextOptions(withTimes: true)));
+$text = $subtitle->toString(Format::PlainText, new WriteOptions(format: new PlainTextWriteOptions(withTimes: true)));
 ```
 
-| `PlainTextOptions` field | Default | Effect |
+| `PlainTextWriteOptions` field | Default | Effect |
 |:--- |:--- |:--- |
 | `joinLines` | `true` | joins the lines of a cue with a space. `false` writes each line on its own line |
 | `joinCues` | `true` | joins the cues of a paragraph with a space. `false` writes each cue on its own line |

@@ -6,7 +6,7 @@ namespace SubtitleToolbox\Streaming;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Formatters\Options\CsvOptions;
+use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -104,6 +104,6 @@ class StreamWriterTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new SubRipStreamWriter($this->path, new WriteOptions(format: new CsvOptions()));
+        new SubRipStreamWriter($this->path, new WriteOptions(format: new CsvWriteOptions()));
     }
 }

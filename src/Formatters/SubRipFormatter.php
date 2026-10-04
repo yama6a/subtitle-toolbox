@@ -11,7 +11,7 @@ use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
-class SubRipFormatter extends SubtitleFormatter
+final class SubRipFormatter extends SubtitleFormatter
 {
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
@@ -26,6 +26,8 @@ class SubRipFormatter extends SubtitleFormatter
 
     /**
      * Returns what format() writes for the cue at $cueIndex, in the line ending of $options, without a BOM.
+     *
+     * @internal SubRipStreamWriter calls it.
      */
     public function formatCueBlock(SubtitleCue $cue, int $cueIndex, WriteOptions $options = new WriteOptions()): string
     {

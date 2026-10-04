@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\Options\HtmlTranscriptOptions;
+use SubtitleToolbox\Formatters\Options\HtmlTranscriptWriteOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -42,7 +42,7 @@ class HtmlTranscriptFormatterTest extends TestCase
 
     public function testStartsAParagraphAtTheGapOfTheOption(): void
     {
-        $html = $this->dialogue()->toString(Format::HtmlTranscript, new WriteOptions(format: new HtmlTranscriptOptions(paragraphGap: 0.5)));
+        $html = $this->dialogue()->toString(Format::HtmlTranscript, new WriteOptions(format: new HtmlTranscriptWriteOptions(paragraphGap: 0.5)));
 
         $this->assertStringStartsWith("<cite>Anna:</cite>\n<time>0:01</time>\n<p>Hello there.</p>\n<cite>Anna:</cite>\n<time>0:02</time>\n", $html);
     }
@@ -60,6 +60,6 @@ class HtmlTranscriptFormatterTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new HtmlTranscriptOptions(paragraphGap: -1);
+        new HtmlTranscriptWriteOptions(paragraphGap: -1);
     }
 }

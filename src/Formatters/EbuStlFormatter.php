@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Encoding\CodePage;
 use SubtitleToolbox\Encoding\Iso6937;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Formatters\Options\EbuStlOptions;
+use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\EbuStlParser as Stl;
@@ -19,9 +19,9 @@ use SubtitleToolbox\WriteOptions;
 /**
  * Writes EBU STL files as defined in EBU Tech 3264: https://tech.ebu.ch/docs/tech/tech3264.pdf
  */
-class EbuStlFormatter extends SubtitleFormatter
+final class EbuStlFormatter extends SubtitleFormatter
 {
-    protected const FORMAT_OPTIONS = EbuStlOptions::class;
+    protected const FORMAT_OPTIONS = EbuStlWriteOptions::class;
 
     // The values of a new GSI block. EBU Tech 3264 section 4.2.5 fills unused bytes with spaces.
     private const DEFAULT_GSI = [
@@ -43,7 +43,7 @@ class EbuStlFormatter extends SubtitleFormatter
             throw new InvalidArgumentException("The character code table \"{$gsi["CCT"]}\" is not 00, 01, 02, 03 or 04.");
         }
 
-        $gsi["DFC"] = array_search($fps, Stl::FRAME_RATES, true);
+        $gsi["DFC"] = array_search((int) $fps, Stl::FRAME_RATES, true);
         $frameRate  = new FrameRate($fps);
         $context    = new EbuStlContext(
             frameRate: $frameRate,

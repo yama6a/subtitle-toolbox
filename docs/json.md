@@ -4,13 +4,13 @@ A web app stores the cues in a database and sends them to the browser as JSON. `
 
 ```php
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\Options\JsonOptions;
+use SubtitleToolbox\Formatters\Options\JsonWriteOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
 $array = $subtitle->toArray();                     // toArray(false) leaves out the format data
 $copy  = Subtitle::fromArray($array);              // equal to $subtitle
-$json  = $subtitle->toString(Format::Json, new WriteOptions(format: new JsonOptions(prettyPrint: true)));
+$json  = $subtitle->toString(Format::Json, new WriteOptions(format: new JsonWriteOptions(prettyPrint: true)));
 $copy  = Subtitle::fromString($json, Format::Json);
 ```
 
@@ -49,5 +49,5 @@ $copy  = Subtitle::fromString($json, Format::Json);
 - **Errors**: `JsonParser` and `fromArray()` throw `ParsingException` with the path of the bad field, for example `The field cues[3].start must be a number.` A time of `1e400` or more is not a number. The format data fields that a formatter reads get the same check, for example `The field formatData.scc.dropFrame must be a boolean.` Other format data fields pass as they are.
 - **Lenient mode**: `new ReadOptions(lenient: true)` skips a cue with a bad field, as [lenient-parsing.md](lenient-parsing.md) says. It also drops a bad metadata field, a bad comment and the bad format data of one format of the file, with a `ParseWarning` of `blockIndex` -1. `fromArray()` has no lenient mode.
 - **Text**: cue lines and metadata must be UTF-8. Otherwise `JsonFormatter` throws `InvalidArgumentException` with the `JsonException` as its previous exception. Parse a file in another encoding with its [source encoding](encodings.md).
-- **Options**: `JsonOptions(prettyPrint: true)` indents with 4 spaces and ends with a newline. `JsonOptions(withFormatData: false)` leaves out the format data. `lineEnding` and `bom` of `WriteOptions` work as in the other formatters.
+- **Options**: `JsonWriteOptions(prettyPrint: true)` indents with 4 spaces and ends with a newline. `JsonWriteOptions(withFormatData: false)` leaves out the format data. `lineEnding` and `bom` of `WriteOptions` work as in the other formatters.
 - **Detection**: an object with a numeric top-level `version` key and a `cues` list detects as `Format::Json`.

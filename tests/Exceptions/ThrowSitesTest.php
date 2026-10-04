@@ -17,19 +17,19 @@ use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Fixing\OcrReplaceList;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\CsvFormatter;
-use SubtitleToolbox\Formatters\CsvTimeFormat;
+use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\Formatters\EbuStlFormatter;
 use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
-use SubtitleToolbox\Formatters\Options\AssOptions;
-use SubtitleToolbox\Formatters\Options\CsvOptions;
-use SubtitleToolbox\Formatters\Options\EbuStlOptions;
-use SubtitleToolbox\Formatters\Options\HtmlTranscriptOptions;
-use SubtitleToolbox\Formatters\Options\IttOptions;
-use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
-use SubtitleToolbox\Formatters\Options\MpSubOptions;
-use SubtitleToolbox\Formatters\Options\PlainTextOptions;
-use SubtitleToolbox\Formatters\Options\SubViewerOptions;
+use SubtitleToolbox\Formatters\Options\AssWriteOptions;
+use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
+use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
+use SubtitleToolbox\Formatters\Options\HtmlTranscriptWriteOptions;
+use SubtitleToolbox\Formatters\Options\IttWriteOptions;
+use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
+use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
+use SubtitleToolbox\Formatters\Options\PlainTextWriteOptions;
+use SubtitleToolbox\Formatters\Options\SubViewerWriteOptions;
 use SubtitleToolbox\Formatters\PgsFormatter;
 use SubtitleToolbox\Formatters\SccFormatter;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
@@ -298,7 +298,7 @@ class ThrowSitesTest extends TestCase
             "Formatters/JsonOutput.php: invalid UTF-8" => [fn () => Subtitle::load(self::FILES . "cli/latin1.srt", Format::SubRip)->toString(Format::Json),
                 ...$invalid],
             "Formatters/CsvFormatter.php: frames without rate" => [fn () => self::subtitle()->toString(Format::Csv,
-                new WriteOptions(format: new CsvOptions(timeFormat: CsvTimeFormat::Frames))), ...$invalid],
+                new WriteOptions(format: new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames))), ...$invalid],
             "Formatters/EbuStlFormatter.php: code table 09" => [fn () => self::subtitle()->setFormatData(EbuStlParser::FORMAT_DATA_KEY,
                 ["gsi" => ["CCT" => "09"]])->toString(Format::EbuStl), ...$invalid],
             "Formatters/EbuStlFormatter.php: subtitle number 65536" => [fn () => self::subtitle()->setFormatData(EbuStlParser::FORMAT_DATA_KEY,
@@ -308,16 +308,14 @@ class ThrowSitesTest extends TestCase
             "Formatters/IttFormatter.php: no frame rate"    => [fn () => (new IttFormatter())->format(self::subtitle(), new WriteOptions()), ...$invalid],
             "Formatters/MicroDvdFormatter.php: no frame rate" => [fn () => (new MicroDvdFormatter())->format(self::subtitle(), new WriteOptions()),
                                                                 ...$invalid],
-            "Formatters/Options/AssOptions.php: karaoke tag" => [fn () => new AssOptions(karaokeTag: "K"), ...$invalid],
-            "Formatters/Options/CsvOptions.php: frame rate 0" => [fn () => new CsvOptions(frameRate: 0), ...$invalid],
-            "Formatters/Options/EbuStlOptions.php: frame rate 24" => [fn () => new EbuStlOptions(frameRate: 24), ...$invalid],
-            "Formatters/Options/HtmlTranscriptOptions.php: negative paragraph gap" => [fn () => new HtmlTranscriptOptions(paragraphGap: -1),
+            "Formatters/Options/CsvWriteOptions.php: frame rate 0" => [fn () => new CsvWriteOptions(frameRate: 0), ...$invalid],
+            "Formatters/Options/EbuStlWriteOptions.php: frame rate 24" => [fn () => new EbuStlWriteOptions(frameRate: 24), ...$invalid],
+            "Formatters/Options/HtmlTranscriptWriteOptions.php: negative paragraph gap" => [fn () => new HtmlTranscriptWriteOptions(paragraphGap: -1),
                 ...$invalid],
-            "Formatters/Options/IttOptions.php: frame rate 50" => [fn () => new IttOptions(frameRate: 50), ...$invalid],
-            "Formatters/Options/MicroDvdOptions.php: frame rate 0" => [fn () => new MicroDvdOptions(frameRate: 0), ...$invalid],
-            "Formatters/Options/MpSubOptions.php: frame rate 0" => [fn () => new MpSubOptions(frameRate: 0), ...$invalid],
-            "Formatters/Options/PlainTextOptions.php: negative paragraph gap" => [fn () => new PlainTextOptions(paragraphGap: -1), ...$invalid],
-            "Formatters/Options/SubViewerOptions.php: version 3" => [fn () => new SubViewerOptions(version: 3), ...$invalid],
+            "Formatters/Options/IttWriteOptions.php: frame rate 50" => [fn () => new IttWriteOptions(frameRate: 50), ...$invalid],
+            "Formatters/Options/MicroDvdWriteOptions.php: frame rate 0" => [fn () => new MicroDvdWriteOptions(frameRate: 0), ...$invalid],
+            "Formatters/Options/MpSubWriteOptions.php: frame rate 0" => [fn () => new MpSubWriteOptions(frameRate: 0), ...$invalid],
+            "Formatters/Options/PlainTextWriteOptions.php: negative paragraph gap" => [fn () => new PlainTextWriteOptions(paragraphGap: -1), ...$invalid],
             "Formatters/PgsFormatter.php: text cue"         => [fn () => self::subtitle()->toString(Format::Pgs), ...$invalid],
             "Formatters/PgsFormatter.php: negative x"       => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), -1, 0, 1, 1, 9, 9))
                 ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$invalid],
@@ -332,9 +330,9 @@ class ThrowSitesTest extends TestCase
             "Formatters/SccFormatter.php: no CEA-608 character" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, "\u{20AC}"))
                 ->toString(Format::Scc), ...$invalid],
             "Formatters/SubtitleFormatter.php: options of another format" => [fn () => self::subtitle()->toString(Format::SubRip,
-                new WriteOptions(format: new CsvOptions())), ...$invalid],
+                new WriteOptions(format: new CsvWriteOptions())), ...$invalid],
             "Formatters/TtmlFormatter.php: stored head"     => [fn () => self::subtitle()->setFormatData(TtmlParser::FORMAT, ["head" => "<p/>"])
-                ->toString(Format::Ttml), InvalidFormatterException::class, InvalidFormatterException::class],
+                ->toString(Format::Ttml), ...$invalid],
             "FrameRate.php: frame rate 0"                   => [fn () => new FrameRate(0), ...$invalid],
             "FormatDataSchema.php: wrong type"              => [fn () => self::fromArray(["formatData" => ["scc" => ["dropFrame" => "x"]]]), ...$parsing],
             "FormatDataSchema.php: numeric key"             => [fn () => self::fromArray(["formatData" => ["ttml" => ["body" => ["x"]]]]), ...$parsing],

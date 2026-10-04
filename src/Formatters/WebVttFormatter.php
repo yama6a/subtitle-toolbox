@@ -12,7 +12,7 @@ use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
-class WebVttFormatter extends SubtitleFormatter
+final class WebVttFormatter extends SubtitleFormatter
 {
     private const INLINE_TIMESTAMP_PATTERN = "/(<(?:\d{2,}:)?[0-5]\d:[0-5]\d\.\d{3}>)/";
 
@@ -64,6 +64,8 @@ class WebVttFormatter extends SubtitleFormatter
 
     /**
      * Returns the cue block format() writes for the cue at $cueIndex, in the line ending of $options, without a BOM.
+     *
+     * @internal WebVttStreamWriter calls it.
      */
     public function formatCueBlock(SubtitleCue $cue, int $cueIndex, WriteOptions $options = new WriteOptions()): string
     {

@@ -7,7 +7,8 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\Options\SubViewerOptions;
+use SubtitleToolbox\Formatters\Options\SubViewerVersion;
+use SubtitleToolbox\Formatters\Options\SubViewerWriteOptions;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -165,7 +166,7 @@ class SubViewerRealFilesTest extends TestCase
         return new WriteOptions(
             lineEnding: str_contains($content, "\r\n") ? LineEnding::Crlf : LineEnding::Lf,
             bom: StringHelpers::hasUtf8Bom($content),
-            format: new SubViewerOptions(version: str_contains($content, SubViewerParser::START_SCRIPT) ? 1 : 2),
+            format: new SubViewerWriteOptions(version: str_contains($content, SubViewerParser::START_SCRIPT) ? SubViewerVersion::V1 : SubViewerVersion::V2),
         );
     }
 

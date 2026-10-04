@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SubtitleToolbox\Formatters;
+namespace SubtitleToolbox\Formatters\Options;
 
 /**
  * A time column format of CSV and TSV files. The value is the pattern, such as "hh:mm:ss,mmm".

@@ -11,9 +11,9 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
 
-class SamiFormatter extends SubtitleFormatter
+final class SamiFormatter extends SubtitleFormatter
 {
-    public const DEFAULT_CLASS = "SUBTTL";
+    private const DEFAULT_CLASS = "SUBTTL";
 
     private const STYLE_TAGS = ["b", "i", "u", "s", "font"];
 

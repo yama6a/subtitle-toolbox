@@ -14,7 +14,7 @@ use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\DualSubtitle;
 use SubtitleToolbox\DualSubtitleOptions;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
+use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Hls\HlsSegmentOptions;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\Karaoke\WordHighlight;
@@ -1503,7 +1503,7 @@ class BinaryTest extends TestCase
         $garden = file_get_contents(self::FILES . "shot-changes/own_garden_24fps.srt");
         file_put_contents("$this->dir/garden.sub", Subtitle::fromString($garden, Format::SubRip)->toString(
             Format::MicroDvd,
-            new WriteOptions(format: new MicroDvdOptions(frameRate: 25)),
+            new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25)),
         ));
         $shotChanges = ShotChanges::fromFfmpegLog($this->file("scenes.log"));
 

@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\Options\PodcastTranscriptOptions;
+use SubtitleToolbox\Formatters\Options\PodcastTranscriptWriteOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -70,7 +70,7 @@ class PodcastTranscriptRealFilesTest extends TestCase
     public function testRealFileRoundTripsThroughTheFormatter(string $fileName): void
     {
         $subtitle = self::parse($fileName);
-        $json     = $subtitle->toString(Format::PodcastTranscript, new WriteOptions(format: new PodcastTranscriptOptions(prettyPrint: true)));
+        $json     = $subtitle->toString(Format::PodcastTranscript, new WriteOptions(format: new PodcastTranscriptWriteOptions(prettyPrint: true)));
         $again    = (new PodcastTranscriptParser())->parse($json, new ReadOptions());
 
         $this->assertSame(self::cues($subtitle), self::cues($again));
@@ -83,7 +83,7 @@ class PodcastTranscriptRealFilesTest extends TestCase
         $content  = file_get_contents(self::DIR . "spec_word_segments.json");
         $original = json_decode($content, true)["segments"];
         $json     = (new PodcastTranscriptParser())->parse($content, new ReadOptions(wordTimestamps: true))
-            ->toString(Format::PodcastTranscript, new WriteOptions(format: new PodcastTranscriptOptions(wordSegments: true)));
+            ->toString(Format::PodcastTranscript, new WriteOptions(format: new PodcastTranscriptWriteOptions(wordSegments: true)));
         $written  = json_decode($json, true)["segments"];
 
         $this->assertSame(

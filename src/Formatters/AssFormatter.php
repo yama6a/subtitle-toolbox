@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
-use SubtitleToolbox\Formatters\Options\AssOptions;
+use SubtitleToolbox\Formatters\Options\AssKaraokeTag;
+use SubtitleToolbox\Formatters\Options\AssWriteOptions;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\StringHelpers;
@@ -13,9 +14,9 @@ use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
-class AssFormatter extends SubtitleFormatter
+final class AssFormatter extends SubtitleFormatter
 {
-    protected const FORMAT_OPTIONS = AssOptions::class;
+    protected const FORMAT_OPTIONS = AssWriteOptions::class;
 
     // The same header that FFmpeg writes when it converts a text subtitle to ASS.
     private const DEFAULT_SCRIPT_INFO = ["ScriptType" => "v4.00+", "PlayResX" => "384", "PlayResY" => "288", "ScaledBorderAndShadow" => "yes"];
@@ -35,7 +36,7 @@ class AssFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
         $data       = $subtitle->getFormatData(AssParser::FORMAT_DATA_KEY) + $this->defaultData();
-        $karaokeTag = ($this->formatOptions($options) ?? new AssOptions())->karaokeTag;
+        $karaokeTag = ($this->formatOptions($options) ?? new AssWriteOptions())->karaokeTag;
 
         $order = $data["sectionOrder"];
         if (!in_array("script info", array_map("strtolower", $order), true)) {
@@ -105,7 +106,7 @@ class AssFormatter extends SubtitleFormatter
     }
 
 
-    private function eventLines(Subtitle $subtitle, array $data, bool $stripAll, string $karaokeTag): array
+    private function eventLines(Subtitle $subtitle, array $data, bool $stripAll, AssKaraokeTag $karaokeTag): array
     {
         $format        = $data["eventFormat"] ?? AssParser::ASS_EVENT_FORMAT;
         $isSsa         = $this->isSsa($data);
@@ -159,7 +160,7 @@ class AssFormatter extends SubtitleFormatter
     }
 
 
-    private function dialogueLine(SubtitleCue $cue, array $format, bool $isSsa, bool $stripAll, string $karaokeTag): string
+    private function dialogueLine(SubtitleCue $cue, array $format, bool $isSsa, bool $stripAll, AssKaraokeTag $karaokeTag): string
     {
         $stored = $cue->getFormatData(AssParser::FORMAT_DATA_KEY);
         $fields = $stored["fields"] ?? [];
@@ -191,7 +192,7 @@ class AssFormatter extends SubtitleFormatter
      *
      * @return array{string, string}
      */
-    private function convertLines(SubtitleCue $cue, bool $isSsa, bool $stripAll, string $karaokeTag): array
+    private function convertLines(SubtitleCue $cue, bool $isSsa, bool $stripAll, AssKaraokeTag $karaokeTag): array
     {
         $text = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines());
         $name = "";
@@ -231,12 +232,12 @@ class AssFormatter extends SubtitleFormatter
      *
      * @return list<array{string, string}> override tags and escaped text
      */
-    private function convertTokens(array $tokens, SubtitleCue $cue, string $karaokeTag): array
+    private function convertTokens(array $tokens, SubtitleCue $cue, AssKaraokeTag $karaokeTag): array
     {
         $karaoke = $this->karaokeDurations($tokens, $cue);
         $parts   = [];
         if ($karaoke["leading"] !== null) {
-            $parts[] = ["tag", "\\" . $karaokeTag . $karaoke["leading"]];
+            $parts[] = ["tag", "\\" . $karaokeTag->value . $karaoke["leading"]];
         }
 
         $colors         = [];
@@ -258,7 +259,7 @@ class AssFormatter extends SubtitleFormatter
                     $parts[] = ["tag", $outer === [] ? "\\c" : $this->colorTag(end($outer))];
                 }
             } elseif (preg_match(self::CORE_TIMESTAMP_REGEX, $token)) {
-                $parts[] = ["tag", "\\" . $karaokeTag . $karaoke["durations"][$timestampIndex++]];
+                $parts[] = ["tag", "\\" . $karaokeTag->value . $karaoke["durations"][$timestampIndex++]];
             }
         }
 

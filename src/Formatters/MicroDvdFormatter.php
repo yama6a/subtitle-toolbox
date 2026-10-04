@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
+use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\MicroDvdParser;
@@ -14,9 +14,9 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
 
-class MicroDvdFormatter extends SubtitleFormatter
+final class MicroDvdFormatter extends SubtitleFormatter
 {
-    protected const FORMAT_OPTIONS = MicroDvdOptions::class;
+    protected const FORMAT_OPTIONS = MicroDvdWriteOptions::class;
 
     private const STYLE_TAGS = ["b", "i", "u", "s"];
 
@@ -24,7 +24,7 @@ class MicroDvdFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
         $microDvd  = $this->formatOptions($options)
-                     ?? throw new InvalidArgumentException("The MicroDVD formatter needs MicroDvdOptions with a frame rate.");
+                     ?? throw new InvalidArgumentException("The MicroDVD formatter needs MicroDvdWriteOptions with a frame rate.");
         $frameRate = new FrameRate($microDvd->frameRate);
         $stripAll  = $options->stripTags;
 

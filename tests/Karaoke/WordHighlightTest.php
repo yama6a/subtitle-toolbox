@@ -7,7 +7,8 @@ namespace SubtitleToolbox\Karaoke;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Formatters\Options\AssOptions;
+use SubtitleToolbox\Formatters\Options\AssKaraokeTag;
+use SubtitleToolbox\Formatters\Options\AssWriteOptions;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\ReadOptions;
@@ -333,12 +334,12 @@ class WordHighlightTest extends TestCase
     {
         $this->assertSame(
             file_get_contents(self::FILES . "karaoke/whisper_kf.ass"),
-            self::whisper()->toString(Format::Ass, new WriteOptions(format: new AssOptions(karaokeTag: "kf")))
+            self::whisper()->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(karaokeTag: AssKaraokeTag::Fill)))
         );
 
         $subtitle = self::subtitle(new SubtitleCue(0, 1.6, "Oh <00:00:00.500>the <00:00:01.000>sea"));
         $this->assertStringContainsString("{\\ko50}Oh {\\ko50}the {\\ko60}sea",
-                                          $subtitle->toString(Format::Ass, new WriteOptions(format: new AssOptions(karaokeTag: "ko"))));
+                                          $subtitle->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(karaokeTag: AssKaraokeTag::Outline))));
         $this->assertStringContainsString("{\\k50}Oh {\\k50}the {\\k60}sea", $subtitle->toString(Format::Ass));
     }
 
@@ -348,7 +349,7 @@ class WordHighlightTest extends TestCase
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "ass/real/own_aegisub.ass"), Format::Ass);
 
         $this->assertStringContainsString("{\\k40}The {\\k35}train {\\k50}leaves {\\kf60}at {\\ko45}noon",
-                                          $subtitle->toString(Format::Ass, new WriteOptions(format: new AssOptions(karaokeTag: "kf"))));
+                                          $subtitle->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(karaokeTag: AssKaraokeTag::Fill))));
     }
 
 }

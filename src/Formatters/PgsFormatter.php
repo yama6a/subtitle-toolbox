@@ -15,7 +15,7 @@ use SubtitleToolbox\WriteOptions;
 /**
  * Writes image cues as a Blu-ray PGS (.sup) file, the inverse of PgsParser. See PgsParser for the specs.
  */
-class PgsFormatter extends SubtitleFormatter implements ImageFormatter
+final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
 {
     private const PTS_PER_SECOND = 90000;
     private const MAX_PTS        = 0xFFFFFFFF;

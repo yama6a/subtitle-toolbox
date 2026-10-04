@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
-use SubtitleToolbox\Formatters\Options\SubViewerOptions;
+use SubtitleToolbox\Formatters\Options\SubViewerVersion;
+use SubtitleToolbox\Formatters\Options\SubViewerWriteOptions;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\StringHelpers;
@@ -12,9 +13,9 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
-class SubViewerFormatter extends SubtitleFormatter
+final class SubViewerFormatter extends SubtitleFormatter
 {
-    protected const FORMAT_OPTIONS = SubViewerOptions::class;
+    protected const FORMAT_OPTIONS = SubViewerWriteOptions::class;
 
     private const VERSION_1_DEFAULT_HEADER = ["SOURCE" => "", "PRG" => "", "FILEPATH" => "", "DELAY" => "0", "CD TRACK" => "0", "BEGIN" => ""];
     private const VERSION_2_DEFAULT_HEADER = ["SOURCE" => "", "PRG" => "", "FILEPATH" => "", "DELAY" => "0", "CD TRACK" => "0", "COMMENT" => ""];
@@ -22,8 +23,8 @@ class SubViewerFormatter extends SubtitleFormatter
 
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $version = ($this->formatOptions($options) ?? new SubViewerOptions())->version;
-        $output  = $version === 1 ? $this->formatVersion1($subtitle) : $this->formatVersion2($subtitle);
+        $version = ($this->formatOptions($options) ?? new SubViewerWriteOptions())->version;
+        $output  = $version === SubViewerVersion::V1 ? $this->formatVersion1($subtitle) : $this->formatVersion2($subtitle);
 
         return $this->applyOutputOptions($output, $options);
     }

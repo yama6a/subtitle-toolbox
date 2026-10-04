@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters\Options;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Formatters\FormatWriteOptions;
 
-final class MicroDvdOptions implements FormatWriteOptions
+final class MicroDvdWriteOptions implements FormatWriteOptions
 {
     public function __construct(
         public readonly float $frameRate,                    // frames per second of the video

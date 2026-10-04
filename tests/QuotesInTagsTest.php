@@ -8,9 +8,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Diff\SubtitleDiff;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
-use SubtitleToolbox\Formatters\FormatWriteOptions;
-use SubtitleToolbox\Formatters\Options\IttOptions;
-use SubtitleToolbox\Formatters\Options\MicroDvdOptions;
+use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
+use SubtitleToolbox\Formatters\Options\IttWriteOptions;
+use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Validation\ValidationResult;
 use SubtitleToolbox\Validation\ValidationRules;
 
@@ -71,9 +71,9 @@ class QuotesInTagsTest extends TestCase
     public static function formatterProvider(): array
     {
         return [
-            "itt"       => [Format::Itt, new IttOptions(frameRate: 25)],
+            "itt"       => [Format::Itt, new IttWriteOptions(frameRate: 25)],
             "lrc"       => [Format::Lyrics, null],
-            "microdvd"  => [Format::MicroDvd, new MicroDvdOptions(frameRate: 25)],
+            "microdvd"  => [Format::MicroDvd, new MicroDvdWriteOptions(frameRate: 25)],
             "mpsub"     => [Format::MpSub, null],
             "sami"      => [Format::Sami, null],
             "sbv"       => [Format::Sbv, null],
