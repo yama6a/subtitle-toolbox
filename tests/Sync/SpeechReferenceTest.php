@@ -46,9 +46,9 @@ class SpeechReferenceTest extends TestCase
 
         $result = ReferenceSync::apply($target, new ReferenceSyncOptions($speech));
 
-        $this->assertEqualsWithDelta(25 / 23.976, $result->getScale(), 0.00001);
-        $this->assertEqualsWithDelta(-2.3, $result->getOffset(), 0.15);
-        $this->assertGreaterThan(0.7, $result->getScore());
+        $this->assertEqualsWithDelta(25 / 23.976, $result->scale, 0.00001);
+        $this->assertEqualsWithDelta(-2.3, $result->offset, 0.15);
+        $this->assertGreaterThan(0.7, $result->score);
     }
 
 

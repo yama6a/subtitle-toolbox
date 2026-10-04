@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\PodcastChaptersParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
@@ -43,7 +43,7 @@ final class PodcastChaptersFormatter extends SubtitleFormatter
 
         $json = JsonOutput::encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 
-        return $this->applyOutputOptions($json . StringHelpers::UNIX_LINE_ENDING, $options);
+        return $this->applyOutputOptions($json . LineEnding::Lf->value, $options);
     }
 
 

@@ -18,9 +18,9 @@ final class ProfanityFilter
      */
     public static function apply(Subtitle $subtitle, ProfanityOptions $options): ProfanityReport
     {
-        $pattern = self::pattern($options->words);
-        $ranges  = [];
-        $removed = false;
+        $pattern     = self::pattern($options->words);
+        $ranges      = [];
+        $removedCues = new \SplObjectStorage();
 
         foreach ($subtitle->getCues() as $index => $cue) {
             $lines = array_values($cue->getLines());
@@ -36,13 +36,12 @@ final class ProfanityFilter
             $hadText = Markup::hasVisibleText($lines);
             $cue->setLinesByArray($changed);
             if ($hadText && !Markup::hasVisibleText($cue->getLines())) {
-                $subtitle->removeCue($index, false);
-                $removed = true;
+                $removedCues[$cue] = true;
             }
         }
 
-        if ($removed) {
-            $subtitle->reIndexCues();
+        if ($removedCues->count() > 0) {
+            $subtitle->removeCuesWhere(fn (SubtitleCue $cue): bool => isset($removedCues[$cue]));
         }
 
         return new ProfanityReport(self::join($ranges, $options->padding));
@@ -119,7 +118,7 @@ final class ProfanityFilter
     }
 
 
-    private static function mask(string $word, string|\Closure $mask): string
+    private static function mask(string $word, ProfanityMask|\Closure $mask): string
     {
         if ($mask instanceof \Closure) {
             return $mask($word);
@@ -129,10 +128,10 @@ final class ProfanityFilter
         $characters = $characters[0];
 
         return match ($mask) {
-            ProfanityOptions::MASK_STARS        => str_repeat("*", count($characters)),
-            ProfanityOptions::MASK_FIRST_LETTER => $characters[0] . str_repeat("*", count($characters) - 1),
-            ProfanityOptions::MASK_REMOVE       => "",
-            ProfanityOptions::MASK_NONE         => $word,
+            ProfanityMask::Stars       => str_repeat("*", count($characters)),
+            ProfanityMask::FirstLetter => $characters[0] . str_repeat("*", count($characters) - 1),
+            ProfanityMask::Remove      => "",
+            ProfanityMask::None        => $word,
         };
     }
 

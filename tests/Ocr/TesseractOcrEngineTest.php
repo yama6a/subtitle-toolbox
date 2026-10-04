@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\OcrException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Markup;
@@ -203,7 +204,7 @@ class TesseractOcrEngineTest extends TestCase
 
     public function testMissingProgramThrowsWithInstallHints(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(OcrException::class);
         $this->expectExceptionMessage("Cannot run OCR with Tesseract - the program \"" . __DIR__ . "/no-such-program\" " .
                                       "is missing! Install Tesseract with: apt install tesseract-ocr (Debian, Ubuntu), " .
                                       "apk add tesseract-ocr tesseract-ocr-data-eng (Alpine), dnf install tesseract (Fedora), brew install " .
@@ -216,7 +217,7 @@ class TesseractOcrEngineTest extends TestCase
 
     public function testMissingLanguageThrowsWithTheInstalledLanguages(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(OcrException::class);
         $this->expectExceptionMessage("Cannot run OCR with Tesseract in the language \"deu+fra+jpn\" - the language " .
                                       "data of fra, jpn is missing! Install it, for example with apt install " .
                                       "tesseract-ocr-fra. The installed languages are: deu, eng, osd.");
@@ -229,7 +230,7 @@ class TesseractOcrEngineTest extends TestCase
     {
         putenv("FAKE_TESSERACT_FAIL=1");
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(OcrException::class);
         $this->expectExceptionMessage("Cannot read the cue image at 3, 4 - tesseract exits with code 1: Error during processing.");
 
         (new TesseractOcrEngine(program: self::FAKE))->recognize(self::image(), null);

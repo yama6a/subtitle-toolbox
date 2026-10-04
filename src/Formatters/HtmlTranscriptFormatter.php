@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Formatters\Options\HtmlTranscriptWriteOptions;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
@@ -39,12 +39,12 @@ final class HtmlTranscriptFormatter extends SubtitleFormatter
         $html = "";
         foreach ($paragraphs as $paragraph) {
             if ($paragraph["speaker"] !== null) {
-                $html .= "<cite>" . Markup::escapeText($paragraph["speaker"]) . ":</cite>" . StringHelpers::UNIX_LINE_ENDING;
+                $html .= "<cite>" . Markup::escapeText($paragraph["speaker"]) . ":</cite>" . LineEnding::Lf->value;
             }
             [$hours, $minutes, $seconds] = Timecode::seconds(floor($paragraph["start"]));
             $time = $hours > 0 ? sprintf("%d:%02d:%02d", $hours, $minutes, $seconds) : sprintf("%d:%02d", $minutes, $seconds);
-            $html .= "<time>$time</time>" . StringHelpers::UNIX_LINE_ENDING .
-                     "<p>" . Markup::escapeText(implode(" ", $paragraph["bodies"])) . "</p>" . StringHelpers::UNIX_LINE_ENDING;
+            $html .= "<time>$time</time>" . LineEnding::Lf->value .
+                     "<p>" . Markup::escapeText(implode(" ", $paragraph["bodies"])) . "</p>" . LineEnding::Lf->value;
         }
 
         return $this->applyOutputOptions($html, $options);

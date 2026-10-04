@@ -10,8 +10,8 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\Parsers\Options\CsvColumns;
-use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\SubtitleCue;
 
@@ -138,7 +138,7 @@ class CsvParserTest extends TestCase
         $this->assertSame([[3.0, 4.0, ["b"]]], $this->describe("start,end,text\nsoon,2,a\n3,4,b\n", new ReadOptions(lenient: true)));
         $this->assertCount(1, $subtitle->getParseWarnings());
         $this->assertSame(2, $subtitle->getParseWarnings()[0]->lineNumber);
-        $this->assertSame(ParseWarning::SKIPPED, $subtitle->getParseWarnings()[0]->action);
+        $this->assertSame(ParseWarningAction::Skipped, $subtitle->getParseWarnings()[0]->action);
     }
 
 

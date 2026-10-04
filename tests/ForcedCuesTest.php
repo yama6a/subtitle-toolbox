@@ -7,6 +7,7 @@ namespace SubtitleToolbox;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Diff\CueDifference;
+use SubtitleToolbox\Diff\CueDifferenceKind;
 use SubtitleToolbox\Diff\SubtitleDiff;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
@@ -105,17 +106,17 @@ class ForcedCuesTest extends TestCase
         $subtitle->addComment("before cue 2", 1);
         $subtitle->addComment("at the end", 3);
 
-        $forced = $subtitle->onlyForced();
+        $forced = $subtitle->withForcedCuesOnly();
 
         $this->assertCount(1, $forced->getCues());
         $this->assertSame([3.0, 4.0, "EXIT", true], [$forced->getCues()[0]->getStart(), $forced->getCues()[0]->getEnd(),
                                                      $forced->getCues()[0]->getText(), $forced->getCues()[0]->isForced()]);
         $this->assertNotSame($subtitle->getCues()[1], $forced->getCues()[0]);
-        $this->assertSame([["text" => "before cue 2", "beforeCueIndex" => 0]], $forced->getComments());
+        $this->assertEquals([new Comment("before cue 2", 0)], $forced->getComments());
         $this->assertSame("en", $forced->getMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertCount(3, $subtitle->getCues());
         $this->assertCount(3, $subtitle->getComments());
-        $this->assertSame([], (new Subtitle())->onlyForced()->getCues());
+        $this->assertSame([], (new Subtitle())->withForcedCuesOnly()->getCues());
     }
 
 
@@ -125,7 +126,7 @@ class ForcedCuesTest extends TestCase
         $subtitle->getCues()[2]->setForced(true);
         $subtitle->addComment("at the end", 3);
 
-        $this->assertSame([["text" => "at the end", "beforeCueIndex" => 1]], $subtitle->onlyForced()->getComments());
+        $this->assertEquals([new Comment("at the end", 1)], $subtitle->withForcedCuesOnly()->getComments());
     }
 
 
@@ -148,9 +149,9 @@ class ForcedCuesTest extends TestCase
         $this->assertSame([false, false, true, true, false, false], $this->forcedFlags($subtitle));
         $this->assertSame([8.0, 9.5, "Platform 4"], [$subtitle->getCues()[2]->getStart(), $subtitle->getCues()[2]->getEnd(),
                                                     $subtitle->getCues()[2]->getText()]);
-        $this->assertCount(2, $subtitle->onlyForced()->getCues());
+        $this->assertCount(2, $subtitle->withForcedCuesOnly()->getCues());
         $this->assertStringStartsWith("1\n00:00:08,000 --> 00:00:09,500\n{\\an8}Platform 4\n\n",
-                                      StringHelpers::removeUtf8Bom($subtitle->onlyForced()->toString(Format::SubRip)));
+                                      StringHelpers::removeUtf8Bom($subtitle->withForcedCuesOnly()->toString(Format::SubRip)));
     }
 
 
@@ -174,8 +175,8 @@ class ForcedCuesTest extends TestCase
         $differences = SubtitleDiff::compare($old, $new);
 
         $this->assertCount(1, $differences);
-        $this->assertSame([CueDifference::KIND_TEXT_CHANGED, 1, 1],
-                          [$differences[0]->getKind(), $differences[0]->getOldIndex(), $differences[0]->getNewIndex()]);
+        $this->assertSame([CueDifferenceKind::TextChanged, 1, 1],
+                          [$differences[0]->kind, $differences[0]->oldIndex, $differences[0]->newIndex]);
         $this->assertSame("text changed: old cue 2, new cue 2\n" .
                           "- 00:00:03.000 --> 00:00:04.000\n  EXIT\n" .
                           "+ 00:00:03.000 --> 00:00:04.000 forced\n  EXIT\n",

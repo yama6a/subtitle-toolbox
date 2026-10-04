@@ -60,8 +60,8 @@ final class PodcastChaptersParser extends SubtitleParser
         foreach ($chapters as $index => [$cue, $end]) {
             $next = $chapters[$index + 1][0] ?? null;
             $cue->setEnd($end ?? $next?->getStart() ?? max($cue->getStart(), $this->formatOptions()->mediaDuration ?? 0));
-            $subtitle->addCue($cue, false);
         }
+        $subtitle->addCues(array_column($chapters, 0));
 
         foreach (["title" => Subtitle::METADATA_TITLE, "author" => Subtitle::METADATA_AUTHOR] as $field => $key) {
             if (is_string($data[$field] ?? null)) {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -22,15 +23,16 @@ final class Mpl2Parser extends SubtitleParser
         $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
 
         $subtitle   = new Subtitle();
+        $parsedCues = [];
         $blockIndex = 0;
-        foreach (explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle) as $lineIndex => $rawLine) {
+        foreach (explode(LineEnding::Lf->value, $rawSubtitle) as $lineIndex => $rawLine) {
             $rawLine = trim($rawLine);
             if ($rawLine === "") {
                 continue;
             }
 
             if (preg_match(self::CUE_REGEX, $rawLine, $matches)) {
-                $subtitle->addCue(new SubtitleCue((int) $matches[1] / 10, (int) $matches[2] / 10, $this->parseText($matches[3])), false);
+                $parsedCues[] = new SubtitleCue((int) $matches[1] / 10, (int) $matches[2] / 10, $this->parseText($matches[3]));
             } else {
                 $lineNumber = $lineIndex + 1;
                 $this->fail(new ParsingException("Line $lineNumber is not an MPL2 cue: $rawLine", $lineNumber), $lineNumber, $blockIndex, [$rawLine]);
@@ -38,7 +40,7 @@ final class Mpl2Parser extends SubtitleParser
             $blockIndex++;
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 

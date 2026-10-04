@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\StringHelpers;
@@ -30,7 +31,7 @@ final class WebVttFormatter extends SubtitleFormatter
             $header .= " " . $fileData["header"];
         }
         foreach ($fileData["headerLines"] ?? [] as $line) {
-            $header .= StringHelpers::UNIX_LINE_ENDING . $line;
+            $header .= LineEnding::Lf->value . $line;
         }
 
         $blocks = [];
@@ -38,24 +39,24 @@ final class WebVttFormatter extends SubtitleFormatter
             $blocks[] = $this->formatRegion($region);
         }
         foreach ($fileData["styles"] ?? [] as $style) {
-            $blocks[] = "STYLE" . StringHelpers::UNIX_LINE_ENDING . $style;
+            $blocks[] = "STYLE" . LineEnding::Lf->value . $style;
         }
 
         $comments = $subtitle->getComments();
         foreach (array_values($subtitle->getCues()) as $cueIndex => $cue) {
-            while ($comments !== [] && $comments[0]["beforeCueIndex"] <= $cueIndex) {
-                $blocks[] = $this->formatComment(array_shift($comments)["text"]);
+            while ($comments !== [] && $comments[0]->beforeCueIndex <= $cueIndex) {
+                $blocks[] = $this->formatComment(array_shift($comments)->text);
             }
             $blocks[] = $this->formatIdentifiedCue($cue, $cueIndex, $options);
         }
         foreach ($comments as $comment) {
-            $blocks[] = $this->formatComment($comment["text"]);
+            $blocks[] = $this->formatComment($comment->text);
         }
 
-        $output = $header . StringHelpers::UNIX_LINE_ENDING . StringHelpers::UNIX_LINE_ENDING;
+        $output = $header . LineEnding::Lf->value . LineEnding::Lf->value;
         if ($blocks !== []) {
-            $output .= implode(StringHelpers::UNIX_LINE_ENDING . StringHelpers::UNIX_LINE_ENDING, $blocks)
-                       . StringHelpers::UNIX_LINE_ENDING;
+            $output .= implode(LineEnding::Lf->value . LineEnding::Lf->value, $blocks)
+                       . LineEnding::Lf->value;
         }
 
         return $this->applyOutputOptions(StringHelpers::addUtf8Bom($output), $options);
@@ -77,7 +78,7 @@ final class WebVttFormatter extends SubtitleFormatter
 
     private function formatIdentifiedCue(SubtitleCue $cue, int $cueIndex, WriteOptions $options): string
     {
-        return $this->formatIdentifier($cue->getIdentifier(), $cueIndex) . StringHelpers::UNIX_LINE_ENDING
+        return $this->formatIdentifier($cue->getIdentifier(), $cueIndex) . LineEnding::Lf->value
                . $this->formatCue($cue, $options);
     }
 
@@ -89,7 +90,7 @@ final class WebVttFormatter extends SubtitleFormatter
             $lines[] = "$name:$value";
         }
 
-        return implode(StringHelpers::UNIX_LINE_ENDING, $lines);
+        return implode(LineEnding::Lf->value, $lines);
     }
 
 
@@ -103,7 +104,7 @@ final class WebVttFormatter extends SubtitleFormatter
             return "NOTE";
         }
 
-        $separator = str_contains($text, StringHelpers::UNIX_LINE_ENDING) ? StringHelpers::UNIX_LINE_ENDING : " ";
+        $separator = str_contains($text, LineEnding::Lf->value) ? LineEnding::Lf->value : " ";
 
         return "NOTE" . $separator . $text;
     }
@@ -112,7 +113,7 @@ final class WebVttFormatter extends SubtitleFormatter
     private function formatIdentifier(?string $identifier, int $cueIndex): string
     {
         if ($identifier === null || trim($identifier) === "" || str_contains($identifier, "-->")
-            || str_contains($identifier, StringHelpers::UNIX_LINE_ENDING)) {
+            || str_contains($identifier, LineEnding::Lf->value)) {
             return (string) ($cueIndex + 1);
         }
 
@@ -128,12 +129,12 @@ final class WebVttFormatter extends SubtitleFormatter
             $timeStamps .= " " . $settings;
         }
 
-        $lines = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines());
+        $lines = implode(LineEnding::Lf->value, $cue->getLines());
         $lines = $options->stripTags
             ? Markup::stripAllTags($lines)
             : $this->keepVttTags($lines);
 
-        return $timeStamps . StringHelpers::UNIX_LINE_ENDING . $lines;
+        return $timeStamps . LineEnding::Lf->value . $lines;
     }
 
 

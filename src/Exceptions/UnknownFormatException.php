@@ -7,10 +7,7 @@ namespace SubtitleToolbox\Exceptions;
 /**
  * UnknownFormatException means that format detection found no format that loads without a format argument.
  */
-class UnknownFormatException extends InvalidParserException
+final class UnknownFormatException extends InvalidParserException
 {
-    public function getErrorCode(): int
-    {
-        return 106;
-    }
+    protected const CODE = 106;
 }

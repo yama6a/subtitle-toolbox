@@ -80,7 +80,8 @@ final class VobSubParser extends SubtitleParser
             $units[]       = $unit;
         }
 
-        $subtitle = new Subtitle();
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
         $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $this->language);
         foreach ($units as $index => $unit) {
             if ($unit["image"] === null) {
@@ -89,10 +90,10 @@ final class VobSubParser extends SubtitleParser
 
             $end = $unit["stop"] ?? min($unit["start"] + $this->options->lastCueDuration,
                                         $units[$index + 1]["start"] ?? INF);
-            $subtitle->addCue($unit["image"]->toCue(new SubtitleCue($unit["start"], $end)), false);
+            $parsedCues[] = $unit["image"]->toCue(new SubtitleCue($unit["start"], $end));
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 

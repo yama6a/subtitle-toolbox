@@ -38,7 +38,7 @@ class OcrRunnerTest extends TestCase
         $subtitle = $this->makeSubtitle();
         $engine   = new FakeOcrEngine(["<i>Line one</i>", "Line two"], 0.75);
 
-        $results = (new OcrRunner($engine))->run($subtitle, "eng");
+        $results = (new OcrRunner($engine))->run($subtitle, "eng")->texts;
 
         $cues = $subtitle->getCues();
         $this->assertSame(["<i>Line one</i>", "Line two"], $cues[0]->getLines());
@@ -73,7 +73,7 @@ class OcrRunnerTest extends TestCase
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "Text"));
         $engine   = new FakeOcrEngine();
 
-        $this->assertSame([], (new OcrRunner($engine))->run($subtitle));
+        $this->assertSame([], (new OcrRunner($engine))->run($subtitle)->texts);
         $this->assertSame([], $engine->calls);
     }
 
@@ -82,7 +82,7 @@ class OcrRunnerTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new OcrResult(["Text"], 1.5);
+        new RecognizedText(["Text"], 1.5);
     }
 
 
@@ -90,6 +90,6 @@ class OcrRunnerTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new OcrResult([42]);
+        new RecognizedText([42]);
     }
 }

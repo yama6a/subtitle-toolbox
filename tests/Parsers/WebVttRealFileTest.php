@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Comment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -63,7 +64,7 @@ class WebVttRealFileTest extends TestCase
         $output   = $subtitle->toString(Format::WebVtt);
         $reparsed = Subtitle::fromString($output, Format::WebVtt);
 
-        $this->assertSame($this->describe($subtitle), $this->describe($reparsed));
+        $this->assertEquals($this->describe($subtitle), $this->describe($reparsed));
         $this->assertSame($output, $reparsed->toString(Format::WebVtt));
     }
 
@@ -98,7 +99,7 @@ class WebVttRealFileTest extends TestCase
             [0, 2, 3],
             array_column($subtitle->getComments(), "beforeCueIndex")
         );
-        $this->assertSame("end of file", $subtitle->getComments()[2]["text"]);
+        $this->assertSame("end of file", $subtitle->getComments()[2]->text);
     }
 
 

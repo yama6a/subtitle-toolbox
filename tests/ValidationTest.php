@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Validation\ValidationResult;
+use SubtitleToolbox\Validation\ValidationRule;
+use SubtitleToolbox\Validation\ValidationViolation;
 use SubtitleToolbox\Validation\ValidationRules;
 
 class ValidationTest extends TestCase
@@ -22,24 +23,26 @@ class ValidationTest extends TestCase
     private function makeSubtitle(array $cues): Subtitle
     {
         $subtitle = new Subtitle();
+        $added    = [];
         foreach ($cues as [$start, $end, $lines]) {
-            $subtitle->addCue(new SubtitleCue($start, $end, $lines), false);
+            $added[] = new SubtitleCue($start, $end, $lines);
         }
+        $subtitle->addCues($added);
 
         return $subtitle;
     }
 
 
     /**
-     * @param list<ValidationResult> $results
+     * @param list<ValidationViolation> $results
      */
     private function toArrays(array $results): array
     {
-        return array_map(fn (ValidationResult $result): array => [
-            $result->getCueIndex(),
-            $result->getRule(),
-            $result->getValue(),
-            $result->getLimit(),
+        return array_map(fn (ValidationViolation $result): array => [
+            $result->cueIndex,
+            $result->rule,
+            $result->value,
+            $result->limit,
         ], $results);
     }
 
@@ -58,14 +61,14 @@ class ValidationTest extends TestCase
 
         $this->assertCount(7, $subtitle->getCues());
         $this->assertSame([
-            [1, ValidationResult::RULE_MAX_CHARACTERS_PER_LINE, 45, 42],
-            [1, ValidationResult::RULE_MAX_CHARACTERS_PER_SECOND, 112.5, 20.0],
-            [1, ValidationResult::RULE_MIN_DURATION, 0.4, 5 / 6],
-            [1, ValidationResult::RULE_MIN_GAP, 0.04, 2 / 24],
-            [2, ValidationResult::RULE_MAX_CHARACTERS_PER_LINE, 49, 42],
-            [2, ValidationResult::RULE_MAX_LINES_PER_CUE, 3, 2],
-            [2, ValidationResult::RULE_MAX_DURATION, 7.5, 7.0],
-            [3, ValidationResult::RULE_OVERLAP, 0.5, null],
+            [1, ValidationRule::MaxCharactersPerLine, 45, 42],
+            [1, ValidationRule::MaxCharactersPerSecond, 112.5, 20.0],
+            [1, ValidationRule::MinDuration, 0.4, 5 / 6],
+            [1, ValidationRule::MinGap, 0.04, 2 / 24],
+            [2, ValidationRule::MaxCharactersPerLine, 49, 42],
+            [2, ValidationRule::MaxLinesPerCue, 3, 2],
+            [2, ValidationRule::MaxDuration, 7.5, 7.0],
+            [3, ValidationRule::NoOverlap, 0.5, null],
         ], $this->toArrays($subtitle->validate(ValidationRules::netflixEnglish(24))));
     }
 
@@ -75,10 +78,10 @@ class ValidationTest extends TestCase
         $subtitle = $this->parseFile("srt/real/language_subtitles_dots_tester.srt", Format::SubRip);
 
         $this->assertSame([
-            [0, ValidationResult::RULE_MAX_CHARACTERS_PER_LINE, 62, 42],
-            [0, ValidationResult::RULE_MAX_CHARACTERS_PER_SECOND, 98 / 1.999, 20.0],
-            [1, ValidationResult::RULE_MIN_GAP, 0.001, 2 / 24],
-            [2, ValidationResult::RULE_OVERLAP, 1.999, null],
+            [0, ValidationRule::MaxCharactersPerLine, 62, 42],
+            [0, ValidationRule::MaxCharactersPerSecond, 98 / 1.999, 20.0],
+            [1, ValidationRule::MinGap, 0.001, 2 / 24],
+            [2, ValidationRule::NoOverlap, 1.999, null],
         ], $this->toArrays($subtitle->validate(ValidationRules::netflixEnglish(24))));
     }
 
@@ -89,7 +92,7 @@ class ValidationTest extends TestCase
 
         $this->assertSame([], $subtitle->validate(ValidationRules::netflixEnglish(24)));
         $this->assertSame(
-            [[1, ValidationResult::RULE_MAX_CHARACTERS_PER_LINE, 33, 30]],
+            [[1, ValidationRule::MaxCharactersPerLine, 33, 30]],
             $this->toArrays($subtitle->validate(new ValidationRules(maxCharactersPerLine: 30)))
         );
     }
@@ -115,7 +118,7 @@ class ValidationTest extends TestCase
         $subtitle = $this->parseFile("validation/own_netflix_checks.srt", Format::SubRip);
 
         $this->assertSame(
-            [[6, ValidationResult::RULE_EMPTY_CUE, 0, null]],
+            [[6, ValidationRule::NoEmptyCues, 0, null]],
             $this->toArrays($subtitle->validate(new ValidationRules(noEmptyCues: true)))
         );
     }
@@ -129,11 +132,11 @@ class ValidationTest extends TestCase
 
         $this->assertSame([], $subtitle->validate(new ValidationRules(maxCharactersPerLine: 42)));
         $this->assertSame(
-            [[0, ValidationResult::RULE_MAX_CHARACTERS_PER_LINE, 42, 41]],
+            [[0, ValidationRule::MaxCharactersPerLine, 42, 41]],
             $this->toArrays($subtitle->validate(new ValidationRules(maxCharactersPerLine: 41)))
         );
         $this->assertSame(
-            [[0, ValidationResult::RULE_MAX_CHARACTERS_PER_SECOND, 5.4, 5.0]],
+            [[0, ValidationRule::MaxCharactersPerSecond, 5.4, 5.0]],
             $this->toArrays($subtitle->validate(new ValidationRules(maxCharactersPerSecond: 5)))
         );
     }
@@ -144,7 +147,7 @@ class ValidationTest extends TestCase
         $subtitle = $this->makeSubtitle([[0, 1, "a\xff\xfe"]]);
 
         $this->assertSame(
-            [[0, ValidationResult::RULE_MAX_CHARACTERS_PER_LINE, 3, 2]],
+            [[0, ValidationRule::MaxCharactersPerLine, 3, 2]],
             $this->toArrays($subtitle->validate(new ValidationRules(maxCharactersPerLine: 2)))
         );
     }
@@ -163,7 +166,7 @@ class ValidationTest extends TestCase
         $subtitle = $this->makeSubtitle([[5, 5, "Hi"], [6, 6, ""]]);
 
         $this->assertSame(
-            [[0, ValidationResult::RULE_MAX_CHARACTERS_PER_SECOND, INF, 20.0]],
+            [[0, ValidationRule::MaxCharactersPerSecond, INF, 20.0]],
             $this->toArrays($subtitle->validate(new ValidationRules(maxCharactersPerSecond: 20)))
         );
     }
@@ -174,7 +177,7 @@ class ValidationTest extends TestCase
         $subtitle = $this->makeSubtitle([[0, 0.833, "a"], [0.916, 1.749, "b"], [1.831, 2.664, "c"]]);
 
         $this->assertSame(
-            [[2, ValidationResult::RULE_MIN_GAP, 0.082, 2 / 24]],
+            [[2, ValidationRule::MinGap, 0.082, 2 / 24]],
             $this->toArrays($subtitle->validate(new ValidationRules(minDuration: 5 / 6, minGap: 2 / 24)))
         );
     }
@@ -185,8 +188,8 @@ class ValidationTest extends TestCase
         $subtitle = $this->makeSubtitle([[0, 10, "long"], [2, 3, "short"], [5, 6, "inside"], [10, 11, "after"]]);
 
         $this->assertSame([
-            [1, ValidationResult::RULE_OVERLAP, 8.0, null],
-            [2, ValidationResult::RULE_OVERLAP, 5.0, null],
+            [1, ValidationRule::NoOverlap, 8.0, null],
+            [2, ValidationRule::NoOverlap, 5.0, null],
         ], $this->toArrays($subtitle->validate(new ValidationRules(minGap: 0, noOverlap: true))));
     }
 
@@ -196,7 +199,7 @@ class ValidationTest extends TestCase
         $subtitle = $this->makeSubtitle([[0, 2, "a"], [1, 3, "b"], [3, 4, "c"]]);
 
         $this->assertSame(
-            [[2, ValidationResult::RULE_MIN_GAP, 0.0, 0.5]],
+            [[2, ValidationRule::MinGap, 0.0, 0.5]],
             $this->toArrays($subtitle->validate(new ValidationRules(minGap: 0.5)))
         );
     }
@@ -218,17 +221,17 @@ class ValidationTest extends TestCase
 
         $this->assertCount(8, $subtitle->getCues());
         $this->assertSame([
-            [0, ValidationResult::RULE_NO_DOUBLE_SPACES, 1, null],
-            [0, ValidationResult::RULE_NO_UNBALANCED_TAGS, 1, null],
-            [0, ValidationResult::RULE_DIALOGUE_DASH_STYLE, 1, null],
-            [0, ValidationResult::RULE_MAX_SPEAKERS_PER_CUE, 3, 2],
-            [0, ValidationResult::RULE_MAX_WORDS_PER_MINUTE, 480.0, 180.0],
-            [0, ValidationResult::RULE_MIN_SECONDS_PER_WORD, 0.125, 0.3],
-            [1, ValidationResult::RULE_NO_DOUBLE_SPACES, 1, null],
-            [1, ValidationResult::RULE_NO_LEADING_OR_TRAILING_SPACES, 2, null],
-            [3, ValidationResult::RULE_NO_ALL_CAPS_LINES, 1, null],
-            [4, ValidationResult::RULE_DIALOGUE_DASH_STYLE, 2, null],
-            [6, ValidationResult::RULE_NO_UNBALANCED_TAGS, 2, null],
+            [0, ValidationRule::NoDoubleSpaces, 1, null],
+            [0, ValidationRule::NoUnbalancedTags, 1, null],
+            [0, ValidationRule::DialogueDashStyle, 1, null],
+            [0, ValidationRule::MaxSpeakersPerCue, 3, 2],
+            [0, ValidationRule::MaxWordsPerMinute, 480.0, 180.0],
+            [0, ValidationRule::MinSecondsPerWord, 0.125, 0.3],
+            [1, ValidationRule::NoDoubleSpaces, 1, null],
+            [1, ValidationRule::NoLeadingOrTrailingSpaces, 2, null],
+            [3, ValidationRule::NoAllCapsLines, 1, null],
+            [4, ValidationRule::DialogueDashStyle, 2, null],
+            [6, ValidationRule::NoUnbalancedTags, 2, null],
         ], $this->toArrays($subtitle->validate($rules)));
     }
 
@@ -254,12 +257,12 @@ class ValidationTest extends TestCase
         );
 
         $this->assertSame([
-            [0, ValidationResult::RULE_NO_DOUBLE_SPACES, 1, null],
-            [0, ValidationResult::RULE_NO_UNBALANCED_TAGS, 1, null],
-            [0, ValidationResult::RULE_DIALOGUE_DASH_STYLE, 1, null],
-            [0, ValidationResult::RULE_MAX_SPEAKERS_PER_CUE, 3, 2],
-            [0, ValidationResult::RULE_MAX_WORDS_PER_MINUTE, 480.0, 180.0],
-            [0, ValidationResult::RULE_MIN_SECONDS_PER_WORD, 0.125, 0.3],
+            [0, ValidationRule::NoDoubleSpaces, 1, null],
+            [0, ValidationRule::NoUnbalancedTags, 1, null],
+            [0, ValidationRule::DialogueDashStyle, 1, null],
+            [0, ValidationRule::MaxSpeakersPerCue, 3, 2],
+            [0, ValidationRule::MaxWordsPerMinute, 480.0, 180.0],
+            [0, ValidationRule::MinSecondsPerWord, 0.125, 0.3],
         ], $this->toArrays($subtitle->validate($rules)));
     }
 
@@ -269,8 +272,8 @@ class ValidationTest extends TestCase
         $subtitle = $this->parseFile("vtt/real/webvttpy_netflix.vtt", Format::WebVtt);
         $words    = 0;
         foreach ($subtitle->validate(new ValidationRules(maxWordsPerMinute: 0.001)) as $result) {
-            $cue    = $subtitle->getCues()[$result->getCueIndex()];
-            $words += (int)round($result->getValue() * round($cue->getEnd() - $cue->getStart(), 3) / 60);
+            $cue    = $subtitle->getCues()[$result->cueIndex];
+            $words += (int)round($result->value * round($cue->getEnd() - $cue->getStart(), 3) / 60);
         }
 
         $this->assertSame(SubtitleStatistics::of($subtitle)->getWordCount(), $words);
@@ -295,24 +298,24 @@ class ValidationTest extends TestCase
         $subtitle = $this->parseFile("vtt/real/w3c_voices.vtt", Format::WebVtt);
 
         $this->assertSame([
-            [1, ValidationResult::RULE_MAX_CHARACTERS_PER_LINE, 55, 37],
-            [1, ValidationResult::RULE_MAX_WORDS_PER_MINUTE, 200.0, 180.0],
-            [2, ValidationResult::RULE_MAX_CHARACTERS_PER_LINE, 39, 37],
-            [2, ValidationResult::RULE_MAX_WORDS_PER_MINUTE, 210.0, 180.0],
-            [2, ValidationResult::RULE_MIN_SECONDS_PER_WORD, 2 / 7, 0.3],
-            [6, ValidationResult::RULE_MAX_WORDS_PER_MINUTE, 240.0, 180.0],
-            [6, ValidationResult::RULE_MIN_SECONDS_PER_WORD, 0.25, 0.3],
-            [7, ValidationResult::RULE_MAX_CHARACTERS_PER_LINE, 61, 37],
-            [7, ValidationResult::RULE_MAX_WORDS_PER_MINUTE, 260.0, 180.0],
-            [7, ValidationResult::RULE_MIN_SECONDS_PER_WORD, 3 / 13, 0.3],
-            [8, ValidationResult::RULE_MAX_WORDS_PER_MINUTE, 200.0, 180.0],
-            [9, ValidationResult::RULE_MAX_CHARACTERS_PER_LINE, 47, 37],
-            [9, ValidationResult::RULE_MAX_WORDS_PER_MINUTE, 270.0, 180.0],
-            [9, ValidationResult::RULE_MIN_SECONDS_PER_WORD, 2 / 9, 0.3],
-            [10, ValidationResult::RULE_MAX_CHARACTERS_PER_LINE, 42, 37],
-            [12, ValidationResult::RULE_MAX_CHARACTERS_PER_LINE, 58, 37],
-            [12, ValidationResult::RULE_MAX_WORDS_PER_MINUTE, 288.0, 180.0],
-            [12, ValidationResult::RULE_MIN_SECONDS_PER_WORD, 2.5 / 12, 0.3],
+            [1, ValidationRule::MaxCharactersPerLine, 55, 37],
+            [1, ValidationRule::MaxWordsPerMinute, 200.0, 180.0],
+            [2, ValidationRule::MaxCharactersPerLine, 39, 37],
+            [2, ValidationRule::MaxWordsPerMinute, 210.0, 180.0],
+            [2, ValidationRule::MinSecondsPerWord, 2 / 7, 0.3],
+            [6, ValidationRule::MaxWordsPerMinute, 240.0, 180.0],
+            [6, ValidationRule::MinSecondsPerWord, 0.25, 0.3],
+            [7, ValidationRule::MaxCharactersPerLine, 61, 37],
+            [7, ValidationRule::MaxWordsPerMinute, 260.0, 180.0],
+            [7, ValidationRule::MinSecondsPerWord, 3 / 13, 0.3],
+            [8, ValidationRule::MaxWordsPerMinute, 200.0, 180.0],
+            [9, ValidationRule::MaxCharactersPerLine, 47, 37],
+            [9, ValidationRule::MaxWordsPerMinute, 270.0, 180.0],
+            [9, ValidationRule::MinSecondsPerWord, 2 / 9, 0.3],
+            [10, ValidationRule::MaxCharactersPerLine, 42, 37],
+            [12, ValidationRule::MaxCharactersPerLine, 58, 37],
+            [12, ValidationRule::MaxWordsPerMinute, 288.0, 180.0],
+            [12, ValidationRule::MinSecondsPerWord, 2.5 / 12, 0.3],
         ], $this->toArrays($subtitle->validate(ValidationRules::bbc())));
     }
 
@@ -324,17 +327,17 @@ class ValidationTest extends TestCase
 
         $this->assertSame([], $voices->validate(new ValidationRules(maxSpeakersPerCue: 1)));
         $this->assertSame(
-            [[0, ValidationResult::RULE_MAX_SPEAKERS_PER_CUE, 2, 1]],
+            [[0, ValidationRule::MaxSpeakersPerCue, 2, 1]],
             $this->toArrays($this->makeSubtitle([[0, 1, ["<v Anna>Hi", "<v.loud Tom>Hello", "<v Anna>Bye"]]])
                 ->validate(new ValidationRules(maxSpeakersPerCue: 1)))
         );
         $this->assertSame(
-            [[17, ValidationResult::RULE_MAX_SPEAKERS_PER_CUE, 2, 1]],
+            [[17, ValidationRule::MaxSpeakersPerCue, 2, 1]],
             $this->toArrays($netflix->validate(new ValidationRules(maxSpeakersPerCue: 1)))
         );
         $this->assertSame([], $netflix->validate(new ValidationRules(dialogueDashStyle: "- ")));
         $this->assertSame(
-            [[17, ValidationResult::RULE_DIALOGUE_DASH_STYLE, 2, null]],
+            [[17, ValidationRule::DialogueDashStyle, 2, null]],
             $this->toArrays($netflix->validate(new ValidationRules(dialogueDashStyle: "\u{2013} ")))
         );
     }
@@ -345,7 +348,7 @@ class ValidationTest extends TestCase
         $subtitle = $this->parseFile("srt/real/own_styled.srt", Format::SubRip);
 
         $this->assertSame(
-            [[7, ValidationResult::RULE_NO_UNBALANCED_TAGS, 1, null]],
+            [[7, ValidationRule::NoUnbalancedTags, 1, null]],
             $this->toArrays($subtitle->validate(new ValidationRules(noUnbalancedTags: true)))
         );
     }
@@ -362,8 +365,8 @@ class ValidationTest extends TestCase
         ]);
 
         $this->assertSame([
-            [1, ValidationResult::RULE_NO_UNBALANCED_TAGS, 2, null],
-            [2, ValidationResult::RULE_NO_UNBALANCED_TAGS, 2, null],
+            [1, ValidationRule::NoUnbalancedTags, 2, null],
+            [2, ValidationRule::NoUnbalancedTags, 2, null],
         ], $this->toArrays($subtitle->validate(new ValidationRules(noUnbalancedTags: true))));
     }
 
@@ -377,10 +380,10 @@ class ValidationTest extends TestCase
         ]);
 
         $this->assertSame([
-            [0, ValidationResult::RULE_NO_DOUBLE_SPACES, 1, null],
-            [0, ValidationResult::RULE_NO_LEADING_OR_TRAILING_SPACES, 1, null],
-            [1, ValidationResult::RULE_NO_DOUBLE_SPACES, 1, null],
-            [1, ValidationResult::RULE_NO_LEADING_OR_TRAILING_SPACES, 1, null],
+            [0, ValidationRule::NoDoubleSpaces, 1, null],
+            [0, ValidationRule::NoLeadingOrTrailingSpaces, 1, null],
+            [1, ValidationRule::NoDoubleSpaces, 1, null],
+            [1, ValidationRule::NoLeadingOrTrailingSpaces, 1, null],
         ], $this->toArrays($subtitle->validate(new ValidationRules(noDoubleSpaces: true, noLeadingOrTrailingSpaces: true))));
     }
 
@@ -394,12 +397,12 @@ class ValidationTest extends TestCase
         ]);
 
         $this->assertSame([
-            [0, ValidationResult::RULE_DIALOGUE_DASH_STYLE, 1, null],
-            [1, ValidationResult::RULE_DIALOGUE_DASH_STYLE, 2, null],
+            [0, ValidationRule::DialogueDashStyle, 1, null],
+            [1, ValidationRule::DialogueDashStyle, 2, null],
         ], $this->toArrays($subtitle->validate(new ValidationRules(dialogueDashStyle: "- "))));
         $this->assertSame([
-            [0, ValidationResult::RULE_DIALOGUE_DASH_STYLE, 1, null],
-            [1, ValidationResult::RULE_DIALOGUE_DASH_STYLE, 1, null],
+            [0, ValidationRule::DialogueDashStyle, 1, null],
+            [1, ValidationRule::DialogueDashStyle, 1, null],
         ], $this->toArrays($subtitle->validate(new ValidationRules(dialogueDashStyle: "-"))));
     }
 
@@ -409,10 +412,10 @@ class ValidationTest extends TestCase
         $subtitle = $this->makeSubtitle([[0, 1.2, "Four words right here"], [2, 2, "Now"], [3, 4, ""], [5, 6.199, "Four words too fast"]]);
 
         $this->assertSame([
-            [1, ValidationResult::RULE_MAX_WORDS_PER_MINUTE, INF, 200.0],
-            [1, ValidationResult::RULE_MIN_SECONDS_PER_WORD, 0.0, 0.3],
-            [3, ValidationResult::RULE_MAX_WORDS_PER_MINUTE, 240 / 1.199, 200.0],
-            [3, ValidationResult::RULE_MIN_SECONDS_PER_WORD, 1.199 / 4, 0.3],
+            [1, ValidationRule::MaxWordsPerMinute, INF, 200.0],
+            [1, ValidationRule::MinSecondsPerWord, 0.0, 0.3],
+            [3, ValidationRule::MaxWordsPerMinute, 240 / 1.199, 200.0],
+            [3, ValidationRule::MinSecondsPerWord, 1.199 / 4, 0.3],
         ], $this->toArrays($subtitle->validate(new ValidationRules(maxWordsPerMinute: 200, minSecondsPerWord: 0.3))));
     }
 
@@ -424,13 +427,13 @@ class ValidationTest extends TestCase
         $broadcast = "[A-Za-z0-9!)(,.?:\\-><&@#%+*=/\u{00A3}\$\u{00A2}\u{00A5}\u{00A9}\u{00AE}\u{00BC}\u{00BD}\u{00BE}\u{2122}'\"]";
 
         $this->assertSame([
-            [1, ValidationResult::RULE_ALLOWED_CHARACTERS, 1, null],
-            [3, ValidationResult::RULE_ALLOWED_CHARACTERS, 2, null],
-            [4, ValidationResult::RULE_ALLOWED_CHARACTERS, 2, null],
-            [5, ValidationResult::RULE_ALLOWED_CHARACTERS, 4, null],
+            [1, ValidationRule::AllowedCharacters, 1, null],
+            [3, ValidationRule::AllowedCharacters, 2, null],
+            [4, ValidationRule::AllowedCharacters, 2, null],
+            [5, ValidationRule::AllowedCharacters, 4, null],
         ], $this->toArrays($subtitle->validate(new ValidationRules(allowedCharacters: $broadcast))));
         $this->assertSame(
-            [[0, ValidationResult::RULE_ALLOWED_CHARACTERS, 5, null]],
+            [[0, ValidationRule::AllowedCharacters, 5, null]],
             $this->toArrays($this->makeSubtitle([[0, 1, "Caf\u{00E9} a/b [c]"]])
                 ->validate(new ValidationRules(allowedCharacters: "Cafab")))
         );
@@ -447,8 +450,8 @@ class ValidationTest extends TestCase
         ]);
 
         $this->assertSame([
-            [1, ValidationResult::RULE_NO_ALL_CAPS_LINES, 3, null],
-            [2, ValidationResult::RULE_NO_ALL_CAPS_LINES, 1, null],
+            [1, ValidationRule::NoAllCapsLines, 3, null],
+            [2, ValidationRule::NoAllCapsLines, 1, null],
         ], $this->toArrays($subtitle->validate(new ValidationRules(noAllCapsLines: true))));
     }
 
@@ -459,25 +462,8 @@ class ValidationTest extends TestCase
         $rules    = new ValidationRules(noDoubleSpaces: true, allowedCharacters: "[A-Za-z]", noAllCapsLines: true);
 
         $this->assertSame([
-            [0, ValidationResult::RULE_ALLOWED_CHARACTERS, 3, null],
-            [0, ValidationResult::RULE_NO_ALL_CAPS_LINES, 1, null],
+            [0, ValidationRule::AllowedCharacters, 3, null],
+            [0, ValidationRule::NoAllCapsLines, 1, null],
         ], $this->toArrays($subtitle->validate($rules)));
-    }
-
-
-    public function testAMissingCueIndexIsReportedOnce(): void
-    {
-        $subtitle = Subtitle::load(__DIR__ . "/files/profanity/keys.srt", Format::SubRip);
-        $count    = count($subtitle->getCues());
-        $subtitle->removeCue(1, false);
-
-        $gaps = array_values(array_filter(
-            $subtitle->validate(new ValidationRules(noIndexGaps: true)),
-            fn (ValidationResult $result): bool => $result->getRule() === ValidationResult::RULE_INDEX_GAP
-        ));
-
-        $this->assertGreaterThan(3, $count);
-        $this->assertCount(1, $gaps);
-        $this->assertSame([2, 1], [$gaps[0]->getCueIndex(), $gaps[0]->getValue()]);
     }
 }

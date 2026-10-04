@@ -8,7 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -210,7 +210,7 @@ class CloudSpeechParsersTest extends TestCase
 
         $this->assertSame($cues, self::cues($subtitle));
         $this->assertCount(1, $subtitle->getParseWarnings());
-        $this->assertSame([$message, 0, ParseWarning::SKIPPED],
+        $this->assertSame([$message, 0, ParseWarningAction::Skipped],
                           [$subtitle->getParseWarnings()[0]->message, $subtitle->getParseWarnings()[0]->blockIndex, $subtitle->getParseWarnings()[0]->action]);
 
         $this->expectException(ParsingException::class);

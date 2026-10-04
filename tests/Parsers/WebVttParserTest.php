@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Comment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
@@ -179,7 +180,7 @@ class WebVttParserTest extends TestCase
                 "scroll"         => "up",
             ]],
         ], $subtitle->getFormatData("vtt"));
-        $this->assertSame([["text" => "Translated by Jane Doe", "beforeCueIndex" => 0]], $subtitle->getComments());
+        $this->assertEquals([new Comment("Translated by Jane Doe", 0)], $subtitle->getComments());
         $this->assertSame("intro", $cue->getIdentifier());
         $this->assertSame(["region" => "fred", "align" => "left", "line" => "85%"], $cue->getFormatData("vtt"));
         $this->assertNull($cue->getAlignment());
@@ -194,10 +195,10 @@ class WebVttParserTest extends TestCase
 
         $subtitle = Subtitle::fromString($raw, Format::WebVtt);
 
-        $this->assertSame([
-            ["text" => "first line\nsecond line", "beforeCueIndex" => 0],
-            ["text" => "between", "beforeCueIndex" => 1],
-            ["text" => "end of file", "beforeCueIndex" => 2],
+        $this->assertEquals([
+            new Comment("first line\nsecond line", 0),
+            new Comment("between", 1),
+            new Comment("end of file", 2),
         ], $subtitle->getComments());
     }
 

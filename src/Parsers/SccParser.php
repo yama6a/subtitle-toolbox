@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use SubtitleToolbox\Encoding\Cea608;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\StringHelpers;
@@ -23,10 +24,16 @@ use SubtitleToolbox\SubtitleCue;
 final class SccParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::Scc->value;
+
+    /** @internal */
     public const HEADER = "Scenarist_SCC V1.0";
 
+    // The values of the 3 caption modes appear as "mode" in the format data of a cue.
+    /** @internal */
     public const MODE_POP_ON   = "pop-on";
+    /** @internal */
     public const MODE_ROLL_UP  = "roll-up";
+    /** @internal */
     public const MODE_PAINT_ON = "paint-on";
     private const MODE_TEXT    = "text";
 
@@ -70,7 +77,7 @@ final class SccParser extends SubtitleParser
     protected function read(string $rawSubtitle): Subtitle
     {
         $rawSubtitle = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawLines    = explode(StringHelpers::UNIX_LINE_ENDING, StringHelpers::normalizeEOLs($rawSubtitle));
+        $rawLines    = explode(LineEnding::Lf->value, StringHelpers::normalizeEOLs($rawSubtitle));
 
         $this->channel = $this->formatOptions()->channel;
         $codeLines     = $this->readCodeLines($rawLines, $dropFrame);
@@ -93,7 +100,8 @@ final class SccParser extends SubtitleParser
             $frame = max($frame, $startFrame + count($words));
         }
 
-        $subtitle = new Subtitle();
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
         if ($dropFrame !== null) {
             $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["dropFrame" => $dropFrame]);
         }
@@ -115,10 +123,10 @@ final class SccParser extends SubtitleParser
                 "rows"    => array_column($state["lines"], "row"),
                 "columns" => array_column($state["lines"], "column"),
             ]);
-            $subtitle->addCue($cue, false);
+            $parsedCues[] = $cue;
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 

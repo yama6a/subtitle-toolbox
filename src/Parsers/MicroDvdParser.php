@@ -8,6 +8,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\StringHelpers;
@@ -35,7 +36,7 @@ final class MicroDvdParser extends SubtitleParser
         $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
         $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
         $rawLines       = array_filter(
-            array_map("trim", explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle)),
+            array_map("trim", explode(LineEnding::Lf->value, $rawSubtitle)),
             fn (string $line): bool => $line !== ""
         );
         if ($this->lenient) {
@@ -59,21 +60,22 @@ final class MicroDvdParser extends SubtitleParser
             throw new ParsingException($exception->getMessage());
         }
 
-        $subtitle = new Subtitle();
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["frameRate" => $frameRate]);
         foreach ($rawLines as $lineNumber => $rawLine) {
             if (!preg_match(self::CUE_REGEX, $rawLine, $matches)) {
                 throw new ParsingException("Line " . ($lineNumber + 1) . " is not a MicroDVD cue: $rawLine", $lineNumber + 1);
             }
 
-            $subtitle->addCue($this->parseCue(
+            $parsedCues[] = $this->parseCue(
                 $frames->framesToSeconds((int) $matches[1]),
                 $frames->framesToSeconds((int) $matches[2]),
                 $matches[3]
-            ), false);
+            );
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 

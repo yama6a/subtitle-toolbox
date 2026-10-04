@@ -22,16 +22,18 @@ class SubtitleDiffTest extends TestCase
     private function summarize(array $differences): array
     {
         return array_map(fn (CueDifference $difference): array =>
-            [$difference->getKind(), $difference->getOldIndex(), $difference->getNewIndex()], $differences);
+            [$difference->kind, $difference->oldIndex, $difference->newIndex], $differences);
     }
 
 
     private function makeSubtitle(array $cues): Subtitle
     {
         $subtitle = new Subtitle();
+        $added    = [];
         foreach ($cues as [$start, $end, $text]) {
-            $subtitle->addCue(new SubtitleCue($start, $end, $text), false);
+            $added[] = new SubtitleCue($start, $end, $text);
         }
+        $subtitle->addCues($added);
 
         return $subtitle;
     }
@@ -63,23 +65,23 @@ class SubtitleDiffTest extends TestCase
         $differences = SubtitleDiff::compare($original, $edited);
 
         $this->assertSame([
-            [CueDifference::KIND_TIMING_CHANGED, 1, 1],
-            [CueDifference::KIND_TEXT_CHANGED, 3, 3],
-            [CueDifference::KIND_TEXT_AND_TIMING_CHANGED, 5, 5],
-            [CueDifference::KIND_ADDED, null, 6],
-            [CueDifference::KIND_REMOVED, 7, null],
-            [CueDifference::KIND_TEXT_AND_TIMING_CHANGED, 8, 8],
-            [CueDifference::KIND_TEXT_CHANGED, 9, 9],
-            [CueDifference::KIND_TEXT_CHANGED, 10, 10],
-            [CueDifference::KIND_ADDED, null, 12],
+            [CueDifferenceKind::TimingChanged, 1, 1],
+            [CueDifferenceKind::TextChanged, 3, 3],
+            [CueDifferenceKind::TextAndTimingChanged, 5, 5],
+            [CueDifferenceKind::Added, null, 6],
+            [CueDifferenceKind::Removed, 7, null],
+            [CueDifferenceKind::TextAndTimingChanged, 8, 8],
+            [CueDifferenceKind::TextChanged, 9, 9],
+            [CueDifferenceKind::TextChanged, 10, 10],
+            [CueDifferenceKind::Added, null, 12],
         ], $this->summarize($differences));
 
-        $this->assertSame($original->getCues()[3], $differences[1]->getOldCue());
-        $this->assertSame($edited->getCues()[3], $differences[1]->getNewCue());
-        $this->assertNull($differences[3]->getOldCue());
-        $this->assertSame("Cards and coins are fine.", $differences[3]->getNewCue()->getText());
-        $this->assertSame("Thank you.", $differences[4]->getOldCue()->getText());
-        $this->assertNull($differences[4]->getNewCue());
+        $this->assertSame($original->getCues()[3], $differences[1]->oldCue);
+        $this->assertSame($edited->getCues()[3], $differences[1]->newCue);
+        $this->assertNull($differences[3]->oldCue);
+        $this->assertSame("Cards and coins are fine.", $differences[3]->newCue->getText());
+        $this->assertSame("Thank you.", $differences[4]->oldCue->getText());
+        $this->assertNull($differences[4]->newCue);
     }
 
 
@@ -97,7 +99,7 @@ class SubtitleDiffTest extends TestCase
         $differences = SubtitleDiff::compare($this->load("own_original.srt"), $this->load("own_edited.srt"),
                                              new SubtitleDiffOptions(ignoreFormatting: true));
 
-        $this->assertNotContains([CueDifference::KIND_TEXT_CHANGED, 9, 9], $this->summarize($differences));
+        $this->assertNotContains([CueDifferenceKind::TextChanged, 9, 9], $this->summarize($differences));
         $this->assertCount(8, $differences);
     }
 
@@ -107,7 +109,7 @@ class SubtitleDiffTest extends TestCase
         $differences = SubtitleDiff::compare($this->load("own_original.srt"), $this->load("own_edited.srt"),
                                              new SubtitleDiffOptions(ignoreWhitespace: true));
 
-        $this->assertNotContains([CueDifference::KIND_TEXT_CHANGED, 10, 10], $this->summarize($differences));
+        $this->assertNotContains([CueDifferenceKind::TextChanged, 10, 10], $this->summarize($differences));
         $this->assertCount(8, $differences);
     }
 
@@ -118,14 +120,14 @@ class SubtitleDiffTest extends TestCase
                                              new SubtitleDiffOptions(textOnly: true));
 
         $this->assertSame([
-            [CueDifference::KIND_TEXT_CHANGED, 3, 3],
-            [CueDifference::KIND_TEXT_CHANGED, 5, 5],
-            [CueDifference::KIND_ADDED, null, 6],
-            [CueDifference::KIND_REMOVED, 7, null],
-            [CueDifference::KIND_TEXT_CHANGED, 8, 8],
-            [CueDifference::KIND_TEXT_CHANGED, 9, 9],
-            [CueDifference::KIND_TEXT_CHANGED, 10, 10],
-            [CueDifference::KIND_ADDED, null, 12],
+            [CueDifferenceKind::TextChanged, 3, 3],
+            [CueDifferenceKind::TextChanged, 5, 5],
+            [CueDifferenceKind::Added, null, 6],
+            [CueDifferenceKind::Removed, 7, null],
+            [CueDifferenceKind::TextChanged, 8, 8],
+            [CueDifferenceKind::TextChanged, 9, 9],
+            [CueDifferenceKind::TextChanged, 10, 10],
+            [CueDifferenceKind::Added, null, 12],
         ], $this->summarize($differences));
     }
 
@@ -136,11 +138,11 @@ class SubtitleDiffTest extends TestCase
         $edited   = $this->load("own_edited.srt");
 
         $wide = $this->summarize(SubtitleDiff::compare($original, $edited, new SubtitleDiffOptions(timeTolerance: 0.25)));
-        $this->assertNotContains([CueDifference::KIND_TIMING_CHANGED, 1, 1], $wide);
+        $this->assertNotContains([CueDifferenceKind::TimingChanged, 1, 1], $wide);
         $this->assertCount(8, $wide);
 
         $exact = $this->summarize(SubtitleDiff::compare($original, $edited, new SubtitleDiffOptions(timeTolerance: 0)));
-        $this->assertContains([CueDifference::KIND_TEXT_AND_TIMING_CHANGED, 9, 9], $exact);
+        $this->assertContains([CueDifferenceKind::TextAndTimingChanged, 9, 9], $exact);
         $this->assertCount(9, $exact);
     }
 
@@ -169,7 +171,7 @@ class SubtitleDiffTest extends TestCase
         $old = $this->makeSubtitle([[1, 2, "The train is late."], [3, 4, "The bakery is open."]]);
         $new = $this->makeSubtitle([[0, 0.5, "Welcome."], [1, 2, "The train is late."], [3, 4, "The bakery is open."]]);
 
-        $this->assertSame([[CueDifference::KIND_ADDED, null, 0]], $this->summarize(SubtitleDiff::compare($old, $new)));
+        $this->assertSame([[CueDifferenceKind::Added, null, 0]], $this->summarize(SubtitleDiff::compare($old, $new)));
     }
 
 
@@ -178,7 +180,7 @@ class SubtitleDiffTest extends TestCase
         $old = $this->makeSubtitle([[10, 12, "The bakery opens at six."]]);
         $new = $this->makeSubtitle([[100, 102, "The bakery opens at six."]]);
 
-        $this->assertSame([[CueDifference::KIND_TIMING_CHANGED, 0, 0]], $this->summarize(SubtitleDiff::compare($old, $new)));
+        $this->assertSame([[CueDifferenceKind::TimingChanged, 0, 0]], $this->summarize(SubtitleDiff::compare($old, $new)));
     }
 
 
@@ -188,8 +190,8 @@ class SubtitleDiffTest extends TestCase
         $new = $this->makeSubtitle([[1, 2, "Rain at noon."], [7, 8, "Coffee is free today."], [9, 10, "Goodbye."]]);
 
         $this->assertSame([
-            [CueDifference::KIND_REMOVED, 1, null],
-            [CueDifference::KIND_ADDED, null, 1],
+            [CueDifferenceKind::Removed, 1, null],
+            [CueDifferenceKind::Added, null, 1],
         ], $this->summarize(SubtitleDiff::compare($old, $new)));
     }
 
@@ -200,20 +202,9 @@ class SubtitleDiffTest extends TestCase
         $new = $this->makeSubtitle([[2.9, 5, "A different line."]]);
 
         $this->assertSame([
-            [CueDifference::KIND_REMOVED, 0, null],
-            [CueDifference::KIND_ADDED, null, 0],
+            [CueDifferenceKind::Removed, 0, null],
+            [CueDifferenceKind::Added, null, 0],
         ], $this->summarize(SubtitleDiff::compare($old, $new)));
-    }
-
-
-    public function testIndexesAreCueKeys(): void
-    {
-        $old = $this->makeSubtitle([[1, 2, "One."], [3, 4, "Two."], [5, 6, "Three."]]);
-        $new = $this->makeSubtitle([[1, 2, "One."], [3, 4, "Two."], [5, 6, "Three!"]]);
-        $old->removeCue(0, false);
-        $new->removeCue(0, false);
-
-        $this->assertSame([[CueDifference::KIND_TEXT_CHANGED, 2, 2]], $this->summarize(SubtitleDiff::compare($old, $new)));
     }
 
 
@@ -231,8 +222,8 @@ class SubtitleDiffTest extends TestCase
         $summary = $this->summarize(SubtitleDiff::compare($this->makeSubtitle($oldCues), $this->makeSubtitle($newCues)));
 
         $this->assertCount(300, $summary);
-        $this->assertSame([CueDifference::KIND_TEXT_CHANGED, 149, 149], $summary[149]);
-        $this->assertSame([CueDifference::KIND_REMOVED, 150, null], $summary[150]);
-        $this->assertSame([CueDifference::KIND_TEXT_CHANGED, 151, 150], $summary[151]);
+        $this->assertSame([CueDifferenceKind::TextChanged, 149, 149], $summary[149]);
+        $this->assertSame([CueDifferenceKind::Removed, 150, null], $summary[150]);
+        $this->assertSame([CueDifferenceKind::TextChanged, 151, 150], $summary[151]);
     }
 }

@@ -76,9 +76,12 @@ class ArrayConversionTest extends TestCase
 
     public function testFromArrayKeepsBinaryFormatDataAndTheCueOrder(): void
     {
-        $subtitle = new Subtitle();
-        $subtitle->addCue((new SubtitleCue(5, 6, "Late"))->setFormatData("image", ["png" => "\x89PNG\r\n\x1a\n"]), false);
-        $subtitle->addCue(new SubtitleCue(1, 2, "Early"), false);
+        $subtitle = (new Subtitle())->addCues([
+            (new SubtitleCue(1, 2, "Late"))->setFormatData("image", ["png" => "\x89PNG\r\n\x1a\n"]),
+            new SubtitleCue(3, 4, "Early"),
+        ]);
+        $subtitle->getCues()[0]->setStart(5)->setEnd(6);
+        $subtitle->getCues()[1]->setStart(1)->setEnd(2);
 
         $copy = Subtitle::fromArray($subtitle->toArray());
 

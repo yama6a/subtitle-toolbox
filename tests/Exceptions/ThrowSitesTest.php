@@ -10,8 +10,9 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Matroska\MkvFixtureWriter;
+use SubtitleToolbox\CueLimits;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
-use SubtitleToolbox\DualSubtitleOptions;
+use SubtitleToolbox\Dual\DualSubtitleOptions;
 use SubtitleToolbox\Encoding\Cea608;
 use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Fixing\OcrReplaceList;
@@ -35,7 +36,7 @@ use SubtitleToolbox\Formatters\SccFormatter;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
 use SubtitleToolbox\Formatters\TtmlFormatter;
 use SubtitleToolbox\FrameRate;
-use SubtitleToolbox\HearingImpairedOptions;
+use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
 use SubtitleToolbox\Hls\HlsSegmentOptions;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\Hls\TimestampMap;
@@ -47,7 +48,8 @@ use SubtitleToolbox\Karaoke\WordHighlightOptions;
 use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Ocr\OcrEngineChooser;
-use SubtitleToolbox\Ocr\OcrResult;
+use SubtitleToolbox\Ocr\OcrEngineName;
+use SubtitleToolbox\Ocr\RecognizedText;
 use SubtitleToolbox\Ocr\TesseractOcrEngine;
 use SubtitleToolbox\Parsers\AssemblyAiParser;
 use SubtitleToolbox\Parsers\AssParser;
@@ -83,8 +85,9 @@ use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 use SubtitleToolbox\Profanity\ProfanityOptions;
 use SubtitleToolbox\ReadOptions;
-use SubtitleToolbox\ResegmentMode;
-use SubtitleToolbox\ResegmentOptions;
+use SubtitleToolbox\ReplaceTextOptions;
+use SubtitleToolbox\Resegmenting\ResegmentMode;
+use SubtitleToolbox\Resegmenting\ResegmentOptions;
 use SubtitleToolbox\Speakers\SpeakerLabelOptions;
 use SubtitleToolbox\Speakers\SpeakerStyle;
 use SubtitleToolbox\Streaming\SubRipStreamReader;
@@ -118,6 +121,7 @@ class ThrowSitesTest extends TestCase
         InvalidArgumentException::class     => 104,
         CueNotFoundException::class         => 105,
         UnknownFormatException::class       => 106,
+        OcrException::class                 => 107,
     ];
 
     private const IDX = "# VobSub index file, v7 (do not modify this line!)\nsize: 720x576\n" .
@@ -232,6 +236,7 @@ class ThrowSitesTest extends TestCase
     {
         $invalid  = [\InvalidArgumentException::class, InvalidArgumentException::class];
         $parsing  = [ParsingException::class, ParsingException::class];
+        $ocr      = [\RuntimeException::class, OcrException::class];
         $imageCue = (new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(1, 2));
 
         $cue = ["start" => 1, "end" => 2, "lines" => ["text"]];
@@ -279,17 +284,19 @@ class ThrowSitesTest extends TestCase
             "Container/Matroska/MatroskaReader.php: unknown size of Tracks" => [fn () => MatroskaReader::open(self::stream(
                                                                 MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT,
                                                                 MkvFixtureWriter::unknownSizeElement(MkvFixtureWriter::TRACKS, "")))), ...$parsing],
-            "CueEditing.php: slice start after end"         => [fn () => self::subtitle()->slice(5, 1), ...$invalid],
+            "CueLimits.php: maximum lines 0"                => [fn () => new CueLimits(maxLines: 0), ...$invalid],
+            "CueLimits.php: negative minimum duration"      => [fn () => new CueLimits(minDuration: -1), ...$invalid],
+            "CueLimits.php: maximum duration 0"             => [fn () => new CueLimits(maxDuration: 0), ...$invalid],
+            "CueEditing.php: slice start after end"         => [fn () => self::subtitle()->withSlice(5, 1), ...$invalid],
             "CueEditing.php: split time outside the cue"    => [fn () => self::subtitle()->splitCue(0, 9, 1), ...$invalid],
             "CueEditing.php: split line out of range"       => [fn () => self::subtitle()->splitCue(0, 1.5, 5), ...$invalid],
             "CueEditing.php: join in the wrong order"       => [fn () => self::subtitle()->joinCues(1, 0), ...$invalid],
             "CueEditing.php: edit a missing cue"            => [fn () => self::subtitle()->splitCue(9, 1.5, 1), ...$invalid],
             "CueLookup.php: range start after end"          => [fn () => self::subtitle()->getCuesBetween(10, 5), ...$invalid],
             "Diff/SubtitleDiffOptions.php: negative tolerance" => [fn () => new SubtitleDiffOptions(-1), ...$invalid],
-            "DualSubtitleOptions.php: unknown mode"         => [fn () => new DualSubtitleOptions("side"), ...$invalid],
-            "DualSubtitleOptions.php: negative snap"        => [fn () => new DualSubtitleOptions(snapTolerance: -1), ...$invalid],
-            "DualSubtitleOptions.php: unknown style"        => [fn () => new DualSubtitleOptions(secondaryStyle: "blink"), ...$invalid],
-            "DualSubtitleOptions.php: alignment 0"          => [fn () => new DualSubtitleOptions(secondaryAlignment: 0), ...$invalid],
+            "Dual/DualSubtitleOptions.php: negative snap"        => [fn () => new DualSubtitleOptions(snapTolerance: -1), ...$invalid],
+            "Dual/DualSubtitleOptions.php: unknown style"        => [fn () => new DualSubtitleOptions(secondaryStyle: "blink"), ...$invalid],
+            "Dual/DualSubtitleOptions.php: alignment 0"          => [fn () => new DualSubtitleOptions(secondaryAlignment: 0), ...$invalid],
             "Encoding/Cea608.php: row 16"                   => [fn () => Cea608::encodePac(16, 0), ...$invalid],
             "Fixes.php: minimum duration 0"                 => [fn () => self::subtitle()->extendShortCues(0), ...$invalid],
             "Fixes.php: maximum characters 0"               => [fn () => self::subtitle()->wrapLines(0), ...$invalid],
@@ -340,7 +347,7 @@ class ThrowSitesTest extends TestCase
             "FormatDataSchema.php: numeric key"             => [fn () => self::fromArray(["formatData" => ["ttml" => ["body" => ["x"]]]]), ...$parsing],
             "FormatDataSchema.php: unknown key"             => [fn () => self::fromArray(["formatData" => ["csv" => ["header" => null, "width" => 1, "roles" => ["x" => 0]]]]), ...$parsing],
             "FormatDataSchema.php: missing field"           => [fn () => self::fromArray(["formatData" => ["csv" => ["delimiter" => ","]]]), ...$parsing],
-            "HearingImpairedOptions.php: empty bracket"     => [fn () => new HearingImpairedOptions(customBrackets: [["{", ""]]), ...$invalid],
+            "HearingImpaired/HearingImpairedOptions.php: empty bracket"     => [fn () => new HearingImpairedOptions(customBrackets: [["{", ""]]), ...$invalid],
             "Hls/HlsSegmentOptions.php: segment duration 0" => [fn () => new HlsSegmentOptions(segmentDuration: 0), ...$invalid],
             "Hls/HlsSegmentOptions.php: no %d in pattern"   => [fn () => new HlsSegmentOptions(fileNamePattern: "sub.vtt"), ...$invalid],
             "Hls/HlsSegmentOptions.php: media duration 0"   => [fn () => new HlsSegmentOptions(mediaDuration: 0), ...$invalid],
@@ -374,28 +381,25 @@ class ThrowSitesTest extends TestCase
             "Image/PngDecoder.php: zlib missing"            => [fn () => (new \ReflectionMethod(PngDecoder::class, "requireFunction"))
                 ->invoke(null, "gzuncompress_missing"), ...$invalid],
             "Karaoke/WordHighlightOptions.php: speaker style" => [fn () => new WordHighlightOptions(style: "v Ann"), ...$invalid],
-            "Karaoke/WordHighlightOptions.php: unknown mode"  => [fn () => new WordHighlightOptions(mode: "line"), ...$invalid],
             "Karaoke/WordHighlightOptions.php: 0 words"       => [fn () => new WordHighlightOptions(maxWordsPerCue: 0), ...$invalid],
-            "MergeShortCuesOptions.php: maximum lines 0"    => [fn () => new MergeShortCuesOptions(maxLines: 0), ...$invalid],
             "MergeShortCuesOptions.php: negative gap"       => [fn () => new MergeShortCuesOptions(maxGap: -1), ...$invalid],
-            "MergeShortCuesOptions.php: maximum duration 0" => [fn () => new MergeShortCuesOptions(maxDuration: 0), ...$invalid],
             "MergeShortCuesOptions.php: minimum characters 0" => [fn () => new MergeShortCuesOptions(minCharacters: 0), ...$invalid],
             "Ocr/GlyphOcrEngine.php: unknown option"        => [fn () => new GlyphOcrEngine(null, ["speed" => 2]), ...$invalid],
             "Ocr/GlyphOcrEngine.php: invalid option"        => [fn () => new GlyphOcrEngine(null, ["inkThreshold" => 0]), ...$invalid],
             "Ocr/GlyphOcrEngine.php: no PNG"                => [fn () => (new GlyphOcrEngine())
-                ->recognize(new CueImage("png", 0, 0, 1, 1, 1, 1), null), ...$invalid],
+                ->recognize(new CueImage("png", 0, 0, 1, 1, 1, 1), null), ...$ocr],
             "Ocr/GlyphOcrEngine.php: package missing"       => [fn () => (new \ReflectionMethod(GlyphOcrEngine::class, "requireClass"))
                 ->invoke(null, "GlyphOcr\\Missing"), ...$invalid],
-            "Ocr/OcrEngineChooser.php: unknown engine"      => [fn () => OcrEngineChooser::choose("easyocr"), ...$invalid],
-            "Ocr/OcrResult.php: line is no string"          => [fn () => new OcrResult([5]), ...$invalid],
-            "Ocr/OcrResult.php: confidence above 1"         => [fn () => new OcrResult(["text"], 2), ...$invalid],
+            "Ocr/OcrEngineChooser.php: engine missing"      => [fn () => OcrEngineChooser::choose(OcrEngineName::Tesseract, __DIR__ . "/none"), ...$invalid],
+            "Ocr/RecognizedText.php: line is no string"          => [fn () => new RecognizedText([5]), ...$invalid],
+            "Ocr/RecognizedText.php: confidence above 1"         => [fn () => new RecognizedText(["text"], 2), ...$invalid],
             "Ocr/TesseractOcrEngine.php: mode 14"           => [fn () => new TesseractOcrEngine(pageSegmentationMode: 14), ...$invalid],
             "Ocr/TesseractOcrEngine.php: scale 0.5"         => [fn () => new TesseractOcrEngine(scale: 0.5), ...$invalid],
             "Ocr/TesseractOcrEngine.php: threshold 0"       => [fn () => new TesseractOcrEngine(threshold: 0), ...$invalid],
             "Ocr/TesseractOcrEngine.php: program missing"   => [fn () => (new TesseractOcrEngine(program: __DIR__ . "/none"))
-                ->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), null), ...$invalid],
+                ->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), null), ...$ocr],
             "Ocr/TesseractOcrEngine.php: language missing"  => [fn () => (new TesseractOcrEngine(program: self::FAKE_TESSERACT))
-                ->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), "xyz"), ...$invalid],
+                ->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), "xyz"), ...$ocr],
             "Ocr/TesseractOcrEngine.php: program fails"     => [function (): void {
                 putenv("FAKE_TESSERACT_FAIL=1");
                 try {
@@ -403,7 +407,7 @@ class ThrowSitesTest extends TestCase
                 } finally {
                     putenv("FAKE_TESSERACT_FAIL");
                 }
-            }, ...$invalid],
+            }, ...$ocr],
             "Parsers/AssParser.php: no events section"      => [fn () => (new AssParser())->parse("[Script Info]\nTitle: x\n", new ReadOptions()), ...$parsing],
             "Parsers/AssParser.php: too few fields"         => [fn () => (new AssParser())->parse("[Events]\nFormat: Layer, Start, End, Text\n" .
                                                                                                   "Dialogue: 0,0:00:01.00\n", new ReadOptions()), ...$parsing],
@@ -586,21 +590,15 @@ class ThrowSitesTest extends TestCase
             "Parsers/YouTubeTimedTextParser.php: bad time"  => [fn () => (new YouTubeTimedTextParser())->parse(
                 '<transcript><text dur="1">Hi</text></transcript>', new ReadOptions()), ...$parsing],
             "Profanity/ProfanityOptions.php: star in a word" => [fn () => new ProfanityOptions(["f*ck"]), ...$invalid],
-            "Profanity/ProfanityOptions.php: no words"      => [fn () => new ProfanityOptions(), ...$invalid],
-            "Profanity/ProfanityOptions.php: unknown mask"  => [fn () => new ProfanityOptions(["hell"], "blur"), ...$invalid],
+            "Profanity/ProfanityOptions.php: no words"      => [fn () => new ProfanityOptions([]), ...$invalid],
             "Profanity/ProfanityOptions.php: negative padding" => [fn () => new ProfanityOptions(["hell"], padding: -1), ...$invalid],
-            "Profanity/ProfanityOptions.php: missing word file" => [fn () => new ProfanityOptions(wordFile: __DIR__ . "/missing.txt"), ...$invalid],
-            "ResegmentOptions.php: maximum lines 0"         => [fn () => new ResegmentOptions(ResegmentMode::SplitLong, maxLines: 0), ...$invalid],
-            "ResegmentOptions.php: negative word gap"       => [fn () => new ResegmentOptions(ResegmentMode::SplitLong, maxWordGap: -1), ...$invalid],
-            "ResegmentOptions.php: maximum duration 0"      => [fn () => new ResegmentOptions(ResegmentMode::SplitLong, maxDuration: 0), ...$invalid],
+            "Resegmenting/ResegmentOptions.php: negative word gap"       => [fn () => new ResegmentOptions(ResegmentMode::SplitLong, maxWordGap: -1), ...$invalid],
             "ReadOptions.php: unknown encoding"             => [fn () => new ReadOptions(encoding: "NO-SUCH-ENCODING"), ...$invalid],
             "ReadOptions.php: negative last cue duration"   => [fn () => new ReadOptions(lastCueDuration: -1), ...$invalid],
             "Retiming.php: scale factor 0"                  => [fn () => self::subtitle()->scale(0), ...$invalid],
             "Retiming.php: same old times"                  => [fn () => self::subtitle()->syncByTwoPoints(1, 1, 1, 2), ...$invalid],
             "Retiming.php: new times in reverse"            => [fn () => self::subtitle()->syncByTwoPoints(1, 2, 2, 1), ...$invalid],
-            "Speakers/SpeakerLabelOptions.php: from a style other than prefix" => [fn () => new SpeakerLabelOptions(from: SpeakerStyle::Colours),
-                                                                ...$invalid],
-            "Speakers/SpeakerLabelOptions.php: invalid colour" => [fn () => new SpeakerLabelOptions(colours: ["yellow"]), ...$invalid],
+            "Speakers/SpeakerLabelOptions.php: invalid color" => [fn () => new SpeakerLabelOptions(colors: ["yellow"]), ...$invalid],
             "Streaming/Streams.php: no stream"              => [fn () => iterator_to_array((new SubRipStreamReader())->read(5)), ...$invalid],
             "Streaming/Streams.php: missing file"           => [fn () => iterator_to_array((new SubRipStreamReader())->read(__DIR__ . "/missing.srt")),
                                                                 ...$invalid],
@@ -612,6 +610,7 @@ class ThrowSitesTest extends TestCase
                 self::stream("WEBVTT\n\ntext\nmore"))), ...$parsing],
             "StringHelpers.php: unknown encoding"           => [fn () => StringHelpers::convertToUtf8("text", "NO-SUCH-ENCODING"),
                                                                 ...$parsing],
+            "Subtitle.php: addCues no cue"                 => [fn () => (new Subtitle())->addCues([5]), ...$invalid],
             "Subtitle.php: unknown format"                  => [fn () => Subtitle::fromStringAutoDetectFormat("text"),
                                                                 InvalidParserException::class, UnknownFormatException::class],
             "Subtitle.php: unknown format of a file"        => [fn () => Subtitle::loadAutoDetectFormat(self::FILES . "chapters/ffmetadata/real/m4b_audiobook.ffmeta"),
@@ -639,7 +638,6 @@ class ThrowSitesTest extends TestCase
             "Subtitle.php: remove a missing cue"            => [fn () => self::subtitle()->removeCue(9),
                                                                 \RuntimeException::class, CueNotFoundException::class],
             "Subtitle.php: negative comment index"          => [fn () => self::subtitle()->addComment("note", -1), ...$invalid],
-            "SubtitleCue.php: lines of the wrong type"      => [fn () => (new SubtitleCue())->setLines(5), ...$invalid],
             "SubtitleCue.php: alignment 10"                 => [fn () => (new SubtitleCue())->setAlignment(10), ...$invalid],
             "Sync/ReferenceSyncOptions.php: offset beyond a day" => [fn () => new ReferenceSyncOptions(new Subtitle(), maxOffset: 1e20), ...$invalid],
             "Sync/ReferenceSyncOptions.php: offset range too wide" => [fn () => new ReferenceSyncOptions(new Subtitle(), -5000, 5000), ...$invalid],
@@ -653,13 +651,12 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Sync/SpeechReference.php: invalid interval"    => [fn () => SpeechReference::fromIntervals([[2, 1]]), ...$invalid],
             "TextTransforms.php: empty search"              => [fn () => self::subtitle()->replaceText("", "x"), ...$invalid],
-            "TextTransforms.php: invalid regex"             => [fn () => self::subtitle()->replaceText("/[/", "x", true), ...$invalid],
-            "TextTransforms.php: unknown case mode"         => [fn () => self::subtitle()->changeCase("title"), ...$invalid],
+            "TextTransforms.php: invalid regex"             => [fn () => self::subtitle()->replaceText("/[/", "x", new ReplaceTextOptions(regex: true)), ...$invalid],
             "Timecode.php: drop frame at 25 fps"            => [fn () => Timecode::frameNumber(0, new FrameRate(25), true), ...$invalid],
             "Timing/ShotChangeOptions.php: frame rate 0"    => [fn () => new ShotChangeOptions(0), ...$invalid],
-            "Timing/ShotChangeOptions.php: negative window" => [fn () => new ShotChangeOptions(24, snapWindow: -1), ...$invalid],
+            "Timing/ShotChangeOptions.php: negative window" => [fn () => new ShotChangeOptions(24, snapWindowFrames: -1), ...$invalid],
             "Timing/ShotChangeOptions.php: negative gap"    => [fn () => new ShotChangeOptions(24, minGapFrames: -1), ...$invalid],
-            "Timing/ShotChangeOptions.php: negative minimum duration" => [fn () => new ShotChangeOptions(24, minDuration: -1),
+            "Timing/ShotChangeOptions.php: negative minimum duration" => [fn () => new ShotChangeOptions(24, minDurationFrames: -1),
                                                                 ...$invalid],
             "Timing/ShotChanges.php: line without a time"   => [fn () => ShotChanges::fromText("abc"), ...$parsing],
             "Translation/TranslationOptions.php: cue limit 0" => [fn () => new TranslationOptions(maxCuesPerSentence: 0), ...$invalid],

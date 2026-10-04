@@ -6,6 +6,9 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
+/**
+ * @internal
+ */
 trait TextTransforms
 {
     /**
@@ -28,10 +31,12 @@ trait TextTransforms
 
 
     /**
-     * Replaces $search with $replace in the text between tags. $search is a PCRE pattern with delimiters when $regex is true.
+     * Replaces $search with $replace in the text between tags.
      */
-    public function replaceText(string $search, string $replace, bool $regex = false, bool $caseSensitive = true): self
+    public function replaceText(string $search, string $replace, ReplaceTextOptions $options = new ReplaceTextOptions()): self
     {
+        $regex         = $options->regex;
+        $caseSensitive = $options->caseSensitive;
         if ($search === "") {
             throw new InvalidArgumentException("The search text must not be empty.");
         }
@@ -85,18 +90,16 @@ trait TextTransforms
 
 
     /**
-     * Changes the case of the text between tags. $mode is "upper", "lower" or "sentence".
-     * $language "tr" or "az" maps i to İ and ı to I.
+     * Changes the case of the text between tags. $language "tr" or "az" maps i to İ and ı to I.
      */
-    public function changeCase(string $mode, ?string $language = null): self
+    public function changeCase(CaseMode $mode, ?string $language = null): self
     {
         $turkic = in_array(StringHelpers::primaryLanguage($language), ["tr", "az"], true);
 
         return match ($mode) {
-            "upper"    => $this->textTransformsMapRuns(fn (string $text): string => self::textTransformsUpper($text, $turkic)),
-            "lower"    => $this->textTransformsMapRuns(fn (string $text): string => self::textTransformsLower($text, $turkic)),
-            "sentence" => $this->textTransformsSentenceCase($turkic),
-            default    => throw new InvalidArgumentException("The case mode must be upper, lower or sentence, got $mode."),
+            CaseMode::Upper    => $this->textTransformsMapRuns(fn (string $text): string => self::textTransformsUpper($text, $turkic)),
+            CaseMode::Lower    => $this->textTransformsMapRuns(fn (string $text): string => self::textTransformsLower($text, $turkic)),
+            CaseMode::Sentence => $this->textTransformsSentenceCase($turkic),
         };
     }
 
@@ -160,22 +163,17 @@ trait TextTransforms
      */
     private function textTransformsMapCues(callable $fn): self
     {
-        $removed = false;
-        foreach ($this->cues as $index => $cue) {
+        $emptied = new \SplObjectStorage();
+        foreach ($this->cues as $cue) {
             $hadText = Markup::hasVisibleText($cue->getLines());
             $cue->setLinesByArray($fn($cue));
 
             if ($hadText && !Markup::hasVisibleText($cue->getLines())) {
-                $this->removeCue($index, false);
-                $removed = true;
+                $emptied[$cue] = true;
             }
         }
 
-        if ($removed) {
-            $this->reIndexCues();
-        }
-
-        return $this;
+        return $emptied->count() === 0 ? $this : $this->removeCuesWhere(fn (SubtitleCue $cue): bool => isset($emptied[$cue]));
     }
 
 

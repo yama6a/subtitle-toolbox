@@ -13,6 +13,7 @@ use GlyphOcr\Recognizer;
 use ReflectionMethod;
 use ReflectionParameter;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\OcrException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Markup;
 use WeakReference;
@@ -57,23 +58,25 @@ final class GlyphOcrEngine implements OcrEngine
     /**
      * Reads the image with one recognizer for all cues, so it keeps the glyph heights it learned. It ignores $language.
      */
-    public function recognize(CueImage $image, ?string $language): OcrResult
+    public function recognize(CueImage $image, ?string $language): RecognizedText
     {
         try {
             $result = $this->recognizer->recognize(Image::fromPng($image->png));
         } catch (GlyphOcrException $exception) {
-            throw new InvalidArgumentException("Cannot read the cue image at {$image->x}, {$image->y} - the " .
-                                               "recognizer says: " . $exception->getMessage(), $exception);
+            throw new OcrException("Cannot read the cue image at {$image->x}, {$image->y} - the " .
+                                   "recognizer says: " . $exception->getMessage(), $exception);
         }
 
-        return self::toOcrResult($result);
+        return self::toRecognizedText($result);
     }
 
 
     /**
      * Maps each recognized line to one line of text. A word becomes italic when most of its characters are.
+     *
+     * @internal
      */
-    public static function toOcrResult(RecognitionResult $result): OcrResult
+    public static function toRecognizedText(RecognitionResult $result): RecognizedText
     {
         $lines = [];
         foreach ($result->lines as $line) {
@@ -106,7 +109,7 @@ final class GlyphOcrEngine implements OcrEngine
             $lines[] = $openItalic ? "$text</i>" : $text;
         }
 
-        return new OcrResult($lines, $result->confidence());
+        return new RecognizedText($lines, $result->confidence());
     }
 
 

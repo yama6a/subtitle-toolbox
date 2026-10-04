@@ -10,9 +10,9 @@ use SubtitleToolbox\Sync\ReferenceSync;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
 
 $result = ReferenceSync::apply($german, new ReferenceSyncOptions($english));   // calls scale() and then shift() on $german
-$result->getScale();                                // 1.04271 (25 / 23.976)
-$result->getOffset();                               // -2.3, added after the scale
-$result->getScore();                                // 0.89
+$result->scale;                                                                // 1.04271 (25 / 23.976)
+$result->offset;                                                               // -2.3, added after the scale
+$result->score;                                                                // 0.89
 
 ReferenceSync::apply($german, new ReferenceSyncOptions(
     reference: $english,
@@ -43,7 +43,7 @@ $result = ReferenceSync::apply($german, new ReferenceSyncOptions(
 ));
 $result->getSegments();    // [['from' => 0.0, 'to' => 414.32, 'scale' => 1.04271, 'offset' => -2.31],
                            //  ['from' => 414.32, 'to' => INF, 'scale' => 1.04271, 'offset' => 147.7]]
-$result->getOffset();      // -2.31, the offset of the first part. apply() shifted each part with its own offset.
+$result->offset;           // -2.31, the offset of the first part. apply() shifted each part with its own offset.
 ```
 
 - **Segments**: `from` and `to` are target cue start times before the sync. A cue goes to the part that holds its start. Without a split, `getSegments()` returns one part from 0 to `INF`.

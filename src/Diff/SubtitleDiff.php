@@ -68,20 +68,20 @@ final class SubtitleDiff
         $differences = [];
         foreach ($diff->align() as [$i, $j]) {
             if ($j === null) {
-                $differences[] = new CueDifference(CueDifference::KIND_REMOVED, $oldIndexes[$i], null, $oldCues[$i], null);
+                $differences[] = new CueDifference(CueDifferenceKind::Removed, $oldIndexes[$i], null, $oldCues[$i], null);
                 continue;
             }
             if ($i === null) {
-                $differences[] = new CueDifference(CueDifference::KIND_ADDED, null, $newIndexes[$j], null, $newCues[$j]);
+                $differences[] = new CueDifference(CueDifferenceKind::Added, null, $newIndexes[$j], null, $newCues[$j]);
                 continue;
             }
 
             $textChanged   = $oldTexts[$i] !== $newTexts[$j] || $oldCues[$i]->isForced() !== $newCues[$j]->isForced();
             $timingChanged = !$options->textOnly && !$diff->isSameTime($i, $j);
             $kind          = match (true) {
-                $textChanged && $timingChanged => CueDifference::KIND_TEXT_AND_TIMING_CHANGED,
-                $textChanged                   => CueDifference::KIND_TEXT_CHANGED,
-                $timingChanged                 => CueDifference::KIND_TIMING_CHANGED,
+                $textChanged && $timingChanged => CueDifferenceKind::TextAndTimingChanged,
+                $textChanged                   => CueDifferenceKind::TextChanged,
+                $timingChanged                 => CueDifferenceKind::TimingChanged,
                 default                        => null,
             };
             if ($kind !== null) {
@@ -112,19 +112,19 @@ final class SubtitleDiff
         $blocks = [];
         foreach ($differences as $difference) {
             $numbers = [];
-            if ($difference->getOldIndex() !== null) {
-                $numbers[] = "old cue " . ($difference->getOldIndex() + 1);
+            if ($difference->oldIndex !== null) {
+                $numbers[] = "old cue " . ($difference->oldIndex + 1);
             }
-            if ($difference->getNewIndex() !== null) {
-                $numbers[] = "new cue " . ($difference->getNewIndex() + 1);
+            if ($difference->newIndex !== null) {
+                $numbers[] = "new cue " . ($difference->newIndex + 1);
             }
 
-            $block = $difference->getKind() . ": " . implode(", ", $numbers) . "\n";
-            if ($difference->getOldCue() !== null) {
-                $block .= self::describeCue("-", $difference->getOldCue());
+            $block = $difference->kind->value . ": " . implode(", ", $numbers) . "\n";
+            if ($difference->oldCue !== null) {
+                $block .= self::describeCue("-", $difference->oldCue);
             }
-            if ($difference->getNewCue() !== null) {
-                $block .= self::describeCue("+", $difference->getNewCue());
+            if ($difference->newCue !== null) {
+                $block .= self::describeCue("+", $difference->newCue);
             }
             $blocks[] = $block;
         }

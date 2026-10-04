@@ -52,11 +52,13 @@ class ParseSpeedTest extends TestCase
         $cues     = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/real/own_escaping.srt"), Format::SubRip)->getCues();
         $period   = ceil(end($cues)->getEnd()) + 1;
         $subtitle = new Subtitle();
+        $added    = [];
         for ($index = 0; $index < $cueCount; $index++) {
             $cue    = $cues[$index % count($cues)];
             $offset = intdiv($index, count($cues)) * $period;
-            $subtitle->addCue(new SubtitleCue($cue->getStart() + $offset, $cue->getEnd() + $offset, $cue->getLines()), false);
+            $added[] = new SubtitleCue($cue->getStart() + $offset, $cue->getEnd() + $offset, $cue->getLines());
         }
+        $subtitle->addCues($added);
 
         return $subtitle;
     }

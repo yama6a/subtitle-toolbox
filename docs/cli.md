@@ -192,7 +192,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --fix-common-errors --in-place
 | `--replace FROM=TO` | [`replaceText()`](text.md#transforms) on the text between tags. Repeatable. The first `=` ends FROM |
 | `--replace-regex` | reads each FROM as a regular expression with delimiters, for example `--replace '/\.{4,}/=...'` |
 | `--replace-ignore-case` | matches FROM in any case |
-| `--speakers MODE` | `prefix`, `dashes`, `colours` or `from-prefix`. Calls `SpeakerLabels::apply()` with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colours`, or with `from: SpeakerStyle::Prefix`, and the other options at their defaults, see [Speakers](text.md#speakers) |
+| `--speakers MODE` | `prefix`, `dashes`, `colours` or `from-prefix`. Calls `SpeakerLabels::apply()` with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colors`, or with `readPrefixes: true`, and the other options at their defaults, see [Speakers](text.md#speakers) |
 | `--case MODE` | `upper`, `lower` or `sentence`, with `changeCase()` |
 | `--strip-tags` | removes all formatting tags, such as `<i>` and `<font>` |
 | `--language CODE` | the language of `--case` and `--fix-common-errors`, for example `en`, `de-AT` or `tr`. `tr` and `az` map `i` to `İ` and `ı` to `I`. Without it, `--fix-common-errors` takes the `language` metadata |
@@ -237,9 +237,9 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 |:--- |:--- |
 | `--snap-shot-changes FILE` | [`ShotChangeTiming::apply()`](editing.md#shot-changes-and-gaps) with the shot changes of the file: the log of the FFmpeg `showinfo` filter, or one time per line in seconds or `hh:mm:ss.mmm` |
 | `--video-fps RATE` | `frameRate`, the frame rate of the shot changes and of the frame options. Required with the `--snap-` options |
-| `--snap-window-frames FRAMES` | `snapWindow`, default half a second |
+| `--snap-window-frames FRAMES` | `snapWindowFrames`, default half a second |
 | `--snap-min-gap-frames FRAMES` | `minGapFrames`, default 2 |
-| `--snap-min-duration-frames FRAMES` | `minDuration`, default 20 |
+| `--snap-min-duration-frames FRAMES` | `minDurationFrames`, default 20 |
 | `--snap-no-chain` | `chain: false` |
 | `--fix-overlaps` | `fixOverlaps()` with `--fix-min-gap` seconds, default 0 |
 | `--fix-min-duration SECONDS` | `extendShortCues()` with `--fix-min-gap` |
@@ -323,7 +323,7 @@ vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-format
 | `--json` | one object with `old`, `new`, `equal` and `differences`. A difference has `kind`, `oldIndex`, `newIndex`, `old` and `new`. A cue has `start`, `end`, `lines` and `forced` |
 
 ## Dual
-`dual` merges a primary and a secondary subtitle with [`DualSubtitle::merge()`](editing.md#dual-subtitles). The output has the format of the primary file, unless `--to` or the `--output` extension sets another one.
+`dual` merges a primary and a secondary subtitle with [`DualSubtitle::fromPair()`](editing.md#dual-subtitles). The output has the format of the primary file, unless `--to` or the `--output` extension sets another one.
 
 ```sh
 vendor/bin/subtitle-toolbox dual movie.en.srt movie.de.srt --secondary-style i -o movie.en-de.srt

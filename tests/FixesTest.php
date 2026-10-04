@@ -85,9 +85,9 @@ class FixesTest extends \PHPUnit\Framework\TestCase
 
     public function testFixOverlapsUsesTheNextCueInTimeOrder(): void
     {
-        $subtitle = new Subtitle();
-        $subtitle->addCue(new SubtitleCue(10, 14, "late"), false);
-        $subtitle->addCue(new SubtitleCue(1, 12, "early"), false);
+        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "late"), new SubtitleCue(3, 4, "early")]);
+        $subtitle->getCues()[0]->setStart(10)->setEnd(14);
+        $subtitle->getCues()[1]->setStart(1)->setEnd(12);
 
         $subtitle->fixOverlaps();
 

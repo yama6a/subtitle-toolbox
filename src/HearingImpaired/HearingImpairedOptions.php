@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SubtitleToolbox;
+namespace SubtitleToolbox\HearingImpaired;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 

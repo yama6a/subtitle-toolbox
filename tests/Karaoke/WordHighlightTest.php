@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Karaoke;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Comment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\AssKaraokeTag;
 use SubtitleToolbox\Formatters\Options\AssWriteOptions;
@@ -105,7 +106,7 @@ class WordHighlightTest extends TestCase
     {
         $karaoke = self::expand(
             self::subtitle(new SubtitleCue(0, 1.6, self::BEACH)),
-            new WordHighlightOptions(style: 'font color="#ffff00"', mode: WordHighlightOptions::MODE_CUMULATIVE)
+            new WordHighlightOptions(style: 'font color="#ffff00"', mode: WordHighlightMode::Cumulative)
         );
 
         $this->assertSame([
@@ -153,7 +154,7 @@ class WordHighlightTest extends TestCase
     public function testStyleNeverCrossesOtherTags(): void
     {
         $cue     = new SubtitleCue(0, 3, "<v Ann><00:00:00.000>Hi <b><00:00:01.000>there</b> <00:00:02.000>you");
-        $karaoke = self::expand(self::subtitle($cue), new WordHighlightOptions(mode: WordHighlightOptions::MODE_CUMULATIVE));
+        $karaoke = self::expand(self::subtitle($cue), new WordHighlightOptions(mode: WordHighlightMode::Cumulative));
 
         $this->assertSame([
             "<v Ann><u>Hi</u> <b>there</b> you",
@@ -252,9 +253,9 @@ class WordHighlightTest extends TestCase
         $karaoke = self::expand($subtitle, new WordHighlightOptions());
 
         $this->assertSame("Beach", $karaoke->getMetadata(Subtitle::METADATA_TITLE));
-        $this->assertSame([
-            ["text" => "Before the second cue", "beforeCueIndex" => 4],
-            ["text" => "At the end", "beforeCueIndex" => 6],
+        $this->assertEquals([
+            new Comment("Before the second cue", 4),
+            new Comment("At the end", 6),
         ], $karaoke->getComments());
     }
 
@@ -306,7 +307,7 @@ class WordHighlightTest extends TestCase
             ],
             "enhanced LRC, cumulative" => [
                 fn (): Subtitle => $lrc("lrc/real/handwritten-enhanced.lrc"),
-                new WordHighlightOptions(style: 'font color="#ffff00"', mode: WordHighlightOptions::MODE_CUMULATIVE),
+                new WordHighlightOptions(style: 'font color="#ffff00"', mode: WordHighlightMode::Cumulative),
                 Format::SubRip,
                 "lrc_cumulative.srt",
             ],

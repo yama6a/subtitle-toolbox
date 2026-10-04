@@ -50,7 +50,7 @@ class ProfanityFilterTest extends TestCase
 
         $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(
             words: ["hell", "damn*"],
-            mask: ProfanityOptions::MASK_FIRST_LETTER,
+            mask: ProfanityMask::FirstLetter,
             padding: 0.1,
         ))->muteRanges;
 
@@ -68,23 +68,23 @@ class ProfanityFilterTest extends TestCase
     public static function maskCases(): array
     {
         return [
-            "stars"                   => [["hell"], ["What the hell?"], ProfanityOptions::MASK_STARS, ["What the ****?"]],
-            "first letter keeps case" => [["hell"], ["HELL no"], ProfanityOptions::MASK_FIRST_LETTER, ["H*** no"]],
-            "remove"                  => [["hell"], ["What the hell is this?"], ProfanityOptions::MASK_REMOVE, ["What the is this?"]],
-            "none"                    => [["hell"], ["What the hell?"], ProfanityOptions::MASK_NONE, ["What the hell?"]],
+            "stars"                   => [["hell"], ["What the hell?"], ProfanityMask::Stars, ["What the ****?"]],
+            "first letter keeps case" => [["hell"], ["HELL no"], ProfanityMask::FirstLetter, ["H*** no"]],
+            "remove"                  => [["hell"], ["What the hell is this?"], ProfanityMask::Remove, ["What the is this?"]],
+            "none"                    => [["hell"], ["What the hell?"], ProfanityMask::None, ["What the hell?"]],
             "callback"                => [["hell"], ["What the hell?"], fn (string $word): string => "[$word]", ["What the [hell]?"]],
             "callback with markup"    => [["hell"], ["What the hell?"], fn (string $word): string => "<$word>", ["What the &lt;hell&gt;?"]],
-            "case-insensitive"        => [["HeLL"], ["hell and Hell"], ProfanityOptions::MASK_STARS, ["**** and ****"]],
-            "whole word only"         => [["hell"], ["Hello, shell, hell's"], ProfanityOptions::MASK_STARS, ["Hello, shell, ****'s"]],
-            "wildcard ending"         => [["damn*"], ["Damn, damned, damnit, condemn"], ProfanityOptions::MASK_STARS,
+            "case-insensitive"        => [["HeLL"], ["hell and Hell"], ProfanityMask::Stars, ["**** and ****"]],
+            "whole word only"         => [["hell"], ["Hello, shell, hell's"], ProfanityMask::Stars, ["Hello, shell, ****'s"]],
+            "wildcard ending"         => [["damn*"], ["Damn, damned, damnit, condemn"], ProfanityMask::Stars,
                                           ["****, ******, ******, condemn"]],
-            "unicode letters"         => [["hölle", "scheiß*"], ["Zur HÖLLE, Scheißkerl!"], ProfanityOptions::MASK_FIRST_LETTER,
+            "unicode letters"         => [["hölle", "scheiß*"], ["Zur HÖLLE, Scheißkerl!"], ProfanityMask::FirstLetter,
                                           ["Zur H****, S*********!"]],
-            "unicode word boundary"   => [["hell"], ["Bellhellé hell"], ProfanityOptions::MASK_STARS, ["Bellhellé ****"]],
-            "combining mark counted"  => [["cafe\u{0301}"], ["Le cafe\u{0301}"], ProfanityOptions::MASK_STARS, ["Le ****"]],
-            "phrase"                  => [["son of a"], ["You son of a gun"], ProfanityOptions::MASK_STARS, ["You ******** gun"]],
-            "inside tags"             => [["hell"], ["<i>What the hell</i>"], ProfanityOptions::MASK_STARS, ["<i>What the ****</i>"]],
-            "entities stay escaped"   => [["hell"], ["hell &amp; &lt;b&gt;"], ProfanityOptions::MASK_STARS, ["**** &amp; &lt;b&gt;"]],
+            "unicode word boundary"   => [["hell"], ["Bellhellé hell"], ProfanityMask::Stars, ["Bellhellé ****"]],
+            "combining mark counted"  => [["cafe\u{0301}"], ["Le cafe\u{0301}"], ProfanityMask::Stars, ["Le ****"]],
+            "phrase"                  => [["son of a"], ["You son of a gun"], ProfanityMask::Stars, ["You ******** gun"]],
+            "inside tags"             => [["hell"], ["<i>What the hell</i>"], ProfanityMask::Stars, ["<i>What the ****</i>"]],
+            "entities stay escaped"   => [["hell"], ["hell &amp; &lt;b&gt;"], ProfanityMask::Stars, ["**** &amp; &lt;b&gt;"]],
         ];
     }
 
@@ -95,7 +95,7 @@ class ProfanityFilterTest extends TestCase
      * @param list<string> $expected
      */
     #[DataProvider("maskCases")]
-    public function testMasks(array $words, array $lines, string|\Closure $mask, array $expected): void
+    public function testMasks(array $words, array $lines, ProfanityMask|\Closure $mask, array $expected): void
     {
         [$actual, $ranges] = self::filterLines($lines, new ProfanityOptions($words, $mask));
 
@@ -116,7 +116,7 @@ class ProfanityFilterTest extends TestCase
             ->addCue(new SubtitleCue(1, 2, "<i>Damn</i>"))
             ->addCue(new SubtitleCue(3, 4, "Fine."));
 
-        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn"], ProfanityOptions::MASK_REMOVE))->muteRanges;
+        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn"], ProfanityMask::Remove))->muteRanges;
 
         $this->assertSame([[1.0, 2.0]], self::times($ranges));
         $this->assertSame([0], array_keys($subtitle->getCues()));
@@ -176,7 +176,7 @@ class ProfanityFilterTest extends TestCase
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "keys.srt"), Format::SubRip);
 
-        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(wordFile: self::FILES . "words.txt"))->muteRanges;
+        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn*", "hell"]))->muteRanges;
 
         $this->assertCount(7, $subtitle->getCues());
         $this->assertSame([[3.4, 5.0], [8.0, 9.1], [11.5, 13.0], [13.2, 15.6]], self::times($ranges));
@@ -192,7 +192,7 @@ class ProfanityFilterTest extends TestCase
         $this->assertSame($expected, $subtitle->toString(Format::SubRip, new WriteOptions(lineEnding: LineEnding::Crlf, bom: false)));
         $this->assertSame([[3.4, 5.0], [8.0, 9.1], [11.5, 13.0], [13.2, 15.6]], self::times(ProfanityFilter::apply(
             Subtitle::fromString(file_get_contents(self::FILES . "keys.srt"), Format::SubRip),
-            new ProfanityOptions(["damn*", "hell"], ProfanityOptions::MASK_NONE)
+            new ProfanityOptions(["damn*", "hell"], ProfanityMask::None)
         )->muteRanges));
     }
 
@@ -212,7 +212,7 @@ class ProfanityFilterTest extends TestCase
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "radio.vtt"), Format::WebVtt);
 
-        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn*", "hell"], ProfanityOptions::MASK_FIRST_LETTER))->muteRanges;
+        $ranges = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn*", "hell"], ProfanityMask::FirstLetter))->muteRanges;
 
         $cues = array_values($subtitle->getCues());
         $this->assertCount(4, $cues);
@@ -238,31 +238,20 @@ class ProfanityFilterTest extends TestCase
     }
 
 
-    public function testWordFileJoinsTheWordsOfTheOptions(): void
-    {
-        $options = new ProfanityOptions(["hell", "crap"], wordFile: self::FILES . "words.txt");
-
-        $this->assertSame(["hell", "crap", "damn*"], $options->words);
-    }
-
-
     /**
      * @return array<string, array{\Closure}>
      */
     public static function invalidOptions(): array
     {
         return [
-            "empty list"         => [fn () => new ProfanityOptions()],
+            "empty list"         => [fn () => new ProfanityOptions([])],
             "empty word"         => [fn () => new ProfanityOptions([""])],
             "star in the middle" => [fn () => new ProfanityOptions(["f*ck"])],
             "only a star"        => [fn () => new ProfanityOptions(["*"])],
             "space at the end"   => [fn () => new ProfanityOptions(["hell "])],
             "no string"          => [fn () => new ProfanityOptions([5])],
             "invalid UTF-8"      => [fn () => new ProfanityOptions(["h\xE9ll"])],
-            "unknown mask"       => [fn () => new ProfanityOptions(["hell"], "blur")],
             "negative padding"   => [fn () => new ProfanityOptions(["hell"], padding: -0.1)],
-            "missing word file"  => [fn () => new ProfanityOptions(wordFile: self::FILES . "missing.txt")],
-            "word file a folder" => [fn () => new ProfanityOptions(wordFile: self::FILES)],
         ];
     }
 

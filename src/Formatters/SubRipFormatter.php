@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\StringHelpers;
@@ -42,11 +43,11 @@ final class SubRipFormatter extends SubtitleFormatter
     {
         $output = "";
         if ($cueIndex > 0) {
-            $output .= StringHelpers::UNIX_LINE_ENDING;
+            $output .= LineEnding::Lf->value;
         }
-        $output .= $cueIndex + 1 . StringHelpers::UNIX_LINE_ENDING;
+        $output .= $cueIndex + 1 . LineEnding::Lf->value;
         $output .= $this->formatCue($cue, $options);
-        $output .= StringHelpers::UNIX_LINE_ENDING;
+        $output .= LineEnding::Lf->value;
 
         return $output;
     }
@@ -56,7 +57,7 @@ final class SubRipFormatter extends SubtitleFormatter
     {
         $time  = sprintf("%02d:%02d:%02d,%03d --> %02d:%02d:%02d,%03d", ...Timecode::milliseconds($cue->getStart()), ...Timecode::milliseconds($cue->getEnd()));
         $time .= $this->formatCoordinates($cue);
-        $lines = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines());
+        $lines = implode(LineEnding::Lf->value, $cue->getLines());
 
         $lines = $options->stripTags
             ? Markup::stripAllTags($lines)
@@ -64,15 +65,15 @@ final class SubRipFormatter extends SubtitleFormatter
         $lines = Markup::decodeEntities($lines);
 
         // A line that holds only a tag becomes empty, and an empty line ends the cue in SubRip.
-        $lines = explode(StringHelpers::UNIX_LINE_ENDING, $lines);
-        $lines = implode(StringHelpers::UNIX_LINE_ENDING, array_filter($lines, fn(string $line) => trim($line) !== ""));
+        $lines = explode(LineEnding::Lf->value, $lines);
+        $lines = implode(LineEnding::Lf->value, array_filter($lines, fn(string $line) => trim($line) !== ""));
 
         if ($cue->getAlignment() !== null && $cue->getAlignment() !== 2) {
             $lines = "{\\an{$cue->getAlignment()}}" . $lines;
         }
 
 
-        return $time . StringHelpers::UNIX_LINE_ENDING . $lines;
+        return $time . LineEnding::Lf->value . $lines;
     }
 
 

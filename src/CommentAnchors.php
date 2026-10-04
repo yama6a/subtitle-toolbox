@@ -14,14 +14,14 @@ namespace SubtitleToolbox;
 final class CommentAnchors
 {
     /**
-     * @param SubtitleCue[]                                  $cues
-     * @param array<array{text: string, beforeCueIndex: int}> $comments
+     * @param SubtitleCue[] $cues
+     * @param list<Comment> $comments
      *
      * @return array<int, ?SubtitleCue>
      */
     public static function of(array $cues, array $comments): array
     {
-        return array_map(fn (array $comment): ?SubtitleCue => self::anchor($cues, $comment["beforeCueIndex"]), $comments);
+        return array_map(fn (Comment $comment): ?SubtitleCue => self::anchor($cues, $comment->beforeCueIndex), $comments);
     }
 
 
@@ -54,11 +54,11 @@ final class CommentAnchors
     /**
      * Returns the comments sorted by their new cue index. A comment whose anchor is not in $cues goes after the last cue.
      *
-     * @param SubtitleCue[]                                  $cues
-     * @param array<array{text: string, beforeCueIndex: int}> $comments
-     * @param array<int, ?SubtitleCue>                       $anchors
+     * @param SubtitleCue[]            $cues
+     * @param list<Comment>            $comments
+     * @param array<int, ?SubtitleCue> $anchors
      *
-     * @return list<array{text: string, beforeCueIndex: int}>
+     * @return list<Comment>
      */
     public static function comments(array $cues, array $comments, array $anchors): array
     {
@@ -67,11 +67,10 @@ final class CommentAnchors
         foreach ($comments as $commentIndex => $comment) {
             $cueIndex = $anchors[$commentIndex] === null ? false : array_search($anchors[$commentIndex], $cues, true);
 
-            $comments[$commentIndex]["beforeCueIndex"] = $cueIndex === false ? count($cues) : $cueIndex;
+            $comments[$commentIndex] = $comment->withBeforeCueIndex($cueIndex === false ? count($cues) : $cueIndex);
         }
 
-        usort($comments, fn (array $comment1, array $comment2): int =>
-            $comment1["beforeCueIndex"] <=> $comment2["beforeCueIndex"]);
+        usort($comments, fn (Comment $comment1, Comment $comment2): int => $comment1->beforeCueIndex <=> $comment2->beforeCueIndex);
 
         return $comments;
     }

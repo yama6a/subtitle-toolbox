@@ -28,12 +28,14 @@ class ReferenceSyncSplitTest extends TestCase
         mt_srand($seed);
         $subtitle = new Subtitle();
         $time     = 1.0;
+        $cues     = [];
         for ($index = 0; $index < $cueCount; $index++) {
             $time     += mt_rand(500, 4000) / 1000;
             $duration  = mt_rand(1000, 5000) / 1000;
-            $subtitle->addCue(new SubtitleCue($time, $time + $duration, "text$index"), false);
+            $cues[] = new SubtitleCue($time, $time + $duration, "text$index");
             $time     += $duration;
         }
+        $subtitle->addCues($cues);
 
         return $subtitle;
     }
@@ -68,8 +70,8 @@ class ReferenceSyncSplitTest extends TestCase
         $this->assertEqualsWithDelta(-2.3, $segments[0]["offset"], 0.02);
         $this->assertEqualsWithDelta(147.7, $segments[1]["offset"], 0.02);
         $this->assertEqualsWithDelta(25 / 23.976, $segments[1]["scale"], 0.00001);
-        $this->assertSame($segments[0]["offset"], $result->getOffset());
-        $this->assertGreaterThan(0.8, $result->getScore());
+        $this->assertSame($segments[0]["offset"], $result->offset);
+        $this->assertGreaterThan(0.8, $result->score);
         $this->assertNotSame($before, $this->getTimes($target));
     }
 
@@ -102,7 +104,7 @@ class ReferenceSyncSplitTest extends TestCase
                                        new ReferenceSyncOptions($this->load("own_reference_en_tv_break.srt"), -180, 180));
 
         $this->assertCount(1, $result->getSegments());
-        $this->assertLessThan(0.5, $result->getScore());
+        $this->assertLessThan(0.5, $result->score);
     }
 
 
@@ -131,20 +133,20 @@ class ReferenceSyncSplitTest extends TestCase
         $result = ReferenceSync::apply($this->makeRandomSubtitle(300, 1),
                                        new ReferenceSyncOptions($this->makeRandomSubtitle(300, 2), maxSplits: 2));
 
-        $this->assertLessThan(0.5, $result->getScore());
+        $this->assertLessThan(0.5, $result->score);
     }
 
 
     public function testSegmentsWithoutSplit(): void
     {
         $this->assertSame([["from" => 0.0, "to" => INF, "scale" => 1.04, "offset" => -2.5]],
-                          (new SyncResult(-2.5, 1.04, 0.9))->getSegments());
+                          (new ReferenceSyncReport(-2.5, 1.04, 0.9))->getSegments());
     }
 
 
-    private static function retimeSegments(Subtitle $subtitle, SyncResult $result): void
+    private static function retimeSegments(Subtitle $subtitle, ReferenceSyncReport $result): void
     {
-        (new \ReflectionMethod(ReferenceSync::class, "retimeSegments"))->invoke(null, $subtitle, $result->getScale(), $result->getSegments());
+        (new \ReflectionMethod(ReferenceSync::class, "retimeSegments"))->invoke(null, $subtitle, $result->scale, $result->getSegments());
     }
 
 
@@ -153,7 +155,7 @@ class ReferenceSyncSplitTest extends TestCase
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(10, 14, "one"))
                                     ->addCue(new SubtitleCue(20, 22, "two"))
                                     ->addCue(new SubtitleCue(25, 27, "three"));
-        $result   = new SyncResult(5, 1, 0.9, [["from" => 0.0, "offset" => 5.0], ["from" => 20.0, "offset" => -3.0]]);
+        $result   = new ReferenceSyncReport(5, 1, 0.9, [["from" => 0.0, "offset" => 5.0], ["from" => 20.0, "offset" => -3.0]]);
 
         self::retimeSegments($subtitle, $result);
 
@@ -165,7 +167,7 @@ class ReferenceSyncSplitTest extends TestCase
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(10, 12, "one"))
                                     ->addCue(new SubtitleCue(20, 22, "two"));
-        $result   = new SyncResult(15, 1, 0.9, [["from" => 0.0, "offset" => 15.0], ["from" => 20.0, "offset" => -15.0]]);
+        $result   = new ReferenceSyncReport(15, 1, 0.9, [["from" => 0.0, "offset" => 15.0], ["from" => 20.0, "offset" => -15.0]]);
 
         self::retimeSegments($subtitle, $result);
 
@@ -188,10 +190,10 @@ class ReferenceSyncSplitTest extends TestCase
         $this->assertLessThan(5, microtime(true) - $start);
         $segments = $result->getSegments();
         $this->assertSame([0.0, $splits[0], $splits[1]], array_column($segments, "from"));
-        $this->assertEqualsWithDelta(25 / 23.976, $result->getScale(), 0.00001);
+        $this->assertEqualsWithDelta(25 / 23.976, $result->scale, 0.00001);
         $this->assertEqualsWithDelta(-12.4 * 25 / 23.976, $segments[0]["offset"], 0.02);
         $this->assertEqualsWithDelta(-12.4 * 25 / 23.976 + 30, $segments[1]["offset"], 0.02);
         $this->assertEqualsWithDelta(-12.4 * 25 / 23.976 + 10, $segments[2]["offset"], 0.02);
-        $this->assertEqualsWithDelta(1, $result->getScore(), 0.001);
+        $this->assertEqualsWithDelta(1, $result->score, 0.001);
     }
 }

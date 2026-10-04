@@ -112,11 +112,11 @@ class WordTimestampRetimingTest extends TestCase
     public function testSliceToZeroMovesWordTimestamps(): void
     {
         $original = self::load("profanity/radio.vtt", Format::WebVtt);
-        $slice    = $original->slice(5, 9, true);
+        $slice    = $original->withSlice(5, 9, true);
 
         $this->assertSame(["<00:00:02.500>Fine, <00:00:03.000>damnit."], $slice->getCues()[1]->getLines());
         $this->assertSame(["<00:00:07.500>Fine, <00:00:08.000>damnit."], $original->getCues()[3]->getLines());
-        $this->assertSame(["<00:00:07.500>Fine, <00:00:08.000>damnit."], $original->slice(5, 9)->getCues()[1]->getLines());
+        $this->assertSame(["<00:00:07.500>Fine, <00:00:08.000>damnit."], $original->withSlice(5, 9)->getCues()[1]->getLines());
     }
 
 
@@ -134,7 +134,7 @@ class WordTimestampRetimingTest extends TestCase
         $this->assertCount(2, $result->getSegments());
         foreach ([$target->getCues()[0], $target->getCues()[count($cues) - 1]] as $cue) {
             preg_match(Markup::WORD_TIMESTAMP_REGEX, $cue->getText(), $match);
-            $this->assertEqualsWithDelta($cue->getStart() + 0.5 * $result->getScale(), Markup::wordTimestampSeconds($match[1]), 0.0015);
+            $this->assertEqualsWithDelta($cue->getStart() + 0.5 * $result->scale, Markup::wordTimestampSeconds($match[1]), 0.0015);
         }
     }
 

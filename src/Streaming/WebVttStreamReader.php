@@ -6,10 +6,10 @@ namespace SubtitleToolbox\Streaming;
 
 use Generator;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\ReadOptions;
-use SubtitleToolbox\StringHelpers;
 
 final class WebVttStreamReader implements CueStreamReader
 {
@@ -67,7 +67,7 @@ final class WebVttStreamReader implements CueStreamReader
                         $seenCue = true;
                         break;
                     case !$seenCue && $firstLine === "STYLE":
-                        $this->header["styles"][] = implode(StringHelpers::UNIX_LINE_ENDING, array_slice($rawLines, 1));
+                        $this->header["styles"][] = implode(LineEnding::Lf->value, array_slice($rawLines, 1));
                         break;
                     case !$seenCue && $firstLine === "REGION":
                         $this->header["regions"][] = $this->parser->parseSettings(

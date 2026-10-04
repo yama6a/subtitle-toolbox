@@ -11,7 +11,7 @@ final class AppliedFix
      */
     public function __construct(
         public readonly int $cueIndex,
-        public readonly string $rule,
+        public readonly CommonErrorRule $rule,
         public readonly string $before,
         public readonly string $after,
     ) {

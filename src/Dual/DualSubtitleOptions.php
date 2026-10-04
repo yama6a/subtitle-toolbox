@@ -2,30 +2,22 @@
 
 declare(strict_types=1);
 
-namespace SubtitleToolbox;
+namespace SubtitleToolbox\Dual;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Markup;
 
 final class DualSubtitleOptions
 {
-    public const MODE_STACK      = "stack";
-    public const MODE_TOP_BOTTOM = "topBottom";
-
-
     /**
-     * Creates the options for DualSubtitle::merge(), for example new DualSubtitleOptions(secondaryStyle: "i").
+     * Creates the options for DualSubtitle::fromPair(), for example new DualSubtitleOptions(secondaryStyle: "i").
      */
     public function __construct(
-        public readonly string $mode = self::MODE_STACK,
+        public readonly DualSubtitleMode $mode = DualSubtitleMode::Stack,
         public readonly float $snapTolerance = 0.25,
         public readonly ?string $secondaryStyle = null,
         public readonly int $secondaryAlignment = 8,
     ) {
-        if (!in_array($mode, [self::MODE_STACK, self::MODE_TOP_BOTTOM], true)) {
-            throw new InvalidArgumentException("Unknown mode $mode - use DualSubtitleOptions::MODE_STACK or " .
-                                               "DualSubtitleOptions::MODE_TOP_BOTTOM.");
-        }
-
         if ($snapTolerance < 0) {
             throw new InvalidArgumentException("The snap tolerance $snapTolerance must not be negative.");
         }

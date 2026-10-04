@@ -33,7 +33,6 @@ final class ValidationRules
         public readonly bool $requireCues = false,
         public readonly bool $noUnsortedCues = false,
         public readonly bool $noNegativeDuration = false,
-        public readonly bool $noIndexGaps = false,
     ) {
         if ($dialogueDashStyle !== null && preg_match("/^[-\x{2010}\x{2013}\x{2014}] ?$/u", $dialogueDashStyle) !== 1) {
             throw new InvalidArgumentException("The dialogue dash style must be a hyphen, an en dash or an em dash, " .
@@ -49,7 +48,7 @@ final class ValidationRules
 
     /**
      * Returns the checks of a well-formed cue list: at least one cue, cues in start order, no cue that ends before it
-     * starts, and cue indexes from 0 without a gap.
+     * starts, and no overlap.
      */
     public static function structure(): self
     {
@@ -57,7 +56,6 @@ final class ValidationRules
             requireCues: true,
             noUnsortedCues: true,
             noNegativeDuration: true,
-            noIndexGaps: true,
             noOverlap: true,
         );
     }
@@ -66,7 +64,7 @@ final class ValidationRules
     /**
      * Returns the limits of the Netflix English (USA) Timed Text Style Guide for adult programs at the given frame rate.
      */
-    public static function netflixEnglish(float $fps): self
+    public static function netflixEnglish(float $frameRate): self
     {
         return new self(
             maxCharactersPerSecond: 20,
@@ -74,7 +72,7 @@ final class ValidationRules
             maxLinesPerCue: 2,
             minDuration: 5 / 6,
             maxDuration: 7,
-            minGap: (new FrameRate($fps))->framesToSeconds(2),
+            minGap: (new FrameRate($frameRate))->framesToSeconds(2),
             noOverlap: true,
         );
     }

@@ -146,8 +146,8 @@ class SyncCommand extends WriteCommand
         ));
 
         $label = self::label($input);
-        $text  = "$label: scale " . self::number($result->getScale(), 5) . ", offset " . self::number($result->getOffset(), 3) .
-                 " s, score " . self::number($result->getScore(), 2) . "\n";
+        $text  = "$label: scale " . self::number($result->scale, 5) . ", offset " . self::number($result->offset, 3) .
+                 " s, score " . self::number($result->score, 2) . "\n";
         $segments = $result->getSegments();
         if (count($segments) > 1) {
             foreach ($segments as $segment) {
@@ -155,7 +155,7 @@ class SyncCommand extends WriteCommand
             }
         }
         $console->err($text);
-        if ($result->getScore() < self::LOW_SCORE) {
+        if ($result->score < self::LOW_SCORE) {
             $console->err("$label: the score is below " . self::LOW_SCORE . ", so the files likely do not match.\n");
         }
 

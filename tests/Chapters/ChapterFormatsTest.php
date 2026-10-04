@@ -16,6 +16,8 @@ use SubtitleToolbox\Parsers\YouTubeChaptersParser;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Validation\ValidationRule;
+use SubtitleToolbox\Validation\ValidationViolation;
 
 class ChapterFormatsTest extends TestCase
 {
@@ -216,10 +218,10 @@ class ChapterFormatsTest extends TestCase
     {
         $chapters = $this->chapters([[5, 9.5, "Intro"], [9.5, 30, "Middle"]]);
 
-        $this->assertSame([
-            ["rule" => YouTubeChapters::RULE_FIRST_CHAPTER_AT_ZERO, "chapterIndex" => 0, "value" => 5.0, "limit" => 0],
-            ["rule" => YouTubeChapters::RULE_MIN_CHAPTERS, "chapterIndex" => null, "value" => 2, "limit" => 3],
-            ["rule" => YouTubeChapters::RULE_MIN_DURATION, "chapterIndex" => 0, "value" => 4.5, "limit" => 10],
+        $this->assertEquals([
+            new ValidationViolation(0, ValidationRule::FirstChapterAtZero, 5.0, 0),
+            new ValidationViolation(null, ValidationRule::MinChapters, 2, 3),
+            new ValidationViolation(0, ValidationRule::MinDuration, 4.5, 10),
         ], YouTubeChapters::check($chapters));
     }
 
@@ -228,19 +230,21 @@ class ChapterFormatsTest extends TestCase
     {
         $chapters = $this->chapters([[0.5, 10.5, "Intro"], [10.5, 20.5, "Middle"], [20.5, 25, "End"]]);
 
-        $this->assertSame([["rule" => YouTubeChapters::RULE_MIN_DURATION, "chapterIndex" => 2, "value" => 4.5, "limit" => 10]],
-                          YouTubeChapters::check($chapters));
-        $this->assertSame([["rule" => YouTubeChapters::RULE_MIN_CHAPTERS, "chapterIndex" => null, "value" => 0, "limit" => 3]],
-                          YouTubeChapters::check(new Subtitle()));
+        $this->assertEquals([new ValidationViolation(2, ValidationRule::MinDuration, 4.5, 10)],
+                            YouTubeChapters::check($chapters));
+        $this->assertEquals([new ValidationViolation(null, ValidationRule::MinChapters, 0, 3)],
+                            YouTubeChapters::check(new Subtitle()));
     }
 
 
     private function chapters(array $chapters): Subtitle
     {
         $subtitle = new Subtitle();
+        $cues     = [];
         foreach ($chapters as [$start, $end, $text]) {
-            $subtitle->addCue(new SubtitleCue($start, $end, $text), false);
+            $cues[] = new SubtitleCue($start, $end, $text);
         }
+        $subtitle->addCues($cues);
 
         return $subtitle;
     }

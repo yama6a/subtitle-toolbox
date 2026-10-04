@@ -6,6 +6,9 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Image\CueImage;
 
+/**
+ * @internal
+ */
 trait ShortCueMerging
 {
     /**
@@ -49,8 +52,8 @@ trait ShortCueMerging
 
     private static function shortCueMergingIsShort(SubtitleCue $cue, MergeShortCuesOptions $options): bool
     {
-        return round($cue->getEnd() - $cue->getStart(), 3) < round($options->minDuration, 3)
-            || ($options->minCharacters !== null && LineWrapper::characters($cue->getLines()) < $options->minCharacters);
+        return round($cue->getEnd() - $cue->getStart(), 3) < round($options->limits->minDuration, 3)
+            || ($options->minCharacters !== null && LineWrapper::visibleCharacters($cue->getLines()) < $options->minCharacters);
     }
 
 
@@ -77,19 +80,19 @@ trait ShortCueMerging
 
         $duration = round(max($first->getEnd(), $second->getEnd()) - $first->getStart(), 3);
         if (round($second->getStart() - $first->getEnd(), 3) > round($options->maxGap, 3)
-            || (!$options->sameSpeakerOnly && $duration > round($options->maxDuration, 3))) {
+            || (!$options->sameSpeakerOnly && $duration > round($options->limits->maxDuration, 3))) {
             return null;
         }
 
         $lines = LineWrapper::wrapToFit(self::shortCueMergingOneVoiceTag($first, $second, $speakers)
                                         ?? [...$first->getLines(), ...$second->getLines()],
-                                        $options->maxCharactersPerLine, $options->maxLines);
-        if ($lines === null || $options->maxCharactersPerSecond === null) {
+                                        $options->limits->maxCharactersPerLine, $options->limits->maxLines);
+        if ($lines === null || $options->limits->maxCharactersPerSecond === null) {
             return $lines;
         }
 
-        $characters = LineWrapper::characters($lines);
-        if ($characters > 0 && ($duration > 0 ? $characters / $duration : INF) > $options->maxCharactersPerSecond) {
+        $characters = LineWrapper::visibleCharacters($lines);
+        if ($characters > 0 && ($duration > 0 ? $characters / $duration : INF) > $options->limits->maxCharactersPerSecond) {
             return null;
         }
 

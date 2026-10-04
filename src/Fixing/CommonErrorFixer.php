@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Fixing;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 
 /**
  * The replace list rules port GetReplaceWord(), StripAffixes(), ReplaceWord() and SkipAddLineEnding() of
@@ -15,21 +16,6 @@ use SubtitleToolbox\Subtitle;
  */
 final class CommonErrorFixer
 {
-    /** The rules in the order they run. */
-    public const RULES = [
-        "replaceList",
-        "unbalancedTags",
-        "emptyTags",
-        "ocrPipe",
-        "ocrZeroInWords",
-        "ocrLowercaseL",
-        "ellipsis",
-        "doubleSpaces",
-        "spaceBeforePunctuation",
-        "missingSpaceAfterPunctuation",
-        "dialogueDashes",
-    ];
-
     private const STYLE_TAG    = '<(\/?)(b|i|u|s|font)(?:\s[^<>]*)?>';
     private const DASHES       = '\-\x{2010}\x{2013}\x{2014}';
     private const NOT_IN_WORD  = '(?<![\p{L}\p{N}\'\x{2019}])';
@@ -45,15 +31,30 @@ final class CommonErrorFixer
 
 
     /**
-     * Fixes common text and OCR errors in the cue text and reports each change. It changes nothing with dryRun.
+     * Fixes common text and OCR errors in the cue text and reports each change.
      */
     public static function apply(Subtitle $subtitle, CommonErrorOptions $options): CommonErrorReport
     {
-        $language   = self::language($options->language ?? $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
-        $cues       = $subtitle->getCues();
-        $indexes    = array_keys($cues);
-        $fixes      = [];
-        $removed    = false;
+        return self::run($subtitle, $options, true);
+    }
+
+
+    /**
+     * Returns the report that apply() would return, and leaves the subtitle as it is.
+     */
+    public static function preview(Subtitle $subtitle, CommonErrorOptions $options): CommonErrorReport
+    {
+        return self::run($subtitle, $options, false);
+    }
+
+
+    private static function run(Subtitle $subtitle, CommonErrorOptions $options, bool $change): CommonErrorReport
+    {
+        $language    = self::language($options->language ?? $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $cues        = $subtitle->getCues();
+        $indexes     = array_keys($cues);
+        $fixes       = [];
+        $removedCues = new \SplObjectStorage();
 
         foreach ($indexes as $position => $index) {
             $cue   = $cues[$index];
@@ -66,7 +67,7 @@ final class CommonErrorFixer
             $continues = $next !== null && $next->getStart() - $cue->getEnd() <= 0.6
                          && preg_match('/^\p{Ll}/u', implode("\n", Markup::plainLines($next->getLines()))) === 1;
             $original  = $lines;
-            foreach (self::RULES as $rule) {
+            foreach (CommonErrorRule::cases() as $rule) {
                 $fixed = self::applyRule($rule, $lines, $options, $language, $continues);
                 if ($fixed !== $lines) {
                     $fixes[] = new AppliedFix($index, $rule, implode("\n", $lines), implode("\n", $fixed));
@@ -74,18 +75,17 @@ final class CommonErrorFixer
                 }
             }
 
-            if ($options->dryRun || $lines === $original) {
+            if (!$change || $lines === $original) {
                 continue;
             }
             $cue->setLinesByArray($lines);
             if (Markup::plainLines($cue->getLines()) === [] && Markup::plainLines($original) !== []) {
-                $subtitle->removeCue($index, false);
-                $removed = true;
+                $removedCues[$cue] = true;
             }
         }
 
-        if ($removed) {
-            $subtitle->reIndexCues();
+        if ($removedCues->count() > 0) {
+            $subtitle->removeCuesWhere(fn (SubtitleCue $cue): bool => isset($removedCues[$cue]));
         }
 
         return new CommonErrorReport($fixes);
@@ -96,32 +96,32 @@ final class CommonErrorFixer
      * @param list<string> $lines
      * @return list<string>
      */
-    private static function applyRule(string $rule, array $lines, CommonErrorOptions $options, ?string $language,
+    private static function applyRule(CommonErrorRule $rule, array $lines, CommonErrorOptions $options, ?string $language,
                                       bool $continues): array
     {
-        $enabled = $rule === "replaceList" ? $options->replaceList !== null : $options->{$rule};
+        $enabled = $rule === CommonErrorRule::ReplaceList ? $options->replaceList !== null : $options->{$rule->value};
         if (!$enabled) {
             return $lines;
         }
 
         return match ($rule) {
-            "replaceList"     => self::replaceList($lines, $options->replaceList, $continues),
-            "unbalancedTags"  => self::unbalancedTags($lines),
-            "emptyTags"       => array_map(fn (string $line): string => self::emptyTags($line), $lines),
-            "ocrPipe"         => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrPipe($text, $language)),
-            "ocrZeroInWords"  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => self::ocrZero($text, $first)),
-            "ocrLowercaseL"   => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrLowercaseL($text, $language)),
-            "ellipsis"        => Markup::mapTextRuns($lines, fn (string $text): string => self::replace(
+            CommonErrorRule::ReplaceList     => self::replaceList($lines, $options->replaceList, $continues),
+            CommonErrorRule::UnbalancedTags  => self::unbalancedTags($lines),
+            CommonErrorRule::EmptyTags       => array_map(fn (string $line): string => self::emptyTags($line), $lines),
+            CommonErrorRule::OcrPipe         => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrPipe($text, $language)),
+            CommonErrorRule::OcrZeroInWords  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => self::ocrZero($text, $first)),
+            CommonErrorRule::OcrLowercaseL   => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrLowercaseL($text, $language)),
+            CommonErrorRule::Ellipsis        => Markup::mapTextRuns($lines, fn (string $text): string => self::replace(
                 '/\.(?: ?\.){2,}' . ($options->unicodeEllipsis ? '|\x{2026}' : '') . '/u',
                 $options->unicodeEllipsis ? "\u{2026}" : "...",
                 $text
             )),
-            "doubleSpaces"    => self::doubleSpaces($lines),
-            "spaceBeforePunctuation"       => Markup::mapTextRuns($lines, fn (string $text): string =>
+            CommonErrorRule::DoubleSpaces    => self::doubleSpaces($lines),
+            CommonErrorRule::SpaceBeforePunctuation       => Markup::mapTextRuns($lines, fn (string $text): string =>
                 self::spaceBeforePunctuation($text, $language)),
-            "missingSpaceAfterPunctuation" => Markup::mapTextRuns($lines, fn (string $text): string =>
+            CommonErrorRule::MissingSpaceAfterPunctuation => Markup::mapTextRuns($lines, fn (string $text): string =>
                 self::missingSpaceAfterPunctuation($text)),
-            "dialogueDashes"  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => !$first ? $text : self::replace(
+            CommonErrorRule::DialogueDashes  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => !$first ? $text : self::replace(
                 '/^[' . self::DASHES . '](?![' . self::DASHES . '])' . self::SPACES . '*(?=[^\s\p{N}])/u',
                 $options->dialogueDash,
                 $text

@@ -24,7 +24,7 @@ final class ShotChangeTiming
 
         for ($i = 0; $i < $count; $i++) {
             $shot = self::firstShotFrom($shots, $ends[$i]);
-            if ($shot !== null && $shot - $ends[$i] <= $options->snapWindow) {
+            if ($shot !== null && $shot - $ends[$i] <= $options->snapWindowFrames) {
                 $end = $shot - $options->minGapFrames;
                 if (self::isAllowed($i, $starts[$i], $end, $starts, $ends, $options)) {
                     $ends[$i] = $end;
@@ -34,7 +34,7 @@ final class ShotChangeTiming
 
         for ($i = 0; $i < $count; $i++) {
             $shot = self::lastShotUntil($shots, $starts[$i]);
-            if ($shot !== null && $starts[$i] - $shot <= $options->snapWindow
+            if ($shot !== null && $starts[$i] - $shot <= $options->snapWindowFrames
                 && self::isAllowed($i, $shot, $ends[$i], $starts, $ends, $options)) {
                 $starts[$i] = $shot;
             }
@@ -63,7 +63,7 @@ final class ShotChangeTiming
     {
         for ($i = 0; $i < count($starts) - 1; $i++) {
             $gap = $starts[$i + 1] - $ends[$i];
-            if ($gap <= $options->minGapFrames || $gap >= $options->snapWindow) {
+            if ($gap <= $options->minGapFrames || $gap >= $options->snapWindowFrames) {
                 continue;
             }
 
@@ -79,7 +79,7 @@ final class ShotChangeTiming
 
 
     /**
-     * Rejects a move that makes a cue shorter than minDuration, or that brings it closer than minGapFrames to the cue before or after it.
+     * Rejects a move that makes a cue shorter than minDurationFrames, or that brings it closer than minGapFrames to the cue before or after it.
      *
      * @param list<int> $starts
      * @param list<int> $ends
@@ -87,7 +87,7 @@ final class ShotChangeTiming
     private static function isAllowed(int $i, int $start, int $end, array $starts, array $ends, ShotChangeOptions $options): bool
     {
         $duration = $end - $start;
-        if ($duration <= 0 || ($duration < $options->minDuration && $duration < $ends[$i] - $starts[$i])) {
+        if ($duration <= 0 || ($duration < $options->minDurationFrames && $duration < $ends[$i] - $starts[$i])) {
             return false;
         }
 

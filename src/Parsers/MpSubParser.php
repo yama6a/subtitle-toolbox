@@ -8,8 +8,9 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -29,9 +30,10 @@ final class MpSubParser extends SubtitleParser
         $this->warnings = [];
         $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
         $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
-        $lines          = explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle);
+        $lines          = explode(LineEnding::Lf->value, $rawSubtitle);
 
         $subtitle   = new Subtitle();
+        $parsedCues = [];
         $formatData = [];
         $frameRate  = null;
         $hasFormat  = false;
@@ -50,7 +52,7 @@ final class MpSubParser extends SubtitleParser
                     continue;
                 }
 
-                $this->addCue($subtitle, $cue, $lineNumber - 1, $cueLine, $cueIndex - 1, $lines);
+                $this->addCue($parsedCues, $cue, $lineNumber - 1, $cueLine, $cueIndex - 1, $lines);
                 $cue = null;
                 continue;
             }
@@ -89,7 +91,7 @@ final class MpSubParser extends SubtitleParser
                     $lineNumber,
                     $cueIndex,
                     [$line],
-                    ParseWarning::REPAIRED
+                    ParseWarningAction::Repaired
                 );
                 $hasFormat = true;
             }
@@ -106,12 +108,12 @@ final class MpSubParser extends SubtitleParser
         }
 
         if ($cue !== null) {
-            $this->addCue($subtitle, $cue, count($lines), $cueLine, $cueIndex - 1, $lines);
+            $this->addCue($parsedCues, $cue, count($lines), $cueLine, $cueIndex - 1, $lines);
         }
 
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, $formatData);
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 
@@ -140,10 +142,10 @@ final class MpSubParser extends SubtitleParser
     /**
      * @param list<string> $lines
      */
-    private function addCue(Subtitle $subtitle, SubtitleCue $cue, int $lineNumber, int $cueLine, int $cueIndex, array $lines): void
+    private function addCue(array &$cues, SubtitleCue $cue, int $lineNumber, int $cueLine, int $cueIndex, array $lines): void
     {
         try {
-            $subtitle->addCue($this->withText($cue, $lineNumber), false);
+            $cues[] = $this->withText($cue, $lineNumber);
         } catch (ParsingException $exception) {
             $this->fail($exception, $cueLine, $cueIndex, [trim($lines[$cueLine - 1])]);
         }
@@ -186,6 +188,6 @@ final class MpSubParser extends SubtitleParser
         }
 
         // FrameRate::framesToSeconds() accepts only whole frames, but MPSub files may hold fractional frames.
-        return $value / $frameRate->getFps();
+        return $value / $frameRate->getFramesPerSecond();
     }
 }

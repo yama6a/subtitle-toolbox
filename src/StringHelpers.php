@@ -6,12 +6,8 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\ParsingException;
 
-class StringHelpers
+final class StringHelpers
 {
-    public const UNIX_LINE_ENDING    = "\n";
-    public const MAC_LINE_ENDING     = "\r";
-    public const WINDOWS_LINE_ENDING = "\r\n";
-
     private const UTF8_BOM = "\xEF\xBB\xBF";
 
     // UTF-32 LE comes before UTF-16 LE because their BOMs share the first two bytes.
@@ -23,18 +19,21 @@ class StringHelpers
     ];
 
 
+    /** @internal */
     public static function hasUtf8Bom(string $str): bool
     {
         return str_starts_with($str, self::UTF8_BOM);
     }
 
 
+    /** @internal */
     public static function removeUtf8Bom(string $str): string
     {
         return self::hasUtf8Bom($str) ? substr($str, 3) : $str;
     }
 
 
+    /** @internal */
     public static function addUtf8Bom(string $str): string
     {
         return self::hasUtf8Bom($str) ? $str : self::UTF8_BOM . $str;
@@ -87,38 +86,44 @@ class StringHelpers
      * @param string $str
      *
      * @return string
+     *
+     * @internal
      */
     public static function cleanString(string $str): string
     {
-        $str = static::normalizeEOLs($str);
-        $str = static::normalizeSpaces($str);
-        $str = static::removeEmptyLines($str);
+        $str = self::normalizeEOLs($str);
+        $str = self::normalizeSpaces($str);
+        $str = self::removeEmptyLines($str);
 
         return trim($str);
     }
 
 
+    /** @internal */
     public static function trimEachLine(string $str): string
     {
-        $lines = explode(StringHelpers::UNIX_LINE_ENDING, $str);
+        $lines = explode(LineEnding::Lf->value, $str);
         $lines = array_map("trim", $lines);
 
-        return implode(StringHelpers::UNIX_LINE_ENDING, $lines);
+        return implode(LineEnding::Lf->value, $lines);
     }
 
 
+    /** @internal */
     public static function removeEmptyLines(string $str): string
     {
         return preg_replace('/\n+/', "\n", $str);
     }
 
 
+    /** @internal */
     public static function removeDoubleEmptyLines(string $str): string
     {
         return preg_replace('/\n{3,}/', "\n\n", $str);
     }
 
 
+    /** @internal */
     public static function normalizeSpaces(string $str): string
     {
         $str = preg_replace('/\t+/', ' ', $str); // replace tabs with spaces
@@ -134,16 +139,20 @@ class StringHelpers
      * @param string $str
      *
      * @return string
+     *
+     * @internal
      */
     public static function normalizeEOLs(string $str): string
     {
         // CR CR LF comes from a CR LF file that went through a text-mode conversion a second time.
-        return preg_replace('/\r+\n|\r/', static::UNIX_LINE_ENDING, $str);
+        return preg_replace('/\r+\n|\r/', LineEnding::Lf->value, $str);
     }
 
 
     /**
      * Returns the lowercase primary language subtag of a language code, for example "pt" for "pt_BR" and "" for null.
+     *
+     * @internal
      */
     public static function primaryLanguage(?string $code): string
     {

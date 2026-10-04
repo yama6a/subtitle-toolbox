@@ -8,8 +8,10 @@ use SubtitleToolbox\Markup;
 
 /**
  * ISO 6937 as character code table 00 of EBU Tech 3264, appendix 2. PHP has no converter for it.
+ *
+ * @internal
  */
-class Iso6937
+final class Iso6937
 {
     // The characters that differ from ASCII. 0x24 is the currency sign and 0xA4 is the dollar sign.
     public const CHARACTERS = [

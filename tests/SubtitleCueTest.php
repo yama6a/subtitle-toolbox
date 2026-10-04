@@ -125,54 +125,10 @@ class SubtitleCueTest extends TestCase
     }
 
 
-    public function testSetLinesThrowsExceptionForUnexpectedBasicType()
+    public function testSetLinesRejectsOtherTypes(): void
     {
-        $cue = new SubtitleCue();
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Can only set cue-text by string or array!");
-        $this->expectExceptionMessage("by double");
-        $cue->setLines(123.456);
-    }
-
-
-    public function testSetLinesThrowsExceptionForUnexpectedObjectType()
-    {
-        $cue = new SubtitleCue();
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Can only set cue-text by string or array!");
-        $this->expectExceptionMessage("by stdClass");
-        $cue->setLines(new \stdClass());
-    }
-
-
-    public function testSetLinesExceptionNamesTheGettypeOfScalars(): void
-    {
-        $cue = new SubtitleCue(1.5, 2);
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Tried to set cue-text of cue [1.5 >>> 2] by NULL");
-        $cue->setLines(null);
-    }
-
-
-    public function testSetLinesExceptionNamesIntegerType(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("by integer");
-        (new SubtitleCue())->setLines(123);
-    }
-
-
-    public function testSetLinesExceptionNamesAnonymousClass(): void
-    {
-        $object = new class {
-        };
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("by " . get_class($object));
-        (new SubtitleCue())->setLines($object);
+        $this->expectException(\TypeError::class);
+        (new SubtitleCue())->setLines(123.456);
     }
 
 

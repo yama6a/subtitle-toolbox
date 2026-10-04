@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
@@ -24,11 +24,11 @@ final class SbvFormatter extends SubtitleFormatter
             }
 
             $blocks[] = sprintf("%d:%02d:%02d.%03d,%d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getStart()), ...Timecode::milliseconds($cue->getEnd())) .
-                        StringHelpers::UNIX_LINE_ENDING .
-                        implode(StringHelpers::UNIX_LINE_ENDING, $lines) .
-                        StringHelpers::UNIX_LINE_ENDING;
+                        LineEnding::Lf->value .
+                        implode(LineEnding::Lf->value, $lines) .
+                        LineEnding::Lf->value;
         }
 
-        return $this->applyOutputOptions(implode(StringHelpers::UNIX_LINE_ENDING, $blocks), $options);
+        return $this->applyOutputOptions(implode(LineEnding::Lf->value, $blocks), $options);
     }
 }

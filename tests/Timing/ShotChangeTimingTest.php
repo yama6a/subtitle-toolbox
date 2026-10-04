@@ -20,9 +20,11 @@ class ShotChangeTimingTest extends TestCase
     private function makeSubtitle(float $fps, array $frames): Subtitle
     {
         $subtitle = new Subtitle();
+        $cues     = [];
         foreach ($frames as $index => [$start, $end]) {
-            $subtitle->addCue(new SubtitleCue($start / $fps, $end / $fps, "cue $index"));
+            $cues[] = new SubtitleCue($start / $fps, $end / $fps, "cue $index");
         }
+        $subtitle->addCues($cues);
 
         return $subtitle;
     }
@@ -111,7 +113,7 @@ class ShotChangeTimingTest extends TestCase
     #[DataProvider("frameRates")]
     public function testChainGapsClosesGapsOf3ToSnapWindowMinus1Frames(float $fps): void
     {
-        $window   = (new ShotChangeOptions($fps))->snapWindow;
+        $window   = (new ShotChangeOptions($fps))->snapWindowFrames;
         $subtitle = $this->makeSubtitle($fps, [[100, 140], [142, 180], [183, 220], [220 + $window - 1, 300],
                                                [300 + $window, 400]]);
 
@@ -124,7 +126,7 @@ class ShotChangeTimingTest extends TestCase
 
     public function testSnapWindowDefaultsToHalfASecond(): void
     {
-        $windows = array_map(fn (float $fps): int => (new ShotChangeOptions($fps))->snapWindow, [23.976, 24, 25, 29.97, 30, 60]);
+        $windows = array_map(fn (float $fps): int => (new ShotChangeOptions($fps))->snapWindowFrames, [23.976, 24, 25, 29.97, 30, 60]);
 
         $this->assertSame([12, 12, 12, 15, 15, 30], $windows);
     }
@@ -174,7 +176,7 @@ class ShotChangeTimingTest extends TestCase
     {
         $subtitle = $this->makeSubtitle(24, [[100, 119]]);
 
-        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [120 / 24], minDuration: 10));
+        ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [120 / 24], minDurationFrames: 10));
 
         $this->assertSame([[100, 118]], $this->getFrames($subtitle, 24));
     }
@@ -227,12 +229,14 @@ class ShotChangeTimingTest extends TestCase
         $subtitle = new Subtitle();
         $shots    = [];
         $time     = 1.0;
+        $cues     = [];
         for ($index = 0; $index < 200; $index++) {
             $start  = $time + mt_rand(0, 900) / 1000;
             $time   = $start + mt_rand(500, 4000) / 1000;
             $shots[] = $start + mt_rand(-600, 600) / 1000;
-            $subtitle->addCue(new SubtitleCue($start, $time, "cue $index"), false);
+            $cues[] = new SubtitleCue($start, $time, "cue $index");
         }
+        $subtitle->addCues($cues);
 
         ShotChangeTiming::apply($subtitle, new ShotChangeOptions($fps, shotChanges: $shots));
 
@@ -250,8 +254,9 @@ class ShotChangeTimingTest extends TestCase
 
     public function testCuesOutOfOrderAreHandledInStartOrder(): void
     {
-        $subtitle = new Subtitle();
-        $subtitle->addCue(new SubtitleCue(10.292, 12), false)->addCue(new SubtitleCue(8, 10), false);
+        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2), new SubtitleCue(3, 4)]);
+        $subtitle->getCues()[0]->setStart(10.292)->setEnd(12);
+        $subtitle->getCues()[1]->setStart(8)->setEnd(10);
 
         ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24));
 
@@ -264,9 +269,9 @@ class ShotChangeTimingTest extends TestCase
     {
         return [
             "frame rate 0"     => [fn () => new ShotChangeOptions(0)],
-            "negative window"  => [fn () => new ShotChangeOptions(24, snapWindow: -1)],
+            "negative window"  => [fn () => new ShotChangeOptions(24, snapWindowFrames: -1)],
             "negative gap"     => [fn () => new ShotChangeOptions(24, minGapFrames: -1)],
-            "negative minimum" => [fn () => new ShotChangeOptions(24, minDuration: -1)],
+            "negative minimum" => [fn () => new ShotChangeOptions(24, minDurationFrames: -1)],
         ];
     }
 

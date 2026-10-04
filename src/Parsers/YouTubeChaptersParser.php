@@ -54,9 +54,8 @@ final class YouTubeChaptersParser extends SubtitleParser
         $subtitle = new Subtitle();
         foreach ($chapters as $index => $cue) {
             $cue->setEnd(isset($chapters[$index + 1]) ? $chapters[$index + 1]->getStart() : max($cue->getStart(), $this->formatOptions()->mediaDuration ?? 0));
-            $subtitle->addCue($cue, false);
         }
 
-        return $subtitle;
+        return $subtitle->addCues($chapters);
     }
 }

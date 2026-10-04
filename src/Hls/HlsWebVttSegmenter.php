@@ -20,7 +20,7 @@ final class HlsWebVttSegmenter
      *
      * @see https://datatracker.ietf.org/doc/html/rfc8216#section-3.5
      */
-    public static function segment(Subtitle $subtitle, HlsSegmentOptions $options = new HlsSegmentOptions()): HlsWebVttResult
+    public static function segment(Subtitle $subtitle, HlsSegmentOptions $options = new HlsSegmentOptions()): HlsWebVttRendition
     {
         $cues        = array_values($subtitle->getCues());
         $totalMillis = $options->mediaDuration === null
@@ -42,16 +42,17 @@ final class HlsWebVttSegmenter
 
         $starts = array_map(fn (SubtitleCue $cue): int => (int) round($cue->getStart() * 1000), $cues);
         $ends   = array_map(fn (SubtitleCue $cue): int => (int) round($cue->getEnd() * 1000), $cues);
-        $copy   = new Subtitle();
-        foreach ($cues as $cueIndex => $cue) {
-            $copy->addCue((clone $cue)->setIdentifier($cue->getIdentifier() ?? (string) ($cueIndex + 1)), false);
-        }
+        $copy   = (new Subtitle())->addCues(array_map(
+            fn (SubtitleCue $cue, int $cueIndex): SubtitleCue => (clone $cue)->setIdentifier($cue->getIdentifier() ?? (string) ($cueIndex + 1)),
+            $cues,
+            array_keys($cues),
+        ));
         $shifted = array_values($copy->shift($options->local)->getCues());
 
         $order = array_keys($starts);
         usort($order, fn (int $first, int $second): int => [$starts[$first], $first] <=> [$starts[$second], $second]);
 
-        $segmentMillis = HlsWebVttResult::segmentMillis($options);
+        $segmentMillis = $options->segmentMilliseconds();
         $segments      = function () use ($fileData, $starts, $ends, $shifted, $order, $options, $segmentMillis, $totalMillis): Generator {
             $empty  = null;
             $next   = 0;
@@ -76,7 +77,7 @@ final class HlsWebVttSegmenter
             }
         };
 
-        return new HlsWebVttResult($segments, $options, $totalMillis);
+        return new HlsWebVttRendition($segments, $options, $totalMillis);
     }
 
 
@@ -85,10 +86,7 @@ final class HlsWebVttSegmenter
      */
     private static function write(array $fileData, array $cues): string
     {
-        $segment = (new Subtitle())->setFormatData(WebVttParser::FORMAT_DATA_KEY, $fileData);
-        foreach ($cues as $cue) {
-            $segment->addCue($cue, false);
-        }
+        $segment = (new Subtitle())->setFormatData(WebVttParser::FORMAT_DATA_KEY, $fileData)->addCues($cues);
 
         return $segment->toString(Format::WebVtt, new WriteOptions(bom: false));
     }

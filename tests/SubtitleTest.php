@@ -6,7 +6,8 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
-use SubtitleToolbox\Validation\ValidationResult;
+use SubtitleToolbox\Validation\ValidationRule;
+use SubtitleToolbox\Validation\ValidationViolation;
 use SubtitleToolbox\Validation\ValidationRules;
 
 class SubtitleTest extends \PHPUnit\Framework\TestCase
@@ -62,37 +63,62 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testAddCuesSortsAllCuesAndKeepsCommentsWithTheirCues(): void
+    {
+        $subtitle = (new Subtitle())->addCue($late = new SubtitleCue(8, 9, "late"))->addComment("before late", 0);
+
+        $subtitle->addCues((function () use (&$early, &$middle): \Generator {
+            yield $middle = new SubtitleCue(5, 6, "middle");
+            yield $early = new SubtitleCue(1, 2, "early");
+        })());
+
+        $this->assertSame([$early, $middle, $late], $subtitle->getCues());
+        $this->assertEquals([new Comment("before late", 2)], $subtitle->getComments());
+    }
+
+
+    public function testRemoveCueNumbersTheCuesFromZeroAgain(): void
+    {
+        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "one"), new SubtitleCue(3, 4, "two"), new SubtitleCue(5, 6, "three")]);
+
+        $subtitle->removeCue(1);
+
+        $this->assertSame([0, 1], array_keys($subtitle->getCues()));
+        $this->assertSame("three", $subtitle->getCues()[1]->getText());
+    }
+
+
     public function testValidateWithTheStructureRulesFindsEachStructureProblem(): void
     {
         $rules    = ValidationRules::structure();
         $problems = fn (Subtitle $subtitle): array => array_map(
-            fn (ValidationResult $result): array => [$result->getCueIndex(), $result->getRule(), $result->getValue()],
+            fn (ValidationViolation $result): array => [$result->cueIndex, $result->rule, $result->value],
             $subtitle->validate($rules)
         );
 
         $subtitle = new Subtitle();
-        $this->assertSame([[null, ValidationResult::RULE_REQUIRE_CUES, 0]], $problems($subtitle));
+        $this->assertSame([[null, ValidationRule::RequireCues, 0]], $problems($subtitle));
 
-        $subtitle->addCue(new SubtitleCue(1, 2, "text1"), false);
-        $subtitle->addCue(new SubtitleCue(5, 6, "text2"), false);
-        $subtitle->addCue(new SubtitleCue(3, 4, "text3"), false);
+        $subtitle->addCues([new SubtitleCue(1, 2, "text1"), new SubtitleCue(3, 4, "text2"), new SubtitleCue(5, 6, "text3")]);
+        $subtitle->getCues()[1]->setStart(5)->setEnd(6);
+        $subtitle->getCues()[2]->setStart(3)->setEnd(4);
         $this->assertSame([
-            [2, ValidationResult::RULE_UNSORTED_CUES, 2.0],
-            [2, ValidationResult::RULE_OVERLAP, 3.0],
+            [2, ValidationRule::NoUnsortedCues, 2.0],
+            [2, ValidationRule::NoOverlap, 3.0],
         ], $problems($subtitle));
 
         $subtitle->reIndexCues();
         $this->assertSame([], $problems($subtitle));
 
         $subtitle->getCues()[1]->setEnd(5.5);
-        $this->assertSame([[2, ValidationResult::RULE_OVERLAP, 0.5]], $problems($subtitle));
+        $this->assertSame([[2, ValidationRule::NoOverlap, 0.5]], $problems($subtitle));
         $subtitle->getCues()[1]->setEnd(4);
 
-        $subtitle->removeCue(1, false);
-        $this->assertSame([[2, ValidationResult::RULE_INDEX_GAP, 1]], $problems($subtitle));
+        $subtitle->removeCue(1);
+        $this->assertSame([], $problems($subtitle));
 
         $subtitle->addCue(new SubtitleCue(9, 1, "text4"));
-        $this->assertSame([[2, ValidationResult::RULE_NEGATIVE_DURATION, -8.0]], $problems($subtitle));
+        $this->assertSame([[2, ValidationRule::NoNegativeDuration, -8.0]], $problems($subtitle));
 
         $subtitle->removeCue(2);
         $this->assertSame([], $problems($subtitle));
@@ -149,7 +175,7 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $subtitle = new Subtitle();
         $subtitle->addCue(new SubtitleCue(1, 2, "first"));
         $subtitle->addCue(new SubtitleCue(3, 4, "second"));
-        $subtitle->removeCue(0, false);
+        $subtitle->removeCue(0);
 
         $this->assertSame(
             "\u{feff}1\n00:00:03,000 --> 00:00:04,000\nsecond\n",
@@ -224,12 +250,12 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
             ->addComment("second before cue 0", 0)
             ->addComment("before cue 1", 1);
 
-        $this->assertSame(
+        $this->assertEquals(
             [
-                ["text" => "first before cue 0", "beforeCueIndex" => 0],
-                ["text" => "second before cue 0", "beforeCueIndex" => 0],
-                ["text" => "before cue 1", "beforeCueIndex" => 1],
-                ["text" => "after last cue", "beforeCueIndex" => 2],
+                new Comment("first before cue 0", 0),
+                new Comment("second before cue 0", 0),
+                new Comment("before cue 1", 1),
+                new Comment("after last cue", 2),
             ],
             $subtitle->getComments()
         );
@@ -246,21 +272,21 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
 
     public function testReIndexKeepsEachCommentBeforeItsCue(): void
     {
-        $subtitle = new Subtitle();
-        $subtitle->addCue(new SubtitleCue(5, 6, "late"), false);
-        $subtitle->addCue(new SubtitleCue(1, 2, "early"), false);
+        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "late"), new SubtitleCue(3, 4, "early")]);
         $subtitle->addComment("before late", 0);
         $subtitle->addComment("before early", 1);
         $subtitle->addComment("at the end", 2);
+        $subtitle->getCues()[0]->setStart(5)->setEnd(6);
+        $subtitle->getCues()[1]->setStart(1)->setEnd(2);
 
         $subtitle->reIndexCues();
 
         $this->assertSame("early", $subtitle->getCues()[0]->getText());
-        $this->assertSame(
+        $this->assertEquals(
             [
-                ["text" => "before early", "beforeCueIndex" => 0],
-                ["text" => "before late", "beforeCueIndex" => 1],
-                ["text" => "at the end", "beforeCueIndex" => 2],
+                new Comment("before early", 0),
+                new Comment("before late", 1),
+                new Comment("at the end", 2),
             ],
             $subtitle->getComments()
         );
@@ -274,7 +300,7 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $subtitle->addComment("before first", 1);
         $subtitle->addCue(new SubtitleCue(1, 2, "first"));
 
-        $this->assertSame([["text" => "before first", "beforeCueIndex" => 0]], $subtitle->getComments());
+        $this->assertEquals([new Comment("before first", 0)], $subtitle->getComments());
     }
 
 
@@ -289,10 +315,10 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
 
         $subtitle->removeCue(1);
 
-        $this->assertSame(
+        $this->assertEquals(
             [
-                ["text" => "before second", "beforeCueIndex" => 1],
-                ["text" => "before third", "beforeCueIndex" => 1],
+                new Comment("before second", 1),
+                new Comment("before third", 1),
             ],
             $subtitle->getComments()
         );
@@ -308,24 +334,7 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
 
         $subtitle->removeCue(1);
 
-        $this->assertSame([["text" => "before second", "beforeCueIndex" => 1]], $subtitle->getComments());
-    }
-
-
-    public function testCommentKeepsIndexAfterRemovalWithoutReIndex(): void
-    {
-        $subtitle = new Subtitle();
-        $subtitle->addCue(new SubtitleCue(1, 2, "first"));
-        $subtitle->addCue(new SubtitleCue(3, 4, "second"));
-        $subtitle->addComment("before second", 1);
-
-        $subtitle->removeCue(0, false);
-
-        $this->assertSame([["text" => "before second", "beforeCueIndex" => 1]], $subtitle->getComments());
-
-        $subtitle->reIndexCues();
-
-        $this->assertSame([["text" => "before second", "beforeCueIndex" => 0]], $subtitle->getComments());
+        $this->assertEquals([new Comment("before second", 1)], $subtitle->getComments());
     }
 
 

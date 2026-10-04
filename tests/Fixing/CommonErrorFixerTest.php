@@ -117,7 +117,7 @@ class CommonErrorFixerTest extends TestCase
         [$lines, $fixes] = self::fixLines($before, new CommonErrorOptions($language, ...$only));
 
         $this->assertSame($after, $lines);
-        $this->assertSame($before === $after ? [] : [$rule], array_map(fn (AppliedFix $fix): string => $fix->rule, $fixes));
+        $this->assertSame($before === $after ? [] : [$rule], array_map(fn (AppliedFix $fix): string => $fix->rule->value, $fixes));
     }
 
 
@@ -170,7 +170,7 @@ class CommonErrorFixerTest extends TestCase
             [0, "doubleSpaces"], [0, "spaceBeforePunctuation"], [1, "missingSpaceAfterPunctuation"], [2, "unbalancedTags"],
             [3, "emptyTags"], [4, "dialogueDashes"], [5, "ellipsis"], [7, "spaceBeforePunctuation"], [8, "unbalancedTags"],
             [9, "missingSpaceAfterPunctuation"], [10, "unbalancedTags"],
-        ], array_map(fn (AppliedFix $fix): array => [$fix->cueIndex, $fix->rule], $fixes));
+        ], array_map(fn (AppliedFix $fix): array => [$fix->cueIndex, $fix->rule->value], $fixes));
         $this->assertSame("Hello <i> there</i>, how was the trip ?", $fixes[0]->before);
         $this->assertSame("Hello <i>there</i>, how was the trip ?", $fixes[0]->after);
         $this->assertSame("Hello <i>there</i>, how was the trip ?", $fixes[1]->before);
@@ -207,16 +207,16 @@ class CommonErrorFixerTest extends TestCase
     }
 
 
-    public function testDryRunListsTheFixesAndChangesNothing(): void
+    public function testPreviewListsTheFixesAndChangesNothing(): void
     {
         $content  = file_get_contents(self::FILES . "fixing/web-errors.srt");
         $subtitle = Subtitle::fromStringAutoDetectFormat($content);
         $before   = $subtitle->toString(Format::SubRip);
 
-        $dryRun = CommonErrorFixer::apply($subtitle, new CommonErrorOptions(language: "en", dryRun: true))->fixes;
+        $preview = CommonErrorFixer::preview($subtitle, new CommonErrorOptions(language: "en"))->fixes;
 
         $this->assertSame($before, $subtitle->toString(Format::SubRip));
-        $this->assertEquals(CommonErrorFixer::apply(Subtitle::fromStringAutoDetectFormat($content), new CommonErrorOptions(language: "en"))->fixes, $dryRun);
+        $this->assertEquals(CommonErrorFixer::apply(Subtitle::fromStringAutoDetectFormat($content), new CommonErrorOptions(language: "en"))->fixes, $preview);
     }
 
 
@@ -274,7 +274,7 @@ class CommonErrorFixerTest extends TestCase
         $fixes = CommonErrorFixer::apply($subtitle, $options)->fixes;
 
         $this->assertSame([[1, "replaceList", "<i></i>"], [1, "emptyTags", ""], [2, "ocrLowercaseL", "It's me"]],
-                          array_map(fn (AppliedFix $fix): array => [$fix->cueIndex, $fix->rule, $fix->after], $fixes));
+                          array_map(fn (AppliedFix $fix): array => [$fix->cueIndex, $fix->rule->value, $fix->after], $fixes));
         $this->assertSame(["Keep", "It's me"], array_map(fn (SubtitleCue $cue): string => $cue->getText(), $subtitle->getCues()));
     }
 

@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -29,11 +30,15 @@ final class AssParser extends SubtitleParser
 
     private int $eventIndex = 0;
 
+    /** @var list<SubtitleCue> */
+    private array $cues = [];
+
 
     protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings   = [];
         $this->eventIndex = 0;
+        $this->cues       = [];
         $rawSubtitle      = StringHelpers::removeUtf8Bom($rawSubtitle);
         $rawSubtitle      = StringHelpers::normalizeEOLs($rawSubtitle);
 
@@ -51,7 +56,7 @@ final class AssParser extends SubtitleParser
         ];
 
         $section = null;
-        foreach (explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle) as $lineIndex => $line) {
+        foreach (explode(LineEnding::Lf->value, $rawSubtitle) as $lineIndex => $line) {
             $line = trim($line);
             if ($line === "") {
                 continue;
@@ -85,7 +90,7 @@ final class AssParser extends SubtitleParser
         $data["eventFormat"] ??= $this->isSsa($data) ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT;
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, $data);
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($this->cues);
     }
 
 
@@ -162,7 +167,7 @@ final class AssParser extends SubtitleParser
 
         if ($isComment) {
             $data["commentEvents"][] = $fields;
-            $subtitle->addComment($fields[$text], count($subtitle->getCues()));
+            $subtitle->addComment($fields[$text], count($this->cues));
 
             return;
         }
@@ -186,7 +191,7 @@ final class AssParser extends SubtitleParser
             "lines"     => $cue->getLines(),
             "alignment" => $alignment,
         ]);
-        $subtitle->addCue($cue, false);
+        $this->cues[] = $cue;
     }
 
 

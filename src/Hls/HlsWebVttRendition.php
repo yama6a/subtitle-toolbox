@@ -7,10 +7,13 @@ namespace SubtitleToolbox\Hls;
 use Closure;
 use Generator;
 
-final class HlsWebVttResult
+/**
+ * The WebVTT segments and the media playlist of one subtitle rendition of an HLS stream.
+ */
+final class HlsWebVttRendition
 {
     /**
-     * @internal HlsWebVttSegmenter::segment() creates the result.
+     * @internal HlsWebVttSegmenter::segment() creates the rendition.
      *
      * @param Closure(): Generator<string, string> $segments yields file name => WebVTT content
      * @param int                                  $totalMillis the milliseconds that the playlist covers
@@ -23,18 +26,9 @@ final class HlsWebVttResult
     }
 
 
-    /**
-     * @internal
-     */
-    public static function segmentMillis(HlsSegmentOptions $options): int
-    {
-        return (int) round($options->segmentDuration * 1000);
-    }
-
-
     public function getSegmentCount(): int
     {
-        return intdiv($this->totalMillis + self::segmentMillis($this->options) - 1, self::segmentMillis($this->options));
+        return intdiv($this->totalMillis + $this->options->segmentMilliseconds() - 1, $this->options->segmentMilliseconds());
     }
 
 
@@ -57,7 +51,7 @@ final class HlsWebVttResult
      */
     public function getDurations(): Generator
     {
-        $segmentMillis = self::segmentMillis($this->options);
+        $segmentMillis = $this->options->segmentMilliseconds();
         for ($startMillis = 0, $index = 0; $startMillis < $this->totalMillis; $startMillis += $segmentMillis, $index++) {
             yield $this->options->fileName($index) => (min($startMillis + $segmentMillis, $this->totalMillis) - $startMillis) / 1000.0;
         }

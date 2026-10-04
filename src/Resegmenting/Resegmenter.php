@@ -2,9 +2,15 @@
 
 declare(strict_types=1);
 
-namespace SubtitleToolbox;
+namespace SubtitleToolbox\Resegmenting;
 
+use SubtitleToolbox\CommentAnchors;
+use SubtitleToolbox\CueList;
 use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\LineWrapper;
+use SubtitleToolbox\Markup;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 
 final class Resegmenter
 {
@@ -145,8 +151,8 @@ final class Resegmenter
         for ($index = $first + 1; $index < $end; $index++) {
             $rank = self::breakRank($pieces, $index);
             if ($rank === null
-                || round($times[$index] - $times[$first], 3) < round($options->minDuration, 3)
-                || round($times[$end] - $times[$index], 3) < round($options->minDuration, 3)) {
+                || round($times[$index] - $times[$first], 3) < round($options->limits->minDuration, 3)
+                || round($times[$end] - $times[$index], 3) < round($options->limits->minDuration, 3)) {
                 continue;
             }
 
@@ -211,17 +217,17 @@ final class Resegmenter
     private static function fits(array $lines, float $start, float $end, ResegmentOptions $options): bool
     {
         $duration = round($end - $start, 3);
-        if ($duration > round($options->maxDuration, 3)
-            || LineWrapper::wrapToFit($lines, $options->maxCharactersPerLine, $options->maxLines) === null) {
+        if ($duration > round($options->limits->maxDuration, 3)
+            || LineWrapper::wrapToFit($lines, $options->limits->maxCharactersPerLine, $options->limits->maxLines) === null) {
             return false;
         }
-        if ($options->maxCharactersPerSecond === null) {
+        if ($options->limits->maxCharactersPerSecond === null) {
             return true;
         }
 
-        $characters = LineWrapper::characters($lines);
+        $characters = LineWrapper::visibleCharacters($lines);
 
-        return $characters === 0 || ($duration > 0 ? $characters / $duration : INF) <= $options->maxCharactersPerSecond;
+        return $characters === 0 || ($duration > 0 ? $characters / $duration : INF) <= $options->limits->maxCharactersPerSecond;
     }
 
 
@@ -234,8 +240,8 @@ final class Resegmenter
      */
     private static function wrap(array $lines, ResegmentOptions $options): array
     {
-        return LineWrapper::wrapToFit($lines, $options->maxCharactersPerLine, $options->maxLines)
-            ?? LineWrapper::wrap($lines, $options->maxCharactersPerLine, $options->maxLines);
+        return LineWrapper::wrapToFit($lines, $options->limits->maxCharactersPerLine, $options->limits->maxLines)
+            ?? LineWrapper::wrap($lines, $options->limits->maxCharactersPerLine, $options->limits->maxLines);
     }
 
 
@@ -249,11 +255,11 @@ final class Resegmenter
         $pieces = [];
         $prefix = "";
         foreach ($cue->getLines() as $line) {
-            foreach (LineWrapper::words($line) as $wordIndex => $word) {
+            foreach (LineWrapper::measuredWords($line) as $wordIndex => $word) {
                 $separator = $wordIndex > 0 ? " " : ($pieces === [] ? "" : "\n");
                 foreach (self::splitWord($word["text"]) as $partIndex => $text) {
                     $piece = ["text"      => $text,
-                              "length"    => LineWrapper::length(LineWrapper::words($text)),
+                              "length"    => LineWrapper::length(LineWrapper::measuredWords($text)),
                               "separator" => $partIndex === 0 ? $separator : ""];
 
                     // A word of tags only, such as "</i>" after a space, joins its neighbour, so that no cue holds only tags.

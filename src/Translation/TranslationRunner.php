@@ -18,26 +18,20 @@ final class TranslationRunner
     private const NOT_TRANSLATED_REGEX     = '/^[\p{N}\p{P}\p{S}\s]*$/u';
     private const NO_SPACES_SCRIPT_REGEX   = '/^[\p{Han}\p{Hiragana}\p{Katakana}\p{Thai}\p{Lao}\p{Khmer}\p{Myanmar}]{2}$/u';
 
-    /** @var list<TranslationWarning> */
-    private array $warnings = [];
-
-
     public function __construct(private readonly TranslationEngine $engine)
     {
     }
 
 
     /**
-     * Returns a copy of $subtitle with the text of each cue translated by the engine and the language metadata set to $target.
+     * Translates the text of each cue with the engine and sets the language metadata to $target. The subtitle changes
+     * only when every engine call succeeds.
      */
-    public function translate(Subtitle $subtitle, string $source, string $target, ?TranslationOptions $options = null): Subtitle
+    public function translate(Subtitle $subtitle, string $source, string $target, ?TranslationOptions $options = null): TranslationReport
     {
-        $options        = $options ?? new TranslationOptions();
-        $this->warnings = [];
-
-        // slice() over all time is the public way to copy the cues and keep the comments.
-        $copy = $subtitle->slice(-INF, INF);
-        $cues = $copy->getCues();
+        $options  = $options ?? new TranslationOptions();
+        $warnings = [];
+        $cues     = array_map(fn (SubtitleCue $cue): SubtitleCue => clone $cue, $subtitle->getCues());
 
         $requests = [];
         foreach ($this->groupCues($cues, $options) as $cueIndexes) {
@@ -54,24 +48,17 @@ final class TranslationRunner
             }
 
             foreach ($batch as $requestIndex => $request) {
-                $this->apply($cues, $request["cueIndexes"], $request["tags"], $translations[$requestIndex]);
+                array_push($warnings, ...$this->apply($cues, $request["cueIndexes"], $request["tags"], $translations[$requestIndex]));
             }
         }
 
-        usort($this->warnings, fn (TranslationWarning $warning1, TranslationWarning $warning2): int => $warning1->cueIndex <=> $warning2->cueIndex);
+        foreach ($subtitle->getCues() as $cueIndex => $cue) {
+            $cue->setLines($cues[$cueIndex]->getLines());
+        }
+        $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $target);
+        usort($warnings, fn (TranslationWarning $warning1, TranslationWarning $warning2): int => $warning1->cueIndex <=> $warning2->cueIndex);
 
-        return $copy->setMetadata(Subtitle::METADATA_LANGUAGE, $target);
-    }
-
-
-    /**
-     * Returns the warnings of the last translate() call, ordered by cue index.
-     *
-     * @return list<TranslationWarning>
-     */
-    public function getWarnings(): array
-    {
-        return $this->warnings;
+        return new TranslationReport($warnings);
     }
 
 
@@ -207,15 +194,16 @@ final class TranslationRunner
      * @param array<int, SubtitleCue>                     $cues
      * @param list<int>                                   $cueIndexes
      * @param array<int, array{0: string, 1: ?string}>    $tags
+     * @return list<TranslationWarning>
      */
-    private function apply(array $cues, array $cueIndexes, array $tags, string $translation): void
+    private function apply(array $cues, array $cueIndexes, array $tags, string $translation): array
     {
+        $warnings = [];
         if (!$this->keepsPlaceholders($translation, $tags)) {
             $translation = preg_replace(self::LOOSE_PLACEHOLDER_REGEX, "", $translation);
             $tags        = [];
             foreach ($cueIndexes as $cueIndex) {
-                $this->warnings[] = new TranslationWarning($cueIndex, "The engine dropped or changed a placeholder tag. " .
-                                                                      "The cue has no tags.");
+                $warnings[] = new TranslationWarning($cueIndex, "The engine dropped or changed a placeholder tag. The cue has no tags.");
             }
         }
 
@@ -223,7 +211,7 @@ final class TranslationRunner
         if (count($cueIndexes) === 1) {
             $cues[$cueIndexes[0]]->setLines(explode("\n", self::restore($tokens, $tags)));
 
-            return;
+            return $warnings;
         }
 
         $weights = array_map(fn (int $cueIndex): int => max(1, Markup::countCharacters(self::visibleText($cues[$cueIndex]))), $cueIndexes);
@@ -231,10 +219,12 @@ final class TranslationRunner
             $cueIndex = $cueIndexes[$pieceIndex];
             $cues[$cueIndex]->setLines(str_replace("\n", " ", self::restore($piece, $tags)));
             if ($cues[$cueIndex]->getLines() === []) {
-                $this->warnings[] = new TranslationWarning($cueIndex, "The translation of the sentence is too short to fill " .
-                                                                      "this cue. The cue has no text.");
+                $warnings[] = new TranslationWarning($cueIndex, "The translation of the sentence is too short to fill " .
+                                                                "this cue. The cue has no text.");
             }
         }
+
+        return $warnings;
     }
 
 

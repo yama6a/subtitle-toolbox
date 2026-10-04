@@ -29,12 +29,14 @@ class ReferenceSyncTest extends TestCase
         mt_srand($seed);
         $subtitle = new Subtitle();
         $time     = 1.0;
+        $cues     = [];
         for ($index = 0; $index < $cueCount; $index++) {
             $time     += mt_rand(500, 4000) / 1000;
             $duration  = mt_rand(1000, 5000) / 1000;
-            $subtitle->addCue(new SubtitleCue($time, $time + $duration, "text$index"), false);
+            $cues[] = new SubtitleCue($time, $time + $duration, "text$index");
             $time     += $duration;
         }
+        $subtitle->addCues($cues);
 
         return $subtitle;
     }
@@ -67,9 +69,9 @@ class ReferenceSyncTest extends TestCase
 
         $result = ReferenceSync::apply($target, new ReferenceSyncOptions($reference));
 
-        $this->assertEqualsWithDelta(-2.3, $result->getOffset(), 0.02);
-        $this->assertEqualsWithDelta(25 / 23.976, $result->getScale(), 0.00001);
-        $this->assertGreaterThan(0.8, $result->getScore());
+        $this->assertEqualsWithDelta(-2.3, $result->offset, 0.02);
+        $this->assertEqualsWithDelta(25 / 23.976, $result->scale, 0.00001);
+        $this->assertGreaterThan(0.8, $result->score);
         $this->assertNotSame($before, $this->getTimes($target));
     }
 
@@ -100,7 +102,7 @@ class ReferenceSyncTest extends TestCase
     {
         $result = ReferenceSync::apply($this->makeRandomSubtitle(300, 1), new ReferenceSyncOptions($this->makeRandomSubtitle(300, 2)));
 
-        $this->assertLessThan(0.5, $result->getScore());
+        $this->assertLessThan(0.5, $result->score);
     }
 
 
@@ -111,8 +113,8 @@ class ReferenceSyncTest extends TestCase
 
         $result = ReferenceSync::apply($target, new ReferenceSyncOptions($reference, searchScale: false));
 
-        $this->assertSame(1.0, $result->getScale());
-        $this->assertLessThan(0.5, $result->getScore());
+        $this->assertSame(1.0, $result->scale);
+        $this->assertLessThan(0.5, $result->score);
     }
 
 
@@ -121,12 +123,12 @@ class ReferenceSyncTest extends TestCase
         $reference = $this->makeRandomSubtitle(200, 3);
         $target    = $this->makeRandomSubtitle(200, 3)->shift(75);
 
-        $this->assertGreaterThanOrEqual(-60, ReferenceSync::apply(clone $target, new ReferenceSyncOptions($reference))->getOffset());
+        $this->assertGreaterThanOrEqual(-60, ReferenceSync::apply(clone $target, new ReferenceSyncOptions($reference))->offset);
 
         $result = ReferenceSync::apply($target, new ReferenceSyncOptions($reference, -90, -60));
-        $this->assertSame(-75.0, $result->getOffset());
-        $this->assertSame(1.0, $result->getScale());
-        $this->assertEqualsWithDelta(1, $result->getScore(), 0.000001);
+        $this->assertSame(-75.0, $result->offset);
+        $this->assertSame(1.0, $result->scale);
+        $this->assertEqualsWithDelta(1, $result->score, 0.000001);
     }
 
 
@@ -134,7 +136,7 @@ class ReferenceSyncTest extends TestCase
     {
         $result = ReferenceSync::apply(new Subtitle(), new ReferenceSyncOptions($this->makeRandomSubtitle(10, 4)));
 
-        $this->assertSame([0.0, 1.0, 0.0], [$result->getOffset(), $result->getScale(), $result->getScore()]);
+        $this->assertSame([0.0, 1.0, 0.0], [$result->offset, $result->scale, $result->score]);
     }
 
 
@@ -145,7 +147,7 @@ class ReferenceSyncTest extends TestCase
 
         $result = ReferenceSync::apply($subtitle, new ReferenceSyncOptions(clone $subtitle));
 
-        $this->assertSame([0.0, 1.0], [$result->getOffset(), $result->getScale()]);
+        $this->assertSame([0.0, 1.0], [$result->offset, $result->scale]);
         $this->assertSame($before, $this->getTimes($subtitle));
     }
 
@@ -166,7 +168,7 @@ class ReferenceSyncTest extends TestCase
         $result = ReferenceSync::apply($target, new ReferenceSyncOptions($reference));
 
         $this->assertLessThan(2, microtime(true) - $start);
-        $this->assertEqualsWithDelta(25 / 23.976, $result->getScale(), 0.00001);
-        $this->assertEqualsWithDelta(-12.4 * 25 / 23.976, $result->getOffset(), 0.02);
+        $this->assertEqualsWithDelta(25 / 23.976, $result->scale, 0.00001);
+        $this->assertEqualsWithDelta(-12.4 * 25 / 23.976, $result->offset, 0.02);
     }
 }

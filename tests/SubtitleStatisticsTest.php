@@ -17,11 +17,24 @@ class SubtitleStatisticsTest extends TestCase
     private function makeSubtitle(array $cues): Subtitle
     {
         $subtitle = new Subtitle();
+        $added    = [];
         foreach ($cues as [$start, $end, $lines]) {
-            $subtitle->addCue(new SubtitleCue($start, $end, $lines), false);
+            $added[] = new SubtitleCue($start, $end, $lines);
         }
+        $subtitle->addCues($added);
 
         return $subtitle;
+    }
+
+
+    /**
+     * @param array<string, int> $counts
+     * @return list<array{word: string, count: int}>
+     */
+    private static function words(array $counts): array
+    {
+        return array_map(fn (string|int $word, int $count): array => ["word" => (string) $word, "count" => $count],
+                         array_keys($counts), $counts);
     }
 
 
@@ -40,8 +53,8 @@ class SubtitleStatisticsTest extends TestCase
         $this->assertEqualsWithDelta(["min" => 8 / 3.5 * 60, "average" => (150 + 240 + 180 + 8 / 3.5 * 60) / 4, "max" => 240.0],
                                      $statistics->getWordsPerMinute(), 0.0001);
         $this->assertSame(["min" => 15.0, "average" => 20.5, "max" => 26.0], $statistics->getCharactersPerLine());
-        $this->assertEqualsWithDelta(["min" => -0.5, "average" => 2 / 3, "max" => 2.0], $statistics->getGap(), 0.0001);
-        $this->assertSame(["the" => 4, "bread" => 3, "bakery" => 2, "at" => 2], $statistics->getMostUsedWords(4));
+        $this->assertEqualsWithDelta(["min" => -0.5, "average" => 2 / 3, "max" => 2.0], $statistics->getGaps(), 0.0001);
+        $this->assertSame(self::words(["the" => 4, "bread" => 3, "bakery" => 2, "at" => 2]), $statistics->getMostUsedWords(4));
     }
 
 
@@ -51,7 +64,7 @@ class SubtitleStatisticsTest extends TestCase
         $array    = SubtitleStatistics::of($subtitle)->toArray();
 
         $this->assertSame(["cueCount", "wordCount", "characterCount", "totalDisplayTime", "span", "charactersPerSecond",
-                           "wordsPerMinute", "charactersPerLine", "gap", "mostUsedWords"], array_keys($array));
+                           "wordsPerMinute", "charactersPerLine", "gaps", "mostUsedWords"], array_keys($array));
         $this->assertCount(10, $array["mostUsedWords"]);
         $this->assertSame(["min" => 15.0, "average" => 20.5, "max" => 26.0], $array["charactersPerLine"]);
         $this->assertJson(json_encode($array, JSON_THROW_ON_ERROR));
@@ -72,7 +85,7 @@ class SubtitleStatisticsTest extends TestCase
             "charactersPerSecond" => $zero,
             "wordsPerMinute"      => $zero,
             "charactersPerLine"   => $zero,
-            "gap"                 => $zero,
+            "gaps"                => $zero,
             "mostUsedWords"       => [],
         ], $statistics->toArray());
     }
@@ -92,7 +105,7 @@ class SubtitleStatisticsTest extends TestCase
         $this->assertSame(["min" => 3.5, "average" => 3.5, "max" => 3.5], $statistics->getCharactersPerSecond());
         $this->assertSame(["min" => 60.0, "average" => 60.0, "max" => 60.0], $statistics->getWordsPerMinute());
         $this->assertSame(["min" => 7.0, "average" => 7.0, "max" => 7.0], $statistics->getCharactersPerLine());
-        $this->assertSame(["min" => 1.0, "average" => 1.0, "max" => 1.0], $statistics->getGap());
+        $this->assertSame(["min" => 1.0, "average" => 1.0, "max" => 1.0], $statistics->getGaps());
     }
 
 
@@ -126,10 +139,19 @@ class SubtitleStatisticsTest extends TestCase
         ]));
 
         $this->assertSame(10, $statistics->getWordCount());
-        $this->assertSame(["\u{e4}pfel" => 2, "apples" => 2, "don't" => 2, "stop" => 1, "12:30" => 1],
+        $this->assertSame(self::words(["\u{e4}pfel" => 2, "apples" => 2, "don't" => 2, "stop" => 1, "12:30" => 1]),
                           $statistics->getMostUsedWords(10));
-        $this->assertSame(["\u{e4}pfel" => 2], $statistics->getMostUsedWords(1));
+        $this->assertSame(self::words(["\u{e4}pfel" => 2]), $statistics->getMostUsedWords(1));
         $this->assertSame([], $statistics->getMostUsedWords(0));
+        $this->assertSame([["word" => "12:30", "count" => 1]], array_slice($statistics->getMostUsedWords(10), 4));
+    }
+
+
+    public function testAWordOfDigitsStaysAString(): void
+    {
+        $statistics = SubtitleStatistics::of($this->makeSubtitle([[0, 2, "2024 2024"]]));
+
+        $this->assertSame([["word" => "2024", "count" => 2]], $statistics->getMostUsedWords(1));
     }
 
 
@@ -141,6 +163,6 @@ class SubtitleStatisticsTest extends TestCase
         $this->assertSame(1, $statistics->getCueCount());
         $this->assertSame(3, $statistics->getWordCount());
         $this->assertSame(12, $statistics->getCharacterCount());
-        $this->assertSame(["caf\xe9" => 1, "au" => 1, "lait" => 1], $statistics->getMostUsedWords(10));
+        $this->assertSame(self::words(["caf\xe9" => 1, "au" => 1, "lait" => 1]), $statistics->getMostUsedWords(10));
     }
 }

@@ -6,6 +6,9 @@ namespace SubtitleToolbox\Image;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
+/**
+ * @internal
+ */
 final class PaletteReducer
 {
     public const MAX_COLORS = 256;

@@ -64,7 +64,7 @@ use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 /**
  * @internal The table behind Format. Use Format in place of it.
  */
-class FormatRegistry
+final class FormatRegistry
 {
     /**
      * Format value => parser class, formatter class and file extensions. Null means that the library cannot read or

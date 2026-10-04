@@ -6,41 +6,38 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
-class FrameRate
+final class FrameRate
 {
-    protected float $fps;
+    private float $framesPerSecond;
 
 
-    public function __construct(float $fps)
+    public function __construct(float $framesPerSecond)
     {
-        if ($fps <= 0) {
-            throw new InvalidArgumentException("The frame rate must be greater than 0, got $fps.");
+        if ($framesPerSecond <= 0) {
+            throw new InvalidArgumentException("The frame rate must be greater than 0, got $framesPerSecond.");
         }
 
-        $this->fps = $fps;
+        $this->framesPerSecond = $framesPerSecond;
     }
 
 
-    public function getFps(): float
+    public function getFramesPerSecond(): float
     {
-        return $this->fps;
+        return $this->framesPerSecond;
     }
 
 
-    /**
-     * Converts a frame number to seconds.
-     */
     public function framesToSeconds(int $frames): float
     {
-        return $frames / $this->fps;
+        return $frames / $this->framesPerSecond;
     }
 
 
     /**
-     * Converts seconds to the nearest frame number.
+     * Rounds to the nearest frame.
      */
     public function secondsToFrames(float $seconds): int
     {
-        return (int)round($seconds * $this->fps);
+        return (int)round($seconds * $this->framesPerSecond);
     }
 }

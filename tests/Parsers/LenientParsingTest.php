@@ -6,10 +6,12 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Comment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Streaming\SubRipStreamReader;
 use SubtitleToolbox\Streaming\WebVttStreamReader;
@@ -20,8 +22,8 @@ class LenientParsingTest extends TestCase
 {
     private const DIR = __DIR__ . "/../files/lenient/";
 
-    private const SKIPPED  = ParseWarning::SKIPPED;
-    private const REPAIRED = ParseWarning::REPAIRED;
+    private const SKIPPED  = ParseWarningAction::Skipped;
+    private const REPAIRED = ParseWarningAction::Repaired;
 
 
     /**
@@ -446,7 +448,7 @@ class LenientParsingTest extends TestCase
                 5,
                 1,
                 ["2", "00:00:05,000 -> 00:00:07,000", "Broken arrow"],
-                ParseWarning::SKIPPED
+                ParseWarningAction::Skipped
             )],
             $subtitle->getParseWarnings()
         );
@@ -594,7 +596,7 @@ class LenientParsingTest extends TestCase
     {
         $subtitle = (new JsonParser())->parse(file_get_contents(self::DIR . "missing_end.json"), new ReadOptions(lenient: true));
 
-        $this->assertSame([["text" => "Platform changes", "beforeCueIndex" => 1]], $subtitle->getComments());
+        $this->assertEquals([new Comment("Platform changes", 1)], $subtitle->getComments());
         $this->assertSame(['{"start":4,"lines":["It leaves from platform two."]}'], $subtitle->getParseWarnings()[0]->block);
     }
 

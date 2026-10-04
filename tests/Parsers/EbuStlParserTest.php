@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Comment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Parsers\Options\EbuStlReadOptions;
 use SubtitleToolbox\ReadOptions;
@@ -59,7 +60,7 @@ class EbuStlParserTest extends TestCase
             self::tti(1, "First") . self::tti(2, "\x80Note\x81\x8Asecond row", comment: 1) . self::tti(3, "Second"), new ReadOptions());
 
         $this->assertSame(["First", "Second"], array_map(fn ($cue) => $cue->getText(), $subtitle->getCues()));
-        $this->assertSame([["text" => "Note\nsecond row", "beforeCueIndex" => 1]], $subtitle->getComments());
+        $this->assertEquals([new Comment("Note\nsecond row", 1)], $subtitle->getComments());
     }
 
 

@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use InvalidArgumentException;
+use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
+use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
+use SubtitleToolbox\HearingImpaired\HearingImpairedReport;
 use SubtitleToolbox\Validation\ValidationRules;
 
 class HearingImpairedRemoverTest extends \PHPUnit\Framework\TestCase
@@ -95,7 +98,7 @@ class HearingImpairedRemoverTest extends \PHPUnit\Framework\TestCase
 
         $again = Subtitle::fromString($subtitle->toString(Format::WebVtt), Format::WebVtt);
         $this->assertSame($this->getTexts($subtitle), $this->getTexts($again));
-        $this->assertSame($subtitle->getComments(), $again->getComments());
+        $this->assertEquals($subtitle->getComments(), $again->getComments());
     }
 
 
@@ -213,10 +216,10 @@ class HearingImpairedRemoverTest extends \PHPUnit\Framework\TestCase
                             HearingImpairedRemover::apply($subtitle, new HearingImpairedOptions()));
 
         $this->assertSame(["first", "last", ""], $this->getTexts($subtitle));
-        $this->assertSame([
-            ["text" => "before music", "beforeCueIndex" => 1],
-            ["text" => "before door", "beforeCueIndex" => 1],
-            ["text" => "before last", "beforeCueIndex" => 1],
+        $this->assertEquals([
+            new Comment("before music", 1),
+            new Comment("before door", 1),
+            new Comment("before last", 1),
         ], $subtitle->getComments());
         $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }

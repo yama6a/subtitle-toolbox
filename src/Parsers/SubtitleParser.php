@@ -9,6 +9,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -114,7 +115,7 @@ abstract class SubtitleParser
     /**
      * @param list<string> $block
      */
-    protected function warn(string $message, ?int $lineNumber, ?int $blockIndex, array $block, string $action): void
+    protected function warn(string $message, ?int $lineNumber, ?int $blockIndex, array $block, ParseWarningAction $action): void
     {
         $this->warnings[] = new ParseWarning($message, $lineNumber, $blockIndex, $block, $action);
     }
@@ -176,7 +177,7 @@ abstract class SubtitleParser
                     $lineNumber + $offset,
                     $blockIndex,
                     $block,
-                    ParseWarning::REPAIRED
+                    ParseWarningAction::Repaired
                 );
             }
         }

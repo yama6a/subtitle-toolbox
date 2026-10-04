@@ -21,7 +21,7 @@ final class SamiParser extends SubtitleParser
 
     private const STYLE_TAGS = ["b" => "b", "i" => "i", "u" => "u", "s" => "s", "strike" => "s"];
 
-    // The 16 colour names of HTML 4.01, section 6.5.
+    // The 16 color names of HTML 4.01, section 6.5.
     private const COLOR_NAMES = [
         "black"  => "#000000", "silver" => "#c0c0c0", "gray"   => "#808080", "white"   => "#ffffff",
         "maroon" => "#800000", "red"    => "#ff0000", "purple" => "#800080", "fuchsia" => "#ff00ff",
@@ -47,6 +47,7 @@ final class SamiParser extends SubtitleParser
         }
 
         $subtitle   = new Subtitle();
+        $parsedCues = [];
         $formatData = [];
 
         if (preg_match('/<TITLE\b[^>]*>(.*?)<\/TITLE\s*>/is', $rawSubtitle, $matches) && trim($matches[1]) !== "") {
@@ -81,7 +82,7 @@ final class SamiParser extends SubtitleParser
             }
 
             if ($openCue !== null) {
-                $subtitle->addCue($openCue->setEnd($sync["start"]), false);
+                $parsedCues[] = $openCue->setEnd($sync["start"]);
                 $openCue = null;
             }
 
@@ -98,10 +99,10 @@ final class SamiParser extends SubtitleParser
         }
 
         if ($openCue !== null) {
-            $subtitle->addCue($openCue->setEnd($openCue->getStart() + $this->options->lastCueDuration), false);
+            $parsedCues[] = $openCue->setEnd($openCue->getStart() + $this->options->lastCueDuration);
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 

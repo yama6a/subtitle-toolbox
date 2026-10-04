@@ -11,7 +11,8 @@ use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
-use SubtitleToolbox\Validation\ValidationResult;
+use SubtitleToolbox\Validation\ValidationRule;
+use SubtitleToolbox\Validation\ValidationViolation;
 use SubtitleToolbox\Validation\ValidationRules;
 
 class QuotesInTagsTest extends TestCase
@@ -137,6 +138,6 @@ class QuotesInTagsTest extends TestCase
     {
         $results = $this->makeSubtitle("<v O'Neil>WE'RE OUT.")->validate(new ValidationRules(noEmptyCues: true, noAllCapsLines: true));
 
-        $this->assertSame([ValidationResult::RULE_NO_ALL_CAPS_LINES], array_map(fn (ValidationResult $result): string => $result->getRule(), $results));
+        $this->assertSame([ValidationRule::NoAllCapsLines], array_map(fn (ValidationViolation $result): ValidationRule => $result->rule, $results));
     }
 }

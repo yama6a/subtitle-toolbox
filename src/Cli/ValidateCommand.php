@@ -6,7 +6,7 @@ namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\Validation\ValidationResult;
+use SubtitleToolbox\Validation\ValidationViolation;
 use SubtitleToolbox\Validation\ValidationRules;
 
 class ValidateCommand extends ReportCommand
@@ -131,21 +131,21 @@ class ValidateCommand extends ReportCommand
         $label = self::label($input);
         $text  = $results === [] ? "$label: no problems\n" : "";
         foreach ($results as $result) {
-            $limit = $result->getLimit() === null ? "" : ", limit " . self::number($result->getLimit());
-            $text .= "$label: cue " . ($result->getCueIndex() + 1) . ": " . $result->getRule() . " " .
-                     self::number($result->getValue()) . "$limit\n";
+            $limit = $result->limit === null ? "" : ", limit " . self::number($result->limit);
+            $text .= "$label: cue " . ($result->cueIndex + 1) . ": " . $result->rule->value . " " .
+                     self::number($result->value) . "$limit\n";
         }
 
         $this->emit($console, $text, [
             "file"    => $label,
             "format"  => $format->value,
             "valid"   => $results === [],
-            "results" => array_map(fn (ValidationResult $result): array => [
-                "cueIndex"  => $result->getCueIndex(),
-                "cueNumber" => $result->getCueIndex() + 1,
-                "rule"      => $result->getRule(),
-                "value"     => self::jsonNumber($result->getValue()),
-                "limit"     => self::jsonNumber($result->getLimit()),
+            "results" => array_map(fn (ValidationViolation $result): array => [
+                "cueIndex"  => $result->cueIndex,
+                "cueNumber" => $result->cueIndex + 1,
+                "rule"      => $result->rule->value,
+                "value"     => self::jsonNumber($result->value),
+                "limit"     => self::jsonNumber($result->limit),
             ], $results),
         ]);
     }

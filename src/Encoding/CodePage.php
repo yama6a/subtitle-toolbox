@@ -10,8 +10,10 @@ use SubtitleToolbox\Markup;
  * Single-byte code pages for EBU STL without ext-mbstring or ext-iconv. Bytes below 0x80 are ASCII.
  * The ISO 8859 tables are the 1987 and 1988 editions in EBU Tech 3264, appendix 2.
  * The DOS code pages are the GSI block code pages in EBU Tech 3264, appendix 1.
+ *
+ * @internal
  */
-class CodePage
+final class CodePage
 {
     public const ISO_8859_5 = [
         0xA0 => "\u{00A0}", 0xA1 => "\u{0401}", 0xA2 => "\u{0402}", 0xA3 => "\u{0403}",

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
-class SubtitleStatistics
+final class SubtitleStatistics
 {
     private int $cueCount           = 0;
     private int $wordCount          = 0;
@@ -139,7 +139,7 @@ class SubtitleStatistics
      *
      * @return array{min: float, average: float, max: float}
      */
-    public function getGap(): array
+    public function getGaps(): array
     {
         return self::range($this->gaps);
     }
@@ -148,13 +148,16 @@ class SubtitleStatistics
     /**
      * Returns the $limit most used words in lower case with their counts, the most used first.
      *
-     * PHP turns a word that is a plain integer such as "2024" into an int key, so cast a key to string before string use.
-     *
-     * @return array<string|int, int>
+     * @return list<array{word: string, count: int}>
      */
     public function getMostUsedWords(int $limit): array
     {
-        return array_slice($this->wordFrequencies, 0, max(0, $limit), true);
+        $words = [];
+        foreach (array_slice($this->wordFrequencies, 0, max(0, $limit), true) as $word => $count) {
+            $words[] = ["word" => (string) $word, "count" => $count];
+        }
+
+        return $words;
     }
 
 
@@ -172,7 +175,7 @@ class SubtitleStatistics
             "charactersPerSecond" => $this->getCharactersPerSecond(),
             "wordsPerMinute"      => $this->getWordsPerMinute(),
             "charactersPerLine"   => $this->getCharactersPerLine(),
-            "gap"                 => $this->getGap(),
+            "gaps"                => $this->getGaps(),
             "mostUsedWords"       => $this->getMostUsedWords(10),
         ];
     }

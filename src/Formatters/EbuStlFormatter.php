@@ -83,9 +83,9 @@ final class EbuStlFormatter extends SubtitleFormatter
         $comments = $subtitle->getComments();
         $sets     = [];
         foreach ([...array_keys($cues), count($cues)] as $index) {
-            while ($comments !== [] && $comments[0]["beforeCueIndex"] <= $index) {
+            while ($comments !== [] && $comments[0]->beforeCueIndex <= $index) {
                 $timeCode = $this->smpteBytes($context, isset($cues[$index]) ? $cues[$index]->getStart() : (end($cues) ?: new SubtitleCue())->getEnd());
-                $sets[]   = ["blocks" => $this->commentBlocks($context, array_shift($comments)["text"], $storedComments, $timeCode), "comment" => true];
+                $sets[]   = ["blocks" => $this->commentBlocks($context, array_shift($comments)->text, $storedComments, $timeCode), "comment" => true];
             }
 
             if (isset($cues[$index])) {
@@ -260,7 +260,7 @@ final class EbuStlFormatter extends SubtitleFormatter
 
     /**
      * Converts the core markup of the cue lines to text field codes: 80h to 83h for italics and underline,
-     * and the teletext alpha colours for the eight colours of EBU Tech 3264 appendix 2.
+     * and the teletext alpha colors for the eight colors of EBU Tech 3264 appendix 2.
      */
     private function encodeText(EbuStlContext $context, SubtitleCue $cue): string
     {
@@ -269,7 +269,7 @@ final class EbuStlFormatter extends SubtitleFormatter
             $bytes   = "";
             $italic  = 0;
             $under   = 0;
-            $colours = [];
+            $colors = [];
             foreach (preg_split('/(<[^>]*>)/', $line, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY) as $token) {
                 if ($token[0] !== "<") {
                     $bytes .= $this->encodeCharacters($context, Markup::decodeEntities($token));
@@ -282,9 +282,9 @@ final class EbuStlFormatter extends SubtitleFormatter
 
                 $tag = strtolower($token);
                 if (preg_match('/^<font\s+color\s*=\s*["\']?(#[0-9a-f]{6})["\']?\s*>$/', $tag, $matches)) {
-                    $colour    = array_search($matches[1], EbuStl::COLORS, true);
-                    $colours[] = $colour === false ? end($colours) : $colour;
-                    $bytes    .= $colour === false ? "" : chr($colour);
+                    $color    = array_search($matches[1], EbuStl::COLORS, true);
+                    $colors[] = $color === false ? end($colors) : $color;
+                    $bytes    .= $color === false ? "" : chr($color);
                     continue;
                 }
 
@@ -293,12 +293,12 @@ final class EbuStlFormatter extends SubtitleFormatter
                     "</i>"    => $italic > 0 && --$italic === 0 ? chr(EbuStl::ITALICS_OFF) : "",
                     "<u>"     => $under++ === 0 ? chr(EbuStl::UNDERLINE_ON) : "",
                     "</u>"    => $under > 0 && --$under === 0 ? chr(EbuStl::UNDERLINE_OFF) : "",
-                    "</font>" => $this->closeColour($colours),
+                    "</font>" => $this->closeColor($colors),
                     default   => "",
                 };
             }
 
-            // A teletext colour code shows as a space, so it replaces one space next to it. At the row end it has no effect.
+            // A teletext color code shows as a space, so it replaces one space next to it. At the row end it has no effect.
             $bytes  = rtrim(preg_replace('/ ([\x00-\x07])|([\x00-\x07]) /', '$1$2', $bytes), "\x00..\x07");
             $rows[] = $bytes . ($italic > 0 ? chr(EbuStl::ITALICS_OFF) : "") . ($under > 0 ? chr(EbuStl::UNDERLINE_OFF) : "");
         }
@@ -308,12 +308,12 @@ final class EbuStlFormatter extends SubtitleFormatter
 
 
     /**
-     * Returns the colour code that applies after a </font> tag, or "" when the colour stays the same.
+     * Returns the color code that applies after a </font> tag, or "" when the color stays the same.
      */
-    private function closeColour(array &$colours): string
+    private function closeColor(array &$colors): string
     {
-        $closed  = array_pop($colours);
-        $current = end($colours);
+        $closed  = array_pop($colors);
+        $current = end($colors);
         $current = $current === false ? array_search("#ffffff", EbuStl::COLORS, true) : $current;
 
         return $closed === null || $closed === false || $closed === $current ? "" : chr($current);

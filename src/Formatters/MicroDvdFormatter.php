@@ -7,9 +7,9 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\MicroDvdParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -30,14 +30,14 @@ final class MicroDvdFormatter extends SubtitleFormatter
 
         $output = "";
         if ($microDvd->writeFrameRateLine) {
-            $output .= "{1}{1}" . $frameRate->getFps() . StringHelpers::UNIX_LINE_ENDING;
+            $output .= "{1}{1}" . $frameRate->getFramesPerSecond() . LineEnding::Lf->value;
         }
 
         foreach ($subtitle->getCues() as $cue) {
             $output .= "{" . $frameRate->secondsToFrames($cue->getStart()) . "}" .
                        "{" . $frameRate->secondsToFrames($cue->getEnd()) . "}" .
                        $this->formatText($cue, $stripAll) .
-                       StringHelpers::UNIX_LINE_ENDING;
+                       LineEnding::Lf->value;
         }
 
         return $this->applyOutputOptions($output, $options);

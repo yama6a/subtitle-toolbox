@@ -62,15 +62,16 @@ final class SpeechReference
     public static function fromIntervals(array $intervals): Subtitle
     {
         $subtitle = new Subtitle();
+        $cues     = [];
         foreach ($intervals as $index => $interval) {
             if (!is_array($interval) || !array_is_list($interval) || count($interval) !== 2 ||
                 !is_numeric($interval[0]) || !is_numeric($interval[1]) || $interval[0] < 0 || $interval[1] < $interval[0]) {
                 throw new InvalidArgumentException("Interval $index must be [start, end] in seconds with 0 <= start <= end.");
             }
 
-            $subtitle->addCue(new SubtitleCue((float)$interval[0], (float)$interval[1]), false);
+            $cues[] = new SubtitleCue((float)$interval[0], (float)$interval[1]);
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($cues);
     }
 }

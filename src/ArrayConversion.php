@@ -6,6 +6,9 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\ParsingException;
 
+/**
+ * @internal
+ */
 trait ArrayConversion
 {
     public const ARRAY_VERSION = 1;
@@ -37,7 +40,8 @@ trait ArrayConversion
         $array = [
             "version"  => self::ARRAY_VERSION,
             "metadata" => $this->metadata,
-            "comments" => $this->comments,
+            "comments" => array_map(fn (Comment $comment): array => ["text" => $comment->text, "beforeCueIndex" => $comment->beforeCueIndex],
+                                    $this->comments),
         ];
         if ($withFormatData) {
             $array["formatData"] = $this->formatData;
@@ -75,7 +79,7 @@ trait ArrayConversion
             throw new ParsingException("The field cues must be a list.");
         }
         foreach ($data["cues"] as $index => $cueData) {
-            $subtitle->addCue(self::arrayConversionCue($cueData, "cues[$index]"), false);
+            $subtitle->cues[] = self::arrayConversionCue($cueData, "cues[$index]");
         }
 
         foreach (self::arrayConversionList($data, "comments") as $index => $comment) {

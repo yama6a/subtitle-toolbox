@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\StringHelpers;
@@ -28,7 +29,7 @@ final class MpSubFormatter extends SubtitleFormatter
         $output      = $this->getHeader($subtitle, $frameRate);
         $previousEnd = 0;
         foreach ($subtitle->getCues() as $cue) {
-            $output .= StringHelpers::UNIX_LINE_ENDING;
+            $output .= LineEnding::Lf->value;
             if ($frameRate === null) {
                 $wait     = Timecode::totalMilliseconds($cue->getStart() - $previousEnd) / 1000;
                 $duration = Timecode::totalMilliseconds($cue->getEnd() - $cue->getStart()) / 1000;
@@ -36,9 +37,9 @@ final class MpSubFormatter extends SubtitleFormatter
                 $wait     = $frameRate->secondsToFrames($cue->getStart()) - $frameRate->secondsToFrames($previousEnd);
                 $duration = $frameRate->secondsToFrames($cue->getEnd()) - $frameRate->secondsToFrames($cue->getStart());
             }
-            $output .= "$wait $duration" . StringHelpers::UNIX_LINE_ENDING;
-            $output .= Markup::plainText(implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines()));
-            $output .= StringHelpers::UNIX_LINE_ENDING;
+            $output .= "$wait $duration" . LineEnding::Lf->value;
+            $output .= Markup::plainText(implode(LineEnding::Lf->value, $cue->getLines()));
+            $output .= LineEnding::Lf->value;
 
             $previousEnd = $cue->getEnd();
         }
@@ -60,12 +61,12 @@ final class MpSubFormatter extends SubtitleFormatter
                 $headers[$key] = $value;
             }
         }
-        $headers["FORMAT"] = $frameRate === null ? "TIME" : (string)(int)$frameRate->getFps();
+        $headers["FORMAT"] = $frameRate === null ? "TIME" : (string)(int)$frameRate->getFramesPerSecond();
         $headers["NOTE"]   = $formatData["NOTE"] ?? self::DEFAULT_NOTE;
 
         $header = "";
         foreach ($headers as $key => $value) {
-            $header .= "$key=$value" . StringHelpers::UNIX_LINE_ENDING;
+            $header .= "$key=$value" . LineEnding::Lf->value;
         }
 
         return $header;

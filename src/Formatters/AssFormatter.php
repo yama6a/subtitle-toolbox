@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Formatters\Options\AssKaraokeTag;
 use SubtitleToolbox\Formatters\Options\AssWriteOptions;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\AssFormatLines;
 use SubtitleToolbox\Parsers\AssParser;
@@ -55,11 +56,11 @@ final class AssFormatter extends SubtitleFormatter
                 strcasecmp($section, "Events") === 0                     => $this->eventLines($subtitle, $data, $options->stripTags, $karaokeTag),
                 default                                                  => $data["sections"][$section] ?? [],
             };
-            $blocks[] = implode(StringHelpers::UNIX_LINE_ENDING, ["[$section]", ...$lines]);
+            $blocks[] = implode(LineEnding::Lf->value, ["[$section]", ...$lines]);
         }
 
         return $this->applyOutputOptions(StringHelpers::addUtf8Bom(
-            implode(StringHelpers::UNIX_LINE_ENDING . StringHelpers::UNIX_LINE_ENDING, $blocks) . StringHelpers::UNIX_LINE_ENDING
+            implode(LineEnding::Lf->value . LineEnding::Lf->value, $blocks) . LineEnding::Lf->value
         ), $options);
     }
 
@@ -119,9 +120,9 @@ final class AssFormatter extends SubtitleFormatter
         foreach ([...$cues, null] as $cueIndex => $cue) {
             $commentTime = $cue?->getStart() ?? ($cues === [] ? 0 : end($cues)->getEnd());
             foreach ($comments as $comment) {
-                $isAtCue = $cue === null ? $comment["beforeCueIndex"] >= $cueIndex : $comment["beforeCueIndex"] === $cueIndex;
+                $isAtCue = $cue === null ? $comment->beforeCueIndex >= $cueIndex : $comment->beforeCueIndex === $cueIndex;
                 if ($isAtCue) {
-                    $lines[] = $this->commentLine($comment["text"], $format, $commentEvents, $commentTime);
+                    $lines[] = $this->commentLine($comment->text, $format, $commentEvents, $commentTime);
                 }
             }
 
@@ -152,7 +153,7 @@ final class AssFormatter extends SubtitleFormatter
         foreach ($format as $field) {
             $values[] = match (strtolower($field)) {
                 "start", "end" => $time,
-                "text"         => str_replace(StringHelpers::UNIX_LINE_ENDING, "\\N", $text),
+                "text"         => str_replace(LineEnding::Lf->value, "\\N", $text),
                 default        => $this->defaultFieldValue($field),
             };
         }
@@ -195,7 +196,7 @@ final class AssFormatter extends SubtitleFormatter
      */
     private function convertLines(SubtitleCue $cue, bool $isSsa, bool $stripAll, AssKaraokeTag $karaokeTag): array
     {
-        $text = implode(StringHelpers::UNIX_LINE_ENDING, $cue->getLines());
+        $text = implode(LineEnding::Lf->value, $cue->getLines());
         $name = "";
         if (preg_match('/<v(?:\.[^\s>]*)?\s+([^>]*)>/', $text, $matches)) {
             $name = str_replace(",", "", trim(Markup::decodeEntities($matches[1])));
@@ -308,7 +309,7 @@ final class AssFormatter extends SubtitleFormatter
 
     private function escapeText(string $text): string
     {
-        return str_replace([StringHelpers::UNIX_LINE_ENDING, "\u{00A0}"], ["\\N", "\\h"], $text);
+        return str_replace([LineEnding::Lf->value, "\u{00A0}"], ["\\N", "\\h"], $text);
     }
 
 

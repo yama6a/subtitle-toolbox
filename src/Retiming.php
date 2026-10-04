@@ -6,6 +6,9 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
+/**
+ * @internal
+ */
 trait Retiming
 {
     /**
@@ -32,11 +35,11 @@ trait Retiming
 
 
     /**
-     * Converts the cue times from a video at $fromFps to the same video at $toFps.
+     * Converts the cue times from a video at the frame rate $from to the same video at the frame rate $to.
      */
-    public function convertFrameRate(float $fromFps, float $toFps): self
+    public function convertFrameRate(float $from, float $to): self
     {
-        return $this->scale((new FrameRate($fromFps))->getFps() / (new FrameRate($toFps))->getFps());
+        return $this->scale((new FrameRate($from))->getFramesPerSecond() / (new FrameRate($to))->getFramesPerSecond());
     }
 
 

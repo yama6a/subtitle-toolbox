@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\DualSubtitle;
-use SubtitleToolbox\DualSubtitleOptions;
+use SubtitleToolbox\Dual\DualSubtitle;
+use SubtitleToolbox\Dual\DualSubtitleMode;
+use SubtitleToolbox\Dual\DualSubtitleOptions;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 class DualCommand extends WriteCommand
 {
-    private const MODES = ["stack" => DualSubtitleOptions::MODE_STACK, "top-bottom" => DualSubtitleOptions::MODE_TOP_BOTTOM];
+    private const MODES = ["stack" => DualSubtitleMode::Stack, "top-bottom" => DualSubtitleMode::TopBottom];
 
     private ?DualSubtitleOptions $dualOptions = null;
 
@@ -111,6 +112,6 @@ class DualCommand extends WriteCommand
     {
         $secondary = $this->loadSecondFile($arguments->positionals[1], $arguments);
 
-        parent::process($input, DualSubtitle::merge($subtitle, $secondary, $this->dualOptions), $format, $arguments, $console);
+        parent::process($input, DualSubtitle::fromPair($subtitle, $secondary, $this->dualOptions), $format, $arguments, $console);
     }
 }

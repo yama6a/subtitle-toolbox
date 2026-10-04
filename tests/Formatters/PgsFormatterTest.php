@@ -249,7 +249,7 @@ class PgsFormatterTest extends TestCase
 
         $this->assertSame([true, false, false, true, false, false],
                           array_map(fn (SubtitleCue $cue): bool => $cue->isForced(), $written->getCues()));
-        $this->assertCount(2, self::pgsRoundTrip($subtitle->onlyForced()));
+        $this->assertCount(2, self::pgsRoundTrip($subtitle->withForcedCuesOnly()));
     }
 
 
