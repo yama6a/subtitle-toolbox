@@ -237,9 +237,9 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 |:--- |:--- |
 | `--snap-shot-changes FILE` | [`ShotChangeTiming::apply()`](editing.md#shot-changes-and-gaps) with the shot changes of the file: the log of the FFmpeg `showinfo` filter, or one time per line in seconds or `hh:mm:ss.mmm` |
 | `--video-fps RATE` | `frameRate`, the frame rate of the shot changes and of the frame options. Required with the `--snap-` options |
-| `--snap-window-frames FRAMES` | `snapWindow`, default half a second |
+| `--snap-window-frames FRAMES` | `snapWindowFrames`, default half a second |
 | `--snap-min-gap-frames FRAMES` | `minGapFrames`, default 2 |
-| `--snap-min-duration-frames FRAMES` | `minDuration`, default 20 |
+| `--snap-min-duration-frames FRAMES` | `minDurationFrames`, default 20 |
 | `--snap-no-chain` | `chain: false` |
 | `--fix-overlaps` | `fixOverlaps()` with `--fix-min-gap` seconds, default 0 |
 | `--fix-min-duration SECONDS` | `extendShortCues()` with `--fix-min-gap` |

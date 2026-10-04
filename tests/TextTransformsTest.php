@@ -54,7 +54,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
 
         $again = Subtitle::fromString($subtitle->toString(Format::WebVtt), Format::WebVtt);
         $this->assertSame($this->getTexts($subtitle), $this->getTexts($again));
-        $this->assertSame($subtitle->getComments(), $again->getComments());
+        $this->assertEquals($subtitle->getComments(), $again->getComments());
     }
 
 
@@ -71,8 +71,8 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     public function testRealCaptionFileCleanedUp(): void
     {
         $subtitle = $this->parseCaptions()
-            ->replaceText('/\[[^\]]*\]/', "", true)
-            ->replaceText('/\.{4,}/', "...", true)
+            ->replaceText('/\[[^\]]*\]/', "", new ReplaceTextOptions(regex: true))
+            ->replaceText('/\.{4,}/', "...", new ReplaceTextOptions(regex: true))
             ->stripFormatting();
 
         $this->assertSame(file_get_contents(self::FILES . "own_cea608_caps_cleaned.vtt"),
@@ -199,7 +199,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     {
         $subtitle = $this->makeSubtitle("Wait.....", "<i>colour</i> and COLOUR");
 
-        $subtitle->replaceText('/\.{4,}/', "...", true)->replaceText('/col(ou)r/', 'col$1r!', true, false);
+        $subtitle->replaceText('/\.{4,}/', "...", new ReplaceTextOptions(regex: true))->replaceText('/col(ou)r/', 'col$1r!', new ReplaceTextOptions(regex: true, caseSensitive: false));
 
         $this->assertSame(["Wait...", "<i>colour!</i> and colOUr!"], $this->getTexts($subtitle));
     }
@@ -209,7 +209,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     {
         $subtitle = $this->makeSubtitle("Ärger and ärger", "Price: \$1");
 
-        $subtitle->replaceText("ÄRGER", "joy", false, false)->replaceText("price", '$1 \1', false, false);
+        $subtitle->replaceText("ÄRGER", "joy", new ReplaceTextOptions(caseSensitive: false))->replaceText("price", '$1 \1', new ReplaceTextOptions(caseSensitive: false));
 
         $this->assertSame(["joy and joy", '$1 \1: $1'], $this->getTexts($subtitle));
     }
@@ -226,7 +226,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
         }
 
         $this->expectException(InvalidArgumentException::class);
-        $subtitle->replaceText("/(/", "x", true);
+        $subtitle->replaceText("/(/", "x", new ReplaceTextOptions(regex: true));
     }
 
 
@@ -293,13 +293,13 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
         $subtitle->addCue(new SubtitleCue(10, 11, ""));
         $subtitle->addComment("before music", 1)->addComment("before door", 2)->addComment("before last", 3);
 
-        $subtitle->replaceText('/\[\w+\]/', "", true);
+        $subtitle->replaceText('/\[\w+\]/', "", new ReplaceTextOptions(regex: true));
 
         $this->assertSame(["first", "last", ""], $this->getTexts($subtitle));
-        $this->assertSame([
-            ["text" => "before music", "beforeCueIndex" => 1],
-            ["text" => "before door", "beforeCueIndex" => 1],
-            ["text" => "before last", "beforeCueIndex" => 1],
+        $this->assertEquals([
+            new Comment("before music", 1),
+            new Comment("before door", 1),
+            new Comment("before last", 1),
         ], $subtitle->getComments());
         $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }

@@ -57,29 +57,34 @@ $subtitle->unwrapLines();                         // join the lines of each cue 
 Speech-to-text output and fast dialogue often have many cues under 1 s. `mergeShortCues()` joins such a cue with its neighbour when the joined cue still fits the limits.
 
 ```php
+use SubtitleToolbox\CueLimits;
 use SubtitleToolbox\MergeShortCuesOptions;
 
 // 00:01:02,100 --> 00:01:02,600  Wait.
 // 00:01:02,640 --> 00:01:03,300  Where are you
 // 00:01:03,320 --> 00:01:04,100  going?
 $subtitle->mergeShortCues(new MergeShortCuesOptions(
-    maxCharactersPerLine: 42,
-    maxLines: 2,
+    limits: new CueLimits(maxCharactersPerLine: 42, maxLines: 2, maxDuration: 7),
     maxGap: 0.25,
-    maxDuration: 7,
 ));
 // 00:01:02,100 --> 00:01:04,100  Wait. Where are you going?
 ```
 
-| Option | Default | Meaning |
+`CueLimits` holds the limits that `MergeShortCuesOptions` and `ResegmentOptions` share.
+
+| `CueLimits` field | Default | Meaning for `mergeShortCues()` |
 |:--- |:--- |:--- |
 | `maxCharactersPerLine` | 42 | the line length of the joined text |
 | `maxLines` | 2 | the line count of the joined text |
-| `maxGap` | 0.25 | seconds from the end of one cue to the start of the next |
 | `maxDuration` | 7 | seconds from the start to the end of the joined cue |
 | `minDuration` | 1 | a cue shorter than this many seconds is short |
-| `minCharacters` | null | a cue with fewer visible characters is short. Null turns the rule off |
 | `maxCharactersPerSecond` | null | the reading speed of the joined cue. Null turns the rule off |
+
+| Option | Default | Meaning |
+|:--- |:--- |:--- |
+| `limits` | `new CueLimits()` | the limits above |
+| `maxGap` | 0.25 | seconds from the end of one cue to the start of the next |
+| `minCharacters` | null | a cue with fewer visible characters is short. Null turns the rule off |
 | `keepSentenceEnds` | false | join only when the first cue does not end with `.`, `?` or `!` |
 | `sameSpeakerOnly` | false | join each cue with the next cue of the same `<v>` speaker, short or not, with no `maxDuration` limit. A cue without a `<v>` tag never joins |
 
@@ -92,13 +97,14 @@ $subtitle->mergeShortCues(new MergeShortCuesOptions(
 Speech-to-text tools such as Whisper write segments of 10 s and more. `wrapLines()` makes the lines shorter, but the cue stays too long to read. `Resegmenter` with `ResegmentMode::SplitLong` splits such a cue into cues that fit the limits.
 
 ```php
+use SubtitleToolbox\CueLimits;
 use SubtitleToolbox\Resegmenting\ResegmentMode;
 use SubtitleToolbox\Resegmenting\Resegmenter;
 use SubtitleToolbox\Resegmenting\ResegmentOptions;
 
 // 00:00:00,000 --> 00:00:11,050  The tensor operators are optimized heavily for Apple silicon CPUs. Depending on
 //                                the computation size, Arm Neon SIMD instrisics or CBLAS Accelerate framework routines are used.
-$report = Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::SplitLong, maxCharactersPerLine: 42, maxLines: 2));
+$report = Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 42, maxLines: 2)));
 // 00:00:00,000 --> 00:00:04,231  The tensor operators are optimized heavily for Apple silicon CPUs.
 // 00:00:04,231 --> 00:00:06,441  Depending on the computation size,
 // 00:00:06,441 --> 00:00:11,050  Arm Neon SIMD instrisics or CBLAS Accelerate framework routines are used.
@@ -113,11 +119,7 @@ Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::ByWords, maxWo
 | Option | Default | Meaning |
 |:--- |:--- |:--- |
 | `mode` | required | `ResegmentMode::SplitLong` or `ResegmentMode::ByWords` |
-| `maxCharactersPerLine` | 42 | the line length of a cue |
-| `maxLines` | 2 | the line count of a cue |
-| `maxDuration` | 7 | seconds from the start to the end of a cue |
-| `minDuration` | 1 | `SplitLong` never makes a cue shorter than this many seconds |
-| `maxCharactersPerSecond` | null | the reading speed of a cue. Null turns the rule off |
+| `limits` | `new CueLimits()` | the limits of each new cue. `SplitLong` never makes a cue shorter than `minDuration` |
 | `maxWordGap` | 0.6 | `ByWords` ends a cue at a pause of this many seconds or more |
 
 - **Limits**: a cue breaks the limits when its text does not fit `maxLines` lines of `maxCharactersPerLine` characters, as `wrapLines()` wraps it. It also breaks them above `maxDuration` or `maxCharactersPerSecond`.

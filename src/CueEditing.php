@@ -25,8 +25,8 @@ trait CueEditing
                 ->setEnd(max(0, $cue->getEnd() + $offset))
                 ->mapWordTimestamps(fn (float $time): float => $time + $offset);
         }
-        foreach ($other->getComments() as $comment) {
-            $otherAnchors[] = CommentAnchors::anchor($otherCues, $comment["beforeCueIndex"]);
+        foreach ($other->comments as $comment) {
+            $otherAnchors[] = CommentAnchors::anchor($otherCues, $comment->beforeCueIndex);
         }
 
         $firstOtherCue = reset($otherCues) ?: null;
@@ -34,7 +34,7 @@ trait CueEditing
             $ownAnchors[$commentIndex] = $anchor ?? $firstOtherCue;
         }
 
-        $comments = array_merge($this->comments, $other->getComments());
+        $comments = array_merge($this->comments, $other->comments);
         $cues     = array_merge(array_values($this->cues), array_values($otherCues));
         usort($cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
 

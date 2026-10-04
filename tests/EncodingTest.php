@@ -98,7 +98,7 @@ class EncodingTest extends TestCase
         $this->assertCount(3, $cues);
         $this->assertSame([1.0, 3.0, "Grüße aus Köln!"], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $this->assertSame([7.0, 9.0, "<b>Ende</b>"], [$cues[2]->getStart(), $cues[2]->getEnd(), $cues[2]->getText()]);
-        $this->assertSame("Saved with Notepad", $subtitle->getComments()[0]["text"]);
+        $this->assertSame("Saved with Notepad", $subtitle->getComments()[0]->text);
         $this->assertEquals($subtitle, Subtitle::fromString($raw, Format::WebVtt, new ReadOptions(encoding: "Windows-1252")));
 
         $output = $subtitle->toString(Format::WebVtt, self::windowsOutput());

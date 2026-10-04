@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Karaoke;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Comment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\AssKaraokeTag;
 use SubtitleToolbox\Formatters\Options\AssWriteOptions;
@@ -252,9 +253,9 @@ class WordHighlightTest extends TestCase
         $karaoke = self::expand($subtitle, new WordHighlightOptions());
 
         $this->assertSame("Beach", $karaoke->getMetadata(Subtitle::METADATA_TITLE));
-        $this->assertSame([
-            ["text" => "Before the second cue", "beforeCueIndex" => 4],
-            ["text" => "At the end", "beforeCueIndex" => 6],
+        $this->assertEquals([
+            new Comment("Before the second cue", 4),
+            new Comment("At the end", 6),
         ], $karaoke->getComments());
     }
 

@@ -22,18 +22,19 @@ Parsers fill these fields where their format has them, and formatters write them
 use SubtitleToolbox\Subtitle;
 
 $subtitle->setMetadata(Subtitle::METADATA_TITLE, 'Yesterday');
-$subtitle->getMetadata('title');            // 'Yesterday'
-$subtitle->setMetadata('title', null);      // removes the key
-$subtitle->getAllMetadata();                // []
+$subtitle->getMetadata('title');              // 'Yesterday'
+$subtitle->setMetadata('title', null);        // removes the key
+$subtitle->getAllMetadata();                  // []
 
 $subtitle->addComment('Translated by Jane Doe', 0);
-$subtitle->getComments();                   // [['text' => 'Translated by Jane Doe', 'beforeCueIndex' => 0]]
+$subtitle->getComments()[0]->text;            // 'Translated by Jane Doe'
+$subtitle->getComments()[0]->beforeCueIndex;  // 0
 
 $cue->setIdentifier('intro');
 ```
 
 - **Metadata keys**: `Subtitle` has constants for the shared keys `title`, `author`, `artist`, `album` and `language`.
-- **Comments**: a comment comes before the cue at `beforeCueIndex`. An index equal to the cue count puts it after the last cue.
+- **Comments**: `getComments()` returns `Comment` objects with the readonly fields `text` and `beforeCueIndex`. A comment comes before the cue at `beforeCueIndex`. An index equal to the cue count puts it after the last cue.
 - **Re-index**: `reIndexCues()` sorts the cues by start time and numbers them from 0. It moves each comment together with its cue. A comment before a removed cue moves to the next cue.
 
 ## Alignment and format data

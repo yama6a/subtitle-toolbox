@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Comment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -52,7 +53,7 @@ class AssFormatterTest extends TestCase
             array_map($this->describeCue(...), $subtitle->getCues()),
             array_map($this->describeCue(...), $reparsed->getCues())
         );
-        $this->assertSame($subtitle->getComments(), $reparsed->getComments());
+        $this->assertEquals($subtitle->getComments(), $reparsed->getComments());
         $this->assertSame($subtitle->getAllMetadata(), $reparsed->getAllMetadata());
         $this->assertSame($subtitle->getFormatData("ass"), $reparsed->getFormatData("ass"));
         $this->assertSame($formatted, $reparsed->toString(Format::Ass));

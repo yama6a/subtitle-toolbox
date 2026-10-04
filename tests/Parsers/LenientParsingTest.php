@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Comment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
@@ -595,7 +596,7 @@ class LenientParsingTest extends TestCase
     {
         $subtitle = (new JsonParser())->parse(file_get_contents(self::DIR . "missing_end.json"), new ReadOptions(lenient: true));
 
-        $this->assertSame([["text" => "Platform changes", "beforeCueIndex" => 1]], $subtitle->getComments());
+        $this->assertEquals([new Comment("Platform changes", 1)], $subtitle->getComments());
         $this->assertSame(['{"start":4,"lines":["It leaves from platform two."]}'], $subtitle->getParseWarnings()[0]->block);
     }
 

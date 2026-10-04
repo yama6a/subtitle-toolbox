@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Cli\Edits;
 use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
+use SubtitleToolbox\CueLimits;
 use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\Resegmenting\ResegmentMode;
 use SubtitleToolbox\Resegmenting\Resegmenter;
@@ -87,26 +88,18 @@ final class StructureEdit extends Edit
 
     public function apply(Subtitle $subtitle, Console $console, string $label): Subtitle
     {
+        $limits = new CueLimits(maxCharactersPerLine: $this->maxCharactersPerLine, maxLines: $this->maxLines);
         if ($this->resegmentWordGap !== null) {
-            Resegmenter::apply($subtitle, new ResegmentOptions(
-                mode: ResegmentMode::ByWords,
-                maxCharactersPerLine: $this->maxCharactersPerLine,
-                maxLines: $this->maxLines,
-                maxWordGap: $this->resegmentWordGap,
-            ));
+            Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::ByWords, $limits, $this->resegmentWordGap));
         }
         if ($this->unwrap) {
             $subtitle->unwrapLines();
         }
         if ($this->mergeShort) {
-            $subtitle->mergeShortCues(new MergeShortCuesOptions(maxCharactersPerLine: $this->maxCharactersPerLine, maxLines: $this->maxLines));
+            $subtitle->mergeShortCues(new MergeShortCuesOptions($limits));
         }
         if ($this->splitLong) {
-            Resegmenter::apply($subtitle, new ResegmentOptions(
-                mode: ResegmentMode::SplitLong,
-                maxCharactersPerLine: $this->maxCharactersPerLine,
-                maxLines: $this->maxLines,
-            ));
+            Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::SplitLong, $limits));
         }
         if ($this->wrap !== null) {
             $subtitle->wrapLines($this->wrap, $this->maxLines);

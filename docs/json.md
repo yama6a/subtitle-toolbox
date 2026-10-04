@@ -35,7 +35,7 @@ $copy  = Subtitle::fromString($json, Format::Json);
 |:--- |:--- |:--- |:--- |
 | `version` | integer | yes | 1. A later version of the shape gets a new number. `fromArray()` rejects all other numbers |
 | `metadata` | object of strings | no | the keys of `getAllMetadata()` |
-| `comments` | list of objects | no | `text` and `beforeCueIndex`, as `getComments()` returns them |
+| `comments` | list of objects | no | `text` and `beforeCueIndex`, the fields of the `Comment` objects that `getComments()` returns |
 | `formatData` | object of objects | no | the format data of the subtitle by format key |
 | `cues` | list of objects | yes | the cues in this order. `fromArray()` does not sort them |
 | `cues[].start`, `cues[].end` | number | yes | seconds, rounded to milliseconds |

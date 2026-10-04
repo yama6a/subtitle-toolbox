@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Comment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\ReadOptions;
@@ -29,7 +30,7 @@ class JsonParserTest extends TestCase
             JSON, Format::Json);
 
         $this->assertSame(["title" => "Big Buck Bunny", "language" => "en"], $subtitle->getAllMetadata());
-        $this->assertSame([["text" => "Translated by Jane Doe", "beforeCueIndex" => 0]], $subtitle->getComments());
+        $this->assertEquals([new Comment("Translated by Jane Doe", 0)], $subtitle->getComments());
         $this->assertEquals(
             [(new SubtitleCue(1.5, 4, ["Hello", "<i>world</i>"]))->setIdentifier("intro")->setAlignment(8)],
             $subtitle->getCues()

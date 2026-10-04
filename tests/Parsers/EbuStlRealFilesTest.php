@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Comment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\EbuStlReadOptions;
 use SubtitleToolbox\ReadOptions;
@@ -120,7 +121,7 @@ class EbuStlRealFilesTest extends TestCase
         $this->assertCount(2, $cues[3]->getFormatData("stl")["blocks"]);
         $this->assertCount(4, $cues[4]->getLines());
         $this->assertSame("<font color=\"#ffff00\">Rye bread and white bread are baked</font>", $cues[4]->getLines()[2]);
-        $this->assertSame([["text" => "Check the price list before air.", "beforeCueIndex" => 3]], $subtitle->getComments());
+        $this->assertEquals([new Comment("Check the price list before air.", 3)], $subtitle->getComments());
     }
 
 

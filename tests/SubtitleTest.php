@@ -225,12 +225,12 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
             ->addComment("second before cue 0", 0)
             ->addComment("before cue 1", 1);
 
-        $this->assertSame(
+        $this->assertEquals(
             [
-                ["text" => "first before cue 0", "beforeCueIndex" => 0],
-                ["text" => "second before cue 0", "beforeCueIndex" => 0],
-                ["text" => "before cue 1", "beforeCueIndex" => 1],
-                ["text" => "after last cue", "beforeCueIndex" => 2],
+                new Comment("first before cue 0", 0),
+                new Comment("second before cue 0", 0),
+                new Comment("before cue 1", 1),
+                new Comment("after last cue", 2),
             ],
             $subtitle->getComments()
         );
@@ -257,11 +257,11 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $subtitle->reIndexCues();
 
         $this->assertSame("early", $subtitle->getCues()[0]->getText());
-        $this->assertSame(
+        $this->assertEquals(
             [
-                ["text" => "before early", "beforeCueIndex" => 0],
-                ["text" => "before late", "beforeCueIndex" => 1],
-                ["text" => "at the end", "beforeCueIndex" => 2],
+                new Comment("before early", 0),
+                new Comment("before late", 1),
+                new Comment("at the end", 2),
             ],
             $subtitle->getComments()
         );
@@ -275,7 +275,7 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $subtitle->addComment("before first", 1);
         $subtitle->addCue(new SubtitleCue(1, 2, "first"));
 
-        $this->assertSame([["text" => "before first", "beforeCueIndex" => 0]], $subtitle->getComments());
+        $this->assertEquals([new Comment("before first", 0)], $subtitle->getComments());
     }
 
 
@@ -290,10 +290,10 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
 
         $subtitle->removeCue(1);
 
-        $this->assertSame(
+        $this->assertEquals(
             [
-                ["text" => "before second", "beforeCueIndex" => 1],
-                ["text" => "before third", "beforeCueIndex" => 1],
+                new Comment("before second", 1),
+                new Comment("before third", 1),
             ],
             $subtitle->getComments()
         );
@@ -309,7 +309,7 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
 
         $subtitle->removeCue(1);
 
-        $this->assertSame([["text" => "before second", "beforeCueIndex" => 1]], $subtitle->getComments());
+        $this->assertEquals([new Comment("before second", 1)], $subtitle->getComments());
     }
 
 

@@ -273,13 +273,13 @@ class CueLookupTest extends TestCase
 
         $this->assertSame($subtitle, $result);
         $this->assertSame([0, 1, 2, 3], array_keys($subtitle->getCues()));
-        $this->assertSame(
+        $this->assertEquals(
             [
-                ["text" => "Recorded on the north pier", "beforeCueIndex" => 0],
-                ["text" => "Segment two starts here", "beforeCueIndex" => 1],
-                ["text" => "The guide speaks from here", "beforeCueIndex" => 3],
-                ["text" => "The boat turns left here", "beforeCueIndex" => 3],
-                ["text" => "End of recording", "beforeCueIndex" => 4],
+                new Comment("Recorded on the north pier", 0),
+                new Comment("Segment two starts here", 1),
+                new Comment("The guide speaks from here", 3),
+                new Comment("The boat turns left here", 3),
+                new Comment("End of recording", 4),
             ],
             $subtitle->getComments()
         );

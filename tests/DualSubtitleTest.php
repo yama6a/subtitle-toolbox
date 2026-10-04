@@ -211,8 +211,8 @@ class DualSubtitleTest extends TestCase
         $this->assertSame(["language" => "en+de", "title" => "Station"], $dual->getAllMetadata());
         $this->assertSame(["header" => "Kind: captions"], $dual->getFormatData("vtt"));
         $this->assertSame([], $dual->getFormatData("ass"));
-        $this->assertSame([["text" => "before second", "beforeCueIndex" => 2],
-                           ["text" => "at the end", "beforeCueIndex" => 3]], $dual->getComments());
+        $this->assertEquals([new Comment("before second", 2),
+                           new Comment("at the end", 3)], $dual->getComments());
         $this->assertSame([[0.0, 2.0, "first\nvorher", null], [2.2, 2.8, "dazwischen", null], [3.0, 5.0, "second", null]],
                           $this->describeCues($dual));
     }
@@ -250,7 +250,7 @@ class DualSubtitleTest extends TestCase
         $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions());
 
         $this->assertSame([[0.0, 2.0, "erste", null]], $this->describeCues($dual));
-        $this->assertSame([["text" => "only a note", "beforeCueIndex" => 1]], $dual->getComments());
+        $this->assertEquals([new Comment("only a note", 1)], $dual->getComments());
         $this->assertSame([], $primary->getCues());
     }
 

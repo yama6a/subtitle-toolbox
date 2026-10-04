@@ -47,7 +47,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     /** @var array<string, string> */
     private array $metadata = [];
 
-    /** @var list<array{text: string, beforeCueIndex: int}> */
+    /** @var list<Comment> */
     private array $comments = [];
 
     /** @var array<string, array> */
@@ -475,7 +475,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     public function reIndexCues(): self
     {
         $commentCues = array_map(
-            fn (array $comment): ?SubtitleCue => $this->findCueAtOrAfter($comment["beforeCueIndex"]),
+            fn (Comment $comment): ?SubtitleCue => $this->findCueAtOrAfter($comment->beforeCueIndex),
             $this->comments
         );
 
@@ -484,7 +484,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
         foreach ($commentCues as $commentIndex => $cue) {
             $cueIndex = $cue === null ? false : array_search($cue, $this->cues, true);
 
-            $this->comments[$commentIndex]["beforeCueIndex"] = $cueIndex === false ? count($this->cues) : $cueIndex;
+            $this->comments[$commentIndex] = $this->comments[$commentIndex]->withBeforeCueIndex($cueIndex === false ? count($this->cues) : $cueIndex);
         }
         $this->sortComments();
 
@@ -523,7 +523,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * @return list<array{text: string, beforeCueIndex: int}>
+     * @return list<Comment>
      */
     public function getComments(): array
     {
@@ -541,7 +541,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
                                                 "the cue index must not be negative!");
         }
 
-        $this->comments[] = ["text" => $text, "beforeCueIndex" => $beforeCueIndex];
+        $this->comments[] = new Comment($text, $beforeCueIndex);
         $this->sortComments();
 
         return $this;
@@ -583,8 +583,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     private function sortComments(): void
     {
-        usort($this->comments, fn (array $comment1, array $comment2): int =>
-            $comment1["beforeCueIndex"] <=> $comment2["beforeCueIndex"]);
+        usort($this->comments, fn (Comment $comment1, Comment $comment2): int => $comment1->beforeCueIndex <=> $comment2->beforeCueIndex);
     }
 
 
@@ -609,10 +608,10 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
         $copy->cues = array_values($kept);
         foreach ($copy->comments as $commentIndex => $comment) {
-            $copy->comments[$commentIndex]["beforeCueIndex"] = count(array_filter(
+            $copy->comments[$commentIndex] = $comment->withBeforeCueIndex(count(array_filter(
                 array_keys($kept),
-                fn (int $cueIndex): bool => $cueIndex < $comment["beforeCueIndex"]
-            ));
+                fn (int $cueIndex): bool => $cueIndex < $comment->beforeCueIndex
+            )));
         }
 
         return $copy;

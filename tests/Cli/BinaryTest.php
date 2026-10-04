@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
+use SubtitleToolbox\CueLimits;
 use SubtitleToolbox\Diff\SubtitleDiff;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\Dual\DualSubtitle;
@@ -32,6 +33,7 @@ use SubtitleToolbox\Profanity\ProfanityFilter;
 use SubtitleToolbox\Profanity\ProfanityMask;
 use SubtitleToolbox\Profanity\ProfanityOptions;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\ReplaceTextOptions;
 use SubtitleToolbox\Resegmenting\ResegmentMode;
 use SubtitleToolbox\Resegmenting\Resegmenter;
 use SubtitleToolbox\Resegmenting\ResegmentOptions;
@@ -503,7 +505,7 @@ class BinaryTest extends TestCase
                               "--replace", '/\.{4,}/=...', "--strip-tags"])
         );
 
-        $expected = Subtitle::fromStringAutoDetectFormat($this->file("multi.srt"))->replaceText("uhr", "Uhr", false, false)->changeCase(CaseMode::Lower, "tr");
+        $expected = Subtitle::fromStringAutoDetectFormat($this->file("multi.srt"))->replaceText("uhr", "Uhr", new ReplaceTextOptions(caseSensitive: false))->changeCase(CaseMode::Lower, "tr");
         $this->assertSame([0, $expected->toString(Format::SubRip), ""], $this->runBinary([
             "convert", "multi.srt", "--to", "srt", "-o", "-", "--replace", "uhr=Uhr", "--replace-ignore-case", "--case", "lower", "--language", "tr",
         ]));
@@ -805,7 +807,7 @@ class BinaryTest extends TestCase
     {
         copy(__DIR__ . "/../files/short-cues/own_speech_to_text.srt", "$this->dir/speech.srt");
         $narrow = Subtitle::fromStringAutoDetectFormat($this->file("speech.srt"))
-            ->mergeShortCues(new MergeShortCuesOptions(maxCharactersPerLine: 20, maxLines: 3))
+            ->mergeShortCues(new MergeShortCuesOptions(limits: new CueLimits(maxCharactersPerLine: 20, maxLines: 3)))
             ->toString(Format::SubRip);
 
         $this->assertSame(
@@ -832,7 +834,7 @@ class BinaryTest extends TestCase
         $this->assertSame([0, $split(new ResegmentOptions(ResegmentMode::SplitLong)), ""], [$code, $stdout, $stderr]);
         $this->assertGreaterThan(count(Subtitle::fromStringAutoDetectFormat($this->file("whisper.json"))->getCues()), substr_count($stdout, " --> "));
         $this->assertSame(
-            [0, $split(new ResegmentOptions(ResegmentMode::SplitLong, maxCharactersPerLine: 30, maxLines: 1)), ""],
+            [0, $split(new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 30, maxLines: 1))), ""],
             $this->runBinary(["convert", "whisper.json", "--fix-split-long", "--fix-max-cpl", "30", "--fix-max-lines", "1", "--to", "vtt", "-o", "-"])
         );
     }
@@ -873,7 +875,7 @@ class BinaryTest extends TestCase
         $this->assertFileEquals(self::FILES . "resegmenting/own_whisper_long_segments_resegmented.srt", "$this->dir/lecture.srt");
 
         $resegmented = $withWords();
-        Resegmenter::apply($resegmented, new ResegmentOptions(ResegmentMode::ByWords, maxCharactersPerLine: 30, maxLines: 1, maxWordGap: 0.3));
+        Resegmenter::apply($resegmented, new ResegmentOptions(ResegmentMode::ByWords, limits: new CueLimits(maxCharactersPerLine: 30, maxLines: 1), maxWordGap: 0.3));
         $this->assertSame(
             [0, $resegmented->toString(Format::SubRip), ""],
             $this->runBinary(["convert", "lecture.json", "--fix-resegment", "--fix-max-cpl", "30", "--fix-max-lines", "1", "--fix-max-word-gap", "0.3",

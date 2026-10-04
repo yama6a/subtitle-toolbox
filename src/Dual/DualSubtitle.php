@@ -31,7 +31,7 @@ final class DualSubtitle
         $result = $primary->withSlice(INF, INF);
         $result->addCues($cues);
         foreach ($primary->getComments() as $comment) {
-            $result->addComment($comment["text"], self::findNewIndex($primaryCues, $cues, $comment["beforeCueIndex"]));
+            $result->addComment($comment->text, self::findNewIndex($primaryCues, $cues, $comment->beforeCueIndex));
         }
 
         $primaryLanguage   = $primary->getMetadata(Subtitle::METADATA_LANGUAGE);

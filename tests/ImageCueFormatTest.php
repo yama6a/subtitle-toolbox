@@ -55,7 +55,7 @@ class ImageCueFormatTest extends TestCase
             ->toString(Format::WebVtt);
         $this->assertSame($expected, $output);
         $this->assertCount(3, $subtitle->getCues());
-        $this->assertSame(2, $subtitle->getComments()[1]["beforeCueIndex"]);
+        $this->assertSame(2, $subtitle->getComments()[1]->beforeCueIndex);
     }
 
 

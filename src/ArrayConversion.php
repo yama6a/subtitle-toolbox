@@ -40,7 +40,8 @@ trait ArrayConversion
         $array = [
             "version"  => self::ARRAY_VERSION,
             "metadata" => $this->metadata,
-            "comments" => $this->comments,
+            "comments" => array_map(fn (Comment $comment): array => ["text" => $comment->text, "beforeCueIndex" => $comment->beforeCueIndex],
+                                    $this->comments),
         ];
         if ($withFormatData) {
             $array["formatData"] = $this->formatData;

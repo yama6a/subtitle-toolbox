@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Comment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\ReadOptions;
@@ -139,10 +140,10 @@ class LyricsParserTest extends TestCase
 [00:02.00] Second
 ", Format::Lyrics);
 
-        $this->assertSame(
+        $this->assertEquals(
             [
-                ["text" => "Header note", "beforeCueIndex" => 0],
-                ["text" => "Before second", "beforeCueIndex" => 1],
+                new Comment("Header note", 0),
+                new Comment("Before second", 1),
             ],
             $subtitle->getComments()
         );
@@ -320,7 +321,7 @@ class LyricsParserTest extends TestCase
 
         $this->assertSame("Fish & Chips", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
         $this->assertSame(["idTags" => ["re" => "<Editor>"]], $subtitle->getFormatData(LyricsParser::FORMAT_DATA_KEY));
-        $this->assertSame("a < b & c", $subtitle->getComments()[0]["text"]);
+        $this->assertSame("a < b & c", $subtitle->getComments()[0]->text);
     }
 
 

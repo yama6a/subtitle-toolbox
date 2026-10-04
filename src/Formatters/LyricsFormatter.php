@@ -62,8 +62,8 @@ final class LyricsFormatter extends SubtitleFormatter
     {
         $output = "";
         foreach ($comments as $comment) {
-            if ($comment["beforeCueIndex"] >= $fromCueIndex && $comment["beforeCueIndex"] <= $toCueIndex) {
-                $output .= "[#:" . Markup::toSingleLine($comment["text"]) . "]" . LineEnding::Lf->value;
+            if ($comment->beforeCueIndex >= $fromCueIndex && $comment->beforeCueIndex <= $toCueIndex) {
+                $output .= "[#:" . Markup::toSingleLine($comment->text) . "]" . LineEnding::Lf->value;
             }
         }
 

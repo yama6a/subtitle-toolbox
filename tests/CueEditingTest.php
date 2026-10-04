@@ -43,7 +43,7 @@ class CueEditingTest extends TestCase
         $cues = $subtitle->getCues();
 
         return array_map(
-            fn (array $comment): array => [$comment["text"], ($cues[$comment["beforeCueIndex"]] ?? null)?->getText()],
+            fn (Comment $comment): array => [$comment->text, ($cues[$comment->beforeCueIndex] ?? null)?->getText()],
             $subtitle->getComments()
         );
     }
@@ -80,7 +80,7 @@ class CueEditingTest extends TestCase
         $reparsed = Subtitle::fromString($harbour->toString(Format::WebVtt), Format::WebVtt);
 
         $this->assertSame($this->describeCues($harbour), $this->describeCues($reparsed));
-        $this->assertSame($harbour->getComments(), $reparsed->getComments());
+        $this->assertEquals($harbour->getComments(), $reparsed->getComments());
         $this->assertSame($harbour->getFormatData("vtt"), $reparsed->getFormatData("vtt"));
     }
 
@@ -117,11 +117,11 @@ class CueEditingTest extends TestCase
         $this->assertSame(["title" => "Part one", "language" => "en"], $subtitle->getAllMetadata());
         $this->assertSame(["header" => "first"], $subtitle->getFormatData("vtt"));
         $this->assertSame(["scriptInfo" => []], $subtitle->getFormatData("ass"));
-        $this->assertSame([
-            ["text" => "before two", "beforeCueIndex" => 1],
-            ["text" => "end of part one", "beforeCueIndex" => 2],
-            ["text" => "start of part two", "beforeCueIndex" => 2],
-            ["text" => "end of part two", "beforeCueIndex" => 3],
+        $this->assertEquals([
+            new Comment("before two", 1),
+            new Comment("end of part one", 2),
+            new Comment("start of part two", 2),
+            new Comment("end of part two", 3),
         ], $subtitle->getComments());
     }
 
@@ -192,12 +192,12 @@ class CueEditingTest extends TestCase
             ->addComment("first", 0)
             ->addComment("last", 2);
 
-        $this->assertSame(
-            [["text" => "last", "beforeCueIndex" => 1]],
+        $this->assertEquals(
+            [new Comment("last", 1)],
             $subtitle->withSlice(2.5, 10, true)->getComments()
         );
-        $this->assertSame(
-            [["text" => "first", "beforeCueIndex" => 0]],
+        $this->assertEquals(
+            [new Comment("first", 0)],
             $subtitle->withSlice(0, 2.5)->getComments()
         );
     }

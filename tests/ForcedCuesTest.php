@@ -112,7 +112,7 @@ class ForcedCuesTest extends TestCase
         $this->assertSame([3.0, 4.0, "EXIT", true], [$forced->getCues()[0]->getStart(), $forced->getCues()[0]->getEnd(),
                                                      $forced->getCues()[0]->getText(), $forced->getCues()[0]->isForced()]);
         $this->assertNotSame($subtitle->getCues()[1], $forced->getCues()[0]);
-        $this->assertSame([["text" => "before cue 2", "beforeCueIndex" => 0]], $forced->getComments());
+        $this->assertEquals([new Comment("before cue 2", 0)], $forced->getComments());
         $this->assertSame("en", $forced->getMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertCount(3, $subtitle->getCues());
         $this->assertCount(3, $subtitle->getComments());
@@ -126,7 +126,7 @@ class ForcedCuesTest extends TestCase
         $subtitle->getCues()[2]->setForced(true);
         $subtitle->addComment("at the end", 3);
 
-        $this->assertSame([["text" => "at the end", "beforeCueIndex" => 1]], $subtitle->withForcedCuesOnly()->getComments());
+        $this->assertEquals([new Comment("at the end", 1)], $subtitle->withForcedCuesOnly()->getComments());
     }
 
 

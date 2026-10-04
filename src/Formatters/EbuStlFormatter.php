@@ -83,9 +83,9 @@ final class EbuStlFormatter extends SubtitleFormatter
         $comments = $subtitle->getComments();
         $sets     = [];
         foreach ([...array_keys($cues), count($cues)] as $index) {
-            while ($comments !== [] && $comments[0]["beforeCueIndex"] <= $index) {
+            while ($comments !== [] && $comments[0]->beforeCueIndex <= $index) {
                 $timeCode = $this->smpteBytes($context, isset($cues[$index]) ? $cues[$index]->getStart() : (end($cues) ?: new SubtitleCue())->getEnd());
-                $sets[]   = ["blocks" => $this->commentBlocks($context, array_shift($comments)["text"], $storedComments, $timeCode), "comment" => true];
+                $sets[]   = ["blocks" => $this->commentBlocks($context, array_shift($comments)->text, $storedComments, $timeCode), "comment" => true];
             }
 
             if (isset($cues[$index])) {

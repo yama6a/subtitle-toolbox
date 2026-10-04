@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Comment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\ReadOptions;
@@ -69,11 +70,11 @@ class AssParserTest extends TestCase
         $this->assertSame("Last Style Storage: Default", $data["sections"]["Aegisub Project Garbage"][0]);
         $this->assertSame(["Default", "Top", "Karaoke"], array_column($data["styles"], "Name"));
         $this->assertSame("Verdana", $data["styles"][2]["Fontname"]);
-        $this->assertSame(
+        $this->assertEquals(
             [
-                ["text" => "{\\r\\t(\$start,\$end,\\fscx120\\fscy120)\\t(\$end,\$end,\\fscx100\\fscy100)}", "beforeCueIndex" => 0],
-                ["text" => "Check the platform number against the station sign", "beforeCueIndex" => 2],
-                ["text" => "End of the station scene", "beforeCueIndex" => 7],
+                new Comment("{\\r\\t(\$start,\$end,\\fscx120\\fscy120)\\t(\$end,\$end,\\fscx100\\fscy100)}", 0),
+                new Comment("Check the platform number against the station sign", 2),
+                new Comment("End of the station scene", 7),
             ],
             $subtitle->getComments()
         );
@@ -131,7 +132,7 @@ class AssParserTest extends TestCase
         $this->assertSame(8, $cues[1]->getAlignment());
         $this->assertSame("Marked=1", $cues[2]->getFormatData("ass")["fields"]["Marked"]);
         $this->assertSame("!Effect", $cues[3]->getFormatData("ass")["fields"]["Effect"]);
-        $this->assertSame([["text" => "Timetable section", "beforeCueIndex" => 1]], $subtitle->getComments());
+        $this->assertEquals([new Comment("Timetable section", 1)], $subtitle->getComments());
     }
 
 

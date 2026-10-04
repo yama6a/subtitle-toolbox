@@ -31,10 +31,12 @@ trait TextTransforms
 
 
     /**
-     * Replaces $search with $replace in the text between tags. $search is a PCRE pattern with delimiters when $regex is true.
+     * Replaces $search with $replace in the text between tags.
      */
-    public function replaceText(string $search, string $replace, bool $regex = false, bool $caseSensitive = true): self
+    public function replaceText(string $search, string $replace, ReplaceTextOptions $options = new ReplaceTextOptions()): self
     {
+        $regex         = $options->regex;
+        $caseSensitive = $options->caseSensitive;
         if ($search === "") {
             throw new InvalidArgumentException("The search text must not be empty.");
         }

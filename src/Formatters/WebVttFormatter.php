@@ -44,13 +44,13 @@ final class WebVttFormatter extends SubtitleFormatter
 
         $comments = $subtitle->getComments();
         foreach (array_values($subtitle->getCues()) as $cueIndex => $cue) {
-            while ($comments !== [] && $comments[0]["beforeCueIndex"] <= $cueIndex) {
-                $blocks[] = $this->formatComment(array_shift($comments)["text"]);
+            while ($comments !== [] && $comments[0]->beforeCueIndex <= $cueIndex) {
+                $blocks[] = $this->formatComment(array_shift($comments)->text);
             }
             $blocks[] = $this->formatIdentifiedCue($cue, $cueIndex, $options);
         }
         foreach ($comments as $comment) {
-            $blocks[] = $this->formatComment($comment["text"]);
+            $blocks[] = $this->formatComment($comment->text);
         }
 
         $output = $header . LineEnding::Lf->value . LineEnding::Lf->value;

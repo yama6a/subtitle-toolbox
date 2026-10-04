@@ -120,9 +120,9 @@ final class AssFormatter extends SubtitleFormatter
         foreach ([...$cues, null] as $cueIndex => $cue) {
             $commentTime = $cue?->getStart() ?? ($cues === [] ? 0 : end($cues)->getEnd());
             foreach ($comments as $comment) {
-                $isAtCue = $cue === null ? $comment["beforeCueIndex"] >= $cueIndex : $comment["beforeCueIndex"] === $cueIndex;
+                $isAtCue = $cue === null ? $comment->beforeCueIndex >= $cueIndex : $comment->beforeCueIndex === $cueIndex;
                 if ($isAtCue) {
-                    $lines[] = $this->commentLine($comment["text"], $format, $commentEvents, $commentTime);
+                    $lines[] = $this->commentLine($comment->text, $format, $commentEvents, $commentTime);
                 }
             }
 

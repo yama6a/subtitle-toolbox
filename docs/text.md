@@ -1,19 +1,21 @@
 # Cue text
 
 ## Text runs
-Most methods on this page see only the **text runs** of a cue: the text between tags, with `&lt;`, `&gt;` and `&amp;` decoded. So a search for `&` finds `&amp;`, and a search for `font` finds no markup. The result gets escaped again, so a replacement cannot add tags. A match cannot cross a tag: `Color` does not match `<i>Col</i>our`.
+Most methods on this page see only the **text runs** of a cue: the text between tags, with `&lt;`, `&gt;` and `&amp;` decoded. So a search for `&` finds `&amp;`, and a search for `font` finds no markup. The result gets escaped again, so a replacement cannot add tags. A match cannot cross a tag: `Colour` does not match `<i>Col</i>our`.
 
 ## Transforms
 ```php
+use SubtitleToolbox\CaseMode;
+use SubtitleToolbox\ReplaceTextOptions;
 use SubtitleToolbox\SubtitleCue;
 
-$subtitle->replaceText('Color', 'Color');               // '<i>Color</i> me' becomes '<i>Color</i> me'
-$subtitle->replaceText('/\.{4,}/', '...', true);         // a regex with delimiters, '$1' works in the replacement
-$subtitle->replaceText('color', 'color', false, false); // case-insensitive
-$subtitle->stripFormatting();                            // '<b>Run</b>, now!' becomes 'Run, now!'
-$subtitle->stripFormatting(['i']);                       // keeps <i>, removes all other tags
-$subtitle->changeCase('sentence');                       // 'WHERE ARE YOU? HOME.' becomes 'Where are you? Home.'
-$subtitle->changeCase('upper', 'tr');                    // Turkish rules: 'istanbul' becomes 'İSTANBUL'
+$subtitle->replaceText('Colour', 'Color');                                              // '<i>Colour</i> me' becomes '<i>Color</i> me'
+$subtitle->replaceText('/\.{4,}/', '...', new ReplaceTextOptions(regex: true));         // a regex with delimiters, '$1' works in the replacement
+$subtitle->replaceText('colour', 'color', new ReplaceTextOptions(caseSensitive: false)); // case-insensitive
+$subtitle->stripFormatting();                                                           // '<b>Run</b>, now!' becomes 'Run, now!'
+$subtitle->stripFormatting(['i']);                                                      // keeps <i>, removes all other tags
+$subtitle->changeCase(CaseMode::Sentence);                                              // 'WHERE ARE YOU? HOME.' becomes 'Where are you? Home.'
+$subtitle->changeCase(CaseMode::Upper, 'tr');                                           // Turkish rules: 'istanbul' becomes 'İSTANBUL'
 $subtitle->mapText(fn (string $text, SubtitleCue $cue): string => str_replace("''", '"', $text));
 $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>");
 ```
@@ -21,7 +23,7 @@ $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>
 - **Text runs**: `replaceText()`, `changeCase()` and `mapText()` work on text runs. Use `mapLines()` to change tags.
 - **Word timestamps**: `stripFormatting()` keeps them. Pass `false` as the second argument to remove them too.
 - **Empty cues**: a transform removes a cue that had text before and has only tags or spaces after. Comments stay before the next cue.
-- **Case modes**: `upper`, `lower` and `sentence`.
+- **Case modes**: `CaseMode::Upper`, `CaseMode::Lower` and `CaseMode::Sentence`.
 - **Unicode**: with `ext-mbstring`, the full Unicode case mapping applies. `ß` becomes `SS`, and Greek `Σ` at the end of a word becomes `ς` in lower case. Without `ext-mbstring`, or for text that is not valid UTF-8, only the letters A to Z change.
 - **Turkish and Azerbaijani**: pass `'tr'` or `'az'` as the second argument of `changeCase()`. Then `i` and `İ` pair, and `ı` and `I` pair. Without it, `İ` becomes `i` with a combining dot, U+0307.
 - **Sentence case**: a sentence starts at the start of a cue, and at the first letter or digit after `.`, `!` or `?` and a space or line break. `www.example.com` stays lower case. Names and the English word `I` become lower case. Fix them after with `replaceText()`.

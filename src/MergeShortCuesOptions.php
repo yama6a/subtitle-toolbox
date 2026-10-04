@@ -9,32 +9,21 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 final class MergeShortCuesOptions
 {
     /**
-     * Creates the settings for Subtitle::mergeShortCues(), see the README section "Merging short cues".
+     * Creates the settings for Subtitle::mergeShortCues(), see docs/editing.md#merging-short-cues.
+     *
+     * @param CueLimits $limits        a cue shorter than $limits->minDuration is short. A joined cue must keep the other limits
+     * @param float     $maxGap        seconds between the 2 cues
+     * @param ?int      $minCharacters a cue with fewer visible characters is short too
      */
     public function __construct(
-        public readonly int $maxCharactersPerLine = 42,
-        public readonly int $maxLines = 2,
+        public readonly CueLimits $limits = new CueLimits(),
         public readonly float $maxGap = 0.25,
-        public readonly float $maxDuration = 7,
-        public readonly float $minDuration = 1,
         public readonly ?int $minCharacters = null,
-        public readonly ?float $maxCharactersPerSecond = null,
         public readonly bool $keepSentenceEnds = false,
         public readonly bool $sameSpeakerOnly = false,
     ) {
-        if ($maxCharactersPerLine < 1 || $maxLines < 1) {
-            throw new InvalidArgumentException("The maximum characters per line and the maximum lines must be at " .
-                                               "least 1, got $maxCharactersPerLine and $maxLines.");
-        }
-
-        if ($maxGap < 0 || $minDuration < 0) {
-            throw new InvalidArgumentException("The maximum gap and the minimum duration must not be negative, " .
-                                               "got $maxGap and $minDuration.");
-        }
-
-        if ($maxDuration <= 0 || ($maxCharactersPerSecond !== null && $maxCharactersPerSecond <= 0)) {
-            throw new InvalidArgumentException("The maximum duration and the maximum characters per second must be " .
-                                               "greater than 0, got $maxDuration and " . ($maxCharactersPerSecond ?? "null") . ".");
+        if ($maxGap < 0) {
+            throw new InvalidArgumentException("The maximum gap must not be negative, got $maxGap.");
         }
 
         if ($minCharacters !== null && $minCharacters < 1) {

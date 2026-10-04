@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Translation;
 
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Comment;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
@@ -111,7 +112,7 @@ class TranslationRunnerTest extends TestCase
         $this->assertSame($cue, $subtitle->getCues()[0]);
         $this->assertSame(["THE TRAIN TO BASEL LEAVES"], $cue->getLines());
         $this->assertSame("de", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
-        $this->assertSame("Station announcements", $subtitle->getComments()[0]["text"]);
+        $this->assertSame("Station announcements", $subtitle->getComments()[0]->text);
     }
 
 

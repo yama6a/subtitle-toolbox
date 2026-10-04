@@ -8,6 +8,7 @@ use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
+use SubtitleToolbox\ReplaceTextOptions;
 use SubtitleToolbox\Subtitle;
 
 final class ReplaceEdit extends Edit
@@ -71,7 +72,7 @@ final class ReplaceEdit extends Edit
     public function apply(Subtitle $subtitle, Console $console, string $label): Subtitle
     {
         foreach ($this->replacements as [$from, $to]) {
-            $subtitle->replaceText($from, $to, $this->regex, !$this->ignoreCase);
+            $subtitle->replaceText($from, $to, new ReplaceTextOptions($this->regex, !$this->ignoreCase));
         }
 
         return $subtitle;

@@ -217,13 +217,13 @@ class JsonTypeErrorsTest extends TestCase
     public function testLenientJsonDropsABadMetadataFieldAndABadComment(): void
     {
         $json = json_encode(["version" => 1, "metadata" => ["title" => 5, "language" => "en"],
-                             "comments" => [["text" => 5, "beforeCueIndex" => 0], ["text" => "Kept", "beforeCueIndex" => 1]],
+                             "comments" => [["text" => 5, "beforeCueIndex" => 0], new Comment("Kept", 1)],
                              "cues" => [["start" => 1, "end" => 2, "lines" => ["Hello"]], ["start" => 3, "end" => 4, "lines" => ["Bye"]]]]);
 
         $subtitle = Subtitle::fromString($json, Format::Json, new ReadOptions(lenient: true));
 
         $this->assertSame(["language" => "en"], $subtitle->getAllMetadata());
-        $this->assertSame([["text" => "Kept", "beforeCueIndex" => 1]], $subtitle->getComments());
+        $this->assertEquals([new Comment("Kept", 1)], $subtitle->getComments());
         $this->assertSame(["The field metadata.title must be a string.", "The field comments[0].text must be a string."],
                           array_map(fn (ParseWarning $warning): string => $warning->message, $subtitle->getParseWarnings()));
     }
