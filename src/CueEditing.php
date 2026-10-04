@@ -9,7 +9,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 trait CueEditing
 {
     /**
-     * Appends copies of the cues of $other, moved by $offset seconds. Metadata and format data of $this win.
+     * Appends copies of the cues of $other, with their word timestamps moved by $offset seconds. Metadata and format data of $this win.
      */
     public function merge(Subtitle $other, float $offset = 0): self
     {
@@ -19,7 +19,8 @@ trait CueEditing
         foreach ($other->getCues() as $index => $cue) {
             $otherCues[$index] = (clone $cue)
                 ->setStart(max(0, $cue->getStart() + $offset))
-                ->setEnd(max(0, $cue->getEnd() + $offset));
+                ->setEnd(max(0, $cue->getEnd() + $offset))
+                ->mapWordTimestamps(fn (float $time): float => $time + $offset);
         }
         foreach ($other->getComments() as $comment) {
             $otherAnchors[] = CommentAnchors::anchor($otherCues, $comment["beforeCueIndex"]);
@@ -45,6 +46,7 @@ trait CueEditing
 
     /**
      * Returns a copy with the cues from $from to $to seconds, cut at both times, and the comments before these cues.
+     * $moveToZero moves the times and word timestamps back by $from.
      */
     public function slice(float $from, float $to, bool $moveToZero = false): self
     {
@@ -61,6 +63,9 @@ trait CueEditing
             $copy = (clone $cue)
                 ->setStart(max($cue->getStart(), $from) - ($moveToZero ? $from : 0))
                 ->setEnd(min($cue->getEnd(), $to) - ($moveToZero ? $from : 0));
+            if ($moveToZero) {
+                $copy->mapWordTimestamps(fn (float $time): float => $time - $from);
+            }
 
             $copies[$cue] = $copy;
         }

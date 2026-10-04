@@ -10,7 +10,7 @@ trait Retiming
 {
     /**
      * Shifts the cues that start at or after $fromTime by $seconds, or all cues when $fromTime is null.
-     * A start or end time that becomes negative becomes 0, and the cue stays.
+     * The word timestamps in the cue text move with the cue. A time that becomes negative becomes 0, and the cue stays.
      */
     public function shift(float $seconds, ?float $fromTime = null): self
     {
@@ -19,7 +19,7 @@ trait Retiming
 
 
     /**
-     * Multiplies the start and end time of every cue by $factor.
+     * Multiplies the start and end time and the word timestamps of every cue by $factor.
      */
     public function scale(float $factor): self
     {
@@ -41,8 +41,8 @@ trait Retiming
 
 
     /**
-     * Moves time $oldA to $newA and time $oldB to $newB, and corrects all other times linearly.
-     * A start or end time that becomes negative becomes 0, and the cue stays.
+     * Moves time $oldA to $newA and time $oldB to $newB, and corrects all other times and the word timestamps linearly.
+     * A time that becomes negative becomes 0, and the cue stays.
      */
     public function syncByTwoPoints(float $oldA, float $newA, float $oldB, float $newB): self
     {
@@ -68,7 +68,7 @@ trait Retiming
 
             $start = max(0, $cue->getStart() * $factor + $offset);
             $end   = max(0, $cue->getEnd() * $factor + $offset);
-            $cue->setStart($start)->setEnd($end);
+            $cue->setStart($start)->setEnd($end)->mapWordTimestamps(fn (float $time): float => $time * $factor + $offset);
         }
 
         return $this;
