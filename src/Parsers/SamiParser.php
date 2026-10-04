@@ -128,7 +128,10 @@ class SamiParser extends SubtitleParser
      */
     private function readSyncs(string $rawSubtitle): array
     {
-        $body = preg_replace('/^.*?<BODY\b[^>]*>|<\/BODY\s*>.*$/is', "", $rawSubtitle);
+        $body = substr($rawSubtitle, self::bodyStart($rawSubtitle));
+        if (preg_match('/<\/BODY\s*>/i', $body, $end, PREG_OFFSET_CAPTURE) === 1) {
+            $body = substr($body, 0, $end[0][1]);
+        }
         $body = preg_replace('/<\/SYNC\s*>/i', "", $body);
 
         $syncs = [];
@@ -168,9 +171,17 @@ class SamiParser extends SubtitleParser
 
     private function lineNumberInBody(string $rawSubtitle, string $body, int $offset): int
     {
-        $head = preg_match('/^.*?<BODY\b[^>]*>/is', $rawSubtitle, $matches) ? $matches[0] : "";
+        return 1 + substr_count($rawSubtitle, "\n", 0, self::bodyStart($rawSubtitle)) + substr_count(substr($body, 0, $offset), "\n");
+    }
 
-        return 1 + substr_count($head, "\n") + substr_count(substr($body, 0, $offset), "\n");
+
+    /**
+     * Returns the offset after the BODY start tag, or 0 without one. A pattern that starts with ^.*? would hit the
+     * PCRE backtrack limit on files over about 1 MB.
+     */
+    private static function bodyStart(string $rawSubtitle): int
+    {
+        return preg_match('/<BODY\b[^>]*>/i', $rawSubtitle, $start, PREG_OFFSET_CAPTURE) === 1 ? $start[0][1] + strlen($start[0][0]) : 0;
     }
 
 

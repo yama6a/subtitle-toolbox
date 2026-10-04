@@ -241,4 +241,18 @@ class SamiParserTest extends TestCase
     {
         return Subtitle::fromString("<SAMI>\n<BODY>\n$body</BODY>\n</SAMI>\n", Format::Sami)->getCues();
     }
+
+
+    public function testReadsTheBodyAfterAHeadOfMoreThanOneMegabyte(): void
+    {
+        $content = file_get_contents(__DIR__ . "/../files/sami/real/subsrt_sample.smi");
+        $large   = str_replace("</HEAD>", "<!-- " . str_repeat("Padding before the body. ", 50000) . "-->\n</HEAD>", $content);
+        $read    = fn (string $sami): array => array_map(
+            fn ($cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()],
+            Subtitle::fromString($sami, Format::Sami)->getCues()
+        );
+
+        $this->assertGreaterThan(1_000_000, strlen($large));
+        $this->assertSame($read($content), $read($large));
+    }
 }

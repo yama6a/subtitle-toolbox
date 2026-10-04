@@ -154,4 +154,28 @@ class WhisperJsonParserTest extends TestCase
 
         (new WhisperJsonParser())->parse($json, new ReadOptions());
     }
+
+
+    public function testASegmentWithANumberOutOfRangeFailsWithAParsingException(): void
+    {
+        $json = file_get_contents(__DIR__ . "/../files/whisper/own_out_of_range_number.json");
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("segments[1].start");
+        (new WhisperJsonParser())->parse($json, new ReadOptions());
+    }
+
+
+    public function testLenientModeSkipsASegmentWithANumberOutOfRange(): void
+    {
+        $json     = file_get_contents(__DIR__ . "/../files/whisper/own_out_of_range_number.json");
+        $subtitle = (new WhisperJsonParser())->parse($json, new ReadOptions(lenient: true));
+        $warnings = $subtitle->getParseWarnings();
+
+        $this->assertSame(["La boulangerie ouvre à sept heures."], $subtitle->getCues()[0]->getLines());
+        $this->assertCount(1, $subtitle->getCues());
+        $this->assertCount(1, $warnings);
+        $this->assertSame(1, $warnings[0]->blockIndex);
+        $this->assertStringContainsString('"avg_logprob":0,', $warnings[0]->block[0]);
+    }
 }
