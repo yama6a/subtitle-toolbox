@@ -49,7 +49,7 @@ $results[0]->getLimit();        // 37
 ## Presets
 | Preset | Limits | Source |
 |:--- |:--- |:--- |
-| `ValidationRules::netflixEnglish($frameRate)` | 20 characters per second, 42 characters per line, 2 lines, 5/6 s to 7 s, a gap of 2 frames at the frame rate, no overlaps | [English (USA) Timed Text Style Guide](https://partnerhelp.netflixstudios.com/hc/en-us/articles/217350977-English-USA-Timed-Text-Style-Guide), [General Requirements](https://partnerhelp.netflixstudios.com/hc/en-us/articles/215758617), [Subtitle Timing Guidelines](https://partnerhelp.netflixstudios.com/hc/en-us/articles/360051554394) |
+| `ValidationRules::netflixEnglish($fps)` | 20 characters per second, 42 characters per line, 2 lines, 5/6 s to 7 s, a gap of 2 frames at the frame rate, no overlaps | [English (USA) Timed Text Style Guide](https://partnerhelp.netflixstudios.com/hc/en-us/articles/217350977-English-USA-Timed-Text-Style-Guide), [General Requirements](https://partnerhelp.netflixstudios.com/hc/en-us/articles/215758617), [Subtitle Timing Guidelines](https://partnerhelp.netflixstudios.com/hc/en-us/articles/360051554394) |
 | `ValidationRules::bbc()` | 37 characters per line, 180 words per minute, 0.3 s per word | [BBC Subtitle Guidelines](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/), sections 3.1 and 4 |
 | `ValidationRules::structure()` | `requireCues`, `noUnsortedCues`, `noNegativeDuration`, `noIndexGaps` and `noOverlap` | the cue list of `Subtitle` |
 

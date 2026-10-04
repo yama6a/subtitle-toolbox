@@ -1,6 +1,6 @@
 {
   "name": "ymakhloufi/subtitle-toolbox",
-  "description": "A toolbox for parsing, manipulating and exporting subtitles to various formats.",
+  "description": "A PHP library and command line tool that reads, edits and writes subtitles, transcripts and chapter lists in more than 30 formats.",
   "keywords": [
     "subtitle",
     "srt",
@@ -8,6 +8,16 @@
     "webvtt",
     "lrc",
     "mpsub",
+    "ass",
+    "ttml",
+    "scc",
+    "pgs",
+    "vobsub",
+    "ocr",
+    "whisper",
+    "transcript",
+    "chapters",
+    "cli",
     "parser",
     "converter"
   ],
@@ -35,6 +45,7 @@
     "yama6a/php-glyph-ocr": "^0.3"
   },
   "suggest": {
+    "ext-mbstring": "*, for full Unicode upper and lower case. Without it, only A to Z change case",
     "ext-zlib": "*, to decode PNG images, which PgsFormatter needs, to compress PNG images and to read zlib-compressed MKV tracks",
     "yama6a/php-glyph-ocr": "^0.3, for GlyphOcrEngine, the pure PHP OCR of PGS and VobSub image cues where Tesseract is not installed"
   },

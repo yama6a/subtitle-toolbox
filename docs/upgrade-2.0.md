@@ -45,13 +45,15 @@ use SubtitleToolbox\Validation\ValidationRules;
 | `FormatRegistry::forPath('movie.sub')` | `Format::fromPath('movie.sub')` |
 | `FormatRegistry::names()` | `array_map(fn (Format $f) => $f->value, Format::cases())` |
 | `FormatRegistry::extensions('ass')` | `Format::Ass->extensions()` |
+| `FormatRegistry::find('srt')`, `FormatRegistry::forExtension('srt')` | `Format::tryFrom('srt')` for a format name, `Format::fromPath('movie.srt')` for an extension |
+| `FormatRegistry::parserClass('vobsub')`, `FormatRegistry::formatterClass('vobsub')` | `Format::VobSub->canRead()`, `Format::VobSub->canWrite()` |
 | a format name from user input, such as `'srt'` | `Format::from('srt')`, or `Format::tryFrom()` for null on an unknown name |
 | `MatroskaReader::open('movie.mkv')->extract(3)` | `Subtitle::loadTrack('movie.mkv', 3)` |
 | `MatroskaReader::open('movie.mkv')->getSubtitleTracks()` | `Subtitle::tracks('movie.mkv')` |
 | `MatroskaReader::DEFAULT_LAST_CUE_DURATION` | `ReadOptions::$lastCueDuration`, 5 s by default |
 | `(new VobSubParser(file_get_contents('movie.idx'), 'de'))->parse(file_get_contents('movie.sub'))` | `Subtitle::load('movie.idx', Format::VobSub, new ReadOptions(language: 'de'))`. It reads the `.sub` file next to the `.idx` file |
 | `new SubRipStreamWriter($stream, [SubtitleFormatter::OPTION_LINE_ENDING => "\r\n"])` | `new SubRipStreamWriter($stream, new WriteOptions(lineEnding: LineEnding::Crlf))`. `WebVttStreamWriter` takes the options as its third argument |
-| a parser or formatter object, for example `(new SubRipParser())->parse($content)` | the classes stay public. `parse()` takes `(string $content, ReadOptions $options)`, `format()` takes `(Subtitle $subtitle, WriteOptions $options)` |
+| a parser or formatter object, for example `(new SubRipParser())->parse($content)` | the classes stay public. `parse()` takes `(string $content, ReadOptions $options)`, `format()` takes `(Subtitle $subtitle, WriteOptions $options)`. `formatCueBlock()` of `SubRipFormatter` and `WebVttFormatter` also takes `WriteOptions` |
 
 `FormatRegistry` and `FormatDetector` are internal now. `getFormat()` returns the format that a load or `fromString()` call read.
 
@@ -105,7 +107,7 @@ $sub = $subtitle->toString(Format::MicroDvd, new WriteOptions(
 | `AssFormatter::OPTION_KARAOKE_TAG` | `AssOptions(karaokeTag: 'kf')` |
 | `CsvFormatter::OPTION_DELIMITER` | `CsvOptions(delimiter: ';')` |
 | `CsvFormatter::OPTION_TIME_FORMAT => CsvParser::TIME_COMMA` | `CsvOptions(timeFormat: CsvTimeFormat::Comma)`. The enum also has `Seconds`, `Dot` and `Frames` |
-| `CsvFormatter::OPTION_FRAME_RATE`, `CsvFormatter::OPTION_FRAME_RATE_OLD_KEY` | `CsvOptions(frameRate: 25)` |
+| `CsvFormatter::OPTION_FRAME_RATE`, the key `'frameRate'` | `CsvOptions(frameRate: 25)` |
 | `CsvFormatter::OPTION_SECOND_TEXT`, `OPTION_SECOND_TEXT_HEADER` | `CsvOptions(secondText: $german, secondTextHeader: 'text (de)')` |
 | `CsvFormatter::OPTION_ESCAPE_FORMULAS` | `CsvOptions(escapeFormulas: true)` |
 | `EbuStlFormatter::OPTION_FRAME_RATE` | `EbuStlOptions(frameRate: 25)` |
@@ -119,6 +121,7 @@ $sub = $subtitle->toString(Format::MicroDvd, new WriteOptions(
 | `SccFormatter::OPTION_DROP_FRAME` | `SccOptions(dropFrame: false)` |
 | `SubViewerFormatter::OPTION_VERSION` | `SubViewerOptions(version: 1)` |
 | `CsvParser::TIME_SECONDS`, `TIME_DOT`, `TIME_COMMA`, `TIME_FRAMES` | `CsvTimeFormat::Seconds`, `Dot`, `Comma`, `Frames` |
+| `CsvParser::TIME_FORMATS` | `CsvTimeFormat::cases()` |
 
 ## Edits that became services
 Common one-step edits stay methods on `Subtitle`, for example `shift()`, `fixOverlaps()`, `mergeShortCues()` and `changeCase()`. An edit with many settings is a service with one static `apply()`. It changes the subtitle and returns a report. See [subtitle.md](subtitle.md#call-shapes).
@@ -142,6 +145,8 @@ Common one-step edits stay methods on `Subtitle`, for example `shift()`, `fixOve
 | `SpeakerLabels::rename($subtitle, ['MAN' => 'TOM'])` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(rename: ['MAN' => 'TOM']))` |
 | `$subtitle->forcedOnly()` | `$subtitle->onlyForced()` |
 | `$subtitle->getErrors()` | `$subtitle->validate(ValidationRules::structure())`. `getCueIndex()` of the result is null for a subtitle without cues |
+
+`ResegmentOptions` and `ReferenceSyncOptions` have a new first parameter, and `ShotChangeOptions` has a new second one. Pass their arguments by name, as the table does.
 
 `ReferenceSync` and `ReferenceSyncOptions` are in `SubtitleToolbox\Sync`. `ShotChangeTiming` and `ShotChangeOptions` are in `SubtitleToolbox\Timing`.
 
@@ -187,6 +192,7 @@ These changes alter the output or the exit code of a call that needs no other ch
 | Last cue without an end, SubViewer 1, LRC, SAMI, CSV and TSV, HTML transcript, Podcasting 2.0 transcript | lasts 10 s | lasts 5 s, so it ends 5 s earlier | `lastCueDuration: 10` |
 | Last cue without an end, PGS, VobSub, MKV | lasts 5 s | lasts 5 s. PGS also accepts 0 | nothing |
 | Auto-detection | `Subtitle::parse($content)` and the CLI found chapters and cloud speech JSON | `Format::detect()`, `fromStringAutoDetectFormat()`, `loadAutoDetectFormat()` and the CLI without `--from` try subtitle formats only. A chapter list or a Deepgram file throws `UnknownFormatException` | name the format, for example `Subtitle::load('call.json', Format::Deepgram)` or `--from deepgram` |
+| Unknown format | auto-detection threw `InvalidParserException` with error code 102 | it throws `UnknownFormatException`, a subclass of `InvalidParserException`, with error code 106 | catch `InvalidParserException` |
 | Detection of JSON | a regular expression on the text | the keys of the decoded JSON. Content that starts with `{` and is not valid JSON gives null. YouTube json3 needs `tStartMs` in its first event | name the format |
 | CLI output of one input | `convert movie.srt --to vtt` wrote `movie.vtt` | every command writes one input to standard output | `-o FILE` or `--output-dir DIR` |
 | CLI output of 2 or more inputs | the commands that edit a file failed and asked for `--output-dir` or `--in-place` | every command writes each output next to its input, with the extension of the output format | `--output-dir` or `--in-place` |

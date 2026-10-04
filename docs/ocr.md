@@ -7,6 +7,8 @@ An **image cue** is a cue with a PNG image in the format data key `image`. It ha
 
 ```php
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Ocr\GlyphOcrEngine;
+use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\WriteOptions;
@@ -170,6 +172,8 @@ use GlyphOcr\GlyphDatabase;
 use GlyphOcr\Image;
 use GlyphOcr\Recognizer;
 use GlyphOcr\Trainer;
+use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\Ocr\GlyphOcrEngine;
 
 $database   = GlyphDatabase::subtitleFonts();
 $recognizer = new Recognizer($database);
@@ -194,6 +198,7 @@ $subtitle->recognizeText(new GlyphOcrEngine(GlyphDatabase::fromFile('my-font.noc
 An engine is a class that implements `OcrEngine`. This example sends each image to an OCR web service:
 
 ```php
+use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\OcrEngine;
 use SubtitleToolbox\Ocr\OcrResult;
 
