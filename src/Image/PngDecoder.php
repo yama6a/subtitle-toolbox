@@ -54,13 +54,19 @@ final class PngDecoder
                                                "$depth and interlace method $interlace - only non-interlaced PNG files are supported!");
         }
 
-        self::requireFunction("gzuncompress");
-        $scanlines = @gzuncompress(implode("", $chunks["IDAT"] ?? []));
-        if ($scanlines === false) {
-            throw new InvalidArgumentException("Cannot decode the PNG - its IDAT chunks hold no valid zlib data!");
+        $tooLarge = CueImage::sizeLimitError($width, $height);
+        if ($tooLarge !== null) {
+            throw new InvalidArgumentException("Cannot decode the PNG - $tooLarge");
         }
 
         $rowLength = intdiv($width * $channels * $depth + 7, 8);
+        self::requireFunction("gzuncompress");
+        $scanlines = @gzuncompress(implode("", $chunks["IDAT"] ?? []), ($rowLength + 1) * $height);
+        if ($scanlines === false) {
+            throw new InvalidArgumentException("Cannot decode the PNG - its IDAT chunks hold no valid zlib data, " .
+                                               "or more data than {$width}x{$height} pixels need!");
+        }
+
         if (strlen($scanlines) < ($rowLength + 1) * $height) {
             throw new InvalidArgumentException("Cannot decode a PNG of {$width}x{$height} pixels from " . strlen($scanlines) .
                                                " bytes of image data - it needs " . ($rowLength + 1) * $height . "!");

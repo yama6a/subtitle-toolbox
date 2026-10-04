@@ -76,6 +76,9 @@ class SyncCommand extends WriteCommand
         if (!ctype_digit($maxSplits)) {
             self::fail("The option --max-splits needs a whole number, got \"$maxSplits\".");
         }
+        if (strlen(ltrim($maxSplits, "0")) > 2 || (int)$maxSplits > ReferenceSyncOptions::MAX_SPLITS) {
+            self::fail("The option --max-splits must be from 0 to " . ReferenceSyncOptions::MAX_SPLITS . ", got $maxSplits.");
+        }
         if (($arguments->float("split-penalty") ?? 0) < 0) {
             self::fail("The option --split-penalty must not be negative.");
         }

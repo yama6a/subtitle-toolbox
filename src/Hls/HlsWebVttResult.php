@@ -4,38 +4,63 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Hls;
 
+use Closure;
+use Generator;
+
 final class HlsWebVttResult
 {
     /**
-     * @param array<string, string> $segments  file name => WebVTT content, in playlist order
-     * @param array<string, float>  $durations file name => segment duration in seconds
+     * @internal HlsWebVttSegmenter::segment() creates the result.
+     *
+     * @param Closure(): Generator<string, string> $segments yields file name => WebVTT content
+     * @param int                                  $totalMillis the milliseconds that the playlist covers
      */
     public function __construct(
-        private readonly array $segments,
-        private readonly array $durations,
+        private readonly Closure $segments,
+        private readonly HlsSegmentOptions $options,
+        private readonly int $totalMillis,
     ) {
     }
 
 
     /**
-     * Returns the WebVTT content of each segment, keyed by its file name, in playlist order.
-     *
-     * @return array<string, string>
+     * @internal
      */
-    public function getSegments(): array
+    public static function segmentMillis(HlsSegmentOptions $options): int
     {
-        return $this->segments;
+        return (int) round($options->segmentDuration * 1000);
+    }
+
+
+    public function getSegmentCount(): int
+    {
+        return intdiv($this->totalMillis + self::segmentMillis($this->options) - 1, self::segmentMillis($this->options));
     }
 
 
     /**
-     * Returns the duration in seconds of each segment, keyed by its file name.
+     * Yields the WebVTT content of each segment, keyed by its file name, in playlist order. Each call writes the
+     * segments again, one at a time. iterator_to_array() returns all of them as an array.
      *
-     * @return array<string, float>
+     * @return Generator<string, string>
      */
-    public function getDurations(): array
+    public function getSegments(): Generator
     {
-        return $this->durations;
+        yield from ($this->segments)();
+    }
+
+
+    /**
+     * Yields the duration in seconds of each segment, keyed by its file name, in playlist order.
+     *
+     * @return Generator<string, float>
+     */
+    public function getDurations(): Generator
+    {
+        $segmentMillis = self::segmentMillis($this->options);
+        for ($startMillis = 0, $index = 0; $startMillis < $this->totalMillis; $startMillis += $segmentMillis, $index++) {
+            yield $this->options->fileName($index) => (min($startMillis + $segmentMillis, $this->totalMillis) - $startMillis) / 1000.0;
+        }
     }
 
 
@@ -47,18 +72,17 @@ final class HlsWebVttResult
     public function getPlaylist(): string
     {
         // RFC 8216 section 4.3.3.1: every EXTINF, rounded to the nearest integer, must not exceed the target duration.
-        $rounded        = array_map(fn (float $duration): int => (int) round($duration), array_values($this->durations));
-        $targetDuration = max(1, ...$rounded);
+        $targetDuration = 1;
+        foreach ($this->getDurations() as $duration) {
+            $targetDuration = max($targetDuration, (int) round($duration));
+        }
 
         // RFC 8216 section 7: decimal EXTINF durations need protocol version 3.
-        $lines = ["#EXTM3U", "#EXT-X-VERSION:3", "#EXT-X-TARGETDURATION:$targetDuration", "#EXT-X-MEDIA-SEQUENCE:0",
-                  "#EXT-X-PLAYLIST-TYPE:VOD"];
-        foreach ($this->durations as $name => $duration) {
-            $lines[] = sprintf("#EXTINF:%.3f,", $duration);
-            $lines[] = $name;
+        $playlist = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:$targetDuration\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-PLAYLIST-TYPE:VOD\n";
+        foreach ($this->getDurations() as $name => $duration) {
+            $playlist .= sprintf("#EXTINF:%.3f,\n", $duration) . $name . "\n";
         }
-        $lines[] = "#EXT-X-ENDLIST";
 
-        return implode("\n", $lines) . "\n";
+        return $playlist . "#EXT-X-ENDLIST\n";
     }
 }

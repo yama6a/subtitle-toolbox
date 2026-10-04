@@ -401,6 +401,10 @@ class VobSubParser extends SubtitleParser
     private function decodeImage(string $unit, array $offsets, int $x, int $y, int $width, int $height,
                                  array $pixelColors, bool $forced): CueImage
     {
+        $tooLarge = CueImage::sizeLimitError($width, $height);
+        if ($tooLarge !== null) {
+            throw new ParsingException("The subtitle packet cannot be read: $tooLarge");
+        }
         $pixels    = array_fill(0, $width * $height, $pixelColors[0]);
         $nibbleEnd = strlen($unit) * 2;
         foreach ($offsets as $field => $offset) {

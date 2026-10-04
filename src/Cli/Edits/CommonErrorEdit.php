@@ -67,8 +67,8 @@ final class CommonErrorEdit extends Edit
         foreach (CommonErrorFixer::apply($subtitle, $this->options)->fixes as $fix) {
             if ($this->list) {
                 $console->err("$label: cue " . ($fix->cueIndex + 1) . ": $fix->rule: " .
-                              json_encode($fix->before, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . " -> " .
-                              json_encode($fix->after, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n");
+                              json_encode($fix->before, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) . " -> " .
+                              json_encode($fix->after, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) . "\n");
             }
         }
 
