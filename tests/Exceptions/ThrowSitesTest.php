@@ -336,6 +336,10 @@ class ThrowSitesTest extends TestCase
             "Formatters/TtmlFormatter.php: stored head"     => [fn () => self::subtitle()->setFormatData(TtmlParser::FORMAT, ["head" => "<p/>"])
                 ->toString(Format::Ttml), InvalidFormatterException::class, InvalidFormatterException::class],
             "FrameRate.php: frame rate 0"                   => [fn () => new FrameRate(0), ...$invalid],
+            "FormatDataSchema.php: wrong type"              => [fn () => self::fromArray(["formatData" => ["scc" => ["dropFrame" => "x"]]]), ...$parsing],
+            "FormatDataSchema.php: numeric key"             => [fn () => self::fromArray(["formatData" => ["ttml" => ["body" => ["x"]]]]), ...$parsing],
+            "FormatDataSchema.php: unknown key"             => [fn () => self::fromArray(["formatData" => ["csv" => ["header" => null, "width" => 1, "roles" => ["x" => 0]]]]), ...$parsing],
+            "FormatDataSchema.php: missing field"           => [fn () => self::fromArray(["formatData" => ["csv" => ["delimiter" => ","]]]), ...$parsing],
             "HearingImpairedOptions.php: empty bracket"     => [fn () => new HearingImpairedOptions(customBrackets: [["{", ""]]), ...$invalid],
             "Hls/HlsSegmentOptions.php: segment duration 0" => [fn () => new HlsSegmentOptions(segmentDuration: 0), ...$invalid],
             "Hls/HlsSegmentOptions.php: no %d in pattern"   => [fn () => new HlsSegmentOptions(fileNamePattern: "sub.vtt"), ...$invalid],
@@ -419,6 +423,7 @@ class ThrowSitesTest extends TestCase
             "Parsers/EbuStlParser.php: code table 09"       => [fn () => (new EbuStlParser())->parse(
                 str_pad("850STL25.01109", 1024, " "), new ReadOptions()), ...$parsing],
             "Parsers/GoogleSpeechParser.php: no results"    => [fn () => (new GoogleSpeechParser())->parse('{"done": true}', new ReadOptions()), ...$parsing],
+            "Parsers/GoogleSpeechParser.php: alternatives"  => [fn () => (new GoogleSpeechParser())->parse('{"results": [{"alternatives": "x"}]}', new ReadOptions()), ...$parsing],
             "Parsers/FfMetadataChaptersParser.php: no header" => [fn () => (new FfMetadataChaptersParser())->parse("title=x", new ReadOptions()), ...$parsing],
             "Parsers/FfMetadataChaptersParser.php: time base 0" => [fn () => (new FfMetadataChaptersParser())->parse(
                 ";FFMETADATA1\n[CHAPTER]\nTIMEBASE=0/1\n", new ReadOptions()), ...$parsing],
@@ -460,6 +465,8 @@ class ThrowSitesTest extends TestCase
             "Parsers/PodcastChaptersParser.php: no chapters" => [fn () => (new PodcastChaptersParser())->parse('{"version": "1.2.0"}', new ReadOptions()), ...$parsing],
             "Parsers/PodcastChaptersParser.php: start no number" => [fn () => (new PodcastChaptersParser())->parse(
                 '{"chapters": [{"title": "x"}]}', new ReadOptions()), ...$parsing],
+            "Parsers/PodcastChaptersParser.php: end no number" => [fn () => (new PodcastChaptersParser())->parse(
+                '{"chapters": [{"startTime": 1, "endTime": "2"}]}', new ReadOptions()), ...$parsing],
             "Parsers/PodcastTranscriptParser.php: no JSON"  => [fn () => (new PodcastTranscriptParser())->parse("{", new ReadOptions()), ...$parsing],
             "Parsers/PodcastTranscriptParser.php: root no object" => [fn () => (new PodcastTranscriptParser())->parse("[1]", new ReadOptions()), ...$parsing],
             "Parsers/PodcastTranscriptParser.php: no segments" => [fn () => (new PodcastTranscriptParser())->parse('{"version": "1.0.0"}', new ReadOptions()),

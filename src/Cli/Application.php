@@ -88,6 +88,10 @@ class Application
             return $command->run($arguments, $this->console);
         } catch (SubtitleToolboxException $exception) {
             return $this->usageError($exception->getMessage(), "help " . $command->name());
+        } catch (\Throwable $throwable) {
+            $this->console->err("Error: " . FileCommand::throwableMessage($throwable) . "\n");
+
+            return self::EXIT_FAILURE;
         }
     }
 

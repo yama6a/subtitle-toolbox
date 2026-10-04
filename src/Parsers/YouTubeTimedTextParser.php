@@ -56,7 +56,7 @@ class YouTubeTimedTextParser extends SubtitleParser
         } catch (JsonException $exception) {
             throw new ParsingException("The content is not valid JSON: {$exception->getMessage()}.");
         }
-        if (!is_array($data["events"] ?? null)) {
+        if (!is_array($data["events"] ?? null) || !array_is_list($data["events"])) {
             throw new ParsingException("The JSON has no \"events\" list.");
         }
 
@@ -128,7 +128,7 @@ class YouTubeTimedTextParser extends SubtitleParser
     private function milliseconds(mixed $object, string $key, string $path, ?int $default = null): int|float
     {
         $value = is_array($object) ? $object[$key] ?? $default : null;
-        if (!is_int($value) && !is_float($value)) {
+        if (!is_int($value) && (!is_float($value) || !is_finite($value))) {
             throw new ParsingException("The field $path.$key must be a number.");
         }
 
@@ -305,7 +305,7 @@ class YouTubeTimedTextParser extends SubtitleParser
     private function time(DOMElement $element, string $name, ?string $default = null): float
     {
         $value = $element->hasAttribute($name) ? trim($element->getAttribute($name)) : $default;
-        if ($value === null || !is_numeric($value) || (float) $value < 0) {
+        if ($value === null || !is_numeric($value) || (float) $value < 0 || !is_finite((float) $value)) {
             throw new ParsingException("The <{$element->nodeName}> element has no valid \"$name\" attribute.", $element->getLineNo());
         }
 

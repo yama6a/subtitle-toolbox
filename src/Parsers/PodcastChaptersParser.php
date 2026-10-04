@@ -39,15 +39,18 @@ class PodcastChaptersParser extends SubtitleParser
         $chapters = [];
         foreach ($data["chapters"] as $index => $chapter) {
             $start = is_array($chapter) ? $chapter["startTime"] ?? null : null;
-            if (!is_int($start) && !is_float($start)) {
+            if (!is_int($start) && (!is_float($start) || !is_finite($start))) {
                 throw new ParsingException("The field chapters[$index].startTime must be a number.");
             }
             $end   = $chapter["endTime"] ?? null;
+            if ($end !== null && !is_int($end) && (!is_float($end) || !is_finite($end))) {
+                throw new ParsingException("The field chapters[$index].endTime must be a number.");
+            }
             $title = $chapter["title"] ?? null;
 
             $cue = new SubtitleCue($start, $start, is_string($title) ? Markup::escapeText($title) : "");
             $cue->setFormatData(self::FORMAT_DATA_KEY, array_diff_key($chapter, array_flip(["startTime", "endTime", "title"])));
-            $chapters[] = [$cue, is_int($end) || is_float($end) ? (float) $end : null];
+            $chapters[] = [$cue, $end === null ? null : (float) $end];
         }
         usort($chapters, fn (array $a, array $b): int => $a[0]->getStart() <=> $b[0]->getStart());
 

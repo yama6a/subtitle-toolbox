@@ -60,8 +60,8 @@ class WhisperJsonParser extends SubtitleParser
         }
 
         $segments = match (true) {
-            is_array($data["segments"] ?? null)      => $this->readSegments($data["segments"], $data["words"] ?? null),
-            is_array($data["transcription"] ?? null) => $this->readTranscription($data["transcription"]),
+            self::isList($data["segments"] ?? null)      => $this->readSegments($data["segments"], $data["words"] ?? null),
+            self::isList($data["transcription"] ?? null) => $this->readTranscription($data["transcription"]),
             default                                  => throw new ParsingException("The JSON has no \"segments\" or \"transcription\" list."),
         };
 
@@ -179,10 +179,16 @@ class WhisperJsonParser extends SubtitleParser
     }
 
 
+    private static function isList(mixed $value): bool
+    {
+        return is_array($value) && array_is_list($value);
+    }
+
+
     private function seconds(mixed $object, string $key, string $path): float
     {
         $value = is_array($object) ? $object[$key] ?? null : null;
-        if (!is_int($value) && !is_float($value)) {
+        if (!is_int($value) && (!is_float($value) || !is_finite($value))) {
             throw new ParsingException("The field $path.$key must be a number.");
         }
 
