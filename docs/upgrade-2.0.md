@@ -150,16 +150,7 @@ See [cli.md](cli.md) for every command and option.
 
 | 1.x | 2.0 |
 |:--- |:--- |
-| `shift FILE --by 2 --after 60` | `retime FILE --shift 2 --shift-after 60`. `shift` still runs and prints a deprecation warning |
-| `scale FILE --factor 1.001` | `retime FILE --scale 1.001`. `scale` still runs and prints a deprecation warning |
-| `fps FILE --from 25 --to 23.976`, `sync-fps` | `retime FILE --from-fps 25 --to-fps 23.976`. `fps` and `sync-fps` are removed |
-| `fix FILE --overlaps --min-gap 0.083` | `convert FILE --fix-overlaps --fix-min-gap 0.083`. `fix` is removed. Each `fix --X` option becomes `--fix-X` |
-| `fix FILE --common-errors --replace-list L --list-fixes` | `convert FILE --fix-common-errors --fix-replace-list L --fix-list` |
-| `fix FILE --language de`, `convert --case-language de` | `--language de` |
-| `strip-sdh FILE` | `convert FILE --sdh`. `strip-sdh` is removed |
-| `strip-sdh FILE --lyrics --brackets "{}"` | `convert FILE --sdh --sdh-lyrics --sdh-brackets "{}"`. Each `strip-sdh --X` option becomes `--sdh-X` |
-| `snap FILE --shot-changes F --fps 24` | `convert FILE --snap-shot-changes F --video-fps 24`. `snap` is removed |
-| `snap --snap-window 12 --min-gap-frames 2 --min-duration-frames 20 --no-chain` | `--snap-window-frames 12 --snap-min-gap-frames 2 --snap-min-duration-frames 20 --snap-no-chain` |
+| `convert --case-language de` | `convert --language de` |
 | `convert --replace FROM=TO --regex --ignore-case` | `convert --replace FROM=TO --replace-regex --replace-ignore-case` |
 | `convert --karaoke-tag kf` | `convert --ass-karaoke-tag kf` |
 | `convert --karaoke-mode`, `--karaoke-words` | removed. Use `WordHighlightOptions` in PHP |
@@ -171,6 +162,22 @@ See [cli.md](cli.md) for every command and option.
 | none | `diff` and `dual` read the second file with `--from2` and `--track2`. `convert` and `dual` take `--in-place`. `diff`, `dual` and `hls` take `--keep-going` |
 
 The new `translate` command translates with DeepL or Google, see [cli.md](cli.md#translate).
+
+### Removed commands
+2.0 removes the commands `shift`, `scale`, `fps` with its alias `sync-fps`, `fix`, `strip-sdh` and `snap`. They fail like any unknown command: exit code 2 and a pointer to the command list. Use the `retime` or `convert` call of the table.
+
+| 1.x | 2.0 |
+|:--- |:--- |
+| `shift FILE --by 2 --after 60` | `retime FILE --shift 2 --shift-after 60` |
+| `scale FILE --factor 1.001` | `retime FILE --scale 1.001` |
+| `fps FILE --from 25 --to 23.976`, `sync-fps FILE --from 25 --to 23.976` | `retime FILE --from-fps 25 --to-fps 23.976` |
+| `fix FILE --overlaps --min-gap 0.083` | `convert FILE --fix-overlaps --fix-min-gap 0.083`. Each `fix --X` option becomes `--fix-X` |
+| `fix FILE --common-errors --replace-list L --list-fixes --language de` | `convert FILE --fix-common-errors --fix-replace-list L --fix-list --language de` |
+| `strip-sdh FILE` | `convert FILE --sdh` |
+| `strip-sdh FILE --lyrics --brackets "{}"` | `convert FILE --sdh --sdh-lyrics --sdh-brackets "{}"`. Each `strip-sdh --X` option becomes `--sdh-X` |
+| `snap FILE --shot-changes F --fps 24` | `convert FILE --snap-shot-changes F --video-fps 24` |
+| `snap FILE --fps 24 --snap-window 12 --min-gap-frames 2 --min-duration-frames 20 --no-chain` | `convert FILE --video-fps 24 --snap-window-frames 12 --snap-min-gap-frames 2 --snap-min-duration-frames 20 --snap-no-chain` |
+| `snap FILE --fps 24` without other snap options | `convert FILE --video-fps 24 --snap-min-gap-frames 2` |
 
 ## Behaviour changes
 These changes alter the output or the exit code of a call that needs no other change.
@@ -184,9 +191,9 @@ These changes alter the output or the exit code of a call that needs no other ch
 | Auto-detection | `Subtitle::parse($content)` and the CLI found chapters and cloud speech JSON | `Format::detect()`, `fromStringAutoDetectFormat()`, `loadAutoDetectFormat()` and the CLI without `--from` try subtitle formats only. A chapter list or a Deepgram file throws `UnknownFormatException` | name the format, for example `Subtitle::load('call.json', Format::Deepgram)` or `--from deepgram` |
 | Detection of JSON | a regular expression on the text | the keys of the decoded JSON. Content that starts with `{` and is not valid JSON gives null. YouTube json3 needs `tStartMs` in its first event | name the format |
 | CLI output of one input | `convert movie.srt --to vtt` wrote `movie.vtt` | every command writes one input to standard output | `-o FILE` or `--output-dir DIR` |
-| CLI output of 2 or more inputs | `shift`, `scale`, `fps`, `fix`, `strip-sdh` and `snap` failed and asked for `--output-dir` or `--in-place` | every command writes each output next to its input, with the extension of the output format | `--output-dir` or `--in-place` |
+| CLI output of 2 or more inputs | the commands that edit a file failed and asked for `--output-dir` or `--in-place` | every command writes each output next to its input, with the extension of the output format | `--output-dir` or `--in-place` |
+| `convert --help` | listed every option | lists the common options and the option groups. `convert --help GROUP` lists the options of one group | `convert --help all` |
 | CLI inputs | `--force` let a command write over its input | a command never overwrites an input without `--in-place`, also not with `--force`. That file fails | `--in-place` |
-| Old CLI commands | `shift`, `scale`, `fps`, `sync-fps`, `fix`, `strip-sdh` and `snap` ran | `shift` and `scale` run and print a deprecation warning on standard error. The others exit with code 2 and print the matching `retime` or `convert` call | use the printed call |
 | Unknown options | before 1.70.5, a misspelled key or a key of another format was ignored. 1.70.5 and later threw `InvalidArgumentException` | a misspelled field, such as `new WriteOptions(lineEndings: LineEnding::Crlf)`, is a PHP `Error` for an unknown named parameter. An options class of another format, such as `new CsvOptions()` for SubRip output, throws `InvalidArgumentException`. Read classes follow the same rule | fix the name, or pass the class of the format |
 | Strict types | the library converted scalar values | every file declares `strict_types`. A `mapText()`, `mapLines()`, `Markup::mapTextRuns()` or `ProfanityOptions` mask callback must return a string, else it throws `TypeError`. `GlyphOcrEngine` options need their exact types, for example `['inkThreshold' => 128]` | return the documented type |
 | Karaoke | `WordHighlight::expand()` returned a new subtitle and left its input as it was | `WordHighlight::apply()` changes the subtitle that you pass | pass `clone $subtitle` |
