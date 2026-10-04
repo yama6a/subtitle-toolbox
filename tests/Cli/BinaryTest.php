@@ -1121,6 +1121,18 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testInfoListsTheTracksOfAnMkvFileOnStandardInput(): void
+    {
+        $this->assertSame(
+            [0, "stdin\n  Format: matroska\n  Track 3: S_HDMV/PGS, ger, default\n  Track 4: S_HDMV/PGS, eng, default, forced\n", ""],
+            $this->runBinary(["info", "-"], file_get_contents(self::FILES . "mkv/pgs.mkv"))
+        );
+
+        [$code, $stdout] = $this->runBinary(["info", "-", "--json"], file_get_contents(self::FILES . "mkv/pgs.mkv"));
+        $this->assertSame([0, "stdin", [3, 4]], [$code, json_decode($stdout, true)["file"], array_column(json_decode($stdout, true)["tracks"], "number")]);
+    }
+
+
     public function testImageFormats(): void
     {
         mkdir("$this->dir/disc");

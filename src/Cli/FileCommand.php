@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
+use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Exceptions\SubtitleToolboxException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\ParseWarning;
@@ -305,20 +306,16 @@ abstract class FileCommand extends Command
     {
         $this->parseWarnings = [];
         $track               = $arguments->positiveInt("track");
-        if ($input === self::DASH) {
-            $subtitle = $this->readStdin($track, $console);
-        } else {
+        if ($input !== self::DASH) {
             if (!is_file($input)) {
                 self::fail("The file does not exist.");
             }
-            if ($track === null && $this->listTracks($input, $console)) {
-                return null;
-            }
-            $subtitle = match (true) {
-                $track !== null            => Subtitle::loadTrack($input, $track, $this->readOptions),
-                $this->fromFormat !== null => Subtitle::load($input, $this->fromFormat, $this->readOptions),
-                default                    => Subtitle::loadAutoDetectFormat($input, $this->readOptions),
-            };
+            $subtitle = $this->readPath($input, $input, $track, $console);
+        } else {
+            $subtitle = $this->readStdin($track, $console);
+        }
+        if ($subtitle === null) {
+            return null;
         }
         // An MKV or WebM input has an extension of no subtitle format, so the output gets the extension of its format.
         $this->fromContainer = $track !== null || ($input !== self::DASH && Format::fromPath($input) === null);
@@ -364,23 +361,42 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Handles an MKV or WebM input without --track. Returns false to read its only subtitle track.
+     * Handles the MKV or WebM file at $path without --track. $input is the argument that named it. Returns false to
+     * read its only subtitle track.
      */
-    protected function listTracks(string $input, Console $console): bool
+    protected function listTracks(string $path, string $input, Console $console): bool
     {
         return false;
     }
 
 
-    private function readStdin(?int $track, Console $console): Subtitle
+    /**
+     * Returns null when listTracks() handled an MKV or WebM file.
+     */
+    private function readPath(string $path, string $input, ?int $track, Console $console): ?Subtitle
+    {
+        if ($track === null && $this->listTracks($path, $input, $console)) {
+            return null;
+        }
+
+        return match (true) {
+            $track !== null            => Subtitle::loadTrack($path, $track, $this->readOptions),
+            $this->fromFormat !== null => Subtitle::load($path, $this->fromFormat, $this->readOptions),
+            default                    => Subtitle::loadAutoDetectFormat($path, $this->readOptions),
+        };
+    }
+
+
+    private function readStdin(?int $track, Console $console): ?Subtitle
     {
         $content = $console->readStdin();
-        if ($track !== null) {
+        if ($track !== null || str_starts_with($content, MatroskaReader::EBML_MAGIC)) {
+            // The track list and loadTrack() need a file.
             $path = tempnam(sys_get_temp_dir(), Application::NAME . "-");
             try {
                 file_put_contents($path, $content);
 
-                return Subtitle::loadTrack($path, $track, $this->readOptions);
+                return $this->readPath($path, self::DASH, $track, $console);
             } finally {
                 @unlink($path);
             }

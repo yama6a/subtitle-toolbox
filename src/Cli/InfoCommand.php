@@ -47,13 +47,13 @@ class InfoCommand extends ReportCommand
     }
 
 
-    protected function listTracks(string $input, Console $console): bool
+    protected function listTracks(string $path, string $input, Console $console): bool
     {
         if (Format::fromPath($input) !== null) {
             return false;
         }
         try {
-            $tracks = Subtitle::tracks($input);
+            $tracks = Subtitle::tracks($path);
         } catch (ParsingException) {
             return false;
         }
