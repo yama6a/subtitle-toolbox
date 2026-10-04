@@ -265,14 +265,19 @@ class Subtitle implements \IteratorAggregate, \Countable
 
     private static function pairedFile(string $path, string $extension): string
     {
-        $stem = substr($path, 0, -strlen(pathinfo($path, PATHINFO_EXTENSION)));
+        $own  = pathinfo($path, PATHINFO_EXTENSION);
+        $stem = match (true) {
+            $own !== ""                => substr($path, 0, -strlen($own)),
+            str_ends_with($path, ".") => $path,
+            default                    => "$path.",
+        };
         foreach ([$extension, strtoupper($extension)] as $candidate) {
             if (is_file($stem . $candidate)) {
                 return $stem . $candidate;
             }
         }
 
-        throw new InvalidArgumentException("VobSub needs the .$extension file next to $path.");
+        throw new InvalidArgumentException("VobSub needs the .$extension file next to $path, but $stem$extension does not exist.");
     }
 
 

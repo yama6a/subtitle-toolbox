@@ -47,7 +47,7 @@ $subtitle->getFormat();                               // Format::SubRip, the for
 $subtitle->save('movie.txt', Format::WebVtt);         // the format argument wins over the extension
 ```
 
-- **`load()`**: reads the file in the given format and never guesses. For VobSub, pass the `.idx` or the `.sub` file. The other file must lie next to it.
+- **`load()`**: reads the file in the given format and never guesses. For VobSub, pass the `.idx` or the `.sub` file. The other file must lie next to it. A path without extension, such as `d/movie`, is the `.sub` file, and `d/movie.idx` must exist. Else `load()` throws `InvalidArgumentException`.
 - **`loadAutoDetectFormat()`**: tries only formats whose `isAutoDetected()` is true. It reads the format that [detection](detection.md) finds in the content. An iTT file with the `.itt` extension reads as iTT, not TTML.
 - **Extension fallback**: when detection finds nothing, `loadAutoDetectFormat()` takes the format of the extension, for example `.tsv`. It skips an extension that a format without detection also uses, such as `.json` and `.txt`. Then it throws `UnknownFormatException`.
 - **Chapters and cloud speech-to-text JSON**: they load only with `load()` and their format.
