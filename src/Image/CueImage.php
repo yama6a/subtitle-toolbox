@@ -12,10 +12,10 @@ final class CueImage
     public const FORMAT_DATA_KEY = "image";
 
     /** Largest width or height of an image in pixels. */
-    public const MAX_SIDE = 4096;
+    public const MAX_SIDE = 7680;
 
-    /** Largest number of pixels of an image: a full 1920x1080 frame. A larger image needs more than 128 MB to decode. */
-    public const MAX_PIXELS = 1920 * 1080;
+    /** Largest number of pixels of an image: a full 3840x2160 frame. */
+    public const MAX_PIXELS = 3840 * 2160;
 
     private const INTEGER_KEYS = ["x", "y", "width", "height", "screenWidth", "screenHeight"];
 

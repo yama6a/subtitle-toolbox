@@ -350,7 +350,7 @@ class ThrowSitesTest extends TestCase
             "Hls/TimestampMap.php: other header"            => [fn () => TimestampMap::fromHeader("WEBVTT"), ...$parsing],
             "Hls/TimestampMap.php: no MPEGTS"               => [fn () => TimestampMap::fromHeader("X-TIMESTAMP-MAP=LOCAL:00:00.000"), ...$parsing],
             "Image/CueImage.php: width 0"                   => [fn () => new CueImage("png", 0, 0, 0, 1, 1, 1), ...$invalid],
-            "Image/CueImage.php: too large"                 => [fn () => new CueImage("png", 0, 0, 5000, 1, 1, 1), ...$invalid],
+            "Image/CueImage.php: too large"                 => [fn () => new CueImage("png", 0, 0, 8000, 1, 1, 1), ...$invalid],
             "Image/CueImage.php: no image"                  => [fn () => CueImage::fromCue(new SubtitleCue(1, 2, "text")), ...$invalid],
             "Image/CueImage.php: no integer x"              => [fn () => CueImage::fromCue((new SubtitleCue(1, 2))
                 ->setFormatData(CueImage::FORMAT_DATA_KEY, ["png" => "png"])), ...$invalid],
@@ -365,7 +365,7 @@ class ThrowSitesTest extends TestCase
             "Image/PngDecoder.php: no IHDR"                 => [fn () => PngDecoder::decode("\x89PNG\r\n\x1a\n"), ...$invalid],
             "Image/PngDecoder.php: interlaced"              => [fn () => PngDecoder::decode(self::pngWithIhdr(1) . self::pngChunk("IDAT", "")), ...$invalid],
             "Image/PngDecoder.php: too large"               => [fn () => PngDecoder::decode("\x89PNG\r\n\x1a\n" .
-                self::pngChunk("IHDR", pack("NNCCCCC", 5000, 1, 8, 6, 0, 0, 0)) . self::pngChunk("IDAT", "")), ...$invalid],
+                self::pngChunk("IHDR", pack("NNCCCCC", 8000, 1, 8, 6, 0, 0, 0)) . self::pngChunk("IDAT", "")), ...$invalid],
             "Image/PngDecoder.php: invalid zlib data"       => [fn () => PngDecoder::decode(self::pngWithIhdr(0) . self::pngChunk("IDAT", "nope")), ...$invalid],
             "Image/PngDecoder.php: too few rows"            => [fn () => PngDecoder::decode(self::pngWithIhdr(0) . self::pngChunk("IDAT", gzcompress(""))),
                                                                 ...$invalid],
@@ -465,9 +465,9 @@ class ThrowSitesTest extends TestCase
                 self::pgsSegment(0x15, "\0\7\0\xC0\0\0\7\0\4\0\2\1\1\0\0") .
                 self::pgsSegment(0x80, ""), new ReadOptions()), ...$parsing],
             "Parsers/PgsParser.php: object too large"       => [fn () => (new PgsParser())->parse(
-                self::pgsSegment(0x15, "\0\7\0\xC0\0\0\4" . pack("nn", 5000, 1)), new ReadOptions()), ...$parsing],
+                self::pgsSegment(0x15, "\0\7\0\xC0\0\0\4" . pack("nn", 8000, 1)), new ReadOptions()), ...$parsing],
             "Parsers/PgsParser.php: objects too far apart"  => [fn () => (new PgsParser())->parse(
-                self::pgsSegment(0x16, "\x02\xD0\x02\x40\x10\0\1\x80\0\0\2" . "\0\1\0\0\0\0\0\0" . "\0\2\0\0" . pack("nn", 5000, 0)) .
+                self::pgsSegment(0x16, "\x02\xD0\x02\x40\x10\0\1\x80\0\0\2" . "\0\1\0\0\0\0\0\0" . "\0\2\0\0" . pack("nn", 8000, 0)) .
                 self::pgsSegment(0x14, "\0\0\1\x10\x80\x80\xFF") .
                 self::pgsSegment(0x15, "\0\1\0\xC0\0\0\5\0\1\0\1\1") .
                 self::pgsSegment(0x15, "\0\2\0\xC0\0\0\5\0\1\0\1\1") .

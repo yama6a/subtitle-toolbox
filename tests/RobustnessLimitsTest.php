@@ -136,22 +136,32 @@ class RobustnessLimitsTest extends TestCase
 
     public function testImagesLargerThanTheLimitThrowBeforeTheyAreDecoded(): void
     {
-        $png = "\x89PNG\r\n\x1a\n" . pack("N", 13) . "IHDR" . pack("NNCCCCC", 5000, 1, 8, 6, 0, 0, 0) . "\0\0\0\0";
-        foreach ([fn () => new CueImage("png", 0, 0, 4097, 1, 1920, 1080), fn () => new CueImage("png", 0, 0, 1921, 1080, 1920, 1080),
+        $png = "\x89PNG\r\n\x1a\n" . pack("N", 13) . "IHDR" . pack("NNCCCCC", 8000, 1, 8, 6, 0, 0, 0) . "\0\0\0\0";
+        foreach ([fn () => new CueImage("png", 0, 0, 7681, 1, 1920, 1080), fn () => new CueImage("png", 0, 0, 3841, 2160, 3840, 2160),
                   fn () => PngDecoder::decode($png)] as $call) {
             try {
                 $call();
                 $this->fail("No exception");
             } catch (InvalidArgumentException $exception) {
-                $this->assertStringContainsString("pixels is larger than the limit of 4096 pixels per side and 2073600 pixels in total.",
+                $this->assertStringContainsString("pixels is larger than the limit of 7680 pixels per side and 8294400 pixels in total.",
                                                   $exception->getMessage());
             }
         }
-        $this->assertSame(1920, (new CueImage("png", 0, 0, 1920, 1080, 1920, 1080))->width);
+        $this->assertSame(7680, (new CueImage("png", 0, 0, 7680, 1080, 7680, 1080))->width);
 
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Object 7 cannot be read: an image of 5000x1 pixels is larger than the limit");
-        (new PgsParser())->parse(self::pgsSegment(0x15, "\0\7\0\xC0\0\0\4" . pack("nn", 5000, 1)), new ReadOptions());
+        $this->expectExceptionMessage("Object 7 cannot be read: an image of 8000x1 pixels is larger than the limit");
+        (new PgsParser())->parse(self::pgsSegment(0x15, "\0\7\0\xC0\0\0\4" . pack("nn", 8000, 1)), new ReadOptions());
+    }
+
+
+    public function testA3840x2160ImageIsAccepted(): void
+    {
+        $image = new CueImage("png", 0, 0, 3840, 2160, 3840, 2160);
+
+        $this->assertSame([3840, 2160], [$image->width, $image->height]);
+        $this->assertNull(CueImage::sizeLimitError(3840, 2160));
+        $this->assertNotNull(CueImage::sizeLimitError(3840, 2161));
     }
 
 
