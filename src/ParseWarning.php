@@ -32,12 +32,17 @@ final class ParseWarning
 
     /**
      * Returns the warning for a block that the parser skipped, with the message of $exception without its class prefix.
+     * A warning with a line number also drops the " (line N)" end of the message, which would repeat it.
      *
      * @param list<string> $block
      */
     public static function skipped(ParsingException $exception, int $lineNumber, int $blockIndex, array $block): self
     {
         $message = preg_replace('/^ParsingException \(Error #\d+\): /', "", $exception->getMessage());
+        $suffix  = " (line {$exception->getLineNumber()})";
+        if ($lineNumber > 0 && $exception->getLineNumber() !== null && str_ends_with($message, $suffix)) {
+            $message = substr($message, 0, -strlen($suffix));
+        }
 
         return new self($message, $lineNumber, $blockIndex, $block, self::SKIPPED);
     }

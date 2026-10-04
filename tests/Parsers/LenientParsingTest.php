@@ -239,8 +239,8 @@ class LenientParsingTest extends TestCase
                     [5, 7, "<i>Tickets are sold on board.</i>"],
                 ],
                 [
-                    [1, 0, self::SKIPPED, "Line 1 is not a MicroDVD cue: Movie.Name.2003.DVDRip (line 1)"],
-                    [4, 3, self::SKIPPED, "Line 4 is not a MicroDVD cue: {x}{120}The deck is wet. (line 4)"],
+                    [1, 0, self::SKIPPED, "Line 1 is not a MicroDVD cue: Movie.Name.2003.DVDRip"],
+                    [4, 3, self::SKIPPED, "Line 4 is not a MicroDVD cue: {x}{120}The deck is wet."],
                 ],
             ],
             "ASS without a Format line, with a short event and a bad time" => [
@@ -253,7 +253,7 @@ class LenientParsingTest extends TestCase
                 ],
                 [
                     [11, 1, self::SKIPPED, "Line 11 has fewer fields than the Format line of the [Events] section: " .
-                                           "Dialogue: 0,0:00:04.00,0:00:06.00,Default (line 11)"],
+                                           "Dialogue: 0,0:00:04.00,0:00:06.00,Default"],
                     [12, 2, self::SKIPPED, "The time of at least one event could not be parsed: 0:00:0x.00"],
                 ],
             ],
@@ -266,7 +266,7 @@ class LenientParsingTest extends TestCase
                     [7, 9, "The stalls close\nat noon."],
                 ],
                 [
-                    [1, 0, self::SKIPPED, "Line 1 is neither a header tag nor a timing line: Downloaded from a subtitle site (line 1)"],
+                    [1, 0, self::SKIPPED, "Line 1 is neither a header tag nor a timing line: Downloaded from a subtitle site"],
                     [9, 1, self::SKIPPED, "Line 9 is a timing line with a bad time: 00:00:04.00,00:00:0x.00"],
                 ],
             ],
@@ -280,8 +280,8 @@ class LenientParsingTest extends TestCase
                 ],
                 [
                     [4, 0, self::REPAIRED, "The file has no FORMAT line before line 4. The parser read the times as seconds."],
-                    [7, 1, self::SKIPPED, "Line 7 is neither a header, a comment nor a timing line: 1 x (line 7)"],
-                    [13, 3, self::SKIPPED, "The cue that ends on line 13 doesn't have any text lines! (line 13)"],
+                    [7, 1, self::SKIPPED, "Line 7 is neither a header, a comment nor a timing line: 1 x"],
+                    [13, 3, self::SKIPPED, "The cue that ends on line 13 doesn't have any text lines!"],
                 ],
             ],
             "LRC with a broken time tag" => [
@@ -543,7 +543,7 @@ class LenientParsingTest extends TestCase
         $subtitle = (new SubViewerParser())->parse("[TITLE]\nMarket\nbroken\n" . SubViewerParser::START_SCRIPT . "\n[00:00:01]\nHello\n[00:00:02]\n", new ReadOptions(lenient: true));
 
         $this->assertSame("Hello", $subtitle->getCues()[0]->getText());
-        $this->assertSame([[3, 0, self::SKIPPED, "Line 3 is not a SubViewer 1 header tag: broken (line 3)"]], $this->warningRows($subtitle->getParseWarnings()));
+        $this->assertSame([[3, 0, self::SKIPPED, "Line 3 is not a SubViewer 1 header tag: broken"]], $this->warningRows($subtitle->getParseWarnings()));
     }
 
 
@@ -552,7 +552,7 @@ class LenientParsingTest extends TestCase
         $subtitle = (new MpSubParser())->parse("FORMAT=PAL\n\n1 2\nHello\n", new ReadOptions(lenient: true));
 
         $this->assertEquals([[1, 3, "Hello"]], $this->cueRows($subtitle->getCues()));
-        $this->assertSame([[1, 0, self::SKIPPED, "Line 1 has an unknown FORMAT value: PAL (line 1)"]], $this->warningRows($subtitle->getParseWarnings()));
+        $this->assertSame([[1, 0, self::SKIPPED, "Line 1 has an unknown FORMAT value: PAL"]], $this->warningRows($subtitle->getParseWarnings()));
     }
 
 
