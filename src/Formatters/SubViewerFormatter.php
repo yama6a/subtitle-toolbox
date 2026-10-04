@@ -69,7 +69,7 @@ final class SubViewerFormatter extends SubtitleFormatter
         }
         $output .= "[END INFORMATION]" . StringHelpers::UNIX_LINE_ENDING . "[SUBTITLE]" . StringHelpers::UNIX_LINE_ENDING;
 
-        $style = $subtitle->getFormatData(SubViewerParser::FORMAT)["style"] ?? null;
+        $style = $subtitle->getFormatData(SubViewerParser::FORMAT_DATA_KEY)["style"] ?? null;
         if ($style !== null) {
             $output .= $style . StringHelpers::UNIX_LINE_ENDING;
         }
@@ -102,6 +102,6 @@ final class SubViewerFormatter extends SubtitleFormatter
             $header[$tag] = $subtitle->getMetadata($metadataKey) ?? "";
         }
 
-        return $header + ($subtitle->getFormatData(SubViewerParser::FORMAT)["header"] ?? $defaultHeader);
+        return $header + ($subtitle->getFormatData(SubViewerParser::FORMAT_DATA_KEY)["header"] ?? $defaultHeader);
     }
 }

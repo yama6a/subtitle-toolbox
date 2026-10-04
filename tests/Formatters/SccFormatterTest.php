@@ -121,29 +121,29 @@ class SccFormatterTest extends TestCase
         $cue    = (new SubtitleCue(2.0, 4.0, ["Weather", "today"]))->setAlignment($alignment);
         $parsed = Subtitle::fromString($this->subtitle($cue)->toString(Format::Scc), Format::Scc)->getCues()[0];
 
-        $this->assertSame(["rows" => $rows, "columns" => $columns], array_diff_key($parsed->getFormatData(SccParser::FORMAT), ["mode" => 0]));
+        $this->assertSame(["rows" => $rows, "columns" => $columns], array_diff_key($parsed->getFormatData(SccParser::FORMAT_DATA_KEY), ["mode" => 0]));
         $this->assertSame(in_array($alignment, [7, 8], true) ? 8 : null, $parsed->getAlignment());
     }
 
 
     public function testKeepsRowsAndColumnsFromTheSccFormatData(): void
     {
-        $cue = (new SubtitleCue(2.0, 4.0, ["Left", "Right"]))->setFormatData(SccParser::FORMAT, ["rows" => [10, 12], "columns" => [3, 27]]);
+        $cue = (new SubtitleCue(2.0, 4.0, ["Left", "Right"]))->setFormatData(SccParser::FORMAT_DATA_KEY, ["rows" => [10, 12], "columns" => [3, 27]]);
 
         $parsed = Subtitle::fromString($this->subtitle($cue)->toString(Format::Scc), Format::Scc)->getCues()[0];
 
-        $this->assertSame([10, 12], $parsed->getFormatData(SccParser::FORMAT)["rows"]);
-        $this->assertSame([3, 27], $parsed->getFormatData(SccParser::FORMAT)["columns"]);
+        $this->assertSame([10, 12], $parsed->getFormatData(SccParser::FORMAT_DATA_KEY)["rows"]);
+        $this->assertSame([3, 27], $parsed->getFormatData(SccParser::FORMAT_DATA_KEY)["columns"]);
     }
 
 
     public function testIgnoresSccFormatDataThatNoLongerFitsTheCue(): void
     {
-        $cue = (new SubtitleCue(2.0, 4.0, ["One line"]))->setFormatData(SccParser::FORMAT, ["rows" => [10, 12], "columns" => [3, 27]]);
+        $cue = (new SubtitleCue(2.0, 4.0, ["One line"]))->setFormatData(SccParser::FORMAT_DATA_KEY, ["rows" => [10, 12], "columns" => [3, 27]]);
 
         $parsed = Subtitle::fromString($this->subtitle($cue)->toString(Format::Scc), Format::Scc)->getCues()[0];
 
-        $this->assertSame([15], $parsed->getFormatData(SccParser::FORMAT)["rows"]);
+        $this->assertSame([15], $parsed->getFormatData(SccParser::FORMAT_DATA_KEY)["rows"]);
     }
 
 

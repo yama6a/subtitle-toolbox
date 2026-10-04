@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SubtitleToolbox\Parsers;
+namespace SubtitleToolbox\Parsers\Options;
 
 /**
  * The read settings of Podcasting 2.0 JSON transcripts.

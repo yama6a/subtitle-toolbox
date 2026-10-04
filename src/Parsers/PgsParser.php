@@ -21,7 +21,7 @@ use SubtitleToolbox\SubtitleCue;
  * Position of a cropped object: libbluray graphics_controller.c,
  * https://code.videolan.org/videolan/libbluray/-/blob/0247557842050c8dfc0ae9293d76c3fb7386429a/src/libbluray/decoders/graphics_controller.c
  */
-class PgsParser extends SubtitleParser
+final class PgsParser extends SubtitleParser
 {
     private const MAGIC          = "PG";
     private const HEADER_LENGTH  = 13;

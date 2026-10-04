@@ -137,8 +137,8 @@ class JsonTypeErrorsTest extends TestCase
             "ASS script type number"   => [Format::Ass, ["ass" => ["scriptInfo" => ["ScriptType" => 4]]], "The field formatData.ass.scriptInfo.ScriptType must be a string."],
             "ASS section lines string" => [Format::Ass, ["ass" => ["sections" => ["Fonts" => "x"]]], "The field formatData.ass.sections.Fonts must be a list or an object."],
             "SCC drop frame string"    => [Format::Scc, ["scc" => ["dropFrame" => "x"]], "The field formatData.scc.dropFrame must be a boolean."],
-            "SAMI style number"        => [Format::Sami, ["smi" => ["style" => 7]], "The field formatData.smi.style must be a string."],
-            "MicroDVD frame rate"      => [Format::MicroDvd, ["sub" => ["frameRate" => "x"]], "The field formatData.sub.frameRate must be a finite number."],
+            "SAMI style number"        => [Format::Sami, ["sami" => ["style" => 7]], "The field formatData.sami.style must be a string."],
+            "MicroDVD frame rate"      => [Format::MicroDvd, ["microdvd" => ["frameRate" => "x"]], "The field formatData.microdvd.frameRate must be a finite number."],
             "TTML namespace number"    => [Format::Ttml, ["ttml" => ["namespace" => 7]], "The field formatData.ttml.namespace must be a string."],
             "TTML attributes list"     => [Format::Ttml, ["ttml" => ["attributes" => ["x"]]], "The field formatData.ttml.attributes must be an object whose keys are names, not numbers."],
             "SubViewer header string"  => [Format::SubViewer, ["subviewer" => ["header" => "x"]], "The field formatData.subviewer.header must be a list or an object."],
@@ -154,7 +154,7 @@ class JsonTypeErrorsTest extends TestCase
             "WebVTT header lines"      => [Format::WebVtt, ["vtt" => ["headerLines" => [5]]], "The field formatData.vtt.headerLines[0] must be a string."],
             "MPSub value list"         => [Format::MpSub, ["mpsub" => ["NOTE" => ["x"]]], "The field formatData.mpsub.NOTE must be a string."],
             "iTT frame rate number"    => [Format::Itt, ["itt" => ["frameRate" => 25]], "The field formatData.itt.frameRate must be a string."],
-            "FFmetadata stream tags"   => [Format::FfMetadata, ["ffmetadata" => ["streams" => ["x"]]], "The field formatData.ffmetadata.streams[0] must be a list or an object."],
+            "FFmetadata stream tags"   => [Format::FfMetadata, ["ffmeta" => ["streams" => ["x"]]], "The field formatData.ffmeta.streams[0] must be a list or an object."],
         ];
     }
 
@@ -171,7 +171,7 @@ class JsonTypeErrorsTest extends TestCase
 
         $subtitle = Subtitle::fromString($json, Format::Json, new ReadOptions(lenient: true));
         $warning  = $subtitle->getParseWarnings()[0];
-        $this->assertSame([$message, -1, ParseWarning::SKIPPED], [$warning->message, $warning->blockIndex, $warning->action]);
+        $this->assertSame([$message, null, ParseWarning::SKIPPED], [$warning->message, $warning->blockIndex, $warning->action]);
         $this->assertSame([json_encode([$key => $formatData[$key]])], $warning->block);
         $this->assertSame([], $subtitle->getFormatData($key));
         $this->assertCount(1, $subtitle->getCues());
@@ -186,12 +186,12 @@ class JsonTypeErrorsTest extends TestCase
         return [
             "ASS fields string"         => [["ass" => ["fields" => "x"]], "The field cues[0].formatData.ass.fields must be an object."],
             "ASS field number"          => [["ass" => ["fields" => ["Name" => 7]]], "The field cues[0].formatData.ass.fields.Name must be a string."],
-            "SAMI paragraph"            => [["smi" => ["paragraphs" => [["attributes" => [], "html" => 5]]]], "The field cues[0].formatData.smi.paragraphs[0].html must be a string."],
-            "MicroDVD line without codes" => [["sub" => ["lines" => [["color" => null, "tags" => []]]]], "The field cues[0].formatData.sub.lines[0].codes is missing."],
+            "SAMI paragraph"            => [["sami" => ["paragraphs" => [["attributes" => [], "html" => 5]]]], "The field cues[0].formatData.sami.paragraphs[0].html must be a string."],
+            "MicroDVD line without codes" => [["microdvd" => ["lines" => [["color" => null, "tags" => []]]]], "The field cues[0].formatData.microdvd.lines[0].codes is missing."],
             "TTML attribute number"     => [["ttml" => ["attributes" => ["region" => []]]], "The field cues[0].formatData.ttml.attributes.region must be a string."],
             "EBU STL group string"      => [["stl" => ["subtitleGroupNumber" => "1"]], "The field cues[0].formatData.stl.subtitleGroupNumber must be an integer."],
             "SubRip coordinates"        => [["srt" => ["coordinates" => ["x1" => 1]]], "The field cues[0].formatData.srt.coordinates.x2 is missing."],
-            "FFmetadata time base"      => [["ffmetadata" => ["timeBase" => "0/1000"]], "The field cues[0].formatData.ffmetadata.timeBase must be a time base such as \"1/1000\"."],
+            "FFmetadata time base"      => [["ffmeta" => ["timeBase" => "0/1000"]], "The field cues[0].formatData.ffmeta.timeBase must be a time base such as \"1/1000\"."],
             "image size string"         => [["image" => ["width" => "2"]], "The field cues[0].formatData.image.width must be an integer."],
             "WebVTT setting number"     => [["vtt" => ["line" => 0]], "The field cues[0].formatData.vtt.line must be a string."],
         ];

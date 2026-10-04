@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class YouTubeChaptersParser extends SubtitleParser
+final class YouTubeChaptersParser extends SubtitleParser
 {
     // A space, "|", ":", "-", an en dash or an em dash. The dashes are UTF-8 bytes, so the patterns need no /u flag.
     private const SEPARATOR       = '(?:[\s|:-]|\xE2\x80[\x93\x94])';

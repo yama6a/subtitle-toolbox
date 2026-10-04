@@ -15,7 +15,7 @@ use SubtitleToolbox\Image\PngDecoder;
 use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\VobSubParser;
-use SubtitleToolbox\Parsers\VobSubReadOptions;
+use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -131,7 +131,7 @@ class PgsFormatterTest extends TestCase
     public function testVobSubFixturesConvertToPgs(string $name, int $track): void
     {
         $original = (new VobSubParser())
-            ->parse(file_get_contents(self::FILES . "vobsub/$name.sub"), new ReadOptions(track: $track, format: new VobSubReadOptions(file_get_contents(self::FILES . "vobsub/$name.idx"))));
+            ->parse(file_get_contents(self::FILES . "vobsub/$name.sub"), new ReadOptions(format: new VobSubReadOptions(file_get_contents(self::FILES . "vobsub/$name.idx"), track: $track)));
         $written  = self::pgsRoundTrip($original);
 
         $this->assertCount(count($original), $written);

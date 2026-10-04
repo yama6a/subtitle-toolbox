@@ -6,14 +6,16 @@ namespace SubtitleToolbox\Parsers;
 
 use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\Options\PodcastTranscriptReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class PodcastTranscriptParser extends SubtitleParser
+final class PodcastTranscriptParser extends SubtitleParser
 {
-    public const FORMAT_DATA_KEY = "podcast";
+    public const FORMAT_DATA_KEY = Format::PodcastTranscript->value;
 
     private const SEGMENT_FIELDS = ["speaker", "startTime", "endTime", "body"];
 
@@ -81,7 +83,7 @@ class PodcastTranscriptParser extends SubtitleParser
             try {
                 $result[] = $this->readSegment($segment, "segments[$index]");
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($segment)]);
+                $this->fail($exception, null, $index, [RawJson::encode($segment)]);
             }
         }
 

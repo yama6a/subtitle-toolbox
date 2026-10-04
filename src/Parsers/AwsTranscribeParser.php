@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
-class AwsTranscribeParser extends SubtitleParser
+final class AwsTranscribeParser extends SubtitleParser
 {
     use WordGrouping;
 
-    public const FORMAT_DATA_KEY = "aws-transcribe";
+    public const FORMAT_DATA_KEY = Format::AwsTranscribe->value;
 
 
     /**
@@ -72,7 +73,7 @@ class AwsTranscribeParser extends SubtitleParser
                 $start = $this->seconds($item["start_time"] ?? null, "$path.start_time");
                 $end   = $this->seconds($item["end_time"] ?? null, "$path.end_time");
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($item)]);
+                $this->fail($exception, null, $index, [RawJson::encode($item)]);
                 continue;
             }
 
@@ -109,7 +110,7 @@ class AwsTranscribeParser extends SubtitleParser
                 $end   = $this->seconds($segment["end_time"] ?? null, "$path.end_time");
                 $text  = $this->text($segment, "transcript", $path);
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($segment)]);
+                $this->fail($exception, null, $index, [RawJson::encode($segment)]);
                 continue;
             }
 

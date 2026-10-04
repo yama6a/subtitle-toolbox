@@ -9,8 +9,9 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
+use SubtitleToolbox\Parsers\Options\CsvColumns;
 use SubtitleToolbox\ParseWarning;
-use SubtitleToolbox\Parsers\CsvReadOptions;
+use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\SubtitleCue;
 
@@ -53,7 +54,7 @@ class CsvParserTest extends TestCase
     {
         $csv = implode($delimiter, ["Start", "End", "Text"]) . "\n" . implode($delimiter, ["1", "2", "\"a, b; c\""]) . "\n";
 
-        $this->assertSame($delimiter, CsvParser::detectDelimiter($csv));
+        $this->assertSame($delimiter, (new CsvParser())->parse($csv, new ReadOptions())->getFormatData(CsvParser::FORMAT_DATA_KEY)["delimiter"]);
         $this->assertSame([[1.0, 2.0, ["a, b; c"]]], $this->describe($csv));
     }
 
@@ -98,29 +99,24 @@ class CsvParserTest extends TestCase
     #[DataProvider("times")]
     public function testReadsTimeFormats(string $time, float $seconds): void
     {
-        $cues = $this->describe("start,text\n$time,a\n", new ReadOptions(format: new CsvReadOptions(new CsvColumns(frameRate: 25))));
+        $cues = $this->describe("start,text\n$time,a\n", new ReadOptions(format: new CsvReadOptions(frameRate: 25)));
 
         $this->assertSame($seconds, $cues[0][0]);
     }
 
 
-    public function testFramesUseTheFrameRateOfReadOptionsWhenTheColumnsHaveNone(): void
+    public function testFramesUseTheFrameRateOfTheReadOptions(): void
     {
-        $content = file_get_contents(__DIR__ . "/../files/csv/own_frame_times.csv");
-        $columns = (new CsvParser())->parse($content, new ReadOptions(format: new CsvReadOptions(new CsvColumns(frameRate: 25))));
-        $fps     = (new CsvParser())->parse($content, new ReadOptions(fps: 25));
-        $both    = (new CsvParser())->parse($content, new ReadOptions(fps: 30, format: new CsvReadOptions(new CsvColumns(frameRate: 25))));
+        $subtitle = (new CsvParser())->parse(file_get_contents(__DIR__ . "/../files/csv/own_frame_times.csv"), new ReadOptions(format: new CsvReadOptions(frameRate: 25)));
 
-        $this->assertEquals($columns, $fps);
-        $this->assertEquals($columns, $both);
-        $this->assertSame(1.48, $fps->getCues()[0]->getStart());
+        $this->assertSame(1.48, $subtitle->getCues()[0]->getStart());
     }
 
 
     public function testFramesNeedAFrameRate(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("The time \"00:00:01:12\" counts frames. Pass the frame rate in CsvColumns. (line 2)");
+        $this->expectExceptionMessage("The time \"00:00:01:12\" counts frames. Pass CsvReadOptions::frameRate. (line 2)");
 
         (new CsvParser())->parse("start,end,text\n00:00:01:12,00:00:02:00,a\n", new ReadOptions());
     }

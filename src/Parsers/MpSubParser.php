@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\ParseWarning;
@@ -13,8 +14,10 @@ use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class MpSubParser extends SubtitleParser
+final class MpSubParser extends SubtitleParser
 {
+    public const FORMAT_DATA_KEY = Format::MpSub->value;
+
     private const METADATA_HEADERS = [
         "TITLE"  => Subtitle::METADATA_TITLE,
         "AUTHOR" => Subtitle::METADATA_AUTHOR,
@@ -106,7 +109,7 @@ class MpSubParser extends SubtitleParser
             $this->addCue($subtitle, $cue, count($lines), $cueLine, $cueIndex - 1, $lines);
         }
 
-        $subtitle->setFormatData("mpsub", $formatData);
+        $subtitle->setFormatData(self::FORMAT_DATA_KEY, $formatData);
 
         return $subtitle->reIndexCues();
     }

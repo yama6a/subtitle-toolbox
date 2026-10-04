@@ -9,13 +9,15 @@ use DOMElement;
 use DOMNode;
 use DOMText;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\SamiReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class SamiParser extends SubtitleParser
+final class SamiParser extends SubtitleParser
 {
-    public const FORMAT_DATA_KEY = "smi";
+    public const FORMAT_DATA_KEY = Format::Sami->value;
 
     private const STYLE_TAGS = ["b" => "b", "i" => "i", "u" => "u", "s" => "s", "strike" => "s"];
 
@@ -28,6 +30,12 @@ class SamiParser extends SubtitleParser
     ];
 
     private const NBSP = "\u{00A0}";
+
+
+    protected static function formatOptionsClass(): string
+    {
+        return SamiReadOptions::class;
+    }
 
 
     protected function read(string $rawSubtitle): Subtitle
@@ -313,10 +321,11 @@ class SamiParser extends SubtitleParser
             }
         }
 
-        if ($this->options->language !== null) {
-            $key = strtolower($this->options->language);
+        $language = $this->formatOptions()->language;
+        if ($language !== null) {
+            $key = strtolower($language);
             if (!isset($classes[$key]) && !isset($used[$key])) {
-                throw new ParsingException("The SAMI file has no class {$this->options->language}.");
+                throw new ParsingException("The SAMI file has no class $language.");
             }
 
             return $classes[$key]["name"] ?? $used[$key];

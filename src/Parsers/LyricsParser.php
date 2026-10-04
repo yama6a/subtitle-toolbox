@@ -4,17 +4,16 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class LyricsParser extends SubtitleParser
+final class LyricsParser extends SubtitleParser
 {
-    public const REGEX = "/^\[(\d{2,3}):([0-5]\d).(\d\d)\](.+)$/";
-
-    public const FORMAT = "lrc";
+    public const FORMAT_DATA_KEY = Format::Lyrics->value;
 
     /** Maps LRC ID tags to the shared metadata keys of Subtitle. */
     public const METADATA_TAGS = [
@@ -69,7 +68,7 @@ class LyricsParser extends SubtitleParser
         }
 
         if ($idTags !== []) {
-            $subtitle->setFormatData(self::FORMAT, ["idTags" => $idTags]);
+            $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["idTags" => $idTags]);
         }
 
         $this->assignEndTimes($timeline);
@@ -160,7 +159,7 @@ class LyricsParser extends SubtitleParser
 
             $entry["cue"]->setEnd($next["time"]);
             if ($next["cue"] === null) {
-                $entry["cue"]->setFormatData(self::FORMAT, ["endLine" => true]);
+                $entry["cue"]->setFormatData(self::FORMAT_DATA_KEY, ["endLine" => true]);
             }
         }
     }

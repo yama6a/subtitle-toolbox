@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\SamiReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Validation\ValidationRules;
@@ -66,11 +67,11 @@ class SamiParserTest extends TestCase
 
     public function testLanguageClassOptionPicksTheClass(): void
     {
-        $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(language: "ENCC"));
+        $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(format: new SamiReadOptions("ENCC")));
         $cues     = $subtitle->getCues();
 
         $this->assertSame("en-US", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
-        $this->assertSame("ENCC", $subtitle->getFormatData("smi")["class"]);
+        $this->assertSame("ENCC", $subtitle->getFormatData("sami")["class"]);
         $this->assertSame([
             [1.0, 4.2, ["The bakery opens at six in the morning."]],
             [5.0, 8.0, ["It is <font color=\"#ffff00\">raining</font> today.", "Take an umbrella."]],
@@ -82,10 +83,10 @@ class SamiParserTest extends TestCase
 
     public function testLanguageClassIsCaseInsensitive(): void
     {
-        $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(language: "frcc"));
+        $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(format: new SamiReadOptions("frcc")));
 
         $this->assertSame("fr-FR", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
-        $this->assertSame("FRCC", $subtitle->getFormatData("smi")["class"]);
+        $this->assertSame("FRCC", $subtitle->getFormatData("sami")["class"]);
         $this->assertSame(["Il <font color=\"#ffff00\">pleut</font> aujourd'hui.", "Prenez un parapluie."], $subtitle->getCues()[1]->getLines());
     }
 
@@ -95,14 +96,14 @@ class SamiParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The SAMI file has no class DECC.");
 
-        (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(language: "DECC"));
+        (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(format: new SamiReadOptions("DECC")));
     }
 
 
     public function testStyleBlockAndHeaderGoToFormatData(): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "mantas_smi.smi"), Format::Sami);
-        $data     = $subtitle->getFormatData("smi");
+        $data     = $subtitle->getFormatData("sami");
 
         $this->assertSame("file", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
         $this->assertSame("ENUSCC", $data["class"]);
@@ -122,7 +123,7 @@ class SamiParserTest extends TestCase
                 ["attributes" => [], "html" => "Weather Report for Tuesday"],
             ],
             "lines"      => ["End of:", "Weather Report for Tuesday"],
-        ], end($cues)->getFormatData("smi"));
+        ], end($cues)->getFormatData("sami"));
     }
 
 
@@ -162,8 +163,8 @@ class SamiParserTest extends TestCase
                "<SYNC Start=4000><P Class=ENCC>&nbsp;\n" .
                "</BODY></SAMI>";
 
-        $english = (new SamiParser())->parse($raw, new ReadOptions(language: "ENCC", lastCueDuration: 1))->getCues();
-        $french  = (new SamiParser())->parse($raw, new ReadOptions(language: "FRCC", lastCueDuration: 1))->getCues();
+        $english = (new SamiParser())->parse($raw, new ReadOptions(lastCueDuration: 1, format: new SamiReadOptions("ENCC")))->getCues();
+        $french  = (new SamiParser())->parse($raw, new ReadOptions(lastCueDuration: 1, format: new SamiReadOptions("FRCC")))->getCues();
 
         $this->assertSame([[1.0, 2.0], [3.0, 4.0]], array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd()], $english));
         $this->assertSame([[1.0, 2.0], [3.5, 4.5]], array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd()], $french));
@@ -175,7 +176,7 @@ class SamiParserTest extends TestCase
         $subtitle = Subtitle::fromString("<sami><body><sync start=500><p>one<sync start=900><p>two<sync start=1200><p>&nbsp;</body></sami>", Format::Sami);
 
         $this->assertNull($subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
-        $this->assertSame([], $subtitle->getFormatData("smi"));
+        $this->assertSame([], $subtitle->getFormatData("sami"));
         $this->assertSame([[0.5, 0.9, "one"], [0.9, 1.2, "two"]], array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $subtitle->getCues()));
     }
 
@@ -184,7 +185,7 @@ class SamiParserTest extends TestCase
     {
         $subtitle = Subtitle::fromString("<SAMI><BODY><SYNC Start=0><P Class=FRCC>un<P Class=ENCC>one\n<SYNC Start=900><P Class=ENCC>two</BODY></SAMI>", Format::Sami);
 
-        $this->assertSame(["class" => "FRCC"], $subtitle->getFormatData("smi"));
+        $this->assertSame(["class" => "FRCC"], $subtitle->getFormatData("sami"));
         $this->assertSame(["un"], array_map(fn ($cue): string => $cue->getText(), $subtitle->getCues()));
     }
 

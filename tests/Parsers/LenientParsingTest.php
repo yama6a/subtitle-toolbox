@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Streaming\SubRipStreamReader;
@@ -233,7 +234,7 @@ class LenientParsingTest extends TestCase
             "MicroDVD with a release name and a line without frames" => [
                 "release_name.sub",
                 MicroDvdParser::class,
-                "The frame rate is unknown. Set ReadOptions::\$fps or start the file with {1}{1}<fps>.",
+                "The frame rate is unknown. Set MicroDvdReadOptions::frameRate or start the file with {1}{1}<fps>.",
                 [
                     [1, 3, "The ferry leaves at noon."],
                     [5, 7, "<i>Tickets are sold on board.</i>"],
@@ -331,8 +332,8 @@ class LenientParsingTest extends TestCase
                     [7, 9, "We close at five."],
                 ],
                 [
-                    [0, 3, self::SKIPPED, "The TTI blocks of an EBU STL file must have 128 bytes each."],
-                    [0, 1, self::SKIPPED, "Subtitle number 2 has a time code that is not valid: 00000400 to 00000630"],
+                    [null, 3, self::SKIPPED, "The TTI blocks of an EBU STL file must have 128 bytes each."],
+                    [null, 1, self::SKIPPED, "Subtitle number 2 has a time code that is not valid: 00000400 to 00000630"],
                 ],
             ],
             "JSON with a cue without end and a line that is not a string" => [
@@ -344,8 +345,8 @@ class LenientParsingTest extends TestCase
                     [7, 9, "The buffet car is closed."],
                 ],
                 [
-                    [0, 1, self::SKIPPED, "The field cues[1].end must be a number."],
-                    [0, 3, self::SKIPPED, "The field cues[3].lines[1] must be a string."],
+                    [null, 1, self::SKIPPED, "The field cues[1].end must be a number."],
+                    [null, 3, self::SKIPPED, "The field cues[3].lines[1] must be a string."],
                 ],
             ],
             "Whisper JSON with a segment without end" => [
@@ -357,7 +358,7 @@ class LenientParsingTest extends TestCase
                     [5, 7.5, "Coffee is in the kitchen."],
                 ],
                 [
-                    [0, 1, self::SKIPPED, "The field segments[1].end must be a number."],
+                    [null, 1, self::SKIPPED, "The field segments[1].end must be a number."],
                 ],
             ],
         ];
@@ -422,7 +423,7 @@ class LenientParsingTest extends TestCase
         $parser   = new $parserClass();
         $subtitle = $parser->parse(file_get_contents(self::DIR . $file), new ReadOptions(lenient: true));
 
-        $reader = (new $readerClass())->setLenient();
+        $reader = new $readerClass(new ReadOptions(lenient: true));
         $cues   = iterator_to_array($reader->read(self::DIR . $file));
 
         $this->assertSame(array_keys($cues), range(0, count($cues) - 1));
@@ -502,7 +503,7 @@ class LenientParsingTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The file doesn't start with the string WEBVTT!");
-        iterator_to_array((new WebVttStreamReader())->setLenient()->read(self::DIR . "bad_timestamp.srt"));
+        iterator_to_array((new WebVttStreamReader(new ReadOptions(lenient: true)))->read(self::DIR . "bad_timestamp.srt"));
     }
 
 
@@ -583,7 +584,7 @@ class LenientParsingTest extends TestCase
 
     public function testEbuStlStrictModeKeepsACueWithABadTimeCode(): void
     {
-        $content = substr(file_get_contents(self::DIR . "bad_time_code.stl"), 0, EbuStlParser::GSI_BLOCK_SIZE + 3 * EbuStlParser::TTI_BLOCK_SIZE);
+        $content = substr(file_get_contents(self::DIR . "bad_time_code.stl"), 0, EbuStl::GSI_BLOCK_SIZE + 3 * EbuStl::TTI_BLOCK_SIZE);
 
         $this->assertCount(3, (new EbuStlParser())->parse($content, new ReadOptions())->getCues());
     }
@@ -613,7 +614,7 @@ class LenientParsingTest extends TestCase
         $subtitle = (new WhisperJsonParser())->parse($content, new ReadOptions(lenient: true));
 
         $this->assertEquals([[0, 2, "Hello"], [3, 4, "Bye"]], $this->cueRows($subtitle->getCues()));
-        $this->assertSame([[0, 1, self::SKIPPED, "The field transcription[1].offsets.from must be a number."]], $this->warningRows($subtitle->getParseWarnings()));
+        $this->assertSame([[null, 1, self::SKIPPED, "The field transcription[1].offsets.from must be a number."]], $this->warningRows($subtitle->getParseWarnings()));
     }
 
 

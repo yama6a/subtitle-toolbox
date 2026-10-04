@@ -6,15 +6,17 @@ namespace SubtitleToolbox\Parsers;
 
 use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
 // Spec: https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/examples/chapters/jsonChapters.md
-class PodcastChaptersParser extends SubtitleParser
+final class PodcastChaptersParser extends SubtitleParser
 {
-    public const FORMAT_DATA_KEY = "chapters";
+    public const FORMAT_DATA_KEY = Format::PodcastChapters->value;
 
 
     protected static function formatOptionsClass(): string

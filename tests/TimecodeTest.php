@@ -10,9 +10,10 @@ use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
-use SubtitleToolbox\Parsers\CsvColumns;
-use SubtitleToolbox\Parsers\CsvReadOptions;
-use SubtitleToolbox\Parsers\PodcastTranscriptReadOptions;
+use SubtitleToolbox\Parsers\Options\CsvColumns;
+use SubtitleToolbox\Parsers\Options\CsvReadOptions;
+use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
+use SubtitleToolbox\Parsers\Options\PodcastTranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 
 class TimecodeTest extends TestCase
@@ -99,13 +100,13 @@ class TimecodeTest extends TestCase
         return [
             "ass"                => ["ass", 0.01, new WriteOptions(), true],
             "csv"                => ["csv", 0.001, new WriteOptions(), true],
-            "csv frames"         => ["csv", 1 / 25, new WriteOptions(format: new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames, frameRate: 25)), true, new ReadOptions(format: new CsvReadOptions(new CsvColumns(frameRate: 25)))],
+            "csv frames"         => ["csv", 1 / 25, new WriteOptions(format: new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames, frameRate: 25)), true, new ReadOptions(format: new CsvReadOptions(frameRate: 25))],
             "ffmeta"             => ["ffmeta", 0.001, new WriteOptions(), true],
             "html"               => ["html", 1, new WriteOptions(), false],
             "itt"                => ["itt", 1 / 25, new WriteOptions(format: new IttWriteOptions(frameRate: 25)), true],
             "json"               => ["json", 0.001, new WriteOptions(), true],
             "lrc"                => ["lrc", 0.01, new WriteOptions(), false],
-            "microdvd"           => ["microdvd", 1 / 25, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25)), true, new ReadOptions(fps: 25)],
+            "microdvd"           => ["microdvd", 1 / 25, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25)), true, new ReadOptions(format: new MicroDvdReadOptions(25))],
             "mpl2"               => ["mpl2", 0.1, new WriteOptions(), true],
             "mpsub"              => ["mpsub", 0.001, new WriteOptions(), true],
             "ogm"                => ["ogm", 0.001, new WriteOptions(), false],

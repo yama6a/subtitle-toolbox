@@ -46,7 +46,7 @@ final class FormatDataSchema
             "timeFormat" => "string",
             "frameRate"  => "?number",
         ],
-        "ffmetadata" => [
+        "ffmeta"     => [
             "tags"    => ["list", "?string"],
             "streams" => ["list", ["list", "string"]],
         ],
@@ -57,23 +57,23 @@ final class FormatDataSchema
         "lrc"        => [
             "idTags" => ["list", "string"],
         ],
-        "mpsub"      => "strings",
-        "scc"        => [
-            "dropFrame" => "bool",
+        "microdvd"   => [
+            "frameRate" => "number",
         ],
-        "smi"        => [
+        "mpsub"      => "strings",
+        "sami"       => [
             "style"     => "?string",
             "class"     => "?string",
             "samiParam" => "?string",
+        ],
+        "scc"        => [
+            "dropFrame" => "bool",
         ],
         "stl"        => [
             "gsi"                        => ["list", "string"],
             "startOfProgrammeSubtracted" => "bool",
             "firstSubtitleNumber"        => "?int",
             "comments"                   => ["list", ["object", ["!text" => "string", "!blocks" => self::TTI_BLOCKS]]],
-        ],
-        "sub"        => [
-            "frameRate" => "number",
         ],
         "subviewer"  => [
             "header" => ["list", "string"],
@@ -102,7 +102,7 @@ final class FormatDataSchema
         "csv"        => [
             "columns" => ["list", "scalar"],
         ],
-        "ffmetadata" => [
+        "ffmeta"     => [
             "timeBase" => "timeBase",
             "tags"     => ["list", "string"],
         ],
@@ -119,7 +119,10 @@ final class FormatDataSchema
         "lrc"        => [
             "endLine" => "bool",
         ],
-        "smi"        => [
+        "microdvd"   => [
+            "lines" => ["list", ["object", ["!codes" => "string", "!color" => "?string", "!tags" => self::STRINGS, "otherCodes" => "string"]]],
+        ],
+        "sami"       => [
             "paragraphs" => ["list", ["object", ["!attributes" => self::ATTRIBUTES, "!html" => "string"]]],
         ],
         "srt"        => [
@@ -131,9 +134,6 @@ final class FormatDataSchema
             "verticalPosition"    => "int",
             "justificationCode"   => "int",
             "blocks"              => self::TTI_BLOCKS,
-        ],
-        "sub"        => [
-            "lines" => ["list", ["object", ["!codes" => "string", "!color" => "?string", "!tags" => self::STRINGS, "otherCodes" => "string"]]],
         ],
         "ttml"       => [
             "attributes" => self::ATTRIBUTES,

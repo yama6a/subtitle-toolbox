@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
-class GoogleSpeechParser extends SubtitleParser
+final class GoogleSpeechParser extends SubtitleParser
 {
     use WordGrouping;
 
-    public const FORMAT_DATA_KEY = "google-speech";
+    public const FORMAT_DATA_KEY = Format::GoogleSpeech->value;
 
 
     /**
@@ -74,7 +75,7 @@ class GoogleSpeechParser extends SubtitleParser
                 $start = $words === [] ? $previousEnd : $words[0]["start"];
                 $text  = is_array($alternative) ? $this->text($alternative, "transcript", "$path.alternatives[0]") : "";
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($result)]);
+                $this->fail($exception, null, $index, [RawJson::encode($result)]);
                 continue;
             }
             $previousEnd = is_int($resultEnd) || (is_float($resultEnd) && is_finite($resultEnd)) ? round($resultEnd, 3) : $end;
@@ -99,7 +100,7 @@ class GoogleSpeechParser extends SubtitleParser
                 $start = $this->seconds(self::duration($word["startTime"] ?? $word["startOffset"] ?? null), "{$path}[$index].startTime");
                 $end   = $this->seconds(self::duration($word["endTime"] ?? $word["endOffset"] ?? null), "{$path}[$index].endTime");
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($word)]);
+                $this->fail($exception, null, $index, [RawJson::encode($word)]);
                 continue;
             }
 

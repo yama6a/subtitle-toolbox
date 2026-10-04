@@ -33,7 +33,7 @@ class WebVttStreamWriter implements CueStreamWriter
     public function __construct($stream, array $header = [], private readonly WriteOptions $options = new WriteOptions())
     {
         $this->formatter  = new WebVttFormatter();
-        $headerOnly       = (new Subtitle())->setFormatData(WebVttParser::FORMAT, $header);
+        $headerOnly       = (new Subtitle())->setFormatData(WebVttParser::FORMAT_DATA_KEY, $header);
         $prefix           = $this->formatter->format($headerOnly, $options);
         $this->lineEnding = $options->lineEnding->value;
         $this->hasBlocks  = ($header["styles"] ?? []) !== [] || ($header["regions"] ?? []) !== [];

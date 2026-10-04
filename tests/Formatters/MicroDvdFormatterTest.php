@@ -10,6 +10,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Parsers\MicroDvdParser;
+use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -31,7 +32,7 @@ class MicroDvdFormatterTest extends TestCase
     public function testRealFileRoundTrips(string $file, float $frameRate): void
     {
         $raw      = file_get_contents(__DIR__ . "/../files/microdvd/real/$file");
-        $subtitle = (new MicroDvdParser())->parse($raw, new ReadOptions(fps: $frameRate));
+        $subtitle = (new MicroDvdParser())->parse($raw, new ReadOptions(format: new MicroDvdReadOptions($frameRate)));
 
         // Some source files have no line break after the last cue.
         $this->assertSame(
@@ -109,7 +110,7 @@ class MicroDvdFormatterTest extends TestCase
     {
         $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/valid.srt"), Format::SubRip);
         $output   = $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25)));
-        $reparsed = (new MicroDvdParser())->parse($output, new ReadOptions(fps: 25));
+        $reparsed = (new MicroDvdParser())->parse($output, new ReadOptions(format: new MicroDvdReadOptions(25)));
 
         $this->assertSame(count($subtitle->getCues()), count($reparsed->getCues()));
         foreach ($subtitle->getCues() as $index => $cue) {

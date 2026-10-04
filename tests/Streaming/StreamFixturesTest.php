@@ -79,7 +79,7 @@ class StreamFixturesTest extends TestCase
             function () use ($content): array {
                 $subtitle = (new WebVttParser())->parse($content, new ReadOptions());
 
-                return [$subtitle->getCues(), $subtitle->getFormatData(WebVttParser::FORMAT)];
+                return [$subtitle->getCues(), $subtitle->getFormatData(WebVttParser::FORMAT_DATA_KEY)];
             },
             fn (): array => [iterator_to_array($reader->read($path), false), $reader->getHeader()]
         );
@@ -108,8 +108,8 @@ class StreamFixturesTest extends TestCase
     public function testWebVttWriterWritesTheBytesOfWebVttFormatter(string $path): void
     {
         $parsed   = (new WebVttParser())->parse(file_get_contents($path), new ReadOptions());
-        $header   = $parsed->getFormatData(WebVttParser::FORMAT);
-        $subtitle = (new Subtitle())->setFormatData(WebVttParser::FORMAT, $header);
+        $header   = $parsed->getFormatData(WebVttParser::FORMAT_DATA_KEY);
+        $subtitle = (new Subtitle())->setFormatData(WebVttParser::FORMAT_DATA_KEY, $header);
         foreach ($parsed->getCues() as $cue) {
             $subtitle->addCue($cue, false);
         }

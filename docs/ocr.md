@@ -61,15 +61,15 @@ VobSub is the subtitle format of DVD rips. It is a pair of files. The `.idx` tex
 
 ```php
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Parsers\VobSubReadOptions;
+use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 $sub      = file_get_contents('movie.sub');
-$idx      = new VobSubReadOptions(file_get_contents('movie.idx'));
-$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: $idx));                   // first track
-$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(language: 'de', format: $idx));   // first track with "id: de"
-$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(track: 1, format: $idx));         // track with "index: 1"
+$idx      = file_get_contents('movie.idx');
+$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions($idx)));                   // first track
+$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions($idx, language: 'de')));   // first track with "id: de"
+$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions($idx, track: 1)));         // track with "index: 1"
 
 $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);   // "de", from the id line
 ```

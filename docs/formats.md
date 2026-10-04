@@ -28,18 +28,20 @@ Format::FfMetadata->isAutoDetected();   // false
 ```
 
 - **Shared extensions**: when two formats share an extension, the earlier case owns it. So `fromPath()` returns `Format::MicroDvd` for `.sub`, `Format::Json` for `.json` and `Format::PlainText` for `.txt`.
-- **Parser and formatter classes**: the classes in `Parsers` and `Formatters` are public. `ReadOptions` holds the parser settings, for example `new ReadOptions(fps: 23.976)`. See [read-options.md](read-options.md).
+- **Parser and formatter classes**: the classes in `Parsers` and `Formatters` are public. `ReadOptions` holds the parser settings, for example `new ReadOptions(lenient: true)`. A class in `Parsers\Options` holds the settings of one format, for example `new MicroDvdReadOptions(frameRate: 23.976)`. See [read-options.md](read-options.md).
 
 ## Load and save
 ```php
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
+use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 Subtitle::load('movie.srt', Format::SubRip)->save('movie.vtt');
 Subtitle::loadAutoDetectFormat('movie.srt')->save('movie.vtt');
-Subtitle::load('movie.sub', Format::MicroDvd, new ReadOptions(encoding: 'Windows-1252', fps: 23.976))->save('movie.srt');
-Subtitle::load('movie.idx', Format::VobSub, new ReadOptions(language: 'de'));
+Subtitle::load('movie.sub', Format::MicroDvd, new ReadOptions(encoding: 'Windows-1252', format: new MicroDvdReadOptions(frameRate: 23.976)))->save('movie.srt');
+Subtitle::load('movie.idx', Format::VobSub, new ReadOptions(format: new VobSubReadOptions(language: 'de')));
 Subtitle::load('call.json', Format::Deepgram, new ReadOptions(speakerVoices: true));
 Subtitle::loadTrack('/media/movie.mkv', 3);           // see mkv.md
 
@@ -146,15 +148,15 @@ Now."
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
-use SubtitleToolbox\Parsers\CsvColumns;
-use SubtitleToolbox\Parsers\CsvReadOptions;
+use SubtitleToolbox\Parsers\Options\CsvColumns;
+use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.csv'), Format::Csv);   // headers start, end, text, ...
-$columns  = new CsvColumns(start: 'Start TC', text: 'Text', speaker: 'Character', frameRate: 25);
-$subtitle = Subtitle::fromString(file_get_contents('dubbing-script.csv'), Format::Csv, new ReadOptions(format: new CsvReadOptions($columns)));
+$columns  = new CsvColumns(start: 'Start TC', text: 'Text', speaker: 'Character');
+$subtitle = Subtitle::fromString(file_get_contents('dubbing-script.csv'), Format::Csv, new ReadOptions(format: new CsvReadOptions($columns, frameRate: 25)));
 $subtitle = Subtitle::fromString($tsv, Format::Tsv, new ReadOptions(format: new CsvReadOptions(new CsvColumns(start: 0, end: 1, text: 2, header: false), "\t")));
 
 $csv = $english->toString(Format::Csv, new WriteOptions(format: new CsvWriteOptions(
@@ -191,7 +193,7 @@ EBU STL is the binary exchange format of European broadcasters, from [EBU Tech 3
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
-use SubtitleToolbox\Parsers\EbuStlReadOptions;
+use SubtitleToolbox\Parsers\Options\EbuStlReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
@@ -262,11 +264,12 @@ MicroDVD counts time in video frames, so the parser and the formatter need the f
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
+use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
-$subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::MicroDvd, new ReadOptions(fps: 23.976));
+$subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(frameRate: 23.976)));
 $subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::MicroDvd);   // reads {1}{1}23.976
 
 $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(
@@ -275,9 +278,9 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWrite
 )));
 ```
 
-- **Frame rate**: `ReadOptions::$fps` wins over a `{1}{1}<fps>` first line. The parser never reads that line as a cue. Without either, the parser throws `ParsingException`.
-- `$subtitle->getFormatData('sub')['frameRate']` returns the frame rate that the parser used.
-- **Control codes**: `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` become core markup. The parser reads the codes at the start of each `|`-separated line. A code later in the line stays text. A lower-case code styles one line. An upper-case code styles the whole cue. The `sub` format data keeps other control codes.
+- **Frame rate**: `MicroDvdReadOptions::$frameRate` wins over a `{1}{1}<fps>` first line. The parser never reads that line as a cue. Without either, the parser throws `ParsingException`.
+- `$subtitle->getFormatData('microdvd')['frameRate']` returns the frame rate that the parser used.
+- **Control codes**: `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` become core markup. The parser reads the codes at the start of each `|`-separated line. A code later in the line stays text. A lower-case code styles one line. An upper-case code styles the whole cue. The `microdvd` format data keeps other control codes.
 - **Output**: the formatter writes control codes only for tags that wrap a whole line. It strips other tags. An unchanged cue keeps its original control codes.
 
 ## MPL2 and TMPlayer
@@ -327,16 +330,17 @@ $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubWriteOption
 ## SAMI
 ```php
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\SamiReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami);   // the first class of the STYLE block
-$subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami, new ReadOptions(language: 'FRCC'));   // the FRCC class
+$subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami, new ReadOptions(format: new SamiReadOptions(language: 'FRCC')));   // the FRCC class
 $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);                              // 'fr-FR', from the lang property of .FRCC
-$subtitle->getFormatData('smi');                                                  // keys style, class and samiParam
+$subtitle->getFormatData('sami');                                                 // keys style, class and samiParam
 ```
 
-- **Language class**: a SAMI file holds one CSS class per language, for example `.FRCC { Name: French; lang: fr-FR; }`. The parser reads the class in `ReadOptions::$language`, else the first class of the STYLE block. Without a STYLE block, it reads the first class that a `<P>` uses. A `<P>` without a class belongs to every class.
+- **Language class**: a SAMI file holds one CSS class per language, for example `.FRCC { Name: French; lang: fr-FR; }`. The parser reads the class in `SamiReadOptions::$language`, else the first class of the STYLE block. Without a STYLE block, it reads the first class that a `<P>` uses. A `<P>` without a class belongs to every class.
 - **End times**: a cue ends at the next `SYNC` that has a `<P>` of the same class, or no `<P>` at all. A `SYNC` with only `&nbsp;` ends a cue and starts none. The last cue lasts `ReadOptions::$lastCueDuration`, 5 s by default.
 - **Text**: a line break in the file is a space, as in HTML. Only `<br>` starts a new cue line. `<b>`, `<i>`, `<u>`, `<s>`, `<strike>` and `<font color>` become core markup. `<font color>` accepts `#rrggbb`, `rrggbb` and the 16 colour names of HTML 4. The parser drops other tags from the cue text.
 - **Formatter**: it keeps `<b>`, `<i>`, `<u>`, `<s>` and `<font>` and strips all other tags. It writes the stored `<TITLE>`, STYLE block and `<SAMIParam>`, without the rules of the other language classes. Without a stored block, it names the class after the language metadata, for example `KOKRCC` for `ko-KR`, or `SUBTTL` without a language.
@@ -355,7 +359,7 @@ US broadcast and many streaming services take closed captions as SCC. Each line 
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
-use SubtitleToolbox\Parsers\SccReadOptions;
+use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;

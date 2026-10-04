@@ -8,6 +8,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
+use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -19,7 +20,7 @@ use SubtitleToolbox\SubtitleCue;
  * Decoder: https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/dvdsubdec.c
  * Index lines: https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/mpeg.c and VSFilter's VobSubFile.cpp
  */
-class VobSubParser extends SubtitleParser
+final class VobSubParser extends SubtitleParser
 {
     // SP_DCSQ_STM delays count in units of 1024 ticks of the 90 kHz clock.
     private const SECONDS_PER_DELAY_UNIT = 1024 / 90000;
@@ -54,15 +55,17 @@ class VobSubParser extends SubtitleParser
 
     /**
      * Reads the image cues of one track from the .sub content. VobSubReadOptions holds the .idx content.
-     * ReadOptions::$track and ReadOptions::$language select the track, else the parser reads the first track.
+     * Its $track and $language select the track, else the parser reads the first track.
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $options = $this->options->format
-            ?? throw new InvalidArgumentException("VobSub needs the .idx content in VobSubReadOptions.");
+        $options = $this->formatOptions();
+        if ($options->idx === null) {
+            throw new InvalidArgumentException("VobSub needs the .idx content in VobSubReadOptions.");
+        }
         $this->palette      = [];
         $this->customColors = null;
-        $this->selectTrack($this->readIndex($options->idx));
+        $this->selectTrack($this->readIndex($options->idx), $options->track, $options->language);
 
         $units = [];
         foreach ($this->entries as $entry) {
@@ -96,10 +99,8 @@ class VobSubParser extends SubtitleParser
     /**
      * @param list<array{id: string, index: int, entries: list<array{time: float, filepos: int}>}> $tracks
      */
-    private function selectTrack(array $tracks): void
+    private function selectTrack(array $tracks, ?int $track, ?string $language): void
     {
-        $track    = $this->options->track;
-        $language = $this->options->language;
         $selected = null;
         foreach ($tracks as $candidate) {
             if (($track === null || $candidate["index"] === $track)

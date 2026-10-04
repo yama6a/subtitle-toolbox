@@ -8,7 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Parsers\ChapterReadOptions;
+use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\Parsers\OgmChaptersParser;
 use SubtitleToolbox\Parsers\PodcastChaptersParser;
@@ -91,7 +91,7 @@ class ChapterFormatsTest extends TestCase
 
         $this->assertSame([[0.0, 60.0, "Doors open"], [60.0, 90.0, "No start"], [120.0, 130.0, "No end"], [130.0, 125.0, "Ends early"]],
                           $this->describe($subtitle));
-        $this->assertSame(["timeBase" => "1/1000000000", "tags" => []], $subtitle->getCues()[0]->getFormatData("ffmetadata"));
+        $this->assertSame(["timeBase" => "1/1000000000", "tags" => []], $subtitle->getCues()[0]->getFormatData("ffmeta"));
         $this->assertSame("Meetup", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
     }
 
@@ -99,7 +99,7 @@ class ChapterFormatsTest extends TestCase
     public function testFfMetadataEscapesRoundTrip(): void
     {
         $subtitle = $this->chapters([[0, 61.5, "a=b; c#d \\ e"], [61.5, 70, "first line\nsecond line"]]);
-        $subtitle->getCues()[0]->setFormatData("ffmetadata", ["timeBase" => "1/90000", "tags" => ["lang=x" => "en"]]);
+        $subtitle->getCues()[0]->setFormatData("ffmeta", ["timeBase" => "1/90000", "tags" => ["lang=x" => "en"]]);
         $output = $subtitle->toString(Format::FfMetadata);
 
         $this->assertSame(";FFMETADATA1\n" .

@@ -10,7 +10,8 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Parsers\EbuStlParser as Stl;
+use SubtitleToolbox\Parsers\EbuStl;
+use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -35,21 +36,21 @@ final class EbuStlFormatter extends SubtitleFormatter
 
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $data = $subtitle->getFormatData(Stl::FORMAT_DATA_KEY);
+        $data = $subtitle->getFormatData(EbuStlParser::FORMAT_DATA_KEY);
         $gsi  = ($data["gsi"] ?? []) + self::DEFAULT_GSI;
-        $fps  = $this->formatOptions($options)?->frameRate ?? Stl::FRAME_RATES[$gsi["DFC"] ?? ""] ?? 25;
+        $fps  = $this->formatOptions($options)?->frameRate ?? EbuStl::FRAME_RATES[$gsi["DFC"] ?? ""] ?? 25;
 
-        if (!array_key_exists($gsi["CCT"], Stl::CHARACTER_CODE_TABLES)) {
+        if (!array_key_exists($gsi["CCT"], EbuStl::CHARACTER_CODE_TABLES)) {
             throw new InvalidArgumentException("The character code table \"{$gsi["CCT"]}\" is not 00, 01, 02, 03 or 04.");
         }
 
-        $gsi["DFC"] = array_search((int) $fps, Stl::FRAME_RATES, true);
+        $gsi["DFC"] = array_search((int) $fps, EbuStl::FRAME_RATES, true);
         $frameRate  = new FrameRate($fps);
         $context    = new EbuStlContext(
             frameRate: $frameRate,
-            offset: empty($data["startOfProgrammeSubtracted"]) ? 0.0 : Stl::timeCodeToSeconds($gsi["TCP"], $frameRate),
+            offset: empty($data["startOfProgrammeSubtracted"]) ? 0.0 : EbuStl::timeCodeToSeconds($gsi["TCP"], $frameRate),
             characterCodeTable: $gsi["CCT"],
-            maxRow: Stl::maxRow($gsi),
+            maxRow: EbuStl::maxRow($gsi),
             teletext: in_array($gsi["DSC"], ["1", "2"], true),
             stripAll: $options->stripTags,
         );
@@ -111,7 +112,7 @@ final class EbuStlFormatter extends SubtitleFormatter
             }
         }
 
-        $bytes = implode(chr(Stl::NEW_LINE), array_map(fn (string $line): string => $this->encodeCharacters($context, $line), explode("\n", $text)));
+        $bytes = implode(chr(EbuStl::NEW_LINE), array_map(fn (string $line): string => $this->encodeCharacters($context, $line), explode("\n", $text)));
         [$verticalPosition, $justificationCode] = $this->position($context, 2, count(explode("\n", $text)));
 
         return $this->textBlocks($context, $bytes, $this->header(0, 0, $smpteBytes, $smpteBytes, $verticalPosition, $justificationCode, 1));
@@ -125,14 +126,14 @@ final class EbuStlFormatter extends SubtitleFormatter
      */
     private function cueBlocks(EbuStlContext $context, SubtitleCue $cue): array
     {
-        $stored    = $cue->getFormatData(Stl::FORMAT_DATA_KEY);
+        $stored    = $cue->getFormatData(EbuStlParser::FORMAT_DATA_KEY);
         $alignment = $cue->getAlignment() ?? 2;
         $timeIn    = $this->smpteBytes($context, $cue->getStart());
         $timeOut   = $this->smpteBytes($context, $cue->getEnd());
 
         $position = [$stored["verticalPosition"] ?? -1, $stored["justificationCode"] ?? -1];
         if (!isset($stored["verticalPosition"], $stored["justificationCode"]) ||
-            Stl::alignment($position[0], $position[1], $context->maxRow) !== $alignment) {
+            EbuStl::alignment($position[0], $position[1], $context->maxRow) !== $alignment) {
             $position = $this->position($context, $alignment, max(1, count($cue->getLines())));
         }
 
@@ -142,7 +143,7 @@ final class EbuStlFormatter extends SubtitleFormatter
             return $this->patchHeaders($blocks, $header);
         }
 
-        $userData = array_filter($blocks, fn (string $block): bool => ord($block[3]) === Stl::USER_DATA_BLOCK);
+        $userData = array_filter($blocks, fn (string $block): bool => ord($block[3]) === EbuStl::USER_DATA_BLOCK);
 
         return [...$this->patchHeaders(array_values($userData), $header), ...$this->textBlocks($context, $this->encodeText($context, $cue), $header)];
     }
@@ -190,16 +191,16 @@ final class EbuStlFormatter extends SubtitleFormatter
     private function textBlocks(EbuStlContext $context, string $bytes, string $header): array
     {
         $fields = [];
-        while (strlen($bytes) >= Stl::TEXT_FIELD_SIZE) {
-            $length = Stl::TEXT_FIELD_SIZE;
+        while (strlen($bytes) >= EbuStl::TEXT_FIELD_SIZE) {
+            $length = EbuStl::TEXT_FIELD_SIZE;
             if ($context->characterCodeTable === "00" && isset(Iso6937::DIACRITICS[ord($bytes[$length - 1])])) {
                 $length--;
             }
 
-            $fields[] = str_pad(substr($bytes, 0, $length), Stl::TEXT_FIELD_SIZE, chr(Stl::UNUSED_SPACE));
+            $fields[] = str_pad(substr($bytes, 0, $length), EbuStl::TEXT_FIELD_SIZE, chr(EbuStl::UNUSED_SPACE));
             $bytes    = substr($bytes, $length);
         }
-        $fields[] = str_pad($bytes, Stl::TEXT_FIELD_SIZE, chr(Stl::UNUSED_SPACE));
+        $fields[] = str_pad($bytes, EbuStl::TEXT_FIELD_SIZE, chr(EbuStl::UNUSED_SPACE));
 
         if (count($fields) > self::MAX_EXTENSION_BLOCKS + 1) {
             throw new InvalidArgumentException("The cue text needs more than " . (self::MAX_EXTENSION_BLOCKS + 1) . " TTI blocks.");
@@ -207,7 +208,7 @@ final class EbuStlFormatter extends SubtitleFormatter
 
         $blocks = [];
         foreach ($fields as $index => $field) {
-            $extensionBlockNumber = $index === count($fields) - 1 ? Stl::LAST_BLOCK : $index;
+            $extensionBlockNumber = $index === count($fields) - 1 ? EbuStl::LAST_BLOCK : $index;
             $blocks[]             = substr_replace($header, chr($extensionBlockNumber), 3, 1) . $field;
         }
 
@@ -220,7 +221,7 @@ final class EbuStlFormatter extends SubtitleFormatter
      */
     private function header(int $group, int $cumulativeStatus, string $tci, string $tco, int $verticalPosition, int $justificationCode, int $commentFlag = 0): string
     {
-        return chr($group) . "\0\0" . chr(Stl::LAST_BLOCK) . chr($cumulativeStatus) . $tci . $tco .
+        return chr($group) . "\0\0" . chr(EbuStl::LAST_BLOCK) . chr($cumulativeStatus) . $tci . $tco .
                chr($verticalPosition) . chr($justificationCode) . chr($commentFlag);
     }
 
@@ -281,17 +282,17 @@ final class EbuStlFormatter extends SubtitleFormatter
 
                 $tag = strtolower($token);
                 if (preg_match('/^<font\s+color\s*=\s*["\']?(#[0-9a-f]{6})["\']?\s*>$/', $tag, $matches)) {
-                    $colour    = array_search($matches[1], Stl::COLOURS, true);
+                    $colour    = array_search($matches[1], EbuStl::COLORS, true);
                     $colours[] = $colour === false ? end($colours) : $colour;
                     $bytes    .= $colour === false ? "" : chr($colour);
                     continue;
                 }
 
                 $bytes .= match ($tag) {
-                    "<i>"     => $italic++ === 0 ? chr(Stl::ITALICS_ON) : "",
-                    "</i>"    => $italic > 0 && --$italic === 0 ? chr(Stl::ITALICS_OFF) : "",
-                    "<u>"     => $under++ === 0 ? chr(Stl::UNDERLINE_ON) : "",
-                    "</u>"    => $under > 0 && --$under === 0 ? chr(Stl::UNDERLINE_OFF) : "",
+                    "<i>"     => $italic++ === 0 ? chr(EbuStl::ITALICS_ON) : "",
+                    "</i>"    => $italic > 0 && --$italic === 0 ? chr(EbuStl::ITALICS_OFF) : "",
+                    "<u>"     => $under++ === 0 ? chr(EbuStl::UNDERLINE_ON) : "",
+                    "</u>"    => $under > 0 && --$under === 0 ? chr(EbuStl::UNDERLINE_OFF) : "",
                     "</font>" => $this->closeColour($colours),
                     default   => "",
                 };
@@ -299,10 +300,10 @@ final class EbuStlFormatter extends SubtitleFormatter
 
             // A teletext colour code shows as a space, so it replaces one space next to it. At the row end it has no effect.
             $bytes  = rtrim(preg_replace('/ ([\x00-\x07])|([\x00-\x07]) /', '$1$2', $bytes), "\x00..\x07");
-            $rows[] = $bytes . ($italic > 0 ? chr(Stl::ITALICS_OFF) : "") . ($under > 0 ? chr(Stl::UNDERLINE_OFF) : "");
+            $rows[] = $bytes . ($italic > 0 ? chr(EbuStl::ITALICS_OFF) : "") . ($under > 0 ? chr(EbuStl::UNDERLINE_OFF) : "");
         }
 
-        return implode(chr(Stl::NEW_LINE), $rows);
+        return implode(chr(EbuStl::NEW_LINE), $rows);
     }
 
 
@@ -313,7 +314,7 @@ final class EbuStlFormatter extends SubtitleFormatter
     {
         $closed  = array_pop($colours);
         $current = end($colours);
-        $current = $current === false ? array_search("#ffffff", Stl::COLOURS, true) : $current;
+        $current = $current === false ? array_search("#ffffff", EbuStl::COLORS, true) : $current;
 
         return $closed === null || $closed === false || $closed === $current ? "" : chr($current);
     }
@@ -321,7 +322,7 @@ final class EbuStlFormatter extends SubtitleFormatter
 
     private function encodeCharacters(EbuStlContext $context, string $text): string
     {
-        $table = Stl::CHARACTER_CODE_TABLES[$context->characterCodeTable];
+        $table = EbuStl::CHARACTER_CODE_TABLES[$context->characterCodeTable];
 
         return $table === null ? Iso6937::encode($text) : CodePage::encode($text, $table);
     }
@@ -340,7 +341,7 @@ final class EbuStlFormatter extends SubtitleFormatter
             "TNB" => array_sum(array_map(fn (array $set): int => count($set["blocks"]), $sets)),
             "TNS" => count($subtitles),
             "TNG" => count(array_unique(array_map(fn (array $set): int => ord($set["blocks"][0][0]), $subtitles))),
-            "TCF" => $subtitles === [] ? "00000000" : Stl::timeCodeDigits(substr($subtitles[0]["blocks"][0], 5, 4)),
+            "TCF" => $subtitles === [] ? "00000000" : EbuStl::timeCodeDigits(substr($subtitles[0]["blocks"][0], 5, 4)),
         ];
         $formats = ["TNB" => "%05d", "TNS" => "%05d", "TNG" => "%03d", "TCF" => "%s"];
         foreach ($counts as $field => $count) {
@@ -355,16 +356,16 @@ final class EbuStlFormatter extends SubtitleFormatter
         }
 
         $language = $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);
-        if (!isset($gsi["LC"]) || $language !== (Stl::LANGUAGES[strtoupper($gsi["LC"])] ?? null)) {
+        if (!isset($gsi["LC"]) || $language !== (EbuStl::LANGUAGES[strtoupper($gsi["LC"])] ?? null)) {
             $gsi["LC"] = $this->languageCode($language);
         }
 
         $gsi["CD"] ??= gmdate("ymd");
         $gsi["RD"] ??= $gsi["CD"];
 
-        $codePage = Stl::GSI_CODE_PAGES[$gsi["CPN"]] ?? CodePage::CP_850;
+        $codePage = EbuStl::GSI_CODE_PAGES[$gsi["CPN"]] ?? CodePage::CP_850;
         $block    = "";
-        foreach (Stl::GSI_FIELDS as $field => [, $length]) {
+        foreach (EbuStl::GSI_FIELDS as $field => [, $length]) {
             $block .= substr(str_pad(CodePage::encode($gsi[$field] ?? "", $codePage), $length), 0, $length);
         }
 
@@ -378,7 +379,7 @@ final class EbuStlFormatter extends SubtitleFormatter
             return "00";
         }
 
-        $languages = array_map("strtolower", Stl::LANGUAGES);
+        $languages = array_map("strtolower", EbuStl::LANGUAGES);
         $code      = array_search(strtolower($language), $languages, true)
                      ?: array_search(strtolower(explode("-", $language)[0]), $languages, true);
 

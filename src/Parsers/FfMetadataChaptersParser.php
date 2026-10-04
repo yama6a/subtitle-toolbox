@@ -5,15 +5,17 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
 // Spec: https://ffmpeg.org/ffmpeg-formats.html#Metadata-1. The section reading follows libavformat/ffmetadec.c.
-class FfMetadataChaptersParser extends SubtitleParser
+final class FfMetadataChaptersParser extends SubtitleParser
 {
-    public const FORMAT_DATA_KEY = "ffmetadata";
+    public const FORMAT_DATA_KEY = Format::FfMetadata->value;
 
     public const METADATA_KEYS = [
         Subtitle::METADATA_TITLE, Subtitle::METADATA_AUTHOR, Subtitle::METADATA_ARTIST,

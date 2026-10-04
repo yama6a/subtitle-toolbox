@@ -6,16 +6,19 @@ namespace SubtitleToolbox\Parsers;
 
 use Generator;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class WebVttParser extends SubtitleParser
+final class WebVttParser extends SubtitleParser
 {
-    public const FORMAT = "vtt";
+    public const FORMAT_DATA_KEY = Format::WebVtt->value;
 
+    /** @internal */
     public const CUE_SETTINGS    = ["vertical", "line", "position", "size", "align", "region"];
+    /** @internal */
     public const REGION_SETTINGS = ["id", "width", "lines", "regionanchor", "viewportanchor", "scroll"];
 
     private const TIMESTAMP_PATTERN = "((\d{2,3}):)?([0-5]\d):([0-5]\d)\.(\d{3})";
@@ -77,7 +80,7 @@ class WebVttParser extends SubtitleParser
             }
         }
 
-        return $subtitle->reIndexCues()->setFormatData(self::FORMAT, $fileData);
+        return $subtitle->reIndexCues()->setFormatData(self::FORMAT_DATA_KEY, $fileData);
     }
 
 
@@ -85,6 +88,8 @@ class WebVttParser extends SubtitleParser
      * Splits at empty lines, and before a timing line that cannot belong to the current cue.
      *
      * @see https://www.w3.org/TR/webvtt1/#collect-a-webvtt-block
+     *
+     * @internal
      */
     public function splitIntoBlocks(iterable $lines): Generator
     {
@@ -101,6 +106,8 @@ class WebVttParser extends SubtitleParser
      * @param iterable<int, string> $lines keyed by the 0-based line number
      *
      * @return Generator<int, list<string>>
+     *
+     * @internal
      */
     public function numberedBlocks(iterable $lines): Generator
     {
@@ -183,6 +190,8 @@ class WebVttParser extends SubtitleParser
 
     /**
      * Returns the file format data of the header block that starts with WEBVTT.
+     *
+     * @internal
      */
     public function parseHeader(array $rawLines): array
     {
@@ -208,6 +217,8 @@ class WebVttParser extends SubtitleParser
 
     /**
      * Parses one cue block as splitIntoBlocks() returns it.
+     *
+     * @internal
      */
     public function parseCueBlock(array $rawLines, int $index): SubtitleCue
     {
@@ -246,7 +257,7 @@ class WebVttParser extends SubtitleParser
         $cue->setIdentifier($identifier ?? null);
 
         $settings = $this->parseSettings($matches[7] ?? "", self::CUE_SETTINGS);
-        $cue->setFormatData(self::FORMAT, $settings);
+        $cue->setFormatData(self::FORMAT_DATA_KEY, $settings);
         $cue->setAlignment($this->settingsToAlignment($settings));
 
         return $cue;
@@ -273,6 +284,8 @@ class WebVttParser extends SubtitleParser
      * Keeps the exact value of each known "name:value" token. The last token with the same name wins.
      *
      * @see https://www.w3.org/TR/webvtt1/#parse-the-webvtt-cue-settings
+     *
+     * @internal
      */
     public function parseSettings(string $input, array $knownNames): array
     {

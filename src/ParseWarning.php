@@ -15,15 +15,15 @@ final class ParseWarning
     /**
      * Holds one problem that a lenient parser found and what it did about it.
      *
-     * @param int          $lineNumber 1-based input line of the problem
-     * @param int          $blockIndex 0-based number of the block, as in the "Block #n" messages
+     * @param ?int         $lineNumber 1-based input line of the problem. Null for binary EBU STL and the JSON formats, which have no lines.
+     * @param ?int         $blockIndex 0-based number of the block, as in the "Block #n" messages. Null for a library JSON field outside the cues.
      * @param list<string> $block      the lines of the block, trimmed as the parser reads them
      * @param string       $action     self::SKIPPED or self::REPAIRED
      */
     public function __construct(
         public readonly string $message,
-        public readonly int $lineNumber,
-        public readonly int $blockIndex,
+        public readonly ?int $lineNumber,
+        public readonly ?int $blockIndex,
         public readonly array $block,
         public readonly string $action,
     ) {
@@ -36,11 +36,11 @@ final class ParseWarning
      *
      * @param list<string> $block
      */
-    public static function skipped(ParsingException $exception, int $lineNumber, int $blockIndex, array $block): self
+    public static function skipped(ParsingException $exception, ?int $lineNumber, ?int $blockIndex, array $block): self
     {
         $message = preg_replace('/^ParsingException \(Error #\d+\): /', "", $exception->getMessage());
         $suffix  = " (line {$exception->getLineNumber()})";
-        if ($lineNumber > 0 && $exception->getLineNumber() !== null && str_ends_with($message, $suffix)) {
+        if ($lineNumber !== null && $exception->getLineNumber() !== null && str_ends_with($message, $suffix)) {
             $message = substr($message, 0, -strlen($suffix));
         }
 

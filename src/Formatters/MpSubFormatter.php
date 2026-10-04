@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
@@ -48,7 +49,7 @@ final class MpSubFormatter extends SubtitleFormatter
 
     private function getHeader(Subtitle $subtitle, ?FrameRate $frameRate): string
     {
-        $formatData = $subtitle->getFormatData("mpsub");
+        $formatData = $subtitle->getFormatData(MpSubParser::FORMAT_DATA_KEY);
         $headers    = [
             "TITLE"  => $subtitle->getMetadata(Subtitle::METADATA_TITLE) ?? "",
             "AUTHOR" => $subtitle->getMetadata(Subtitle::METADATA_AUTHOR) ?? "",

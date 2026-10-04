@@ -6,14 +6,17 @@ namespace SubtitleToolbox\Parsers;
 
 use Generator;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class SubRipParser extends SubtitleParser
+final class SubRipParser extends SubtitleParser
 {
+    public const FORMAT_DATA_KEY = Format::SubRip->value;
+
     // Legacy SSA codes: 1 to 3 are bottom, +4 is top, +8 is middle.
     private const LEGACY_ALIGNMENTS = [1 => 1, 2 => 2, 3 => 3, 5 => 7, 6 => 8, 7 => 9, 9 => 4, 10 => 5, 11 => 6];
 
@@ -40,6 +43,8 @@ class SubRipParser extends SubtitleParser
      * @param iterable<int, string> $lines keyed by the 0-based line number
      *
      * @return Generator<int, list<string>>
+     *
+     * @internal
      */
     public function splitIntoBlocks(iterable $lines): Generator
     {
@@ -53,6 +58,8 @@ class SubRipParser extends SubtitleParser
      * @param list<string> $rawLines
      *
      * @return list<SubtitleCue>
+     *
+     * @internal
      */
     public function parseBlock(array $rawLines, int $index, int $lineNumber): array
     {
@@ -102,6 +109,8 @@ class SubRipParser extends SubtitleParser
 
     /**
      * Parses one cue block of trimmed lines without empty lines, as parse() splits the file.
+     *
+     * @internal
      */
     public function parseCueBlock(array $rawLines, int $idx): SubtitleCue
     {
@@ -126,7 +135,7 @@ class SubRipParser extends SubtitleParser
         );
         $this->convertOverrideTags($cue);
         if ($coordinates !== null) {
-            $cue->setFormatData("srt", ["coordinates" => $coordinates]);
+            $cue->setFormatData(self::FORMAT_DATA_KEY, ["coordinates" => $coordinates]);
         }
 
         return $cue;

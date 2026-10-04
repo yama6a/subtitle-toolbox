@@ -43,7 +43,7 @@ $subtitle->getFormatData('ass');                        // [] when not set
 ```
 
 - **Alignment**: a number from 1 to 9 in numeric keypad layout. 1 is bottom left, 2 is bottom center, 8 is top center. `null` means the format default, bottom center.
-- **Format data**: the data of a format that has no shared field, for example ASS styles. Only the formatter of the same format reads it. The key is the lowercase file extension of the format, for example `ass` or `vtt`. [formats.md](formats.md) lists the keys of each format.
+- **Format data**: the data of a format that has no shared field, for example ASS styles. Only the formatter of the same format reads it. The key is the value of the `Format` case, for example `ass` for `Format::Ass` and `microdvd` for `Format::MicroDvd`. Each parser holds its key in `FORMAT_DATA_KEY`. CSV and TSV share the key `csv`. [formats.md](formats.md) lists the fields of each format.
 
 ## Finding cues
 ```php

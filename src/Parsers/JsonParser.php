@@ -10,7 +10,7 @@ use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 
-class JsonParser extends SubtitleParser
+final class JsonParser extends SubtitleParser
 {
     private const PLACEHOLDER_CUE = ["start" => 0, "end" => 0, "lines" => []];
 
@@ -37,7 +37,7 @@ class JsonParser extends SubtitleParser
             try {
                 $data["formatData"][$format] = $this->decodeBinary($formatData, "formatData.$format");
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, -1, [RawJson::encode([$format => $formatData])]);
+                $this->fail($exception, null, null, [RawJson::encode([$format => $formatData])]);
                 unset($data["formatData"][$format]);
             }
         }
@@ -48,7 +48,7 @@ class JsonParser extends SubtitleParser
                     try {
                         $data["cues"][$index]["formatData"] = $this->decodeBinary($cue["formatData"], "cues[$index].formatData");
                     } catch (ParsingException $exception) {
-                        $this->fail($exception, 0, $index, [RawJson::encode($cue)]);
+                        $this->fail($exception, null, $index, [RawJson::encode($cue)]);
                         $data["cues"][$index] = self::PLACEHOLDER_CUE;
                         $skipped[$index]      = true;
                     }
@@ -77,12 +77,12 @@ class JsonParser extends SubtitleParser
                 $message = $exception->getMessage();
                 if (preg_match('/: The field cues\[(\d+)\]/', $message, $matches)) {
                     $index = (int) $matches[1];
-                    $this->fail($exception, 0, $index, [RawJson::encode($data["cues"][$index])]);
+                    $this->fail($exception, null, $index, [RawJson::encode($data["cues"][$index])]);
                     $data["cues"][$index] = self::PLACEHOLDER_CUE;
                     $skipped[$index]      = true;
                 } elseif (preg_match('/: The field comments\[(\d+)\]/', $message, $matches)) {
                     $index = (int) $matches[1];
-                    $this->fail($exception, 0, -1, [RawJson::encode($data["comments"][$index])]);
+                    $this->fail($exception, null, null, [RawJson::encode($data["comments"][$index])]);
                     $data["comments"][$index] = ["text" => "", "beforeCueIndex" => 0];
                     $skippedComments[$index]  = true;
                 } elseif (preg_match('/: The field (metadata|formatData)\.(.+?) (?:must|is) /', $message, $matches)
@@ -91,7 +91,7 @@ class JsonParser extends SubtitleParser
                     if ($key === null) {
                         throw $exception;
                     }
-                    $this->fail($exception, 0, -1, [RawJson::encode([$key => $data[$matches[1]][$key]])]);
+                    $this->fail($exception, null, null, [RawJson::encode([$key => $data[$matches[1]][$key]])]);
                     unset($data[$matches[1]][$key]);
                 } else {
                     throw $exception;

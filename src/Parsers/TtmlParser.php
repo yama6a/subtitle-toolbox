@@ -9,27 +9,14 @@ use DOMElement;
 use DOMNode;
 use DOMXPath;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class TtmlParser extends SubtitleParser
+final class TtmlParser extends SubtitleParser
 {
-    public const FORMAT = "ttml";
-
-    public const NAMESPACE_TTML = "http://www.w3.org/ns/ttml";
-    public const NAMESPACE_DFXP = "http://www.w3.org/2006/10/ttaf1";
-    public const NAMESPACE_XML  = "http://www.w3.org/XML/1998/namespace";
-
-    public const NAMESPACE_IMSC_STYLING = "http://www.w3.org/ns/ttml/profile/imsc1#styling";
-
-    public const STYLING_NAMESPACES   = [
-        "http://www.w3.org/ns/ttml#styling",
-        "http://www.w3.org/2006/10/ttaf1#style",
-        "http://www.w3.org/2006/10/ttaf1#styling",
-    ];
-    public const PARAMETER_NAMESPACES = ["http://www.w3.org/ns/ttml#parameter", "http://www.w3.org/2006/10/ttaf1#parameter"];
-    public const METADATA_NAMESPACES  = ["http://www.w3.org/ns/ttml#metadata", "http://www.w3.org/2006/10/ttaf1#metadata"];
+    public const FORMAT_DATA_KEY = Format::Ttml->value;
 
     private const TIMING_ATTRIBUTES = ["begin", "end", "dur"];
 
@@ -79,7 +66,7 @@ class TtmlParser extends SubtitleParser
         $this->root      = $document->documentElement;
         $this->namespace = $this->root->namespaceURI;
         if ($this->root->localName !== "tt"
-            || !in_array($this->namespace, [self::NAMESPACE_TTML, self::NAMESPACE_DFXP, null], true)) {
+            || !in_array($this->namespace, [TtmlNamespaces::TTML, TtmlNamespaces::DFXP, null], true)) {
             throw new ParsingException("The root element is not a TTML <tt> element!");
         }
 
@@ -91,7 +78,7 @@ class TtmlParser extends SubtitleParser
         $this->agents  = $head === null ? [] : $this->readAgents($head);
 
         $subtitle = new Subtitle();
-        $language = $this->root->getAttributeNS(self::NAMESPACE_XML, "lang");
+        $language = $this->root->getAttributeNS(TtmlNamespaces::XML, "lang");
         if ($language !== "") {
             $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $language);
         }
@@ -108,7 +95,7 @@ class TtmlParser extends SubtitleParser
         if ($body !== null && $this->readAttributes($body, self::TIMING_ATTRIBUTES) !== []) {
             $fileData["body"] = $this->readAttributes($body, self::TIMING_ATTRIBUTES);
         }
-        $subtitle->setFormatData(self::FORMAT, $fileData);
+        $subtitle->setFormatData(self::FORMAT_DATA_KEY, $fileData);
 
         if ($body !== null) {
             $this->readContainer($subtitle, $body, 0.0, null, null, null, false, [], null);
@@ -254,7 +241,7 @@ class TtmlParser extends SubtitleParser
                 }
                 $this->paragraphIndex++;
                 if ($divAttributes !== []) {
-                    $cue->setFormatData(self::FORMAT, [...$cue->getFormatData(self::FORMAT), "div" => $divAttributes]);
+                    $cue->setFormatData(self::FORMAT_DATA_KEY, [...$cue->getFormatData(self::FORMAT_DATA_KEY), "div" => $divAttributes]);
                 }
                 $subtitle->addCue($cue, false);
             }
@@ -293,14 +280,14 @@ class TtmlParser extends SubtitleParser
         $this->collectRuns($paragraph, $style, $agent, $this->preservesSpace($paragraph, $preserveSpace), $runs);
 
         $cue = new SubtitleCue($begin, $end, $this->runsToLines($runs));
-        $id  = $paragraph->getAttributeNS(self::NAMESPACE_XML, "id");
+        $id  = $paragraph->getAttributeNS(TtmlNamespaces::XML, "id");
         $cue->setIdentifier($id === "" ? null : $id);
 
         $attributes = $this->readAttributes($paragraph, [...self::TIMING_ATTRIBUTES, "xml:id"]);
         if (!$paragraph->hasAttribute("region") && $region !== null) {
             $attributes["region"] = $region;
         }
-        $cue->setFormatData(self::FORMAT, $attributes === [] ? [] : ["attributes" => $attributes]);
+        $cue->setFormatData(self::FORMAT_DATA_KEY, $attributes === [] ? [] : ["attributes" => $attributes]);
 
         $textAlign = $this->ownStyleProperties($paragraph)["textAlign"] ?? $textAlign;
         $region    = $paragraph->hasAttribute("region") ? $paragraph->getAttribute("region") : $region;
@@ -321,7 +308,7 @@ class TtmlParser extends SubtitleParser
     private function forcedDisplay(DOMElement $element, int $depth = 0): ?bool
     {
         foreach ($element->attributes as $attribute) {
-            if ($attribute->namespaceURI === self::NAMESPACE_IMSC_STYLING && $attribute->localName === "forcedDisplay"
+            if ($attribute->namespaceURI === TtmlNamespaces::IMSC_STYLING && $attribute->localName === "forcedDisplay"
                 || $attribute->namespaceURI === null && $attribute->nodeName === "itts:forcedDisplay") {
                 return trim($attribute->value) === "true";
             }
@@ -586,7 +573,7 @@ class TtmlParser extends SubtitleParser
     {
         $properties = [];
         foreach ($element->attributes as $attribute) {
-            if (in_array($attribute->namespaceURI, self::STYLING_NAMESPACES, true)) {
+            if (in_array($attribute->namespaceURI, TtmlNamespaces::STYLING, true)) {
                 $properties[$attribute->localName] = $attribute->value;
             } elseif ($attribute->namespaceURI === null && str_starts_with($attribute->nodeName, "tts:")) {
                 $properties[substr($attribute->nodeName, 4)] = $attribute->value;
@@ -723,7 +710,7 @@ class TtmlParser extends SubtitleParser
             if (!$this->isMetadataElement($element, "agent")) {
                 continue;
             }
-            $id = $element->getAttributeNS(self::NAMESPACE_XML, "id");
+            $id = $element->getAttributeNS(TtmlNamespaces::XML, "id");
             foreach ($element->childNodes as $child) {
                 if ($child instanceof DOMElement && $this->isMetadataElement($child, "name") && trim($child->textContent) !== "") {
                     $agents[$id] = trim($child->textContent);
@@ -776,8 +763,8 @@ class TtmlParser extends SubtitleParser
     {
         $attributes = [];
         foreach ($element->attributes as $attribute) {
-            $name = $attribute->namespaceURI === self::NAMESPACE_XML ? "xml:" . $attribute->localName : $attribute->nodeName;
-            if (in_array($attribute->namespaceURI, self::METADATA_NAMESPACES, true) && $attribute->localName === "agent") {
+            $name = $attribute->namespaceURI === TtmlNamespaces::XML ? "xml:" . $attribute->localName : $attribute->nodeName;
+            if (in_array($attribute->namespaceURI, TtmlNamespaces::METADATA, true) && $attribute->localName === "agent") {
                 continue;
             }
             if (!in_array($name, $skip, true)) {
@@ -791,7 +778,7 @@ class TtmlParser extends SubtitleParser
 
     private function preservesSpace(DOMElement $element, bool $inherited): bool
     {
-        $space = $element->getAttributeNS(self::NAMESPACE_XML, "space");
+        $space = $element->getAttributeNS(TtmlNamespaces::XML, "space");
 
         return $space === "" ? $inherited : $space === "preserve";
     }
@@ -803,9 +790,9 @@ class TtmlParser extends SubtitleParser
     private function attribute(DOMElement $element, string $prefix, string $localName): ?string
     {
         $namespaces = match ($prefix) {
-            "ttp" => self::PARAMETER_NAMESPACES,
-            "tts" => self::STYLING_NAMESPACES,
-            "ttm" => self::METADATA_NAMESPACES,
+            "ttp" => TtmlNamespaces::PARAMETER,
+            "tts" => TtmlNamespaces::STYLING,
+            "ttm" => TtmlNamespaces::METADATA,
         };
         foreach ($element->attributes as $attribute) {
             if (in_array($attribute->namespaceURI, $namespaces, true) && $attribute->localName === $localName
@@ -826,7 +813,7 @@ class TtmlParser extends SubtitleParser
 
     private function isMetadataElement(DOMElement $element, string $localName): bool
     {
-        return in_array($element->namespaceURI, self::METADATA_NAMESPACES, true) && $element->localName === $localName
+        return in_array($element->namespaceURI, TtmlNamespaces::METADATA, true) && $element->localName === $localName
                || $element->namespaceURI === null && $element->nodeName === "ttm:$localName";
     }
 
@@ -850,7 +837,7 @@ class TtmlParser extends SubtitleParser
     {
         $elements = [];
         foreach ($head->getElementsByTagName("*") as $element) {
-            $id = $element->getAttributeNS(self::NAMESPACE_XML, "id");
+            $id = $element->getAttributeNS(TtmlNamespaces::XML, "id");
             if ($this->isTtElement($element, $localName) && $id !== "" && !isset($elements[$id])) {
                 $elements[$id] = $element;
             }

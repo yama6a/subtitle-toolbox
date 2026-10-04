@@ -2,16 +2,15 @@
 
 declare(strict_types=1);
 
-namespace SubtitleToolbox\Parsers;
+namespace SubtitleToolbox\Parsers\Options;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\FrameRate;
 
 /**
  * The column layout of a CSV or TSV table. A string maps a role to a header name, case-insensitively.
  * An int maps it to a 0-based column index. Null maps it to the header with the role name, when the table has one.
  */
-class CsvColumns
+final class CsvColumns
 {
     public const ROLES = ["identifier", "start", "end", "duration", "speaker", "text"];
 
@@ -23,13 +22,8 @@ class CsvColumns
         public readonly string|int|null $speaker = null,
         public readonly string|int|null $identifier = null,
         public readonly string|int|null $duration = null,
-        public readonly ?float $frameRate = null,
         public readonly bool $header = true,
     ) {
-        if ($frameRate !== null) {
-            new FrameRate($frameRate);
-        }
-
         foreach (self::ROLES as $role) {
             $column = $this->$role;
             if (is_int($column) && $column < 0) {
