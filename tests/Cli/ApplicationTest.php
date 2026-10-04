@@ -174,6 +174,25 @@ class ApplicationTest extends TestCase
     }
 
 
+    public function testConvertHelpBeforeAFileArgumentPrintsTheConvertHelp(): void
+    {
+        $help = self::runApplication(["convert", "--help"]);
+        $cwd  = getcwd();
+        chdir(__DIR__ . "/../..");
+        try {
+            $this->assertSame([0, ""], [$help[0], $help[2]]);
+            $this->assertSame($help, self::runApplication(["convert", "in.srt", "-h", "out.srt"]));
+            $this->assertSame($help, self::runApplication(["convert", "-h", "season1/movie"]));
+            $this->assertSame($help, self::runApplication(["convert", "-h", "LICENSE"]));
+            $this->assertSame($help, self::runApplication(["help", "convert", "out.srt"]));
+            $this->assertSame(self::runApplication(["convert", "--help", "text"]), self::runApplication(["convert", "in.srt", "-h", "text"]));
+            $this->assertSame(2, self::runApplication(["convert", "in.srt", "-h", "out"])[0]);
+        } finally {
+            chdir($cwd);
+        }
+    }
+
+
     public function testConvertHelpOfAnUnknownGroupListsTheGroups(): void
     {
         $expected = [2, "", "Error: Unknown option group \"timings\". The groups are ocr, forced, errors, sdh, replace, text, structure, " .
