@@ -160,7 +160,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --fix-common-errors --in-place
 | 1. Read | | input options | |
 | 2. OCR | `ocr` | `--ocr` | the later steps need text |
 | 3. Forced | `forced` | `--forced-only` | |
-| 4. Text | `errors`, `sdh`, `replace`, `text` | `--fix-common-errors`, `--sdh`, `--replace`, `--strip-tags`, `--case`, `--speakers` | SDH changes the line lengths, so it runs before wrapping |
+| 4. Text | `errors`, `sdh`, `replace`, `text` | `--fix-common-errors`, `--sdh`, `--replace`, `--speakers`, `--case`, `--strip-tags` | SDH changes the line lengths, so it runs before wrapping |
 | 5. Structure | `structure` | `--fix-resegment`, `--fix-unwrap`, `--fix-merge-short`, `--fix-split-long`, `--fix-wrap`, `--fix-merge-duplicates` | |
 | 6. Timing | `retime`, `snap`, `timing` | `--shift`, `--scale`, `--from-fps` and `--to-fps`, `--snap-shot-changes`, `--fix-overlaps`, `--fix-min-duration` | splits in step 5 create new cues |
 | 7. Masking | `masking` | `--mask-words` | the mute ranges of `--mute-edl` and `--mute-filter` need the final times |
@@ -190,9 +190,9 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --fix-common-errors --in-place
 | `--replace FROM=TO` | [`replaceText()`](text.md#transforms) on the text between tags. Repeatable. The first `=` ends FROM |
 | `--replace-regex` | reads each FROM as a regular expression with delimiters, for example `--replace '/\.{4,}/=...'` |
 | `--replace-ignore-case` | matches FROM in any case |
-| `--strip-tags` | removes all formatting tags, such as `<i>` and `<font>` |
-| `--case MODE` | `upper`, `lower` or `sentence`, with `changeCase()` |
 | `--speakers MODE` | `prefix`, `dashes`, `colours` or `from-prefix`. Calls `SpeakerLabels::apply()` with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colours`, or with `from: SpeakerStyle::Prefix`, and the other options at their defaults, see [Speakers](text.md#speakers) |
+| `--case MODE` | `upper`, `lower` or `sentence`, with `changeCase()` |
+| `--strip-tags` | removes all formatting tags, such as `<i>` and `<font>` |
 | `--language CODE` | the language of `--case` and `--fix-common-errors`, for example `en`, `de-AT` or `tr`. `tr` and `az` map `i` to `İ` and `ı` to `I`. Without it, `--fix-common-errors` takes the `language` metadata |
 
 ### Masking

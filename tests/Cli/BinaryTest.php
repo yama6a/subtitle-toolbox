@@ -465,6 +465,25 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testSpeakersRunBeforeCaseAndStripTags(): void
+    {
+        $files = __DIR__ . "/../files/speakers/";
+        copy($files . "voices.vtt", "$this->dir/voices.vtt");
+        copy($files . "sdh_labels.srt", "$this->dir/labels.srt");
+        $prefix = Subtitle::fromString(file_get_contents($files . "voices_prefix.srt"), Format::SubRip)->stripFormatting();
+        $voices = Subtitle::fromString(file_get_contents($files . "sdh_labels_voices.vtt"), Format::WebVtt)->changeCase("lower");
+
+        $this->assertSame(
+            [0, $prefix->toString(Format::SubRip, new WriteOptions(bom: false)), ""],
+            $this->runBinary(["convert", "voices.vtt", "--to", "srt", "-o", "-", "--no-bom", "--strip-tags", "--speakers", "prefix"])
+        );
+        $this->assertSame(
+            [0, $voices->toString(Format::WebVtt, new WriteOptions(bom: false)), ""],
+            $this->runBinary(["convert", "labels.srt", "--to", "vtt", "-o", "-", "--no-bom", "--case", "lower", "--speakers", "from-prefix"])
+        );
+    }
+
+
     public function testReplaceAndCase(): void
     {
         copy(self::FILES . "transforms/own_cea608_caps.vtt", "$this->dir/caps.vtt");
