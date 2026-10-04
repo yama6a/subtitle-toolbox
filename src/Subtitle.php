@@ -71,7 +71,17 @@ class Subtitle implements \IteratorAggregate, \Countable
      */
     public function __clone()
     {
-        $this->cues = array_map(fn (SubtitleCue $cue): SubtitleCue => clone $cue, $this->cues);
+        $this->cues           = array_map(fn (SubtitleCue $cue): SubtitleCue => clone $cue, $this->cues);
+        $this->cueLookupIndex = null;
+    }
+
+
+    /**
+     * Drops the cue lookup cache, because its edit count is only valid in the process that built it.
+     */
+    public function __wakeup(): void
+    {
+        $this->cueLookupIndex = null;
     }
 
 
