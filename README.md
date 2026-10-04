@@ -15,7 +15,6 @@ composer require ymakhloufi/subtitle-toolbox
 | PHP 8.2 or later | everything |
 | `ext-dom`, `ext-iconv` | everything. Composer checks them |
 | `ext-mbstring`, optional | full Unicode upper and lower case. Without it, only A to Z change case |
-| `ext-curl`, optional | the DeepL and Google translation engines and the `translate` command |
 | `ext-zlib`, optional | writing PGS, compressed PNG images, zlib-compressed MKV tracks |
 | [`yama6a/php-glyph-ocr`](https://github.com/yama6a/php-glyph-ocr), optional | the built-in OCR of PGS and VobSub bitmaps |
 
@@ -83,7 +82,7 @@ $subtitle->save('movie.vtt');                                   // WebVTT, from 
 - **Validation**: reading speed, line length and timing rules, with Netflix and BBC presets. See [validation.md](docs/validation.md).
 - **Sync**: find the offset and frame rate from a reference subtitle or from the speech in the audio. See [sync.md](docs/sync.md).
 - **OCR**: turn PGS and VobSub bitmaps into text in pure PHP, or with your own engine. See [ocr.md](docs/ocr.md).
-- **Translation**: translate the cues with the built-in DeepL and Google engines or your own engine, and keep the tags. See [translation.md](docs/translation.md).
+- **Translation**: send the cues to a machine translation engine and keep the tags. See [translation.md](docs/translation.md).
 - **Compare**: list the cues that changed between two versions. See [compare.md](docs/compare.md).
 - **Large files and streaming**: stream SRT and WebVTT cue by cue, cut WebVTT into HLS segments. See [streaming.md](docs/streaming.md) and [hls.md](docs/hls.md).
 - **Broken files**: skip broken cues with a warning in place of an exception. See [lenient-parsing.md](docs/lenient-parsing.md).

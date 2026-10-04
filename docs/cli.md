@@ -18,7 +18,7 @@ Every release also ships the tool as a PHAR file and as a container image.
 
 | Form | Needs | Example |
 |:--- |:--- |:--- |
-| PHAR on the [GitHub release](https://github.com/yama6a/subtitle-toolbox/releases) | PHP 8.2 or later with `ext-dom`, `ext-iconv` and `ext-zlib`, plus `ext-curl` for `translate` | `php subtitle-toolbox.phar convert in.srt out.vtt` |
+| PHAR on the [GitHub release](https://github.com/yama6a/subtitle-toolbox/releases) | PHP 8.2 or later with `ext-dom`, `ext-iconv` and `ext-zlib` | `php subtitle-toolbox.phar convert in.srt out.vtt` |
 | Image `ghcr.io/yama6a/subtitle-toolbox` | Docker or another container runtime | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:2.0.0 convert in.srt out.vtt` |
 | Image `ghcr.io/yama6a/subtitle-toolbox:tesseract` | the same, for OCR with Tesseract in every language | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:2.0.0-tesseract convert in.sup out.srt --ocr --ocr-language deu` |
 
@@ -42,7 +42,6 @@ php subtitle-toolbox.phar --version
 | `validate` | prints each broken rule, as text or with `--json`, see [Validate](#validate) |
 | `sync` | retimes a subtitle to a reference subtitle or to the speech, see [Sync](#sync) |
 | `diff` | lists the added, removed and changed cues of two files, see [Diff](#diff) |
-| `translate` | translates the cue text with DeepL or Google Cloud Translation, see [Translate](#translate) |
 | `dual` | merges two languages into one file, see [Dual](#dual) |
 | `hls` | cuts a subtitle into WebVTT segments and writes an HLS playlist, see [HLS](#hls) |
 | `formats` | lists the format names and extensions for `--from` and `--to` |
@@ -54,7 +53,7 @@ php subtitle-toolbox.phar --version
 ## Input and output
 - **Inputs**: a file, a directory, a glob such as `"season1/*.srt"`, or `-` for standard input. A directory gives its files with a known extension.
 - **Input format**: `--from`, else format detection on the content, else the file extension. Chapters and cloud speech-to-text JSON need `--from`, for example `--from deepgram` or `--from ffmeta`. The tool reads like `Subtitle::loadAutoDetectFormat()`, see [formats.md](formats.md#load-and-save).
-- **Output**: `-o` or `--output` for one file, `--output-dir`, or `--in-place`. `--output -` writes standard output. `convert`, `retime`, `sync`, `translate` and `dual` take all 4. `hls` takes only `--output-dir`.
+- **Output**: `-o` or `--output` for one file, `--output-dir`, or `--in-place`. `--output -` writes standard output. `convert`, `retime`, `sync` and `dual` take all 4. `hls` takes only `--output-dir`.
 - **Default output**: without these options, one input goes to standard output. With 2 or more inputs, each output goes next to its input, with the extension of the output format. The tool counts the inputs after it expands directories and globs.
 
 | Call | Writes |
@@ -316,28 +315,6 @@ vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-format
 | `--ignore-formatting`, `--ignore-whitespace`, `--text-only` | `ignoreFormatting`, `ignoreWhitespace`, `textOnly` |
 | `--from2 FORMAT`, `--track2 NUMBER` | the format and the MKV or WebM track of the new file. `--from` and `--track` apply to the old file |
 | `--json` | one object with `old`, `new`, `equal` and `differences`. A difference has `kind`, `oldIndex`, `newIndex`, `old` and `new`. A cue has `start`, `end`, `lines` and `forced` |
-
-## Translate
-`translate` translates the cue text with DeepL or Google Cloud Translation, through [`TranslationRunner`](translation.md) and the built-in engines. It needs the PHP extension curl.
-
-```sh
-vendor/bin/subtitle-toolbox translate movie.de.srt --engine deepl --source-language de --target-language en-US -o movie.en.srt
-DEEPL_API_KEY=... vendor/bin/subtitle-toolbox translate movie.de.srt --engine deepl --target-language en-US
-vendor/bin/subtitle-toolbox translate movie.de.srt --engine google --api-key "$KEY" --target-language fr --to vtt
-```
-
-| Option | Sets |
-|:--- |:--- |
-| `--engine deepl\|google` | the engine, `DeepLEngine` or `GoogleTranslateEngine`. Required |
-| `--api-key KEY` | the API key. Default: `DEEPL_API_KEY` for `deepl`, `GOOGLE_TRANSLATE_API_KEY` for `google` |
-| `--source-language CODE` | the language of the input, for example `de`. Default: the engine detects it |
-| `--target-language CODE` | the language of the output, for example `en-US` for DeepL or `fr` for Google. Required |
-
-- **Key**: the tool reads only the variable of the chosen engine. With `--engine deepl`, a set `GOOGLE_TRANSLATE_API_KEY` does not help. The key never appears in the output or in error messages.
-- **Usage errors**: a missing or unknown `--engine`, a missing key or a missing `--target-language` stops the tool with exit code 2.
-- **Engine errors**: a wrong key, too many requests or a used-up quota fail the file with exit code 1 and a message that names the cause.
-- **No curl**: without `ext-curl`, `translate` exits with code 1 and names the extension. The other commands run without it. The Docker images include it. For the PHAR, install it with your PHP, for example `apt install php8.2-curl`.
-- **Warnings**: the tool prints a warning per cue to standard error when the engine breaks a tag placeholder, see [translation.md](translation.md).
 
 ## Dual
 `dual` merges a primary and a secondary subtitle with [`DualSubtitle::merge()`](editing.md#dual-subtitles). The output has the format of the primary file, unless `--to` or the `--output` extension sets another one.
