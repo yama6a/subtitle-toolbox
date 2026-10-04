@@ -226,6 +226,8 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 | `--fix-max-cpl CHARS` | `maxCharactersPerLine` of `--fix-resegment`, `--fix-merge-short` and `--fix-split-long`, default 42 |
 | `--fix-max-lines LINES` | `maxLines` of `--fix-resegment`, `--fix-merge-short`, `--fix-split-long` and `--fix-wrap`, default 2 |
 
+- **Limits without their fix**: `--fix-max-cpl`, `--fix-max-lines` and `--fix-min-gap` alone are a usage error, exit code 2. The message names the fix options that use them.
+
 ### Timing
 `--shift`, `--shift-after`, `--scale`, `--from-fps` and `--to-fps` work as in [Retime](#retime).
 
@@ -239,6 +241,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 | `--snap-no-chain` | `chain: false` |
 | `--fix-overlaps` | `fixOverlaps()` with `--fix-min-gap` seconds, default 0 |
 | `--fix-min-duration SECONDS` | `extendShortCues()` with `--fix-min-gap` |
+| `--fix-min-gap SECONDS` | the gap of `--fix-overlaps` and `--fix-min-duration` |
 
 ```sh
 ffmpeg -i movie.mp4 -vf "select='gt(scene,0.3)',showinfo" -f null - 2> scenes.log

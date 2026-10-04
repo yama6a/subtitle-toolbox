@@ -62,6 +62,8 @@ final class StructureEdit extends Edit
     public static function fromArguments(Arguments $arguments): ?static
     {
         self::needs($arguments, "fix-resegment", ["fix-max-word-gap"]);
+        self::needsOneOf($arguments, ["fix-resegment", "fix-merge-short", "fix-split-long"], "fix-max-cpl");
+        self::needsOneOf($arguments, ["fix-wrap", "fix-resegment", "fix-merge-short", "fix-split-long"], "fix-max-lines");
         $wordGap  = $arguments->positiveFloat("fix-max-word-gap");
         $wrap     = $arguments->positiveInt("fix-wrap");
         $maxCpl   = $arguments->positiveInt("fix-max-cpl");

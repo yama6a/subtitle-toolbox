@@ -44,6 +44,7 @@ final class TimingFixEdit extends Edit
 
     public static function fromArguments(Arguments $arguments): ?static
     {
+        self::needsOneOf($arguments, ["fix-overlaps", "fix-min-duration"], "fix-min-gap");
         $minDuration = $arguments->positiveFloat("fix-min-duration");
         $minGap      = $arguments->float("fix-min-gap") ?? 0.0;
         if ($minGap < 0) {

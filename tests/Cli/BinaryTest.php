@@ -767,6 +767,35 @@ class BinaryTest extends TestCase
     }
 
 
+    /**
+     * @return array<string, array{list<string>, string}>
+     */
+    public static function fixLimitsWithoutTheirFix(): array
+    {
+        return [
+            "max cpl"           => [["--fix-max-cpl", "30"], "Pass --fix-resegment, --fix-merge-short or --fix-split-long with --fix-max-cpl."],
+            "max cpl with wrap" => [["--fix-max-cpl", "30", "--fix-wrap", "20"],
+                                    "Pass --fix-resegment, --fix-merge-short or --fix-split-long with --fix-max-cpl."],
+            "max lines"         => [["--fix-max-lines", "1", "--fix-overlaps"],
+                                    "Pass --fix-wrap, --fix-resegment, --fix-merge-short or --fix-split-long with --fix-max-lines."],
+            "min gap"           => [["--fix-min-gap", "0.1", "--fix-wrap", "20"], "Pass --fix-overlaps or --fix-min-duration with --fix-min-gap."],
+        ];
+    }
+
+
+    /**
+     * @param list<string> $options
+     */
+    #[DataProvider("fixLimitsWithoutTheirFix")]
+    public function testFixLimitWithoutItsFixIsAUsageError(array $options, string $message): void
+    {
+        $this->assertSame(
+            [2, "", "Error: $message\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            $this->runBinary(["convert", "trip.srt", "--to", "srt", "-o", "-", ...$options])
+        );
+    }
+
+
     public function testFixMergeShort(): void
     {
         copy(__DIR__ . "/../files/short-cues/own_speech_to_text.srt", "$this->dir/speech.srt");
