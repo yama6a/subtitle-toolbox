@@ -16,6 +16,9 @@ use SubtitleToolbox\Profanity\ProfanityOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 
+/**
+ * @internal
+ */
 final class MaskingEdit extends Edit
 {
     private const MASKS = [

@@ -13,6 +13,9 @@ use SubtitleToolbox\Karaoke\WordHighlight;
 use SubtitleToolbox\Karaoke\WordHighlightOptions;
 use SubtitleToolbox\Subtitle;
 
+/**
+ * @internal
+ */
 final class KaraokeEdit extends Edit
 {
     private function __construct(private readonly WordHighlightOptions $options)

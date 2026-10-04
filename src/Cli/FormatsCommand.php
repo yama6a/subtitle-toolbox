@@ -6,7 +6,10 @@ namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Format;
 
-class FormatsCommand extends Command
+/**
+ * @internal
+ */
+final class FormatsCommand extends Command
 {
     public function name(): string
     {

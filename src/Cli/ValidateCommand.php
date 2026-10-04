@@ -9,7 +9,10 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Validation\ValidationViolation;
 use SubtitleToolbox\Validation\ValidationRules;
 
-class ValidateCommand extends ReportCommand
+/**
+ * @internal
+ */
+final class ValidateCommand extends ReportCommand
 {
     private const PRESETS = ["netflix-en", "bbc"];
 
@@ -123,30 +126,30 @@ class ValidateCommand extends ReportCommand
 
     protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
-        $results = $subtitle->validate($this->rules);
-        if ($results !== []) {
+        $violations = $subtitle->validate($this->rules);
+        if ($violations !== []) {
             $this->withProblems++;
         }
 
         $label = self::label($input);
-        $text  = $results === [] ? "$label: no problems\n" : "";
-        foreach ($results as $result) {
-            $limit = $result->limit === null ? "" : ", limit " . self::number($result->limit);
-            $text .= "$label: cue " . ($result->cueIndex + 1) . ": " . $result->rule->value . " " .
-                     self::number($result->value) . "$limit\n";
+        $text  = $violations === [] ? "$label: no problems\n" : "";
+        foreach ($violations as $violation) {
+            $limit = $violation->limit === null ? "" : ", limit " . self::number($violation->limit);
+            $text .= "$label: cue " . ($violation->cueIndex + 1) . ": " . $violation->rule->value . " " .
+                     self::number($violation->value) . "$limit\n";
         }
 
         $this->emit($console, $text, [
-            "file"    => $label,
-            "format"  => $format->value,
-            "valid"   => $results === [],
-            "results" => array_map(fn (ValidationViolation $result): array => [
-                "cueIndex"  => $result->cueIndex,
-                "cueNumber" => $result->cueIndex + 1,
-                "rule"      => $result->rule->value,
-                "value"     => self::jsonNumber($result->value),
-                "limit"     => self::jsonNumber($result->limit),
-            ], $results),
+            "file"       => $label,
+            "format"     => $format->value,
+            "valid"      => $violations === [],
+            "violations" => array_map(fn (ValidationViolation $violation): array => [
+                "cueIndex" => $violation->cueIndex,
+                "rule"     => $violation->rule->value,
+                "value"    => self::jsonNumber($violation->value),
+                "limit"    => self::jsonNumber($violation->limit),
+            ], $violations),
+            "warnings"   => self::warningsJson($this->parseWarnings),
         ]);
     }
 

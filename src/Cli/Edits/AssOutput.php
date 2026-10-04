@@ -13,6 +13,8 @@ use SubtitleToolbox\Formatters\Options\AssWriteOptions;
 
 /**
  * The ASS writer settings of convert.
+ *
+ * @internal
  */
 final class AssOutput
 {
@@ -59,7 +61,7 @@ final class AssOutput
     public function formatOptions(Format $outputFormat): AssWriteOptions
     {
         if ($outputFormat !== Format::Ass) {
-            Command::fail("--ass-karaoke-tag needs ASS output.");
+            Command::fail("Pass --to ass with --ass-karaoke-tag.");
         }
 
         return new AssWriteOptions($this->karaokeTag);

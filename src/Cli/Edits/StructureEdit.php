@@ -14,9 +14,12 @@ use SubtitleToolbox\Resegmenting\Resegmenter;
 use SubtitleToolbox\Resegmenting\ResegmentOptions;
 use SubtitleToolbox\Subtitle;
 
+/**
+ * @internal
+ */
 final class StructureEdit extends Edit
 {
-    private const EDITS = ["fix-resegment", "fix-unwrap", "fix-merge-short", "fix-split-long", "fix-wrap", "fix-merge-duplicates"];
+    private const EDITS = ["structure-resegment", "structure-unwrap", "structure-merge-short", "structure-split-long", "structure-wrap", "structure-merge-duplicates"];
 
 
     private function __construct(
@@ -24,7 +27,7 @@ final class StructureEdit extends Edit
         private readonly bool $unwrap,
         private readonly bool $mergeShort,
         private readonly bool $splitLong,
-        private readonly ?int $wrap,
+        private readonly bool $wrap,
         private readonly bool $mergeDuplicates,
         private readonly int $maxCharactersPerLine,
         private readonly int $maxLines,
@@ -47,39 +50,38 @@ final class StructureEdit extends Edit
     public static function options(): array
     {
         return [
-            Option::flag("fix-resegment", "Build new cues from the word timestamps, one sentence or as much as fits --fix-max-cpl and --fix-max-lines each."),
-            Option::value("fix-max-word-gap", "SECONDS", "--fix-resegment ends a cue at a pause of this length. Default: 0.6."),
-            Option::flag("fix-unwrap", "Join the lines of each cue with a space."),
-            Option::flag("fix-merge-short", "Join cues shorter than 1 s with a neighbour at most 0.25 s away, where the joined cue fits 7 s, --fix-max-cpl and --fix-max-lines."),
-            Option::flag("fix-split-long", "Split cues longer than 7 s, or longer than --fix-max-lines lines of --fix-max-cpl characters, at sentence ends, clause ends or spaces."),
-            Option::value("fix-wrap", "CHARS", "Break lines longer than this number of characters."),
-            Option::value("fix-max-cpl", "CHARS", "Maximum characters per line for --fix-resegment, --fix-merge-short and --fix-split-long. Default: 42."),
-            Option::value("fix-max-lines", "LINES", "Maximum number of lines per cue for --fix-wrap, --fix-resegment, --fix-merge-short and --fix-split-long. Default: 2."),
-            Option::flag("fix-merge-duplicates", "Join touching cues with the same text."),
+            Option::flag("structure-resegment", "Build new cues from the word timestamps, one sentence or as much as fits --structure-max-cpl and --structure-max-lines each."),
+            Option::value("structure-max-word-gap", "SECONDS", "--structure-resegment ends a cue at a pause of this length. Default: 0.6."),
+            Option::flag("structure-unwrap", "Join the lines of each cue with a space."),
+            Option::flag("structure-merge-short", "Join cues shorter than 1 s with a neighbour at most 0.25 s away, where the joined cue fits 7 s, --structure-max-cpl and --structure-max-lines."),
+            Option::flag("structure-split-long", "Split cues longer than 7 s, or longer than --structure-max-lines lines of --structure-max-cpl characters, at sentence ends, clause ends or spaces."),
+            Option::flag("structure-wrap", "Break lines longer than --structure-max-cpl characters."),
+            Option::value("structure-max-cpl", "CHARS", "Maximum characters per line for --structure-wrap, --structure-resegment, --structure-merge-short and --structure-split-long. Default: 42."),
+            Option::value("structure-max-lines", "LINES", "Maximum number of lines per cue for --structure-wrap, --structure-resegment, --structure-merge-short and --structure-split-long. Default: 2."),
+            Option::flag("structure-merge-duplicates", "Join touching cues with the same text."),
         ];
     }
 
 
     public static function fromArguments(Arguments $arguments): ?static
     {
-        self::needs($arguments, "fix-resegment", ["fix-max-word-gap"]);
-        self::needsOneOf($arguments, ["fix-resegment", "fix-merge-short", "fix-split-long"], "fix-max-cpl");
-        self::needsOneOf($arguments, ["fix-wrap", "fix-resegment", "fix-merge-short", "fix-split-long"], "fix-max-lines");
-        $wordGap  = $arguments->positiveFloat("fix-max-word-gap");
-        $wrap     = $arguments->positiveInt("fix-wrap");
-        $maxCpl   = $arguments->positiveInt("fix-max-cpl");
-        $maxLines = $arguments->positiveInt("fix-max-lines");
+        self::needs($arguments, "structure-resegment", ["structure-max-word-gap"]);
+        self::needsOneOf($arguments, ["structure-wrap", "structure-resegment", "structure-merge-short", "structure-split-long"], "structure-max-cpl");
+        self::needsOneOf($arguments, ["structure-wrap", "structure-resegment", "structure-merge-short", "structure-split-long"], "structure-max-lines");
+        $wordGap  = $arguments->positiveFloat("structure-max-word-gap");
+        $maxCpl   = $arguments->positiveInt("structure-max-cpl");
+        $maxLines = $arguments->positiveInt("structure-max-lines");
         if (array_filter(self::EDITS, $arguments->has(...)) === []) {
             return null;
         }
 
         return new self(
-            $arguments->has("fix-resegment") ? $wordGap ?? 0.6 : null,
-            $arguments->has("fix-unwrap"),
-            $arguments->has("fix-merge-short"),
-            $arguments->has("fix-split-long"),
-            $wrap,
-            $arguments->has("fix-merge-duplicates"),
+            $arguments->has("structure-resegment") ? $wordGap ?? 0.6 : null,
+            $arguments->has("structure-unwrap"),
+            $arguments->has("structure-merge-short"),
+            $arguments->has("structure-split-long"),
+            $arguments->has("structure-wrap"),
+            $arguments->has("structure-merge-duplicates"),
             $maxCpl ?? 42,
             $maxLines ?? 2,
         );
@@ -101,8 +103,8 @@ final class StructureEdit extends Edit
         if ($this->splitLong) {
             Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::SplitLong, $limits));
         }
-        if ($this->wrap !== null) {
-            $subtitle->wrapLines($this->wrap, $this->maxLines);
+        if ($this->wrap) {
+            $subtitle->wrapLines($this->maxCharactersPerLine, $this->maxLines);
         }
         if ($this->mergeDuplicates) {
             $subtitle->removeDuplicateCues();

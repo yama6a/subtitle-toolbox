@@ -91,7 +91,7 @@ class RobustnessLimitsTest extends TestCase
     {
         $path = self::FILES . "fixing/latin1_unclosed_italic.srt";
 
-        [$code, , $error] = self::runApplication(["convert", $path, "--fix-common-errors", "--fix-list", "-o", "-"]);
+        [$code, , $error] = self::runApplication(["convert", $path, "--errors-fix", "--errors-list", "-o", "-"]);
 
         $this->assertSame(0, $code);
         $this->assertSame("$path: cue 1: unbalancedTags: \"<i>Caf\u{FFFD} au lait.\" -> \"<i>Caf\u{FFFD} au lait.</i>\"\n", $error);

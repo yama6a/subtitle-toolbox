@@ -11,6 +11,9 @@ use SubtitleToolbox\Cli\Option;
 use SubtitleToolbox\ReplaceTextOptions;
 use SubtitleToolbox\Subtitle;
 
+/**
+ * @internal
+ */
 final class ReplaceEdit extends Edit
 {
     /**

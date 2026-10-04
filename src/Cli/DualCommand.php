@@ -11,7 +11,10 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
-class DualCommand extends WriteCommand
+/**
+ * @internal
+ */
+final class DualCommand extends WriteCommand
 {
     private const MODES = ["stack" => DualSubtitleMode::Stack, "top-bottom" => DualSubtitleMode::TopBottom];
 
@@ -110,7 +113,7 @@ class DualCommand extends WriteCommand
 
     protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
-        $secondary = $this->loadSecondFile($arguments->positionals[1], $arguments);
+        $secondary = $this->loadSecondFile($arguments->positionals[1], $arguments, $console);
 
         parent::process($input, DualSubtitle::fromPair($subtitle, $secondary, $this->dualOptions), $format, $arguments, $console);
     }

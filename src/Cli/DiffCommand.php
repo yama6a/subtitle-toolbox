@@ -12,7 +12,10 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class DiffCommand extends ReportCommand
+/**
+ * @internal
+ */
+final class DiffCommand extends ReportCommand
 {
     private ?SubtitleDiffOptions $diffOptions = null;
 
@@ -103,12 +106,13 @@ class DiffCommand extends ReportCommand
     protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         $newPath     = $arguments->positionals[1];
-        $differences = SubtitleDiff::compare($subtitle, $this->loadSecondFile($newPath, $arguments), $this->diffOptions);
+        $new         = $this->loadSecondFile($newPath, $arguments, $console);
+        $differences = SubtitleDiff::compare($subtitle, $new, $this->diffOptions);
 
         $this->different = $differences !== [];
         $this->emit($console, SubtitleDiff::toText($differences), [
-            "old"         => self::label($input),
-            "new"         => self::label($newPath),
+            "oldFile"     => self::label($input),
+            "newFile"     => self::label($newPath),
             "equal"       => $differences === [],
             "differences" => array_map(fn (CueDifference $difference): array => [
                 "kind"     => $difference->kind->value,
@@ -117,6 +121,8 @@ class DiffCommand extends ReportCommand
                 "old"      => self::cue($difference->oldCue),
                 "new"      => self::cue($difference->newCue),
             ], $differences),
+            "oldWarnings" => self::warningsJson($this->parseWarnings),
+            "newWarnings" => self::warningsJson($new->getParseWarnings()),
         ]);
     }
 

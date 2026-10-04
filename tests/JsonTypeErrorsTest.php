@@ -7,8 +7,8 @@ namespace SubtitleToolbox;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Cli\Application;
-use SubtitleToolbox\Cli\FormatsCommand;
-use SubtitleToolbox\Cli\InfoCommand;
+use SubtitleToolbox\Cli\Command;
+use SubtitleToolbox\Cli\FileCommand;
 use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Exceptions\ParsingException;
@@ -258,7 +258,31 @@ class JsonTypeErrorsTest extends TestCase
 
     public function testCliPrintsAnErrorOfAFileRunWithItsClassAndGoesOn(): void
     {
-        $command = new class extends InfoCommand {
+        $command = new class extends FileCommand {
+            public function name(): string
+            {
+                return "info";
+            }
+
+
+            public function summary(): string
+            {
+                return "";
+            }
+
+
+            protected function usageLines(): array
+            {
+                return [];
+            }
+
+
+            protected function commandOptions(): array
+            {
+                return [];
+            }
+
+
             protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
             {
                 throw new \TypeError("Broken value");
@@ -276,7 +300,37 @@ class JsonTypeErrorsTest extends TestCase
 
     public function testCliPrintsAnErrorOutsideAFileRunWithItsClass(): void
     {
-        $command = new class extends FormatsCommand {
+        $command = new class extends Command {
+            public function name(): string
+            {
+                return "formats";
+            }
+
+
+            public function summary(): string
+            {
+                return "";
+            }
+
+
+            protected function usageLines(): array
+            {
+                return [];
+            }
+
+
+            public function options(): array
+            {
+                return [];
+            }
+
+
+            public function execute(Arguments $arguments, Console $console): int
+            {
+                return 0;
+            }
+
+
             public function run(array $arguments, Console $console): int
             {
                 throw new \Error("Broken state");

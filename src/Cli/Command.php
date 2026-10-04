@@ -6,6 +6,9 @@ namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
+/**
+ * @internal
+ */
 abstract class Command
 {
     abstract public function name(): string;

@@ -955,7 +955,7 @@
         "fromPath": "vtt",
         "detect": "vtt"
     },
-    "speakers/voices_colours.srt": {
+    "speakers/voices_colors.srt": {
         "fromPath": "srt",
         "detect": "srt"
     },

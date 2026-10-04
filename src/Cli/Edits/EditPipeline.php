@@ -11,6 +11,8 @@ use SubtitleToolbox\Subtitle;
 
 /**
  * Runs the edits of convert in one fixed order: forced cues, OCR, text, structure, timing, masking, karaoke.
+ *
+ * @internal
  */
 final class EditPipeline
 {
@@ -57,8 +59,8 @@ final class EditPipeline
 
     public static function fromArguments(Arguments $arguments): self
     {
-        if ($arguments->has("language") && !$arguments->has("case") && !$arguments->has("fix-common-errors")) {
-            Command::fail("Pass --case or --fix-common-errors with --language.");
+        if ($arguments->has("language") && !$arguments->has("case") && !$arguments->has("errors-fix")) {
+            Command::fail("Pass --case or --errors-fix with --language.");
         }
 
         return new self(array_values(array_filter(array_map(fn (string $edit): ?Edit => $edit::fromArguments($arguments), self::EDITS))));

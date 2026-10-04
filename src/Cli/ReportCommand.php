@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
+use SubtitleToolbox\ParseWarning;
+
 /**
  * Prints a report on each input file, as text or as JSON.
+ *
+ * @internal
  */
 abstract class ReportCommand extends FileCommand
 {
@@ -89,6 +93,22 @@ abstract class ReportCommand extends FileCommand
             is_infinite($value)  => "INF",
             default              => rtrim(rtrim(number_format($value, 3, ".", ""), "0"), "."),
         };
+    }
+
+
+    /**
+     * @param list<ParseWarning> $warnings
+     *
+     * @return list<array{lineNumber: ?int, blockIndex: ?int, message: string, action: string}>
+     */
+    protected static function warningsJson(array $warnings): array
+    {
+        return array_map(fn (ParseWarning $warning): array => [
+            "lineNumber" => $warning->lineNumber,
+            "blockIndex" => $warning->blockIndex,
+            "message"    => $warning->message,
+            "action"     => $warning->action->value,
+        ], $warnings);
     }
 
 

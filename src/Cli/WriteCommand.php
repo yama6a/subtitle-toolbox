@@ -15,6 +15,8 @@ use SubtitleToolbox\WriteOptions;
 
 /**
  * Changes each input subtitle with transform() and writes it to a file or to standard output.
+ *
+ * @internal
  */
 abstract class WriteCommand extends FileCommand
 {
@@ -145,7 +147,7 @@ abstract class WriteCommand extends FileCommand
     }
 
 
-    public static function writableFormat(string $nameOrExtension): Format
+    private static function writableFormat(string $nameOrExtension): Format
     {
         $format = self::findFormat($nameOrExtension);
         if (!$format->canWrite()) {

@@ -9,6 +9,9 @@ use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
 use SubtitleToolbox\Subtitle;
 
+/**
+ * @internal
+ */
 final class ForcedEdit extends Edit
 {
     public static function group(): string

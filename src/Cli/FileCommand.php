@@ -16,6 +16,8 @@ use SubtitleToolbox\Subtitle;
 
 /**
  * Reads each input file, a glob or the files of a directory, and runs process() on it.
+ *
+ * @internal
  */
 abstract class FileCommand extends Command
 {
@@ -215,7 +217,7 @@ abstract class FileCommand extends Command
     }
 
 
-    public static function label(string $input): string
+    protected static function label(string $input): string
     {
         return $input === self::DASH ? "stdin" : $input;
     }
@@ -224,7 +226,7 @@ abstract class FileCommand extends Command
     /**
      * Returns the format for a format name or a file extension such as "SRT" or ".ssa".
      */
-    public static function findFormat(string $nameOrExtension): Format
+    protected static function findFormat(string $nameOrExtension): Format
     {
         $key = strtolower(ltrim($nameOrExtension, "."));
 
@@ -233,7 +235,7 @@ abstract class FileCommand extends Command
     }
 
 
-    public static function readableFormat(string $nameOrExtension): Format
+    private static function readableFormat(string $nameOrExtension): Format
     {
         $format = self::findFormat($nameOrExtension);
         if (!$format->canRead()) {
@@ -323,19 +325,24 @@ abstract class FileCommand extends Command
         $this->fromContainer = $track !== null || ($input !== self::DASH && Format::fromPath($input) === null);
 
         $this->parseWarnings = $subtitle->getParseWarnings();
-        foreach ($this->parseWarnings as $warning) {
-            $line = $warning->lineNumber === null ? "" : "line $warning->lineNumber: ";
-            $console->err(self::label($input) . ": $line$warning->message ({$warning->action->value})\n");
-        }
+        self::printWarnings($console, self::label($input), $this->parseWarnings);
 
         return [$subtitle, $subtitle->getFormat()];
     }
 
 
     /**
-     * Rewords a library message that names a PHP method, class or option property, so that it names CLI options.
-     * $track and $from are the options that pick the track and the format of the file, or null when it has none.
+     * @param list<ParseWarning> $warnings
      */
+    private static function printWarnings(Console $console, string $label, array $warnings): void
+    {
+        foreach ($warnings as $warning) {
+            $line = $warning->lineNumber === null ? "" : "line $warning->lineNumber: ";
+            $console->err("$label: $line$warning->message ({$warning->action->value})\n");
+        }
+    }
+
+
     /**
      * Returns the message of a library exception, which names its class, or the class and message of another error.
      */
@@ -347,7 +354,11 @@ abstract class FileCommand extends Command
     }
 
 
-    public static function cliMessage(string $message, ?string $track, ?string $from): string
+    /**
+     * Rewords a library message that names a PHP method, class or option property, so that it names CLI options.
+     * $track and $from are the options that pick the track and the format of the file, or null when it has none.
+     */
+    private static function cliMessage(string $message, ?string $track, ?string $from): string
     {
         $pickTrack  = $track === null ? "Write one of them to a subtitle file with convert --track N first:" : "Pass $track N with one of them:";
         $pickFormat = $from === null
@@ -367,7 +378,7 @@ abstract class FileCommand extends Command
             "Pass IttWriteOptions::frameRate."                                       => "Pass --fps or --output-fps.",
             "Set MicroDvdReadOptions::frameRate or start the file with {1}{1}<fps>." => "Pass --fps or --input-fps, or start the file with {1}{1}<fps>.",
             "Pass CsvReadOptions::frameRate."                                    => "Pass --fps or --input-fps.",
-            "Call wrapLines(32, 4) first."                                      => "Pass --fix-wrap 32 --fix-max-lines 4.",
+            "Call wrapLines(32, 4) first."                                      => "Pass --structure-wrap --structure-max-cpl 32 --structure-max-lines 4.",
         ]);
     }
 
@@ -376,27 +387,30 @@ abstract class FileCommand extends Command
      * Reads a file other than the input, such as a reference, without --from and --track. Detects the format unless
      * $format or $track is given. $trackOption and $fromOption name the options that set $track and $format.
      */
-    protected function loadOtherFile(string $path, ?Format $format = null, ?int $track = null, ?string $trackOption = null,
-                                     ?string $fromOption = null): Subtitle
+    protected function loadOtherFile(string $path, Console $console, ?Format $format = null, ?int $track = null,
+                                     ?string $trackOption = null, ?string $fromOption = null): Subtitle
     {
         if (!is_file($path)) {
             self::fail("$path: The file does not exist.");
         }
 
         try {
-            return $this->loadFile($path, $format, $track);
+            $subtitle = $this->loadFile($path, $format, $track);
         } catch (SubtitleToolboxException $exception) {
             return self::fail("$path: " . self::cliMessage($exception->getMessage(), $trackOption, $fromOption));
         }
+        self::printWarnings($console, $path, $subtitle->getParseWarnings());
+
+        return $subtitle;
     }
 
 
     /**
      * Reads the second file of diff and dual with --from2 and --track2.
      */
-    protected function loadSecondFile(string $path, Arguments $arguments): Subtitle
+    protected function loadSecondFile(string $path, Arguments $arguments, Console $console): Subtitle
     {
-        return $this->loadOtherFile($path, $this->secondFormat, $arguments->positiveInt("track2"), "--track2", "--from2");
+        return $this->loadOtherFile($path, $console, $this->secondFormat, $arguments->positiveInt("track2"), "--track2", "--from2");
     }
 
 

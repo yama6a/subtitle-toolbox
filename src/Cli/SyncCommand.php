@@ -12,7 +12,10 @@ use SubtitleToolbox\Sync\ReferenceSync;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
 use SubtitleToolbox\Sync\SpeechReference;
 
-class SyncCommand extends WriteCommand
+/**
+ * @internal
+ */
+final class SyncCommand extends WriteCommand
 {
     private const LOW_SCORE = 0.5;
 
@@ -115,7 +118,7 @@ class SyncCommand extends WriteCommand
     {
         $log = $arguments->value("silence-log");
         if ($log === null) {
-            return $this->loadOtherFile($arguments->value("reference"));
+            return $this->loadOtherFile($arguments->value("reference"), $console);
         }
 
         $content = is_file($log) ? @file_get_contents($log) : false;
