@@ -131,7 +131,7 @@ $subtitle->recognizeText(new TesseractOcrEngine(program: 'C:\\Program Files\\Tes
 ```
 
 - **Languages**: pass [Tesseract language codes](https://tesseract-ocr.github.io/tessdoc/Data-Files-in-different-versions.html), joined with `+`. The English data comes with the program, except on Alpine. Each other language is a package, for example `tesseract-ocr-rus`.
-- **Missing program**: the first `recognize()` call checks the program and the languages. It throws `InvalidArgumentException` with the install commands, or with the list of installed languages.
+- **Missing program**: the first `recognize()` call checks the program and the languages. It throws `OcrException` with the install commands, or with the list of installed languages. A failed run of `tesseract` also throws `OcrException`.
 - **Images**: the engine draws each cue image on black, inverts it to dark text on white, and adds a 10-pixel white border. It writes the result to a temporary PGM file and deletes the file after the call.
 - **Options**: `pageSegmentationMode` is the `--psm` value, default 6, one block of text. `scale` from 1 to 8 scales the image up, default 2 on screens below 720 lines and 1 above. `invert` and `threshold` change the image steps. The defaults read the test files with the fewest errors: scaling DVD text by 2 and inverting fixed the errors on small text, a threshold added errors.
 - **Lines and confidence**: each Tesseract text line becomes one line. The confidence is the mean word confidence of the cue, from 0 to 1, or null for a cue without text.
@@ -156,7 +156,7 @@ file_put_contents('movie.srt', $subtitle->toString(Format::SubRip));
 - **Package**: without php-glyph-ocr, `new GlyphOcrEngine()` throws `InvalidArgumentException` with the `composer require` command.
 - **Database**: the first argument is a `GlyphOcr\GlyphDatabase`. The default is `GlyphDatabase::subtitleFonts()`. It holds glyphs of DejaVu Sans, Liberation Sans and Noto Sans, upright and italic, and then the Latin database of Subtitle Edit for other fonts. Liberation Sans has the metrics of Arial. The database takes about 76 MB of memory, so engines that exist at the same time share one copy.
 - **Subtitle Edit output**: `new GlyphOcrEngine(GlyphDatabase::latin(), ['lineContext' => false])` reads the text as the nOCR engine of Subtitle Edit does.
-- **Options**: the second argument holds named arguments of `GlyphOcr\Recognizer`, for example `['italicSlant' => 0.2]`. An unknown name or an invalid value throws `InvalidArgumentException`.
+- **Options**: the second argument holds named arguments of `GlyphOcr\Recognizer`, for example `['italicSlant' => 0.2]`. An unknown name or an invalid value throws `InvalidArgumentException`. A recognizer error on an image throws `OcrException`.
 - **One engine per stream**: the engine learns the glyph heights from the cues it reads. So use a new engine for each subtitle stream.
 - **Italic**: a word becomes italic when most of its characters match italic glyphs.
 - **Language**: the engine ignores the language argument. The database sets the characters it knows.

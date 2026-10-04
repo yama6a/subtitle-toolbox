@@ -12,6 +12,7 @@ composer require ymakhloufi/subtitle-toolbox:^2.0
 The calls below use these imports:
 
 ```php
+use SubtitleToolbox\CueLimits;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
 use SubtitleToolbox\LineEnding;
@@ -144,7 +145,7 @@ Common one-step edits stay methods on `Subtitle`, for example `shift()`, `fixOve
 |:--- |:--- |
 | `$subtitle->removeHearingImpaired($options)` | `HearingImpairedRemover::apply($subtitle, $options)`. `$options` is required |
 | `$options->isHearingImpaired($line)` | `HearingImpairedRemover::isAnnotation($line, $options)` |
-| `$subtitle->splitLongCues(new ResegmentOptions(maxCharactersPerLine: 42))` | `Resegmenter::apply($subtitle, new ResegmentOptions(mode: ResegmentMode::SplitLong, maxCharactersPerLine: 42))` |
+| `$subtitle->splitLongCues(new ResegmentOptions(maxCharactersPerLine: 42))` | `Resegmenter::apply($subtitle, new ResegmentOptions(mode: ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 42)))` |
 | `$subtitle->resegmentByWords($options)` | `Resegmenter::apply($subtitle, new ResegmentOptions(mode: ResegmentMode::ByWords))` |
 | `ReferenceSync::sync($german, $english, $options)->apply($german)` | `ReferenceSync::apply($german, new ReferenceSyncOptions(reference: $english))`. It returns the `ReferenceSyncReport` |
 | `ShotChangeTiming::apply($subtitle, $shots, new ShotChangeOptions(24))` | `ShotChangeTiming::apply($subtitle, new ShotChangeOptions(frameRate: 24, shotChanges: $shots))` |
@@ -155,14 +156,79 @@ Common one-step edits stay methods on `Subtitle`, for example `shift()`, `fixOve
 | `SpeakerLabels::toPrefix($subtitle)` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Prefix))` |
 | `SpeakerLabels::toDialogueDashes($subtitle, '- ')` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes, dash: '- '))` |
 | `SpeakerLabels::toColours($subtitle, $colours)` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Colors, colors: $colours))` |
-| `SpeakerLabels::fromPrefix($subtitle)` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(from: SpeakerStyle::Prefix))` |
+| `SpeakerLabels::fromPrefix($subtitle)` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(readPrefixes: true))` |
 | `SpeakerLabels::rename($subtitle, ['MAN' => 'TOM'])` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(rename: ['MAN' => 'TOM']))` |
-| `$subtitle->forcedOnly()` | `$subtitle->onlyForced()` |
-| `$subtitle->getErrors()` | `$subtitle->validate(ValidationRules::structure())`. `getCueIndex()` of the result is null for a subtitle without cues |
+| `$subtitle->forcedOnly()` | `$subtitle->withForcedCuesOnly()` |
+| `$subtitle->getErrors()` | `$subtitle->validate(ValidationRules::structure())`. The `cueIndex` of the result is null for a subtitle without cues |
 
 `ResegmentOptions` and `ReferenceSyncOptions` have a new first parameter, and `ShotChangeOptions` has a new second one. Pass their arguments by name, as the table does.
 
-`ReferenceSync` and `ReferenceSyncOptions` are in `SubtitleToolbox\Sync`. `ShotChangeTiming` and `ShotChangeOptions` are in `SubtitleToolbox\Timing`.
+`ReferenceSync` and `ReferenceSyncOptions` are in `SubtitleToolbox\Sync`. `ShotChangeTiming` and `ShotChangeOptions` are in `SubtitleToolbox\Timing`. The `HearingImpaired*` classes are in `SubtitleToolbox\HearingImpaired`, `Resegmenter` and the `Resegment*` classes in `SubtitleToolbox\Resegmenting`, and the `DualSubtitle*` classes in `SubtitleToolbox\Dual`.
+
+## Subtitle and cues
+A method that returns a new `Subtitle` starts with `with` or `to`. A method that changes the subtitle is a verb.
+
+| 1.x | 2.0 |
+|:--- |:--- |
+| `$subtitle->slice(10, 20, true)` | `$subtitle->withSlice(10, 20, true)` |
+| `$subtitle->onlyForced()` | `$subtitle->withForcedCuesOnly()` |
+| `$subtitle->filterCues(fn (SubtitleCue $cue) => $cue->isForced())` | `$subtitle->removeCuesWhere(fn (SubtitleCue $cue) => !$cue->isForced())`. The callback returns true for the cues to remove |
+| `$subtitle->addCue($cue, false)` in a loop, then `reIndexCues()` | `$subtitle->addCues($cues)`. It adds all cues and sorts once. `addCue($cue)` sorts after each cue |
+| `$subtitle->removeCue($index, false)` | `$subtitle->removeCue($index)`. It always numbers the cues from 0 again. Remove many cues with `removeCuesWhere()` |
+| `$subtitle->changeCase('upper', 'tr')` | `$subtitle->changeCase(CaseMode::Upper, 'tr')`. The enum also has `Lower` and `Sentence` |
+| `$subtitle->replaceText('/x+/', 'y', true, false)` | `$subtitle->replaceText('/x+/', 'y', new ReplaceTextOptions(regex: true, caseSensitive: false))` |
+| `$subtitle->getComments()[0]['text']`, `['beforeCueIndex']` | `$subtitle->getComments()[0]->text`, `->beforeCueIndex`. `getComments()` returns readonly `Comment` objects |
+| `$subtitle->convertFrameRate(fromFps: 25, toFps: 23.976)` | `$subtitle->convertFrameRate(from: 25, to: 23.976)` |
+| `$subtitle->wrapLines(maxCharsPerLine: 42)` | `$subtitle->wrapLines(maxCharactersPerLine: 42)` |
+| `new MergeShortCuesOptions(maxCharactersPerLine: 37, maxGap: 0.5)` | `new MergeShortCuesOptions(limits: new CueLimits(maxCharactersPerLine: 37), maxGap: 0.5)`. `CueLimits` holds `maxCharactersPerLine`, `maxLines`, `minDuration`, `maxDuration` and `maxCharactersPerSecond`. `ResegmentOptions` takes it too |
+| `(new FrameRate(25))->getFps()` | `(new FrameRate(25))->getFramesPerSecond()` |
+| `$warning->action === ParseWarning::SKIPPED`, `ParseWarning::REPAIRED` | `$warning->action === ParseWarningAction::Skipped`, `ParseWarningAction::Repaired` |
+| `StringHelpers::UNIX_LINE_ENDING`, `WINDOWS_LINE_ENDING`, `MAC_LINE_ENDING` | `LineEnding::Lf->value`, `LineEnding::Crlf->value`, `"\r"` |
+| `StringHelpers` methods other than `convertToUtf8()` and `isValidUtf8()` | `@internal` |
+| `Markup::CORE_TAGS`, `WORD_TIMESTAMP_REGEX`, `unescapeText()`, `escapeTextLike()`, `splitTags()`, `plainLines()`, `countCharacters()`, `characters()`, `words()`, `toSingleLine()`, `openCoreTags()`, `closeCoreTags()`, `coreTimestamp()` | `@internal`. [markup.md](markup.md) lists the public members |
+| `Cea608`, `CodePage`, `Iso6937`, `EbmlReader`, `PaletteReducer` and the traits of `Subtitle` | `@internal` |
+| `SccParser::HEADER`, `MODE_POP_ON`, `MODE_ROLL_UP`, `MODE_PAINT_ON`, `SubViewerParser::START_SCRIPT`, `METADATA_TAGS`, `CsvParser::DELIMITERS`, `LyricsParser::METADATA_TAGS`, `FfMetadataChaptersParser::METADATA_KEYS`, `WebVttParser::REGION_SETTINGS` | `@internal`. The SCC format data keeps the values `pop-on`, `roll-up` and `paint-on` |
+| a class that extends `Subtitle`, `SubtitleCue`, `FrameRate`, `Markup`, `SubtitleStatistics`, a stream writer or an exception class | every concrete class is `final`, except `InvalidParserException`. Wrap the class in your own class |
+| `new ValidationRules(noIndexGaps: true)`, `ValidationResult::RULE_INDEX_GAP` | removed. Cue indexes have no gaps, because `removeCue()` always numbers the cues from 0 again |
+
+## Services and reports
+Each service result is a `*Report` with `public readonly` fields, or a value object with `public readonly` fields. String constant sets are backed enums. The value of each case is the 1.x string.
+
+| 1.x | 2.0 |
+|:--- |:--- |
+| `SubtitleToolbox\HearingImpairedRemover`, `HearingImpairedOptions`, `HearingImpairedReport` | `SubtitleToolbox\HearingImpaired\HearingImpairedRemover` and the same for the other 2 |
+| `SubtitleToolbox\ResegmentOptions`, `ResegmentMode`, `ResegmentReport` | `SubtitleToolbox\Resegmenting\ResegmentOptions` and the same for the other 2 |
+| `DualSubtitle::merge($english, $german, $options)` | `SubtitleToolbox\Dual\DualSubtitle::fromPair($english, $german, $options)` |
+| `DualSubtitleOptions::MODE_STACK`, `MODE_TOP_BOTTOM` | `DualSubtitleMode::Stack`, `DualSubtitleMode::TopBottom` |
+| `$result = ReferenceSync::apply(...)` with `$result->getOffset()`, `getScale()`, `getScore()` | the `ReferenceSyncReport` fields `offset`, `scale` and `score`. `getSegments()` stays |
+| `$difference->getKind() === CueDifference::KIND_TEXT_CHANGED` | `$difference->kind === CueDifferenceKind::TextChanged`. `getOldIndex()`, `getNewIndex()`, `getOldCue()` and `getNewCue()` become the fields `oldIndex`, `newIndex`, `oldCue` and `newCue` |
+| `ValidationResult` with `getCueIndex()`, `getRule()`, `getValue()` and `getLimit()` | `ValidationViolation` with the fields `cueIndex`, `rule`, `value` and `limit` |
+| `ValidationResult::RULE_MAX_CHARACTERS_PER_LINE` and the other `RULE_*` constants | `ValidationRule::MaxCharactersPerLine`. Each case is the field name of `ValidationRules`: `RULE_OVERLAP` becomes `NoOverlap`, `RULE_EMPTY_CUE` becomes `NoEmptyCues`, `RULE_UNSORTED_CUES` becomes `NoUnsortedCues`, `RULE_NEGATIVE_DURATION` becomes `NoNegativeDuration` |
+| `ValidationRules::netflixEnglish(fps: 24)` | `ValidationRules::netflixEnglish(frameRate: 24)` |
+| `YouTubeChapters::check()` returns `['rule' => YouTubeChapters::RULE_MIN_DURATION, 'chapterIndex' => 2, ...]` | it returns `ValidationViolation` objects. `RULE_FIRST_CHAPTER_AT_ZERO`, `RULE_MIN_CHAPTERS` and `RULE_MIN_DURATION` become `ValidationRule::FirstChapterAtZero`, `MinChapters` and `MinDuration`. `chapterIndex` becomes `cueIndex` |
+| `CommonErrorFixer::RULES`, `AppliedFix::$rule` as a string | `CommonErrorRule::cases()` in run order, `AppliedFix::$rule` as a `CommonErrorRule` |
+| `CommonErrorFixer::apply($subtitle, new CommonErrorOptions(dryRun: true))` | `CommonErrorFixer::preview($subtitle, new CommonErrorOptions())` |
+| `WordHighlightOptions::MODE_WORD`, `MODE_CUMULATIVE` | `WordHighlightMode::Word`, `WordHighlightMode::Cumulative` |
+| `ProfanityOptions::MASK_STARS`, `MASK_FIRST_LETTER`, `MASK_REMOVE`, `MASK_NONE` | `ProfanityMask::Stars`, `FirstLetter`, `Remove`, `None` |
+| `new ProfanityOptions(wordFile: 'words.txt')` | `new ProfanityOptions($words)`, with the list of words. The CLI `--mask-words` still reads a file |
+| `OcrEngineChooser::ENGINE_TESSERACT`, `ENGINE_GLYPH`, `ENGINES`, and `choose()` returns a string | `OcrEngineName::Tesseract`, `OcrEngineName::Glyph`, `OcrEngineName::cases()`. `choose()` and `create()` take and return an `OcrEngineName` |
+| `OcrResult` | `RecognizedText` |
+| `$results = (new OcrRunner($engine))->run($subtitle)` | `$results = (new OcrRunner($engine))->run($subtitle)->texts`. `run()` returns an `OcrReport` |
+| `GlyphOcrEngine::toOcrResult()`, `TesseractOcrEngine::fromTsv()` | `@internal` |
+| `HlsWebVttResult`, `HlsWebVttResult::segmentMillis()` | `HlsWebVttRendition`. `segmentMillis()` is gone |
+| `$copy = $runner->translate($german, 'de', 'en')`, then `$runner->getWarnings()` | `$report = $runner->translate($copy = clone $german, 'de', 'en')`, then `$report->warnings`. `translate()` changes the subtitle you pass and keeps no state |
+| `SpeakerStyle::Colours`, `SpeakerLabels::BBC_COLOURS`, `new SpeakerLabelOptions(colours: $colours)` | `SpeakerStyle::Colors`, `SpeakerLabels::BBC_COLORS`, `new SpeakerLabelOptions(colors: $colours)` |
+| `new SpeakerLabelOptions(from: SpeakerStyle::Prefix, upperCaseOnly: false, upperCase: false)` | `new SpeakerLabelOptions(readPrefixes: true, readUpperCaseOnly: false, writeUpperCase: false)` |
+| `new ShotChangeOptions(24, snapWindow: 12, minDuration: 20)` | `new ShotChangeOptions(24, snapWindowFrames: 12, minDurationFrames: 20)` |
+| `SubtitleStatistics::getGap()`, `toArray()['gap']` | `getGaps()`, `toArray()['gaps']` |
+| `getMostUsedWords(10)` returns `['you' => 211]` | it returns `[['word' => 'you', 'count' => 211]]`. A word such as `2024` stays a string |
+
+## Exceptions
+| 1.x | 2.0 |
+|:--- |:--- |
+| `$exception->getErrorCode()` | `$exception->getCode()` |
+| `new ParsingException($message, $lineNumber)` | the same, plus an optional third argument `$previous`. The other library exceptions take `($message, $previous)` |
+| `catch (InvalidArgumentException $e)` around `recognizeText()` or `OcrRunner::run()` | `catch (OcrException $e)` for a failed OCR run, error code 107 |
 
 ## Command line tool
 See [cli.md](cli.md) for every command and option.
@@ -229,5 +295,9 @@ These changes alter the output or the exit code of a call that needs no other ch
 | Image size | the PGS and VobSub parsers decoded an image of any size | an image larger than 7,680 pixels per side or 8,294,400 pixels, one 3840x2160 frame, throws `ParsingException`. `new CueImage()` and `PngDecoder::decode()` throw `InvalidArgumentException` | nothing for Blu-ray, UHD and DVD files, whose images are at most 3840x2160 |
 | Stored TTML head that is not valid XML | `toString(Format::Ttml)` threw `InvalidFormatterException`, error code 101 | it throws `InvalidArgumentException`, error code 104 | catch `InvalidArgumentException` |
 | Karaoke | `WordHighlight::expand()` returned a new subtitle and left its input as it was | `WordHighlight::apply()` changes the subtitle that you pass | pass `clone $subtitle` |
+| Translation | `TranslationRunner::translate()` returned a translated copy | it translates the subtitle that you pass, after the last engine call succeeds | pass `clone $subtitle` |
+| OCR failures | a failed Tesseract run, a missing `tesseract` program or language, or a php-glyph-ocr error on an image threw `InvalidArgumentException`, error code 104 | they throw `OcrException`, error code 107. The CLI message starts with `OcrException (Error #107): ` | catch `OcrException` or `SubtitleToolboxException` |
+| `SubtitleCue::setLines()` with a value that is no string or array | threw `InvalidArgumentException` | throws a PHP `TypeError` | pass a string or a list of strings |
+| CLI `info --json` | `statistics.gap`, and `statistics.mostUsedWords` as an object of word and count | `statistics.gaps`, and `statistics.mostUsedWords` as a list of `{"word": ..., "count": ...}` | read the new keys |
 
 Code that does not declare `strict_types` itself still calls the library as before. `new SubtitleCue("1", 2)` from such a file works.

@@ -63,6 +63,31 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testAddCuesSortsAllCuesAndKeepsCommentsWithTheirCues(): void
+    {
+        $subtitle = (new Subtitle())->addCue($late = new SubtitleCue(8, 9, "late"))->addComment("before late", 0);
+
+        $subtitle->addCues((function () use (&$early, &$middle): \Generator {
+            yield $middle = new SubtitleCue(5, 6, "middle");
+            yield $early = new SubtitleCue(1, 2, "early");
+        })());
+
+        $this->assertSame([$early, $middle, $late], $subtitle->getCues());
+        $this->assertEquals([new Comment("before late", 2)], $subtitle->getComments());
+    }
+
+
+    public function testRemoveCueNumbersTheCuesFromZeroAgain(): void
+    {
+        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "one"), new SubtitleCue(3, 4, "two"), new SubtitleCue(5, 6, "three")]);
+
+        $subtitle->removeCue(1);
+
+        $this->assertSame([0, 1], array_keys($subtitle->getCues()));
+        $this->assertSame("three", $subtitle->getCues()[1]->getText());
+    }
+
+
     public function testValidateWithTheStructureRulesFindsEachStructureProblem(): void
     {
         $rules    = ValidationRules::structure();

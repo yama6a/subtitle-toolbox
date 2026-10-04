@@ -23,9 +23,12 @@ try {
 | `InvalidArgumentException` | `\InvalidArgumentException` | 104 | an invalid argument or option, for example alignment 10, frame rate 0, a missing MicroDVD output frame rate, the options class of another format, or a stored TTML head that is not valid XML |
 | `CueNotFoundException` | `\RuntimeException` | 105 | `removeCue()` with an index that has no cue |
 | `UnknownFormatException` | `InvalidParserException` | 106 | `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()` when detection finds no format |
+| `OcrException` | `\RuntimeException` | 107 | an OCR engine that fails on a valid image: Tesseract exits with an error, the `tesseract` program or its language data is missing, or php-glyph-ocr cannot read the image |
 
 - **SPL classes**: each class extends an SPL class, so `catch (\InvalidArgumentException $e)` and `catch (\RuntimeException $e)` also work.
 - **Messages**: `InvalidArgumentException` and `CueNotFoundException` keep the plain message. The other classes start it with the class name and the code, for example `ParsingException (Error #100): `.
+- **Previous exception**: every constructor takes the message, then an optional `$previous` exception. `ParsingException` takes the line number before it. `getPrevious()` returns it.
+- **Final classes**: every exception class is `final`, except `InvalidParserException`, which `UnknownFormatException` extends.
 - **Line number**: `ParsingException::getLineNumber()` returns the 1-based input line when the parser knows it, and null otherwise. Then the message ends with ` (line 12)`.
 
 These readers set the line number:
