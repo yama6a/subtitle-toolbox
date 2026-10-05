@@ -62,18 +62,18 @@ trait Fixes
 
 
     /**
-     * Breaks the lines of each cue that has a line longer than $maxCharactersPerLine or more than $maxLines lines.
+     * Breaks the lines of each cue that has a line longer than $maxCharactersPerLine or more than $maxLinesPerCue lines.
      */
-    public function wrapLines(int $maxCharactersPerLine, int $maxLines = 2): self
+    public function wrapLines(int $maxCharactersPerLine, int $maxLinesPerCue = 2): self
     {
-        if ($maxCharactersPerLine < 1 || $maxLines < 1) {
+        if ($maxCharactersPerLine < 1 || $maxLinesPerCue < 1) {
             throw new InvalidArgumentException("The maximum characters per line and the maximum lines must be at " .
-                                               "least 1, got $maxCharactersPerLine and $maxLines.");
+                                               "least 1, got $maxCharactersPerLine and $maxLinesPerCue.");
         }
 
         foreach ($this->getCues() as $cue) {
-            if (!LineWrapper::fits($cue->getLines(), $maxCharactersPerLine, $maxLines)) {
-                $cue->setLines(LineWrapper::wrap($cue->getLines(), $maxCharactersPerLine, $maxLines));
+            if (!LineWrapper::fits($cue->getLines(), $maxCharactersPerLine, $maxLinesPerCue)) {
+                $cue->setLines(LineWrapper::wrap($cue->getLines(), $maxCharactersPerLine, $maxLinesPerCue));
             }
         }
 

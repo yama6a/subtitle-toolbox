@@ -101,13 +101,4 @@ abstract class ReportCommand extends FileCommand
             "action"     => $warning->action->value,
         ], $warnings);
     }
-
-
-    /**
-     * Returns null for INF and NAN, which JSON cannot hold.
-     */
-    protected static function jsonNumber(int|float|null $value): int|float|null
-    {
-        return is_float($value) && !is_finite($value) ? null : $value;
-    }
 }

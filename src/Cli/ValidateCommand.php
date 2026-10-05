@@ -38,7 +38,7 @@ final class ValidateCommand extends ReportCommand
 
     protected function usageLines(): array
     {
-        return ["<input>... --preset netflix-en|bbc [options]", "<input>... [--max-cpl CHARS] [--check-overlap] [...] [options]"];
+        return ["<input>... --preset netflix-en|bbc [options]", "<input>... [--max-cpl CHARS] [--check-overlaps] [...] [options]"];
     }
 
 
@@ -70,7 +70,7 @@ final class ValidateCommand extends ReportCommand
             Option::value("min-duration", "SECONDS", "Minimum duration of a cue."),
             Option::value("max-duration", "SECONDS", "Maximum duration of a cue."),
             Option::value("min-gap", "SECONDS", "Minimum gap between cues."),
-            Option::flag("check-overlap", "Report overlapping cues."),
+            Option::flag("check-overlaps", "Report overlapping cues."),
             Option::flag("check-empty-cues", "Report cues without text."),
             Option::value("max-wpm", "WORDS", "Maximum words per minute."),
             Option::value("min-seconds-per-word", "SECONDS", "Minimum duration of a cue per word."),
@@ -94,6 +94,9 @@ final class ValidateCommand extends ReportCommand
         if ($preset !== null && !in_array($preset, self::PRESETS, true)) {
             self::fail("Unknown preset \"$preset\". Known presets: " . implode(", ", self::PRESETS) . ".");
         }
+        if ($arguments->has("video-fps") && $preset !== "netflix-en") {
+            self::fail("--video-fps sets the frame rate of the netflix-en gap rule. Pass --preset netflix-en, or leave out --video-fps.");
+        }
         $base = match ($preset) {
             null         => new ValidationRules(),
             "bbc"        => ValidationRules::bbc(),
@@ -107,7 +110,7 @@ final class ValidateCommand extends ReportCommand
             minDuration: $arguments->positiveFloat("min-duration") ?? $base->minDuration,
             maxDuration: $arguments->positiveFloat("max-duration") ?? $base->maxDuration,
             minGap: $arguments->positiveFloat("min-gap") ?? $base->minGap,
-            noOverlap: $arguments->has("check-overlap") || $base->noOverlap,
+            noOverlap: $arguments->has("check-overlaps") || $base->noOverlap,
             noEmptyCues: $arguments->has("check-empty-cues") || $base->noEmptyCues,
             noDoubleSpaces: $arguments->has("check-double-spaces") || $base->noDoubleSpaces,
             noLeadingOrTrailingSpaces: $arguments->has("check-leading-or-trailing-spaces") || $base->noLeadingOrTrailingSpaces,
@@ -141,14 +144,15 @@ final class ValidateCommand extends ReportCommand
         }
 
         $this->emit($console, $text, [
-            "file"       => $label,
+            "file"       => $input,
             "format"     => $format->value,
             "valid"      => $violations === [],
             "violations" => array_map(fn (ValidationViolation $violation): array => [
                 "cueIndex" => $violation->cueIndex,
                 "rule"     => $violation->rule->value,
-                "value"    => self::jsonNumber($violation->value),
-                "limit"    => self::jsonNumber($violation->limit),
+                "value"    => is_float($violation->value) && is_infinite($violation->value) ? null : $violation->value,
+                "infinite" => is_float($violation->value) && is_infinite($violation->value),
+                "limit"    => $violation->limit,
             ], $violations),
             "warnings"   => self::warningsJson($this->parseWarnings),
         ]);
@@ -166,7 +170,11 @@ final class ValidateCommand extends ReportCommand
 
     protected function exitCode(): int
     {
-        return $this->failed > 0 || $this->withProblems > 0 ? Application::EXIT_FAILURE : Application::EXIT_OK;
+        return match (true) {
+            $this->failed > 0       => Application::EXIT_FILE,
+            $this->withProblems > 0 => Application::EXIT_RESULT,
+            default                 => Application::EXIT_OK,
+        };
     }
 
 

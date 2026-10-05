@@ -200,6 +200,7 @@ A lookup that starts with `get` returns a value or throws when nothing matches. 
 | `$subtitle->getComments()[0]['text']`, `['beforeCueIndex']` | `$subtitle->getComments()[0]->text`, `->beforeCueIndex`. `getComments()` returns readonly `Comment` objects |
 | `$subtitle->convertFrameRate(fromFps: 25, toFps: 23.976)` | `$subtitle->convertFrameRate(from: 25, to: 23.976)` |
 | `$subtitle->wrapLines(maxCharsPerLine: 42)` | `$subtitle->wrapLines(maxCharactersPerLine: 42)` |
+| `$subtitle->wrapLines(42, maxLines: 3)` | `$subtitle->wrapLines(42, maxLinesPerCue: 3)`, the name of `CueLimits` and `ValidationRules` |
 | `new MergeShortCuesOptions(maxCharactersPerLine: 37, maxGap: 0.5)` | `new MergeShortCuesOptions(limits: new CueLimits(maxCharactersPerLine: 37), maxGap: 0.5)`. `CueLimits` holds `maxCharactersPerLine`, `maxLinesPerCue`, `minDuration`, `maxDuration` and `maxCharactersPerSecond`. `ResegmentOptions` takes it too |
 | `new MergeShortCuesOptions(maxLines: 1)` | `new MergeShortCuesOptions(limits: new CueLimits(maxLinesPerCue: 1))` |
 | `$options->maxLines` of `MergeShortCuesOptions` or `ResegmentOptions`, and the same for `maxCharactersPerLine`, `minDuration`, `maxDuration` and `maxCharactersPerSecond` | `$options->limits->maxLinesPerCue`, `$options->limits->maxCharactersPerLine` and so on |
@@ -276,7 +277,7 @@ See [cli.md](cli.md) for every command and option.
 | `convert --replace FROM=TO --regex --ignore-case` | `convert --replace FROM=TO --replace-regex --replace-ignore-case` |
 | `convert --karaoke-tag kf` | `convert --ass-karaoke-tag kf` |
 | `convert --karaoke-mode`, `--karaoke-words` | removed. Use `WordHighlightOptions` in PHP |
-| `validate --no-overlap`, `--no-empty-cues`, `--no-double-spaces` | `validate --check-overlap`, `--check-empty-cues`, `--check-double-spaces` |
+| `validate --no-overlap`, `--no-empty-cues`, `--no-double-spaces` | `validate --check-overlaps`, `--check-empty-cues`, `--check-double-spaces` |
 | `validate --no-leading-or-trailing-spaces`, `--no-unbalanced-tags`, `--no-all-caps-lines` | `validate --check-leading-or-trailing-spaces`, `--check-unbalanced-tags`, `--check-all-caps-lines` |
 | `--fps 25` | still works and sets each frame rate that the command has. `--input-fps`, `--output-fps` and `--video-fps` set one rate each, see [Frame rates](cli.md#frame-rates) |
 | `convert movie.srt --to vtt` to write `movie.vtt` | `convert movie.srt --to vtt -o movie.vtt` |
@@ -299,14 +300,14 @@ See [cli.md](cli.md) for every command and option.
 | `scale FILE --factor 1.001` | `retime FILE --scale 1.001` |
 | `fps FILE --from 25 --to 23.976`, `sync-fps FILE --from 25 --to 23.976` | `retime FILE --from-fps 25 --to-fps 23.976` |
 | `fix FILE --overlaps --min-duration 1 --min-gap 0.083` | `convert FILE --timing-fix-overlaps --timing-min-duration 1 --timing-min-gap 0.083` |
-| `fix FILE --common-errors --replace-list L --list-fixes --language de` | `convert FILE --errors-fix --errors-replace-list L --errors-list --language de` |
+| `fix FILE --common-errors --replace-list L --list-fixes --language de` | `convert FILE --errors-fix --errors-replace-list L --errors-list-fixes --language de` |
 | `fix FILE --wrap 32 --max-lines 3` | `convert FILE --structure-wrap --structure-max-cpl 32 --structure-max-lines 3`. `--structure-wrap` takes no value. Its width is `--structure-max-cpl`, default 42 |
 | `fix FILE --resegment --max-word-gap 0.3 --max-cpl 32 --max-lines 1` | `convert FILE --structure-resegment --structure-max-word-gap 0.3 --structure-max-cpl 32 --structure-max-lines 1` |
 | `fix FILE --unwrap`, `--merge-short`, `--split-long`, `--merge-duplicates` | `convert FILE --structure-unwrap`, `--structure-merge-short`, `--structure-split-long`, `--structure-merge-duplicates` |
 | `strip-sdh FILE` | `convert FILE --sdh` |
 | `strip-sdh FILE --lyrics --brackets "{}"` | `convert FILE --sdh --sdh-lyrics --sdh-brackets "{}"`. Each `strip-sdh --X` option becomes `--sdh-X` |
 | `snap FILE --shot-changes F --fps 24` | `convert FILE --snap-shot-changes F --video-fps 24` |
-| `snap FILE --shot-changes F --fps 24 --snap-window 12 --min-gap-frames 2 --min-duration-frames 20 --no-chain` | `convert FILE --snap-shot-changes F --video-fps 24 --snap-window-frames 12 --snap-min-gap-frames 2 --snap-min-duration-frames 20 --snap-no-chain` |
+| `snap FILE --shot-changes F --fps 24 --snap-window 12 --min-gap-frames 2 --min-duration-frames 20 --no-chain` | `convert FILE --snap-shot-changes F --video-fps 24 --snap-window-frames 12 --snap-min-gap-frames 2 --snap-min-duration-frames 20 --no-snap-chain` |
 | `snap FILE --fps 24` without other snap options | `convert FILE --video-fps 24 --snap-min-gap-frames 2` |
 
 ## Behaviour changes
@@ -325,6 +326,7 @@ These changes alter the output or the exit code of a call that needs no other ch
 | CLI output of 2 or more inputs | the commands that edit a file failed and asked for `--output-dir` or `--in-place` | every command writes each output next to its input, with the extension of the output format | `--output-dir` or `--in-place` |
 | `convert --help` | listed every option | lists the common options and the option groups. `convert --help GROUP` lists the options of one group | `convert --help all` |
 | CLI inputs | `--force` let a command write over its input | a command never overwrites an input without `--in-place`, also not with `--force`. That file fails | `--in-place` |
+| CLI output names | with `--force`, the second of two inputs with the same output file overwrote the first output | the command fails with exit code 2 before it writes a file. So do mute files and `hls` files that would overwrite an input or each other, and standard input with `--output-dir` | pass such inputs in two runs, and give each output its own name |
 | Unknown options | before 1.70.5, a misspelled key or a key of another format was ignored. 1.70.5 and later threw `InvalidArgumentException` | a misspelled field, such as `new WriteOptions(lineEndings: LineEnding::Crlf)`, is a PHP `Error` for an unknown named parameter. An options class of another format, such as `new CsvWriteOptions()` for SubRip output, throws `InvalidArgumentException`. Read classes follow the same rule | fix the name, or pass the class of the format |
 | Strict types | the library converted scalar values | every file declares `strict_types`. A `mapText()`, `mapLines()`, `Markup::mapTextRuns()` or `ProfanityOptions` mask callback must return a string, else it throws `TypeError`. | return the documented type |
 | CSV and TSV times in `hh:mm:ss:ff` | the CLI could not read such a file | the CLI `--input-fps` and `--fps` set `CsvReadOptions::$frameRate` | nothing |
@@ -334,7 +336,8 @@ These changes alter the output or the exit code of a call that needs no other ch
 | Word timestamps | `shift()`, `scale()`, `convertFrameRate()`, `syncByTwoPoints()`, `merge()` with an offset, `slice()` with `$moveToZero`, `ReferenceSync` and the CLI `retime` and `sync` kept the word timestamps in the cue text, such as `<00:00:02.000>`, at their old times | they move the word timestamps with the cues. Mute ranges of the profanity filter and the WebVTT, LRC and ASS karaoke output use the moved times | nothing. The 1.x times were wrong |
 | Library JSON format data | `JsonParser` and `fromArray()` took any value in the format data. A formatter then failed with a PHP `TypeError` or `Error` | they throw `ParsingException` with the path of a format data field of the wrong type, for example `formatData.scc.dropFrame`. A lenient `JsonParser` drops the bad format data of that format, or skips the cue | fix the field |
 | Wrong JSON types in the speech-to-text and Podcasting 2.0 parsers | a Whisper `segments` object, a Google `alternatives` string, or a time such as `1e400` gave a PHP `TypeError` or an infinite time | they throw `ParsingException` with the path of the field, or skip the block in lenient mode. A Podcasting 2.0 chapter `endTime` that is not a number throws, where 1.x ignored it | fix the field |
-| CLI errors | a PHP `Error` such as `TypeError` stopped the tool with a PHP fatal error | the tool prints `FILE: TypeError: MESSAGE`, fails that file with exit code 1 and goes on with `--keep-going` | nothing |
+| CLI errors | a PHP `Error` such as `TypeError` stopped the tool with a PHP fatal error | the tool prints `FILE: TypeError: MESSAGE`, fails that file with exit code 3 and goes on with `--keep-going` | nothing |
+| CLI exit codes | 1 for a file that failed, a broken `validate` rule and a `diff` difference | 1 only for a broken rule and a difference. 3 for a file that could not be read or written, also a file of `--mask-words`, `--errors-replace-list`, `--snap-shot-changes` or `--ocr-database`. `--ass-karaoke-tag` with another output format than ASS, and `validate --video-fps` without `--preset netflix-en`, give 2 before the tool reads a file | test for 3 where a script tested for a failed file with 1 |
 | HLS segments | `HlsWebVttResult::getSegments()` and `getDurations()` returned arrays | they return generators that write each segment when you read it, so a long subtitle needs no memory for all segments. `getSegmentCount()` returns the number | `iterator_to_array($hls->getSegments())` |
 | Sync limits | `ReferenceSyncOptions` and the CLI `sync` took any offset range and any number of splits, and ran out of memory on large values | `minOffset` and `maxOffset` are from -86,400 to 86,400 s and at most 7,200 s apart. `maxSplits` is from 0 to 10. A larger value throws `InvalidArgumentException`, and the CLI exits with code 2 | keep the values in these ranges |
 | Image size | the PGS and VobSub parsers decoded an image of any size | an image larger than 7,680 pixels per side or 8,294,400 pixels, one 3840x2160 frame, throws `ParsingException`. `new CueImage()` and `PngDecoder::decode()` throw `InvalidArgumentException` | nothing for Blu-ray, UHD and DVD files, whose images are at most 3840x2160 |
@@ -350,5 +353,8 @@ These changes alter the output or the exit code of a call that needs no other ch
 | `SubtitleStatistics` without data | the ranges and the span were 0, for example a gap of `['min' => 0, ...]` for 1 cue | `span` is null without cues. `charactersPerSecond`, `wordsPerMinute`, `charactersPerLine` and `gaps` are null when there is no value to measure, for example `gaps` with fewer than 2 cues. `toArray()` and CLI `info --json` write null. CLI `info` prints `-` | test for null |
 | CLI `info --json` | `statistics.gap`, and `statistics.mostUsedWords` as an object of word and count | `statistics.gaps`, and `statistics.mostUsedWords` as a list of `{"word": ..., "count": ...}` | read the new keys |
 | CLI `info` text output | the line `Gap:` | the line `Gaps:` | read the new label |
+| CLI `--json` of standard input | `file`, `oldFile` and `newFile` held `stdin` | they hold `-` | test for `-` |
+| CLI `info --json` of an MKV or WebM file without `--track` | `format` held `matroska` | `container` holds `matroska`. The text output prints `Container: matroska` | read `container` |
+| CLI `validate --json` of an infinite value | `value` was null, like a missing value | `value` is still null, and each violation has `infinite`, which is true for an infinite value | read `infinite` |
 
 Code that does not declare `strict_types` itself still calls the library as before. `new SubtitleCue("1", 2)` from such a file works.

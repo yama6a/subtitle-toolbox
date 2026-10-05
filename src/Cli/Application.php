@@ -13,9 +13,10 @@ final class Application
 {
     public const NAME = "subtitle-toolbox";
 
-    public const EXIT_OK      = 0;
-    public const EXIT_FAILURE = 1;
-    public const EXIT_USAGE   = 2;
+    public const EXIT_OK     = 0;
+    public const EXIT_RESULT = 1;
+    public const EXIT_USAGE  = 2;
+    public const EXIT_FILE   = 3;
 
     private Console $console;
 
@@ -89,12 +90,16 @@ final class Application
 
         try {
             return $command->run($arguments, $this->console);
+        } catch (FileFailure $failure) {
+            $this->console->err("Error: " . $failure->getMessage() . "\n");
+
+            return self::EXIT_FILE;
         } catch (SubtitleToolboxException $exception) {
             return $this->usageError($exception->getMessage(), "help " . $command->name());
         } catch (\Throwable $throwable) {
             $this->console->err("Error: " . FileCommand::throwableMessage($throwable) . "\n");
 
-            return self::EXIT_FAILURE;
+            return self::EXIT_FILE;
         }
     }
 
@@ -171,7 +176,8 @@ final class Application
             Run "$name help <command>" or "$name <command> --help" for the options of a command.
             A file argument of - reads standard input. --output - writes standard output.
 
-            Exit codes: 0 success, 1 a file failed, broke a validation rule or differs in diff, 2 invalid arguments.
+            Exit codes: 0 success, 1 a file broke a validation rule or differs in diff, 2 invalid arguments,
+            3 a file could not be read or written.
             Options: -h, --help shows this help, -V, --version prints the version.
 
             HELP;

@@ -8,6 +8,8 @@ use Closure;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Cli\Arguments;
+use SubtitleToolbox\Cli\Command;
+use SubtitleToolbox\Cli\FileFailure;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Matroska\MkvFixtureWriter;
 use SubtitleToolbox\CueLimits;
@@ -125,6 +127,9 @@ class ThrowSitesTest extends TestCase
         OcrException::class                 => 107,
         UnwritableContentException::class   => 108,
     ];
+
+    // The CLI catches its own exceptions, so they need no error code.
+    private const CLI_CODES = [FileFailure::class => 0];
 
     private const IDX = "# VobSub index file, v7 (do not modify this line!)\nsize: 720x576\n" .
                         "palette: 000000, f0f0f0, cccccc, 999999, 3333fa, 1111bb, fa3333, bb1111, " .
@@ -264,6 +269,7 @@ class ThrowSitesTest extends TestCase
             "ArrayConversion.php: map no object"            => [fn () => self::fromArray(["metadata" => 5]), ...$parsing],
             "ArrayConversion.php: comments no list"         => [fn () => self::fromArray(["comments" => 5]), ...$parsing],
             "Cli/Command.php: unknown option"               => [fn () => Arguments::parse(["--nope"], []), ...$invalid],
+            "Cli/Command.php: file failure"                 => [fn () => Command::failFile("Cannot read x."), \RuntimeException::class, FileFailure::class],
             "Container/Matroska/EbmlReader.php: invalid element header" => [fn () => MatroskaReader::open(self::stream("\0\0\0\0")), ...$parsing],
             "Container/Matroska/EbmlReader.php: cut off element data" => [fn () => self::mkv("", ["codecPrivate" => "abc"], "c"), ...$parsing],
             "Container/Matroska/MatroskaReader.php: stream not seekable" => [fn () => MatroskaReader::open(fopen("php://output", "wb")), ...$invalid],
@@ -697,7 +703,7 @@ class ThrowSitesTest extends TestCase
         $this->assertInstanceOf($oldType, $caughtByOldType);
         $this->assertInstanceOf(SubtitleToolboxException::class, $caughtByInterface);
         $this->assertSame($class, $caughtByInterface::class);
-        $this->assertSame(self::CODES[$class], $caughtByInterface->getCode());
+        $this->assertSame((self::CODES + self::CLI_CODES)[$class], $caughtByInterface->getCode());
     }
 
 

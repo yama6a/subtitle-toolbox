@@ -153,6 +153,26 @@ final class ConvertCommand extends WriteCommand
 
         $this->edits     = EditPipeline::fromArguments($arguments);
         $this->assOutput = AssOutput::fromArguments($arguments);
+        if ($this->assOutput !== null && !$this->outputCanBeAss()) {
+            self::fail("Pass --to ass with --ass-karaoke-tag.");
+        }
+    }
+
+
+    /**
+     * Returns false when --to or the --output extension picks another format than ASS, whatever the input format.
+     */
+    private function outputCanBeAss(): bool
+    {
+        if ($this->toFormat !== null) {
+            return $this->toFormat === Format::Ass;
+        }
+        if ($this->output === null || $this->output === self::DASH) {
+            return true;
+        }
+
+        return in_array(strtolower(pathinfo($this->output, PATHINFO_EXTENSION)), Format::Ass->extensions(), true)
+            || !(Format::fromPath($this->output)?->canWrite() ?? false);
     }
 
 
@@ -165,11 +185,17 @@ final class ConvertCommand extends WriteCommand
 
     protected function checkInputs(array $inputs, Arguments $arguments): void
     {
-        parent::checkInputs($inputs, $arguments);
-
         if (count($inputs) > 1 && ($arguments->has("mute-edl") || $arguments->has("mute-filter"))) {
             self::fail("--mute-edl and --mute-filter take one input file, got " . count($inputs) . ".");
         }
+
+        parent::checkInputs($inputs, $arguments);
+    }
+
+
+    protected function sideOutputs(): array
+    {
+        return $this->edits->find(MaskingEdit::class)?->outputPaths() ?? [];
     }
 
 

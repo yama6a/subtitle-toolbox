@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
+use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
+use SubtitleToolbox\Exceptions\SubtitleToolboxException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\LineEnding;
+use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
@@ -22,14 +25,20 @@ abstract class WriteCommand extends FileCommand
 {
     private const LINE_ENDINGS = ["lf" => LineEnding::Lf, "crlf" => LineEnding::Crlf];
 
+    // The options that name a file the command reads besides its inputs. No output may overwrite one.
+    private const READ_OPTIONS = ["reference", "silence-log", "mask-words", "snap-shot-changes", "errors-replace-list", "ocr-database"];
+
     protected ?Format $toFormat = null;
 
     protected ?string $output = null;
 
     protected bool $dataOnStdout = false;
 
-    /** @var list<string> the real paths of the input files */
-    private array $inputPaths = [];
+    /** @var list<string> the real paths of the files that the command reads */
+    private array $readPaths = [];
+
+    /** @var array<string, string> input => real path of its output file, where checkInputs() could tell it */
+    private array $plannedTargets = [];
 
     private bool $nextToInput = false;
 
@@ -117,14 +126,147 @@ abstract class WriteCommand extends FileCommand
         if ($this->output !== null && count($inputs) > 1) {
             self::fail("--output takes one input file, got " . count($inputs) . ". Use --output-dir for several files.");
         }
+        if ($arguments->has("output-dir") && in_array(self::DASH, $inputs, true)) {
+            self::fail("Standard input has no file name for --output-dir. Pass -o FILE.");
+        }
 
-        $this->inputPaths   = array_values(array_filter(array_map(
-            fn (string $input): string|false => $input === self::DASH ? false : realpath($input),
-            $this->readPaths($inputs, $arguments)
-        )));
+        $this->readPaths    = self::realReadPaths([
+            ...$this->readPaths($inputs, $arguments),
+            ...array_filter(array_map($arguments->value(...), self::READ_OPTIONS)),
+        ]);
         $defaultTarget      = $this->output === null && !$arguments->has("output-dir") && !$arguments->has("in-place");
         $this->nextToInput  = $defaultTarget && count($inputs) > 1;
         $this->dataOnStdout = $this->output === self::DASH || in_array(self::DASH, $inputs, true) || ($defaultTarget && count($inputs) === 1);
+
+        $this->plannedTargets = [];
+        $writers              = [];
+        foreach ($inputs as $input) {
+            $target = $this->plannedTarget($input, $arguments);
+            if ($target === null || $target === self::DASH) {
+                continue;
+            }
+            $real = self::realTarget($target);
+            if (isset($writers[$real])) {
+                self::fail("$writers[$real] and $input would both write $target. Pass them in two runs.");
+            }
+            $writers[$real]               = $input;
+            $this->plannedTargets[$input] = $real;
+        }
+        foreach ($this->sideOutputs() as $option => $path) {
+            $real = self::realTarget($path);
+            if (in_array($real, $this->readPaths, true)) {
+                self::fail("The --$option file $path would overwrite a file that the command reads.");
+            }
+            if (isset($writers[$real])) {
+                self::fail("The --$option file $path is also the output of $writers[$real].");
+            }
+            $writers[$real] = "--$option";
+        }
+    }
+
+
+    /**
+     * Returns the files that the command writes besides the subtitles, by option name.
+     *
+     * @return array<string, string>
+     */
+    protected function sideOutputs(): array
+    {
+        return [];
+    }
+
+
+    /**
+     * Returns the output of $input, or null when only the read can tell it.
+     */
+    private function plannedTarget(string $input, Arguments $arguments): ?string
+    {
+        if ($input === self::DASH || $this->output !== null || $arguments->has("in-place")) {
+            return $this->target($input, null, null, false, $arguments);
+        }
+        if (!$arguments->has("output-dir") && !$this->nextToInput) {
+            return self::DASH;
+        }
+        $track        = $arguments->positiveInt("track");
+        $inputFormat  = $this->peekFormat($input, $track);
+        $outputFormat = $inputFormat === null ? null : $this->outputFormat($inputFormat);
+
+        return $this->target($input, $inputFormat, $outputFormat, $track !== null || Format::fromPath($input) === null, $arguments);
+    }
+
+
+    /**
+     * Returns the format that the read of $input will find, or null when only the read can tell.
+     */
+    private function peekFormat(string $input, ?int $track): ?Format
+    {
+        try {
+            if (!is_file($input)) {
+                return null;
+            }
+            if ($track !== null || self::isMatroska($input)) {
+                $reader   = MatroskaReader::open($input);
+                $tracks   = $reader->getSubtitleTracks();
+                $track  ??= count($tracks) === 1 ? $tracks[0]->number : null;
+
+                return $track === null ? null : $reader->trackFormat($track);
+            }
+            if ($this->fromFormat !== null) {
+                return $this->fromFormat;
+            }
+            // The rule of Subtitle::loadAutoDetectFormat().
+            $byExtension = Format::fromPath($input);
+            $detected    = Format::detect(StringHelpers::convertToUtf8((string)file_get_contents($input), $this->readOptions->encoding));
+
+            return $detected === Format::Ttml && $byExtension === Format::Itt ? Format::Itt : $detected ?? $byExtension;
+        } catch (SubtitleToolboxException) {
+            return null;
+        }
+    }
+
+
+    private static function isMatroska(string $path): bool
+    {
+        $file = is_file($path) ? @fopen($path, "rb") : false;
+        if ($file === false) {
+            return false;
+        }
+        $magic = fread($file, strlen(MatroskaReader::EBML_MAGIC));
+        fclose($file);
+
+        return $magic === MatroskaReader::EBML_MAGIC;
+    }
+
+
+    /**
+     * Returns the real paths of $paths that exist, with the other file of each VobSub .idx and .sub pair.
+     *
+     * @param list<string> $paths
+     *
+     * @return list<string>
+     */
+    private static function realReadPaths(array $paths): array
+    {
+        $real = [];
+        foreach ($paths as $path) {
+            $realPath = $path === self::DASH ? false : realpath($path);
+            if ($realPath === false) {
+                continue;
+            }
+            $real[]    = $realPath;
+            $extension = strtolower(pathinfo($realPath, PATHINFO_EXTENSION));
+            if ($extension !== "idx" && $extension !== "sub") {
+                continue;
+            }
+            $pair = strtolower(pathinfo($realPath, PATHINFO_FILENAME)) . ($extension === "idx" ? ".sub" : ".idx");
+            foreach (scandir(dirname($realPath)) ?: [] as $name) {
+                if (strtolower($name) === $pair) {
+                    $real[] = dirname($realPath) . DIRECTORY_SEPARATOR . $name;
+                }
+            }
+        }
+
+        return array_values(array_unique($real));
     }
 
 
@@ -160,11 +302,10 @@ abstract class WriteCommand extends FileCommand
 
     protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
-        $outputFormat = $this->outputFormat($format);
-        $target       = $this->target($input, $format, $outputFormat, $arguments);
-        if ($target !== self::DASH && !$arguments->has("in-place") && $this->isInput($target)) {
-            self::fail("The output $target is an input file. Pass --in-place to overwrite it, or -o or --output-dir to write another file.");
-        }
+        $outputFormat = $this->outputFormat($format)
+            ?? self::fail("The format $format->value can be read but not written. Pass --to with another format.");
+        $target = $this->target($input, $format, $outputFormat, $this->fromContainer, $arguments);
+        $this->checkTarget($input, $target, $arguments);
 
         $subtitle = $this->transform($subtitle, $arguments, $console, $input);
 
@@ -185,6 +326,22 @@ abstract class WriteCommand extends FileCommand
     }
 
 
+    private function checkTarget(string $input, string $target, Arguments $arguments): void
+    {
+        if ($target === self::DASH) {
+            return;
+        }
+        $real = self::realTarget($target);
+        if (in_array($real, $this->readPaths, true) && !($arguments->has("in-place") && $real === realpath($input))) {
+            self::fail("The output $target is an input file. Pass --in-place to overwrite it, or -o or --output-dir to write another file.");
+        }
+        // checkInputs() planned another target when the read found another format than its peek.
+        if ($real !== ($this->plannedTargets[$input] ?? null) && in_array($real, $this->plannedTargets, true)) {
+            self::fail("The output $target is also the output of another input.");
+        }
+    }
+
+
     /**
      * Returns formatter options of the command for the output format.
      */
@@ -194,7 +351,10 @@ abstract class WriteCommand extends FileCommand
     }
 
 
-    private function outputFormat(Format $inputFormat): Format
+    /**
+     * Returns null when neither --to, the --output extension nor the input format gives a writable format.
+     */
+    private function outputFormat(Format $inputFormat): ?Format
     {
         if ($this->toFormat !== null) {
             return $this->toFormat;
@@ -210,15 +370,16 @@ abstract class WriteCommand extends FileCommand
                 return $byExtension;
             }
         }
-        if ($inputFormat->canWrite()) {
-            return $inputFormat;
-        }
 
-        return self::fail("The format $inputFormat->value can be read but not written. Pass --to with another format.");
+        return $inputFormat->canWrite() ? $inputFormat : null;
     }
 
 
-    private function target(string $input, Format $inputFormat, Format $outputFormat, Arguments $arguments): string
+    /**
+     * Returns the output of $input, or null when it depends on a format that is unknown. $renamed is true when the
+     * file name of the input names no subtitle format, as for an MKV file, so the output gets an extension.
+     */
+    private function target(string $input, ?Format $inputFormat, ?Format $outputFormat, bool $renamed, Arguments $arguments): ?string
     {
         if ($this->output !== null) {
             return $this->output;
@@ -230,10 +391,13 @@ abstract class WriteCommand extends FileCommand
         if ($arguments->has("in-place")) {
             return $input;
         }
+        if ($inputFormat === null || $outputFormat === null) {
+            return null;
+        }
 
         $fileName   = basename($input);
         $extensions = $outputFormat->extensions();
-        if (($outputFormat !== $inputFormat || $this->fromContainer) && !in_array(strtolower(pathinfo($fileName, PATHINFO_EXTENSION)), $extensions, true)) {
+        if (($outputFormat !== $inputFormat || $renamed) && !in_array(strtolower(pathinfo($fileName, PATHINFO_EXTENSION)), $extensions, true)) {
             $fileName = pathinfo($fileName, PATHINFO_FILENAME) . "." . $extensions[0];
         }
 
@@ -246,17 +410,9 @@ abstract class WriteCommand extends FileCommand
     }
 
 
-    private function isInput(string $path): bool
-    {
-        $realPath = realpath($path);
-
-        return $realPath !== false && in_array($realPath, $this->inputPaths, true);
-    }
-
-
     private function write(string $target, string $content, Arguments $arguments): void
     {
-        if (!$this->isInput($target) && file_exists($target) && !$arguments->has("force")) {
+        if (!$arguments->has("in-place") && file_exists($target) && !$arguments->has("force")) {
             self::fail("$target exists. Pass --force to overwrite it.");
         }
 

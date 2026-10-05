@@ -57,7 +57,7 @@ class ApplicationTest extends TestCase
     private const OFF_SWITCHES = [
         "no-bom"        => "the UTF-8 BOM of the output format",
         "no-scale"      => "the scale search of sync",
-        "snap-no-chain" => "the closing of small gaps between cues",
+        "no-snap-chain" => "the closing of small gaps between cues",
     ];
 
 
@@ -83,7 +83,7 @@ class ApplicationTest extends TestCase
                 }
             }
         }
-        $this->assertContains("check-overlap", $names);
+        $this->assertContains("check-overlaps", $names);
         $this->assertContains("snap-window-frames", $names);
         $this->assertEqualsCanonicalizing(array_keys(self::OFF_SWITCHES), array_values(array_unique(preg_grep('/(^|-)no-/', $names))));
     }
@@ -102,7 +102,7 @@ class ApplicationTest extends TestCase
         [$code, $stdout, $stderr] = self::runApplication(["info", "-", "--json"], file_get_contents(__DIR__ . "/../files/cli/shop.vtt"));
 
         $this->assertSame([0, ""], [$code, $stderr]);
-        $this->assertSame(["file" => "stdin", "format" => "vtt"], array_slice(json_decode($stdout, true)[0], 0, 2));
+        $this->assertSame(["file" => "-", "format" => "vtt"], array_slice(json_decode($stdout, true)[0], 0, 2));
     }
 
 
@@ -242,7 +242,8 @@ class ApplicationTest extends TestCase
 
     public function testHelpDescribesTheDiffExitCodeAndJson(): void
     {
-        $this->assertStringContainsString("\nExit codes: 0 success, 1 a file failed, broke a validation rule or differs in diff, 2 invalid arguments.\n",
+        $this->assertStringContainsString("\nExit codes: 0 success, 1 a file broke a validation rule or differs in diff, 2 invalid arguments,\n" .
+                                          "3 a file could not be read or written.\n",
                                           self::runApplication(["--help"])[1]);
         $this->assertMatchesRegularExpression('/^  --json +Print the differences as JSON: a list with one object for the pair of files\.$/m', self::runApplication(["diff", "--help"])[1]);
         $this->assertMatchesRegularExpression('/^  --json +Print JSON: a list with one object for each input file, also for one file\.$/m',
@@ -250,12 +251,12 @@ class ApplicationTest extends TestCase
     }
 
 
-    public function testFileErrorsExitWith1(): void
+    public function testFileErrorsExitWith3(): void
     {
-        $this->assertSame([1, "", "stdin: UnknownFormatException (Error #106): Format detection found no subtitle format. Pass --from FORMAT. " .
+        $this->assertSame([3, "", "stdin: UnknownFormatException (Error #106): Format detection found no subtitle format. Pass --from FORMAT. " .
                                   "Chapters and cloud speech-to-text JSON always need it, for example --from deepgram.\n"],
                           self::runApplication(["info", "-"], "hello"));
-        $this->assertSame([1, "", "stdin: VobSub needs the path of the .idx file. Standard input does not work.\n"],
+        $this->assertSame([3, "", "stdin: VobSub needs the path of the .idx file. Standard input does not work.\n"],
                           self::runApplication(["info", "-", "--from", "vobsub"], "hello"));
     }
 
@@ -268,8 +269,8 @@ class ApplicationTest extends TestCase
         $unknown = "UnknownFormatException (Error #106): Format detection found no subtitle format. Pass --from FORMAT. " .
                    "Chapters and cloud speech-to-text JSON always need it, for example --from deepgram.\n";
 
-        $this->assertSame([1, "", "$chapters: $unknown"], self::runApplication(["info", $chapters]));
-        $this->assertSame([1, "", "stdin: $unknown"], self::runApplication(["info", "-"], $deepgram));
+        $this->assertSame([3, "", "$chapters: $unknown"], self::runApplication(["info", $chapters]));
+        $this->assertSame([3, "", "stdin: $unknown"], self::runApplication(["info", "-"], $deepgram));
 
         [$code, $stdout] = self::runApplication(["info", $chapters, "--from", "ffmeta-chapters"]);
         $this->assertSame(0, $code);

@@ -111,8 +111,8 @@ final class DiffCommand extends ReportCommand
 
         $this->different = $differences !== [];
         $this->emit($console, SubtitleDiff::toText($differences), [
-            "oldFile"     => self::label($input),
-            "newFile"     => self::label($newPath),
+            "oldFile"     => $input,
+            "newFile"     => $newPath,
             "equal"       => $differences === [],
             "differences" => array_map(fn (CueDifference $difference): array => [
                 "kind"     => $difference->kind->value,
@@ -129,7 +129,11 @@ final class DiffCommand extends ReportCommand
 
     protected function exitCode(): int
     {
-        return $this->failed > 0 || $this->different ? Application::EXIT_FAILURE : Application::EXIT_OK;
+        return match (true) {
+            $this->failed > 0 => Application::EXIT_FILE,
+            $this->different  => Application::EXIT_RESULT,
+            default           => Application::EXIT_OK,
+        };
     }
 
 

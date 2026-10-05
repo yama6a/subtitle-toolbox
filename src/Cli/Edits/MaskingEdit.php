@@ -107,7 +107,7 @@ final class MaskingEdit extends Edit
     {
         $content = is_file($path) ? @file_get_contents($path) : false;
         if ($content === false) {
-            Command::fail("Cannot read the word file $path.");
+            Command::failFile("Cannot read the word file $path.");
         }
 
         $lines = preg_split('/\R/', StringHelpers::removeUtf8Bom($content));
@@ -121,6 +121,17 @@ final class MaskingEdit extends Edit
         $this->muteRanges = ProfanityFilter::apply($subtitle, $this->options)->muteRanges;
 
         return $subtitle;
+    }
+
+
+    /**
+     * Returns the files of --mute-edl and --mute-filter, by option name.
+     *
+     * @return array<string, string>
+     */
+    public function outputPaths(): array
+    {
+        return array_filter(["mute-edl" => $this->edlPath, "mute-filter" => $this->filterPath], fn (?string $path): bool => $path !== null);
     }
 
 

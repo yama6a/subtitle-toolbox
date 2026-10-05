@@ -45,7 +45,7 @@ final class SnapEdit extends Edit
             Option::value("snap-window-frames", "FRAMES", "Largest move to a shot change, and largest gap that closes. Default: half a second."),
             Option::value("snap-min-gap-frames", "FRAMES", "Gap between a cue and the next cue or shot change. Default: 2."),
             Option::value("snap-min-duration-frames", "FRAMES", "No move makes a cue shorter than this. Default: 20."),
-            Option::flag("snap-no-chain", "Keep small gaps between cues."),
+            Option::flag("no-snap-chain", "Keep small gaps between cues."),
         ];
     }
 
@@ -53,7 +53,7 @@ final class SnapEdit extends Edit
     public static function fromArguments(Arguments $arguments): ?static
     {
         $videoFps = $arguments->positiveFloat("video-fps") ?? $arguments->positiveFloat("fps");
-        $snaps    = array_filter(["snap-shot-changes", "snap-window-frames", "snap-min-gap-frames", "snap-min-duration-frames", "snap-no-chain"], $arguments->has(...));
+        $snaps    = array_filter(["snap-shot-changes", "snap-window-frames", "snap-min-gap-frames", "snap-min-duration-frames", "no-snap-chain"], $arguments->has(...));
         if ($snaps === []) {
             if ($arguments->has("video-fps")) {
                 Command::fail("Pass --snap-shot-changes FILE with --video-fps.");
@@ -65,8 +65,8 @@ final class SnapEdit extends Edit
             Command::fail("Pass --video-fps RATE with --" . reset($snaps) . ".");
         }
         $path = $arguments->value("snap-shot-changes");
-        if ($path === null && $arguments->has("snap-no-chain")) {
-            Command::fail("Pass --snap-shot-changes FILE. With --snap-no-chain and no shot changes, snapping changes nothing.");
+        if ($path === null && $arguments->has("no-snap-chain")) {
+            Command::fail("Pass --snap-shot-changes FILE. With --no-snap-chain and no shot changes, snapping changes nothing.");
         }
 
         try {
@@ -75,7 +75,7 @@ final class SnapEdit extends Edit
                 shotChanges: $path === null ? [] : self::loadShotChanges($path),
                 snapWindowFrames: self::frames($arguments, "snap-window-frames"),
                 minGapFrames: self::frames($arguments, "snap-min-gap-frames") ?? 2,
-                chain: !$arguments->has("snap-no-chain"),
+                chain: !$arguments->has("no-snap-chain"),
                 minDurationFrames: self::frames($arguments, "snap-min-duration-frames") ?? 20,
             ));
         } catch (InvalidArgumentException $exception) {
@@ -110,7 +110,7 @@ final class SnapEdit extends Edit
     {
         $content = is_file($path) ? @file_get_contents($path) : false;
         if ($content === false) {
-            Command::fail("Cannot read the shot change file $path.");
+            Command::failFile("Cannot read the shot change file $path.");
         }
 
         try {
