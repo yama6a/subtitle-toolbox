@@ -237,6 +237,7 @@ Only the library creates the reports and results. Their constructors are `@inter
 | `OcrResult` | `RecognizedText` |
 | `$results = (new OcrRunner($engine))->run($subtitle)` | `$results = (new OcrRunner($engine))->run($subtitle)->texts`. `run()` returns an `OcrReport` |
 | `GlyphOcrEngine::toOcrResult()`, `TesseractOcrEngine::fromTsv()` | `@internal` |
+| `new GlyphOcrEngine($database, ['italicSlant' => 0.2, 'lineContext' => false])` | `new GlyphOcrEngine(new GlyphOcrOptions(database: $database, italicSlant: 0.2, lineContext: false))`. `GlyphOcrOptions` has one typed field per `GlyphOcr\Recognizer` setting and checks the values. A misspelled name is a PHP `Error` |
 | `DualSubtitleOptions::getSecondaryTagName()`, `WordHighlightOptions::getTagName()`, the `Parsers\WordGrouping` trait | `@internal` |
 | `HlsWebVttResult`, `HlsWebVttResult::segmentMillis()` | `HlsWebVttRendition`. `segmentMillis()` is gone |
 | `$copy = $runner->translate($german, 'de', 'en')`, then `$runner->getWarnings()` | `$report = $runner->translate($copy = clone $german, 'de', 'en')`, then `$report->warnings`. `translate()` changes the subtitle you pass and keeps no state |
@@ -315,7 +316,7 @@ These changes alter the output or the exit code of a call that needs no other ch
 | `convert --help` | listed every option | lists the common options and the option groups. `convert --help GROUP` lists the options of one group | `convert --help all` |
 | CLI inputs | `--force` let a command write over its input | a command never overwrites an input without `--in-place`, also not with `--force`. That file fails | `--in-place` |
 | Unknown options | before 1.70.5, a misspelled key or a key of another format was ignored. 1.70.5 and later threw `InvalidArgumentException` | a misspelled field, such as `new WriteOptions(lineEndings: LineEnding::Crlf)`, is a PHP `Error` for an unknown named parameter. An options class of another format, such as `new CsvWriteOptions()` for SubRip output, throws `InvalidArgumentException`. Read classes follow the same rule | fix the name, or pass the class of the format |
-| Strict types | the library converted scalar values | every file declares `strict_types`. A `mapText()`, `mapLines()`, `Markup::mapTextRuns()` or `ProfanityOptions` mask callback must return a string, else it throws `TypeError`. `GlyphOcrEngine` options need their exact types, for example `['inkThreshold' => 128]` | return the documented type |
+| Strict types | the library converted scalar values | every file declares `strict_types`. A `mapText()`, `mapLines()`, `Markup::mapTextRuns()` or `ProfanityOptions` mask callback must return a string, else it throws `TypeError`. | return the documented type |
 | CSV and TSV times in `hh:mm:ss:ff` | the CLI could not read such a file | the CLI `--input-fps` and `--fps` set `CsvReadOptions::$frameRate` | nothing |
 | JSON output of text that is not UTF-8 | `JsonFormatter` and the Podcasting 2.0 formatters threw `JsonException` | they throw `InvalidArgumentException`, with the `JsonException` as its previous exception | catch `InvalidArgumentException` or `SubtitleToolboxException` |
 | `ParseWarning::$lineNumber`, `$blockIndex` | 0 for a warning without a line, -1 for a library JSON field outside the cues | null in both cases | test for null |
