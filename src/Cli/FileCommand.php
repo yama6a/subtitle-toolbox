@@ -50,9 +50,9 @@ abstract class FileCommand extends Command
 
     protected int $failed = 0;
 
-    protected bool $fromContainer = false;
-
     protected ReadOptions $readOptions;
+
+    protected OutputFiles $outputFiles;
 
     /** @var list<ParseWarning> */
     protected array $parseWarnings = [];
@@ -121,6 +121,7 @@ abstract class FileCommand extends Command
     {
         $this->succeeded      = 0;
         $this->failed         = 0;
+        $this->outputFiles    = new OutputFiles();
         $this->inputFps       = self::rate($arguments, "input-fps");
         $this->wordTimestamps = $this->needsWordTimestamps($arguments);
         $arguments->positiveFloat("fps");
@@ -236,6 +237,8 @@ abstract class FileCommand extends Command
                     $this->process($input, $read[0], $read[1], $arguments, $console);
                 }
                 $this->succeeded++;
+            } catch (FileFailure $failure) {
+                throw $failure;
             } catch (\Throwable $exception) {
                 $this->failed++;
                 $console->err(self::label($input) . ": " . self::cliMessage(self::throwableMessage($exception), "--track", "--from") . "\n");
@@ -368,9 +371,6 @@ abstract class FileCommand extends Command
         if ($subtitle === null) {
             return null;
         }
-        // An MKV or WebM input has an extension of no subtitle format, so the output gets the extension of its format.
-        $this->fromContainer = $track !== null || ($input !== self::DASH && Format::fromPath($input) === null);
-
         $this->parseWarnings = $subtitle->getParseWarnings();
         self::printWarnings($console, self::label($input), $this->parseWarnings);
 

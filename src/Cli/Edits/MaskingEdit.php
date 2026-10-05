@@ -9,6 +9,7 @@ use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\FileCommand;
 use SubtitleToolbox\Cli\Option;
+use SubtitleToolbox\Cli\OutputFiles;
 use SubtitleToolbox\Profanity\MuteRange;
 use SubtitleToolbox\Profanity\ProfanityFilter;
 use SubtitleToolbox\Profanity\ProfanityMask;
@@ -81,9 +82,6 @@ final class MaskingEdit extends Edit
             if ($path === FileCommand::DASH) {
                 Command::fail("The option --$option needs a file path.");
             }
-            if ($path !== null && file_exists($path) && !$arguments->has("force")) {
-                Command::fail("$path exists. Pass --force to overwrite it.");
-            }
         }
         $padding = $arguments->float("mute-padding") ?? 0.0;
         if ($padding < 0) {
@@ -140,7 +138,7 @@ final class MaskingEdit extends Edit
      *
      * @return list<string>
      */
-    public function writeMuteFiles(): array
+    public function writeMuteFiles(OutputFiles $files): array
     {
         $written = [];
         foreach ([[$this->edlPath, MuteRange::toEdl(...)], [$this->filterPath, MuteRange::toFfmpegVolumeFilter(...)]] as [$path, $render]) {
@@ -148,9 +146,7 @@ final class MaskingEdit extends Edit
                 continue;
             }
             $content = $render($this->muteRanges);
-            if (@file_put_contents($path, $content === "" || str_ends_with($content, "\n") ? $content : "$content\n") === false) {
-                Command::fail("Cannot write $path.");
-            }
+            $files->create($path, $content === "" || str_ends_with($content, "\n") ? $content : "$content\n");
             $written[] = $path;
         }
 
