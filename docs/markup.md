@@ -16,7 +16,7 @@ Cue lines hold HTML-like inline tags, the **core markup**. Parsers convert the s
 - **Speaker names**: a quote in a name stays a raw character, for example `<v O'Neil>`.
 
 ## Helpers
-The `Markup` class has the helpers that the parsers and formatters use. They help when you write your own parser, OCR engine or text change.
+The `Markup` class has the helpers that the parsers and formatters use. They help when you write your own OCR engine, text change, or code that reads or writes a format that the library does not have.
 
 ```php
 use SubtitleToolbox\Markup;

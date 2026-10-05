@@ -14,6 +14,10 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 
+/**
+ * The base class of the parsers of this library. Only the library extends it. Its protected members are not API and
+ * can change in any release.
+ */
 abstract class SubtitleParser
 {
     protected ReadOptions $options;

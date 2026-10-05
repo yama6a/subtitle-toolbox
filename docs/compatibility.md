@@ -22,4 +22,5 @@ A fix that a 2.x minor release adds to `CommonErrorFixer` is off by default. So 
 
 ## Not covered
 - **`@internal`**: a class, method or constant marked `@internal` can change in any release. An example is `ImageFormatter`.
+- **Parsers and formatters as base classes**: only the library extends `SubtitleParser` and `SubtitleFormatter`. Their protected members can change in any release. Call a parser or formatter from your own class.
 - **`SubtitleToolbox\Cli`**: the PHP classes of the command line tool. Run the binary instead.

@@ -11,6 +11,10 @@ use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
+/**
+ * The base class of the formatters of this library. Only the library extends it. Its protected members are not API and
+ * can change in any release.
+ */
 abstract class SubtitleFormatter
 {
     /** @var class-string<FormatWriteOptions>|null the class that WriteOptions::$format must have, or null for none */
