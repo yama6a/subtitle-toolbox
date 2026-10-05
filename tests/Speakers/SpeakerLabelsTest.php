@@ -366,7 +366,7 @@ class SpeakerLabelsTest extends TestCase
         $this->assertCount(4, $cues);
         $this->assertSame([0.0, 2.4, "<v 0>Did you lock the back door?"], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $this->assertSame([6.3, 8.0, "<v 0>Then we can go."], [$cues[3]->getStart(), $cues[3]->getEnd(), $cues[3]->getText()]);
-        $this->assertSame("?", $cues[2]->getFormatData("whisper")["speaker"]);
+        $this->assertSame("?", $cues[2]->findFormatData("whisper")["speaker"]);
         $this->assertSame([0 => 2, 1 => 1, "?" => 1], SpeakerLabels::list($subtitle));
         $this->assertSame(file_get_contents(self::FILES . "whisper_cpp_diarize.vtt"), $subtitle->toString(Format::WebVtt, self::noBom()));
     }
@@ -377,7 +377,7 @@ class SpeakerLabelsTest extends TestCase
         $subtitle = self::whisper("../whisper/real/whisperx_diarize.json");
 
         $this->assertSame("<v SPEAKER_00>The market opens on Saturday.", $subtitle->getCues()[0]->getText());
-        $this->assertSame("SPEAKER_00", $subtitle->getCues()[0]->getFormatData("whisper")["speaker"]);
+        $this->assertSame("SPEAKER_00", $subtitle->getCues()[0]->findFormatData("whisper")["speaker"]);
 
         SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(rename: ["SPEAKER_00" => "Anna", "SPEAKER_01" => "Ben"]));
         $this->assertSame(["Anna" => 1, "Ben" => 2], SpeakerLabels::list($subtitle));

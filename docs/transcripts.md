@@ -13,7 +13,7 @@ use SubtitleToolbox\Subtitle;
 $subtitle = Subtitle::fromString($openAiResponseBody, Format::Whisper);
 $subtitle = Subtitle::fromString(file_get_contents('lecture.json'), Format::Whisper, new ReadOptions(wordTimestamps: true));
 $subtitle->getCues()[0]->getText();                                          // '<00:00:00.000>The <00:00:00.240>beach <00:00:00.710>was <00:00:00.950>quiet.'
-$subtitle->getCues()[0]->getFormatData('whisper')['avg_logprob'];            // -0.25
+$subtitle->getCues()[0]->findFormatData('whisper')['avg_logprob'];           // -0.25
 ```
 
 | Tool | Shape | Source |
@@ -42,7 +42,7 @@ use SubtitleToolbox\Subtitle;
 $subtitle = Subtitle::fromString($transcribeJson, Format::AwsTranscribe);    // format detection does not find cloud speech JSON
 $subtitle = Subtitle::fromString($deepgramResponseBody, Format::Deepgram, new ReadOptions(wordTimestamps: true, speakerVoices: true));
 $subtitle->getCues()[2]->getText();                                          // '<v 0><00:00:06.500>Thank <00:00:06.800>you.'
-$subtitle->getCues()[2]->getFormatData('deepgram')['confidence'];            // 0.9637655
+$subtitle->getCues()[2]->findFormatData('deepgram')['confidence'];           // 0.9637655
 ```
 
 | Service | Parser, format data key | Cues |
@@ -74,7 +74,7 @@ use SubtitleToolbox\Subtitle;
 $subtitle = Subtitle::fromString(file_get_contents('video.en.json3'), Format::YouTube);
 $subtitle = Subtitle::fromString(file_get_contents('video.en.srv3'), Format::YouTube, new ReadOptions(wordTimestamps: true));
 $subtitle->getCues()[0]->getText();                                          // '<00:00:01.200>Hello <00:00:01.600>world'
-$subtitle->getFormatData('youtube')['format'];                               // 'srv3'
+$subtitle->findFormatData('youtube')['format'];                              // 'srv3'
 ```
 
 | Format | Shape |
@@ -135,7 +135,7 @@ $subtitle = Subtitle::fromString($json, Format::PodcastTranscript, new ReadOptio
 - **No end time**: a segment without `endTime` and an HTML paragraph end at the next later start. The last one lasts `ReadOptions::$lastCueDuration`, 5 s by default.
 - **HTML input**: each `<time>` starts a cue. The cue holds the `<p>` elements up to the next `<time>` or `<cite>`, one line per `<p>` and `<br>`. A `<cite>` names only the next cue. The parser strips other tags and reads times such as `0:09`, `12:05` and `1:02:03.5`.
 - **HTML output**: a new paragraph starts at a speaker change or a gap. The formatter writes `<cite>` only for a paragraph with a speaker, times such as `0:09` and `1:02:03`, and the text without tags.
-- **Format data**: the JSON parser keeps the top-level fields except `segments` in `getFormatData('podcast-transcript')`, for example `version`. A cue of one segment keeps the other fields of the segment. The formatter writes them back, and `"version": "1.0.0"` when there is none.
+- **Format data**: the JSON parser keeps the top-level fields except `segments` in `findFormatData('podcast-transcript')`, for example `version`. A cue of one segment keeps the other fields of the segment. The formatter writes them back, and `"version": "1.0.0"` when there is none.
 - **Errors**: a segment without a numeric `startTime` throws `ParsingException`. So does a `speaker`, `endTime` or `body` of the wrong type, a `<p>` without a `<time>` before it, and a bad time. A segment without `body` gives no cue.
 - **Command line tool**: the format names are `podcast-transcript` and `html`. `.json` stays the library JSON, so pass `--to podcast-transcript`.
 

@@ -209,8 +209,8 @@ class DualSubtitleTest extends TestCase
         $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions());
 
         $this->assertSame(["language" => "en+de", "title" => "Station"], $dual->getAllMetadata());
-        $this->assertSame(["header" => "Kind: captions"], $dual->getFormatData("vtt"));
-        $this->assertSame([], $dual->getFormatData("ass"));
+        $this->assertSame(["header" => "Kind: captions"], $dual->findFormatData("vtt"));
+        $this->assertSame([], $dual->findFormatData("ass"));
         $this->assertEquals([new Comment("before second", 2),
                            new Comment("at the end", 3)], $dual->getComments());
         $this->assertSame([[0.0, 2.0, "first\nvorher", null], [2.2, 2.8, "dazwischen", null], [3.0, 5.0, "second", null]],
@@ -225,7 +225,7 @@ class DualSubtitleTest extends TestCase
 
         $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions());
 
-        $this->assertSame("en", $dual->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("en", $dual->findMetadata(Subtitle::METADATA_LANGUAGE));
     }
 
 
@@ -238,7 +238,7 @@ class DualSubtitleTest extends TestCase
         $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions());
 
         $this->assertNull($dual->getCues()[1]->getIdentifier());
-        $this->assertSame([], $dual->getCues()[1]->getFormatData("ass"));
+        $this->assertSame([], $dual->getCues()[1]->findFormatData("ass"));
     }
 
 

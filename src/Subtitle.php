@@ -400,11 +400,11 @@ final class Subtitle implements \IteratorAggregate, \Countable
                                             $csv->secondTextHeader, $csv->escapeFormulas);
         }
         if ($format === Format::MicroDvd && $formatOptions === null) {
-            $formatOptions = new MicroDvdWriteOptions($this->getFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
+            $formatOptions = new MicroDvdWriteOptions($this->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
                 ?? throw new InvalidArgumentException("MicroDVD output needs the frame rate of the video. Pass MicroDvdWriteOptions::frameRate."));
         }
         if ($format === Format::Itt && ($formatOptions === null || ($formatOptions instanceof IttWriteOptions && $formatOptions->frameRate === null))
-            && !isset($this->getFormatData(IttParser::FORMAT_DATA_KEY)["frameRate"])) {
+            && !isset($this->findFormatData(IttParser::FORMAT_DATA_KEY)["frameRate"])) {
             throw new InvalidArgumentException("iTT output needs the frame rate of the video. Pass IttWriteOptions::frameRate.");
         }
 
@@ -492,7 +492,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     }
 
 
-    public function getMetadata(string $key): ?string
+    public function findMetadata(string $key): ?string
     {
         return $this->metadata[$key] ?? null;
     }
@@ -551,7 +551,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     /**
      * Returns the data that only the given format reads, or an empty array.
      */
-    public function getFormatData(string $format): array
+    public function findFormatData(string $format): array
     {
         return $this->formatData[$format] ?? [];
     }

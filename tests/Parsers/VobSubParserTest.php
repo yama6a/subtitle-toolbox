@@ -143,7 +143,7 @@ class VobSubParserTest extends TestCase
         $subtitle = $this->parseFixture($name, $track);
         $cues     = $subtitle->getCues();
 
-        $this->assertSame($language, $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame($language, $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertCount($cueCount, $cues);
         $this->assertSame($firstCue, $this->describeCue($cues[0]));
         $this->assertSame($lastCue, $this->describeCue(end($cues)));
@@ -334,7 +334,7 @@ class VobSubParserTest extends TestCase
         $sub = file_get_contents(self::DIR . "two-tracks-pal.sub");
 
         $byIndex = (new VobSubParser())->parse($sub, new ReadOptions(format: new VobSubReadOptions($idx, track: 1)));
-        $this->assertSame("de", $byIndex->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("de", $byIndex->findMetadata(Subtitle::METADATA_LANGUAGE));
 
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The .idx content has no track with index 1 and language \"en\".");

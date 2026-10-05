@@ -95,13 +95,13 @@ class TtmlRealFileTest extends TestCase
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "bbc_ebu_tt_d.ttml"), Format::Ttml);
         $cues     = array_values($subtitle->getCues());
 
-        $this->assertSame("Harbour weather", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
-        $this->assertSame("en-GB", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("Harbour weather", $subtitle->findMetadata(Subtitle::METADATA_TITLE));
+        $this->assertSame("en-GB", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame("sub3", $cues[2]->getIdentifier());
         $this->assertSame("<v Ben>The first ferry left\nat seven o'clock.", $cues[2]->getText());
         $this->assertSame("<v Ben>Tide tables are <b>on the <u>board</u></b>", $cues[10]->getText());
-        $this->assertStringNotContainsString("ttm:title", $subtitle->getFormatData("ttml")["head"]);
-        $this->assertStringContainsString("ebuttm:documentMetadata", $subtitle->getFormatData("ttml")["head"]);
+        $this->assertStringNotContainsString("ttm:title", $subtitle->findFormatData("ttml")["head"]);
+        $this->assertStringContainsString("ebuttm:documentMetadata", $subtitle->findFormatData("ttml")["head"]);
     }
 
 
@@ -109,8 +109,8 @@ class TtmlRealFileTest extends TestCase
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "mantas_netflix_ticks.dfxp"), Format::Ttml);
 
-        $this->assertSame(["region" => "bottomCenter"], $subtitle->getCues()[0]->getFormatData("ttml")["attributes"]);
-        $this->assertSame(["xml:space" => "preserve"], $subtitle->getCues()[0]->getFormatData("ttml")["div"]);
+        $this->assertSame(["region" => "bottomCenter"], $subtitle->getCues()[0]->findFormatData("ttml")["attributes"]);
+        $this->assertSame(["xml:space" => "preserve"], $subtitle->getCues()[0]->findFormatData("ttml")["div"]);
     }
 
 

@@ -22,7 +22,7 @@ Parsers fill these fields where their format has them, and formatters write them
 use SubtitleToolbox\Subtitle;
 
 $subtitle->setMetadata(Subtitle::METADATA_TITLE, 'Yesterday');
-$subtitle->getMetadata('title');              // 'Yesterday'
+$subtitle->findMetadata('title');             // 'Yesterday'
 $subtitle->setMetadata('title', null);        // removes the key
 $subtitle->getAllMetadata();                  // []
 
@@ -41,7 +41,7 @@ $cue->setIdentifier('intro');
 ```php
 $cue->setAlignment(8);                                  // top center
 $cue->setFormatData('ass', ['style' => 'Sign']);
-$subtitle->getFormatData('ass');                        // [] when not set
+$subtitle->findFormatData('ass');                       // [] when not set
 ```
 
 - **Alignment**: a number from 1 to 9 in numeric keypad layout. 1 is bottom left, 2 is bottom center, 8 is top center. `null` means the format default, bottom center.
@@ -54,16 +54,16 @@ use SubtitleToolbox\SubtitleCue;
 count($subtitle);                               // 612
 foreach ($subtitle as $index => $cue) { }       // in index order
 
-$subtitle->getCuesAt(83.2);                     // [41 => $cue], the cues on screen at 83.2 s
-$subtitle->getCueIndexAt(83.2);                 // 41, or null when no cue is on screen
-$subtitle->getCuesBetween(600, 660);            // the cues that overlap 600 s to 660 s, not cut
+$subtitle->findCuesAt(83.2);                    // [41 => $cue], the cues on screen at 83.2 s
+$subtitle->findCueIndexAt(83.2);                // 41, or null when no cue is on screen
+$subtitle->findCuesBetween(600, 660);           // the cues that overlap 600 s to 660 s, not cut
 $subtitle->findCues(fn (SubtitleCue $cue) => str_contains($cue->getText(), 'Paris'));
 $subtitle->removeCuesWhere(fn (SubtitleCue $cue) => $cue->getEnd() - $cue->getStart() < 0.5);
 ```
 
 - **On screen**: a cue is on screen at time `t` when `start <= t < end`. A cue from 4.0 s to 6.0 s is on screen at 4.0 s, but not at 6.0 s. A cue with the same start and end is never on screen.
-- **Overlaps**: cues can overlap, so `getCuesAt()` returns an array. `getCueIndexAt()` returns the lowest index of these cues.
-- **Keys**: `getCuesAt()`, `getCuesBetween()` and `findCues()` keep the cue index as the array key.
+- **Overlaps**: cues can overlap, so `findCuesAt()` returns an array. `findCueIndexAt()` returns the lowest index of these cues.
+- **Keys**: `findCuesAt()`, `findCuesBetween()` and `findCues()` keep the cue index as the array key.
 - **Remove**: `removeCuesWhere()` moves a comment before a removed cue to the next kept cue, and then calls `reIndexCues()`.
 - **Add and remove**: `addCue()` sorts the cues by start time after each call. `addCues()` adds a list and sorts once, so use it for many cues. `removeCue()` numbers the remaining cues from 0 again.
 - **No array access**: `$subtitle[3]` does not work. Use `getCues()`, `addCue()` and `removeCue()`, so the cue indexes and comments stay correct.

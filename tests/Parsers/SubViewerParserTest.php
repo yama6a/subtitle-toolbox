@@ -34,7 +34,7 @@ class SubViewerParserTest extends TestCase
         $subtitle = (new SubViewerParser())->parse("[INFORMATION]\n[DELAY]5\n[END INFORMATION]\n[SUBTITLE]\n00:00:01.00,00:00:02.00\nHello\n", new ReadOptions());
 
         $this->assertSame([[1.0, 2.0]], $this->times($subtitle));
-        $this->assertSame(["version" => 2, "header" => ["DELAY" => "5"]], $subtitle->getFormatData("subviewer"));
+        $this->assertSame(["version" => 2, "header" => ["DELAY" => "5"]], $subtitle->findFormatData("subviewer"));
     }
 
 
@@ -53,7 +53,7 @@ class SubViewerParserTest extends TestCase
                                                    "[COLF]&H00FF00,[SIZE]20\n00:00:03.00,00:00:04.00\nTwo\n", new ReadOptions());
 
         $this->assertSame([["One"], ["Two"]], array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $subtitle->getCues()));
-        $this->assertSame("[COLF]&HFFFFFF,[SIZE]18", $subtitle->getFormatData("subviewer")["style"]);
+        $this->assertSame("[COLF]&HFFFFFF,[SIZE]18", $subtitle->findFormatData("subviewer")["style"]);
     }
 
 
@@ -104,7 +104,7 @@ class SubViewerParserTest extends TestCase
     {
         $subtitle = (new SubViewerParser())->parse("[TITLE]Ferry times\n[DELAY]\n-1\n******** START SCRIPT ********\n[00:00:02]\nHello\n[00:00:03]\n", new ReadOptions());
 
-        $this->assertSame("Ferry times", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
+        $this->assertSame("Ferry times", $subtitle->findMetadata(Subtitle::METADATA_TITLE));
         $this->assertSame([[1.0, 2.0]], $this->times($subtitle));
     }
 

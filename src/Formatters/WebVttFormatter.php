@@ -25,7 +25,7 @@ final class WebVttFormatter extends SubtitleFormatter
 
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $fileData = $subtitle->getFormatData(WebVttParser::FORMAT_DATA_KEY);
+        $fileData = $subtitle->findFormatData(WebVttParser::FORMAT_DATA_KEY);
         $header   = "WEBVTT";
         if (($fileData["header"] ?? "") !== "") {
             $header .= " " . $fileData["header"];
@@ -141,7 +141,7 @@ final class WebVttFormatter extends SubtitleFormatter
     private function formatSettings(SubtitleCue $cue): string
     {
         $settings = [];
-        foreach ($cue->getFormatData(WebVttParser::FORMAT_DATA_KEY) as $name => $value) {
+        foreach ($cue->findFormatData(WebVttParser::FORMAT_DATA_KEY) as $name => $value) {
             if (in_array($name, WebVttParser::CUE_SETTINGS, true)) {
                 $settings[] = "$name:$value";
             }

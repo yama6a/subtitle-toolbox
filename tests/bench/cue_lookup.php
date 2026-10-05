@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Times 1,000 calls of getCuesAt() on 100, 2,000 and 20,000 cues, first alone and then each after a setEnd() call.
+// Times 1,000 calls of findCuesAt() on 100, 2,000 and 20,000 cues, first alone and then each after a setEnd() call.
 // Usage: php tests/bench/cue_lookup.php
 
 use SubtitleToolbox\Format;
@@ -54,7 +54,7 @@ foreach ([100, 2000, 20000] as $cueCount) {
 
     $lookups = milliseconds(function () use ($subtitle, $times): void {
         foreach ($times as $time) {
-            $subtitle->getCuesAt($time);
+            $subtitle->findCuesAt($time);
         }
     });
 
@@ -63,7 +63,7 @@ foreach ([100, 2000, 20000] as $cueCount) {
         foreach ($times as $lookup => $time) {
             $cue = $cues[($lookup * 7) % $cueCount];
             $cue->setEnd($cue->getEnd() + ($lookup % 2 === 0 ? 0.001 : -0.001));
-            $subtitle->getCuesAt($time);
+            $subtitle->findCuesAt($time);
         }
     });
 

@@ -43,7 +43,7 @@ class TtmlParserTest extends TestCase
             Format::Ttml);
         $cues = $subtitle->getCues();
 
-        $this->assertSame("en", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("en", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame([1.5, 4.0, ["Hello", "<i>world</i>"]], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getLines()]);
         $this->assertSame([5.0, 7.5, ["Second cue"]], [$cues[1]->getStart(), $cues[1]->getEnd(), $cues[1]->getLines()]);
     }
@@ -263,7 +263,7 @@ class TtmlParserTest extends TestCase
         );
 
         $this->assertSame(1, $subtitle->getCues()[0]->getAlignment());
-        $this->assertSame(["tts:textAlign" => "left", "region" => "r1"], $subtitle->getCues()[0]->getFormatData("ttml")["attributes"]);
+        $this->assertSame(["tts:textAlign" => "left", "region" => "r1"], $subtitle->getCues()[0]->findFormatData("ttml")["attributes"]);
     }
 
 
@@ -282,7 +282,7 @@ class TtmlParserTest extends TestCase
             "xml:lang=\"de\" ttp:frameRate=\"25\"",
             "<metadata><ttm:title>Wetter</ttm:title><ttm:copyright>Sample</ttm:copyright></metadata>"
         );
-        $fileData = $subtitle->getFormatData("ttml");
+        $fileData = $subtitle->findFormatData("ttml");
 
         $this->assertSame(["language" => "de", "title" => "Wetter"], $subtitle->getAllMetadata());
         $this->assertSame("http://www.w3.org/ns/ttml", $fileData["namespace"]);

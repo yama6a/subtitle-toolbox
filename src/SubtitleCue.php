@@ -198,7 +198,7 @@ final class SubtitleCue
     /**
      * Returns the data that only the given format reads, or an empty array.
      */
-    public function getFormatData(string $format): array
+    public function findFormatData(string $format): array
     {
         return $this->formatData[$format] ?? [];
     }

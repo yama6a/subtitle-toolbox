@@ -59,7 +59,7 @@ class SamiParserTest extends TestCase
 
         $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
         $this->assertCount($cueCount, $cues);
-        $this->assertSame($language, $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame($language, $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame($first, [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getLines()]);
         $this->assertSame($last, [end($cues)->getStart(), end($cues)->getEnd(), end($cues)->getLines()]);
     }
@@ -70,8 +70,8 @@ class SamiParserTest extends TestCase
         $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(format: new SamiReadOptions("ENCC")));
         $cues     = $subtitle->getCues();
 
-        $this->assertSame("en-US", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
-        $this->assertSame("ENCC", $subtitle->getFormatData("sami")["class"]);
+        $this->assertSame("en-US", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("ENCC", $subtitle->findFormatData("sami")["class"]);
         $this->assertSame([
             [1.0, 4.2, ["The bakery opens at six in the morning."]],
             [5.0, 8.0, ["It is <font color=\"#ffff00\">raining</font> today.", "Take an umbrella."]],
@@ -85,8 +85,8 @@ class SamiParserTest extends TestCase
     {
         $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . "multi_language.smi"), new ReadOptions(format: new SamiReadOptions("frcc")));
 
-        $this->assertSame("fr-FR", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
-        $this->assertSame("FRCC", $subtitle->getFormatData("sami")["class"]);
+        $this->assertSame("fr-FR", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("FRCC", $subtitle->findFormatData("sami")["class"]);
         $this->assertSame(["Il <font color=\"#ffff00\">pleut</font> aujourd'hui.", "Prenez un parapluie."], $subtitle->getCues()[1]->getLines());
     }
 
@@ -103,9 +103,9 @@ class SamiParserTest extends TestCase
     public function testStyleBlockAndHeaderGoToFormatData(): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "mantas_smi.smi"), Format::Sami);
-        $data     = $subtitle->getFormatData("sami");
+        $data     = $subtitle->findFormatData("sami");
 
-        $this->assertSame("file", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
+        $this->assertSame("file", $subtitle->findMetadata(Subtitle::METADATA_TITLE));
         $this->assertSame("ENUSCC", $data["class"]);
         $this->assertSame("\n  Metrics {time:ms;}\n  Spec {MSFT:1.0;}\n", $data["samiParam"]);
         $this->assertStringStartsWith("\n<!--\n  P { font-family: Arial;", $data["style"]);
@@ -123,7 +123,7 @@ class SamiParserTest extends TestCase
                 ["attributes" => [], "html" => "Weather Report for Tuesday"],
             ],
             "lines"      => ["End of:", "Weather Report for Tuesday"],
-        ], end($cues)->getFormatData("sami"));
+        ], end($cues)->findFormatData("sami"));
     }
 
 
@@ -175,8 +175,8 @@ class SamiParserTest extends TestCase
     {
         $subtitle = Subtitle::fromString("<sami><body><sync start=500><p>one<sync start=900><p>two<sync start=1200><p>&nbsp;</body></sami>", Format::Sami);
 
-        $this->assertNull($subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
-        $this->assertSame([], $subtitle->getFormatData("sami"));
+        $this->assertNull($subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame([], $subtitle->findFormatData("sami"));
         $this->assertSame([[0.5, 0.9, "one"], [0.9, 1.2, "two"]], array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $subtitle->getCues()));
     }
 
@@ -185,7 +185,7 @@ class SamiParserTest extends TestCase
     {
         $subtitle = Subtitle::fromString("<SAMI><BODY><SYNC Start=0><P Class=FRCC>un<P Class=ENCC>one\n<SYNC Start=900><P Class=ENCC>two</BODY></SAMI>", Format::Sami);
 
-        $this->assertSame(["class" => "FRCC"], $subtitle->getFormatData("sami"));
+        $this->assertSame(["class" => "FRCC"], $subtitle->findFormatData("sami"));
         $this->assertSame(["un"], array_map(fn ($cue): string => $cue->getText(), $subtitle->getCues()));
     }
 

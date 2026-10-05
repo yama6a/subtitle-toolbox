@@ -193,19 +193,19 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $subtitle = new Subtitle();
 
         $this->assertSame([], $subtitle->getAllMetadata());
-        $this->assertNull($subtitle->getMetadata(Subtitle::METADATA_TITLE));
+        $this->assertNull($subtitle->findMetadata(Subtitle::METADATA_TITLE));
     }
 
 
-    public function testSetAndGetMetadata(): void
+    public function testSetAndFindMetadata(): void
     {
         $subtitle = (new Subtitle())
             ->setMetadata(Subtitle::METADATA_TITLE, "Yesterday")
             ->setMetadata(Subtitle::METADATA_ARTIST, "The Beatles")
             ->setMetadata("custom", "");
 
-        $this->assertSame("Yesterday", $subtitle->getMetadata("title"));
-        $this->assertSame("", $subtitle->getMetadata("custom"));
+        $this->assertSame("Yesterday", $subtitle->findMetadata("title"));
+        $this->assertSame("", $subtitle->findMetadata("custom"));
         $this->assertSame(
             ["title" => "Yesterday", "artist" => "The Beatles", "custom" => ""],
             $subtitle->getAllMetadata()
@@ -231,7 +231,7 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
             ->setMetadata(Subtitle::METADATA_AUTHOR, null)
             ->setMetadata("missing", null);
 
-        $this->assertNull($subtitle->getMetadata("author"));
+        $this->assertNull($subtitle->findMetadata("author"));
         $this->assertSame(["album" => "Help!"], $subtitle->getAllMetadata());
     }
 
@@ -340,19 +340,19 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
 
     public function testFormatDataIsEmptyByDefault(): void
     {
-        $this->assertSame([], (new Subtitle())->getFormatData("ass"));
+        $this->assertSame([], (new Subtitle())->findFormatData("ass"));
     }
 
 
-    public function testSetAndGetFormatDataPerFormat(): void
+    public function testSetAndFindFormatDataPerFormat(): void
     {
         $object = (new Subtitle())
             ->setFormatData("ass", ["style" => "Default", "marginV" => 10])
             ->setFormatData("vtt", ["region" => "top"]);
 
-        $this->assertSame(["style" => "Default", "marginV" => 10], $object->getFormatData("ass"));
-        $this->assertSame(["region" => "top"], $object->getFormatData("vtt"));
-        $this->assertSame([], $object->getFormatData("srt"));
+        $this->assertSame(["style" => "Default", "marginV" => 10], $object->findFormatData("ass"));
+        $this->assertSame(["region" => "top"], $object->findFormatData("vtt"));
+        $this->assertSame([], $object->findFormatData("srt"));
     }
 
 
@@ -362,9 +362,9 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
             ->setFormatData("ass", ["style" => "Default", "marginV" => 10])
             ->setFormatData("ass", ["style" => "Sign"]);
 
-        $this->assertSame(["style" => "Sign"], $object->getFormatData("ass"));
+        $this->assertSame(["style" => "Sign"], $object->findFormatData("ass"));
 
         $object->setFormatData("ass", []);
-        $this->assertSame([], $object->getFormatData("ass"));
+        $this->assertSame([], $object->findFormatData("ass"));
     }
 }

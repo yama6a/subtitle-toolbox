@@ -21,7 +21,7 @@ final class IttParser extends SubtitleParser
     {
         $subtitle       = (new TtmlParser())->parse($rawSubtitle, $this->options);
         $this->warnings = $subtitle->getParseWarnings();
-        $ttmlData       = $subtitle->getFormatData(TtmlParser::FORMAT_DATA_KEY);
+        $ttmlData       = $subtitle->findFormatData(TtmlParser::FORMAT_DATA_KEY);
 
         $parameters = [];
         foreach ($ttmlData["attributes"] ?? [] as $name => $value) {

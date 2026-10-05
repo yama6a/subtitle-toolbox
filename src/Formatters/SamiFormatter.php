@@ -23,11 +23,11 @@ final class SamiFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
         $stripAll = $options->stripTags;
-        $data     = $subtitle->getFormatData(SamiParser::FORMAT_DATA_KEY);
-        $language = $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);
+        $data     = $subtitle->findFormatData(SamiParser::FORMAT_DATA_KEY);
+        $language = $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);
         $class    = isset($data["style"]) || isset($data["class"]) ? ($data["class"] ?? null) : $this->classFor($language);
         $style    = isset($data["style"]) ? $this->keepOnlyClass($data["style"], $class) : $this->defaultStyle($class, $language);
-        $title    = $subtitle->getMetadata(Subtitle::METADATA_TITLE);
+        $title    = $subtitle->findMetadata(Subtitle::METADATA_TITLE);
         $eol      = LineEnding::Lf->value;
 
         $output = "<SAMI>$eol<HEAD>$eol";
@@ -56,7 +56,7 @@ final class SamiFormatter extends SubtitleFormatter
 
     private function formatParagraphs(SubtitleCue $cue, ?string $class, bool $stripAll): string
     {
-        $stored = $cue->getFormatData(SamiParser::FORMAT_DATA_KEY);
+        $stored = $cue->findFormatData(SamiParser::FORMAT_DATA_KEY);
         if (!$stripAll && isset($stored["paragraphs"]) && ($stored["lines"] ?? null) === $cue->getLines()) {
             return implode("", array_map(
                 fn (array $paragraph): string => $this->openParagraph($class, $paragraph["attributes"]) . $this->writeNbsp($paragraph["html"]),

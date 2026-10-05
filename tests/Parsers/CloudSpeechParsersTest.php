@@ -49,9 +49,9 @@ class CloudSpeechParsersTest extends TestCase
         $subtitle = Subtitle::fromString(self::ISSUE_EXAMPLE, Format::AwsTranscribe);
 
         $this->assertSame([[0.04, 0.98, "Hello world."]], self::cues($subtitle));
-        $this->assertSame(["jobName" => "lecture-12"], $subtitle->getFormatData("aws-transcribe"));
+        $this->assertSame(["jobName" => "lecture-12"], $subtitle->findFormatData("aws-transcribe"));
         $this->assertSame(["0.99", "0.98", "0.0"],
-                          array_column(array_column(array_column($subtitle->getCues()[0]->getFormatData("aws-transcribe")["items"], "alternatives"), 0), "confidence"));
+                          array_column(array_column(array_column($subtitle->getCues()[0]->findFormatData("aws-transcribe")["items"], "alternatives"), 0), "confidence"));
     }
 
 
@@ -110,7 +110,7 @@ class CloudSpeechParsersTest extends TestCase
     public function testAssemblyAiConvertsTheLanguageCodeToBcp47(): void
     {
         $parse = fn (string $code): ?string => (new AssemblyAiParser())->parse('{"language_code": "' . $code . '", "words": []}', new ReadOptions())
-                                                                       ->getMetadata(Subtitle::METADATA_LANGUAGE);
+                                                                       ->findMetadata(Subtitle::METADATA_LANGUAGE);
 
         $this->assertSame(["en-US", "en-AU", "de"], [$parse("en_us"), $parse("en_au"), $parse("de")]);
     }
@@ -146,7 +146,7 @@ class CloudSpeechParsersTest extends TestCase
         $subtitle = (new DeepgramParser())->parse($json, new ReadOptions());
 
         $this->assertSame([[0.5, 1.0, "First."], [2.0, 2.5, "later"]], self::cues($subtitle));
-        $this->assertSame([1, 0], array_map(fn (SubtitleCue $cue): int => $cue->getFormatData("deepgram")["channel"], $subtitle->getCues()));
+        $this->assertSame([1, 0], array_map(fn (SubtitleCue $cue): int => $cue->findFormatData("deepgram")["channel"], $subtitle->getCues()));
     }
 
 

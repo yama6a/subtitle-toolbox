@@ -73,7 +73,7 @@ class EncodingTest extends TestCase
     {
         $raw = file_get_contents(self::DIR . "korean-cp949.smi");
 
-        $this->assertSame("기차 안내", Subtitle::fromString($raw, Format::Sami, new ReadOptions(encoding: "CP949"))->getMetadata(Subtitle::METADATA_TITLE));
+        $this->assertSame("기차 안내", Subtitle::fromString($raw, Format::Sami, new ReadOptions(encoding: "CP949"))->findMetadata(Subtitle::METADATA_TITLE));
         $this->assertSame("똠방각하가 왔습니다.", Subtitle::fromString($raw, Format::Sami, new ReadOptions(encoding: "CP949"))->getCues()[1]->getText());
 
         $this->expectException(ParsingException::class);

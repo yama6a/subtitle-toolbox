@@ -29,7 +29,7 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
     {
         $podcast      = $this->formatOptions($options) ?? new PodcastTranscriptWriteOptions();
         $wordSegments = $podcast->wordSegments;
-        $fileData     = $subtitle->getFormatData(PodcastTranscriptParser::FORMAT_DATA_KEY);
+        $fileData     = $subtitle->findFormatData(PodcastTranscriptParser::FORMAT_DATA_KEY);
         $cues         = $subtitle->getCues();
         $pieces       = $this->pieces($subtitle, $wordSegments);
         $piecesPerCue = array_count_values(array_column($pieces, "cue"));
@@ -38,7 +38,7 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
         foreach ($pieces as $piece) {
             $segment = $this->segment($piece);
             if (!$wordSegments && $piecesPerCue[$piece["cue"]] === 1) {
-                $segment += $cues[$piece["cue"]]->getFormatData(PodcastTranscriptParser::FORMAT_DATA_KEY);
+                $segment += $cues[$piece["cue"]]->findFormatData(PodcastTranscriptParser::FORMAT_DATA_KEY);
             }
             $segments[] = $segment;
         }

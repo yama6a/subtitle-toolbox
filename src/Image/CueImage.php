@@ -63,7 +63,7 @@ final class CueImage
      */
     public static function isImageCue(SubtitleCue $cue): bool
     {
-        return $cue->getFormatData(self::FORMAT_DATA_KEY) !== [];
+        return $cue->findFormatData(self::FORMAT_DATA_KEY) !== [];
     }
 
 
@@ -72,7 +72,7 @@ final class CueImage
      */
     public static function fromCue(SubtitleCue $cue): self
     {
-        $data = $cue->getFormatData(self::FORMAT_DATA_KEY);
+        $data = $cue->findFormatData(self::FORMAT_DATA_KEY);
         if ($data === []) {
             throw new InvalidArgumentException("Cannot read the image of cue [{$cue->getStart()} >>> {$cue->getEnd()}] - " .
                                                "the cue holds no image!");

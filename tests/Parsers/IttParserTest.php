@@ -36,7 +36,7 @@ class IttParserTest extends TestCase
         $this->assertSame([4.004, ["Hello", "<i>world</i>"], 2], [$cue->getEnd(), $cue->getLines(), $cue->getAlignment()]);
         $this->assertSame(
             ["timeBase" => "smpte", "frameRate" => "24", "frameRateMultiplier" => "999 1000", "dropMode" => "nonDrop"],
-            $subtitle->getFormatData(IttParser::FORMAT_DATA_KEY)
+            $subtitle->findFormatData(IttParser::FORMAT_DATA_KEY)
         );
     }
 
@@ -46,8 +46,8 @@ class IttParserTest extends TestCase
         $ttml = Subtitle::fromString(self::ISSUE_EXAMPLE, Format::Ttml);
         $itt  = Subtitle::fromString(self::ISSUE_EXAMPLE, Format::Itt);
 
-        $this->assertSame($ttml->getFormatData(TtmlParser::FORMAT_DATA_KEY), $itt->getFormatData(TtmlParser::FORMAT_DATA_KEY));
-        $this->assertSame([], $ttml->getFormatData(IttParser::FORMAT_DATA_KEY));
+        $this->assertSame($ttml->findFormatData(TtmlParser::FORMAT_DATA_KEY), $itt->findFormatData(TtmlParser::FORMAT_DATA_KEY));
+        $this->assertSame([], $ttml->findFormatData(IttParser::FORMAT_DATA_KEY));
     }
 
 
@@ -58,7 +58,7 @@ class IttParserTest extends TestCase
             . " p:timeBase=\"smpte\" p:frameRate=\"25\" x:frameRate=\"50\"><body><div><p begin=\"00:00:01:05\" end=\"00:00:02:00\">a</p></div></body></tt>",
             Format::Itt);
 
-        $this->assertSame(["timeBase" => "smpte", "frameRate" => "25"], $subtitle->getFormatData(IttParser::FORMAT_DATA_KEY));
+        $this->assertSame(["timeBase" => "smpte", "frameRate" => "25"], $subtitle->findFormatData(IttParser::FORMAT_DATA_KEY));
         $this->assertSame(1.2, $subtitle->getCues()[0]->getStart());
     }
 
@@ -69,6 +69,6 @@ class IttParserTest extends TestCase
             "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div><p begin=\"1s\" end=\"2s\">a</p></div></body></tt>",
             Format::Itt);
 
-        $this->assertSame([], $subtitle->getFormatData(IttParser::FORMAT_DATA_KEY));
+        $this->assertSame([], $subtitle->findFormatData(IttParser::FORMAT_DATA_KEY));
     }
 }

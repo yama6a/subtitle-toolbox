@@ -17,11 +17,11 @@ final class PodcastChaptersFormatter extends SubtitleFormatter
 
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $stored = $subtitle->getFormatData(PodcastChaptersParser::FORMAT_DATA_KEY);
+        $stored = $subtitle->findFormatData(PodcastChaptersParser::FORMAT_DATA_KEY);
         $data   = ["version" => $stored["version"] ?? self::VERSION];
         foreach (["author" => Subtitle::METADATA_AUTHOR, "title" => Subtitle::METADATA_TITLE] as $field => $key) {
-            if ($subtitle->getMetadata($key) !== null) {
-                $data[$field] = $subtitle->getMetadata($key);
+            if ($subtitle->findMetadata($key) !== null) {
+                $data[$field] = $subtitle->findMetadata($key);
             }
         }
         $data += $stored;
@@ -38,7 +38,7 @@ final class PodcastChaptersFormatter extends SubtitleFormatter
             if ($title !== "") {
                 $chapter["title"] = $title;
             }
-            $data["chapters"][] = $chapter + $cue->getFormatData(PodcastChaptersParser::FORMAT_DATA_KEY);
+            $data["chapters"][] = $chapter + $cue->findFormatData(PodcastChaptersParser::FORMAT_DATA_KEY);
         }
 
         $json = JsonOutput::encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);

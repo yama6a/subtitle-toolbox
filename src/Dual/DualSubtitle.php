@@ -34,8 +34,8 @@ final class DualSubtitle
             $result->addComment($comment->text, self::findNewIndex($primaryCues, $cues, $comment->beforeCueIndex));
         }
 
-        $primaryLanguage   = $primary->getMetadata(Subtitle::METADATA_LANGUAGE);
-        $secondaryLanguage = $secondary->getMetadata(Subtitle::METADATA_LANGUAGE);
+        $primaryLanguage   = $primary->findMetadata(Subtitle::METADATA_LANGUAGE);
+        $secondaryLanguage = $secondary->findMetadata(Subtitle::METADATA_LANGUAGE);
         if ($primaryLanguage !== null && $secondaryLanguage !== null) {
             $result->setMetadata(Subtitle::METADATA_LANGUAGE, "$primaryLanguage+$secondaryLanguage");
         }

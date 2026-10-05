@@ -104,8 +104,8 @@ class PodcastTranscriptParserTest extends TestCase
         $json     = '{"version": "1.0.0", "segments": [{"startTime": 0, "endTime": 1, "body": "Hi", "confidence": 0.9}], "language": "en"}';
         $subtitle = (new PodcastTranscriptParser())->parse("\u{FEFF}" . $json, new ReadOptions());
 
-        $this->assertSame(["version" => "1.0.0", "language" => "en"], $subtitle->getFormatData("podcast-transcript"));
-        $this->assertSame(["confidence" => 0.9], $subtitle->getCues()[0]->getFormatData("podcast-transcript"));
+        $this->assertSame(["version" => "1.0.0", "language" => "en"], $subtitle->findFormatData("podcast-transcript"));
+        $this->assertSame(["confidence" => 0.9], $subtitle->getCues()[0]->findFormatData("podcast-transcript"));
     }
 
 

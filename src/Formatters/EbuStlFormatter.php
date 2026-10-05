@@ -36,7 +36,7 @@ final class EbuStlFormatter extends SubtitleFormatter
 
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $data = $subtitle->getFormatData(EbuStlParser::FORMAT_DATA_KEY);
+        $data = $subtitle->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
         $gsi  = ($data["gsi"] ?? []) + self::DEFAULT_GSI;
         $fps  = $this->formatOptions($options)?->frameRate ?? EbuStl::FRAME_RATES[$gsi["DFC"] ?? ""] ?? 25;
 
@@ -126,7 +126,7 @@ final class EbuStlFormatter extends SubtitleFormatter
      */
     private function cueBlocks(EbuStlContext $context, SubtitleCue $cue): array
     {
-        $stored    = $cue->getFormatData(EbuStlParser::FORMAT_DATA_KEY);
+        $stored    = $cue->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
         $alignment = $cue->getAlignment() ?? 2;
         $timeIn    = $this->smpteBytes($context, $cue->getStart());
         $timeOut   = $this->smpteBytes($context, $cue->getEnd());
@@ -350,12 +350,12 @@ final class EbuStlFormatter extends SubtitleFormatter
             }
         }
 
-        $title = $subtitle->getMetadata(Subtitle::METADATA_TITLE) ?? "";
+        $title = $subtitle->findMetadata(Subtitle::METADATA_TITLE) ?? "";
         if ($title !== rtrim($gsi["OPT"] ?? "", " \0")) {
             $gsi["OPT"] = $title;
         }
 
-        $language = $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);
+        $language = $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);
         if (!isset($gsi["LC"]) || $language !== (EbuStl::LANGUAGES[strtoupper($gsi["LC"])] ?? null)) {
             $gsi["LC"] = $this->languageCode($language);
         }

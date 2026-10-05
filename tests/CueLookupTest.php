@@ -84,20 +84,20 @@ class CueLookupTest extends TestCase
         $subtitle = new Subtitle();
 
         $this->assertCount(0, $subtitle);
-        $this->assertSame([], $subtitle->getCuesAt(1));
-        $this->assertNull($subtitle->getCueIndexAt(1));
-        $this->assertSame([], $subtitle->getCuesBetween(0, 10));
+        $this->assertSame([], $subtitle->findCuesAt(1));
+        $this->assertNull($subtitle->findCueIndexAt(1));
+        $this->assertSame([], $subtitle->findCuesBetween(0, 10));
     }
 
 
-    public function testGetCuesAtFindsOverlappingCuesInRealFile(): void
+    public function testFindCuesAtFindsOverlappingCuesInRealFile(): void
     {
         $subtitle = $this->parseSigns();
 
-        $this->assertSame([1, 2, 3], array_keys($subtitle->getCuesAt(5)));
-        $this->assertSame([2, 3, 4], array_keys($subtitle->getCuesAt(8.5)));
-        $this->assertSame("SUNNY\n25 °C", $subtitle->getCuesAt(8.5)[2]->getText());
-        $this->assertSame(2, $subtitle->getCueIndexAt(8.5));
+        $this->assertSame([1, 2, 3], array_keys($subtitle->findCuesAt(5)));
+        $this->assertSame([2, 3, 4], array_keys($subtitle->findCuesAt(8.5)));
+        $this->assertSame("SUNNY\n25 °C", $subtitle->findCuesAt(8.5)[2]->getText());
+        $this->assertSame(2, $subtitle->findCueIndexAt(8.5));
     }
 
 
@@ -105,13 +105,13 @@ class CueLookupTest extends TestCase
     {
         $subtitle = $this->parseHarbourTour();
 
-        $this->assertSame([0], array_keys($subtitle->getCuesAt(1)));
-        $this->assertSame([1], array_keys($subtitle->getCuesAt(4)));
-        $this->assertSame([], $subtitle->getCuesAt(0.999));
-        $this->assertSame([], $subtitle->getCuesAt(6.2));
-        $this->assertNull($subtitle->getCueIndexAt(6.2));
-        $this->assertNull($subtitle->getCueIndexAt(20));
-        $this->assertSame(5, $subtitle->getCueIndexAt(19.999));
+        $this->assertSame([0], array_keys($subtitle->findCuesAt(1)));
+        $this->assertSame([1], array_keys($subtitle->findCuesAt(4)));
+        $this->assertSame([], $subtitle->findCuesAt(0.999));
+        $this->assertSame([], $subtitle->findCuesAt(6.2));
+        $this->assertNull($subtitle->findCueIndexAt(6.2));
+        $this->assertNull($subtitle->findCueIndexAt(20));
+        $this->assertSame(5, $subtitle->findCueIndexAt(19.999));
     }
 
 
@@ -119,30 +119,30 @@ class CueLookupTest extends TestCase
     {
         $subtitle = $this->makeSubtitle([[1, 1], [1, 2]]);
 
-        $this->assertSame([1], array_keys($subtitle->getCuesAt(1)));
+        $this->assertSame([1], array_keys($subtitle->findCuesAt(1)));
     }
 
 
-    public function testGetCuesBetweenReturnsOverlappingCuesUncut(): void
+    public function testFindCuesBetweenReturnsOverlappingCuesUncut(): void
     {
         $subtitle = $this->parseHarbourTour();
-        $cues     = $subtitle->getCuesBetween(5, 13);
+        $cues     = $subtitle->findCuesBetween(5, 13);
 
         $this->assertSame([1, 2], array_keys($cues));
         $this->assertSame($subtitle->getCues()[1], $cues[1]);
         $this->assertSame(4.0, $cues[1]->getStart());
         $this->assertSame(12.5, $cues[2]->getEnd());
-        $this->assertSame([3, 4], array_keys($subtitle->getCuesBetween(13, 17)));
-        $this->assertSame([], $subtitle->getCuesBetween(17, 18));
+        $this->assertSame([3, 4], array_keys($subtitle->findCuesBetween(13, 17)));
+        $this->assertSame([], $subtitle->findCuesBetween(17, 18));
     }
 
 
-    public function testGetCuesBetweenRejectsReversedRange(): void
+    public function testFindCuesBetweenRejectsReversedRange(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("The range start 10 must not be after the range end 5.");
 
-        (new Subtitle())->getCuesBetween(10, 5);
+        (new Subtitle())->findCuesBetween(10, 5);
     }
 
 
@@ -150,77 +150,77 @@ class CueLookupTest extends TestCase
     {
         $subtitle = $this->makeSubtitle([[5, 9], [1, 4], [3, 6]], false);
 
-        $this->assertSame([0, 2], array_keys($subtitle->getCuesAt(5)));
-        $this->assertSame(1, $subtitle->getCueIndexAt(3.5));
-        $this->assertSame([1, 2], array_keys($subtitle->getCuesBetween(2, 5)));
+        $this->assertSame([0, 2], array_keys($subtitle->findCuesAt(5)));
+        $this->assertSame(1, $subtitle->findCueIndexAt(3.5));
+        $this->assertSame([1, 2], array_keys($subtitle->findCuesBetween(2, 5)));
     }
 
 
     public function testLookupSeesTimeChangesOfCues(): void
     {
         $subtitle = $this->parseHarbourTour();
-        $this->assertSame(0, $subtitle->getCueIndexAt(2));
+        $this->assertSame(0, $subtitle->findCueIndexAt(2));
 
         $subtitle->shift(10);
-        $this->assertNull($subtitle->getCueIndexAt(2));
-        $this->assertSame(0, $subtitle->getCueIndexAt(12));
+        $this->assertNull($subtitle->findCueIndexAt(2));
+        $this->assertSame(0, $subtitle->findCueIndexAt(12));
 
         $subtitle->getCues()[5]->setStart(1)->setEnd(3);
-        $this->assertSame(5, $subtitle->getCueIndexAt(2));
+        $this->assertSame(5, $subtitle->findCueIndexAt(2));
 
         $subtitle->removeCue(5);
-        $this->assertNull($subtitle->getCueIndexAt(2));
+        $this->assertNull($subtitle->findCueIndexAt(2));
     }
 
 
     public function testLookupSeesSetStartAfterLookup(): void
     {
         $subtitle = $this->parseHarbourTour();
-        $this->assertSame(0, $subtitle->getCueIndexAt(2));
-        $this->assertSame([0, 1], array_keys($subtitle->getCuesBetween(1, 5)));
+        $this->assertSame(0, $subtitle->findCueIndexAt(2));
+        $this->assertSame([0, 1], array_keys($subtitle->findCuesBetween(1, 5)));
 
         $subtitle->getCues()[0]->setStart(2.5);
 
-        $this->assertNull($subtitle->getCueIndexAt(2));
-        $this->assertSame(0, $subtitle->getCueIndexAt(2.5));
-        $this->assertSame([], $subtitle->getCuesBetween(1, 2.5));
-        $this->assertSame([0], array_keys($subtitle->getCuesBetween(1, 2.6)));
+        $this->assertNull($subtitle->findCueIndexAt(2));
+        $this->assertSame(0, $subtitle->findCueIndexAt(2.5));
+        $this->assertSame([], $subtitle->findCuesBetween(1, 2.5));
+        $this->assertSame([0], array_keys($subtitle->findCuesBetween(1, 2.6)));
     }
 
 
     public function testLookupSeesSetStartOnLargeSubtitle(): void
     {
         $subtitle = $this->makeLargeSubtitle();
-        $this->assertSame(["background", "line 4000", "sign 4000"], $this->getTexts($subtitle->getCuesAt(10001.5)));
+        $this->assertSame(["background", "line 4000", "sign 4000"], $this->getTexts($subtitle->findCuesAt(10001.5)));
 
         $sign = array_key_first($subtitle->findCues(fn (SubtitleCue $cue): bool => $cue->getText() === "sign 4000"));
         $subtitle->getCues()[$sign]->setStart(10001.6);
 
-        $this->assertSame(["background", "line 4000"], $this->getTexts($subtitle->getCuesAt(10001.5)));
-        $this->assertSame(["background", "line 4000", "sign 4000"], $this->getTexts($subtitle->getCuesAt(10001.6)));
+        $this->assertSame(["background", "line 4000"], $this->getTexts($subtitle->findCuesAt(10001.5)));
+        $this->assertSame(["background", "line 4000", "sign 4000"], $this->getTexts($subtitle->findCuesAt(10001.6)));
     }
 
 
     public function testLookupSeesCueAddedAfterLookup(): void
     {
         $subtitle = $this->parseHarbourTour();
-        $this->assertNull($subtitle->getCueIndexAt(30));
+        $this->assertNull($subtitle->findCueIndexAt(30));
 
         $subtitle->addCue(new SubtitleCue(29, 31, "late"));
 
-        $this->assertSame(6, $subtitle->getCueIndexAt(30));
+        $this->assertSame(6, $subtitle->findCueIndexAt(30));
     }
 
 
     public function testLookupSeesCueRemovedAfterLookup(): void
     {
         $subtitle = $this->parseHarbourTour();
-        $this->assertSame(0, $subtitle->getCueIndexAt(2));
+        $this->assertSame(0, $subtitle->findCueIndexAt(2));
 
         $subtitle->removeCue(0);
 
-        $this->assertNull($subtitle->getCueIndexAt(2));
-        $this->assertSame(0, $subtitle->getCueIndexAt(5));
+        $this->assertNull($subtitle->findCueIndexAt(2));
+        $this->assertSame(0, $subtitle->findCueIndexAt(5));
     }
 
 
@@ -229,27 +229,27 @@ class CueLookupTest extends TestCase
         $subtitle = $this->makeLargeSubtitle();
 
         $this->assertCount(10101, $subtitle);
-        $this->assertSame(["background", "line 4000", "sign 4000"], $this->getTexts($subtitle->getCuesAt(10001.5)));
-        $this->assertSame(["background", "sign 4000", "line 4011"], $this->getTexts($subtitle->getCuesAt(10027.5)));
-        $this->assertSame(["background", "line 9999"], $this->getTexts($subtitle->getCuesAt(24997.5)));
-        $this->assertSame(["background"], $this->getTexts($subtitle->getCuesAt(24999.9)));
-        $this->assertSame([], $subtitle->getCuesAt(25000));
+        $this->assertSame(["background", "line 4000", "sign 4000"], $this->getTexts($subtitle->findCuesAt(10001.5)));
+        $this->assertSame(["background", "sign 4000", "line 4011"], $this->getTexts($subtitle->findCuesAt(10027.5)));
+        $this->assertSame(["background", "line 9999"], $this->getTexts($subtitle->findCuesAt(24997.5)));
+        $this->assertSame(["background"], $this->getTexts($subtitle->findCuesAt(24999.9)));
+        $this->assertSame([], $subtitle->findCuesAt(25000));
 
         mt_srand(81);
         for ($sample = 0; $sample < 200; $sample++) {
             $time = mt_rand(-100, 2510000) / 100;
-            $this->assertSame(array_keys($this->scanCuesAt($subtitle, $time)), array_keys($subtitle->getCuesAt($time)));
+            $this->assertSame(array_keys($this->scanCuesAt($subtitle, $time)), array_keys($subtitle->findCuesAt($time)));
         }
     }
 
 
-    public function testGetCuesBetweenOnLargeSubtitle(): void
+    public function testFindCuesBetweenOnLargeSubtitle(): void
     {
         $subtitle = $this->makeLargeSubtitle();
 
         $this->assertSame(
             ["background", "line 3999", "line 4000", "sign 4000"],
-            $this->getTexts($subtitle->getCuesBetween(9999, 10002.5))
+            $this->getTexts($subtitle->findCuesBetween(9999, 10002.5))
         );
     }
 
@@ -309,7 +309,7 @@ class CueLookupTest extends TestCase
         $fixture  = var_export(__DIR__ . "/files/profanity/keys.srt", true);
         $saved    = $this->runPhp("require $autoload;
             \$subtitle = SubtitleToolbox\\Subtitle::load($fixture, SubtitleToolbox\\Format::SubRip);
-            \$subtitle->getCuesAt(1.5);
+            \$subtitle->findCuesAt(1.5);
             echo SubtitleToolbox\\SubtitleCue::timeEditCount(), ' ', base64_encode(serialize(\$subtitle));");
         [$edits, $serialized] = explode(" ", $saved);
 
@@ -322,8 +322,8 @@ class CueLookupTest extends TestCase
             while (SubtitleToolbox\\SubtitleCue::timeEditCount() < $edits) {
                 \$subtitle->getCues()[0]->setStart(\$subtitle->getCues()[0]->getStart());
             }
-            echo SubtitleToolbox\\SubtitleCue::timeEditCount() === $edits ? json_encode([array_keys(\$subtitle->getCuesAt(1.5)),
-                array_keys(\$subtitle->getCuesAt(101.5))]) : 'count';");
+            echo SubtitleToolbox\\SubtitleCue::timeEditCount() === $edits ? json_encode([array_keys(\$subtitle->findCuesAt(1.5)),
+                array_keys(\$subtitle->findCuesAt(101.5))]) : 'count';");
 
         $this->assertSame("[[],[0]]", $found);
     }

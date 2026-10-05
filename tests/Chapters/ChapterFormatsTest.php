@@ -93,8 +93,8 @@ class ChapterFormatsTest extends TestCase
 
         $this->assertSame([[0.0, 60.0, "Doors open"], [60.0, 90.0, "No start"], [120.0, 130.0, "No end"], [130.0, 125.0, "Ends early"]],
                           $this->describe($subtitle));
-        $this->assertSame(["timeBase" => "1/1000000000", "tags" => []], $subtitle->getCues()[0]->getFormatData("ffmeta"));
-        $this->assertSame("Meetup", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
+        $this->assertSame(["timeBase" => "1/1000000000", "tags" => []], $subtitle->getCues()[0]->findFormatData("ffmeta"));
+        $this->assertSame("Meetup", $subtitle->findMetadata(Subtitle::METADATA_TITLE));
     }
 
 

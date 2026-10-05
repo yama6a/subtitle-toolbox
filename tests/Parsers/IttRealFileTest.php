@@ -71,7 +71,7 @@ class IttRealFileTest extends TestCase
             $this->assertSame($cue->getAlignment() ?? 2, $copy->getAlignment());
         }
         $this->assertSame($subtitle->getAllMetadata(), $reparsed->getAllMetadata());
-        $this->assertSame($subtitle->getFormatData("itt"), $reparsed->getFormatData("itt"));
+        $this->assertSame($subtitle->findFormatData("itt"), $reparsed->findFormatData("itt"));
         $this->assertSame($output, $reparsed->toString(Format::Itt));
     }
 
@@ -82,9 +82,9 @@ class IttRealFileTest extends TestCase
 
         $this->assertSame(
             ["timeBase" => "smpte", "frameRate" => "24", "frameRateMultiplier" => "1000 1001", "dropMode" => "nonDrop"],
-            $subtitle->getFormatData("itt")
+            $subtitle->findFormatData("itt")
         );
-        $this->assertSame("en", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("en", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
     }
 
 
@@ -93,8 +93,8 @@ class IttRealFileTest extends TestCase
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "bom_2997_crlf.itt"), Format::Itt);
         $cues     = $subtitle->getCues();
 
-        $this->assertSame("Wetterbericht", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
-        $this->assertSame("de-DE", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("Wetterbericht", $subtitle->findMetadata(Subtitle::METADATA_TITLE));
+        $this->assertSame("de-DE", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame(["Im Norden bleibt es kühl,", "im Süden scheint die Sonne."], $cues[1]->getLines());
         $this->assertSame([8, "<i>Grafik: Temperaturen</i>"], [$cues[2]->getAlignment(), $cues[2]->getText()]);
         $this->assertSame("Am Wochenende wird es <b>wärmer</b>.", $cues[4]->getText());

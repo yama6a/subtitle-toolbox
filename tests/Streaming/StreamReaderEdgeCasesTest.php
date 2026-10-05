@@ -68,7 +68,7 @@ class StreamReaderEdgeCasesTest extends TestCase
             function () use ($content): array {
                 $subtitle = (new WebVttParser())->parse($content, new ReadOptions());
 
-                return [$subtitle->getCues(), $subtitle->getFormatData(WebVttParser::FORMAT_DATA_KEY)];
+                return [$subtitle->getCues(), $subtitle->findFormatData(WebVttParser::FORMAT_DATA_KEY)];
             },
             fn (): array => [iterator_to_array($reader->read($this->stream($content)), false), $reader->getHeader()]
         );

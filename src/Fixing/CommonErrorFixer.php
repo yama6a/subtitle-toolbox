@@ -50,7 +50,7 @@ final class CommonErrorFixer
 
     private static function run(Subtitle $subtitle, CommonErrorOptions $options, bool $change): CommonErrorReport
     {
-        $language    = self::language($options->language ?? $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $language    = self::language($options->language ?? $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
         $cues        = $subtitle->getCues();
         $indexes     = array_keys($cues);
         $fixes       = [];

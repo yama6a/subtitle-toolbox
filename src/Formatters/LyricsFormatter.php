@@ -26,7 +26,7 @@ final class LyricsFormatter extends SubtitleFormatter
             $output .= $this->formatCue($cue);
             $output .= LineEnding::Lf->value;
 
-            if ($cue->getFormatData(LyricsParser::FORMAT_DATA_KEY)["endLine"] ?? false) {
+            if ($cue->findFormatData(LyricsParser::FORMAT_DATA_KEY)["endLine"] ?? false) {
                 $output .= $this->stamp($cue->getEnd()) . LineEnding::Lf->value;
             }
         }
@@ -40,11 +40,11 @@ final class LyricsFormatter extends SubtitleFormatter
     {
         $tags = [];
         foreach (LyricsParser::METADATA_TAGS as $tag => $metadataKey) {
-            if ($subtitle->getMetadata($metadataKey) !== null) {
-                $tags[$tag] = $subtitle->getMetadata($metadataKey);
+            if ($subtitle->findMetadata($metadataKey) !== null) {
+                $tags[$tag] = $subtitle->findMetadata($metadataKey);
             }
         }
-        $tags += $subtitle->getFormatData(LyricsParser::FORMAT_DATA_KEY)["idTags"] ?? [];
+        $tags += $subtitle->findFormatData(LyricsParser::FORMAT_DATA_KEY)["idTags"] ?? [];
 
         $output = "";
         foreach ($tags as $tag => $value) {

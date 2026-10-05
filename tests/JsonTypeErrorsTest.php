@@ -173,7 +173,7 @@ class JsonTypeErrorsTest extends TestCase
         $warning  = $subtitle->getParseWarnings()[0];
         $this->assertSame([$message, null, ParseWarningAction::Skipped], [$warning->message, $warning->blockIndex, $warning->action]);
         $this->assertSame([json_encode([$key => $formatData[$key]])], $warning->block);
-        $this->assertSame([], $subtitle->getFormatData($key));
+        $this->assertSame([], $subtitle->findFormatData($key));
         $this->assertCount(1, $subtitle->getCues());
         $this->assertNotSame("", $subtitle->toString($format, $format === Format::MicroDvd || $format === Format::Itt
             ? new WriteOptions(format: $format === Format::Itt ? new Formatters\Options\IttWriteOptions(25) : new Formatters\Options\MicroDvdWriteOptions(25))

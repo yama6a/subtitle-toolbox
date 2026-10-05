@@ -55,7 +55,7 @@ class AssFormatterTest extends TestCase
         );
         $this->assertEquals($subtitle->getComments(), $reparsed->getComments());
         $this->assertSame($subtitle->getAllMetadata(), $reparsed->getAllMetadata());
-        $this->assertSame($subtitle->getFormatData("ass"), $reparsed->getFormatData("ass"));
+        $this->assertSame($subtitle->findFormatData("ass"), $reparsed->findFormatData("ass"));
         $this->assertSame($formatted, $reparsed->toString(Format::Ass));
     }
 
@@ -249,6 +249,6 @@ class AssFormatterTest extends TestCase
 
     private function describeCue(SubtitleCue $cue): array
     {
-        return [$cue->getStart(), $cue->getEnd(), $cue->getLines(), $cue->getAlignment(), $cue->getFormatData("ass")];
+        return [$cue->getStart(), $cue->getEnd(), $cue->getLines(), $cue->getAlignment(), $cue->findFormatData("ass")];
     }
 }

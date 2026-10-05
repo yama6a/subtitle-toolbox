@@ -107,7 +107,7 @@ class WhisperJsonRealFilesTest extends TestCase
         $subtitle = self::parse($fileName);
         $cues     = $subtitle->getCues();
 
-        $this->assertSame($language, $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame($language, $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame($cueCount, count($cues));
         $this->assertSame($firstCue, [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $last = $cues[count($cues) - 1];
@@ -132,9 +132,9 @@ class WhisperJsonRealFilesTest extends TestCase
     {
         $cue = self::parse("openai_whisper_word_timestamps.json")->getCues()[1];
 
-        $this->assertSame(-0.21312345678901234, $cue->getFormatData("whisper")["avg_logprob"]);
+        $this->assertSame(-0.21312345678901234, $cue->findFormatData("whisper")["avg_logprob"]);
         $this->assertSame(["word" => " caf\u{e9}", "start" => 2.42, "end" => 2.86, "probability" => 0.7412345409393311],
-                          $cue->getFormatData("whisper")["words"][1]);
+                          $cue->findFormatData("whisper")["words"][1]);
     }
 
 
@@ -142,19 +142,19 @@ class WhisperJsonRealFilesTest extends TestCase
     {
         $subtitle = self::parse("openai_api_verbose_json_words.json");
 
-        $this->assertSame(8.470000267028809, $subtitle->getFormatData("whisper")["duration"]);
-        $this->assertSame("english", $subtitle->getFormatData("whisper")["language"]);
-        $this->assertSame([7, 2, 6], array_map(fn ($cue) => count($cue->getFormatData("whisper")["words"]), $subtitle->getCues()));
+        $this->assertSame(8.470000267028809, $subtitle->findFormatData("whisper")["duration"]);
+        $this->assertSame("english", $subtitle->findFormatData("whisper")["language"]);
+        $this->assertSame([7, 2, 6], array_map(fn ($cue) => count($cue->findFormatData("whisper")["words"]), $subtitle->getCues()));
     }
 
 
     public function testWhisperCppFileKeepsTheModelAndTheTokens(): void
     {
         $subtitle = self::parse("whisper_cpp_ojf.json");
-        $tokens   = $subtitle->getCues()[0]->getFormatData("whisper")["tokens"];
+        $tokens   = $subtitle->getCues()[0]->findFormatData("whisper")["tokens"];
 
-        $this->assertSame("base", $subtitle->getFormatData("whisper")["model"]["type"]);
-        $this->assertSame("models/ggml-base.bin", $subtitle->getFormatData("whisper")["params"]["model"]);
+        $this->assertSame("base", $subtitle->findFormatData("whisper")["model"]["type"]);
+        $this->assertSame("models/ggml-base.bin", $subtitle->findFormatData("whisper")["params"]["model"]);
         $this->assertSame(["[_BEG_]", " The"], [$tokens[0]["text"], $tokens[1]["text"]]);
         $this->assertSame(0.987654, $tokens[1]["p"]);
     }
@@ -163,11 +163,11 @@ class WhisperJsonRealFilesTest extends TestCase
     public function testWhisperXFileKeepsTheSpeakersAndTheWordWithoutTimes(): void
     {
         $subtitle = self::parse("whisperx_diarize.json");
-        $last     = $subtitle->getCues()[2]->getFormatData("whisper");
+        $last     = $subtitle->getCues()[2]->findFormatData("whisper");
 
         $this->assertSame(["SPEAKER_00", "SPEAKER_01", "SPEAKER_01"],
-                          array_map(fn ($cue) => $cue->getFormatData("whisper")["speaker"], $subtitle->getCues()));
+                          array_map(fn ($cue) => $cue->findFormatData("whisper")["speaker"], $subtitle->getCues()));
         $this->assertSame([["word" => "15.", "speaker" => "SPEAKER_01"]], $last["words"]);
-        $this->assertSame(["language" => "en"], $subtitle->getFormatData("whisper"));
+        $this->assertSame(["language" => "en"], $subtitle->findFormatData("whisper"));
     }
 }

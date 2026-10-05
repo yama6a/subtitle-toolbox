@@ -94,7 +94,7 @@ class CsvRealFilesTest extends TestCase
     {
         $cues = $this->parseFile("dubbing_script.csv", new CsvReadOptions(new CsvColumns(start: "Start TC", text: "Text", speaker: "Character"), frameRate: 25))->getCues();
 
-        $this->assertSame(["columns" => ["Notes" => "warm tone"]], $cues[1]->getFormatData("csv"));
+        $this->assertSame(["columns" => ["Notes" => "warm tone"]], $cues[1]->findFormatData("csv"));
         $this->assertSame(36005.8, $cues[2]->getStart());
     }
 

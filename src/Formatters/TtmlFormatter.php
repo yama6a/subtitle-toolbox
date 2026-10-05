@@ -58,13 +58,13 @@ final class TtmlFormatter extends SubtitleFormatter
 
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $fileData        = $subtitle->getFormatData(TtmlParser::FORMAT_DATA_KEY);
+        $fileData        = $subtitle->findFormatData(TtmlParser::FORMAT_DATA_KEY);
         $this->namespace = ($fileData["namespace"] ?? "") ?: TtmlNamespaces::TTML;
         $this->prepareNamespaces($fileData["namespaces"] ?? []);
         $this->loadHead($fileData["head"] ?? "<head/>");
         $this->regionIds = [];
 
-        $title = $subtitle->getMetadata(Subtitle::METADATA_TITLE);
+        $title = $subtitle->findMetadata(Subtitle::METADATA_TITLE);
         if ($title !== null) {
             $element = $this->headDocument->createElementNS($this->namespaces[$this->ttm], "$this->ttm:title");
             $element->appendChild($this->headDocument->createTextNode($title));
@@ -73,7 +73,7 @@ final class TtmlFormatter extends SubtitleFormatter
 
         $divs = [];
         foreach ($subtitle->getCues() as $cue) {
-            $div       = $this->formatAttributes($cue->getFormatData(TtmlParser::FORMAT_DATA_KEY)["div"] ?? [], []);
+            $div       = $this->formatAttributes($cue->findFormatData(TtmlParser::FORMAT_DATA_KEY)["div"] ?? [], []);
             $paragraph = "      " . $this->formatParagraph($cue, $options, $fileData === []) . self::NL;
             if ($divs !== [] && $divs[count($divs) - 1]["attributes"] === $div) {
                 $divs[count($divs) - 1]["content"] .= $paragraph;
@@ -179,7 +179,7 @@ final class TtmlFormatter extends SubtitleFormatter
         foreach ($this->namespaces as $prefix => $uri) {
             $output .= $this->formatAttribute($prefix === "" ? "xmlns" : "xmlns:$prefix", $uri);
         }
-        $output .= $this->formatAttribute("xml:lang", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE) ?? "");
+        $output .= $this->formatAttribute("xml:lang", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE) ?? "");
 
         foreach ($attributes as $name => $value) {
             [$prefix, $localName] = str_contains($name, ":") ? explode(":", $name, 2) : ["", $name];
@@ -203,7 +203,7 @@ final class TtmlFormatter extends SubtitleFormatter
         $attributes .= $this->formatAttribute("begin", sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getStart())));
         $attributes .= $this->formatAttribute("end", sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getEnd())));
 
-        $cueData     = $cue->getFormatData(TtmlParser::FORMAT_DATA_KEY);
+        $cueData     = $cue->findFormatData(TtmlParser::FORMAT_DATA_KEY);
         $stored      = $cueData["attributes"] ?? [];
         $forcedName  = $this->forcedDisplayName($stored);
         $forced      = $forcedName === null

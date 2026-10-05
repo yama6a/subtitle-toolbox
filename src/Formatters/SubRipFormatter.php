@@ -79,7 +79,7 @@ final class SubRipFormatter extends SubtitleFormatter
 
     private function formatCoordinates(SubtitleCue $cue): string
     {
-        $coordinates = $cue->getFormatData(SubRipParser::FORMAT_DATA_KEY)["coordinates"] ?? null;
+        $coordinates = $cue->findFormatData(SubRipParser::FORMAT_DATA_KEY)["coordinates"] ?? null;
         if (!is_array($coordinates)) {
             return "";
         }

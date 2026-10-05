@@ -51,7 +51,7 @@ class MpSubParserTest extends TestCase
                 "TYPE" => "VIDEO",
                 "NOTE" => "Sample file written after the MPlayer format notes",
             ],
-            $subtitle->getFormatData("mpsub")
+            $subtitle->findFormatData("mpsub")
         );
     }
 
@@ -83,7 +83,7 @@ class MpSubParserTest extends TestCase
         $this->assertSame(11.04, $cues[2]->getEnd());
         $this->assertSame(["Half a second later,", "shown for three seconds"], $cues[2]->getLines());
         $this->assertSame([Subtitle::METADATA_TITLE => "Harbour walk, frame based (sample)"], $subtitle->getAllMetadata());
-        $this->assertSame([], $subtitle->getFormatData("mpsub"));
+        $this->assertSame([], $subtitle->findFormatData("mpsub"));
     }
 
 
@@ -113,9 +113,9 @@ class MpSubParserTest extends TestCase
         $this->assertSame(2.0, $cues[0]->getEnd());
         $this->assertSame(3.0, $cues[1]->getStart());
         $this->assertSame(6.0, $cues[1]->getEnd());
-        $this->assertSame("Big Buck Bunny", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
-        $this->assertSame("Jane Doe", $subtitle->getMetadata(Subtitle::METADATA_AUTHOR));
-        $this->assertSame(["TYPE" => "VIDEO"], $subtitle->getFormatData("mpsub"));
+        $this->assertSame("Big Buck Bunny", $subtitle->findMetadata(Subtitle::METADATA_TITLE));
+        $this->assertSame("Jane Doe", $subtitle->findMetadata(Subtitle::METADATA_AUTHOR));
+        $this->assertSame(["TYPE" => "VIDEO"], $subtitle->findFormatData("mpsub"));
 
         $expected = "\xEF\xBB\xBF" . str_replace(
             "FORMAT=25\n",
@@ -173,7 +173,7 @@ class MpSubParserTest extends TestCase
         $subtitle = Subtitle::fromString($raw, Format::MpSub);
 
         $this->assertSame(["I &lt;3 bread &amp; jam"], $subtitle->getCues()[0]->getLines());
-        $this->assertSame("Tom & Jerry <draft>", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
+        $this->assertSame("Tom & Jerry <draft>", $subtitle->findMetadata(Subtitle::METADATA_TITLE));
         $this->assertStringContainsString(
             "TITLE=Tom & Jerry <draft>\n",
             $subtitle->toString(Format::MpSub)

@@ -37,7 +37,7 @@ final class AssFormatter extends SubtitleFormatter
 
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $data       = $subtitle->getFormatData(AssParser::FORMAT_DATA_KEY) + $this->defaultData();
+        $data       = $subtitle->findFormatData(AssParser::FORMAT_DATA_KEY) + $this->defaultData();
         $karaokeTag = ($this->formatOptions($options) ?? new AssWriteOptions())->karaokeTag;
 
         $order = $data["sectionOrder"];
@@ -84,7 +84,7 @@ final class AssFormatter extends SubtitleFormatter
     private function scriptInfoLines(Subtitle $subtitle, array $data): array
     {
         $lines = $data["scriptInfoComments"] ?? [];
-        $title = $subtitle->getMetadata(Subtitle::METADATA_TITLE);
+        $title = $subtitle->findMetadata(Subtitle::METADATA_TITLE);
         if ($title !== null) {
             $lines[] = "Title: " . Markup::toSingleLine($title);
         }
@@ -164,7 +164,7 @@ final class AssFormatter extends SubtitleFormatter
 
     private function dialogueLine(SubtitleCue $cue, array $format, bool $isSsa, bool $stripAll, AssKaraokeTag $karaokeTag): string
     {
-        $stored = $cue->getFormatData(AssParser::FORMAT_DATA_KEY);
+        $stored = $cue->findFormatData(AssParser::FORMAT_DATA_KEY);
         $fields = $stored["fields"] ?? [];
 
         $unchanged = !$stripAll && isset($stored["text"]) &&

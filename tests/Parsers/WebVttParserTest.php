@@ -179,10 +179,10 @@ class WebVttParserTest extends TestCase
                 "viewportanchor" => "10%,90%",
                 "scroll"         => "up",
             ]],
-        ], $subtitle->getFormatData("vtt"));
+        ], $subtitle->findFormatData("vtt"));
         $this->assertEquals([new Comment("Translated by Jane Doe", 0)], $subtitle->getComments());
         $this->assertSame("intro", $cue->getIdentifier());
-        $this->assertSame(["region" => "fred", "align" => "left", "line" => "85%"], $cue->getFormatData("vtt"));
+        $this->assertSame(["region" => "fred", "align" => "left", "line" => "85%"], $cue->findFormatData("vtt"));
         $this->assertNull($cue->getAlignment());
         $this->assertSame("<v Fred>Hi, I am Fred &amp; this is <c.yellow>Bob</c></v>", $cue->getText());
     }
@@ -220,7 +220,7 @@ class WebVttParserTest extends TestCase
         $subtitle = Subtitle::fromString("WEBVTT\n\n00:01.000 --> 00:02.000\nOne\n", Format::WebVtt);
 
         $this->assertNull($subtitle->getCues()[0]->getIdentifier());
-        $this->assertSame([], $subtitle->getFormatData("vtt"));
+        $this->assertSame([], $subtitle->findFormatData("vtt"));
     }
 
 
@@ -230,7 +230,7 @@ class WebVttParserTest extends TestCase
 
         $subtitle = Subtitle::fromString($raw, Format::WebVtt);
 
-        $this->assertSame(["styles" => ["::cue {\n\tcolor: lime;\n}"]], $subtitle->getFormatData("vtt"));
+        $this->assertSame(["styles" => ["::cue {\n\tcolor: lime;\n}"]], $subtitle->findFormatData("vtt"));
     }
 
 
@@ -241,7 +241,7 @@ class WebVttParserTest extends TestCase
         $subtitle = Subtitle::fromString($raw, Format::WebVtt);
 
         $this->assertSame(1, count($subtitle->getCues()));
-        $this->assertSame([], $subtitle->getFormatData("vtt"));
+        $this->assertSame([], $subtitle->findFormatData("vtt"));
     }
 
 
@@ -249,7 +249,7 @@ class WebVttParserTest extends TestCase
     {
         $raw = "WEBVTT\n\nSTYLES\n::cue {}\n\n00:01.000 --> 00:02.000\nOne\n";
 
-        $this->assertSame([], Subtitle::fromString($raw, Format::WebVtt)->getFormatData("vtt"));
+        $this->assertSame([], Subtitle::fromString($raw, Format::WebVtt)->findFormatData("vtt"));
     }
 
 
@@ -259,7 +259,7 @@ class WebVttParserTest extends TestCase
 
         $subtitle = Subtitle::fromString($raw, Format::WebVtt);
 
-        $this->assertSame(["regions" => [["id" => "fred", "scroll" => "up"]]], $subtitle->getFormatData("vtt"));
+        $this->assertSame(["regions" => [["id" => "fred", "scroll" => "up"]]], $subtitle->findFormatData("vtt"));
     }
 
 
@@ -303,7 +303,7 @@ class WebVttParserTest extends TestCase
 
         $cue = Subtitle::fromString($raw, Format::WebVtt)->getCues()[0];
 
-        $this->assertSame(["vertical" => "rl", "size" => "50.5%", "position" => "10%,line-left"], $cue->getFormatData("vtt"));
+        $this->assertSame(["vertical" => "rl", "size" => "50.5%", "position" => "10%,line-left"], $cue->findFormatData("vtt"));
         $this->assertNull($cue->getAlignment());
     }
 

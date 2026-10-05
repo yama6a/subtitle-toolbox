@@ -74,7 +74,7 @@ final class TimestampMap
      */
     public static function fromSubtitle(Subtitle $subtitle): ?self
     {
-        foreach ($subtitle->getFormatData(WebVttParser::FORMAT_DATA_KEY)["headerLines"] ?? [] as $line) {
+        foreach ($subtitle->findFormatData(WebVttParser::FORMAT_DATA_KEY)["headerLines"] ?? [] as $line) {
             if (self::isHeader($line)) {
                 return self::fromHeader($line);
             }

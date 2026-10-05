@@ -121,7 +121,7 @@ class SccFormatterTest extends TestCase
         $cue    = (new SubtitleCue(2.0, 4.0, ["Weather", "today"]))->setAlignment($alignment);
         $parsed = Subtitle::fromString($this->subtitle($cue)->toString(Format::Scc), Format::Scc)->getCues()[0];
 
-        $this->assertSame(["rows" => $rows, "columns" => $columns], array_diff_key($parsed->getFormatData(SccParser::FORMAT_DATA_KEY), ["mode" => 0]));
+        $this->assertSame(["rows" => $rows, "columns" => $columns], array_diff_key($parsed->findFormatData(SccParser::FORMAT_DATA_KEY), ["mode" => 0]));
         $this->assertSame(in_array($alignment, [7, 8], true) ? 8 : null, $parsed->getAlignment());
     }
 
@@ -132,8 +132,8 @@ class SccFormatterTest extends TestCase
 
         $parsed = Subtitle::fromString($this->subtitle($cue)->toString(Format::Scc), Format::Scc)->getCues()[0];
 
-        $this->assertSame([10, 12], $parsed->getFormatData(SccParser::FORMAT_DATA_KEY)["rows"]);
-        $this->assertSame([3, 27], $parsed->getFormatData(SccParser::FORMAT_DATA_KEY)["columns"]);
+        $this->assertSame([10, 12], $parsed->findFormatData(SccParser::FORMAT_DATA_KEY)["rows"]);
+        $this->assertSame([3, 27], $parsed->findFormatData(SccParser::FORMAT_DATA_KEY)["columns"]);
     }
 
 
@@ -143,7 +143,7 @@ class SccFormatterTest extends TestCase
 
         $parsed = Subtitle::fromString($this->subtitle($cue)->toString(Format::Scc), Format::Scc)->getCues()[0];
 
-        $this->assertSame([15], $parsed->getFormatData(SccParser::FORMAT_DATA_KEY)["rows"]);
+        $this->assertSame([15], $parsed->findFormatData(SccParser::FORMAT_DATA_KEY)["rows"]);
     }
 
 

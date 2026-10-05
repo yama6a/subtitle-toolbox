@@ -62,7 +62,7 @@ class ArrayConversionTest extends TestCase
             (clone $this->bakery())->setFormatData("ass", [])->getCues()[0],
             Subtitle::fromArray($array)->getCues()[0]
         );
-        $this->assertSame([], Subtitle::fromArray($array)->getCues()[1]->getFormatData("vtt"));
+        $this->assertSame([], Subtitle::fromArray($array)->getCues()[1]->findFormatData("vtt"));
     }
 
 

@@ -31,7 +31,7 @@ final class HlsWebVttSegmenter
                                                "Set the mediaDuration option to segment it.");
         }
 
-        $fileData                = $subtitle->getFormatData(WebVttParser::FORMAT_DATA_KEY);
+        $fileData                = $subtitle->findFormatData(WebVttParser::FORMAT_DATA_KEY);
         $fileData["headerLines"] = [
             $options->timestampMap->toHeader(),
             ...array_filter(

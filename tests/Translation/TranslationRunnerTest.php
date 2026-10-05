@@ -96,7 +96,7 @@ class TranslationRunnerTest extends TestCase
             ["<i>ZURICH MAIN STATION.</i>"],
         ], self::lines($translated));
         $this->assertSame([], $report->warnings);
-        $this->assertSame("de", $translated->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("de", $translated->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame(1.0, $translated->getCues()[0]->getStart());
         $this->assertSame(21.0, $translated->getCues()[7]->getEnd());
     }
@@ -111,7 +111,7 @@ class TranslationRunnerTest extends TestCase
 
         $this->assertSame($cue, $subtitle->getCues()[0]);
         $this->assertSame(["THE TRAIN TO BASEL LEAVES"], $cue->getLines());
-        $this->assertSame("de", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("de", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame("Station announcements", $subtitle->getComments()[0]->text);
     }
 
@@ -139,7 +139,7 @@ class TranslationRunnerTest extends TestCase
         }
 
         $this->assertSame($before, self::lines($subtitle));
-        $this->assertNull($subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertNull($subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
     }
 
 
@@ -261,7 +261,7 @@ class TranslationRunnerTest extends TestCase
         (new TranslationRunner($engine))->translate($translated = new Subtitle(), "en", "de");
 
         $this->assertSame([], $engine->calls);
-        $this->assertSame("de", $translated->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("de", $translated->findMetadata(Subtitle::METADATA_LANGUAGE));
     }
 
 

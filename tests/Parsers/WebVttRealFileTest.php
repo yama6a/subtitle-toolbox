@@ -74,8 +74,8 @@ class WebVttRealFileTest extends TestCase
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "w3c_regions.vtt"), Format::WebVtt);
         $cue      = $subtitle->getCues()[1];
 
-        $this->assertSame(["fred", "bill"], array_column($subtitle->getFormatData("vtt")["regions"], "id"));
-        $this->assertSame(["region" => "bill", "align" => "right"], $cue->getFormatData("vtt"));
+        $this->assertSame(["fred", "bill"], array_column($subtitle->findFormatData("vtt")["regions"], "id"));
+        $this->assertSame(["region" => "bill", "align" => "right"], $cue->findFormatData("vtt"));
         $this->assertSame(3, $cue->getAlignment());
     }
 
@@ -84,7 +84,7 @@ class WebVttRealFileTest extends TestCase
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "webvttpy_youtube.vtt"), Format::WebVtt);
 
-        $headerLines = $subtitle->getFormatData("vtt")["headerLines"];
+        $headerLines = $subtitle->findFormatData("vtt")["headerLines"];
         $this->assertSame(["Kind: captions", "Language: en", "Style:"], array_slice($headerLines, 0, 3));
         $this->assertSame("##", end($headerLines));
     }
@@ -94,7 +94,7 @@ class WebVttRealFileTest extends TestCase
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "webvttpy_comments.vtt"), Format::WebVtt);
 
-        $this->assertSame(["header" => "- Translation of a weather report"], $subtitle->getFormatData("vtt"));
+        $this->assertSame(["header" => "- Translation of a weather report"], $subtitle->findFormatData("vtt"));
         $this->assertSame(
             [0, 2, 3],
             array_column($subtitle->getComments(), "beforeCueIndex")
@@ -106,14 +106,14 @@ class WebVttRealFileTest extends TestCase
     private function describe(Subtitle $subtitle): array
     {
         return [
-            $subtitle->getFormatData("vtt"),
+            $subtitle->findFormatData("vtt"),
             $subtitle->getComments(),
             array_map(fn (SubtitleCue $cue): array => [
                 $cue->getStart(),
                 $cue->getEnd(),
                 $cue->getLines(),
                 $cue->getAlignment(),
-                $cue->getFormatData("vtt"),
+                $cue->findFormatData("vtt"),
             ], $subtitle->getCues()),
         ];
     }

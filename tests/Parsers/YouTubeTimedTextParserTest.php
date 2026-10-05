@@ -113,9 +113,9 @@ class YouTubeTimedTextParserTest extends TestCase
             [[7, '<font color="#ff0000"><b>red</b></font>'], [6, "<i><u>styled</u></i> plain"], [null, "no anchor"]],
             array_map(fn ($cue) => [$cue->getAlignment(), $cue->getText()], $cues)
         );
-        $this->assertSame(["wp" => "1", "p" => "1"], $cues[0]->getFormatData("youtube"));
-        $this->assertSame(["wp" => "2", "segments" => [["p" => "2"], []]], $cues[1]->getFormatData("youtube"));
-        $this->assertSame(["id" => "1", "fc" => "#FF0000", "b" => "1", "et" => "3"], $subtitle->getFormatData("youtube")["pen"][0]);
+        $this->assertSame(["wp" => "1", "p" => "1"], $cues[0]->findFormatData("youtube"));
+        $this->assertSame(["wp" => "2", "segments" => [["p" => "2"], []]], $cues[1]->findFormatData("youtube"));
+        $this->assertSame(["id" => "1", "fc" => "#FF0000", "b" => "1", "et" => "3"], $subtitle->findFormatData("youtube")["pen"][0]);
     }
 
 
@@ -130,9 +130,9 @@ class YouTubeTimedTextParserTest extends TestCase
 
         $this->assertSame(3, $cue->getAlignment());
         $this->assertSame('<font color="#00ff00"><b>green</b></font> text', $cue->getText());
-        $this->assertSame(["wpWinPosId" => 1, "segments" => [["pPenId" => 1], []]], $cue->getFormatData("youtube"));
-        $this->assertSame("pb3", $subtitle->getFormatData("youtube")["wireMagic"]);
-        $this->assertSame("json3", $subtitle->getFormatData("youtube")["format"]);
+        $this->assertSame(["wpWinPosId" => 1, "segments" => [["pPenId" => 1], []]], $cue->findFormatData("youtube"));
+        $this->assertSame("pb3", $subtitle->findFormatData("youtube")["wireMagic"]);
+        $this->assertSame("json3", $subtitle->findFormatData("youtube")["format"]);
     }
 
 
@@ -153,7 +153,7 @@ class YouTubeTimedTextParserTest extends TestCase
         $subtitle = (new YouTubeTimedTextParser())->parse('<?xml version="1.0"?><timedtext><text t="1200" d="2300">Hello world</text></timedtext>', new ReadOptions());
 
         $this->assertSame([1.2, 3.5, "Hello world"], [$subtitle->getCues()[0]->getStart(), $subtitle->getCues()[0]->getEnd(), $subtitle->getCues()[0]->getText()]);
-        $this->assertSame(["format" => "srv2"], $subtitle->getFormatData("youtube"));
+        $this->assertSame(["format" => "srv2"], $subtitle->findFormatData("youtube"));
     }
 
 

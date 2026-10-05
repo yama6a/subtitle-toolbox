@@ -56,7 +56,7 @@ class MicroDvdParserTest extends TestCase
         $this->assertSame(4, count($cues));
         $this->assertSame(1.001, $cues[0]->getStart());
         $this->assertSame(3.003, $cues[0]->getEnd());
-        $this->assertSame(["frameRate" => 23.976], $subtitle->getFormatData("microdvd"));
+        $this->assertSame(["frameRate" => 23.976], $subtitle->findFormatData("microdvd"));
     }
 
 
@@ -75,9 +75,9 @@ class MicroDvdParserTest extends TestCase
     {
         $cues = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/microdvd/valid.sub"), Format::MicroDvd)->getCues();
 
-        $this->assertSame("{f:Arial}{s:20}", $cues[2]->getFormatData("microdvd")["lines"][0]["otherCodes"]);
-        $this->assertSame("", $cues[2]->getFormatData("microdvd")["lines"][1]["otherCodes"]);
-        $this->assertSame("{P:0}", $cues[3]->getFormatData("microdvd")["lines"][0]["otherCodes"]);
+        $this->assertSame("{f:Arial}{s:20}", $cues[2]->findFormatData("microdvd")["lines"][0]["otherCodes"]);
+        $this->assertSame("", $cues[2]->findFormatData("microdvd")["lines"][1]["otherCodes"]);
+        $this->assertSame("{P:0}", $cues[3]->findFormatData("microdvd")["lines"][0]["otherCodes"]);
     }
 
 

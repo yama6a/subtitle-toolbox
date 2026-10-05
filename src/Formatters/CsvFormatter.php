@@ -28,7 +28,7 @@ final class CsvFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
         $csv       = $this->formatOptions($options) ?? new CsvWriteOptions();
-        $data      = $subtitle->getFormatData(CsvParser::FORMAT_DATA_KEY);
+        $data      = $subtitle->findFormatData(CsvParser::FORMAT_DATA_KEY);
         $delimiter = $csv->delimiter ?? $data["delimiter"] ?? ",";
         CsvParser::checkDelimiter($delimiter);
         $timeFormat = $csv->timeFormat ?? CsvTimeFormat::tryFrom($data["timeFormat"] ?? "") ?? CsvTimeFormat::Dot;
@@ -59,7 +59,7 @@ final class CsvFormatter extends SubtitleFormatter
                 "speaker"    => $rows[$index][0],
                 "text"       => $rows[$index][1],
                 "second"     => $secondTexts[$index],
-                "other"      => (string) ($cue->getFormatData(CsvParser::FORMAT_DATA_KEY)["columns"][$column[1]] ?? ""),
+                "other"      => (string) ($cue->findFormatData(CsvParser::FORMAT_DATA_KEY)["columns"][$column[1]] ?? ""),
             }, $columns);
         }
 
@@ -100,7 +100,7 @@ final class CsvFormatter extends SubtitleFormatter
             }
             $others = [];
             foreach ($cues as $cue) {
-                $others += $cue->getFormatData(CsvParser::FORMAT_DATA_KEY)["columns"] ?? [];
+                $others += $cue->findFormatData(CsvParser::FORMAT_DATA_KEY)["columns"] ?? [];
             }
             foreach (array_keys($others) as $name) {
                 $columns[] = ["other", $name];

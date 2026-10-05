@@ -521,7 +521,7 @@ class LenientParsingTest extends TestCase
     {
         $subtitle = (new WebVttParser())->parse(file_get_contents(self::DIR . "missing_empty_line.vtt"), new ReadOptions(lenient: true));
 
-        $this->assertSame(["headerLines" => ["Kind: captions", "Language: en"]], $subtitle->getFormatData("vtt"));
+        $this->assertSame(["headerLines" => ["Kind: captions", "Language: en"]], $subtitle->findFormatData("vtt"));
     }
 
 
