@@ -156,7 +156,10 @@ trait ArrayConversion
             if (!is_array($value)) {
                 throw new ParsingException("The field $pathPrefix$key.$format must be an object.");
             }
-            FormatDataSchema::check((string) $format, $value, "$pathPrefix$key.$format", $pathPrefix !== "");
+            $problem = FormatDataSchema::problem((string) $format, $value, "$pathPrefix$key.$format", $pathPrefix !== "");
+            if ($problem !== null) {
+                throw new ParsingException($problem);
+            }
         }
 
         return $formatData;

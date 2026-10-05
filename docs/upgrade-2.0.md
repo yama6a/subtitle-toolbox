@@ -343,6 +343,7 @@ These changes alter the output or the exit code of a call that needs no other ch
 | OCR failures | a failed Tesseract run or a php-glyph-ocr error on an image threw `InvalidArgumentException`, error code 104 | they throw `OcrException`, error code 107. A missing `tesseract` program, Tesseract language or php-glyph-ocr package still throws `InvalidArgumentException` | catch `OcrException` or `SubtitleToolboxException` |
 | php-glyph-ocr version | Composer installed any version of `yama6a/php-glyph-ocr` next to the library | Composer refuses a version below 0.3, and 0.4 or later | `composer require yama6a/php-glyph-ocr:^0.3` |
 | CLI `--ocr-language` without installed data | the file failed with exit code 1 | the tool stops before the first file with exit code 2 | install the language |
+| `setFormatData()` of `Subtitle` and `SubtitleCue` | stored any array. A formatter then failed with a PHP `TypeError` or `Error` | a field that a formatter reads, such as `scc.dropFrame`, must have its type. A wrong type throws `InvalidArgumentException` with the path of the field | fix the field |
 | `SubtitleCue::setLines()` with a value that is no string or array | threw `InvalidArgumentException` | throws a PHP `TypeError` | pass a string or a list of strings |
 | CLI `info --json` | `statistics.gap`, and `statistics.mostUsedWords` as an object of word and count | `statistics.gaps`, and `statistics.mostUsedWords` as a list of `{"word": ..., "count": ...}` | read the new keys |
 | CLI `info` text output | the line `Gap:` | the line `Gaps:` | read the new label |

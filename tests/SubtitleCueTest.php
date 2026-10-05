@@ -227,4 +227,16 @@ class SubtitleCueTest extends TestCase
         $this->assertSame(["ass" => ["style" => "Default"]], $object->getAllFormatData());
         $this->assertSame([], (new SubtitleCue())->getAllFormatData());
     }
+
+
+    public function testSetFormatDataRejectsAFieldThatAFormatterReadsWithTheWrongShape(): void
+    {
+        $cue = (new SubtitleCue())->setFormatData("srt", ["coordinates" => ["x1" => 1, "x2" => 2, "y1" => 3, "y2" => 4]]);
+        $this->assertSame(["x1" => 1, "x2" => 2, "y1" => 3, "y2" => 4], $cue->findFormatData("srt")["coordinates"]);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("The field formatData.srt.coordinates.x2 is missing.");
+
+        $cue->setFormatData("srt", ["coordinates" => ["x1" => 1]]);
+    }
 }

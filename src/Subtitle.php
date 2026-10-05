@@ -555,8 +555,17 @@ final class Subtitle implements \IteratorAggregate, \Countable
     }
 
 
+    /**
+     * Stores $data under $key. An empty array removes the key.
+     *
+     * @throws InvalidArgumentException when a field that a formatter reads has the wrong type, as fromArray() checks it.
+     */
     public function setFormatData(string $key, array $data): self
     {
+        $problem = FormatDataSchema::problem($key, $data, "formatData.$key", false);
+        if ($problem !== null) {
+            throw new InvalidArgumentException($problem);
+        }
         if ($data === []) {
             unset($this->formatData[$key]);
         } else {
