@@ -96,6 +96,30 @@ final class HlsCommand extends FileCommand
         if (count($inputs) > 1) {
             self::fail("The hls command takes one input file, got " . count($inputs) . ".");
         }
+
+        $playlist = self::realTarget(rtrim($this->directory, "/\\") . "/$this->playlist");
+        if ($this->isSegment($playlist)) {
+            self::fail("The playlist $this->playlist has the name of a segment. Pass another --playlist or --pattern.");
+        }
+        $input = $inputs[0] === self::DASH ? false : realpath($inputs[0]);
+        if ($input !== false && ($input === $playlist || $this->isSegment($input))) {
+            self::fail("The output would overwrite the input $inputs[0]. Pass another --output-dir, --playlist or --pattern.");
+        }
+    }
+
+
+    private function isSegment(string $realPath): bool
+    {
+        $directory = self::realTarget(rtrim($this->directory, "/\\")) . DIRECTORY_SEPARATOR;
+        if (!str_starts_with($realPath, $directory)) {
+            return false;
+        }
+        $name    = substr($realPath, strlen($directory));
+        $pattern = $this->segmentOptions->fileNamePattern;
+        $parsed  = sscanf($name, $pattern);
+        $number  = is_array($parsed) ? $parsed[0] : null;
+
+        return is_int($number) && $number >= 0 && sprintf($pattern, $number) === $name;
     }
 
 

@@ -125,6 +125,17 @@ final class MaskingEdit extends Edit
 
 
     /**
+     * Returns the files of --mute-edl and --mute-filter, by option name.
+     *
+     * @return array<string, string>
+     */
+    public function outputPaths(): array
+    {
+        return array_filter(["mute-edl" => $this->edlPath, "mute-filter" => $this->filterPath], fn (?string $path): bool => $path !== null);
+    }
+
+
+    /**
      * Writes the mute ranges of the last apply() to the files of --mute-edl and --mute-filter, and returns their paths.
      *
      * @return list<string>

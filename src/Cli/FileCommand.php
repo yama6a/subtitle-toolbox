@@ -161,6 +161,31 @@ abstract class FileCommand extends Command
 
 
     /**
+     * Returns the real path of a file that may not exist yet: the real path of its nearest existing directory plus
+     * the rest of the path.
+     */
+    protected static function realTarget(string $path): string
+    {
+        $real = realpath($path);
+        if ($real !== false) {
+            return $real;
+        }
+        $parent = dirname($path);
+        $name   = basename($path);
+        if ($parent === $path || $name === "") {
+            return $path;
+        }
+        $realParent = self::realTarget($parent);
+
+        return match ($name) {
+            "."     => $realParent,
+            ".."    => dirname($realParent),
+            default => rtrim($realParent, "/\\") . DIRECTORY_SEPARATOR . $name,
+        };
+    }
+
+
+    /**
      * @return list<string>
      */
     protected function inputArguments(Arguments $arguments): array
@@ -289,7 +314,12 @@ abstract class FileCommand extends Command
             }
         }
 
-        return array_values(array_unique($inputs));
+        $unique = [];
+        foreach ($inputs as $input) {
+            $unique[$input === self::DASH ? self::DASH : (realpath($input) ?: $input)] ??= $input;
+        }
+
+        return array_values($unique);
     }
 
 

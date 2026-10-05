@@ -67,7 +67,9 @@ php subtitle-toolbox.phar --version
 | `retime a.srt b.srt --shift 1` | nothing. The command fails, because each output would overwrite its input |
 | `retime a.srt b.srt --shift 1 --in-place` | `a.srt` and `b.srt` |
 
-- **Inputs stay**: the tool never overwrites an input file without `--in-place`, not even with `--force`. Such a file fails with a message that names `--in-place`, `-o` and `--output-dir`. With `--keep-going`, the other files still get written.
+- **Inputs stay**: the tool never overwrites an input file without `--in-place`, not even with `--force`. Such a file fails with a message that names `--in-place`, `-o` and `--output-dir`. With `--keep-going`, the other files still get written. The `.sub` file of a VobSub input and the files of options such as `--mask-words` and `--reference` count as inputs.
+- **One writer per file**: before it reads the first input, the tool fails with exit code 2 and writes nothing when two inputs would write the same output file, for example `convert a/movie.srt b/movie.vtt --to vtt --output-dir out`. A file passed twice, such as `movie.srt ./movie.srt`, counts once.
+- **Standard input**: `-` takes `-o FILE`, not `--output-dir`. With `--output-dir`, the tool fails with exit code 2.
 - **Overwrite**: the tool overwrites another existing file only with `--force`.
 - **Batch**: the tool prints one line per file and a summary. It stops at the first failed file, unless you pass `--keep-going`. Every command that reads a file takes `--keep-going`, also `diff`, `dual` and `hls`, which read one input.
 - **Option names**: `--no-X` always turns X off, for example `--no-bom`. A time option is in seconds, unless its name ends in `-frames`.
@@ -213,6 +215,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 ```
 
 - **Mute files**: they need `--mask-words` and one input file. They hold the times after `--shift`, `--scale`, snapping and the timing fixes. Without `--force`, the tool does not overwrite them.
+- **Mute file names**: `--mute-edl` and `--mute-filter` must name 2 different files. Neither may name the subtitle output or a file that the command reads, not even with `--force`. Else the tool fails with exit code 2 before it writes a file.
 - **No match**: the filter file is empty. Then leave out `-af`.
 
 ### Structure
@@ -373,6 +376,7 @@ This writes `hls/sub0.vtt` to `hls/sub899.vtt` and `hls/subs.m3u8`.
 | `--media-duration SECONDS` | the end of the last cue | `mediaDuration`. Set it to the video duration, so the playlist covers the whole video |
 
 - **Overwrite**: `hls` fails before it writes a file when a segment or the playlist exists. Pass `--force` to overwrite.
+- **Names**: `hls` fails with exit code 2 before it writes a file when `--playlist` matches `--pattern`, for example `--playlist sub0.vtt`. It also fails when the playlist or a segment would overwrite the input, also with `--force`.
 
 ## OCR
 `convert --ocr` reads the image cues of PGS and VobSub files before it writes the output. It uses [Tesseract](ocr.md#tesseract) when the `tesseract` program is on the `PATH`, and else [php-glyph-ocr](ocr.md#php-glyph-ocr).

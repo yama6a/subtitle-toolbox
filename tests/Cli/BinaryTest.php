@@ -326,6 +326,58 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testTwoInputsWithOneOutputFailBeforeAnyWrite(): void
+    {
+        mkdir("$this->dir/a");
+        mkdir("$this->dir/b");
+        copy("$this->dir/trip.srt", "$this->dir/a/trip.srt");
+        copy("$this->dir/shop.vtt", "$this->dir/b/trip.vtt");
+        copy("$this->dir/shop.vtt", "$this->dir/b/trip.txt");
+        $usage = "\nRun \"subtitle-toolbox help convert\" for the usage.\n";
+
+        foreach ([[], ["--force"]] as $force) {
+            $this->assertSame(
+                [2, "", "Error: a/trip.srt and b/trip.vtt would both write out/trip.vtt. Pass them in two runs.$usage"],
+                $this->runBinary(["convert", "a/trip.srt", "b/trip.vtt", "--to", "vtt", "--output-dir", "out", ...$force])
+            );
+        }
+        // The content of b/trip.txt is WebVTT, so --to srt renames it to trip.srt.
+        $this->assertSame(
+            [2, "", "Error: trip.srt and b/trip.txt would both write out/trip.srt. Pass them in two runs.$usage"],
+            $this->runBinary(["convert", "trip.srt", "b/trip.txt", "--to", "srt", "--output-dir", "out", "--force"])
+        );
+        $this->assertDirectoryDoesNotExist("$this->dir/out");
+
+        $this->assertSame([0, "trip.srt -> out/trip.vtt\n", ""],
+                          $this->runBinary(["convert", "trip.srt", "./trip.srt", "a/../trip.srt", "--to", "vtt", "--output-dir", "out"]));
+    }
+
+
+    public function testStandardInputTakesNoOutputDir(): void
+    {
+        $this->assertSame(
+            [2, "", "Error: Standard input has no file name for --output-dir. Pass -o FILE.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            $this->runBinary(["convert", "-", "--to", "vtt", "--output-dir", "out"], $this->file("trip.srt"))
+        );
+        $this->assertSame(2, $this->runBinary(["retime", "trip.srt", "-", "--shift", "1", "--output-dir", "out"], $this->file("trip.srt"))[0]);
+        $this->assertDirectoryDoesNotExist("$this->dir/out");
+    }
+
+
+    public function testConvertNeverOverwritesTheSubFileOfAVobSubInput(): void
+    {
+        copy(self::FILES . "vobsub/text-pal.idx", "$this->dir/text.idx");
+        copy(self::FILES . "vobsub/text-pal.sub", "$this->dir/text.sub");
+
+        foreach ([["-o", "text.sub"], ["--output-dir", "."]] as $output) {
+            [$code, , $stderr] = $this->runBinary(["convert", "text.idx", "--to", "microdvd", "--fps", "25", "--skip-image-cues", "--force", ...$output]);
+            $this->assertSame([1, "text.idx: The output " . ($output[0] === "-o" ? "" : "./") . "text.sub is an input file. Pass --in-place to " .
+                                  "overwrite it, or -o or --output-dir to write another file.\n"], [$code, $stderr]);
+            $this->assertFileEquals(self::FILES . "vobsub/text-pal.sub", "$this->dir/text.sub");
+        }
+    }
+
+
     public function testBatchGoesOnWithKeepGoingAndPrintsASummary(): void
     {
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "*.srt", "--to", "vtt", "--output-dir", "out", "--keep-going"]);
@@ -577,6 +629,29 @@ class BinaryTest extends TestCase
         $this->assertSame(2, $this->runBinary(["convert", "radio.vtt", "trip.srt", "--to", "vtt", "--output-dir", "out",
                                                "--mask-words", "words.txt", "--mute-edl", "new.edl"])[0]);
         $this->assertFileDoesNotExist("$this->dir/new.edl");
+    }
+
+
+    public function testMuteFilesNeverOverwriteAnotherFileOfTheRun(): void
+    {
+        copy(self::FILES . "profanity/radio.vtt", "$this->dir/radio.vtt");
+        copy(self::FILES . "profanity/words.txt", "$this->dir/words.txt");
+        $usage = "\nRun \"subtitle-toolbox help convert\" for the usage.\n";
+        $run   = fn (string ...$options): array => $this->runBinary(["convert", "radio.vtt", "--to", "srt", "--mask-words", "words.txt", ...$options]);
+
+        $this->assertSame([2, "", "Error: The --mute-filter file radio.mute is also the output of --mute-edl.$usage"],
+                          $run("-o", "out.srt", "--mute-edl", "radio.mute", "--mute-filter", "radio.mute"));
+        $this->assertSame([2, "", "Error: The --mute-edl file out.srt is also the output of radio.vtt.$usage"],
+                          $run("-o", "out.srt", "--mute-edl", "out.srt"));
+        $this->assertSame([2, "", "Error: The --mute-edl file radio.vtt would overwrite a file that the command reads.$usage"],
+                          $run("-o", "out.srt", "--mute-edl", "radio.vtt", "--force"));
+        $this->assertSame([2, "", "Error: The --mute-filter file ./words.txt would overwrite a file that the command reads.$usage"],
+                          $run("-o", "out.srt", "--mute-filter", "./words.txt", "--force"));
+
+        $this->assertFileDoesNotExist("$this->dir/radio.mute");
+        $this->assertFileDoesNotExist("$this->dir/out.srt");
+        $this->assertFileEquals(self::FILES . "profanity/radio.vtt", "$this->dir/radio.vtt");
+        $this->assertFileEquals(self::FILES . "profanity/words.txt", "$this->dir/words.txt");
     }
 
 
@@ -1694,6 +1769,28 @@ class BinaryTest extends TestCase
         $this->assertSame(2, $this->runBinary(["hls", "talk.vtt"])[0]);
         $this->assertSame(2, $this->runBinary(["hls", "talk.vtt", "--output-dir", "out", "--pattern", "part.vtt"])[0]);
         $this->assertSame(2, $this->runBinary(["hls", "talk.vtt", "trip.srt", "--output-dir", "out"])[0]);
+    }
+
+
+    public function testHlsNeverOverwritesItsInputOrASegment(): void
+    {
+        mkdir("$this->dir/out");
+        copy("$this->dir/trip.srt", "$this->dir/out/sub1.vtt");
+        copy("$this->dir/trip.srt", "$this->dir/out/subs.m3u8");
+        $usage = "\nRun \"subtitle-toolbox help hls\" for the usage.\n";
+
+        $this->assertSame([2, "", "Error: The playlist sub0.vtt has the name of a segment. Pass another --playlist or --pattern.$usage"],
+                          $this->runBinary(["hls", "trip.srt", "--output-dir", "new", "--playlist", "sub0.vtt"]));
+        $this->assertSame([2, "", "Error: The playlist p007.vtt has the name of a segment. Pass another --playlist or --pattern.$usage"],
+                          $this->runBinary(["hls", "trip.srt", "--output-dir", "new", "--pattern", "p%03d.vtt", "--playlist", "p007.vtt"]));
+        $this->assertDirectoryDoesNotExist("$this->dir/new");
+
+        foreach (["out/sub1.vtt", "out/subs.m3u8"] as $input) {
+            $this->assertSame([2, "", "Error: The output would overwrite the input $input. Pass another --output-dir, --playlist or --pattern.$usage"],
+                              $this->runBinary(["hls", $input, "--output-dir", "out/", "--force"]));
+            $this->assertSame($this->file("trip.srt"), $this->file($input));
+        }
+        $this->assertCount(2, glob("$this->dir/out/*"));
     }
 
 
