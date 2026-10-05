@@ -10,7 +10,6 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Image\CueImage;
-use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\WriteOptions;
 
 $image = CueImage::fromCue($cue);                    // $image->png, x, y, width, height, screenWidth, screenHeight, forced
@@ -147,6 +146,8 @@ composer require yama6a/php-glyph-ocr:^0.3
 
 ```php
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Ocr\GlyphOcrEngine;
+use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.sup'), Format::Pgs);   // image cues
 $subtitle->recognizeText(new GlyphOcrEngine());                                  // subtitle fonts database by default

@@ -8,6 +8,7 @@ use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -41,6 +42,12 @@ final class WhisperJsonParser extends SubtitleParser
         "pushto" => "ps", "panjabi" => "pa", "moldavian" => "ro", "moldovan" => "ro", "sinhalese" => "si",
         "castilian" => "es", "mandarin" => "zh",
     ];
+
+
+    protected static function formatOptionsClass(): string
+    {
+        return TranscriptReadOptions::class;
+    }
 
 
     /**
@@ -81,9 +88,9 @@ final class WhisperJsonParser extends SubtitleParser
                 continue;
             }
 
-            $markup  = $this->options->wordTimestamps ? Markup::insertWordTimestamps($text, $words) : Markup::escapeText($text);
+            $markup  = $this->formatOptions()->wordTimestamps ? Markup::insertWordTimestamps($text, $words) : Markup::escapeText($text);
             $speaker = is_string($formatData["speaker"] ?? null) ? trim($formatData["speaker"]) : "";
-            if ($this->options->speakerVoices && $speaker !== "") {
+            if ($this->formatOptions()->speakerVoices && $speaker !== "") {
                 $markup = Markup::voiceTag($speaker) . $markup;
             }
 

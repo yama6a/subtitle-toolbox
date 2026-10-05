@@ -7,11 +7,12 @@ A speech-to-text tool based on OpenAI Whisper writes a JSON transcript.
 
 ```php
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString($openAiResponseBody, Format::Whisper);
-$subtitle = Subtitle::fromString(file_get_contents('lecture.json'), Format::Whisper, new ReadOptions(wordTimestamps: true));
+$subtitle = Subtitle::fromString(file_get_contents('lecture.json'), Format::Whisper, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
 $subtitle->getCues()[0]->getText();                                          // '<00:00:00.000>The <00:00:00.240>beach <00:00:00.710>was <00:00:00.950>quiet.'
 $subtitle->getCues()[0]->findFormatData('whisper')['avg_logprob'];           // -0.25
 ```
@@ -25,8 +26,8 @@ $subtitle->getCues()[0]->findFormatData('whisper')['avg_logprob'];           // 
 | whisper.cpp | `-oj`: `transcription` with `offsets` in milliseconds. `-ojf` adds `tokens` | [`cli.cpp`](https://github.com/ggml-org/whisper.cpp/blob/60c0be6ac8fa71b1a2ae2dd938a31a34a508e774/examples/cli/cli.cpp) |
 
 - **Cues**: one cue per segment. The parser trims the text and skips segments without text. A long segment stays one cue. [`Resegmenter`](editing.md#long-cues) breaks it up.
-- **Word timestamps**: off by default. With `ReadOptions::$wordTimestamps`, each word that has a start time and occurs in the segment text gets a core word timestamp before it. The parser skips the other words. The OpenAI API lists the words at the top level. A word then goes to the segment that holds the middle of the word.
-- **Speakers**: off by default. `ReadOptions::$speakerVoices` writes the segment `speaker` as a `<v>` tag. See [text.md](text.md#speakers).
+- **Word timestamps**: off by default. With `TranscriptReadOptions::$wordTimestamps`, each word that has a start time and occurs in the segment text gets a core word timestamp before it. The parser skips the other words. The OpenAI API lists the words at the top level. A word then goes to the segment that holds the middle of the word.
+- **Speakers**: off by default. `TranscriptReadOptions::$speakerVoices` writes the segment `speaker` as a `<v>` tag. See [text.md](text.md#speakers).
 - **Language**: the `language` metadata. A name such as `english` becomes `en`. A code such as `en` stays.
 - **Format data**: the subtitle keeps the top-level fields except the segments, words and text, for example `duration`. Each cue keeps the fields of its segment except the times and the text, for example `avg_logprob`, `no_speech_prob`, `words` and `speaker`.
 - **Errors**: JSON without a `segments` or `transcription` list throws `ParsingException`. A response with only `words` or `text` has no cue times, so it throws too.
@@ -36,11 +37,12 @@ Amazon Transcribe, Deepgram, AssemblyAI and Google Cloud Speech-to-Text return a
 
 ```php
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString($transcribeJson, Format::AwsTranscribe);    // format detection does not find cloud speech JSON
-$subtitle = Subtitle::fromString($deepgramResponseBody, Format::Deepgram, new ReadOptions(wordTimestamps: true, speakerVoices: true));
+$subtitle = Subtitle::fromString($deepgramResponseBody, Format::Deepgram, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true, speakerVoices: true)));
 $subtitle->getCues()[2]->getText();                                          // '<v 0><00:00:06.500>Thank <00:00:06.800>you.'
 $subtitle->getCues()[2]->findFormatData('deepgram')['confidence'];           // 0.9637655
 ```
@@ -53,9 +55,9 @@ $subtitle->getCues()[2]->findFormatData('deepgram')['confidence'];           // 
 | [Google Cloud Speech-to-Text](https://cloud.google.com/speech-to-text/docs/async-time-offsets) | `GoogleSpeechParser`, `google-speech` | one per result, else grouped from the words of the last result |
 
 - **Word grouping**: a cue ends after a word that ends a sentence with `.`, `?`, `!` or their CJK forms. It also ends before a pause of 1 s or more, before a word that makes it longer than 84 characters, and where the speaker changes.
-- **Long cues**: an audio segment, utterance or result stays one cue. [`Resegmenter`](editing.md#long-cues) breaks it up. With `ReadOptions::$wordTimestamps`, `ResegmentMode::ByWords` regroups the words with other limits.
-- **Word timestamps**: off by default. With `ReadOptions::$wordTimestamps`, each word gets a core word timestamp before it.
-- **Speakers**: off by default. `ReadOptions::$speakerVoices` writes the speaker label of the service as a `<v>` tag, for example `<v spk_0>`, `<v 0>`, `<v A>` or `<v 1>`. The `rename` option of [`SpeakerLabels::apply()`](text.md#speakers) gives them names.
+- **Long cues**: an audio segment, utterance or result stays one cue. [`Resegmenter`](editing.md#long-cues) breaks it up. With `TranscriptReadOptions::$wordTimestamps`, `ResegmentMode::ByWords` regroups the words with other limits.
+- **Word timestamps**: off by default. With `TranscriptReadOptions::$wordTimestamps`, each word gets a core word timestamp before it.
+- **Speakers**: off by default. `TranscriptReadOptions::$speakerVoices` writes the speaker label of the service as a `<v>` tag, for example `<v spk_0>`, `<v 0>`, `<v A>` or `<v 1>`. The `rename` option of [`SpeakerLabels::apply()`](text.md#speakers) gives them names.
 - **Amazon Transcribe**: the language comes from `results.language_code`.
 - **Deepgram**: the parser reads every channel and sorts the cues by time. The language comes from `detected_language` of the first channel.
 - **AssemblyAI**: the language `en_us` becomes `en-US`.
@@ -68,11 +70,12 @@ yt-dlp and youtube-transcript-api download YouTube captions as json3, srv3 or th
 
 ```php
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('video.en.json3'), Format::YouTube);
-$subtitle = Subtitle::fromString(file_get_contents('video.en.srv3'), Format::YouTube, new ReadOptions(wordTimestamps: true));
+$subtitle = Subtitle::fromString(file_get_contents('video.en.srv3'), Format::YouTube, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
 $subtitle->getCues()[0]->getText();                                          // '<00:00:01.200>Hello <00:00:01.600>world'
 $subtitle->findFormatData('youtube')['format'];                              // 'srv3'
 ```
@@ -85,7 +88,7 @@ $subtitle->findFormatData('youtube')['format'];                              // 
 | srv1 and transcript XML | `<transcript><text start="1.2" dur="2.3">Hello world</text></transcript>` |
 
 - **Automatic captions**: the parser skips the events that only add a line break. A cue in a window ends where the next cue of the same window starts, so the rolling cues do not stack.
-- **Word timestamps**: off by default. With `ReadOptions::$wordTimestamps`, each segment of a cue gets a core word timestamp. This needs at least one segment of the cue with a time. srv1 and srv2 have no word times.
+- **Word timestamps**: off by default. With `TranscriptReadOptions::$wordTimestamps`, each segment of a cue gets a core word timestamp. This needs at least one segment of the cue with a time. srv1 and srv2 have no word times.
 - **Alignment**: from the anchor point of the window position of a cue. Anchor point 0 is top left and becomes alignment 7. A cue without its own window position, such as an automatic caption, has no alignment.
 - **Pens**: the pen color becomes `<font color>`. Bold, italic and underline become `<b>`, `<i>` and `<u>`.
 - **Format data**: the subtitle keeps the `format` name, and the head elements and windows of the file. Each cue keeps the other fields of its event or `<p>`, and the other fields of its segments in `segments`.
@@ -109,22 +112,22 @@ A podcast feed links a transcript per episode with the `<podcast:transcript>` ta
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\PodcastTranscriptWriteOptions;
-use SubtitleToolbox\Parsers\Options\PodcastTranscriptReadOptions;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
-$subtitle = Subtitle::fromString($whisperJson, Format::Whisper, new ReadOptions(wordTimestamps: true));
+$subtitle = Subtitle::fromString($whisperJson, Format::Whisper, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
 $json     = $subtitle->toString(Format::PodcastTranscript, new WriteOptions(format: new PodcastTranscriptWriteOptions(wordSegments: true)));
 $html     = $subtitle->toString(Format::HtmlTranscript);
 $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('episode.json'));   // detects a Podcasting 2.0 transcript
-$subtitle = Subtitle::fromString($json, Format::PodcastTranscript, new ReadOptions(format: new PodcastTranscriptReadOptions(keepSegments: true)));
+$subtitle = Subtitle::fromString($json, Format::PodcastTranscript, new ReadOptions(format: new TranscriptReadOptions(keepSegments: true)));
 ```
 
 | Class | Option | Effect |
 |:--- |:--- |:--- |
-| `PodcastTranscriptReadOptions` | `keepSegments` | one cue per segment. By default, segments of one word join into a cue |
-| `ReadOptions` | `wordTimestamps` | a core word timestamp before each word of a joined cue |
+| `TranscriptReadOptions` | `keepSegments` | one cue per segment. By default, segments of one word join into a cue |
+| `TranscriptReadOptions` | `wordTimestamps` | a core word timestamp before each word of a joined cue |
 | `PodcastTranscriptWriteOptions` | `wordSegments` | one segment per core word timestamp, for the word highlight of the apps. By default, one segment per cue |
 | `PodcastTranscriptWriteOptions` | `prettyPrint` | indents with 4 spaces and ends with a newline |
 | `HtmlTranscriptWriteOptions` | `paragraphGap` | the gap in seconds that starts a new paragraph, 2.0 by default |

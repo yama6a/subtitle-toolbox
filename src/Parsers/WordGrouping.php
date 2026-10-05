@@ -7,11 +7,14 @@ namespace SubtitleToolbox\Parsers;
 use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\SubtitleCue;
 
 /**
  * Builds cues from the JSON transcripts of cloud speech-to-text services, and groups their words into cues.
+ *
+ * @internal
  */
 trait WordGrouping
 {
@@ -21,6 +24,12 @@ trait WordGrouping
 
     // A full stop, question mark or exclamation mark, also the CJK forms, and closing quotes or brackets after it.
     private const SENTENCE_END = '/[.?!\x{3002}\x{FF0E}\x{FF1F}\x{FF01}]["\'\x{2019}\x{201D})\]\x{300D}\x{300F}\x{FF09}]*$/u';
+
+
+    protected static function formatOptionsClass(): string
+    {
+        return TranscriptReadOptions::class;
+    }
 
 
     private function decodeObject(string $rawSubtitle): array
@@ -142,11 +151,11 @@ trait WordGrouping
             return null;
         }
 
-        $markup  = $this->options->wordTimestamps
+        $markup  = $this->formatOptions()->wordTimestamps
             ? Markup::insertWordTimestamps($text, array_map(fn (array $word): array => [$word["text"], $word["start"]], $words))
             : Markup::escapeText($text);
         $speaker = trim($speaker ?? "");
-        if ($this->options->speakerVoices && $speaker !== "") {
+        if ($this->formatOptions()->speakerVoices && $speaker !== "") {
             $markup = Markup::voiceTag($speaker) . $markup;
         }
 

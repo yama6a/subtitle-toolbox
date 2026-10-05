@@ -102,7 +102,7 @@ class QuotesInTagsTest extends TestCase
 
     public function testStatisticsCountWordsAfterQuotesInTags(): void
     {
-        $this->assertSame(5, SubtitleStatistics::of($this->makeSubtitle("<v O'Neil>We're out of rye.", '<v Mo "Baker>Hi.'))->getWordCount());
+        $this->assertSame(5, SubtitleStatistics::of($this->makeSubtitle("<v O'Neil>We're out of rye.", '<v Mo "Baker>Hi.'))->wordCount);
     }
 
 

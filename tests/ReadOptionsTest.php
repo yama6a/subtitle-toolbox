@@ -14,6 +14,7 @@ use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\Parsers\Options\SamiReadOptions;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 
 class ReadOptionsTest extends TestCase
@@ -82,8 +83,8 @@ class ReadOptionsTest extends TestCase
         return [
             "MicroDVD frame rate"    => ["microdvd_subsrt_sample", Format::MicroDvd, "microdvd/real/subsrt_sample.sub", new ReadOptions(format: new MicroDvdReadOptions(23.976))],
             "encoding"               => ["french_windows_1252", Format::SubRip, "encoding/french-windows-1252.srt", new ReadOptions(encoding: "Windows-1252")],
-            "Whisper word times"     => ["whisper_word_timestamps", Format::Whisper, "whisper/real/openai_whisper_word_timestamps.json", new ReadOptions(wordTimestamps: true)],
-            "WhisperX speakers"      => ["whisperx_speaker_voices", Format::Whisper, "whisper/real/whisperx_diarize.json", new ReadOptions(speakerVoices: true)],
+            "Whisper word times"     => ["whisper_word_timestamps", Format::Whisper, "whisper/real/openai_whisper_word_timestamps.json", new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true))],
+            "WhisperX speakers"      => ["whisperx_speaker_voices", Format::Whisper, "whisper/real/whisperx_diarize.json", new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true))],
             "SAMI language class"    => ["sami_multi_language_frcc", Format::Sami, "sami/real/multi_language.smi", new ReadOptions(lastCueDuration: 10, format: new SamiReadOptions("FRCC"))],
             "CSV delimiter"          => ["csv_excel_de_semicolon", Format::Csv, "csv/real/excel_de_semicolon.csv", new ReadOptions(lastCueDuration: 10, format: new CsvReadOptions(delimiter: ";"))],
             "SCC channel"            => ["scc_rollup_news_ndf", Format::Scc, "scc/real/rollup_news_ndf.scc", new ReadOptions(lastCueDuration: 4, format: new SccReadOptions(channel: 1))],

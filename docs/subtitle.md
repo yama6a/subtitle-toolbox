@@ -74,6 +74,7 @@ A **forced cue** shows also when the viewer has turned subtitles off, for exampl
 
 ```php
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.itt'), Format::Itt);   // <p itts:forcedDisplay="true">Sector 7 ahead</p>
 $subtitle->getCues()[3]->isForced();                                             // true
@@ -101,22 +102,22 @@ file_put_contents('movie.forced.itt', $forced->toString(Format::Itt));
 use SubtitleToolbox\SubtitleStatistics;
 
 $stats = SubtitleStatistics::of($subtitle);
-$stats->getCueCount();             // 612
-$stats->getWordCount();            // 4870
-$stats->getCharacterCount();       // 25310
-$stats->getTotalDisplayTime();     // 1742.5, the sum of the cue durations in seconds
-$stats->getSpan();                 // 2688.0, the seconds from the first start to the last end
-$stats->getCharactersPerSecond();  // ['min' => 3.1, 'average' => 14.5, 'max' => 31.2]
-$stats->getWordsPerMinute();       // ['min' => 40.0, 'average' => 168.0, 'max' => 390.0]
-$stats->getCharactersPerLine();    // ['min' => 2.0, 'average' => 31.0, 'max' => 47.0]
-$stats->getGaps();                 // ['min' => 0.0, 'average' => 2.9, 'max' => 41.0]
-$stats->getMostUsedWords(10);      // [['word' => 'you', 'count' => 211], ['word' => 'the', 'count' => 160], ...]
-json_encode($stats->toArray());    // all numbers and the 10 most used words
+$stats->cueCount;                          // 612
+$stats->wordCount;                         // 4870
+$stats->characterCount;                    // 25310
+$stats->totalDisplayTime;                  // 1742.5, the sum of the cue durations in seconds
+$stats->span;                              // 2688.0, the seconds from the first start to the last end
+$stats->charactersPerSecond;               // ['min' => 3.1, 'average' => 14.5, 'max' => 31.2]
+$stats->wordsPerMinute;                    // ['min' => 40.0, 'average' => 168.0, 'max' => 390.0]
+$stats->charactersPerLine;                 // ['min' => 2.0, 'average' => 31.0, 'max' => 47.0]
+$stats->gaps;                              // ['min' => 0.0, 'average' => 2.9, 'max' => 41.0]
+array_slice($stats->mostUsedWords, 0, 10); // [['word' => 'you', 'count' => 211], ['word' => 'the', 'count' => 160], ...]
+json_encode($stats->toArray());            // all numbers and the 10 most used words
 ```
 
 - **Characters**: the count leaves out tags and leading and trailing spaces. An entity such as `&amp;` and a UTF-8 letter of several bytes count as one character. [Validation](validation.md) counts the same way.
-- **Words**: the text without tags, split at whitespace. A dialogue dash counts as a word. `getMostUsedWords()` removes punctuation at the start and end of each word and compares in lower case.
-- **Cues without text**: an image cue counts in `getCueCount()`, the display time, the span and the gaps. The text numbers leave it out.
+- **Words**: the text without tags, split at whitespace. A dialogue dash counts as a word. `mostUsedWords` lists every word, the most used first. It removes punctuation at the start and end of each word and compares in lower case.
+- **Cues without text**: an image cue counts in `cueCount`, the display time, the span and the gaps. The text numbers leave it out.
 - **Reading speed**: a cue with a duration of 0 has no characters per second and no words per minute.
 - **Gap**: the start of a cue minus the latest end of the earlier cues. An overlap gives a negative gap.
 - **No cues**: all numbers are 0.

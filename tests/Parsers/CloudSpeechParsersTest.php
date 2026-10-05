@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
@@ -59,7 +60,7 @@ class CloudSpeechParsersTest extends TestCase
     {
         $parser = new AwsTranscribeParser();
 
-        $this->assertSame("<00:00:00.040>Hello <00:00:00.510>world.", $parser->parse(self::ISSUE_EXAMPLE, new ReadOptions(wordTimestamps: true))->getCues()[0]->getText());
+        $this->assertSame("<00:00:00.040>Hello <00:00:00.510>world.", $parser->parse(self::ISSUE_EXAMPLE, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)))->getCues()[0]->getText());
     }
 
 
@@ -95,7 +96,7 @@ class CloudSpeechParsersTest extends TestCase
 
         $this->assertSame([[0.0, 0.3, "Hi."], [0.4, 0.7, "Bye."]], self::cues((new AssemblyAiParser())->parse($json, new ReadOptions())));
         $this->assertSame([[0.0, 0.3, "<v O'Neil>Hi."], [0.4, 0.7, "<v B>Bye."]],
-                          self::cues((new AssemblyAiParser())->parse($json, new ReadOptions(speakerVoices: true))));
+                          self::cues((new AssemblyAiParser())->parse($json, new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true)))));
     }
 
 
@@ -134,7 +135,7 @@ class CloudSpeechParsersTest extends TestCase
                 '{"type": "pronunciation", "start_time": "0.5", "end_time": "0.9", "speaker_label": "spk_1", "alternatives": [{"content": "No"}]}]}}';
         $parser = new AwsTranscribeParser();
 
-        $this->assertSame([[0.1, 0.4, "<v spk_0>Yes"], [0.5, 0.9, "<v spk_1>No"]], self::cues($parser->parse($json, new ReadOptions(speakerVoices: true))));
+        $this->assertSame([[0.1, 0.4, "<v spk_0>Yes"], [0.5, 0.9, "<v spk_1>No"]], self::cues($parser->parse($json, new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true)))));
     }
 
 
@@ -156,7 +157,7 @@ class CloudSpeechParsersTest extends TestCase
                 '{"speaker": 1, "sentences": [{"text": "Hello there.", "start": 0.2, "end": 1.1}]}]}}]}]}}';
         $parser = new DeepgramParser();
 
-        $this->assertSame([[0.2, 1.1, "<v 1>Hello there."]], self::cues($parser->parse($json, new ReadOptions(speakerVoices: true))));
+        $this->assertSame([[0.2, 1.1, "<v 1>Hello there."]], self::cues($parser->parse($json, new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true)))));
     }
 
 
@@ -169,7 +170,7 @@ class CloudSpeechParsersTest extends TestCase
                 '{"startTime": "0.300s", "endTime": "0.600s", "word": "there", "speakerTag": 2}]}]}]}';
         $parser = new GoogleSpeechParser();
 
-        $this->assertSame([[0.0, 0.3, "<v 1>hi"], [0.3, 0.6, "<v 2>there"]], self::cues($parser->parse($json, new ReadOptions(speakerVoices: true))));
+        $this->assertSame([[0.0, 0.3, "<v 1>hi"], [0.3, 0.6, "<v 2>there"]], self::cues($parser->parse($json, new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true)))));
     }
 
 

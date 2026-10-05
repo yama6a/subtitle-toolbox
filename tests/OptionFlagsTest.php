@@ -6,7 +6,7 @@ namespace SubtitleToolbox;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Parsers\Options\PodcastTranscriptReadOptions;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 
 class OptionFlagsTest extends TestCase
 {
@@ -16,12 +16,12 @@ class OptionFlagsTest extends TestCase
     public static function readFlags(): array
     {
         return [
-            "Whisper word timestamps" => [Format::Whisper, new ReadOptions(wordTimestamps: true), "whisper/real/openai_whisper_word_timestamps.json"],
-            "Whisper speaker voices"  => [Format::Whisper, new ReadOptions(speakerVoices: true), "whisper/real/whisperx_diarize.json"],
-            "Deepgram speaker voices" => [Format::Deepgram, new ReadOptions(speakerVoices: true), "deepgram/real/pool_utterances_diarize.json"],
-            "YouTube word timestamps" => [Format::YouTube, new ReadOptions(wordTimestamps: true), "youtube/real/auto.en.json3"],
-            "podcast keep segments"   => [Format::PodcastTranscript, new ReadOptions(format: new PodcastTranscriptReadOptions(keepSegments: true)), "podcast/real/spec_word_segments.json"],
-            "podcast word timestamps" => [Format::PodcastTranscript, new ReadOptions(wordTimestamps: true), "podcast/real/spec_word_segments.json"],
+            "Whisper word timestamps" => [Format::Whisper, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)), "whisper/real/openai_whisper_word_timestamps.json"],
+            "Whisper speaker voices"  => [Format::Whisper, new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true)), "whisper/real/whisperx_diarize.json"],
+            "Deepgram speaker voices" => [Format::Deepgram, new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true)), "deepgram/real/pool_utterances_diarize.json"],
+            "YouTube word timestamps" => [Format::YouTube, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)), "youtube/real/auto.en.json3"],
+            "podcast keep segments"   => [Format::PodcastTranscript, new ReadOptions(format: new TranscriptReadOptions(keepSegments: true)), "podcast/real/spec_word_segments.json"],
+            "podcast word timestamps" => [Format::PodcastTranscript, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)), "podcast/real/spec_word_segments.json"],
         ];
     }
 

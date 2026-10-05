@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
@@ -97,7 +98,7 @@ class WhisperJsonRealFilesTest extends TestCase
     {
         $parser = new WhisperJsonParser();
 
-        return $parser->parse(file_get_contents(self::DIR . $fileName), new ReadOptions(wordTimestamps: true));
+        return $parser->parse(file_get_contents(self::DIR . $fileName), new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
     }
 
 

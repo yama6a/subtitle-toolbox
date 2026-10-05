@@ -106,8 +106,6 @@ final class Subtitle implements \IteratorAggregate, \Countable
         $vobSubOptions = new ReadOptions(
             encoding: $options->encoding,
             lenient: $options->lenient,
-            wordTimestamps: $options->wordTimestamps,
-            speakerVoices: $options->speakerVoices,
             lastCueDuration: $options->lastCueDuration,
             format: new VobSubReadOptions(
                 StringHelpers::convertToUtf8(self::readFile($idxPath), $options->encoding),

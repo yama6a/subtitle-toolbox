@@ -6,6 +6,7 @@ namespace SubtitleToolbox;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Resegmenting\Resegmenter;
@@ -64,7 +65,7 @@ class ResegmenterTest extends TestCase
     private function parseWhisperFixture(): Subtitle
     {
         return (new WhisperJsonParser())
-            ->parse(file_get_contents(self::FILES . "own_whisper_long_segments.json"), new ReadOptions(wordTimestamps: true));
+            ->parse(file_get_contents(self::FILES . "own_whisper_long_segments.json"), new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
     }
 
 

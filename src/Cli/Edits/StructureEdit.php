@@ -53,7 +53,7 @@ final class StructureEdit extends Edit
             Option::flag("structure-resegment", "Build new cues from the word timestamps, one sentence or as much as fits --structure-max-cpl and --structure-max-lines each."),
             Option::value("structure-max-word-gap", "SECONDS", "--structure-resegment ends a cue at a pause of this length. Default: 0.6."),
             Option::flag("structure-unwrap", "Join the lines of each cue with a space."),
-            Option::flag("structure-merge-short", "Join cues shorter than 1 s with a neighbour at most 0.25 s away, where the joined cue fits 7 s, --structure-max-cpl and --structure-max-lines."),
+            Option::flag("structure-merge-short", "Join cues shorter than 1 s with a neighbor at most 0.25 s away, where the joined cue fits 7 s, --structure-max-cpl and --structure-max-lines."),
             Option::flag("structure-split-long", "Split cues longer than 7 s, or longer than --structure-max-lines lines of --structure-max-cpl characters, at sentence ends, clause ends or spaces."),
             Option::flag("structure-wrap", "Break lines longer than --structure-max-cpl characters."),
             Option::value("structure-max-cpl", "CHARS", "Maximum characters per line for --structure-wrap, --structure-resegment, --structure-merge-short and --structure-split-long. Default: 42."),

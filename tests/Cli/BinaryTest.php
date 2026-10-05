@@ -27,6 +27,7 @@ use SubtitleToolbox\Ocr\TesseractOcrEngine;
 use SubtitleToolbox\Parsers\Options\CsvColumns;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Profanity\MuteRange;
 use SubtitleToolbox\Profanity\ProfanityFilter;
@@ -604,7 +605,7 @@ class BinaryTest extends TestCase
 
         $this->assertSame([0, "song.json -> word.srt\n", ""], $this->runBinary(["convert", "song.json", "word.srt", "--karaoke"]));
         $this->assertFileEquals(self::FILES . "karaoke/whisper_word.srt", "$this->dir/word.srt");
-        $expected = Subtitle::loadAutoDetectFormat("$this->dir/song.lrc", new ReadOptions(wordTimestamps: true));
+        $expected = Subtitle::loadAutoDetectFormat("$this->dir/song.lrc");
         WordHighlight::apply($expected, new WordHighlightOptions(style: 'font color="#ffff00"'));
         $this->assertSame(
             [0, $expected->toString(Format::SubRip), ""],
@@ -869,7 +870,7 @@ class BinaryTest extends TestCase
     public function testWordTimestampsAndResegment(): void
     {
         copy(self::FILES . "resegmenting/own_whisper_long_segments.json", "$this->dir/lecture.json");
-        $withWords = fn (): Subtitle => (new WhisperJsonParser())->parse($this->file("lecture.json"), new ReadOptions(wordTimestamps: true));
+        $withWords = fn (): Subtitle => (new WhisperJsonParser())->parse($this->file("lecture.json"), new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
 
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "lecture.json", "--structure-resegment", "-o", "lecture.srt"]);
         $this->assertSame([0, "lecture.json -> lecture.srt\n", ""], [$code, $stdout, $stderr]);
@@ -885,6 +886,11 @@ class BinaryTest extends TestCase
 
         $this->assertSame([0, $withWords()->toString(Format::WebVtt), ""],
                           $this->runBinary(["convert", "lecture.json", "--to", "vtt", "-o", "-", "--word-timestamps"]));
+        $this->assertSame([0, $withWords()->toString(Format::WebVtt), ""],
+                          $this->runBinary(["convert", "lecture.json", "--from", "whisper", "--to", "vtt", "-o", "-", "--word-timestamps"]));
+        $this->assertSame([0, $withWords()->toString(Format::WebVtt), ""],
+                          $this->runBinary(["convert", "-", "--to", "vtt", "-o", "-", "--word-timestamps"], $this->file("lecture.json")));
+        $this->assertSame(0, $this->runBinary(["convert", "trip.srt", "--to", "vtt", "-o", "-", "--word-timestamps"])[0]);
         $this->assertStringNotContainsString("<00:", $this->runBinary(["convert", "lecture.json", "--to", "vtt", "-o", "-"])[1]);
         $this->assertSame(2, $this->runBinary(["convert", "lecture.json", "--to", "srt", "-o", "-", "--timing-fix-overlaps", "--structure-max-word-gap", "1"])[0]);
     }
@@ -913,7 +919,7 @@ class BinaryTest extends TestCase
 
         $this->assertSame(0, $code);
         $this->assertStringStartsWith("trip.srt\n  Format:                srt\n  Cues:                  3\n", $stdout);
-        $this->assertStringContainsString("  Gap:                   min -0.5, average 0.25, max 1 s\n", $stdout);
+        $this->assertStringContainsString("  Gaps:                  min -0.5, average 0.25, max 1 s\n", $stdout);
         $this->assertSame("", $stderr);
     }
 

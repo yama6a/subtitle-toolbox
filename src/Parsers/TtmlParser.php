@@ -205,10 +205,9 @@ final class TtmlParser extends SubtitleParser
 
 
     /**
-     * @see https://www.w3.org/TR/ttml2/#timing-time-intervals
-     */
-    /**
      * @param list<SubtitleCue> $cues
+     *
+     * @see https://www.w3.org/TR/ttml2/#timing-time-intervals
      */
     private function readContainer(
         array &$cues,

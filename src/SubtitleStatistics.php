@@ -6,30 +6,30 @@ namespace SubtitleToolbox;
 
 final class SubtitleStatistics
 {
-    private int $cueCount           = 0;
-    private int $wordCount          = 0;
-    private int $characterCount     = 0;
-    private float $totalDisplayTime = 0;
-    private float $span             = 0;
-
-    /** @var list<float> */
-    private array $charactersPerSecond = [];
-
-    /** @var list<float> */
-    private array $wordsPerMinute = [];
-
-    /** @var list<int> */
-    private array $charactersPerLine = [];
-
-    /** @var list<float> */
-    private array $gaps = [];
-
-    /** @var array<string, int> */
-    private array $wordFrequencies = [];
-
-
-    private function __construct()
-    {
+    /**
+     * @param int                                           $cueCount            The number of cues, also image cues.
+     * @param int                                           $wordCount           The number of words of the text without tags.
+     * @param int                                           $characterCount      The characters without tags, with an entity such as &amp; as one character.
+     * @param float                                         $totalDisplayTime    The sum of the cue durations in seconds.
+     * @param float                                         $span                The seconds from the first start to the last end.
+     * @param array{min: float, average: float, max: float} $charactersPerSecond The reading speed of the cues with text and a duration.
+     * @param array{min: float, average: float, max: float} $wordsPerMinute      The words per minute of the cues with text and a duration.
+     * @param array{min: float, average: float, max: float} $charactersPerLine   The characters of the lines with text.
+     * @param array{min: float, average: float, max: float} $gaps                The seconds from the latest end of the earlier cues to the start of each cue, negative for an overlap.
+     * @param list<array{word: string, count: int}>         $mostUsedWords       Every word in lower case with its count, the most used first.
+     */
+    private function __construct(
+        public readonly int $cueCount,
+        public readonly int $wordCount,
+        public readonly int $characterCount,
+        public readonly float $totalDisplayTime,
+        public readonly float $span,
+        public readonly array $charactersPerSecond,
+        public readonly array $wordsPerMinute,
+        public readonly array $charactersPerLine,
+        public readonly array $gaps,
+        public readonly array $mostUsedWords,
+    ) {
     }
 
 
@@ -38,126 +38,81 @@ final class SubtitleStatistics
      */
     public static function of(Subtitle $subtitle): self
     {
-        $statistics = new self();
-        $cues       = array_values($subtitle->getCues());
+        $cues = array_values($subtitle->getCues());
         usort($cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
 
-        $statistics->cueCount = count($cues);
+        $span = 0.0;
         if ($cues !== []) {
-            $firstStart       = min(array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $cues));
-            $lastEnd          = max(array_map(fn (SubtitleCue $cue): float => $cue->getEnd(), $cues));
-            $statistics->span = round($lastEnd - $firstStart, 3);
+            $firstStart = min(array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $cues));
+            $lastEnd    = max(array_map(fn (SubtitleCue $cue): float => $cue->getEnd(), $cues));
+            $span       = round($lastEnd - $firstStart, 3);
         }
 
-        $previousEnd = null;
+        $totalDisplayTime    = 0.0;
+        $gaps                = [];
+        $characterCount      = 0;
+        $wordCount           = 0;
+        $charactersPerSecond = [];
+        $wordsPerMinute      = [];
+        $charactersPerLine   = [];
+        $wordFrequencies     = [];
+        $previousEnd         = null;
         foreach ($cues as $cue) {
-            $duration                      = round($cue->getEnd() - $cue->getStart(), 3);
-            $statistics->totalDisplayTime += $duration;
+            $duration          = round($cue->getEnd() - $cue->getStart(), 3);
+            $totalDisplayTime += $duration;
 
             if ($previousEnd !== null) {
-                $statistics->gaps[] = round($cue->getStart() - $previousEnd, 3);
+                $gaps[] = round($cue->getStart() - $previousEnd, 3);
             }
             $previousEnd = max($previousEnd ?? $cue->getEnd(), $cue->getEnd());
 
-            $statistics->addText($cue, $duration);
+            $characters = 0;
+            foreach ($cue->getLines() as $line) {
+                $length = Markup::visibleLength($line);
+                if ($length > 0) {
+                    $charactersPerLine[] = $length;
+                    $characters         += $length;
+                }
+            }
+            if ($characters === 0) {
+                continue;
+            }
+
+            $words           = Markup::words(Markup::plainText(implode("\n", $cue->getLines())));
+            $characterCount += $characters;
+            $wordCount      += count($words);
+            foreach ($words as $word) {
+                $word = self::normalizeWord($word);
+                if ($word !== "") {
+                    $wordFrequencies[$word] = ($wordFrequencies[$word] ?? 0) + 1;
+                }
+            }
+
+            // A cue without duration has no reading speed.
+            if ($duration > 0) {
+                $charactersPerSecond[] = $characters / $duration;
+                $wordsPerMinute[]      = count($words) / $duration * 60;
+            }
         }
-        $statistics->totalDisplayTime = round($statistics->totalDisplayTime, 3);
-        arsort($statistics->wordFrequencies);
+        arsort($wordFrequencies);
 
-        return $statistics;
-    }
-
-
-    public function getCueCount(): int
-    {
-        return $this->cueCount;
-    }
-
-
-    public function getWordCount(): int
-    {
-        return $this->wordCount;
-    }
-
-
-    /**
-     * Returns the number of characters without tags, with an entity such as &amp; as one character.
-     */
-    public function getCharacterCount(): int
-    {
-        return $this->characterCount;
-    }
-
-
-    /**
-     * Returns the sum of the cue durations in seconds.
-     */
-    public function getTotalDisplayTime(): float
-    {
-        return $this->totalDisplayTime;
-    }
-
-
-    /**
-     * Returns the seconds from the first start to the last end.
-     */
-    public function getSpan(): float
-    {
-        return $this->span;
-    }
-
-
-    /**
-     * @return array{min: float, average: float, max: float}
-     */
-    public function getCharactersPerSecond(): array
-    {
-        return self::range($this->charactersPerSecond);
-    }
-
-
-    /**
-     * @return array{min: float, average: float, max: float}
-     */
-    public function getWordsPerMinute(): array
-    {
-        return self::range($this->wordsPerMinute);
-    }
-
-
-    /**
-     * @return array{min: float, average: float, max: float}
-     */
-    public function getCharactersPerLine(): array
-    {
-        return self::range($this->charactersPerLine);
-    }
-
-
-    /**
-     * Returns the seconds from the latest end of the earlier cues to the start of each cue, negative for an overlap.
-     *
-     * @return array{min: float, average: float, max: float}
-     */
-    public function getGaps(): array
-    {
-        return self::range($this->gaps);
-    }
-
-
-    /**
-     * Returns the $limit most used words in lower case with their counts, the most used first.
-     *
-     * @return list<array{word: string, count: int}>
-     */
-    public function getMostUsedWords(int $limit): array
-    {
-        $words = [];
-        foreach (array_slice($this->wordFrequencies, 0, max(0, $limit), true) as $word => $count) {
-            $words[] = ["word" => (string) $word, "count" => $count];
+        $mostUsedWords = [];
+        foreach ($wordFrequencies as $word => $count) {
+            $mostUsedWords[] = ["word" => (string) $word, "count" => $count];
         }
 
-        return $words;
+        return new self(
+            cueCount: count($cues),
+            wordCount: $wordCount,
+            characterCount: $characterCount,
+            totalDisplayTime: round($totalDisplayTime, 3),
+            span: $span,
+            charactersPerSecond: self::range($charactersPerSecond),
+            wordsPerMinute: self::range($wordsPerMinute),
+            charactersPerLine: self::range($charactersPerLine),
+            gaps: self::range($gaps),
+            mostUsedWords: $mostUsedWords,
+        );
     }
 
 
@@ -167,51 +122,17 @@ final class SubtitleStatistics
     public function toArray(): array
     {
         return [
-            "cueCount"            => $this->getCueCount(),
-            "wordCount"           => $this->getWordCount(),
-            "characterCount"      => $this->getCharacterCount(),
-            "totalDisplayTime"    => $this->getTotalDisplayTime(),
-            "span"                => $this->getSpan(),
-            "charactersPerSecond" => $this->getCharactersPerSecond(),
-            "wordsPerMinute"      => $this->getWordsPerMinute(),
-            "charactersPerLine"   => $this->getCharactersPerLine(),
-            "gaps"                => $this->getGaps(),
-            "mostUsedWords"       => $this->getMostUsedWords(10),
+            "cueCount"            => $this->cueCount,
+            "wordCount"           => $this->wordCount,
+            "characterCount"      => $this->characterCount,
+            "totalDisplayTime"    => $this->totalDisplayTime,
+            "span"                => $this->span,
+            "charactersPerSecond" => $this->charactersPerSecond,
+            "wordsPerMinute"      => $this->wordsPerMinute,
+            "charactersPerLine"   => $this->charactersPerLine,
+            "gaps"                => $this->gaps,
+            "mostUsedWords"       => array_slice($this->mostUsedWords, 0, 10),
         ];
-    }
-
-
-    private function addText(SubtitleCue $cue, float $duration): void
-    {
-        $characters = 0;
-        foreach ($cue->getLines() as $line) {
-            $length = Markup::visibleLength($line);
-            if ($length > 0) {
-                $this->charactersPerLine[] = $length;
-                $characters               += $length;
-            }
-        }
-        if ($characters === 0) {
-            return;
-        }
-
-        $text  = Markup::plainText(implode("\n", $cue->getLines()));
-        $words = Markup::words($text);
-
-        $this->characterCount += $characters;
-        $this->wordCount      += count($words);
-        foreach ($words as $word) {
-            $word = self::normalizeWord($word);
-            if ($word !== "") {
-                $this->wordFrequencies[$word] = ($this->wordFrequencies[$word] ?? 0) + 1;
-            }
-        }
-
-        // A cue without duration has no reading speed.
-        if ($duration > 0) {
-            $this->charactersPerSecond[] = $characters / $duration;
-            $this->wordsPerMinute[]      = count($words) / $duration * 60;
-        }
     }
 
 

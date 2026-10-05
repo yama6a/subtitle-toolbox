@@ -88,7 +88,7 @@ final class InfoCommand extends ReportCommand
         $range = fn (array $values): string => "min " . self::number($values["min"]) . ", average " .
                                                self::number($values["average"]) . ", max " . self::number($values["max"]);
         $words = [];
-        foreach ($statistics->getMostUsedWords(10) as ["word" => $word, "count" => $count]) {
+        foreach (array_slice($statistics->mostUsedWords, 0, 10) as ["word" => $word, "count" => $count]) {
             $words[] = "$word ($count)";
         }
 
@@ -97,7 +97,7 @@ final class InfoCommand extends ReportCommand
 
         $rows = [
             "Format" => $format->value,
-            "Cues"   => (string)$statistics->getCueCount(),
+            "Cues"   => (string)$statistics->cueCount,
         ];
         if ($this->parseWarnings !== []) {
             $rows["Warnings"] = (string)count($this->parseWarnings);
@@ -106,14 +106,14 @@ final class InfoCommand extends ReportCommand
             $rows["Image cues"] = count($imageCues) . ", $imageCuesWithText with text";
         }
         $rows += [
-            "Words"                 => (string)$statistics->getWordCount(),
-            "Characters"            => (string)$statistics->getCharacterCount(),
-            "Display time"          => self::number($statistics->getTotalDisplayTime()) . " s",
-            "Span"                  => self::number($statistics->getSpan()) . " s",
-            "Characters per second" => $range($statistics->getCharactersPerSecond()),
-            "Words per minute"      => $range($statistics->getWordsPerMinute()),
-            "Characters per line"   => $range($statistics->getCharactersPerLine()),
-            "Gap"                   => $range($statistics->getGaps()) . " s",
+            "Words"                 => (string)$statistics->wordCount,
+            "Characters"            => (string)$statistics->characterCount,
+            "Display time"          => self::number($statistics->totalDisplayTime) . " s",
+            "Span"                  => self::number($statistics->span) . " s",
+            "Characters per second" => $range($statistics->charactersPerSecond),
+            "Words per minute"      => $range($statistics->wordsPerMinute),
+            "Characters per line"   => $range($statistics->charactersPerLine),
+            "Gaps"                  => $range($statistics->gaps) . " s",
             "Most used words"       => implode(", ", $words),
         ];
         foreach ($subtitle->getAllMetadata() as $key => $value) {
