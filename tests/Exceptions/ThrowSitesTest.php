@@ -497,7 +497,7 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Parsers/SamiParser.php: unknown class"         => [fn () => (new SamiParser())->parse(
                 "<SAMI><BODY><SYNC Start=0><P Class=ENCC>text</BODY></SAMI>", new ReadOptions(format: new SamiReadOptions("FRCC"))), ...$parsing],
-            "Parsers/Options/SamiReadOptions.php: empty language"   => [fn () => new SamiReadOptions(" "), ...$invalid],
+            "Parsers/Options/SamiReadOptions.php: empty language class"   => [fn () => new SamiReadOptions(" "), ...$invalid],
             "Parsers/SbvParser.php: no timestamps"          => [fn () => (new SbvParser())->parse("text\nmore", new ReadOptions()), ...$parsing],
             "Parsers/SbvParser.php: no text lines"          => [fn () => (new SbvParser())->parse("0:00:01.000,0:00:02.000", new ReadOptions()), ...$parsing],
             "Parsers/SbvParser.php: invalid time"           => [fn () => (new SbvParser())->parse("soon,0:00:02.000\ntext", new ReadOptions()), ...$parsing],

@@ -88,7 +88,7 @@ No parser constructor takes an argument. Pass the setting to `ReadOptions`.
 | `(new SubRipStreamReader())->setLenient()`, the same for `WebVttStreamReader` | `new SubRipStreamReader(new ReadOptions(lenient: true))`. `getWarnings()` is part of the `CueStreamReader` interface |
 | `$parser->getWarnings()` | `$subtitle->getParseWarnings()` |
 | `new MicroDvdParser(23.976)` | `new ReadOptions(format: new MicroDvdReadOptions(frameRate: 23.976))` |
-| `new SamiParser('ENUSCC', 10)` | `new ReadOptions(lastCueDuration: 10, format: new SamiReadOptions(language: 'ENUSCC'))` |
+| `new SamiParser('ENUSCC', 10)` | `new ReadOptions(lastCueDuration: 10, format: new SamiReadOptions(languageClass: 'ENUSCC'))` |
 | `new VobSubParser($idx, 'de')`, `new VobSubParser($idx, 1)` | `new ReadOptions(format: new VobSubReadOptions($idx, language: 'de'))`, `new ReadOptions(format: new VobSubReadOptions($idx, track: 1))` |
 | `new TmPlayerParser(4)`, `new SubViewerParser(10)`, `new LyricsParser(10)`, `new PgsParser(5)`, `new HtmlTranscriptParser(10)` | `new ReadOptions(lastCueDuration: 4)` and so on |
 | `TmPlayerParser::DEFAULT_LAST_CUE_DURATION` and the same constant of 4 other parsers | `ReadOptions::$lastCueDuration`, 5 s for every format |
