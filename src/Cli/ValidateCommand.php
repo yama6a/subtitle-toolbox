@@ -150,7 +150,7 @@ final class ValidateCommand extends ReportCommand
             "violations" => array_map(fn (ValidationViolation $violation): array => [
                 "cueIndex" => $violation->cueIndex,
                 "rule"     => $violation->rule->value,
-                "value"    => is_float($violation->value) && is_infinite($violation->value) ? PHP_FLOAT_MAX : $violation->value,
+                "value"    => is_float($violation->value) && is_infinite($violation->value) ? null : $violation->value,
                 "infinite" => is_float($violation->value) && is_infinite($violation->value),
                 "limit"    => $violation->limit,
             ], $violations),

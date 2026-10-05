@@ -286,8 +286,8 @@ vendor/bin/subtitle-toolbox convert movie.srt movie.timed.srt --video-fps 24 --s
 
 - **Indexes**: `cueIndex`, `oldIndex`, `newIndex` and `blockIndex` start at 0, as in the library. The text output counts cues from 1.
 - **Standard input**: `file`, `oldFile` and `newFile` hold `-` for standard input. The text output prints `stdin`.
-- **Limits**: `limit` is null only for a rule without a number limit, such as `noOverlap`.
-- **Infinite values**: a cue with text and a duration of 0 has infinite characters per second. Its violation has `"infinite": true`, and `value` holds the largest JSON number, `1.7976931348623157e+308`. The text output prints `INF`.
+- **Limits**: `limit` is null for a rule without a number limit, such as `noOverlap`.
+- **Infinite values**: a cue with text and a duration of 0 has infinite characters per second. JSON cannot hold infinity, so its violation has `"value": null` and `"infinite": true`. The text output prints `INF`.
 - **Warnings**: a list of the parse warnings of the file, empty without `--lenient`. A warning has `lineNumber`, `blockIndex`, `message` and `action`, see [lenient-parsing.md](lenient-parsing.md).
 
 ## Info

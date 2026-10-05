@@ -1203,7 +1203,7 @@ class BinaryTest extends TestCase
             "format"     => "srt",
             "valid"      => false,
             "violations" => [
-                ["cueIndex" => 0, "rule" => "maxCharactersPerSecond", "value" => PHP_FLOAT_MAX, "infinite" => true, "limit" => 20],
+                ["cueIndex" => 0, "rule" => "maxCharactersPerSecond", "value" => null, "infinite" => true, "limit" => 20],
                 ["cueIndex" => 2, "rule" => "noOverlap", "value" => 0.5, "infinite" => false, "limit" => null],
             ],
             "warnings"   => [],
