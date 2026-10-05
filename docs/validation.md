@@ -31,7 +31,7 @@ The value of a `ValidationRule` case is the name of its field in `ValidationRule
 | `noDoubleSpaces` | `true` to check, result limit `null` | runs of two or more spaces between words. A non-breaking space counts as a space |
 | `noLeadingOrTrailingSpaces` | `true` to check, result limit `null` | lines that start or end with a space or a non-breaking space |
 | `noUnbalancedTags` | `true` to check, result limit `null` | `<b>`, `<i>`, `<u>`, `<s>` and `<font>` tags without a partner tag, across all lines of the cue. An open `<v>` needs no `</v>` |
-| `dialogueDashStyle` | the dash and the space after it: `'- '`, `'-'`, `"\u{2013} "` and so on. Result limit `null` | lines with a dialogue dash in another style |
+| `dialogueDashStyle` | a `DialogueDashStyle` case, such as `HyphenSpace` for `'- '` or `EnDash` for an en dash without a space. Result limit `null` | lines with a dialogue dash in another style |
 | `maxSpeakersPerCue` | speakers | the lines with a dialogue dash or the different `<v>` names, the larger count |
 | `maxWordsPerMinute` | words per minute | words divided by the duration. `INF` for a cue with words and no duration |
 | `minSecondsPerWord` | seconds per word | duration divided by the words |

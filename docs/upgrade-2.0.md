@@ -13,6 +13,7 @@ The calls below use these imports:
 
 ```php
 use SubtitleToolbox\CueLimits;
+use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
 use SubtitleToolbox\LineEnding;
@@ -154,7 +155,7 @@ Common one-step edits stay methods on `Subtitle`, for example `shift()`, `fixOve
 | `$karaoke = WordHighlight::expand($subtitle, $options)` | `WordHighlight::apply($karaoke = clone $subtitle, $options)` |
 | `$ranges = ProfanityFilter::apply($subtitle, $options)` | `$ranges = ProfanityFilter::apply($subtitle, $options)->muteRanges` |
 | `SpeakerLabels::toPrefix($subtitle)` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Prefix))` |
-| `SpeakerLabels::toDialogueDashes($subtitle, '- ')` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes, dash: '- '))` |
+| `SpeakerLabels::toDialogueDashes($subtitle, '- ')` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes, dialogueDashStyle: DialogueDashStyle::HyphenSpace))` |
 | `SpeakerLabels::toColours($subtitle, $colours)` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Colors, colors: $colours))` |
 | `SpeakerLabels::fromPrefix($subtitle)` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(readPrefixes: true))` |
 | `SpeakerLabels::rename($subtitle, ['MAN' => 'TOM'])` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(rename: ['MAN' => 'TOM']))` |
@@ -208,6 +209,8 @@ Each service result is a `*Report` with `public readonly` fields, or a value obj
 | `ValidationRules::netflixEnglish(fps: 24)` | `ValidationRules::netflixEnglish(frameRate: 24)` |
 | `YouTubeChapters::check()` returns `['rule' => YouTubeChapters::RULE_MIN_DURATION, 'chapterIndex' => 2, ...]` | it returns `ValidationViolation` objects. `RULE_FIRST_CHAPTER_AT_ZERO`, `RULE_MIN_CHAPTERS` and `RULE_MIN_DURATION` become `ValidationRule::FirstChapterAtZero`, `MinChapters` and `MinDuration`. `chapterIndex` becomes `cueIndex` |
 | `CommonErrorFixer::RULES`, `AppliedFix::$rule` as a string | `CommonErrorRule::cases()` in run order, `AppliedFix::$rule` as a `CommonErrorRule` |
+| `new CommonErrorOptions(dialogueDash: '-')` | `new CommonErrorOptions(dialogueDashStyle: DialogueDashStyle::Hyphen)`. `DialogueDashStyle` has a case for a hyphen, U+2010, an en dash and an em dash, each with and without a space |
+| `new ValidationRules(dialogueDashStyle: "\u{2013} ")` | `new ValidationRules(dialogueDashStyle: DialogueDashStyle::EnDashSpace)` |
 | `CommonErrorFixer::apply($subtitle, new CommonErrorOptions(dryRun: true))` | `CommonErrorFixer::preview($subtitle, new CommonErrorOptions())` |
 | `WordHighlightOptions::MODE_WORD`, `MODE_CUMULATIVE` | `WordHighlightMode::Word`, `WordHighlightMode::Cumulative` |
 | `ProfanityOptions::MASK_STARS`, `MASK_FIRST_LETTER`, `MASK_REMOVE`, `MASK_NONE` | `ProfanityMask::Stars`, `FirstLetter`, `Remove`, `None` |

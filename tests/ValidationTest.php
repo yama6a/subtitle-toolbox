@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Validation\ValidationRule;
 use SubtitleToolbox\Validation\ValidationViolation;
 use SubtitleToolbox\Validation\ValidationRules;
@@ -212,7 +213,7 @@ class ValidationTest extends TestCase
             noDoubleSpaces: true,
             noLeadingOrTrailingSpaces: true,
             noUnbalancedTags: true,
-            dialogueDashStyle: "- ",
+            dialogueDashStyle: DialogueDashStyle::HyphenSpace,
             maxSpeakersPerCue: 2,
             maxWordsPerMinute: 180,
             minSecondsPerWord: 0.3,
@@ -250,7 +251,7 @@ class ValidationTest extends TestCase
         $rules    = new ValidationRules(
             noDoubleSpaces: true,
             noUnbalancedTags: true,
-            dialogueDashStyle: "- ",
+            dialogueDashStyle: DialogueDashStyle::HyphenSpace,
             maxSpeakersPerCue: 2,
             maxWordsPerMinute: 180,
             minSecondsPerWord: 0.3,
@@ -335,10 +336,10 @@ class ValidationTest extends TestCase
             [[17, ValidationRule::MaxSpeakersPerCue, 2, 1]],
             $this->toArrays($netflix->validate(new ValidationRules(maxSpeakersPerCue: 1)))
         );
-        $this->assertSame([], $netflix->validate(new ValidationRules(dialogueDashStyle: "- ")));
+        $this->assertSame([], $netflix->validate(new ValidationRules(dialogueDashStyle: DialogueDashStyle::HyphenSpace)));
         $this->assertSame(
             [[17, ValidationRule::DialogueDashStyle, 2, null]],
-            $this->toArrays($netflix->validate(new ValidationRules(dialogueDashStyle: "\u{2013} ")))
+            $this->toArrays($netflix->validate(new ValidationRules(dialogueDashStyle: DialogueDashStyle::EnDashSpace)))
         );
     }
 
@@ -399,11 +400,11 @@ class ValidationTest extends TestCase
         $this->assertSame([
             [0, ValidationRule::DialogueDashStyle, 1, null],
             [1, ValidationRule::DialogueDashStyle, 2, null],
-        ], $this->toArrays($subtitle->validate(new ValidationRules(dialogueDashStyle: "- "))));
+        ], $this->toArrays($subtitle->validate(new ValidationRules(dialogueDashStyle: DialogueDashStyle::HyphenSpace))));
         $this->assertSame([
             [0, ValidationRule::DialogueDashStyle, 1, null],
             [1, ValidationRule::DialogueDashStyle, 1, null],
-        ], $this->toArrays($subtitle->validate(new ValidationRules(dialogueDashStyle: "-"))));
+        ], $this->toArrays($subtitle->validate(new ValidationRules(dialogueDashStyle: DialogueDashStyle::Hyphen))));
     }
 
 

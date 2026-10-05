@@ -89,7 +89,7 @@ $subtitle->toString(Format::SubRip);
 | `readPrefixes: true`, with `readUpperCaseOnly`, default `true` | `JOHN: Hi.` | `<v John>Hi.` |
 | `rename: ['SPEAKER_00' => 'Anna']` | `<v SPEAKER_00>` | `<v Anna>` |
 | `to: SpeakerStyle::Prefix`, with `writeUpperCase`, default `true`, and `separator`, default `': '` | `<v Anna>Where were you?` | `ANNA: Where were you?` |
-| `to: SpeakerStyle::DialogueDashes`, with `dash`, default `'- '` | `<v Anna>Where?` and `<v Ben>Home.` in one cue | `- Where?` and `- Home.` |
+| `to: SpeakerStyle::DialogueDashes`, with `dialogueDashStyle`, default `DialogueDashStyle::HyphenSpace` | `<v Anna>Where?` and `<v Ben>Home.` in one cue | `- Where?` and `- Home.` |
 | `to: SpeakerStyle::Colors`, with `colors`, default `SpeakerLabels::BBC_COLORS` | `<v Anna>Where?` and `<v Ben>Home.` | `<font color="#ffffff">Where?</font>` and `<font color="#ffff00">Home.</font>` |
 
 | Format | Reads `<v>` from | Writes `<v>` as |
@@ -201,6 +201,7 @@ WordHighlight::apply($subtitle, new WordHighlightOptions(
 OCR of PGS and VobSub cues reads `It's` as `lt's`. Files from the web have spaces before `?` and tags that never close. `CommonErrorFixer` fixes such errors in one call and lists each change for review.
 
 ```php
+use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Fixing\CommonErrorFixer;
 use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Fixing\CommonErrorRule;
@@ -214,7 +215,7 @@ $fixes[0]->after;      // "It's late."
 
 CommonErrorFixer::apply($subtitle, new CommonErrorOptions(
     language: 'fr',
-    dialogueDash: '-',                                       // '- ' (default), '-', or an en or em dash with or without a space
+    dialogueDashStyle: DialogueDashStyle::Hyphen,            // default HyphenSpace, see DialogueDashStyle for the en and em dash
     unicodeEllipsis: true,                                   // writes U+2026 for every ellipsis
     replaceList: OcrReplaceList::fromSubtitleEditXml(file_get_contents('fra_OCRFixReplaceList_User.xml')),
 ));
@@ -228,7 +229,7 @@ CommonErrorFixer::preview($subtitle, new CommonErrorOptions(language: 'en'));   
 | `missingSpaceAfterPunctuation` | `Stop.Now`, `Hi!How` | `Stop. Now`, `Hi! How`. Not in `1.5`, `www.example.com`, `e.g.` or `U.S.Army` |
 | `unbalancedTags` | `<i>Hello` | `<i>Hello</i>` |
 | `emptyTags` | `Hi <i></i>there` | `Hi there` |
-| `dialogueDashes` | `-Hi.` and `-Hello.` | `- Hi.` and `- Hello.`, or the style of `dialogueDash` |
+| `dialogueDashes` | `-Hi.` and `-Hello.` | `- Hi.` and `- Hello.`, or the style of `dialogueDashStyle` |
 | `ellipsis` | `. . .` or `....` | `...`, or U+2026 with `unicodeEllipsis` |
 | `ocrLowercaseL` | `lt's`, `l'm`, `l'll`, `lT lS` | `It's`, `I'm`, `I'll`, `IT IS` |
 | `ocrPipe` | `\|t was`, `wi\|\|` | `It was`, `will` |

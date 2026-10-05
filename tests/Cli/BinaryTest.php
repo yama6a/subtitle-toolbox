@@ -1057,7 +1057,7 @@ class BinaryTest extends TestCase
             "--check-leading-or-trailing-spaces", "--max-speakers", "2", "--allowed-characters", "[A-Za-z0-9 .,!?<>/\\-]",
         ], $vtt));
         $this->assertSame(
-            [2, "", "Error: The dialogue dash style must be a hyphen, an en dash or an em dash, with or without one space after it, got \"x\".\n" .
+            [2, "", "Error: The option --dialogue-dash must be a hyphen, an en dash or an em dash, with or without one space after it, got \"x\".\n" .
                     "Run \"subtitle-toolbox help validate\" for the usage.\n"],
             $this->runBinary(["validate", "-", "--dialogue-dash", "x"], $vtt)
         );

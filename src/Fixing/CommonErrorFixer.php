@@ -123,7 +123,7 @@ final class CommonErrorFixer
                 self::missingSpaceAfterPunctuation($text)),
             CommonErrorRule::DialogueDashes  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => !$first ? $text : self::replace(
                 '/^[' . self::DASHES . '](?![' . self::DASHES . '])' . self::SPACES . '*(?=[^\s\p{N}])/u',
-                $options->dialogueDash,
+                $options->dialogueDashStyle->value,
                 $text
             )),
         };

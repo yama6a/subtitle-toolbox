@@ -14,7 +14,6 @@ use SubtitleToolbox\CueLimits;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\Dual\DualSubtitleOptions;
 use SubtitleToolbox\Encoding\Cea608;
-use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Fixing\OcrReplaceList;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\CsvFormatter;
@@ -301,7 +300,6 @@ class ThrowSitesTest extends TestCase
             "Fixes.php: minimum duration 0"                 => [fn () => self::subtitle()->extendShortCues(0), ...$invalid],
             "Fixes.php: maximum characters 0"               => [fn () => self::subtitle()->wrapLines(0), ...$invalid],
             "Fixes.php: negative gap"                       => [fn () => self::subtitle()->fixOverlaps(-1), ...$invalid],
-            "Fixing/CommonErrorOptions.php: dialogue dash"  => [fn () => new CommonErrorOptions(dialogueDash: "*"), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid regex"      => [fn () => new OcrReplaceList(regularExpressions: ["/(/" => ""]), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid XML"        => [fn () => OcrReplaceList::fromSubtitleEditXml("<ReplaceList>"), ...$parsing],
             "Formatters/JsonOutput.php: invalid UTF-8" => [fn () => Subtitle::load(self::FILES . "cli/latin1.srt", Format::SubRip)->toString(Format::Json),
@@ -667,7 +665,6 @@ class ThrowSitesTest extends TestCase
                     return [];
                 }
             }))->translate(self::subtitle(), "en", "de"), ...$invalid],
-            "Validation/ValidationRules.php: dialogue dash style" => [fn () => new ValidationRules(dialogueDashStyle: "*"), ...$invalid],
             "Validation/ValidationRules.php: invalid character class" => [fn () => new ValidationRules(allowedCharacters: "[z-a]"),
                 ...$invalid],
         ];

@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Speakers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
@@ -183,18 +184,18 @@ class SpeakerLabelsTest extends TestCase
 
 
     /**
-     * @return array<string, array{string, string, list<string>}>
+     * @return array<string, array{string, DialogueDashStyle, list<string>}>
      */
     public static function dashCases(): array
     {
         return [
-            "two lines"            => ["<v Anna>Where?\n<v Ben>Home.", "- ", ["- Where?", "- Home."]],
-            "one line"             => ["<v Anna>Where? <v Ben>Home.", "- ", ["- Where?", "- Home."]],
-            "one speaker"          => ["<v Anna>Where are\nyou going?", "- ", ["Where are", "you going?"]],
-            "text without speaker" => ["Where?\n<v Ben>Home.", "- ", ["- Where?", "- Home."]],
-            "dash already there"   => ["<v Anna>- Where?\n<v Ben>Home.", "- ", ["- Where?", "- Home."]],
-            "own dash"             => ["<v Anna>Where?\n<v Ben>Home.", "-", ["-Where?", "-Home."]],
-            "three speakers"       => ["<v Anna>One.\n<v Ben>Two.\n<v Clara>Three.", "- ", ["- One.", "- Two.", "- Three."]],
+            "two lines"            => ["<v Anna>Where?\n<v Ben>Home.", DialogueDashStyle::HyphenSpace, ["- Where?", "- Home."]],
+            "one line"             => ["<v Anna>Where? <v Ben>Home.", DialogueDashStyle::HyphenSpace, ["- Where?", "- Home."]],
+            "one speaker"          => ["<v Anna>Where are\nyou going?", DialogueDashStyle::HyphenSpace, ["Where are", "you going?"]],
+            "text without speaker" => ["Where?\n<v Ben>Home.", DialogueDashStyle::HyphenSpace, ["- Where?", "- Home."]],
+            "dash already there"   => ["<v Anna>- Where?\n<v Ben>Home.", DialogueDashStyle::HyphenSpace, ["- Where?", "- Home."]],
+            "own dash"             => ["<v Anna>Where?\n<v Ben>Home.", DialogueDashStyle::Hyphen, ["-Where?", "-Home."]],
+            "three speakers"       => ["<v Anna>One.\n<v Ben>Two.\n<v Clara>Three.", DialogueDashStyle::HyphenSpace, ["- One.", "- Two.", "- Three."]],
         ];
     }
 
@@ -203,9 +204,9 @@ class SpeakerLabelsTest extends TestCase
      * @param list<string> $expected
      */
     #[DataProvider("dashCases")]
-    public function testToDialogueDashes(string $text, string $dash, array $expected): void
+    public function testToDialogueDashes(string $text, DialogueDashStyle $dash, array $expected): void
     {
-        $this->assertSame([$expected], self::lines(self::apply(self::subtitle($text), new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes, dash: $dash))));
+        $this->assertSame([$expected], self::lines(self::apply(self::subtitle($text), new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes, dialogueDashStyle: $dash))));
     }
 
 
