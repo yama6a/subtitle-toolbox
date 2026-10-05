@@ -45,7 +45,7 @@ class ShortCueMergingTest extends TestCase
                                     "14\n00:01:03,320 --> 00:01:04,100\ngoing?\n", Format::SubRip);
 
         $subtitle->mergeShortCues(new MergeShortCuesOptions(
-            limits: new CueLimits(maxCharactersPerLine: 42, maxLines: 2, maxDuration: 7),
+            limits: new CueLimits(maxCharactersPerLine: 42, maxLinesPerCue: 2, maxDuration: 7),
             maxGap: 0.25,
         ));
 
@@ -79,7 +79,7 @@ class ShortCueMergingTest extends TestCase
         );
 
         $subtitle = Subtitle::fromString($content, Format::WebVtt)
-            ->mergeShortCues(new MergeShortCuesOptions(sameSpeakerOnly: true));
+            ->mergeShortCues(new MergeShortCuesOptions(mergeSameSpeakerAnyDuration: true));
 
         $cues = $this->describeCues($subtitle);
         $this->assertCount(4, $cues);
@@ -128,7 +128,7 @@ class ShortCueMergingTest extends TestCase
         $this->assertSame([[0.0, 1.0, "The bridge opened\nlast spring."]],
                           $this->merge($cues, new MergeShortCuesOptions(limits: new CueLimits(maxCharactersPerLine: 20))));
         $this->assertSame([[0.0, 0.5, "The bridge opened"], [0.5, 1.0, "last spring."]],
-                          $this->merge($cues, new MergeShortCuesOptions(limits: new CueLimits(maxCharactersPerLine: 20, maxLines: 1))));
+                          $this->merge($cues, new MergeShortCuesOptions(limits: new CueLimits(maxCharactersPerLine: 20, maxLinesPerCue: 1))));
         $this->assertSame([[0.0, 0.5, "The bridge opened"], [0.5, 1.0, "last spring."]],
                           $this->merge($cues, new MergeShortCuesOptions(limits: new CueLimits(maxCharactersPerLine: 16))));
     }
@@ -147,7 +147,7 @@ class ShortCueMergingTest extends TestCase
         $this->assertSame([[0.0, 1.0, "- Is it safe?\n- Yes."]], $this->merge([[0, 0.5, "- Is it safe?"], [0.5, 1, "- Yes."]]));
         $this->assertSame([[0.0, 1.0, "- Ready?\n<i>- Yes.</i>"]], $this->merge([[0, 0.5, "- Ready?"], [0.5, 1, "<i>- Yes.</i>"]]));
         $this->assertSame([[0.0, 0.5, "- Is it safe?"], [0.5, 1.0, "- Yes."]],
-                          $this->merge([[0, 0.5, "- Is it safe?"], [0.5, 1, "- Yes."]], new MergeShortCuesOptions(limits: new CueLimits(maxLines: 1))));
+                          $this->merge([[0, 0.5, "- Is it safe?"], [0.5, 1, "- Yes."]], new MergeShortCuesOptions(limits: new CueLimits(maxLinesPerCue: 1))));
         $this->assertSame([[0.0, 0.5, "- Is it safe?"], [0.5, 1.0, "- Yes."]],
                           $this->merge([[0, 0.5, "- Is it safe?"], [0.5, 1, "- Yes."]], new MergeShortCuesOptions(limits: new CueLimits(maxCharactersPerLine: 12))));
     }
@@ -211,7 +211,7 @@ class ShortCueMergingTest extends TestCase
 
     public function testSameSpeakerOnly(): void
     {
-        $options = new MergeShortCuesOptions(sameSpeakerOnly: true);
+        $options = new MergeShortCuesOptions(mergeSameSpeakerAnyDuration: true);
 
         $this->assertSame([[0.0, 9.0, "<v Anna>I grew up near the coast and my parents"]],
                           $this->merge([[0, 5, "<v Anna>I grew up near the coast"], [5.1, 9, "<v Anna>and my parents"]], $options));

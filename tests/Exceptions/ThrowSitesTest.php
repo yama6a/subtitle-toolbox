@@ -287,7 +287,7 @@ class ThrowSitesTest extends TestCase
             "Container/Matroska/MatroskaReader.php: unknown size of Tracks" => [fn () => MatroskaReader::open(self::stream(
                                                                 MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT,
                                                                 MkvFixtureWriter::unknownSizeElement(MkvFixtureWriter::TRACKS, "")))), ...$parsing],
-            "CueLimits.php: maximum lines 0"                => [fn () => new CueLimits(maxLines: 0), ...$invalid],
+            "CueLimits.php: maximum lines 0"                => [fn () => new CueLimits(maxLinesPerCue: 0), ...$invalid],
             "CueLimits.php: negative minimum duration"      => [fn () => new CueLimits(minDuration: -1), ...$invalid],
             "CueLimits.php: maximum duration 0"             => [fn () => new CueLimits(maxDuration: 0), ...$invalid],
             "CueEditing.php: slice start after end"         => [fn () => self::subtitle()->withSlice(5, 1), ...$invalid],

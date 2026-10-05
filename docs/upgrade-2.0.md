@@ -53,7 +53,7 @@ use SubtitleToolbox\Validation\ValidationRules;
 | `FormatRegistry::find('srt')`, `FormatRegistry::forExtension('srt')` | `Format::tryFrom('srt')` for a format name, `Format::fromPath('movie.srt')` for an extension |
 | `FormatRegistry::parserClass('vobsub')`, `FormatRegistry::formatterClass('vobsub')` | `Format::VobSub->canRead()`, `Format::VobSub->canWrite()` |
 | a format name from user input, such as `'srt'` | `Format::from('srt')`, or `Format::tryFrom()` for null on an unknown name |
-| `MatroskaReader::open('movie.mkv')->extract(3)` | `Subtitle::loadTrack('movie.mkv', 3)` |
+| `MatroskaReader::open('movie.mkv')->extract(3)` | `Subtitle::loadTrack('movie.mkv', 3)`. Its second parameter is `$trackNumber`, as in `extract()` |
 | `MatroskaReader::open('movie.mkv')->getSubtitleTracks()` | `Subtitle::tracks('movie.mkv')` |
 | `MatroskaReader::DEFAULT_LAST_CUE_DURATION` | `ReadOptions::$lastCueDuration`, 5 s by default |
 | `(new VobSubParser(file_get_contents('movie.idx'), 'de'))->parse(file_get_contents('movie.sub'))` | `Subtitle::load('movie.idx', Format::VobSub, new ReadOptions(format: new VobSubReadOptions(language: 'de')))`. It reads the `.sub` file next to the `.idx` file |
@@ -156,7 +156,7 @@ Common one-step edits stay methods on `Subtitle`, for example `shift()`, `fixOve
 | `$options->isHearingImpaired($line)` | `HearingImpairedRemover::isAnnotation($line, $options)` |
 | `$subtitle->splitLongCues(new ResegmentOptions(maxCharactersPerLine: 42))` | `Resegmenter::apply($subtitle, new ResegmentOptions(mode: ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 42)))` |
 | `$subtitle->resegmentByWords($options)` | `Resegmenter::apply($subtitle, new ResegmentOptions(mode: ResegmentMode::ByWords))` |
-| `ReferenceSync::sync($german, $english, $options)->apply($german)` | `ReferenceSync::apply($german, new ReferenceSyncOptions(reference: $english))`. It returns the `ReferenceSyncReport` |
+| `ReferenceSync::sync($german, $english, $options)->apply($german)` | `ReferenceSync::apply($german, new ReferenceSyncOptions(reference: $english))`. It returns the `ReferenceSyncReport`. The first parameter is `$subtitle`, not `$target` |
 | `ShotChangeTiming::apply($subtitle, $shots, new ShotChangeOptions(24))` | `ShotChangeTiming::apply($subtitle, new ShotChangeOptions(frameRate: 24, shotChanges: $shots))` |
 | `ShotChangeTiming::chainGaps($subtitle, $options)` | `ShotChangeTiming::apply($subtitle, $options)` without shot changes |
 | `$fixes = CommonErrorFixer::fix($subtitle, $options)` | `$fixes = CommonErrorFixer::apply($subtitle, $options)->fixes`. `$options` is required |
@@ -170,7 +170,7 @@ Common one-step edits stay methods on `Subtitle`, for example `shift()`, `fixOve
 | `$subtitle->forcedOnly()` | `$subtitle->withForcedCuesOnly()` |
 | `$subtitle->getErrors()` | `$subtitle->validate(ValidationRules::structure())`. The `cueIndex` of the result is null for a subtitle without cues |
 
-`ResegmentOptions` and `ReferenceSyncOptions` have a new first parameter, and `ShotChangeOptions` has a new second one. `MergeShortCuesOptions` takes `limits`, `maxGap`, `minCharacters`, `keepSentenceEnds` and `sameSpeakerOnly`, in this order. `CueLimits` takes `minDuration` before `maxDuration`. Pass their arguments by name, as the table does.
+`ResegmentOptions` and `ReferenceSyncOptions` have a new first parameter, and `ShotChangeOptions` has a new second one. `MergeShortCuesOptions` takes `limits`, `maxGap`, `minCharacters`, `keepSentenceEnds` and `mergeSameSpeakerAnyDuration`, in this order. `CueLimits` takes `minDuration` before `maxDuration`. Pass their arguments by name, as the table does.
 
 `ReferenceSync` and `ReferenceSyncOptions` are in `SubtitleToolbox\Sync`. `ShotChangeTiming` and `ShotChangeOptions` are in `SubtitleToolbox\Timing`. The `HearingImpaired*` classes are in `SubtitleToolbox\HearingImpaired`, `Resegmenter` and the `Resegment*` classes in `SubtitleToolbox\Resegmenting`, and the `DualSubtitle*` classes in `SubtitleToolbox\Dual`.
 
@@ -191,13 +191,17 @@ A lookup that starts with `get` returns a value or throws when nothing matches. 
 | `$subtitle->getCueIndexAt(83.2)` | `$subtitle->findCueIndexAt(83.2)` |
 | `$subtitle->getCuesBetween(600, 660)` | `$subtitle->findCuesBetween(600, 660)` |
 | `$subtitle->getMetadata('title')` | `$subtitle->findMetadata('title')` |
-| `$subtitle->getFormatData('ass')`, `$cue->getFormatData('ass')` | `$subtitle->findFormatData('ass')`, `$cue->findFormatData('ass')` |
+| `$subtitle->getFormatData('ass')`, `$cue->getFormatData('ass')` | `$subtitle->findFormatData('ass')`, `$cue->findFormatData('ass')`. The parameter is `$key`, not `$format` |
+| `setFormatData(format: 'ass', data: $data)` on `Subtitle` or `SubtitleCue` | `setFormatData(key: 'ass', data: $data)` |
+| `$subtitle->findCues(fn: $callback)` | `$subtitle->findCues(predicate: $callback)`. `removeCuesWhere()` names its callback `$predicate` too |
 | `$subtitle->replaceText('/x+/', 'y', true, false)` | `$subtitle->replaceText('/x+/', 'y', new ReplaceTextOptions(regex: true, caseSensitive: false))` |
 | `$subtitle->getComments()[0]['text']`, `['beforeCueIndex']` | `$subtitle->getComments()[0]->text`, `->beforeCueIndex`. `getComments()` returns readonly `Comment` objects |
 | `$subtitle->convertFrameRate(fromFps: 25, toFps: 23.976)` | `$subtitle->convertFrameRate(from: 25, to: 23.976)` |
 | `$subtitle->wrapLines(maxCharsPerLine: 42)` | `$subtitle->wrapLines(maxCharactersPerLine: 42)` |
-| `new MergeShortCuesOptions(maxCharactersPerLine: 37, maxGap: 0.5)` | `new MergeShortCuesOptions(limits: new CueLimits(maxCharactersPerLine: 37), maxGap: 0.5)`. `CueLimits` holds `maxCharactersPerLine`, `maxLines`, `minDuration`, `maxDuration` and `maxCharactersPerSecond`. `ResegmentOptions` takes it too |
-| `$options->maxLines` of `MergeShortCuesOptions` or `ResegmentOptions`, and the same for `maxCharactersPerLine`, `minDuration`, `maxDuration` and `maxCharactersPerSecond` | `$options->limits->maxLines` and so on |
+| `new MergeShortCuesOptions(maxCharactersPerLine: 37, maxGap: 0.5)` | `new MergeShortCuesOptions(limits: new CueLimits(maxCharactersPerLine: 37), maxGap: 0.5)`. `CueLimits` holds `maxCharactersPerLine`, `maxLinesPerCue`, `minDuration`, `maxDuration` and `maxCharactersPerSecond`. `ResegmentOptions` takes it too |
+| `new MergeShortCuesOptions(maxLines: 1)` | `new MergeShortCuesOptions(limits: new CueLimits(maxLinesPerCue: 1))` |
+| `$options->maxLines` of `MergeShortCuesOptions` or `ResegmentOptions`, and the same for `maxCharactersPerLine`, `minDuration`, `maxDuration` and `maxCharactersPerSecond` | `$options->limits->maxLinesPerCue`, `$options->limits->maxCharactersPerLine` and so on |
+| `new MergeShortCuesOptions(sameSpeakerOnly: true)` | `new MergeShortCuesOptions(mergeSameSpeakerAnyDuration: true)`. It joins cues of the same speaker of any duration, as `sameSpeakerOnly` did |
 | `(new FrameRate(25))->getFps()` | `(new FrameRate(25))->getFramesPerSecond()` |
 | `new FrameRate(fps: 25)` | `new FrameRate(framesPerSecond: 25)` |
 | `$warning->action === ParseWarning::SKIPPED`, `ParseWarning::REPAIRED` | `$warning->action === ParseWarningAction::Skipped`, `ParseWarningAction::Repaired` |
@@ -242,6 +246,7 @@ Only the library creates the reports and results. Their constructors are `@inter
 | `DualSubtitleOptions::getSecondaryTagName()`, `WordHighlightOptions::getTagName()`, the `Parsers\WordGrouping` trait | `@internal` |
 | `HlsWebVttResult`, `HlsWebVttResult::segmentMillis()` | `HlsWebVttRendition`. `segmentMillis()` is gone |
 | `$copy = $runner->translate($german, 'de', 'en')`, then `$runner->getWarnings()` | `$report = $runner->translate($copy = clone $german, 'de', 'en')`, then `$report->warnings`. `translate()` changes the subtitle you pass and keeps no state |
+| `$runner->translate($german, source: 'de', target: 'en')` | `$runner->translate($german, sourceLanguage: 'de', targetLanguage: 'en')`, the names of `TranslationEngine::translate()` |
 | `SpeakerLabels::BBC_COLOURS` | `SpeakerLabels::BBC_COLORS` |
 | `SpeakerLabels::fromPrefix($subtitle, false)` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(readPrefixes: true, readUpperCaseOnly: false))` |
 | `SpeakerLabels::toPrefix($subtitle, false, ' - ')` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Prefix, writeUpperCase: false, separator: ' - '))` |

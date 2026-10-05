@@ -20,7 +20,7 @@ trait ShortCueMerging
         $cues    = CueList::inStartOrder($this->cues);
         $index   = 0;
         while ($index < count($cues)) {
-            if (!$options->sameSpeakerOnly && !self::shortCueMergingIsShort($cues[$index], $options)) {
+            if (!$options->mergeSameSpeakerAnyDuration && !self::shortCueMergingIsShort($cues[$index], $options)) {
                 $index++;
                 continue;
             }
@@ -69,7 +69,7 @@ trait ShortCueMerging
             || ($first->getAlignment() ?? 2) !== ($second->getAlignment() ?? 2)
             || $first->isForced() !== $second->isForced()
             || $speakers !== CueList::speakers($second)
-            || ($options->sameSpeakerOnly && $speakers === [])) {
+            || ($options->mergeSameSpeakerAnyDuration && $speakers === [])) {
             return null;
         }
 
@@ -80,13 +80,13 @@ trait ShortCueMerging
 
         $duration = round(max($first->getEnd(), $second->getEnd()) - $first->getStart(), 3);
         if (round($second->getStart() - $first->getEnd(), 3) > round($options->maxGap, 3)
-            || (!$options->sameSpeakerOnly && $duration > round($options->limits->maxDuration, 3))) {
+            || (!$options->mergeSameSpeakerAnyDuration && $duration > round($options->limits->maxDuration, 3))) {
             return null;
         }
 
         $lines = LineWrapper::wrapToFit(self::shortCueMergingOneVoiceTag($first, $second, $speakers)
                                         ?? [...$first->getLines(), ...$second->getLines()],
-                                        $options->limits->maxCharactersPerLine, $options->limits->maxLines);
+                                        $options->limits->maxCharactersPerLine, $options->limits->maxLinesPerCue);
         if ($lines === null || $options->limits->maxCharactersPerSecond === null) {
             return $lines;
         }

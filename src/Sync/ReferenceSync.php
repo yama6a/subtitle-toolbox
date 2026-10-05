@@ -15,24 +15,24 @@ final class ReferenceSync
 
 
     /**
-     * Finds the scale and offset that make the cue times of $target match those of the reference in $options, and
-     * retimes $target with them.
+     * Finds the scale and offset that make the cue times of $subtitle match those of the reference in $options, and
+     * retimes $subtitle with them.
      */
-    public static function apply(Subtitle $target, ReferenceSyncOptions $options): ReferenceSyncReport
+    public static function apply(Subtitle $subtitle, ReferenceSyncOptions $options): ReferenceSyncReport
     {
-        $result   = self::find($target, $options);
+        $result   = self::find($subtitle, $options);
         $segments = $result->getSegments();
         if (count($segments) > 1) {
-            self::retimeSegments($target, $result->scale, $segments);
+            self::retimeSegments($subtitle, $result->scale, $segments);
 
             return $result;
         }
 
         if ($result->scale != 1) {
-            $target->scale($result->scale);
+            $subtitle->scale($result->scale);
         }
         if ($result->offset != 0) {
-            $target->shift($result->offset);
+            $subtitle->shift($result->offset);
         }
 
         return $result;

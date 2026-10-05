@@ -227,7 +227,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 | `--structure-wrap` | `wrapLines()` with `--structure-max-cpl` and `--structure-max-lines` |
 | `--structure-merge-duplicates` | `removeDuplicateCues()` |
 | `--structure-max-cpl CHARS` | `maxCharactersPerLine` of `--structure-resegment`, `--structure-merge-short`, `--structure-split-long` and `--structure-wrap`, default 42 |
-| `--structure-max-lines LINES` | `maxLines` of `--structure-resegment`, `--structure-merge-short`, `--structure-split-long` and `--structure-wrap`, default 2 |
+| `--structure-max-lines LINES` | `maxLinesPerCue` of `--structure-resegment`, `--structure-merge-short`, `--structure-split-long` and `--structure-wrap`, default 2 |
 
 - **Limits without their fix**: `--structure-max-cpl`, `--structure-max-lines` and `--timing-min-gap` alone are a usage error, exit code 2. The message names the fix options that use them.
 

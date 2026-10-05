@@ -71,7 +71,7 @@ class ResegmenterTest extends TestCase
 
     public function testIssueExample(): void
     {
-        $cues = $this->split([[0, 11.05, self::ISSUE_EXAMPLE]], new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 42, maxLines: 2)));
+        $cues = $this->split([[0, 11.05, self::ISSUE_EXAMPLE]], new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 42, maxLinesPerCue: 2)));
 
         $this->assertSame([
             [0.0, 4.231, "The tensor operators are optimized\nheavily for Apple silicon CPUs."],
@@ -120,7 +120,7 @@ class ResegmenterTest extends TestCase
     {
         foreach ([ResegmentMode::SplitLong, ResegmentMode::ByWords] as $mode) {
             $method   = $mode->name;
-            $subtitle = self::apply($this->parseWhisperFixture(), new ResegmentOptions($mode, limits: new CueLimits(maxCharactersPerLine: 20, maxLines: 1)));
+            $subtitle = self::apply($this->parseWhisperFixture(), new ResegmentOptions($mode, limits: new CueLimits(maxCharactersPerLine: 20, maxLinesPerCue: 1)));
             foreach ($subtitle->getCues() as $cue) {
                 preg_match_all('/<(\d{2}):(\d{2}):(\d{2}\.\d{3})>/', $cue->getText(), $matches, PREG_SET_ORDER);
                 $this->assertNotEmpty($matches);
@@ -145,7 +145,7 @@ class ResegmenterTest extends TestCase
 
     public function testBreakPointsPreferSentenceEndThenClauseEndThenMiddleSpace(): void
     {
-        $options = new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 30, maxLines: 1, minDuration: 0));
+        $options = new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 30, maxLinesPerCue: 1, minDuration: 0));
 
         $this->assertSame(
             ["One two three four five.", "Six seven eight nine ten"],
@@ -164,7 +164,7 @@ class ResegmenterTest extends TestCase
 
     public function testClauseEndsIncludeSemicolonColonAndDashes(): void
     {
-        $options = new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 30, maxLines: 1, minDuration: 0));
+        $options = new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 30, maxLinesPerCue: 1, minDuration: 0));
 
         foreach (["one;" => "one;", "one:" => "one:", "one\u{2014}" => "one\u{2014}", "one -" => "one -"] as $end => $expected) {
             $this->assertSame(
@@ -178,7 +178,7 @@ class ResegmenterTest extends TestCase
 
     public function testFullStopBeforeLowerCaseWordEndsNoSentence(): void
     {
-        $options = new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 30, maxLines: 1, minDuration: 0));
+        $options = new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 30, maxLinesPerCue: 1, minDuration: 0));
 
         $this->assertSame(
             ["Bring a tool e.g. a hammer and", "nails for the roof of the shed"],
@@ -190,7 +190,7 @@ class ResegmenterTest extends TestCase
     public function testSplitsUntilEachPartFits(): void
     {
         $cues = $this->split([[0, 9, "One. Two. Three. Four. Five. Six."]],
-                             new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 10, maxLines: 1, minDuration: 0)));
+                             new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 10, maxLinesPerCue: 1, minDuration: 0)));
 
         $this->assertSame(["One. Two.", "Three.", "Four.", "Five. Six."], array_column($cues, 2));
     }
@@ -199,7 +199,7 @@ class ResegmenterTest extends TestCase
     public function testTimeSplitsInProportionToTheVisibleCharacters(): void
     {
         $cues = $this->split([[10, 20, "<i>Aaaa bbbb.</i> Cccc dddd eeee ffff gggg."]],
-                             new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 30, maxLines: 1)));
+                             new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 30, maxLinesPerCue: 1)));
 
         $this->assertSame([[10.0, 13.056, "<i>Aaaa bbbb.</i>"], [13.056, 20.0, "Cccc dddd eeee ffff gggg."]], $cues);
     }
@@ -211,14 +211,14 @@ class ResegmenterTest extends TestCase
 
         $this->assertSame(
             ["Yes.", "Then we walk along the river to the old mill and back."],
-            array_column($this->split([[0, 12, $text]], new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 60, maxLines: 1, maxDuration: 11))), 2)
+            array_column($this->split([[0, 12, $text]], new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 60, maxLinesPerCue: 1, maxDuration: 11))), 2)
         );
         $this->assertSame(
             ["Yes. Then we walk along the", "river to the old mill and back."],
-            array_column($this->split([[0, 6.5, $text]], new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 60, maxLines: 1, maxDuration: 6))), 2)
+            array_column($this->split([[0, 6.5, $text]], new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 60, maxLinesPerCue: 1, maxDuration: 6))), 2)
         );
         $this->assertSame([[0.0, 1.5, $text]],
-                          $this->split([[0, 1.5, $text]], new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 30, maxLines: 1))));
+                          $this->split([[0, 1.5, $text]], new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 30, maxLinesPerCue: 1))));
     }
 
 
@@ -236,7 +236,7 @@ class ResegmenterTest extends TestCase
     public function testCoreMarkupClosesAtTheBreakAndOpensAgain(): void
     {
         $cues = $this->split([[0, 10, '<v Ann><i>We go <font color="#ff0000">now, but</font> slowly.</i> <b>Keep up.</b>']],
-                             new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 15, maxLines: 1, minDuration: 0)));
+                             new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 15, maxLinesPerCue: 1, minDuration: 0)));
 
         $this->assertSame([
             '<v Ann><i>We go <font color="#ff0000">now,</font></i></v>',
@@ -249,7 +249,7 @@ class ResegmenterTest extends TestCase
     public function testCjkTextSplitsAtCjkPunctuation(): void
     {
         $cues = $this->split([[0, 10, "今日はとても良い天気ですね。明日も晴れると良いのですが、雨が降るかもしれません。「本当に？」そうです。"]],
-                             new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 16, maxLines: 1)));
+                             new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 16, maxLinesPerCue: 1)));
 
         $this->assertSame([
             [0.0, 2.745, "今日はとても良い天気ですね。"],
@@ -264,7 +264,7 @@ class ResegmenterTest extends TestCase
     {
         $text = "<00:00:00.000>今日<00:00:01.000>は<00:00:01.500>とても<00:00:02.500>良い<00:00:03.500>天気<00:00:04.500>です";
 
-        $cues = $this->split([[0, 6, $text]], new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 6, maxLines: 1)));
+        $cues = $this->split([[0, 6, $text]], new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 6, maxLinesPerCue: 1)));
 
         $this->assertSame([
             [0.0, 2.5, "<00:00:00.000>今日<00:00:01.000>は<00:00:01.500>とても"],
@@ -281,7 +281,7 @@ class ResegmenterTest extends TestCase
 
         foreach ([ResegmentMode::SplitLong, ResegmentMode::ByWords] as $mode) {
             $this->assertSame([[0.0, 20.0, "Supercalifragilisticexpialidocious"], [20.0, 40.0, self::ISSUE_EXAMPLE]],
-                              $this->describeCues(self::apply($subtitle, new ResegmentOptions($mode, limits: new CueLimits(maxCharactersPerLine: 10, maxLines: 1)))),
+                              $this->describeCues(self::apply($subtitle, new ResegmentOptions($mode, limits: new CueLimits(maxCharactersPerLine: 10, maxLinesPerCue: 1)))),
                               $mode->name);
         }
     }
@@ -331,7 +331,7 @@ class ResegmenterTest extends TestCase
     public function testResegmentEndsCueWhenTheNextWordBreaksALimit(): void
     {
         $cues = $this->resegment([[0, 4, "<00:00:00.000>Aaaa <00:00:01.000>bbbb <00:00:02.000>cccc <00:00:03.000>dddd"]],
-                                 new ResegmentOptions(ResegmentMode::ByWords, limits: new CueLimits(maxCharactersPerLine: 10, maxLines: 1)));
+                                 new ResegmentOptions(ResegmentMode::ByWords, limits: new CueLimits(maxCharactersPerLine: 10, maxLinesPerCue: 1)));
 
         $this->assertSame([[0.0, 2.0, "<00:00:00.000>Aaaa <00:00:01.000>bbbb"], [2.0, 4.0, "<00:00:02.000>cccc <00:00:03.000>dddd"]], $cues);
     }

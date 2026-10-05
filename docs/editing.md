@@ -64,7 +64,7 @@ use SubtitleToolbox\MergeShortCuesOptions;
 // 00:01:02,640 --> 00:01:03,300  Where are you
 // 00:01:03,320 --> 00:01:04,100  going?
 $subtitle->mergeShortCues(new MergeShortCuesOptions(
-    limits: new CueLimits(maxCharactersPerLine: 42, maxLines: 2, maxDuration: 7),
+    limits: new CueLimits(maxCharactersPerLine: 42, maxLinesPerCue: 2, maxDuration: 7),
     maxGap: 0.25,
 ));
 // 00:01:02,100 --> 00:01:04,100  Wait. Where are you going?
@@ -75,7 +75,7 @@ $subtitle->mergeShortCues(new MergeShortCuesOptions(
 | `CueLimits` field | Default | Meaning for `mergeShortCues()` |
 |:--- |:--- |:--- |
 | `maxCharactersPerLine` | 42 | the line length of the joined text |
-| `maxLines` | 2 | the line count of the joined text |
+| `maxLinesPerCue` | 2 | the line count of the joined text |
 | `maxDuration` | 7 | seconds from the start to the end of the joined cue |
 | `minDuration` | 1 | a cue shorter than this many seconds is short |
 | `maxCharactersPerSecond` | null | the reading speed of the joined cue. Null turns the rule off |
@@ -86,7 +86,7 @@ $subtitle->mergeShortCues(new MergeShortCuesOptions(
 | `maxGap` | 0.25 | seconds from the end of one cue to the start of the next |
 | `minCharacters` | null | a cue with fewer visible characters is short. Null turns the rule off |
 | `keepSentenceEnds` | false | join only when the first cue does not end with `.`, `?` or `!` |
-| `sameSpeakerOnly` | false | join each cue with the next cue of the same `<v>` speaker, short or not, with no `maxDuration` limit. A cue without a `<v>` tag never joins |
+| `mergeSameSpeakerAnyDuration` | false | join each cue with the next cue of the same `<v>` speaker, short or not, with no `maxDuration` limit. A cue without a `<v>` tag never joins |
 
 - **Order**: the method walks the cues in start time order. It joins a short cue with the next cue. When the next cue does not fit, it tries the previous cue. A joined cue that is still short joins again.
 - **Never joined**: cues with different `<v>` speakers, different alignments or different forced flags, and image cues. A cue without a `<v>` tag and a cue with one have different speakers. Alignment `null` and alignment 2 count as the same.
@@ -104,7 +104,7 @@ use SubtitleToolbox\Resegmenting\ResegmentOptions;
 
 // 00:00:00,000 --> 00:00:11,050  The tensor operators are optimized heavily for Apple silicon CPUs. Depending on
 //                                the computation size, Arm Neon SIMD instrisics or CBLAS Accelerate framework routines are used.
-$report = Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 42, maxLines: 2)));
+$report = Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 42, maxLinesPerCue: 2)));
 // 00:00:00,000 --> 00:00:04,231  The tensor operators are optimized heavily for Apple silicon CPUs.
 // 00:00:04,231 --> 00:00:06,441  Depending on the computation size,
 // 00:00:06,441 --> 00:00:11,050  Arm Neon SIMD instrisics or CBLAS Accelerate framework routines are used.
@@ -122,7 +122,7 @@ Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::ByWords, maxWo
 | `limits` | `new CueLimits()` | the limits of each new cue. `SplitLong` never makes a cue shorter than `minDuration` |
 | `maxWordGap` | 0.6 | `ByWords` ends a cue at a pause of this many seconds or more |
 
-- **Limits**: a cue breaks the limits when its text does not fit `maxLines` lines of `maxCharactersPerLine` characters, as `wrapLines()` wraps it. It also breaks them above `maxDuration` or `maxCharactersPerSecond`.
+- **Limits**: a cue breaks the limits when its text does not fit `maxLinesPerCue` lines of `maxCharactersPerLine` characters, as `wrapLines()` wraps it. It also breaks them above `maxDuration` or `maxCharactersPerSecond`.
 - **Break points**, best first: a sentence end, a clause end, then the space closest to the middle. Among break points of the same kind, the one closest to the middle wins. A full stop before a word in lower case, as in "e.g. this", is no sentence end.
 - **Splitting**: `SplitLong` splits a cue in two at the best break point. It splits each part again while the part breaks a limit. A cue stays unchanged when no break point keeps both parts at `minDuration` or longer.
 - **Times**: a new cue starts at the word timestamp of its first word. Without one, the time splits in proportion to the visible characters.

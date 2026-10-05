@@ -67,14 +67,14 @@ trait CueLookup
 
 
     /**
-     * Returns the cues for which $fn returns true, keyed by cue index.
+     * Returns the cues for which $predicate returns true, keyed by cue index.
      *
-     * @param callable(SubtitleCue): bool $fn
+     * @param callable(SubtitleCue): bool $predicate
      * @return array<int, SubtitleCue>
      */
-    public function findCues(callable $fn): array
+    public function findCues(callable $predicate): array
     {
-        return array_filter($this->cues, $fn);
+        return array_filter($this->cues, $predicate);
     }
 
 

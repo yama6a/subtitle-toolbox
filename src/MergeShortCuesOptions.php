@@ -20,7 +20,7 @@ final class MergeShortCuesOptions
         public readonly float $maxGap = 0.25,
         public readonly ?int $minCharacters = null,
         public readonly bool $keepSentenceEnds = false,
-        public readonly bool $sameSpeakerOnly = false,
+        public readonly bool $mergeSameSpeakerAnyDuration = false,
     ) {
         if ($maxGap < 0) {
             throw new InvalidArgumentException("The maximum gap must not be negative, got $maxGap.");
