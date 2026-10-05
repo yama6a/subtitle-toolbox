@@ -85,8 +85,9 @@ final class InfoCommand extends ReportCommand
     {
         $statistics = SubtitleStatistics::of($subtitle);
 
-        $range = fn (array $values): string => "min " . self::number($values["min"]) . ", average " .
-                                               self::number($values["average"]) . ", max " . self::number($values["max"]);
+        $range = fn (?array $values, string $unit = ""): string => $values === null ? "-" :
+            "min " . self::number($values["min"]) . ", average " . self::number($values["average"]) . ", max " .
+            self::number($values["max"]) . $unit;
         $words = [];
         foreach (array_slice($statistics->mostUsedWords, 0, 10) as ["word" => $word, "count" => $count]) {
             $words[] = "$word ($count)";
@@ -109,11 +110,11 @@ final class InfoCommand extends ReportCommand
             "Words"                 => (string)$statistics->wordCount,
             "Characters"            => (string)$statistics->characterCount,
             "Display time"          => self::number($statistics->totalDisplayTime) . " s",
-            "Span"                  => self::number($statistics->span) . " s",
+            "Span"                  => $statistics->span === null ? "-" : self::number($statistics->span) . " s",
             "Characters per second" => $range($statistics->charactersPerSecond),
             "Words per minute"      => $range($statistics->wordsPerMinute),
             "Characters per line"   => $range($statistics->charactersPerLine),
-            "Gaps"                  => $range($statistics->gaps) . " s",
+            "Gaps"                  => $range($statistics->gaps, " s"),
             "Most used words"       => implode(", ", $words),
         ];
         foreach ($subtitle->getAllMetadata() as $key => $value) {

@@ -106,6 +106,17 @@ class ApplicationTest extends TestCase
     }
 
 
+    public function testInfoPrintsADashForNumbersWithoutData(): void
+    {
+        [$code, $stdout] = self::runApplication(["info", "-"], "1\n00:00:01,000 --> 00:00:03,000\n<i> </i>\n");
+
+        $this->assertSame(0, $code);
+        $this->assertStringContainsString("  Span:                  2 s\n", $stdout);
+        $this->assertStringContainsString("  Characters per second: -\n", $stdout);
+        $this->assertStringContainsString("  Gaps:                  -\n", $stdout);
+    }
+
+
     public function testUsageErrorsExitWith2(): void
     {
         $this->assertSame(

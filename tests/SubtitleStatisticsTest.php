@@ -71,23 +71,34 @@ class SubtitleStatisticsTest extends TestCase
     }
 
 
-    public function testSubtitleWithoutCuesGivesZeros(): void
+    public function testSubtitleWithoutCuesGivesZeroCountsAndNullForTheOtherNumbers(): void
     {
         $statistics = SubtitleStatistics::of(new Subtitle());
-        $zero       = ["min" => 0.0, "average" => 0.0, "max" => 0.0];
 
         $this->assertSame([
             "cueCount"            => 0,
             "wordCount"           => 0,
             "characterCount"      => 0,
             "totalDisplayTime"    => 0.0,
-            "span"                => 0.0,
-            "charactersPerSecond" => $zero,
-            "wordsPerMinute"      => $zero,
-            "charactersPerLine"   => $zero,
-            "gaps"                => $zero,
+            "span"                => null,
+            "charactersPerSecond" => null,
+            "wordsPerMinute"      => null,
+            "charactersPerLine"   => null,
+            "gaps"                => null,
             "mostUsedWords"       => [],
         ], $statistics->toArray());
+    }
+
+
+    public function testOneCueWithoutTextHasASpanButNoGapsAndNoTextNumbers(): void
+    {
+        $statistics = SubtitleStatistics::of($this->makeSubtitle([[1, 3, "<i> </i>"]]));
+
+        $this->assertSame(2.0, $statistics->span);
+        $this->assertNull($statistics->gaps);
+        $this->assertNull($statistics->charactersPerSecond);
+        $this->assertNull($statistics->wordsPerMinute);
+        $this->assertNull($statistics->charactersPerLine);
     }
 
 

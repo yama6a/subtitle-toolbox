@@ -121,4 +121,4 @@ json_encode($stats->toArray());            // all numbers and the 10 most used w
 - **Cues without text**: an image cue counts in `cueCount`, the display time, the span and the gaps. The text numbers leave it out.
 - **Reading speed**: a cue with a duration of 0 has no characters per second and no words per minute.
 - **Gap**: the start of a cue minus the latest end of the earlier cues. An overlap gives a negative gap.
-- **No cues**: all numbers are 0.
+- **No data**: a range with no value to measure is null, for example `gaps` with fewer than 2 cues, or `charactersPerSecond` without a cue that has text and a duration. Without cues, `span` is null too, and the counts and `totalDisplayTime` are 0. `toArray()` writes the same nulls.

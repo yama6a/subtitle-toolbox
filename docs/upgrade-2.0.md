@@ -346,6 +346,7 @@ These changes alter the output or the exit code of a call that needs no other ch
 | CLI `--ocr-language` without installed data | the file failed with exit code 1 | the tool stops before the first file with exit code 2 | install the language |
 | `setFormatData()` of `Subtitle` and `SubtitleCue` | stored any array. A formatter then failed with a PHP `TypeError` or `Error` | a field that a formatter reads, such as `scc.dropFrame`, must have its type. A wrong type throws `InvalidArgumentException` with the path of the field | fix the field |
 | `SubtitleCue::setLines()` with a value that is no string or array | threw `InvalidArgumentException` | throws a PHP `TypeError` | pass a string or a list of strings |
+| `SubtitleStatistics` without data | the ranges and the span were 0, for example a gap of `['min' => 0, ...]` for 1 cue | `span` is null without cues. `charactersPerSecond`, `wordsPerMinute`, `charactersPerLine` and `gaps` are null when there is no value to measure, for example `gaps` with fewer than 2 cues. `toArray()` and CLI `info --json` write null. CLI `info` prints `-` | test for null |
 | CLI `info --json` | `statistics.gap`, and `statistics.mostUsedWords` as an object of word and count | `statistics.gaps`, and `statistics.mostUsedWords` as a list of `{"word": ..., "count": ...}` | read the new keys |
 | CLI `info` text output | the line `Gap:` | the line `Gaps:` | read the new label |
 
