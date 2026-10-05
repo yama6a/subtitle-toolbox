@@ -67,10 +67,10 @@ $subtitle->save('movie.vtt');                                   // WebVTT, from 
 | YouTube timed text | `YouTube` | `youtube` | `.json3`, `.srv3`, `.srv1` | yes | no | json3, srv1, srv2, srv3 and transcript XML |
 | Podcasting 2.0 transcript JSON | `PodcastTranscript` | `podcast-transcript` | `.json` | yes | yes | |
 | HTML transcript | `HtmlTranscript` | `html` | `.html`, `.htm` | yes | yes | the Podcasting 2.0 HTML format |
-| YouTube chapters | `YouTubeChapters` | `ytchapter` | `.txt` | yes | yes | chapter list in a video description. Not detected |
-| Podcasting 2.0 chapters | `PodcastChapters` | `podcast` | `.json` | yes | yes | not detected |
-| FFmpeg metadata chapters | `FfMetadata` | `ffmeta` | `.ffmeta` | yes | yes | not detected |
-| OGM chapters | `OgmChapters` | `ogm` | `.txt` | yes | yes | not detected |
+| YouTube chapters | `YouTubeChapters` | `youtube-chapters` | `.txt` | yes | yes | chapter list in a video description. Not detected |
+| Podcasting 2.0 chapters | `PodcastChapters` | `podcast-chapters` | `.json` | yes | yes | not detected |
+| FFmpeg metadata chapters | `FfMetadataChapters` | `ffmeta-chapters` | `.ffmeta` | yes | yes | not detected |
+| OGM chapters | `OgmChapters` | `ogm-chapters` | `.txt` | yes | yes | not detected |
 | MKV and WebM tracks | | | `.mkv`, `.webm` | yes | no | `Subtitle::loadTrack()` reads `S_TEXT/UTF8`, ASS, SSA, WebVTT and PGS tracks. CLI: `--track` |
 
 **Case** is the case of the enum `Format`, for example `Format::SubRip`. **Name** is its value, and the format name for `--from` and `--to` in the command line tool. The details of each format are in [formats](docs/formats.md), [transcripts](docs/transcripts.md), [chapters](docs/chapters.md), [OCR](docs/ocr.md), [JSON](docs/json.md) and [MKV](docs/mkv.md).

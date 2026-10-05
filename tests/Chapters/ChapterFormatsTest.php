@@ -93,7 +93,7 @@ class ChapterFormatsTest extends TestCase
 
         $this->assertSame([[0.0, 60.0, "Doors open"], [60.0, 90.0, "No start"], [120.0, 130.0, "No end"], [130.0, 125.0, "Ends early"]],
                           $this->describe($subtitle));
-        $this->assertSame(["timeBase" => "1/1000000000", "tags" => []], $subtitle->getCues()[0]->findFormatData("ffmeta"));
+        $this->assertSame(["timeBase" => "1/1000000000", "tags" => []], $subtitle->getCues()[0]->findFormatData("ffmeta-chapters"));
         $this->assertSame("Meetup", $subtitle->findMetadata(Subtitle::METADATA_TITLE));
     }
 
@@ -101,8 +101,8 @@ class ChapterFormatsTest extends TestCase
     public function testFfMetadataEscapesRoundTrip(): void
     {
         $subtitle = $this->chapters([[0, 61.5, "a=b; c#d \\ e"], [61.5, 70, "first line\nsecond line"]]);
-        $subtitle->getCues()[0]->setFormatData("ffmeta", ["timeBase" => "1/90000", "tags" => ["lang=x" => "en"]]);
-        $output = $subtitle->toString(Format::FfMetadata);
+        $subtitle->getCues()[0]->setFormatData("ffmeta-chapters", ["timeBase" => "1/90000", "tags" => ["lang=x" => "en"]]);
+        $output = $subtitle->toString(Format::FfMetadataChapters);
 
         $this->assertSame(";FFMETADATA1\n" .
                           "[CHAPTER]\nTIMEBASE=1/90000\nSTART=0\nEND=5535000\ntitle=a\\=b\; c\\#d \\\\ e\nlang\\=x=en\n" .
@@ -119,7 +119,7 @@ class ChapterFormatsTest extends TestCase
         $subtitle->setMetadata(Subtitle::METADATA_TITLE, "New")->setMetadata(Subtitle::METADATA_ARTIST, null)
                  ->setMetadata(Subtitle::METADATA_ALBUM, "Notes");
 
-        $this->assertSame(";FFMETADATA1\nmajor_brand=isom\ntitle=New\nalbum=Notes\n", $subtitle->toString(Format::FfMetadata));
+        $this->assertSame(";FFMETADATA1\nmajor_brand=isom\ntitle=New\nalbum=Notes\n", $subtitle->toString(Format::FfMetadataChapters));
     }
 
 

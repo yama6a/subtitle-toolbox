@@ -74,7 +74,7 @@ final class FormatRegistry
     private const FORMATS = [
         "ass"       => [AssParser::class, AssFormatter::class, ["ass", "ssa"]],
         "csv"       => [CsvParser::class, CsvFormatter::class, ["csv"]],
-        "ffmeta"    => [FfMetadataChaptersParser::class, FfMetadataChaptersFormatter::class, ["ffmeta"]],
+        "ffmeta-chapters" => [FfMetadataChaptersParser::class, FfMetadataChaptersFormatter::class, ["ffmeta"]],
         "html"      => [HtmlTranscriptParser::class, HtmlTranscriptFormatter::class, ["html", "htm"]],
         "itt"       => [IttParser::class, IttFormatter::class, ["itt"]],
         "json"      => [JsonParser::class, JsonFormatter::class, ["json"]],
@@ -101,10 +101,10 @@ final class FormatRegistry
         "vtt"       => [WebVttParser::class, WebVttFormatter::class, ["vtt"]],
         "whisper"   => [WhisperJsonParser::class, null, ["json"]],
         "youtube"   => [YouTubeTimedTextParser::class, null, ["json3", "srv3", "srv1"]],
-        "ogm"       => [OgmChaptersParser::class, OgmChaptersFormatter::class, ["txt"]],
-        "podcast"   => [PodcastChaptersParser::class, PodcastChaptersFormatter::class, ["json"]],
+        "ogm-chapters" => [OgmChaptersParser::class, OgmChaptersFormatter::class, ["txt"]],
+        "podcast-chapters" => [PodcastChaptersParser::class, PodcastChaptersFormatter::class, ["json"]],
         "podcast-transcript" => [PodcastTranscriptParser::class, PodcastTranscriptFormatter::class, ["json"]],
-        "ytchapter" => [YouTubeChaptersParser::class, YouTubeChaptersFormatter::class, ["txt"]],
+        "youtube-chapters" => [YouTubeChaptersParser::class, YouTubeChaptersFormatter::class, ["txt"]],
     ];
 
 

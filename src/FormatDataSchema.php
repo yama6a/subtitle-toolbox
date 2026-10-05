@@ -46,7 +46,7 @@ final class FormatDataSchema
             "timeFormat" => "string",
             "frameRate"  => "?number",
         ],
-        "ffmeta"     => [
+        "ffmeta-chapters" => [
             "tags"    => ["list", "?string"],
             "streams" => ["list", ["list", "string"]],
         ],
@@ -102,7 +102,7 @@ final class FormatDataSchema
         "csv"        => [
             "columns" => ["list", "scalar"],
         ],
-        "ffmeta"     => [
+        "ffmeta-chapters" => [
             "timeBase" => "timeBase",
             "tags"     => ["list", "string"],
         ],

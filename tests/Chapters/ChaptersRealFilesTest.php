@@ -41,15 +41,15 @@ class ChaptersRealFilesTest extends TestCase
                 5, [0.0, 95.5, "Welcome"], [1530.0, 1804.8, "Listener questions"], null,
             ],
             "FFmpeg MP4 export" => [
-                "ffmetadata/real/ffmpeg_mp4_export.ffmeta", Format::FfMetadata,
+                "ffmetadata/real/ffmpeg_mp4_export.ffmeta", Format::FfMetadataChapters,
                 4, [0.0, 184.52, "Welcome and agenda"], [2210.48, 2405.007, "Wrap-up"], self::bytes(),
             ],
             "FFmpeg M4B audiobook" => [
-                "ffmetadata/real/m4b_audiobook.ffmeta", Format::FfMetadata,
+                "ffmetadata/real/m4b_audiobook.ffmeta", Format::FfMetadataChapters,
                 3, [0.0, 30.0, "Opening credits"], [940.0, 2236.0, "Chapter 2=Starters"], self::bytes(),
             ],
             "FFmpeg hand-written CR LF" => [
-                "ffmetadata/real/hand_written_crlf.ffmeta", Format::FfMetadata,
+                "ffmetadata/real/hand_written_crlf.ffmeta", Format::FfMetadataChapters,
                 3, [0.0, 90.0, "Doors open"], [1950.5, 1950.5, "Talk 2"], null,
             ],
             "OGM from mkvextract" => [
@@ -118,13 +118,13 @@ class ChaptersRealFilesTest extends TestCase
 
         $this->assertSame("Episode 7 - Making Progress", $subtitle->findMetadata(Subtitle::METADATA_TITLE));
         $this->assertSame("John Doe", $subtitle->findMetadata(Subtitle::METADATA_AUTHOR));
-        $this->assertSame(["version" => "1.2.0", "podcastName" => "John's Awesome Podcast"], $subtitle->findFormatData("podcast"));
+        $this->assertSame(["version" => "1.2.0", "podcastName" => "John's Awesome Podcast"], $subtitle->findFormatData("podcast-chapters"));
         $this->assertSame([], $silent->getLines());
         $this->assertSame([
             "img"      => "https://example.com/images/parisfrance.jpg",
             "toc"      => false,
             "location" => ["name" => "Eiffel Tower, Paris", "geo" => "geo:42.3417649,-70.9661596"],
-        ], $silent->findFormatData("podcast"));
+        ], $silent->findFormatData("podcast-chapters"));
     }
 
 
@@ -142,12 +142,12 @@ class ChaptersRealFilesTest extends TestCase
 
     public function testAudiobookKeepsTheStreamAndTheTimeBase(): void
     {
-        $subtitle = $this->parse("ffmetadata/real/m4b_audiobook.ffmeta", Format::FfMetadata);
+        $subtitle = $this->parse("ffmetadata/real/m4b_audiobook.ffmeta", Format::FfMetadataChapters);
 
-        $this->assertSame("Read by the author\nRecorded in 2023", $subtitle->findFormatData("ffmeta")["tags"]["comment"]);
-        $this->assertSame([["handler_name" => "SoundHandler", "vendor_id" => "[0][0][0][0]"]], $subtitle->findFormatData("ffmeta")["streams"]);
+        $this->assertSame("Read by the author\nRecorded in 2023", $subtitle->findFormatData("ffmeta-chapters")["tags"]["comment"]);
+        $this->assertSame([["handler_name" => "SoundHandler", "vendor_id" => "[0][0][0][0]"]], $subtitle->findFormatData("ffmeta-chapters")["streams"]);
         $this->assertSame("Jane Doe", $subtitle->findMetadata(Subtitle::METADATA_ARTIST));
-        $this->assertSame(["timeBase" => "1/44100", "tags" => []], $subtitle->getCues()[1]->findFormatData("ffmeta"));
+        $this->assertSame(["timeBase" => "1/44100", "tags" => []], $subtitle->getCues()[1]->findFormatData("ffmeta-chapters"));
     }
 
 

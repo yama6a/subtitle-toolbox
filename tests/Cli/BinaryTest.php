@@ -402,8 +402,8 @@ class BinaryTest extends TestCase
             $this->runBinary(["convert", "pool.json", "--from", "deepgram", "--to", "srt", "-o", "-"])
         );
         $this->assertSame(
-            [0, Subtitle::load("$this->dir/book.ffmeta", Format::FfMetadata)->toString(Format::YouTubeChapters), ""],
-            $this->runBinary(["convert", "book.ffmeta", "--from", "ffmeta", "--to", "ytchapter", "-o", "-"])
+            [0, Subtitle::load("$this->dir/book.ffmeta", Format::FfMetadataChapters)->toString(Format::YouTubeChapters), ""],
+            $this->runBinary(["convert", "book.ffmeta", "--from", "ffmeta-chapters", "--to", "youtube-chapters", "-o", "-"])
         );
     }
 

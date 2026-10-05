@@ -101,7 +101,7 @@ class TimecodeTest extends TestCase
             "ass"                => ["ass", 0.01, new WriteOptions(), true],
             "csv"                => ["csv", 0.001, new WriteOptions(), true],
             "csv frames"         => ["csv", 1 / 25, new WriteOptions(format: new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames, frameRate: 25)), true, new ReadOptions(format: new CsvReadOptions(frameRate: 25))],
-            "ffmeta"             => ["ffmeta", 0.001, new WriteOptions(), true],
+            "ffmeta-chapters"    => ["ffmeta-chapters", 0.001, new WriteOptions(), true],
             "html"               => ["html", 1, new WriteOptions(), false],
             "itt"                => ["itt", 1 / 25, new WriteOptions(format: new IttWriteOptions(frameRate: 25)), true],
             "json"               => ["json", 0.001, new WriteOptions(), true],
@@ -109,8 +109,8 @@ class TimecodeTest extends TestCase
             "microdvd"           => ["microdvd", 1 / 25, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25)), true, new ReadOptions(format: new MicroDvdReadOptions(25))],
             "mpl2"               => ["mpl2", 0.1, new WriteOptions(), true],
             "mpsub"              => ["mpsub", 0.001, new WriteOptions(), true],
-            "ogm"                => ["ogm", 0.001, new WriteOptions(), false],
-            "podcast"            => ["podcast", 0.001, new WriteOptions(), true],
+            "ogm-chapters"       => ["ogm-chapters", 0.001, new WriteOptions(), false],
+            "podcast-chapters"   => ["podcast-chapters", 0.001, new WriteOptions(), true],
             "podcast-transcript" => ["podcast-transcript", 0.001, new WriteOptions(), true, new ReadOptions(format: new TranscriptReadOptions(keepSegments: true))],
             "sami"               => ["sami", 0.001, new WriteOptions(), true],
             "sbv"                => ["sbv", 0.001, new WriteOptions(), true],
@@ -121,7 +121,7 @@ class TimecodeTest extends TestCase
             "tsv"                => ["tsv", 0.001, new WriteOptions(), true],
             "ttml"               => ["ttml", 0.001, new WriteOptions(), true],
             "vtt"                => ["vtt", 0.001, new WriteOptions(), true],
-            "ytchapter"          => ["ytchapter", 1, new WriteOptions(), false],
+            "youtube-chapters"   => ["youtube-chapters", 1, new WriteOptions(), false],
         ];
     }
 

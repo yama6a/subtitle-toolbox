@@ -74,7 +74,7 @@ class LoadSaveTest extends TestCase
             "chapters/youtube/real/*.txt"     => Format::YouTubeChapters,
             "chapters/podcast/real/*.json"    => Format::PodcastChapters,
             "chapters/ogm/real/*.txt"         => Format::OgmChapters,
-            "chapters/ffmetadata/real/*.ffmeta" => Format::FfMetadata,
+            "chapters/ffmetadata/real/*.ffmeta" => Format::FfMetadataChapters,
             "aws-transcribe/real/*.json"      => Format::AwsTranscribe,
             "deepgram/real/*.json"            => Format::Deepgram,
             "assemblyai/real/*.json"          => Format::AssemblyAi,

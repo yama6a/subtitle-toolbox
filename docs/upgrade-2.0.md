@@ -49,6 +49,7 @@ use SubtitleToolbox\Validation\ValidationRules;
 | `FormatRegistry::forPath('movie.sub')` | `Format::fromPath('movie.sub')` |
 | `FormatRegistry::names()` | `array_map(fn (Format $f) => $f->value, Format::cases())` |
 | `FormatRegistry::extensions('ass')` | `Format::Ass->extensions()` |
+| the format names `'ytchapter'`, `'podcast'`, `'ogm'` and `'ffmeta'`, for example in `FormatRegistry::find()` | `Format::YouTubeChapters`, `Format::PodcastChapters`, `Format::OgmChapters` and `Format::FfMetadataChapters`. Their values are `'youtube-chapters'`, `'podcast-chapters'`, `'ogm-chapters'` and `'ffmeta-chapters'`. `Format::tryFrom('ytchapter')` returns null |
 | `FormatRegistry::find('srt')`, `FormatRegistry::forExtension('srt')` | `Format::tryFrom('srt')` for a format name, `Format::fromPath('movie.srt')` for an extension |
 | `FormatRegistry::parserClass('vobsub')`, `FormatRegistry::formatterClass('vobsub')` | `Format::VobSub->canRead()`, `Format::VobSub->canWrite()` |
 | a format name from user input, such as `'srt'` | `Format::from('srt')`, or `Format::tryFrom()` for null on an unknown name |
@@ -71,9 +72,9 @@ use SubtitleToolbox\Validation\ValidationRules;
 | `PodcastTranscriptFormatter::segments()` | `@internal`. Read the `segments` key of `json_decode($subtitle->toString(Format::PodcastTranscript), true)` |
 | `MpSubFormatter::MPSUB_HEADER` | removed. `(new Subtitle())->toString(Format::MpSub)` returns the header without metadata, after a UTF-8 BOM |
 | `SamiFormatter::DEFAULT_CLASS` | private. Its value is `'SUBTTL'` |
-| `getFormatData('sub')`, `'smi'`, `'ffmetadata'`, `'chapters'` for Podcasting 2.0 chapters, `'podcast'` for Podcasting 2.0 transcripts | `findFormatData('microdvd')`, `'sami'`, `'ffmeta'`, `'podcast'`, `'podcast-transcript'`. The key is the value of the `Format` case |
+| `getFormatData('sub')`, `'smi'`, `'ffmetadata'`, `'chapters'` for Podcasting 2.0 chapters, `'podcast'` for Podcasting 2.0 transcripts | `findFormatData('microdvd')`, `'sami'`, `'ffmeta-chapters'`, `'podcast-chapters'`, `'podcast-transcript'`. The key is the value of the `Format` case |
 | `IttParser::FORMAT`, `LyricsParser::FORMAT`, `SccParser::FORMAT`, `SubViewerParser::FORMAT`, `TtmlParser::FORMAT`, `WebVttParser::FORMAT` | `FORMAT_DATA_KEY`. These parsers have no `FORMAT_DATA_KEY`: HTML transcript, JSON, MPL2, OGM chapters, PGS, SBV, TMPlayer, VobSub and YouTube chapters |
-| library JSON with the old format data keys, read with `fromArray()` or `JsonParser` | rename the keys in the JSON before you read it. 2.0 keeps the data under the old key, and no formatter reads it. Old `podcast` data of a transcript becomes Podcasting 2.0 chapter data |
+| library JSON with the old format data keys, read with `fromArray()` or `JsonParser` | rename the keys in the JSON before you read it. 2.0 keeps the data under the old key, and no formatter reads it |
 
 `FormatRegistry` and `FormatDetector` are internal now. `getFormat()` returns the format that a load or `fromString()` call read.
 
@@ -257,6 +258,7 @@ See [cli.md](cli.md) for every command and option.
 
 | 1.x | 2.0 |
 |:--- |:--- |
+| `--from ytchapter`, `--to podcast`, and the same for `ogm` and `ffmeta` | still works. The new names are `youtube-chapters`, `podcast-chapters`, `ogm-chapters` and `ffmeta-chapters`. `formats` and `info` print the new names |
 | `convert --case-language de` | `convert --language de` |
 | `convert --replace FROM=TO --regex --ignore-case` | `convert --replace FROM=TO --replace-regex --replace-ignore-case` |
 | `convert --karaoke-tag kf` | `convert --ass-karaoke-tag kf` |

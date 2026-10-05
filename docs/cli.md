@@ -55,7 +55,7 @@ php subtitle-toolbox.phar --version
 
 ## Input and output
 - **Inputs**: a file, a directory, a glob such as `"season1/*.srt"`, or `-` for standard input. A directory gives its files with a known extension.
-- **Input format**: `--from`, else format detection on the content, else the file extension. Chapters and cloud speech-to-text JSON need `--from`, for example `--from deepgram` or `--from ffmeta`. The tool reads like `Subtitle::loadAutoDetectFormat()`, see [formats.md](formats.md#load-and-save).
+- **Input format**: `--from`, else format detection on the content, else the file extension. Chapters and cloud speech-to-text JSON need `--from`, for example `--from deepgram` or `--from ffmeta-chapters`. The tool reads like `Subtitle::loadAutoDetectFormat()`, see [formats.md](formats.md#load-and-save).
 - **Output**: `-o` or `--output` for one file, `--output-dir`, or `--in-place`. `--output -` writes standard output. `convert`, `retime`, `sync` and `dual` take all 4. `hls` takes only `--output-dir`.
 - **Default output**: without these options, one input goes to standard output. With 2 or more inputs, each output goes next to its input, with the extension of the output format. The tool counts the inputs after it expands directories and globs.
 
@@ -98,7 +98,7 @@ Run `subtitle-toolbox formats` for the list. When two formats share an extension
 - **`.sub`**: MicroDVD. Pass `--from subviewer` for SubViewer. A directory skips a `.sub` file that has an `.idx` file next to it.
 - **VobSub**: pass the `.idx` file. The tool reads the `.sub` file next to it. Standard input does not work.
 - **`.json` and `.txt` input**: format detection finds the library JSON, Whisper JSON, YouTube json3, Podcasting 2.0 transcripts, MPL2 and TMPlayer by their content. Other `.json` and `.txt` input fails. Pass `--from` for chapters and cloud speech-to-text JSON.
-- **Other output formats**: pass `--to`, for example `--to mpl2`, `--to podcast-transcript` or `--to ytchapter`.
+- **Other output formats**: pass `--to`, for example `--to mpl2`, `--to podcast-transcript` or `--to youtube-chapters`.
 - **CSV and TSV**: TSV output has tabs between the cells. CSV output from a TSV input has commas. Other CSV output keeps the delimiter of the input table.
 
 ## MKV and WebM

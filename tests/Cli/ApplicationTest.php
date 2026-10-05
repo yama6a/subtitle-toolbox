@@ -260,13 +260,30 @@ class ApplicationTest extends TestCase
         $this->assertSame([1, "", "$chapters: $unknown"], self::runApplication(["info", $chapters]));
         $this->assertSame([1, "", "stdin: $unknown"], self::runApplication(["info", "-"], $deepgram));
 
-        [$code, $stdout] = self::runApplication(["info", $chapters, "--from", "ffmeta"]);
+        [$code, $stdout] = self::runApplication(["info", $chapters, "--from", "ffmeta-chapters"]);
         $this->assertSame(0, $code);
-        $this->assertStringContainsString("ffmeta", $stdout);
+        $this->assertStringContainsString("ffmeta-chapters", $stdout);
 
         [$code, $stdout] = self::runApplication(["info", "-", "--from", "deepgram"], $deepgram);
         $this->assertSame(0, $code);
         $this->assertStringContainsString("deepgram", $stdout);
+    }
+
+
+    public function testOneXChapterFormatNamesStillWorkAsFromAndTo(): void
+    {
+        $files = __DIR__ . "/../files/chapters/";
+        foreach ([
+            "ytchapter" => ["youtube/real/video_description.txt", Format::YouTubeChapters],
+            "podcast"   => ["podcast/real/spec_basic_example.json", Format::PodcastChapters],
+            "ogm"       => ["ogm/real/mkvextract_simple.txt", Format::OgmChapters],
+            "ffmeta"    => ["ffmetadata/real/m4b_audiobook.ffmeta", Format::FfMetadataChapters],
+        ] as $alias => [$file, $format]) {
+            $expected = Subtitle::load($files . $file, $format)->toString($format);
+            $this->assertSame([0, $expected, ""], self::runApplication(["convert", $files . $file, "--from", $alias, "--to", $alias]), $alias);
+        }
+
+        $this->assertNull(Format::tryFrom("ytchapter"));
     }
 
 

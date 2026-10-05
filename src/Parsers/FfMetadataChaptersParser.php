@@ -15,7 +15,7 @@ use SubtitleToolbox\SubtitleCue;
 // Spec: https://ffmpeg.org/ffmpeg-formats.html#Metadata-1. The section reading follows libavformat/ffmetadec.c.
 final class FfMetadataChaptersParser extends SubtitleParser
 {
-    public const FORMAT_DATA_KEY = Format::FfMetadata->value;
+    public const FORMAT_DATA_KEY = Format::FfMetadataChapters->value;
 
     /** @internal */
     public const METADATA_KEYS = [
