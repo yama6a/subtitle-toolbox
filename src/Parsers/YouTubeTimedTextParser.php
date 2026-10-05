@@ -11,6 +11,7 @@ use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -21,6 +22,12 @@ final class YouTubeTimedTextParser extends SubtitleParser
 
     // A window anchor point runs from 0, top left, to 8, bottom right, row by row.
     private const ALIGNMENTS = [7, 8, 9, 4, 5, 6, 1, 2, 3];
+
+
+    protected static function formatOptionsClass(): string
+    {
+        return TranscriptReadOptions::class;
+    }
 
 
     /**
@@ -345,7 +352,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
 
     private function markup(array $segments, float $start): string
     {
-        $timed  = $this->options->wordTimestamps && array_filter(array_column($segments, 1), fn (?float $offset): bool => $offset !== null) !== [];
+        $timed  = $this->formatOptions()->wordTimestamps && array_filter(array_column($segments, 1), fn (?float $offset): bool => $offset !== null) !== [];
         $markup = "";
         foreach ($segments as [$text, $offset, $style]) {
             if (!$timed) {

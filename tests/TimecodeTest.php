@@ -13,7 +13,7 @@ use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Parsers\Options\CsvColumns;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
-use SubtitleToolbox\Parsers\Options\PodcastTranscriptReadOptions;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 
 class TimecodeTest extends TestCase
@@ -111,7 +111,7 @@ class TimecodeTest extends TestCase
             "mpsub"              => ["mpsub", 0.001, new WriteOptions(), true],
             "ogm"                => ["ogm", 0.001, new WriteOptions(), false],
             "podcast"            => ["podcast", 0.001, new WriteOptions(), true],
-            "podcast-transcript" => ["podcast-transcript", 0.001, new WriteOptions(), true, new ReadOptions(format: new PodcastTranscriptReadOptions(keepSegments: true))],
+            "podcast-transcript" => ["podcast-transcript", 0.001, new WriteOptions(), true, new ReadOptions(format: new TranscriptReadOptions(keepSegments: true))],
             "sami"               => ["sami", 0.001, new WriteOptions(), true],
             "sbv"                => ["sbv", 0.001, new WriteOptions(), true],
             "scc"                => ["scc", 1001 / 30000, new WriteOptions(), true],

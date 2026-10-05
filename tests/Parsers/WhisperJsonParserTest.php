@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -33,7 +34,7 @@ class WhisperJsonParserTest extends TestCase
 
     private static function withWords(string $json): Subtitle
     {
-        return (new WhisperJsonParser())->parse($json, new ReadOptions(wordTimestamps: true));
+        return (new WhisperJsonParser())->parse($json, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
     }
 
 

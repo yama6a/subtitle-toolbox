@@ -21,8 +21,6 @@ $table = Subtitle::fromString(file_get_contents('lines.csv'), Format::Csv,
 |:--- |:--- |:--- |
 | `encoding` | null, UTF-8 | text formats. A UTF-16 or UTF-32 BOM wins. See [encodings.md](encodings.md) |
 | `lenient` | false | skips or repairs a broken block and records a warning, see [lenient-parsing.md](lenient-parsing.md) |
-| `wordTimestamps` | false | Whisper, YouTube timed text, Podcasting 2.0 transcripts, cloud speech JSON, see [transcripts.md](transcripts.md) |
-| `speakerVoices` | false | Whisper and cloud speech JSON, see [text.md](text.md#speakers) |
 | `lastCueDuration` | 5.0 | seconds that a last cue without an end lasts |
 | `format` | null | one per-format class, see below |
 
@@ -39,7 +37,7 @@ $table = Subtitle::fromString(file_get_contents('lines.csv'), Format::Csv,
 | `CsvReadOptions` | CSV, TSV | `columns`: a `CsvColumns` layout, null reads the header names. `delimiter`: `,`, `;` or a tab, null detects it. `frameRate`: the frames per second of times in `hh:mm:ss:ff` |
 | `SccReadOptions` | SCC | `channel`: 1 reads CC1 and CC3, 2 reads CC2 and CC4 |
 | `EbuStlReadOptions` | EBU STL | `subtractStartOfProgramme`: subtracts the TCP time code from every cue time |
-| `PodcastTranscriptReadOptions` | Podcasting 2.0 transcript | `keepSegments`: one cue per segment, also for a segment with one word |
+| `TranscriptReadOptions` | Whisper, cloud speech JSON, YouTube timed text, Podcasting 2.0 transcript | `wordTimestamps`: word times as core markup, see [transcripts.md](transcripts.md). `speakerVoices`: speakers as voice tags, Whisper and cloud speech JSON only, see [text.md](text.md#speakers). `keepSegments`: Podcasting 2.0 only, one cue per segment, also for a segment with one word |
 | `ChapterReadOptions` | YouTube, Podcasting 2.0, FFmpeg and OGM chapters | `mediaDuration`: seconds where the last chapter ends. Null ends it at its own start |
 | `MicroDvdReadOptions` | MicroDVD | `frameRate`: frames per second. It wins over a `{1}{1}<fps>` first line |
 | `SamiReadOptions` | SAMI | `language`: the language class to read, such as `FRCC`. Null reads the first class of the STYLE block |

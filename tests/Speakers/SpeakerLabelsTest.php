@@ -10,6 +10,7 @@ use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
@@ -64,7 +65,7 @@ class SpeakerLabelsTest extends TestCase
     {
         $parser = new WhisperJsonParser();
 
-        return $parser->parse(file_get_contents(self::FILES . $path), new ReadOptions(speakerVoices: true));
+        return $parser->parse(file_get_contents(self::FILES . $path), new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true)));
     }
 
 
@@ -394,6 +395,6 @@ class SpeakerLabelsTest extends TestCase
                   ' {"start": 3, "end": 4, "text": "Yes.", "speaker": 5}]}';
         $parser = new WhisperJsonParser();
 
-        $this->assertSame([["<v O'Neil &amp; &lt;Son&gt;><00:00:00.500>Hi."], ["Bye."], ["Yes."]], self::lines($parser->parse($json, new ReadOptions(speakerVoices: true, wordTimestamps: true))));
+        $this->assertSame([["<v O'Neil &amp; &lt;Son&gt;><00:00:00.500>Hi."], ["Bye."], ["Yes."]], self::lines($parser->parse($json, new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true, wordTimestamps: true)))));
     }
 }

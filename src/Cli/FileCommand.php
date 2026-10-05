@@ -8,7 +8,9 @@ use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Exceptions\SubtitleToolboxException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
+use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
@@ -23,11 +25,18 @@ abstract class FileCommand extends Command
 {
     public const DASH = "-";
 
+    private const TRANSCRIPT_FORMATS = [
+        Format::Whisper, Format::AssemblyAi, Format::AwsTranscribe, Format::Deepgram, Format::GoogleSpeech,
+        Format::YouTube, Format::PodcastTranscript,
+    ];
+
     protected ?Format $fromFormat = null;
 
     protected ?Format $secondFormat = null;
 
     protected ?float $inputFps = null;
+
+    protected bool $wordTimestamps = false;
 
     protected int $succeeded = 0;
 
@@ -102,9 +111,10 @@ abstract class FileCommand extends Command
 
     protected function prepare(Arguments $arguments): void
     {
-        $this->succeeded = 0;
-        $this->failed    = 0;
-        $this->inputFps  = self::rate($arguments, "input-fps");
+        $this->succeeded      = 0;
+        $this->failed         = 0;
+        $this->inputFps       = self::rate($arguments, "input-fps");
+        $this->wordTimestamps = $this->needsWordTimestamps($arguments);
         $arguments->positiveFloat("fps");
         $arguments->positiveInt("track");
         $arguments->positiveInt("track2");
@@ -118,7 +128,6 @@ abstract class FileCommand extends Command
             $this->readOptions = new ReadOptions(
                 encoding: $arguments->value("encoding"),
                 lenient: $arguments->has("lenient"),
-                wordTimestamps: $this->needsWordTimestamps($arguments),
             );
         } catch (SubtitleToolboxException $exception) {
             self::fail($exception->getMessage());
@@ -442,7 +451,7 @@ abstract class FileCommand extends Command
         if ($track !== null) {
             return Subtitle::loadTrack($path, $track, $this->readOptions);
         }
-        $format ??= $this->frameRateFormat(fn (): string => (string) file_get_contents($path), $path);
+        $format ??= $this->formatWithOptions(fn (): string => (string) file_get_contents($path), $path);
 
         return $format === null
             ? Subtitle::loadAutoDetectFormat($path, $this->readOptions)
@@ -451,14 +460,14 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Returns the format of an input without --from when --input-fps applies to it, else null for format detection.
-     * The read then passes the frame rate in the read options of that format.
+     * Returns the format of an input without --from when --input-fps or word timestamps apply to it, else null for
+     * format detection. The read then passes them in the read options of that format.
      *
      * @param callable(): string $content
      */
-    private function frameRateFormat(callable $content, ?string $path): ?Format
+    private function formatWithOptions(callable $content, ?string $path): ?Format
     {
-        if ($this->inputFps === null) {
+        if ($this->inputFps === null && !$this->wordTimestamps) {
             return null;
         }
         $content = $content();
@@ -473,21 +482,13 @@ abstract class FileCommand extends Command
             return null;
         }
 
-        return in_array($format, [Format::MicroDvd, Format::Csv, Format::Tsv], true) ? $format : null;
+        return $format !== null && $this->formatOptions($format) !== null ? $format : null;
     }
 
 
-    /**
-     * Returns the read options with --input-fps in the read options of $format, for MicroDVD, CSV and TSV.
-     */
     private function readOptionsFor(Format $format): ReadOptions
     {
-        $formatOptions = match (true) {
-            $this->inputFps === null                       => null,
-            $format === Format::MicroDvd                   => new MicroDvdReadOptions($this->inputFps),
-            in_array($format, [Format::Csv, Format::Tsv], true) => new CsvReadOptions(frameRate: $this->inputFps),
-            default                                        => null,
-        };
+        $formatOptions = $this->formatOptions($format);
         if ($formatOptions === null) {
             return $this->readOptions;
         }
@@ -495,11 +496,23 @@ abstract class FileCommand extends Command
         return new ReadOptions(
             encoding: $this->readOptions->encoding,
             lenient: $this->readOptions->lenient,
-            wordTimestamps: $this->readOptions->wordTimestamps,
-            speakerVoices: $this->readOptions->speakerVoices,
             lastCueDuration: $this->readOptions->lastCueDuration,
             format: $formatOptions,
         );
+    }
+
+
+    /**
+     * Returns --input-fps for MicroDVD, CSV and TSV, and the word timestamps for the transcript formats.
+     */
+    private function formatOptions(Format $format): ?FormatReadOptions
+    {
+        return match (true) {
+            $this->inputFps !== null && $format === Format::MicroDvd => new MicroDvdReadOptions($this->inputFps),
+            $this->inputFps !== null && in_array($format, [Format::Csv, Format::Tsv], true) => new CsvReadOptions(frameRate: $this->inputFps),
+            $this->wordTimestamps && in_array($format, self::TRANSCRIPT_FORMATS, true) => new TranscriptReadOptions(wordTimestamps: true),
+            default => null,
+        };
     }
 
 
@@ -521,7 +534,7 @@ abstract class FileCommand extends Command
             self::fail("VobSub needs the path of the .idx file. Standard input does not work.");
         }
 
-        $format = $this->fromFormat ?? $this->frameRateFormat(fn (): string => $content, null);
+        $format = $this->fromFormat ?? $this->formatWithOptions(fn (): string => $content, null);
 
         return $format === null
             ? Subtitle::fromStringAutoDetectFormat($content, $this->readOptions)

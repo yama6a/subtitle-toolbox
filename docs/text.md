@@ -66,13 +66,14 @@ Core markup holds a speaker as `<v Anna>`. `SpeakerLabels` converts it to the fo
 
 ```php
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Speakers\SpeakerLabelOptions;
 use SubtitleToolbox\Speakers\SpeakerLabels;
 use SubtitleToolbox\Speakers\SpeakerStyle;
 use SubtitleToolbox\Subtitle;
 
-$subtitle = Subtitle::fromString($whisperXJson, Format::Whisper, new ReadOptions(speakerVoices: true));
+$subtitle = Subtitle::fromString($whisperXJson, Format::Whisper, new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true)));
 SpeakerLabels::list($subtitle);                    // ['SPEAKER_00' => 14, 'SPEAKER_01' => 9], cues per speaker
 $report = SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(
     rename: ['SPEAKER_00' => 'Anna', 'SPEAKER_01' => 'Ben'],
@@ -100,8 +101,8 @@ $subtitle->toString(Format::SubRip);
 | CSV, TSV | the `speaker` column | the `speaker` column |
 | Podcasting 2.0 transcript JSON | the segment `speaker` | the segment `speaker` |
 | HTML transcript | `<cite>` | `<cite>` |
-| Whisper JSON | the segment `speaker`, with `ReadOptions::$speakerVoices` | no formatter |
-| Cloud speech-to-text JSON | the speaker labels of the service, with `ReadOptions::$speakerVoices` | no formatter |
+| Whisper JSON | the segment `speaker`, with `TranscriptReadOptions::$speakerVoices` | no formatter |
+| Cloud speech-to-text JSON | the speaker labels of the service, with `TranscriptReadOptions::$speakerVoices` | no formatter |
 | JSON | the cue lines | the cue lines |
 | all other formats, iTT too | no speaker | nothing. Convert with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colors` first |
 
@@ -162,7 +163,7 @@ new ProfanityOptions(['hell'], fn (string $word): string => '[beep]');
 - **FFmpeg**: use the filter as `ffmpeg -i in.mp4 -af "<filter>" -c:v copy out.mp4`. It returns `""` for no ranges. Then leave out `-af`.
 
 ## Word highlight and karaoke
-Lyric videos and short-form captions show a line and mark the word that is sung or spoken. SubRip and WebVTT players have no karaoke effect. So `WordHighlight` writes one cue per word, with the active word styled. The word timestamps come from Whisper JSON with `ReadOptions::$wordTimestamps`, enhanced LRC, or ASS `\k` tags.
+Lyric videos and short-form captions show a line and mark the word that is sung or spoken. SubRip and WebVTT players have no karaoke effect. So `WordHighlight` writes one cue per word, with the active word styled. The word timestamps come from Whisper JSON with `TranscriptReadOptions::$wordTimestamps`, enhanced LRC, or ASS `\k` tags.
 
 ```php
 use SubtitleToolbox\Karaoke\WordHighlight;

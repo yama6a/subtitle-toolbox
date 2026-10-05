@@ -34,6 +34,7 @@ Format::FfMetadata->isAutoDetected();   // false
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
@@ -42,9 +43,10 @@ Subtitle::load('movie.srt', Format::SubRip)->save('movie.vtt');
 Subtitle::loadAutoDetectFormat('movie.srt')->save('movie.vtt');
 Subtitle::load('movie.sub', Format::MicroDvd, new ReadOptions(encoding: 'Windows-1252', format: new MicroDvdReadOptions(frameRate: 23.976)))->save('movie.srt');
 Subtitle::load('movie.idx', Format::VobSub, new ReadOptions(format: new VobSubReadOptions(language: 'de')));
-Subtitle::load('call.json', Format::Deepgram, new ReadOptions(speakerVoices: true));
+Subtitle::load('call.json', Format::Deepgram, new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true)));
 Subtitle::loadTrack('/media/movie.mkv', 3);           // see mkv.md
 
+$subtitle = Subtitle::load('movie.srt', Format::SubRip);
 $subtitle->getFormat();                               // Format::SubRip, the format that the load call read
 $subtitle->save('movie.txt', Format::WebVtt);         // the format argument wins over the extension
 ```

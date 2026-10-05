@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\PodcastTranscriptWriteOptions;
 use SubtitleToolbox\LineEnding;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
@@ -75,7 +76,7 @@ class PodcastTranscriptFormatterTest extends TestCase
 
     public function testWritesWordSegmentsFromWhisperJson(): void
     {
-        $subtitle = (new WhisperJsonParser())->parse(file_get_contents(self::DIR . "whisper/real/openai_whisper_word_timestamps.json"), new ReadOptions(wordTimestamps: true));
+        $subtitle = (new WhisperJsonParser())->parse(file_get_contents(self::DIR . "whisper/real/openai_whisper_word_timestamps.json"), new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
         $json     = $subtitle->toString(Format::PodcastTranscript, new WriteOptions(format: new PodcastTranscriptWriteOptions(wordSegments: true)));
 
         $this->assertSame(

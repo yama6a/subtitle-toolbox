@@ -8,7 +8,7 @@ use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Parsers\Options\PodcastTranscriptReadOptions;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -24,7 +24,7 @@ final class PodcastTranscriptParser extends SubtitleParser
 
     protected static function formatOptionsClass(): string
     {
-        return PodcastTranscriptReadOptions::class;
+        return TranscriptReadOptions::class;
     }
 
 
@@ -55,7 +55,7 @@ final class PodcastTranscriptParser extends SubtitleParser
             $speaker = $group[0]["speaker"];
             $words   = [];
             foreach ($group as $segment) {
-                $timestamp = count($group) > 1 && $this->options->wordTimestamps ? "<" . Markup::coreTimestamp($segment["start"]) . ">" : "";
+                $timestamp = count($group) > 1 && $this->formatOptions()->wordTimestamps ? "<" . Markup::coreTimestamp($segment["start"]) . ">" : "";
                 $words[]   = $timestamp . Markup::escapeText($segment["body"]);
             }
             $markup = implode(" ", $words);

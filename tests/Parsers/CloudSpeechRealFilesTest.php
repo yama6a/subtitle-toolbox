@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -97,7 +98,7 @@ class CloudSpeechRealFilesTest extends TestCase
 
     private static function parse(string $parserClass, string $file, bool $wordTimestamps = false): Subtitle
     {
-        return (new $parserClass())->parse(file_get_contents(self::DIR . $file), new ReadOptions(wordTimestamps: $wordTimestamps, speakerVoices: true));
+        return (new $parserClass())->parse(file_get_contents(self::DIR . $file), new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: $wordTimestamps, speakerVoices: true)));
     }
 
 

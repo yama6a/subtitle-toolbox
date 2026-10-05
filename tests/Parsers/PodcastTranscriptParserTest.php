@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\ParseWarning;
-use SubtitleToolbox\Parsers\Options\PodcastTranscriptReadOptions;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -51,7 +51,7 @@ class PodcastTranscriptParserTest extends TestCase
         $json   = self::words([["Anna", 0, 0.4, "Hello"], ["Anna", 0.5, 0.9, "there."]]);
         $parser = new PodcastTranscriptParser();
 
-        $this->assertSame([[0.0, 0.4, "<v Anna>Hello"], [0.5, 0.9, "<v Anna>there."]], self::cues($parser->parse($json, new ReadOptions(format: new PodcastTranscriptReadOptions(keepSegments: true)))));
+        $this->assertSame([[0.0, 0.4, "<v Anna>Hello"], [0.5, 0.9, "<v Anna>there."]], self::cues($parser->parse($json, new ReadOptions(format: new TranscriptReadOptions(keepSegments: true)))));
     }
 
 
@@ -61,7 +61,7 @@ class PodcastTranscriptParserTest extends TestCase
         $parser = new PodcastTranscriptParser();
 
         $this->assertSame([[0.0, 0.9, "<v Anna><00:00:00.000>Hello <00:00:00.500>there."], [1.0, 2.0, "<v Anna>Bye."]],
-                          self::cues($parser->parse($json, new ReadOptions(wordTimestamps: true))));
+                          self::cues($parser->parse($json, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)))));
     }
 
 
