@@ -118,7 +118,7 @@ class StreamFixturesTest extends TestCase
 
         foreach (self::optionSets() as $name => $options) {
             $stream = fopen("php://memory", "w+b");
-            $writer = new WebVttStreamWriter($stream, $header, $options);
+            $writer = new WebVttStreamWriter($stream, $options, $header);
             foreach ($subtitle->getCues() as $cue) {
                 $writer->write($cue);
             }

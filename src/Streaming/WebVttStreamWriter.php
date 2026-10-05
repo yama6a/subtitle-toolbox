@@ -27,10 +27,10 @@ final class WebVttStreamWriter implements CueStreamWriter
 
 
     /**
-     * @param resource|string $stream a stream resource, or a file path that the writer opens and closes
-     * @param array           $header the header, STYLE and REGION blocks, as WebVttStreamReader::getHeader() returns them
+     * @param resource|string     $stream a stream resource, or a file path that the writer opens and closes
+     * @param array<string, mixed> $header the header, STYLE and REGION blocks, as WebVttStreamReader::getHeader() returns them
      */
-    public function __construct($stream, array $header = [], private readonly WriteOptions $options = new WriteOptions())
+    public function __construct($stream, private readonly WriteOptions $options = new WriteOptions(), array $header = [])
     {
         $this->formatter  = new WebVttFormatter();
         $headerOnly       = (new Subtitle())->setFormatData(WebVttParser::FORMAT_DATA_KEY, $header);

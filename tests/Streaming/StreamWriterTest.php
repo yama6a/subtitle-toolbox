@@ -52,7 +52,7 @@ class StreamWriterTest extends TestCase
         $reader = new WebVttStreamReader();
         $cues   = $reader->read(self::WEBVTT_FIXTURE);
         $cues->current();
-        $writer = new WebVttStreamWriter($this->path, $reader->getHeader());
+        $writer = new WebVttStreamWriter($this->path, header: $reader->getHeader());
         foreach ($cues as $cue) {
             $writer->write($cue);
         }
