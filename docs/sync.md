@@ -58,6 +58,8 @@ Without a reference subtitle, the speech in the audio is the reference. FFmpeg f
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Sync\ReferenceSync;
+use SubtitleToolbox\Sync\ReferenceSyncOptions;
 use SubtitleToolbox\Sync\SpeechReference;
 
 // ffmpeg -i movie.mkv -af silencedetect=noise=-30dB:d=0.4 -f null - 2> silence.log

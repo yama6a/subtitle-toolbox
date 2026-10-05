@@ -114,7 +114,7 @@ $report->cuesAfter;    // 3
 Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::ByWords, maxWordGap: 0.6));
 ```
 
-`ResegmentMode::ByWords` drops the cue boundaries and builds new cues from the word timestamps, for example from Whisper JSON read with `ReadOptions::$wordTimestamps`. Each cue then holds one sentence, or as much of it as fits.
+`ResegmentMode::ByWords` drops the cue boundaries and builds new cues from the word timestamps, for example from Whisper JSON read with `TranscriptReadOptions::$wordTimestamps`. Each cue then holds one sentence, or as much of it as fits.
 
 | Option | Default | Meaning |
 |:--- |:--- |:--- |
@@ -174,6 +174,7 @@ A dual subtitle shows two languages at the same time, for example for language l
 use SubtitleToolbox\Dual\DualSubtitle;
 use SubtitleToolbox\Dual\DualSubtitleMode;
 use SubtitleToolbox\Dual\DualSubtitleOptions;
+use SubtitleToolbox\Subtitle;
 
 $english = Subtitle::fromStringAutoDetectFormat(file_get_contents('movie.en.srt'));
 $german  = Subtitle::fromStringAutoDetectFormat(file_get_contents('movie.de.srt'));
