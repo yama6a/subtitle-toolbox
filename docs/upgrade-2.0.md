@@ -276,7 +276,7 @@ See [cli.md](cli.md) for every command and option.
 | `convert --replace FROM=TO --regex --ignore-case` | `convert --replace FROM=TO --replace-regex --replace-ignore-case` |
 | `convert --karaoke-tag kf` | `convert --ass-karaoke-tag kf` |
 | `convert --karaoke-mode`, `--karaoke-words` | removed. Use `WordHighlightOptions` in PHP |
-| `validate --no-overlap`, `--no-empty-cues`, `--no-double-spaces` | `validate --check-overlap`, `--check-empty-cues`, `--check-double-spaces` |
+| `validate --no-overlap`, `--no-empty-cues`, `--no-double-spaces` | `validate --check-overlaps`, `--check-empty-cues`, `--check-double-spaces` |
 | `validate --no-leading-or-trailing-spaces`, `--no-unbalanced-tags`, `--no-all-caps-lines` | `validate --check-leading-or-trailing-spaces`, `--check-unbalanced-tags`, `--check-all-caps-lines` |
 | `--fps 25` | still works and sets each frame rate that the command has. `--input-fps`, `--output-fps` and `--video-fps` set one rate each, see [Frame rates](cli.md#frame-rates) |
 | `convert movie.srt --to vtt` to write `movie.vtt` | `convert movie.srt --to vtt -o movie.vtt` |
@@ -299,14 +299,14 @@ See [cli.md](cli.md) for every command and option.
 | `scale FILE --factor 1.001` | `retime FILE --scale 1.001` |
 | `fps FILE --from 25 --to 23.976`, `sync-fps FILE --from 25 --to 23.976` | `retime FILE --from-fps 25 --to-fps 23.976` |
 | `fix FILE --overlaps --min-duration 1 --min-gap 0.083` | `convert FILE --timing-fix-overlaps --timing-min-duration 1 --timing-min-gap 0.083` |
-| `fix FILE --common-errors --replace-list L --list-fixes --language de` | `convert FILE --errors-fix --errors-replace-list L --errors-list --language de` |
+| `fix FILE --common-errors --replace-list L --list-fixes --language de` | `convert FILE --errors-fix --errors-replace-list L --errors-list-fixes --language de` |
 | `fix FILE --wrap 32 --max-lines 3` | `convert FILE --structure-wrap --structure-max-cpl 32 --structure-max-lines 3`. `--structure-wrap` takes no value. Its width is `--structure-max-cpl`, default 42 |
 | `fix FILE --resegment --max-word-gap 0.3 --max-cpl 32 --max-lines 1` | `convert FILE --structure-resegment --structure-max-word-gap 0.3 --structure-max-cpl 32 --structure-max-lines 1` |
 | `fix FILE --unwrap`, `--merge-short`, `--split-long`, `--merge-duplicates` | `convert FILE --structure-unwrap`, `--structure-merge-short`, `--structure-split-long`, `--structure-merge-duplicates` |
 | `strip-sdh FILE` | `convert FILE --sdh` |
 | `strip-sdh FILE --lyrics --brackets "{}"` | `convert FILE --sdh --sdh-lyrics --sdh-brackets "{}"`. Each `strip-sdh --X` option becomes `--sdh-X` |
 | `snap FILE --shot-changes F --fps 24` | `convert FILE --snap-shot-changes F --video-fps 24` |
-| `snap FILE --shot-changes F --fps 24 --snap-window 12 --min-gap-frames 2 --min-duration-frames 20 --no-chain` | `convert FILE --snap-shot-changes F --video-fps 24 --snap-window-frames 12 --snap-min-gap-frames 2 --snap-min-duration-frames 20 --snap-no-chain` |
+| `snap FILE --shot-changes F --fps 24 --snap-window 12 --min-gap-frames 2 --min-duration-frames 20 --no-chain` | `convert FILE --snap-shot-changes F --video-fps 24 --snap-window-frames 12 --snap-min-gap-frames 2 --snap-min-duration-frames 20 --no-snap-chain` |
 | `snap FILE --fps 24` without other snap options | `convert FILE --video-fps 24 --snap-min-gap-frames 2` |
 
 ## Behaviour changes

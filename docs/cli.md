@@ -166,7 +166,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --errors-fix --in-place
 - **Output file argument**: `convert IN OUT` reads `IN` and writes `OUT` only without `--to`, `-o`, `--output-dir` and `--in-place`. With one of them, both arguments are inputs.
 
 ### Order
-`convert` always runs the edits in this order, whatever the order of the options. The options form groups. `convert --help GROUP` lists the options of one group, and `convert --help all` lists every option. A word after `--help` that holds a dot or a slash, or names a file, is no group, so `convert in.srt -h out.srt` prints the convert help. A group prefix is the group name, for example `--structure-wrap` and `--timing-min-gap`.
+`convert` always runs the edits in this order, whatever the order of the options. The options form groups. `convert --help GROUP` lists the options of one group, and `convert --help all` lists every option. A word after `--help` that holds a dot or a slash, or names a file, is no group, so `convert in.srt -h out.srt` prints the convert help. A group prefix is the group name, for example `--structure-wrap` and `--timing-min-gap`. An option that turns a default off puts `--no-` before the prefix, for example `--no-snap-chain`.
 
 | Step | Group | Options | Why here |
 |:--- |:--- |:--- |:--- |
@@ -194,7 +194,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --errors-fix --in-place
 |:--- |:--- |
 | `--errors-fix` | [`CommonErrorFixer::apply()`](text.md#fixing-common-errors) with all default fixes |
 | `--errors-replace-list FILE` | adds a Subtitle Edit OCR replace list to `--errors-fix` |
-| `--errors-list` | prints each change of `--errors-fix` to standard error, for example `movie.srt: cue 15: ocrLowercaseL: "lt's late." -> "It's late."`. A byte that is not valid UTF-8 prints as U+FFFD |
+| `--errors-list-fixes` | prints each change of `--errors-fix` to standard error, for example `movie.srt: cue 15: ocrLowercaseL: "lt's late." -> "It's late."`. A byte that is not valid UTF-8 prints as U+FFFD |
 | `--sdh` | removes everything that [`HearingImpairedRemover::apply()`](text.md#hearing-impaired-annotations) removes by default. A cue with no text left goes |
 | `--sdh-keep-square-brackets`, `--sdh-keep-parentheses`, `--sdh-keep-speaker-labels`, `--sdh-keep-music-lines` | turns off one rule of `--sdh` |
 | `--sdh-any-case-labels` | also removes speaker labels that are not upper case, such as `Baker:` |
@@ -252,7 +252,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 | `--snap-window-frames FRAMES` | `snapWindowFrames`, default half a second |
 | `--snap-min-gap-frames FRAMES` | `minGapFrames`, default 2 |
 | `--snap-min-duration-frames FRAMES` | `minDurationFrames`, default 20 |
-| `--snap-no-chain` | `chain: false` |
+| `--no-snap-chain` | `chain: false` |
 | `--timing-fix-overlaps` | `fixOverlaps()` with `--timing-min-gap` seconds, default 0 |
 | `--timing-min-duration SECONDS` | `extendShortCues()` with `--timing-min-gap` |
 | `--timing-min-gap SECONDS` | the gap of `--timing-fix-overlaps` and `--timing-min-duration` |
@@ -299,7 +299,7 @@ vendor/bin/subtitle-toolbox convert movie.srt movie.timed.srt --video-fps 24 --s
 | `--min-duration`, `--max-duration`, `--min-gap` | `minDuration`, `maxDuration`, `minGap` |
 | `--max-wpm`, `--min-seconds-per-word` | `maxWordsPerMinute`, `minSecondsPerWord` |
 | `--max-speakers`, `--dialogue-dash STYLE`, `--allowed-characters CHARS` | `maxSpeakersPerCue`, `dialogueDashStyle`, `allowedCharacters` |
-| `--check-overlap`, `--check-empty-cues`, `--check-double-spaces` | `noOverlap`, `noEmptyCues`, `noDoubleSpaces` |
+| `--check-overlaps`, `--check-empty-cues`, `--check-double-spaces` | `noOverlap`, `noEmptyCues`, `noDoubleSpaces` |
 | `--check-leading-or-trailing-spaces`, `--check-unbalanced-tags`, `--check-all-caps-lines` | `noLeadingOrTrailingSpaces`, `noUnbalancedTags`, `noAllCapsLines` |
 
 ```sh

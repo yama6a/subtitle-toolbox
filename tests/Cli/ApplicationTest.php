@@ -57,7 +57,7 @@ class ApplicationTest extends TestCase
     private const OFF_SWITCHES = [
         "no-bom"        => "the UTF-8 BOM of the output format",
         "no-scale"      => "the scale search of sync",
-        "snap-no-chain" => "the closing of small gaps between cues",
+        "no-snap-chain" => "the closing of small gaps between cues",
     ];
 
 
@@ -83,7 +83,7 @@ class ApplicationTest extends TestCase
                 }
             }
         }
-        $this->assertContains("check-overlap", $names);
+        $this->assertContains("check-overlaps", $names);
         $this->assertContains("snap-window-frames", $names);
         $this->assertEqualsCanonicalizing(array_keys(self::OFF_SWITCHES), array_values(array_unique(preg_grep('/(^|-)no-/', $names))));
     }

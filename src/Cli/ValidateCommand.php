@@ -38,7 +38,7 @@ final class ValidateCommand extends ReportCommand
 
     protected function usageLines(): array
     {
-        return ["<input>... --preset netflix-en|bbc [options]", "<input>... [--max-cpl CHARS] [--check-overlap] [...] [options]"];
+        return ["<input>... --preset netflix-en|bbc [options]", "<input>... [--max-cpl CHARS] [--check-overlaps] [...] [options]"];
     }
 
 
@@ -70,7 +70,7 @@ final class ValidateCommand extends ReportCommand
             Option::value("min-duration", "SECONDS", "Minimum duration of a cue."),
             Option::value("max-duration", "SECONDS", "Maximum duration of a cue."),
             Option::value("min-gap", "SECONDS", "Minimum gap between cues."),
-            Option::flag("check-overlap", "Report overlapping cues."),
+            Option::flag("check-overlaps", "Report overlapping cues."),
             Option::flag("check-empty-cues", "Report cues without text."),
             Option::value("max-wpm", "WORDS", "Maximum words per minute."),
             Option::value("min-seconds-per-word", "SECONDS", "Minimum duration of a cue per word."),
@@ -110,7 +110,7 @@ final class ValidateCommand extends ReportCommand
             minDuration: $arguments->positiveFloat("min-duration") ?? $base->minDuration,
             maxDuration: $arguments->positiveFloat("max-duration") ?? $base->maxDuration,
             minGap: $arguments->positiveFloat("min-gap") ?? $base->minGap,
-            noOverlap: $arguments->has("check-overlap") || $base->noOverlap,
+            noOverlap: $arguments->has("check-overlaps") || $base->noOverlap,
             noEmptyCues: $arguments->has("check-empty-cues") || $base->noEmptyCues,
             noDoubleSpaces: $arguments->has("check-double-spaces") || $base->noDoubleSpaces,
             noLeadingOrTrailingSpaces: $arguments->has("check-leading-or-trailing-spaces") || $base->noLeadingOrTrailingSpaces,

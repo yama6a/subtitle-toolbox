@@ -43,14 +43,14 @@ final class CommonErrorEdit extends Edit
         return [
             Option::flag("errors-fix", "Fix spacing, punctuation, dash, tag and OCR errors such as lt's for It's."),
             Option::value("errors-replace-list", "FILE", "Also apply this Subtitle Edit OCR replace list, an XML file, with --errors-fix."),
-            Option::flag("errors-list", "Print each change of --errors-fix to standard error."),
+            Option::flag("errors-list-fixes", "Print each change of --errors-fix to standard error."),
         ];
     }
 
 
     public static function fromArguments(Arguments $arguments): ?static
     {
-        self::needs($arguments, "errors-fix", ["errors-replace-list", "errors-list"]);
+        self::needs($arguments, "errors-fix", ["errors-replace-list", "errors-list-fixes"]);
         if (!$arguments->has("errors-fix")) {
             return null;
         }
@@ -60,7 +60,7 @@ final class CommonErrorEdit extends Edit
                 language: $arguments->value("language"),
                 replaceList: self::loadReplaceList($arguments->value("errors-replace-list")),
             ),
-            $arguments->has("errors-list"),
+            $arguments->has("errors-list-fixes"),
         );
     }
 

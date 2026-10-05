@@ -958,7 +958,7 @@ class BinaryTest extends TestCase
         $this->assertStringEqualsFile(self::FILES . "fixing/web-errors.fixed.srt", $stdout);
 
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "pal.srt", "--to", "srt", "-o", "-", "--errors-fix", "--language", "en", "--errors-replace-list", "list.xml",
-                                                      "--errors-list"]);
+                                                      "--errors-list-fixes"]);
         $this->assertSame(0, $code);
         $this->assertStringEqualsFile(self::FILES . "fixing/text-pal.fixed.srt", $stdout);
         $this->assertStringStartsWith("pal.srt: cue 1: ", $stderr);
@@ -966,8 +966,8 @@ class BinaryTest extends TestCase
 
         $this->assertSame([2, "", "Error: Pass --case or --errors-fix with --language.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
                           $this->runBinary(["convert", "web.srt", "--to", "srt", "-o", "-", "--timing-fix-overlaps", "--language", "en"]));
-        $this->assertSame([2, "", "Error: Pass --errors-fix with --errors-list.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
-                          $this->runBinary(["convert", "web.srt", "--to", "srt", "-o", "-", "--errors-list"]));
+        $this->assertSame([2, "", "Error: Pass --errors-fix with --errors-list-fixes.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+                          $this->runBinary(["convert", "web.srt", "--to", "srt", "-o", "-", "--errors-list-fixes"]));
         $this->assertSame([3, "", "Error: Cannot read the replace list missing.xml.\n"],
                           $this->runBinary(["convert", "web.srt", "--to", "srt", "-o", "-", "--errors-fix", "--errors-replace-list", "missing.xml"]));
     }
@@ -1081,7 +1081,7 @@ class BinaryTest extends TestCase
         $expected = Subtitle::load($path, Format::SubRip)->validate(new ValidationRules(noOverlap: true));
         $this->assertNotSame([], $expected);
 
-        [$code, $stdout, $stderr] = $this->runBinary(["validate", $path, "--check-overlap", "--json"]);
+        [$code, $stdout, $stderr] = $this->runBinary(["validate", $path, "--check-overlaps", "--json"]);
 
         $this->assertSame([1, ""], [$code, $stderr]);
         $violations = json_decode($stdout, true)[0]["violations"];
@@ -1108,7 +1108,7 @@ class BinaryTest extends TestCase
 
         $this->assertSame(
             [1, "trip.srt: cue 2: noOverlap 0.5\nshop.vtt: no problems\n2 files: 1 valid, 1 with problems, 0 failed.\n", ""],
-            $this->runBinary(["validate", "trip.srt", "shop.vtt", "--check-overlap"])
+            $this->runBinary(["validate", "trip.srt", "shop.vtt", "--check-overlaps"])
         );
         $this->assertSame([0, "shop.vtt: no problems\n", ""], $this->runBinary(["validate", "shop.vtt", "--preset", "netflix-en", "--max-cps", "30"]));
         $this->assertSame(2, $this->runBinary(["validate", "shop.vtt"])[0]);
@@ -1627,7 +1627,7 @@ class BinaryTest extends TestCase
                                                                  snapWindowFrames: 6, minGapFrames: 3, chain: false, minDurationFrames: 12));
         $this->assertSame([0, $expected->toString(Format::SubRip), ""], $this->runBinary([
             "convert", "garden.srt", "--to", "srt", "-o", "-", "--video-fps", "24", "--snap-shot-changes", "scenes.txt", "--snap-window-frames", "6",
-            "--snap-min-gap-frames", "3", "--snap-no-chain", "--snap-min-duration-frames", "12",
+            "--snap-min-gap-frames", "3", "--no-snap-chain", "--snap-min-duration-frames", "12",
         ]));
 
         $chained = Subtitle::fromStringAutoDetectFormat($this->file("garden.srt"));
@@ -1635,7 +1635,7 @@ class BinaryTest extends TestCase
         $this->assertSame([0, $chained->toString(Format::SubRip), ""], $this->runBinary(["convert", "garden.srt", "--to", "srt", "-o", "-", "--fps", "24", "--snap-min-gap-frames", "2"]));
 
         foreach ([["--video-fps", "24"], ["--snap-shot-changes", "scenes.txt"], ["--input-fps", "24", "--snap-window-frames", "6"],
-                  ["--video-fps", "24", "--snap-no-chain"], ["--video-fps", "24", "--snap-window-frames", "-1"],
+                  ["--video-fps", "24", "--no-snap-chain"], ["--video-fps", "24", "--snap-window-frames", "-1"],
                   ["--video-fps", "24", "--snap-shot-changes", "garden.srt"]] as $options) {
             $this->assertSame(2, $this->runBinary(["convert", "garden.srt", "--to", "srt", "-o", "-", ...$options])[0], implode(" ", $options));
         }
