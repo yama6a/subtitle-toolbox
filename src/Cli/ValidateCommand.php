@@ -144,14 +144,15 @@ final class ValidateCommand extends ReportCommand
         }
 
         $this->emit($console, $text, [
-            "file"       => $label,
+            "file"       => $input,
             "format"     => $format->value,
             "valid"      => $violations === [],
             "violations" => array_map(fn (ValidationViolation $violation): array => [
                 "cueIndex" => $violation->cueIndex,
                 "rule"     => $violation->rule->value,
-                "value"    => self::jsonNumber($violation->value),
-                "limit"    => self::jsonNumber($violation->limit),
+                "value"    => is_float($violation->value) && is_infinite($violation->value) ? PHP_FLOAT_MAX : $violation->value,
+                "infinite" => is_float($violation->value) && is_infinite($violation->value),
+                "limit"    => $violation->limit,
             ], $violations),
             "warnings"   => self::warningsJson($this->parseWarnings),
         ]);

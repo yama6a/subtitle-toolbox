@@ -1190,7 +1190,22 @@ class BinaryTest extends TestCase
             "file"       => "trip.srt",
             "format"     => "srt",
             "valid"      => false,
-            "violations" => [["cueIndex" => 1, "rule" => "maxCharactersPerLine", "value" => 57, "limit" => 42]],
+            "violations" => [["cueIndex" => 1, "rule" => "maxCharactersPerLine", "value" => 57, "infinite" => false, "limit" => 42]],
+            "warnings"   => [],
+        ]], json_decode($stdout, true));
+
+        [$code, $stdout] = $this->runBinary(["validate", "-", "--max-cps", "20", "--check-overlaps", "--json"],
+                                            "1\n00:00:01,000 --> 00:00:01,000\nHello\n\n2\n00:00:01,000 --> 00:00:03,000\nHi\n\n" .
+                                            "3\n00:00:02,500 --> 00:00:04,000\nYo\n");
+        $this->assertSame(1, $code);
+        $this->assertSame([[
+            "file"       => "-",
+            "format"     => "srt",
+            "valid"      => false,
+            "violations" => [
+                ["cueIndex" => 0, "rule" => "maxCharactersPerSecond", "value" => PHP_FLOAT_MAX, "infinite" => true, "limit" => 20],
+                ["cueIndex" => 2, "rule" => "noOverlap", "value" => 0.5, "infinite" => false, "limit" => null],
+            ],
             "warnings"   => [],
         ]], json_decode($stdout, true));
     }
@@ -1325,13 +1340,13 @@ class BinaryTest extends TestCase
         copy(self::FILES . "mkv/pgs.mkv", "$this->dir/pgs.mkv");
 
         $this->assertSame(
-            [0, "pgs.mkv\n  Format: matroska\n  Track 3: S_HDMV/PGS, ger, default\n  Track 4: S_HDMV/PGS, eng, default, forced\n", ""],
+            [0, "pgs.mkv\n  Container: matroska\n  Track 3: S_HDMV/PGS, ger, default\n  Track 4: S_HDMV/PGS, eng, default, forced\n", ""],
             $this->runBinary(["info", "pgs.mkv"])
         );
 
         [$code, $stdout] = $this->runBinary(["info", "pgs.mkv", "--json"]);
         $this->assertSame(0, $code);
-        $this->assertSame([["file" => "pgs.mkv", "format" => "matroska", "tracks" => [
+        $this->assertSame([["file" => "pgs.mkv", "container" => "matroska", "tracks" => [
             ["number" => 3, "codecId" => "S_HDMV/PGS", "language" => "ger", "name" => null, "default" => true, "forced" => false],
             ["number" => 4, "codecId" => "S_HDMV/PGS", "language" => "eng", "name" => null, "default" => true, "forced" => true],
         ]]], json_decode($stdout, true));
@@ -1346,12 +1361,12 @@ class BinaryTest extends TestCase
     public function testInfoListsTheTracksOfAnMkvFileOnStandardInput(): void
     {
         $this->assertSame(
-            [0, "stdin\n  Format: matroska\n  Track 3: S_HDMV/PGS, ger, default\n  Track 4: S_HDMV/PGS, eng, default, forced\n", ""],
+            [0, "stdin\n  Container: matroska\n  Track 3: S_HDMV/PGS, ger, default\n  Track 4: S_HDMV/PGS, eng, default, forced\n", ""],
             $this->runBinary(["info", "-"], file_get_contents(self::FILES . "mkv/pgs.mkv"))
         );
 
         [$code, $stdout] = $this->runBinary(["info", "-", "--json"], file_get_contents(self::FILES . "mkv/pgs.mkv"));
-        $this->assertSame([0, "stdin", [3, 4]], [$code, json_decode($stdout, true)[0]["file"], array_column(json_decode($stdout, true)[0]["tracks"], "number")]);
+        $this->assertSame([0, "-", [3, 4]], [$code, json_decode($stdout, true)[0]["file"], array_column(json_decode($stdout, true)[0]["tracks"], "number")]);
     }
 
 
@@ -1677,6 +1692,7 @@ class BinaryTest extends TestCase
 
         $this->assertSame([1, file_get_contents(self::FILES . "diff/own_report.txt"), ""], $this->runBinary(["diff", "v1.srt", "v2.srt"]));
         $this->assertSame([0, "", ""], $this->runBinary(["diff", "v1.srt", "v1.vtt"]));
+        $this->assertSame(["oldFile" => "-", "newFile" => "v1.vtt"], array_slice(json_decode($this->runBinary(["diff", "-", "v1.vtt", "--json"], $this->file("v1.srt"))[1], true)[0], 0, 2));
 
         $options  = new SubtitleDiffOptions(timeTolerance: 0.5, ignoreFormatting: true, textOnly: true);
         $expected = SubtitleDiff::compare(Subtitle::fromStringAutoDetectFormat($this->file("v1.srt")), Subtitle::fromStringAutoDetectFormat($this->file("v2.srt")), $options);

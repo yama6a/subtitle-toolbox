@@ -111,8 +111,8 @@ final class DiffCommand extends ReportCommand
 
         $this->different = $differences !== [];
         $this->emit($console, SubtitleDiff::toText($differences), [
-            "oldFile"     => self::label($input),
-            "newFile"     => self::label($newPath),
+            "oldFile"     => $input,
+            "newFile"     => $newPath,
             "equal"       => $differences === [],
             "differences" => array_map(fn (CueDifference $difference): array => [
                 "kind"     => $difference->kind->value,

@@ -102,7 +102,7 @@ class ApplicationTest extends TestCase
         [$code, $stdout, $stderr] = self::runApplication(["info", "-", "--json"], file_get_contents(__DIR__ . "/../files/cli/shop.vtt"));
 
         $this->assertSame([0, ""], [$code, $stderr]);
-        $this->assertSame(["file" => "stdin", "format" => "vtt"], array_slice(json_decode($stdout, true)[0], 0, 2));
+        $this->assertSame(["file" => "-", "format" => "vtt"], array_slice(json_decode($stdout, true)[0], 0, 2));
     }
 
 

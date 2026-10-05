@@ -352,5 +352,8 @@ These changes alter the output or the exit code of a call that needs no other ch
 | `SubtitleStatistics` without data | the ranges and the span were 0, for example a gap of `['min' => 0, ...]` for 1 cue | `span` is null without cues. `charactersPerSecond`, `wordsPerMinute`, `charactersPerLine` and `gaps` are null when there is no value to measure, for example `gaps` with fewer than 2 cues. `toArray()` and CLI `info --json` write null. CLI `info` prints `-` | test for null |
 | CLI `info --json` | `statistics.gap`, and `statistics.mostUsedWords` as an object of word and count | `statistics.gaps`, and `statistics.mostUsedWords` as a list of `{"word": ..., "count": ...}` | read the new keys |
 | CLI `info` text output | the line `Gap:` | the line `Gaps:` | read the new label |
+| CLI `--json` of standard input | `file`, `oldFile` and `newFile` held `stdin` | they hold `-` | test for `-` |
+| CLI `info --json` of an MKV or WebM file without `--track` | `format` held `matroska` | `container` holds `matroska`. The text output prints `Container: matroska` | read `container` |
+| CLI `validate --json` of an infinite value | `value` was null | `value` holds `1.7976931348623157e+308`, and each violation has `infinite`. Only `limit` can be null | read `infinite` |
 
 Code that does not declare `strict_types` itself still calls the library as before. `new SubtitleCue("1", 2)` from such a file works.

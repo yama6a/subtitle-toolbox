@@ -60,14 +60,14 @@ final class InfoCommand extends ReportCommand
             return false;
         }
 
-        $text = self::label($input) . "\n  Format: matroska\n";
+        $text = self::label($input) . "\n  Container: matroska\n";
         foreach ($tracks as $track) {
             $text .= "  Track $track->number: " . $track->describe() . "\n";
         }
         $this->emit($console, ($this->succeeded > 0 ? "\n" : "") . $text, [
-            "file"   => self::label($input),
-            "format" => "matroska",
-            "tracks" => array_map(fn (MatroskaTrack $track): array => [
+            "file"      => $input,
+            "container" => "matroska",
+            "tracks"    => array_map(fn (MatroskaTrack $track): array => [
                 "number"   => $track->number,
                 "codecId"  => $track->codecId,
                 "language" => $track->language,
@@ -129,7 +129,7 @@ final class InfoCommand extends ReportCommand
 
         $data = $statistics->toArray();
         $this->emit($console, ($this->succeeded > 0 ? "\n" : "") . $text, [
-            "file"       => self::label($input),
+            "file"       => $input,
             "format"     => $format->value,
             "metadata"   => (object)$subtitle->getAllMetadata(),
             "statistics" => $data,
