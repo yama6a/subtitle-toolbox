@@ -166,7 +166,7 @@ trait TextTransforms
         $emptied = new \SplObjectStorage();
         foreach ($this->cues as $cue) {
             $hadText = Markup::hasVisibleText($cue->getLines());
-            $cue->setLinesByArray($fn($cue));
+            $cue->setLines($fn($cue));
 
             if ($hadText && !Markup::hasVisibleText($cue->getLines())) {
                 $emptied[$cue] = true;

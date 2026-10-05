@@ -73,7 +73,7 @@ trait Fixes
 
         foreach ($this->getCues() as $cue) {
             if (!LineWrapper::fits($cue->getLines(), $maxCharactersPerLine, $maxLines)) {
-                $cue->setLinesByArray(LineWrapper::wrap($cue->getLines(), $maxCharactersPerLine, $maxLines));
+                $cue->setLines(LineWrapper::wrap($cue->getLines(), $maxCharactersPerLine, $maxLines));
             }
         }
 
@@ -87,7 +87,7 @@ trait Fixes
     public function unwrapLines(): self
     {
         foreach ($this->getCues() as $cue) {
-            $cue->setLinesByArray([implode(" ", $cue->getLines())]);
+            $cue->setLines([implode(" ", $cue->getLines())]);
         }
 
         return $this;

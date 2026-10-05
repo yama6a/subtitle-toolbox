@@ -78,7 +78,7 @@ final class CommonErrorFixer
             if (!$change || $lines === $original) {
                 continue;
             }
-            $cue->setLinesByArray($lines);
+            $cue->setLines($lines);
             if (Markup::plainLines($cue->getLines()) === [] && Markup::plainLines($original) !== []) {
                 $removedCues[$cue] = true;
             }

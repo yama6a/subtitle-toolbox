@@ -81,10 +81,10 @@ class SubtitleCueTest extends TestCase
     }
 
 
-    public function testSetLinesByString()
+    public function testSetLinesFromString()
     {
         $cue = new SubtitleCue();
-        $cue->setLinesByString(
+        $cue->setLines(
             $text = (
                 ($line1 = "this is a line") .
                 "\n" .
@@ -99,10 +99,10 @@ class SubtitleCueTest extends TestCase
     }
 
 
-    public function testSetLinesByArray()
+    public function testSetLinesFromArray()
     {
         $cue = new SubtitleCue();
-        $cue->setLinesByArray($lines = [$line1 = "this is a line", $line2 = "with a linebreak"]);
+        $cue->setLines($lines = [$line1 = "this is a line", $line2 = "with a linebreak"]);
 
         $this->assertSame($line1 . "\n" . $line2, $cue->getText());
         $this->assertSame(2, count($cue->getLines()));

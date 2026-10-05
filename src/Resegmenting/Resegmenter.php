@@ -117,7 +117,7 @@ final class Resegmenter
         }
         foreach ($parts as [$part, $first, $end]) {
             $lines = explode("\n", self::text($pieces, $first, $end));
-            $part->setStart($times[$first])->setEnd($times[$end])->setLinesByArray(self::wrap($lines, $options));
+            $part->setStart($times[$first])->setEnd($times[$end])->setLines(self::wrap($lines, $options));
         }
 
         return array_column($parts, 0);
@@ -494,7 +494,7 @@ final class Resegmenter
             ->setIdentifier($first["index"] === 0 ? $first["cue"]->getIdentifier() : null)
             ->setStart($first["start"])
             ->setEnd(end($group)["end"])
-            ->setLinesByArray(self::wrap(self::groupLines($group), $options));
+            ->setLines(self::wrap(self::groupLines($group), $options));
 
         foreach ($group as $word) {
             if ($word["index"] === 0) {

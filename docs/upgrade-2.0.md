@@ -176,6 +176,7 @@ A method that returns a new `Subtitle` starts with `with` or `to`. A method that
 | `$subtitle->addCue($cue, false)` in a loop, then `reIndexCues()` | `$subtitle->addCues($cues)`. It adds all cues and sorts once. `addCue($cue)` sorts after each cue |
 | `$subtitle->removeCue($index, false)` | `$subtitle->removeCue($index)`. It always numbers the cues from 0 again. Remove many cues with `removeCuesWhere()` |
 | `$subtitle->changeCase('upper', 'tr')` | `$subtitle->changeCase(CaseMode::Upper, 'tr')`. The enum also has `Lower` and `Sentence` |
+| `$cue->setLinesByArray(['Hi.', 'Bye.'])`, `$cue->setLinesByString("Hi.\nBye.")` | `$cue->setLines(['Hi.', 'Bye.'])`, `$cue->setLines("Hi.\nBye.")` |
 | `$subtitle->replaceText('/x+/', 'y', true, false)` | `$subtitle->replaceText('/x+/', 'y', new ReplaceTextOptions(regex: true, caseSensitive: false))` |
 | `$subtitle->getComments()[0]['text']`, `['beforeCueIndex']` | `$subtitle->getComments()[0]->text`, `->beforeCueIndex`. `getComments()` returns readonly `Comment` objects |
 | `$subtitle->convertFrameRate(fromFps: 25, toFps: 23.976)` | `$subtitle->convertFrameRate(from: 25, to: 23.976)` |

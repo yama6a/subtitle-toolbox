@@ -149,8 +149,8 @@ trait CueEditing
         $second  = (clone $cue)
             ->setIdentifier(null)
             ->setStart($at)
-            ->setLinesByArray(array_slice($lines, $splitAfterLine));
-        $cue->setEnd($at)->setLinesByArray(array_slice($lines, 0, $splitAfterLine));
+            ->setLines(array_slice($lines, $splitAfterLine));
+        $cue->setEnd($at)->setLines(array_slice($lines, 0, $splitAfterLine));
 
         $cues     = array_values($this->cues);
         $position = array_search($cue, $cues, true);

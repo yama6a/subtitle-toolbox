@@ -85,7 +85,7 @@ final class DualSubtitle
                 $start = min($start, $cue->getStart());
                 $end   = max($end, $cue->getEnd());
             }
-            $joined->setStart($start)->setEnd($end)->setLinesByArray($lines);
+            $joined->setStart($start)->setEnd($end)->setLines($lines);
         }
 
         return $ownCues;

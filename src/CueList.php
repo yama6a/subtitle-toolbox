@@ -48,7 +48,7 @@ final class CueList
             $end     = max($end, $cue->getEnd());
             $anchors = CommentAnchors::move($anchors, $cue, $joined);
         }
-        $joined->setEnd($end)->setLinesByArray($lines);
+        $joined->setEnd($end)->setLines($lines);
 
         $cues = array_values(array_filter(
             $cues,
