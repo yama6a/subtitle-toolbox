@@ -919,7 +919,7 @@ class BinaryTest extends TestCase
 
         $this->assertSame(0, $code);
         $this->assertStringStartsWith("trip.srt\n  Format:                srt\n  Cues:                  3\n", $stdout);
-        $this->assertStringContainsString("  Gap:                   min -0.5, average 0.25, max 1 s\n", $stdout);
+        $this->assertStringContainsString("  Gaps:                  min -0.5, average 0.25, max 1 s\n", $stdout);
         $this->assertSame("", $stderr);
     }
 

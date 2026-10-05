@@ -277,7 +277,7 @@ class ValidationTest extends TestCase
             $words += (int)round($result->value * round($cue->getEnd() - $cue->getStart(), 3) / 60);
         }
 
-        $this->assertSame(SubtitleStatistics::of($subtitle)->getWordCount(), $words);
+        $this->assertSame(SubtitleStatistics::of($subtitle)->wordCount, $words);
     }
 
 
