@@ -122,6 +122,7 @@ class ThrowSitesTest extends TestCase
         CueNotFoundException::class         => 105,
         UnknownFormatException::class       => 106,
         OcrException::class                 => 107,
+        UnwritableContentException::class   => 108,
     ];
 
     private const IDX = "# VobSub index file, v7 (do not modify this line!)\nsize: 720x576\n" .
@@ -234,10 +235,11 @@ class ThrowSitesTest extends TestCase
      */
     public static function throwSites(): array
     {
-        $invalid  = [\InvalidArgumentException::class, InvalidArgumentException::class];
-        $parsing  = [ParsingException::class, ParsingException::class];
-        $ocr      = [\RuntimeException::class, OcrException::class];
-        $imageCue = (new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(1, 2));
+        $invalid    = [\InvalidArgumentException::class, InvalidArgumentException::class];
+        $parsing    = [ParsingException::class, ParsingException::class];
+        $ocr        = [\RuntimeException::class, OcrException::class];
+        $unwritable = [\InvalidArgumentException::class, UnwritableContentException::class];
+        $imageCue   = (new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(1, 2));
 
         $cue = ["start" => 1, "end" => 2, "lines" => ["text"]];
 
@@ -304,15 +306,15 @@ class ThrowSitesTest extends TestCase
             "Fixing/OcrReplaceList.php: invalid regex"      => [fn () => new OcrReplaceList(regularExpressions: ["/(/" => ""]), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid XML"        => [fn () => OcrReplaceList::fromSubtitleEditXml("<ReplaceList>"), ...$parsing],
             "Formatters/JsonOutput.php: invalid UTF-8" => [fn () => Subtitle::load(self::FILES . "cli/latin1.srt", Format::SubRip)->toString(Format::Json),
-                ...$invalid],
+                ...$unwritable],
             "Formatters/CsvFormatter.php: frames without rate" => [fn () => self::subtitle()->toString(Format::Csv,
                 new WriteOptions(format: new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames))), ...$invalid],
             "Formatters/EbuStlFormatter.php: code table 09" => [fn () => self::subtitle()->setFormatData(EbuStlParser::FORMAT_DATA_KEY,
                 ["gsi" => ["CCT" => "09"]])->toString(Format::EbuStl), ...$invalid],
             "Formatters/EbuStlFormatter.php: subtitle number 65536" => [fn () => self::subtitle()->setFormatData(EbuStlParser::FORMAT_DATA_KEY,
-                ["firstSubtitleNumber" => 65536])->toString(Format::EbuStl), ...$invalid],
+                ["firstSubtitleNumber" => 65536])->toString(Format::EbuStl), ...$unwritable],
             "Formatters/EbuStlFormatter.php: text too long" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 30000)))
-                ->toString(Format::EbuStl), ...$invalid],
+                ->toString(Format::EbuStl), ...$unwritable],
             "Formatters/IttFormatter.php: no frame rate"    => [fn () => (new IttFormatter())->format(self::subtitle(), new WriteOptions()), ...$invalid],
             "Formatters/MicroDvdFormatter.php: no frame rate" => [fn () => (new MicroDvdFormatter())->format(self::subtitle(), new WriteOptions()),
                                                                 ...$invalid],
@@ -324,23 +326,23 @@ class ThrowSitesTest extends TestCase
             "Formatters/Options/MicroDvdWriteOptions.php: frame rate 0" => [fn () => new MicroDvdWriteOptions(frameRate: 0), ...$invalid],
             "Formatters/Options/MpSubWriteOptions.php: frame rate 0" => [fn () => new MpSubWriteOptions(frameRate: 0), ...$invalid],
             "Formatters/Options/PlainTextWriteOptions.php: negative paragraph gap" => [fn () => new PlainTextWriteOptions(paragraphGap: -1), ...$invalid],
-            "Formatters/PgsFormatter.php: text cue"         => [fn () => self::subtitle()->toString(Format::Pgs), ...$invalid],
+            "Formatters/PgsFormatter.php: text cue"         => [fn () => self::subtitle()->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: negative x"       => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), -1, 0, 1, 1, 9, 9))
-                ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$invalid],
+                ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: PNG size"         => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), 0, 0, 2, 1, 9, 9))
-                ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$invalid],
+                ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: negative time"    => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), 0, 0, 1, 1, 9, 9))
-                ->toCue(new SubtitleCue(-1, 2)))->toString(Format::Pgs), ...$invalid],
+                ->toCue(new SubtitleCue(-1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/SccFormatter.php: 5 lines"          => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, ["1", "2", "3", "4", "5"]))
-                ->toString(Format::Scc), ...$invalid],
+                ->toString(Format::Scc), ...$unwritable],
             "Formatters/SccFormatter.php: 33 characters"    => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 33)))
-                ->toString(Format::Scc), ...$invalid],
+                ->toString(Format::Scc), ...$unwritable],
             "Formatters/SccFormatter.php: no CEA-608 character" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, "\u{20AC}"))
-                ->toString(Format::Scc), ...$invalid],
+                ->toString(Format::Scc), ...$unwritable],
             "Formatters/SubtitleFormatter.php: options of another format" => [fn () => self::subtitle()->toString(Format::SubRip,
                 new WriteOptions(format: new CsvWriteOptions())), ...$invalid],
             "Formatters/TtmlFormatter.php: stored head"     => [fn () => self::subtitle()->setFormatData(TtmlParser::FORMAT_DATA_KEY, ["head" => "<p/>"])
-                ->toString(Format::Ttml), ...$invalid],
+                ->toString(Format::Ttml), ...$unwritable],
             "FrameRate.php: frame rate 0"                   => [fn () => new FrameRate(0), ...$invalid],
             "FormatDataSchema.php: wrong type"              => [fn () => self::fromArray(["formatData" => ["scc" => ["dropFrame" => "x"]]]), ...$parsing],
             "FormatDataSchema.php: numeric key"             => [fn () => self::fromArray(["formatData" => ["ttml" => ["body" => ["x"]]]]), ...$parsing],

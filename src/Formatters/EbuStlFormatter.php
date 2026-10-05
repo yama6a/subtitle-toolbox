@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Encoding\CodePage;
 use SubtitleToolbox\Encoding\Iso6937;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
@@ -61,7 +62,7 @@ final class EbuStlFormatter extends SubtitleFormatter
         $blocks = "";
         foreach ($sets as $set) {
             if ($number > 0xFFFF) {
-                throw new InvalidArgumentException("EBU STL allows subtitle numbers up to 65535.");
+                throw new UnwritableContentException("EBU STL allows subtitle numbers up to 65535.");
             }
 
             foreach ($set["blocks"] as $block) {
@@ -203,7 +204,7 @@ final class EbuStlFormatter extends SubtitleFormatter
         $fields[] = str_pad($bytes, EbuStl::TEXT_FIELD_SIZE, chr(EbuStl::UNUSED_SPACE));
 
         if (count($fields) > self::MAX_EXTENSION_BLOCKS + 1) {
-            throw new InvalidArgumentException("The cue text needs more than " . (self::MAX_EXTENSION_BLOCKS + 1) . " TTI blocks.");
+            throw new UnwritableContentException("The cue text needs more than " . (self::MAX_EXTENSION_BLOCKS + 1) . " TTI blocks.");
         }
 
         $blocks = [];

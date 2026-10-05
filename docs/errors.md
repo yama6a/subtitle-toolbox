@@ -20,15 +20,16 @@ try {
 | `InvalidFormatterException` | `\RuntimeException` | 101 | `toString()` with a format that the library cannot write, or `save()` with an unknown extension |
 | `InvalidParserException` | `\RuntimeException` | 102 | `fromString()` with a format that the library cannot read. An MKV or WebM file in `load()` or `fromString()`. An MKV or WebM file without exactly 1 subtitle track in `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()` |
 | `ImageCueWithoutTextException` | `\RuntimeException` | 103 | an image cue without text in `toString()` with a text format |
-| `InvalidArgumentException` | `\InvalidArgumentException` | 104 | an invalid argument or option, for example alignment 10, frame rate 0, a missing MicroDVD output frame rate, the options class of another format, or a stored TTML head that is not valid XML. Also a missing OCR engine or Tesseract language |
+| `InvalidArgumentException` | `\InvalidArgumentException` | 104 | an invalid argument or option, for example alignment 10, frame rate 0, a missing MicroDVD output frame rate or the options class of another format. Also a missing OCR engine or Tesseract language |
 | `CueNotFoundException` | `\RuntimeException` | 105 | `removeCue()` with an index that has no cue |
 | `UnknownFormatException` | `InvalidParserException` | 106 | `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()` when detection finds no format |
 | `OcrException` | `\RuntimeException` | 107 | an OCR engine that fails on one image: Tesseract exits with an error, or php-glyph-ocr cannot read the image. A missing `tesseract` program, a missing Tesseract language or a missing php-glyph-ocr package throws `InvalidArgumentException` |
+| `UnwritableContentException` | `InvalidArgumentException` | 108 | `toString()` or `save()` with a subtitle that the output format cannot hold. Examples are more than 4 lines or 32 characters per line in SCC, a cue without an image in PGS, a subtitle number over 65535 in EBU STL, text that is not UTF-8 in a JSON format, and a stored TTML head that is not valid XML |
 
 - **SPL classes**: each class extends an SPL class, so `catch (\InvalidArgumentException $e)` and `catch (\RuntimeException $e)` also work.
-- **Messages**: `InvalidArgumentException` and `CueNotFoundException` keep the plain message. The other classes start it with the class name and the code, for example `ParsingException (Error #100): `. The message text is not API and can change in a minor release. Test the class and `getCode()`, see [compatibility.md](compatibility.md).
+- **Messages**: `InvalidArgumentException`, `UnwritableContentException` and `CueNotFoundException` keep the plain message. The other classes start it with the class name and the code, for example `ParsingException (Error #100): `. The message text is not API and can change in a minor release. Test the class and `getCode()`, see [compatibility.md](compatibility.md).
 - **Previous exception**: every constructor takes the message, then an optional `$previous` exception. `ParsingException` takes the line number before it. `getPrevious()` returns it.
-- **Final classes**: every exception class is `final`, except `InvalidParserException`, which `UnknownFormatException` extends.
+- **Final classes**: every exception class is `final`, except `InvalidParserException`, which `UnknownFormatException` extends, and `InvalidArgumentException`, which `UnwritableContentException` extends.
 - **Line number**: `ParsingException::getLineNumber()` returns the 1-based input line when the parser knows it, and null otherwise. The message then ends with the line, for example ` (line 12)`. Read the line from `getLineNumber()`, not from the message.
 
 These readers set the line number:

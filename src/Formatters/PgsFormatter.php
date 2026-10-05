@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PaletteReducer;
 use SubtitleToolbox\Image\PngDecoder;
@@ -63,8 +63,8 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
         $output                  = "";
         foreach ($cues as $index => $cue) {
             if (!CueImage::isImageCue($cue)) {
-                throw new InvalidArgumentException("Cannot write cue [{$cue->getStart()} >>> {$cue->getEnd()}] as PGS - " .
-                                                   "the cue holds no image, and PgsFormatter does not render text!");
+                throw new UnwritableContentException("Cannot write cue [{$cue->getStart()} >>> {$cue->getEnd()}] as PGS - " .
+                                                     "the cue holds no image, and PgsFormatter does not render text!");
             }
 
             $image = CueImage::fromCue($cue);
@@ -86,16 +86,16 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
     {
         foreach ([$image->x, $image->y, $image->width, $image->height, $image->screenWidth, $image->screenHeight] as $value) {
             if ($value < 0 || $value > self::MAX_FIELD) {
-                throw new InvalidArgumentException("Cannot write cue [{$cue->getStart()} >>> {$cue->getEnd()}] as PGS - " .
-                                                   "the image position and size must be from 0 to " . self::MAX_FIELD . "!");
+                throw new UnwritableContentException("Cannot write cue [{$cue->getStart()} >>> {$cue->getEnd()}] as PGS - " .
+                                                     "the image position and size must be from 0 to " . self::MAX_FIELD . "!");
             }
         }
 
         ["width" => $width, "height" => $height, "pixels" => $pixels] = PngDecoder::decode($image->png);
         if ($width !== $image->width || $height !== $image->height) {
-            throw new InvalidArgumentException("Cannot write cue [{$cue->getStart()} >>> {$cue->getEnd()}] as PGS - " .
-                                               "the PNG has {$width}x{$height} pixels, but the image data says " .
-                                               "{$image->width}x{$image->height}!");
+            throw new UnwritableContentException("Cannot write cue [{$cue->getStart()} >>> {$cue->getEnd()}] as PGS - " .
+                                                 "the PNG has {$width}x{$height} pixels, but the image data says " .
+                                                 "{$image->width}x{$image->height}!");
         }
 
         ["palette" => $palette, "indexes" => $indexes] = PaletteReducer::reduce($pixels);
@@ -269,8 +269,8 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
     {
         $pts = (int) round($seconds * self::PTS_PER_SECOND);
         if ($pts < 0 || $pts > self::MAX_PTS) {
-            throw new InvalidArgumentException("Cannot write cue [{$cue->getStart()} >>> {$cue->getEnd()}] as PGS - " .
-                                               "a time stamp must be from 0 to " . self::MAX_PTS . " ticks of 90 kHz!");
+            throw new UnwritableContentException("Cannot write cue [{$cue->getStart()} >>> {$cue->getEnd()}] as PGS - " .
+                                                 "a time stamp must be from 0 to " . self::MAX_PTS . " ticks of 90 kHz!");
         }
 
         return $pts;

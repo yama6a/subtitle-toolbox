@@ -49,7 +49,7 @@ file_put_contents('movie.synced.sup', $subtitle->toString(Format::Pgs));
 - **Forced**: `forced` in the image data is true when at least one object of the display set has the forced flag.
 - **Alignment**: an image whose center is in the top third of the screen gets alignment 8.
 - **Errors**: the parser skips segments of unknown types. It throws `ParsingException` for a segment without the `PG` bytes, a cut-off segment, and a bitmap with too few pixels.
-- **Formatter**: `PgsFormatter` writes image cues back to a `.sup` file. So you can retime, cut or filter a PGS file without OCR. It also converts VobSub to PGS. It does not render text, and throws `InvalidArgumentException` for a cue without an image.
+- **Formatter**: `PgsFormatter` writes image cues back to a `.sup` file. So you can retime, cut or filter a PGS file without OCR. It also converts VobSub to PGS. It does not render text, and throws `UnwritableContentException` for a cue without an image.
 - **Overlaps**: the formatter writes the cues in start order. A cue that starts before the previous cue ends replaces it on screen.
 - **Colors**: the formatter reduces an image with more than 255 colors. A color channel can change by 1.
 - **Round trip**: a PGS file that `PgsParser` reads and `PgsFormatter` writes gives the same pixels, positions and times to 1 ms. Two cues with the same image, where the second starts at the end of the first, come back as one cue.

@@ -382,7 +382,7 @@ $subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dr
 - **Position**: rows 1 to 4 give alignment 8, and all other rows give `null`. The `scc` format data keeps the row and column of each line. The formatter writes them back when they still fit the cue. Else it places the lines by the alignment, at the bottom and centred by default.
 - **Timing of the formatter**: it loads each caption before the cue start, so the caption shows on the first frame of the cue. When the frames after the previous caption are too few for the load, the caption shows late. Of two overlapping cues, the later one replaces the earlier one.
 - **Markup**: styles become `<i>`, `<u>` and `<font color>` with `#ffffff`, `#00ff00`, `#0000ff`, `#00ffff`, `#ff0000`, `#ffff00` and `#ff00ff`, and back. The formatter writes other colors as white and strips all other tags. A style change inside a word adds a space.
-- **Limits**: the formatter throws `InvalidArgumentException` for more than 4 lines, more than 32 characters per line, or a character outside the CEA-608 character sets. Call `wrapLines(32, 4)` first.
+- **Limits**: the formatter throws `UnwritableContentException` for more than 4 lines, more than 32 characters per line, or a character outside the CEA-608 character sets. Call `wrapLines(32, 4)` first.
 
 ## SubRip
 | Input | Parser result | Formatter output |

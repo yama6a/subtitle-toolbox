@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Encoding\Cea608;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\LineEnding;
@@ -124,18 +124,18 @@ final class SccFormatter extends SubtitleFormatter
         }
 
         if (count($lines) > self::MAX_LINES) {
-            throw new InvalidArgumentException("Cue #$idx at {$cue->getStart()} s has " . count($lines) . " lines, " .
-                                               "but SCC allows " . self::MAX_LINES . ". Call wrapLines(32, 4) first.");
+            throw new UnwritableContentException("Cue #$idx at {$cue->getStart()} s has " . count($lines) . " lines, " .
+                                                 "but SCC allows " . self::MAX_LINES . ". Call wrapLines(32, 4) first.");
         }
         foreach ($lines as $characters) {
             if (count($characters) > Cea608::COLUMNS) {
-                throw new InvalidArgumentException("Cue #$idx at {$cue->getStart()} s has a line with " . count($characters) .
-                                                   " characters, but SCC allows " . Cea608::COLUMNS . ". Call wrapLines(32, 4) first.");
+                throw new UnwritableContentException("Cue #$idx at {$cue->getStart()} s has a line with " . count($characters) .
+                                                     " characters, but SCC allows " . Cea608::COLUMNS . ". Call wrapLines(32, 4) first.");
             }
             foreach ($characters as $character) {
                 if (Cea608::encodeCharacter($character["char"]) === null) {
-                    throw new InvalidArgumentException("Cue #$idx at {$cue->getStart()} s has the character \"{$character["char"]}\", " .
-                                                       "which CEA-608 cannot show.");
+                    throw new UnwritableContentException("Cue #$idx at {$cue->getStart()} s has the character \"{$character["char"]}\", " .
+                                                         "which CEA-608 cannot show.");
                 }
             }
         }
