@@ -50,7 +50,7 @@ final class DiffCommand extends ReportCommand
 
     protected function jsonDescription(): string
     {
-        return "Print the differences as one JSON object.";
+        return "Print the differences as JSON: a list with one object for the pair of files.";
     }
 
 

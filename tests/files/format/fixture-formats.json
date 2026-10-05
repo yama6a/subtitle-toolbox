@@ -32,36 +32,36 @@
         "detect": "aws-transcribe"
     },
     "chapters/ffmetadata/real/ffmpeg_mp4_export.ffmeta": {
-        "fromPath": "ffmeta",
-        "detect": "ffmeta"
+        "fromPath": "ffmeta-chapters",
+        "detect": "ffmeta-chapters"
     },
     "chapters/ffmetadata/real/hand_written_crlf.ffmeta": {
-        "fromPath": "ffmeta",
-        "detect": "ffmeta"
+        "fromPath": "ffmeta-chapters",
+        "detect": "ffmeta-chapters"
     },
     "chapters/ffmetadata/real/m4b_audiobook.ffmeta": {
-        "fromPath": "ffmeta",
-        "detect": "ffmeta"
+        "fromPath": "ffmeta-chapters",
+        "detect": "ffmeta-chapters"
     },
     "chapters/ogm/real/mkvextract_simple.txt": {
         "fromPath": "txt",
-        "detect": "ogm"
+        "detect": "ogm-chapters"
     },
     "chapters/ogm/real/windows_tool_crlf_bom.txt": {
         "fromPath": "txt",
-        "detect": "ogm"
+        "detect": "ogm-chapters"
     },
     "chapters/podcast/real/hosting_export.json": {
         "fromPath": "json",
-        "detect": "podcast"
+        "detect": "podcast-chapters"
     },
     "chapters/podcast/real/spec_basic_example.json": {
         "fromPath": "json",
-        "detect": "podcast"
+        "detect": "podcast-chapters"
     },
     "chapters/podcast/real/spec_complex_example.json": {
         "fromPath": "json",
-        "detect": "podcast"
+        "detect": "podcast-chapters"
     },
     "chapters/youtube/real/long_stream_chapters.txt": {
         "fromPath": "txt",

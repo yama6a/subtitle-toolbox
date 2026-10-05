@@ -30,6 +30,14 @@ abstract class FileCommand extends Command
         Format::YouTube, Format::PodcastTranscript,
     ];
 
+    // The 1.x names of the chapter formats, kept so that 1.x scripts still run.
+    private const FORMAT_ALIASES = [
+        "ytchapter" => Format::YouTubeChapters,
+        "podcast"   => Format::PodcastChapters,
+        "ogm"       => Format::OgmChapters,
+        "ffmeta"    => Format::FfMetadataChapters,
+    ];
+
     protected ?Format $fromFormat = null;
 
     protected ?Format $secondFormat = null;
@@ -239,7 +247,7 @@ abstract class FileCommand extends Command
     {
         $key = strtolower(ltrim($nameOrExtension, "."));
 
-        return Format::tryFrom($key) ?? Format::fromPath("file.$key")
+        return Format::tryFrom($key) ?? self::FORMAT_ALIASES[$key] ?? Format::fromPath("file.$key")
             ?? self::fail("Unknown format \"$nameOrExtension\". Run \"" . Application::NAME . " formats\" for the list.");
     }
 

@@ -402,8 +402,8 @@ class BinaryTest extends TestCase
             $this->runBinary(["convert", "pool.json", "--from", "deepgram", "--to", "srt", "-o", "-"])
         );
         $this->assertSame(
-            [0, Subtitle::load("$this->dir/book.ffmeta", Format::FfMetadata)->toString(Format::YouTubeChapters), ""],
-            $this->runBinary(["convert", "book.ffmeta", "--from", "ffmeta", "--to", "ytchapter", "-o", "-"])
+            [0, Subtitle::load("$this->dir/book.ffmeta", Format::FfMetadataChapters)->toString(Format::YouTubeChapters), ""],
+            $this->runBinary(["convert", "book.ffmeta", "--from", "ffmeta-chapters", "--to", "youtube-chapters", "-o", "-"])
         );
     }
 
@@ -927,9 +927,10 @@ class BinaryTest extends TestCase
     public function testInfoAsJson(): void
     {
         [$code, $stdout] = $this->runBinary(["info", "trip.srt", "--json"]);
-        $info = json_decode($stdout, true);
+        $list = json_decode($stdout, true);
+        $info = $list[0];
 
-        $this->assertSame(0, $code);
+        $this->assertSame([0, 1], [$code, count($list)]);
         $this->assertSame("trip.srt", $info["file"]);
         $this->assertSame("srt", $info["format"]);
         $this->assertSame(3, $info["statistics"]["cueCount"]);
@@ -943,12 +944,15 @@ class BinaryTest extends TestCase
         $this->assertSame("vtt", $list[1]["format"]);
         $this->assertStringStartsWith("broken.srt: ", $stderr);
         $this->assertStringEndsWith("3 files: 2 succeeded, 1 failed.\n", $stderr);
+
+        [$code, $stdout] = $this->runBinary(["info", "broken.srt", "--json"]);
+        $this->assertSame([1, "[]\n"], [$code, $stdout]);
     }
 
 
     public function testInfoListsTheParseWarnings(): void
     {
-        $this->assertSame([], json_decode($this->runBinary(["info", "trip.srt", "--json"])[1], true)["warnings"]);
+        $this->assertSame([], json_decode($this->runBinary(["info", "trip.srt", "--json"])[1], true)[0]["warnings"]);
 
         [$code, $stdout, $stderr] = $this->runBinary(["info", "broken.srt", "--json", "--lenient"]);
         $this->assertSame(0, $code);
@@ -957,7 +961,7 @@ class BinaryTest extends TestCase
             "blockIndex" => 1,
             "message"    => "Block #1 doesn't seem to have its timestamps on its second line!",
             "action"     => "skipped",
-        ]], json_decode($stdout, true)["warnings"]);
+        ]], json_decode($stdout, true)[0]["warnings"]);
         $this->assertSame("broken.srt: line 5: Block #1 doesn't seem to have its timestamps on its second line! (skipped)\n", $stderr);
 
         $this->assertMatchesRegularExpression('/^  Warnings: +1$/m', $this->runBinary(["info", "broken.srt", "--lenient"])[1]);
@@ -974,7 +978,7 @@ class BinaryTest extends TestCase
         [$code, $stdout, $stderr] = $this->runBinary(["validate", $path, "--check-overlap", "--json"]);
 
         $this->assertSame([1, ""], [$code, $stderr]);
-        $violations = json_decode($stdout, true)["violations"];
+        $violations = json_decode($stdout, true)[0]["violations"];
         $this->assertSame(array_fill(0, count($expected), "noOverlap"), array_column($violations, "rule"));
         $this->assertSame(array_map(fn (ValidationViolation $violation): int => $violation->cueIndex, $expected), array_column($violations, "cueIndex"));
         $this->assertSame(2, $this->runBinary(["validate", $path, "--no-overlap"])[0]);
@@ -1076,13 +1080,13 @@ class BinaryTest extends TestCase
         [$code, $stdout] = $this->runBinary(["validate", "trip.srt", "--max-cpl", "42", "--json"]);
 
         $this->assertSame(1, $code);
-        $this->assertSame([
+        $this->assertSame([[
             "file"       => "trip.srt",
             "format"     => "srt",
             "valid"      => false,
             "violations" => [["cueIndex" => 1, "rule" => "maxCharactersPerLine", "value" => 57, "limit" => 42]],
             "warnings"   => [],
-        ], json_decode($stdout, true));
+        ]], json_decode($stdout, true));
     }
 
 
@@ -1097,14 +1101,14 @@ class BinaryTest extends TestCase
         $line    = "line 5: Block #1 doesn't seem to have its timestamps on its second line! (skipped)\n";
 
         [$code, $stdout, $stderr] = $this->runBinary(["validate", "broken.srt", "--max-cpl", "42", "--json", "--lenient"]);
-        $this->assertSame([0, [$warning], "broken.srt: $line"], [$code, json_decode($stdout, true)["warnings"], $stderr]);
+        $this->assertSame([0, [$warning], "broken.srt: $line"], [$code, json_decode($stdout, true)[0]["warnings"], $stderr]);
 
         [$code, $stdout, $stderr] = $this->runBinary(["diff", "trip.srt", "broken.srt", "--json", "--lenient"]);
-        $json = json_decode($stdout, true);
+        $json = json_decode($stdout, true)[0];
         $this->assertSame([1, [], [$warning], "broken.srt: $line"], [$code, $json["oldWarnings"], $json["newWarnings"], $stderr]);
 
         [$code, $stdout] = $this->runBinary(["diff", "broken.srt", "trip.srt", "--json", "--lenient"]);
-        $json = json_decode($stdout, true);
+        $json = json_decode($stdout, true)[0];
         $this->assertSame([1, [$warning], []], [$code, $json["oldWarnings"], $json["newWarnings"]]);
     }
 
@@ -1221,10 +1225,10 @@ class BinaryTest extends TestCase
 
         [$code, $stdout] = $this->runBinary(["info", "pgs.mkv", "--json"]);
         $this->assertSame(0, $code);
-        $this->assertSame(["file" => "pgs.mkv", "format" => "matroska", "tracks" => [
+        $this->assertSame([["file" => "pgs.mkv", "format" => "matroska", "tracks" => [
             ["number" => 3, "codecId" => "S_HDMV/PGS", "language" => "ger", "name" => null, "default" => true, "forced" => false],
             ["number" => 4, "codecId" => "S_HDMV/PGS", "language" => "eng", "name" => null, "default" => true, "forced" => true],
-        ]], json_decode($stdout, true));
+        ]]], json_decode($stdout, true));
 
         [$code, $stdout] = $this->runBinary(["info", "pgs.mkv", "--track", "4"]);
         $this->assertSame(0, $code);
@@ -1241,7 +1245,7 @@ class BinaryTest extends TestCase
         );
 
         [$code, $stdout] = $this->runBinary(["info", "-", "--json"], file_get_contents(self::FILES . "mkv/pgs.mkv"));
-        $this->assertSame([0, "stdin", [3, 4]], [$code, json_decode($stdout, true)["file"], array_column(json_decode($stdout, true)["tracks"], "number")]);
+        $this->assertSame([0, "stdin", [3, 4]], [$code, json_decode($stdout, true)[0]["file"], array_column(json_decode($stdout, true)[0]["tracks"], "number")]);
     }
 
 
@@ -1397,9 +1401,9 @@ class BinaryTest extends TestCase
         $this->assertSame([2, "", "Error: Cannot run OCR with Tesseract - the program \"tesseract\" is missing! " .
                                   TesseractOcrEngine::INSTALL_HINT . "\n$usage"],
                           $this->runWithPath($this->dir, ["convert", "text.sup", "text.srt", "--ocr", "--ocr-engine", "tesseract"]));
-        $this->assertSame([1, "", "text.sup: OcrException (Error #107): Cannot run OCR with Tesseract in the language \"fra\" - the language data of " .
+        $this->assertSame([2, "", "Error: Cannot run OCR with Tesseract in the language \"fra\" - the language data of " .
                                   "fra is missing! Install it, for example with apt install tesseract-ocr-fra. The " .
-                                  "installed languages are: deu, eng, osd.\n"],
+                                  "installed languages are: deu, eng, osd.\n$usage"],
                           $this->runWithFakeTesseract(["convert", "text.sup", "text.srt", "--ocr", "--ocr-language", "fra"]));
         $this->assertFileDoesNotExist("$this->dir/text.srt");
     }
@@ -1571,7 +1575,8 @@ class BinaryTest extends TestCase
         $expected = SubtitleDiff::compare(Subtitle::fromStringAutoDetectFormat($this->file("v1.srt")), Subtitle::fromStringAutoDetectFormat($this->file("v2.srt")), $options);
         [$code, $stdout, $stderr] = $this->runBinary(["diff", "v1.srt", "v2.srt", "--json", "--time-tolerance", "0.5", "--ignore-formatting", "--text-only"]);
         $this->assertSame([1, ""], [$code, $stderr]);
-        $json = json_decode($stdout, true);
+        $this->assertCount(1, json_decode($stdout, true));
+        $json = json_decode($stdout, true)[0];
         $this->assertSame(["v1.srt", "v2.srt", false], [$json["oldFile"], $json["newFile"], $json["equal"]]);
         $this->assertSame(array_map(fn ($difference): string => $difference->kind->value, $expected), array_column($json["differences"], "kind"));
         $old = $expected[0]->oldCue;

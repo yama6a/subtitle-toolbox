@@ -9,39 +9,39 @@ namespace SubtitleToolbox;
  */
 enum Format: string
 {
-    case Ass               = "ass";
-    case Csv               = "csv";
-    case FfMetadata        = "ffmeta";
-    case HtmlTranscript    = "html";
-    case Itt               = "itt";
-    case Json              = "json";
-    case AssemblyAi        = "assemblyai";
-    case AwsTranscribe     = "aws-transcribe";
-    case Deepgram          = "deepgram";
-    case GoogleSpeech      = "google-speech";
-    case Lyrics            = "lrc";
-    case MicroDvd          = "microdvd";
-    case MpSub             = "mpsub";
-    case Pgs               = "pgs";
-    case Sami              = "sami";
-    case Sbv               = "sbv";
-    case Scc               = "scc";
-    case SubRip            = "srt";
-    case EbuStl            = "stl";
-    case SubViewer         = "subviewer";
-    case Ttml              = "ttml";
-    case Tsv               = "tsv";
-    case PlainText         = "txt";
-    case Mpl2              = "mpl2";
-    case TmPlayer          = "tmplayer";
-    case VobSub            = "vobsub";
-    case WebVtt            = "vtt";
-    case Whisper           = "whisper";
-    case YouTube           = "youtube";
-    case OgmChapters       = "ogm";
-    case PodcastChapters   = "podcast";
-    case PodcastTranscript = "podcast-transcript";
-    case YouTubeChapters   = "ytchapter";
+    case Ass                = "ass";
+    case Csv                = "csv";
+    case FfMetadataChapters = "ffmeta-chapters";
+    case HtmlTranscript     = "html";
+    case Itt                = "itt";
+    case Json               = "json";
+    case AssemblyAi         = "assemblyai";
+    case AwsTranscribe      = "aws-transcribe";
+    case Deepgram           = "deepgram";
+    case GoogleSpeech       = "google-speech";
+    case Lyrics             = "lrc";
+    case MicroDvd           = "microdvd";
+    case MpSub              = "mpsub";
+    case Pgs                = "pgs";
+    case Sami               = "sami";
+    case Sbv                = "sbv";
+    case Scc                = "scc";
+    case SubRip             = "srt";
+    case EbuStl             = "stl";
+    case SubViewer          = "subviewer";
+    case Ttml               = "ttml";
+    case Tsv                = "tsv";
+    case PlainText          = "txt";
+    case Mpl2               = "mpl2";
+    case TmPlayer           = "tmplayer";
+    case VobSub             = "vobsub";
+    case WebVtt             = "vtt";
+    case Whisper            = "whisper";
+    case YouTube            = "youtube";
+    case OgmChapters        = "ogm-chapters";
+    case PodcastChapters    = "podcast-chapters";
+    case PodcastTranscript  = "podcast-transcript";
+    case YouTubeChapters    = "youtube-chapters";
 
 
     /**
@@ -93,7 +93,7 @@ enum Format: string
     public function isAutoDetected(): bool
     {
         return match ($this) {
-            self::YouTubeChapters, self::PodcastChapters, self::FfMetadata, self::OgmChapters,
+            self::YouTubeChapters, self::PodcastChapters, self::FfMetadataChapters, self::OgmChapters,
             self::AwsTranscribe, self::Deepgram, self::AssemblyAi, self::GoogleSpeech => false,
             default => true,
         };

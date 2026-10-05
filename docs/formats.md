@@ -19,12 +19,12 @@ $subtitle = Subtitle::fromString($content, Format::MicroDvd);
 $subtitle = Subtitle::fromStringAutoDetectFormat($content);   // see detection.md
 $vtt      = $subtitle->toString(Format::WebVtt);
 
-Format::from('srt');                    // Format::SubRip, for a name from user input
-Format::fromPath('movie.sub');          // Format::MicroDvd
-Format::Ass->extensions();              // ['ass', 'ssa'], the first one for new files
-Format::Whisper->canWrite();            // false
-Format::PlainText->canRead();           // false
-Format::FfMetadata->isAutoDetected();   // false
+Format::from('srt');                          // Format::SubRip, for a name from user input
+Format::fromPath('movie.sub');                // Format::MicroDvd
+Format::Ass->extensions();                    // ['ass', 'ssa'], the first one for new files
+Format::Whisper->canWrite();                  // false
+Format::PlainText->canRead();                 // false
+Format::FfMetadataChapters->isAutoDetected(); // false
 ```
 
 - **Shared extensions**: when two formats share an extension, the earlier case owns it. So `fromPath()` returns `Format::MicroDvd` for `.sub`, `Format::Json` for `.json` and `Format::PlainText` for `.txt`.

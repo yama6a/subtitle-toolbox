@@ -11,6 +11,8 @@ final class ParseWarning
     /**
      * Holds one problem that a lenient parser found and what it did about it.
      *
+     * @internal The parsers create the warnings.
+     *
      * @param ?int         $lineNumber 1-based input line of the problem. Null for binary EBU STL and the JSON formats, which have no lines.
      * @param ?int         $blockIndex 0-based number of the block, as in the "Block #n" messages. Null for a library JSON field outside the cues.
      * @param list<string> $block      the lines of the block, trimmed as the parser reads them
@@ -28,6 +30,8 @@ final class ParseWarning
     /**
      * Returns the warning for a block that the parser skipped, with the message of $exception without its class prefix.
      * A warning with a line number also drops the " (line N)" end of the message, which would repeat it.
+     *
+     * @internal
      *
      * @param list<string> $block
      */

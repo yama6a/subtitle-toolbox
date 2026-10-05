@@ -12,7 +12,7 @@ class FormatTest extends TestCase
     private const FILES = __DIR__ . "/files/";
 
     private const NOT_AUTO_DETECTED = [
-        Format::YouTubeChapters, Format::PodcastChapters, Format::FfMetadata, Format::OgmChapters,
+        Format::YouTubeChapters, Format::PodcastChapters, Format::FfMetadataChapters, Format::OgmChapters,
         Format::AwsTranscribe, Format::Deepgram, Format::AssemblyAi, Format::GoogleSpeech,
     ];
 
@@ -93,8 +93,8 @@ class FormatTest extends TestCase
 
     public function testFfMetadataLoadsByItsExtensionButIsNotDetected(): void
     {
-        $this->assertSame(Format::FfMetadata, Format::fromPath("chapters.ffmeta"));
-        $this->assertFalse(Format::FfMetadata->isAutoDetected());
+        $this->assertSame(Format::FfMetadataChapters, Format::fromPath("chapters.ffmeta"));
+        $this->assertFalse(Format::FfMetadataChapters->isAutoDetected());
         $this->assertNull(Format::detect(file_get_contents(self::FILES . "chapters/ffmetadata/real/m4b_audiobook.ffmeta")));
     }
 
@@ -173,14 +173,14 @@ class FormatTest extends TestCase
     }
 
 
-    public function testFormatsCommandPrintsTheTableOfVersion1(): void
+    public function testFormatsCommandPrintsTheFormatTable(): void
     {
         $streams = [fopen("php://memory", "w+b"), fopen("php://memory", "w+b"), fopen("php://memory", "w+b")];
         $code    = (new Cli\Application(...$streams))->run(["subtitle-toolbox", "formats"]);
         rewind($streams[1]);
 
         $this->assertSame(0, $code);
-        $this->assertSame(file_get_contents(self::FILES . "format/formats.1x.txt"), stream_get_contents($streams[1]));
+        $this->assertSame(file_get_contents(self::FILES . "format/formats.txt"), stream_get_contents($streams[1]));
     }
 
 

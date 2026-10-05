@@ -18,8 +18,6 @@ abstract class ReportCommand extends FileCommand
     /** @var list<array<string, mixed>> */
     private array $entries = [];
 
-    private int $inputCount = 0;
-
 
     public function options(): array
     {
@@ -33,7 +31,7 @@ abstract class ReportCommand extends FileCommand
 
     protected function jsonDescription(): string
     {
-        return "Print JSON: one object for one input file, a list of objects for several.";
+        return "Print JSON: a list with one object for each input file, also for one file.";
     }
 
 
@@ -43,12 +41,6 @@ abstract class ReportCommand extends FileCommand
 
         $this->json    = $arguments->has("json");
         $this->entries = [];
-    }
-
-
-    protected function checkInputs(array $inputs, Arguments $arguments): void
-    {
-        $this->inputCount = count($inputs);
     }
 
 
@@ -69,12 +61,11 @@ abstract class ReportCommand extends FileCommand
 
     protected function finish(Console $console): void
     {
-        if (!$this->json || $this->entries === []) {
+        if (!$this->json) {
             return;
         }
 
-        $data = $this->inputCount === 1 ? $this->entries[0] : $this->entries;
-        $console->out(json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+        $console->out(json_encode($this->entries, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
                                          | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR) . "\n");
     }
 

@@ -14,6 +14,7 @@ use SubtitleToolbox\Cli\Option;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
+use SubtitleToolbox\Ocr\GlyphOcrOptions;
 use SubtitleToolbox\Ocr\OcrEngine;
 use SubtitleToolbox\Ocr\OcrEngineChooser;
 use SubtitleToolbox\Ocr\OcrEngineName;
@@ -32,7 +33,7 @@ final class OcrEdit extends Edit
     private function __construct(
         private readonly OcrEngineName $engine,
         private readonly ?string $language,
-        private readonly ?GlyphDatabase $database,
+        private readonly ?GlyphOcrOptions $glyphOptions,
     ) {
     }
 
@@ -79,6 +80,10 @@ final class OcrEdit extends Edit
         }
         try {
             $engine = OcrEngineChooser::choose($engine);
+            if ($engine === OcrEngineName::Tesseract) {
+                $language = $arguments->value("ocr-language") ?? "eng";
+                (new TesseractOcrEngine($language))->requireLanguages($language);
+            }
         } catch (InvalidArgumentException $exception) {
             Command::fail($exception->getMessage());
         }
@@ -86,7 +91,7 @@ final class OcrEdit extends Edit
         return new self(
             $engine,
             $arguments->value("ocr-language"),
-            $engine === OcrEngineName::Glyph ? self::loadDatabase($arguments->value("ocr-database")) : null,
+            $engine === OcrEngineName::Glyph ? new GlyphOcrOptions(database: self::loadDatabase($arguments->value("ocr-database"))) : null,
         );
     }
 
@@ -113,7 +118,7 @@ final class OcrEdit extends Edit
         }
 
         // A new engine for each file, because the recognizer learns the glyph heights of one stream.
-        return new GlyphOcrEngine($this->database);
+        return new GlyphOcrEngine($this->glyphOptions ?? new GlyphOcrOptions());
     }
 
 

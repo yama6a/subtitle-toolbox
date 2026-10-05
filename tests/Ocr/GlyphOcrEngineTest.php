@@ -10,6 +10,7 @@ use GlyphOcr\GlyphDatabase;
 use GlyphOcr\RecognitionResult;
 use GlyphOcr\RecognizedChar;
 use GlyphOcr\RecognizedLine;
+use GlyphOcr\Recognizer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
@@ -145,7 +146,7 @@ class GlyphOcrEngineTest extends TestCase
         $subtitle = (new PgsParser())->parse(file_get_contents(self::PGS . "text_1080p.sup"), new ReadOptions());
         $image    = CueImage::fromCue($subtitle->getCues()[0]);
 
-        $result = (new GlyphOcrEngine(new GlyphDatabase(), ["unknownText" => "#"]))->recognize($image, "eng");
+        $result = (new GlyphOcrEngine(new GlyphOcrOptions(new GlyphDatabase(), unknownText: "#")))->recognize($image, "eng");
 
         $this->assertCount(1, $result->lines);
         $this->assertMatchesRegularExpression("/^#+( #+)+$/", $result->lines[0]);
@@ -153,22 +154,42 @@ class GlyphOcrEngineTest extends TestCase
     }
 
 
-    public function testUnknownOptionThrows(): void
+    public function testOptionsMatchTheRecognizerDefaults(): void
     {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot create a GlyphOcrEngine with the option \"database\"");
-
-        new GlyphOcrEngine(null, ["database" => GlyphDatabase::latin()]);
+        $options = new GlyphOcrOptions();
+        foreach ((new \ReflectionMethod(Recognizer::class, "__construct"))->getParameters() as $parameter) {
+            if ($parameter->getName() !== "database") {
+                $this->assertSame($parameter->getDefaultValue(), $options->{$parameter->getName()}, $parameter->getName());
+            }
+        }
+        $this->assertSame(array_column((new \ReflectionMethod(Recognizer::class, "__construct"))->getParameters(), "name"),
+                          array_column((new \ReflectionMethod(GlyphOcrOptions::class, "__construct"))->getParameters(), "name"));
     }
 
 
-    public function testInvalidOptionValueThrows(): void
+    /**
+     * @return array<string, array{Closure(): GlyphOcrOptions, string}>
+     */
+    public static function invalidOptions(): array
+    {
+        return [
+            "ink threshold 0"   => [fn () => new GlyphOcrOptions(inkThreshold: 0), "ink threshold 0 - it must be from 1 to 765"],
+            "ink threshold 766" => [fn () => new GlyphOcrOptions(inkThreshold: 766), "ink threshold 766 - it must be from 1 to 765"],
+            "space width 0"     => [fn () => new GlyphOcrOptions(spaceWidth: 0), "space width 0 - it must be at least 1"],
+            "wrong pixels -1"   => [fn () => new GlyphOcrOptions(maxWrongPixels: -1), "-1 wrong pixels - the number must be at least 0"],
+            "italic slant -0.1" => [fn () => new GlyphOcrOptions(italicSlant: -0.1), "italic slant -0.1 - it must be from 0 to 1"],
+            "line height 0"     => [fn () => new GlyphOcrOptions(minLineHeight: 0), "minimum line height 0 - it must be at least 1"],
+        ];
+    }
+
+
+    #[DataProvider("invalidOptions")]
+    public function testInvalidOptionThrows(Closure $create, string $message): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot create a GlyphOcrEngine - the recognizer says: Cannot create a recognizer " .
-                                      "with ink threshold 0");
+        $this->expectExceptionMessage("Cannot create GlyphOcrOptions with $message!");
 
-        new GlyphOcrEngine(null, ["inkThreshold" => 0]);
+        $create();
     }
 
 

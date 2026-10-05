@@ -1,7 +1,7 @@
 Name                Extensions          Read  Write
 ass                 .ass .ssa           yes   yes
 csv                 .csv                yes   yes
-ffmeta              .ffmeta             yes   yes
+ffmeta-chapters     .ffmeta             yes   yes
 html                .html .htm          yes   yes
 itt                 .itt                yes   yes
 json                .json               yes   yes
@@ -28,7 +28,7 @@ vobsub              .idx                yes   no
 vtt                 .vtt                yes   yes
 whisper             .json               yes   no
 youtube             .json3 .srv3 .srv1  yes   no
-ogm                 .txt                yes   yes
-podcast             .json               yes   yes
+ogm-chapters        .txt                yes   yes
+podcast-chapters    .json               yes   yes
 podcast-transcript  .json               yes   yes
-ytchapter           .txt                yes   yes
+youtube-chapters    .txt                yes   yes

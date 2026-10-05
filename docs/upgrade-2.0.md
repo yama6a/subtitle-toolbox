@@ -8,6 +8,8 @@ composer require ymakhloufi/subtitle-toolbox:^2.0
 
 2.0 has the same requirements as 1.x: PHP 8.2 or later, `ext-dom` and `ext-iconv`.
 
+[compatibility.md](compatibility.md) says what semantic versioning covers in 2.x.
+
 ## New names
 The calls below use these imports:
 
@@ -47,6 +49,7 @@ use SubtitleToolbox\Validation\ValidationRules;
 | `FormatRegistry::forPath('movie.sub')` | `Format::fromPath('movie.sub')` |
 | `FormatRegistry::names()` | `array_map(fn (Format $f) => $f->value, Format::cases())` |
 | `FormatRegistry::extensions('ass')` | `Format::Ass->extensions()` |
+| the format names `'ytchapter'`, `'podcast'`, `'ogm'` and `'ffmeta'`, for example in `FormatRegistry::find()` | `Format::YouTubeChapters`, `Format::PodcastChapters`, `Format::OgmChapters` and `Format::FfMetadataChapters`. Their values are `'youtube-chapters'`, `'podcast-chapters'`, `'ogm-chapters'` and `'ffmeta-chapters'`. `Format::tryFrom('ytchapter')` returns null |
 | `FormatRegistry::find('srt')`, `FormatRegistry::forExtension('srt')` | `Format::tryFrom('srt')` for a format name, `Format::fromPath('movie.srt')` for an extension |
 | `FormatRegistry::parserClass('vobsub')`, `FormatRegistry::formatterClass('vobsub')` | `Format::VobSub->canRead()`, `Format::VobSub->canWrite()` |
 | a format name from user input, such as `'srt'` | `Format::from('srt')`, or `Format::tryFrom()` for null on an unknown name |
@@ -54,10 +57,11 @@ use SubtitleToolbox\Validation\ValidationRules;
 | `MatroskaReader::open('movie.mkv')->getSubtitleTracks()` | `Subtitle::tracks('movie.mkv')` |
 | `MatroskaReader::DEFAULT_LAST_CUE_DURATION` | `ReadOptions::$lastCueDuration`, 5 s by default |
 | `(new VobSubParser(file_get_contents('movie.idx'), 'de'))->parse(file_get_contents('movie.sub'))` | `Subtitle::load('movie.idx', Format::VobSub, new ReadOptions(format: new VobSubReadOptions(language: 'de')))`. It reads the `.sub` file next to the `.idx` file |
-| `new SubRipStreamWriter($stream, [SubtitleFormatter::OPTION_LINE_ENDING => "\r\n"])` | `new SubRipStreamWriter($stream, new WriteOptions(lineEnding: LineEnding::Crlf))`. `WebVttStreamWriter` takes the options as its third argument |
+| `new SubRipStreamWriter($stream, [SubtitleFormatter::OPTION_LINE_ENDING => "\r\n"])` | `new SubRipStreamWriter($stream, new WriteOptions(lineEnding: LineEnding::Crlf))`. `WebVttStreamWriter` takes the same arguments |
+| `new WebVttStreamWriter($stream, $reader->getHeader(), $options)` | `new WebVttStreamWriter($stream, new WriteOptions(), $reader->getHeader())`, or `new WebVttStreamWriter($stream, header: $reader->getHeader())`. The options come second, as in `SubRipStreamWriter` |
 | a parser or formatter object, for example `(new SubRipParser())->parse($content)` | the classes stay public. `parse()` takes `(string $content, ReadOptions $options)`, `format()` takes `(Subtitle $subtitle, WriteOptions $options)` |
-| a class that extends a parser, such as `class MyParser extends SubRipParser` | every parser except `SubtitleParser` is `final`. Call the parser from your own class and change the `Subtitle` that `parse()` returns |
-| a class that extends a formatter, such as `class MyFormatter extends SubRipFormatter` | every formatter except `SubtitleFormatter` is `final`. Call the formatter from your own class and change the string that `format()` returns |
+| a class that extends a parser, such as `class MyParser extends SubRipParser` | every parser except `SubtitleParser` is `final`. Only the library extends `SubtitleParser`, and its protected members are not API. Call the parser from your own class and change the `Subtitle` that `parse()` returns |
+| a class that extends a formatter, such as `class MyFormatter extends SubRipFormatter` | every formatter except `SubtitleFormatter` is `final`. Only the library extends `SubtitleFormatter`, and its protected members are not API. Call the formatter from your own class and change the string that `format()` returns |
 | `SubRipParser::splitIntoBlocks()`, `parseBlock()`, `parseCueBlock()`, and the same `WebVttParser` methods with `numberedBlocks()`, `parseHeader()` and `parseSettings()` | `@internal`. Read one cue at a time with `SubRipStreamReader` or `WebVttStreamReader` |
 | `CsvParser::detectDelimiter()`, `records()`, `parseTime()` | private. `parse()` keeps the detected delimiter in `findFormatData('csv')['delimiter']` |
 | the constants and static helpers of `EbuStlParser`, such as `GSI_FIELDS`, `LANGUAGES` and `readGsi()` | removed from the parser. Keep your own copy of the values you need |
@@ -69,9 +73,9 @@ use SubtitleToolbox\Validation\ValidationRules;
 | `PodcastTranscriptFormatter::segments()` | `@internal`. Read the `segments` key of `json_decode($subtitle->toString(Format::PodcastTranscript), true)` |
 | `MpSubFormatter::MPSUB_HEADER` | removed. `(new Subtitle())->toString(Format::MpSub)` returns the header without metadata, after a UTF-8 BOM |
 | `SamiFormatter::DEFAULT_CLASS` | private. Its value is `'SUBTTL'` |
-| `getFormatData('sub')`, `'smi'`, `'ffmetadata'`, `'chapters'` for Podcasting 2.0 chapters, `'podcast'` for Podcasting 2.0 transcripts | `findFormatData('microdvd')`, `'sami'`, `'ffmeta'`, `'podcast'`, `'podcast-transcript'`. The key is the value of the `Format` case |
+| `getFormatData('sub')`, `'smi'`, `'ffmetadata'`, `'chapters'` for Podcasting 2.0 chapters, `'podcast'` for Podcasting 2.0 transcripts | `findFormatData('microdvd')`, `'sami'`, `'ffmeta-chapters'`, `'podcast-chapters'`, `'podcast-transcript'`. The key is the value of the `Format` case |
 | `IttParser::FORMAT`, `LyricsParser::FORMAT`, `SccParser::FORMAT`, `SubViewerParser::FORMAT`, `TtmlParser::FORMAT`, `WebVttParser::FORMAT` | `FORMAT_DATA_KEY`. These parsers have no `FORMAT_DATA_KEY`: HTML transcript, JSON, MPL2, OGM chapters, PGS, SBV, TMPlayer, VobSub and YouTube chapters |
-| library JSON with the old format data keys, read with `fromArray()` or `JsonParser` | rename the keys in the JSON before you read it. 2.0 keeps the data under the old key, and no formatter reads it. Old `podcast` data of a transcript becomes Podcasting 2.0 chapter data |
+| library JSON with the old format data keys, read with `fromArray()` or `JsonParser` | rename the keys in the JSON before you read it. 2.0 keeps the data under the old key, and no formatter reads it |
 
 `FormatRegistry` and `FormatDetector` are internal now. `getFormat()` returns the format that a load or `fromString()` call read.
 
@@ -200,13 +204,15 @@ A lookup that starts with `get` returns a value or throws when nothing matches. 
 | `StringHelpers::UNIX_LINE_ENDING`, `WINDOWS_LINE_ENDING`, `MAC_LINE_ENDING` | `LineEnding::Lf->value`, `LineEnding::Crlf->value`, `"\r"` |
 | `StringHelpers` methods other than `convertToUtf8()` and `isValidUtf8()` | `@internal` |
 | `Markup::CORE_TAGS`, `WORD_TIMESTAMP_REGEX`, `unescapeText()`, `escapeTextLike()`, `splitTags()`, `plainLines()`, `countCharacters()`, `characters()`, `words()`, `toSingleLine()`, `openCoreTags()`, `closeCoreTags()`, `coreTimestamp()` | `@internal`. [markup.md](markup.md) lists the public members |
-| `Cea608`, `CodePage`, `Iso6937`, `EbmlReader`, `PaletteReducer` and the traits of `Subtitle` | `@internal` |
+| `Cea608`, `CodePage`, `Iso6937`, `EbmlReader`, `PaletteReducer`, `ImageFormatter` and the traits of `Subtitle` | `@internal` |
 | `SccParser::HEADER`, `MODE_POP_ON`, `MODE_ROLL_UP`, `MODE_PAINT_ON`, `SubViewerParser::START_SCRIPT`, `METADATA_TAGS`, `CsvParser::DELIMITERS`, `LyricsParser::METADATA_TAGS`, `FfMetadataChaptersParser::METADATA_KEYS`, `WebVttParser::REGION_SETTINGS`, `WebVttParser::CUE_SETTINGS`, `CsvParser::checkDelimiter()` | `@internal`. The SCC format data keeps the values `pop-on`, `roll-up` and `paint-on` |
 | a class that extends `Subtitle`, `SubtitleCue`, `FrameRate`, `Markup`, `SubtitleStatistics`, a stream writer or an exception class | every concrete class is `final`, except `InvalidParserException`. Wrap the class in your own class |
 | `new ValidationRules(noIndexGaps: true)`, `ValidationResult::RULE_INDEX_GAP` | removed. Cue indexes have no gaps, because `removeCue()` always numbers the cues from 0 again |
 
 ## Services and reports
 Each service result is a `*Report` with `public readonly` fields, or a value object with `public readonly` fields. String constant sets are backed enums. The value of each case is the 1.x string.
+
+Only the library creates the reports and results. Their constructors are `@internal`: `CommonErrorReport`, `HearingImpairedReport`, `OcrReport`, `ProfanityReport`, `ReferenceSyncReport`, `ResegmentReport`, `ShotChangeReport`, `SpeakerLabelReport`, `TranslationReport`, `WordHighlightReport`, `AppliedFix`, `CueDifference`, `ValidationViolation`, `TranslationWarning`, `MuteRange`, `MatroskaTrack`, `HlsWebVttRendition`, and `ParseWarning` with `ParseWarning::skipped()`. `RecognizedText` and `Comment` keep public constructors.
 
 | 1.x | 2.0 |
 |:--- |:--- |
@@ -231,6 +237,7 @@ Each service result is a `*Report` with `public readonly` fields, or a value obj
 | `OcrResult` | `RecognizedText` |
 | `$results = (new OcrRunner($engine))->run($subtitle)` | `$results = (new OcrRunner($engine))->run($subtitle)->texts`. `run()` returns an `OcrReport` |
 | `GlyphOcrEngine::toOcrResult()`, `TesseractOcrEngine::fromTsv()` | `@internal` |
+| `new GlyphOcrEngine($database, ['italicSlant' => 0.2, 'lineContext' => false])` | `new GlyphOcrEngine(new GlyphOcrOptions(database: $database, italicSlant: 0.2, lineContext: false))`. `GlyphOcrOptions` has one typed field per `GlyphOcr\Recognizer` setting and checks the values. A misspelled name is a PHP `Error` |
 | `DualSubtitleOptions::getSecondaryTagName()`, `WordHighlightOptions::getTagName()`, the `Parsers\WordGrouping` trait | `@internal` |
 | `HlsWebVttResult`, `HlsWebVttResult::segmentMillis()` | `HlsWebVttRendition`. `segmentMillis()` is gone |
 | `$copy = $runner->translate($german, 'de', 'en')`, then `$runner->getWarnings()` | `$report = $runner->translate($copy = clone $german, 'de', 'en')`, then `$report->warnings`. `translate()` changes the subtitle you pass and keeps no state |
@@ -248,13 +255,14 @@ Each service result is a `*Report` with `public readonly` fields, or a value obj
 |:--- |:--- |
 | `$exception->getErrorCode()` | `$exception->getCode()` |
 | `new ParsingException($message, $lineNumber)` | the same, plus an optional third argument `$previous`. The other library exceptions take `($message, $previous)` |
-| `catch (InvalidArgumentException $e)` around `recognizeText()` or `OcrRunner::run()` | `catch (OcrException $e)` for a failed OCR run, error code 107 |
+| `catch (InvalidArgumentException $e)` around `recognizeText()` or `OcrRunner::run()` | `catch (OcrException $e)` for a failed OCR run on an image, error code 107. A missing engine or language still throws `InvalidArgumentException` |
 
 ## Command line tool
 See [cli.md](cli.md) for every command and option.
 
 | 1.x | 2.0 |
 |:--- |:--- |
+| `--from ytchapter`, `--to podcast`, and the same for `ogm` and `ffmeta` | still works. The new names are `youtube-chapters`, `podcast-chapters`, `ogm-chapters` and `ffmeta-chapters`. `formats` and `info` print the new names |
 | `convert --case-language de` | `convert --language de` |
 | `convert --replace FROM=TO --regex --ignore-case` | `convert --replace FROM=TO --replace-regex --replace-ignore-case` |
 | `convert --karaoke-tag kf` | `convert --ass-karaoke-tag kf` |
@@ -266,10 +274,11 @@ See [cli.md](cli.md) for every command and option.
 | `convert call.json --to srt` for Deepgram JSON | `convert call.json --from deepgram --to srt`. Chapters and cloud speech JSON always need `--from` |
 | none | `diff` and `dual` read the second file with `--from2` and `--track2`. `convert` and `dual` take `--in-place`. `diff`, `dual` and `hls` take `--keep-going` |
 | `convert --speakers colours` | `convert --speakers colors` |
+| `info --json`, `validate --json` or `diff --json` with one input printed one object | they always print a list, with one object for each input. Read `[0]` for one input |
 | `validate --json` with `results`, each with `cueIndex` and `cueNumber` | `violations`, each with `cueIndex` only. `cueIndex` starts at 0, so the cue number is `cueIndex + 1` |
 | `diff --json` with `old` and `new` for the file names | `oldFile` and `newFile`. Each difference keeps `old` and `new` for the cues |
 | only `info --json` had `warnings` | `validate --json` has `warnings` too, and `diff --json` has `oldWarnings` and `newWarnings`. `diff`, `dual` and `sync --reference` also print the warnings of their second file to standard error |
-| the classes in `SubtitleToolbox\Cli`, for example a subclass of `InfoCommand` | `@internal`, and every class that is not abstract is final. Run the binary. Only its commands, options, output and exit codes are stable |
+| the classes in `SubtitleToolbox\Cli`, for example a subclass of `InfoCommand` | `@internal`, and every class that is not abstract is final. Run the binary. Only its commands, options, exit codes and `--json` shapes are stable |
 
 ### Removed commands
 2.0 removes the commands `shift`, `scale`, `fps` with its alias `sync-fps`, `fix`, `strip-sdh` and `snap`. They fail like any unknown command: exit code 2 and a pointer to the command list. Use the `retime` or `convert` call of the table.
@@ -307,7 +316,7 @@ These changes alter the output or the exit code of a call that needs no other ch
 | `convert --help` | listed every option | lists the common options and the option groups. `convert --help GROUP` lists the options of one group | `convert --help all` |
 | CLI inputs | `--force` let a command write over its input | a command never overwrites an input without `--in-place`, also not with `--force`. That file fails | `--in-place` |
 | Unknown options | before 1.70.5, a misspelled key or a key of another format was ignored. 1.70.5 and later threw `InvalidArgumentException` | a misspelled field, such as `new WriteOptions(lineEndings: LineEnding::Crlf)`, is a PHP `Error` for an unknown named parameter. An options class of another format, such as `new CsvWriteOptions()` for SubRip output, throws `InvalidArgumentException`. Read classes follow the same rule | fix the name, or pass the class of the format |
-| Strict types | the library converted scalar values | every file declares `strict_types`. A `mapText()`, `mapLines()`, `Markup::mapTextRuns()` or `ProfanityOptions` mask callback must return a string, else it throws `TypeError`. `GlyphOcrEngine` options need their exact types, for example `['inkThreshold' => 128]` | return the documented type |
+| Strict types | the library converted scalar values | every file declares `strict_types`. A `mapText()`, `mapLines()`, `Markup::mapTextRuns()` or `ProfanityOptions` mask callback must return a string, else it throws `TypeError`. | return the documented type |
 | CSV and TSV times in `hh:mm:ss:ff` | the CLI could not read such a file | the CLI `--input-fps` and `--fps` set `CsvReadOptions::$frameRate` | nothing |
 | JSON output of text that is not UTF-8 | `JsonFormatter` and the Podcasting 2.0 formatters threw `JsonException` | they throw `InvalidArgumentException`, with the `JsonException` as its previous exception | catch `InvalidArgumentException` or `SubtitleToolboxException` |
 | `ParseWarning::$lineNumber`, `$blockIndex` | 0 for a warning without a line, -1 for a library JSON field outside the cues | null in both cases | test for null |
@@ -322,7 +331,8 @@ These changes alter the output or the exit code of a call that needs no other ch
 | Stored TTML head that is not valid XML | `toString(Format::Ttml)` threw `InvalidFormatterException`, error code 101 | it throws `InvalidArgumentException`, error code 104 | catch `InvalidArgumentException` |
 | Karaoke | `WordHighlight::expand()` returned a new subtitle and left its input as it was | `WordHighlight::apply()` changes the subtitle that you pass | pass `clone $subtitle` |
 | Translation | `TranslationRunner::translate()` returned a translated copy | it translates the subtitle that you pass, after the last engine call succeeds | pass `clone $subtitle` |
-| OCR failures | a failed Tesseract run, a missing `tesseract` program or language, or a php-glyph-ocr error on an image threw `InvalidArgumentException`, error code 104 | they throw `OcrException`, error code 107. The CLI message starts with `OcrException (Error #107): ` | catch `OcrException` or `SubtitleToolboxException` |
+| OCR failures | a failed Tesseract run or a php-glyph-ocr error on an image threw `InvalidArgumentException`, error code 104 | they throw `OcrException`, error code 107. A missing `tesseract` program, Tesseract language or php-glyph-ocr package still throws `InvalidArgumentException` | catch `OcrException` or `SubtitleToolboxException` |
+| CLI `--ocr-language` without installed data | the file failed with exit code 1 | the tool stops before the first file with exit code 2 | install the language |
 | `SubtitleCue::setLines()` with a value that is no string or array | threw `InvalidArgumentException` | throws a PHP `TypeError` | pass a string or a list of strings |
 | CLI `info --json` | `statistics.gap`, and `statistics.mostUsedWords` as an object of word and count | `statistics.gaps`, and `statistics.mostUsedWords` as a list of `{"word": ..., "count": ...}` | read the new keys |
 | CLI `info` text output | the line `Gap:` | the line `Gaps:` | read the new label |

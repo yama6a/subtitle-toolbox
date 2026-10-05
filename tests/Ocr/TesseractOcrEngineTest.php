@@ -204,7 +204,7 @@ class TesseractOcrEngineTest extends TestCase
 
     public function testMissingProgramThrowsWithInstallHints(): void
     {
-        $this->expectException(OcrException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("Cannot run OCR with Tesseract - the program \"" . __DIR__ . "/no-such-program\" " .
                                       "is missing! Install Tesseract with: apt install tesseract-ocr (Debian, Ubuntu), " .
                                       "apk add tesseract-ocr tesseract-ocr-data-eng (Alpine), dnf install tesseract (Fedora), brew install " .
@@ -217,7 +217,7 @@ class TesseractOcrEngineTest extends TestCase
 
     public function testMissingLanguageThrowsWithTheInstalledLanguages(): void
     {
-        $this->expectException(OcrException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("Cannot run OCR with Tesseract in the language \"deu+fra+jpn\" - the language " .
                                       "data of fra, jpn is missing! Install it, for example with apt install " .
                                       "tesseract-ocr-fra. The installed languages are: deu, eng, osd.");

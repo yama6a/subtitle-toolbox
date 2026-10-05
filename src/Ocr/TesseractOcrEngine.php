@@ -116,12 +116,17 @@ final class TesseractOcrEngine implements OcrEngine
     }
 
 
-    private function requireLanguages(string $language): void
+    /**
+     * Throws when the program or the language data of $language is missing. The CLI calls it before the first file.
+     *
+     * @internal
+     */
+    public function requireLanguages(string $language): void
     {
         if (!isset(self::$languages[$this->program])) {
             if (!self::isInstalled($this->program)) {
-                throw new OcrException("Cannot run OCR with Tesseract - the program \"$this->program\" is " .
-                                       "missing! " . self::INSTALL_HINT);
+                throw new InvalidArgumentException("Cannot run OCR with Tesseract - the program \"$this->program\" " .
+                                                   "is missing! " . self::INSTALL_HINT);
             }
             [, $output, $error]              = self::run([$this->program, "--list-langs"]);
             $lines                           = array_map(trim(...), explode("\n", trim($output . $error)));
@@ -130,11 +135,11 @@ final class TesseractOcrEngine implements OcrEngine
 
         $missing = array_diff(explode("+", $language), self::$languages[$this->program]);
         if ($missing !== []) {
-            throw new OcrException("Cannot run OCR with Tesseract in the language \"$language\" - the " .
-                                   "language data of " . implode(", ", $missing) . " is missing! Install " .
-                                   "it, for example with apt install tesseract-ocr-" . reset($missing) .
-                                   ". The installed languages are: " .
-                                   implode(", ", self::$languages[$this->program]) . ".");
+            throw new InvalidArgumentException("Cannot run OCR with Tesseract in the language \"$language\" - " .
+                                               "the language data of " . implode(", ", $missing) . " is missing! " .
+                                               "Install it, for example with apt install tesseract-ocr-" .
+                                               reset($missing) . ". The installed languages are: " .
+                                               implode(", ", self::$languages[$this->program]) . ".");
         }
     }
 

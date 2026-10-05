@@ -12,6 +12,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
+use SubtitleToolbox\Ocr\GlyphOcrOptions;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
@@ -197,7 +198,7 @@ class CommonErrorFixerTest extends TestCase
         $subtitle = (new PgsParser())->parse(file_get_contents(self::FILES . "fixing/ocr-fr.sup"), new ReadOptions());
         $this->assertSame([], CommonErrorFixer::apply($subtitle, new CommonErrorOptions(language: "fr"))->fixes);
 
-        $subtitle->recognizeText(new GlyphOcrEngine(GlyphDatabase::latin(), ["lineContext" => false]));
+        $subtitle->recognizeText(new GlyphOcrEngine(new GlyphOcrOptions(GlyphDatabase::latin(), lineContext: false)));
         $fixes = CommonErrorFixer::apply($subtitle, new CommonErrorOptions(language: "fr"))->fixes;
 
         $this->assertSame(["ll pleut. lls restent à la maison.", "Il pleut. Ils restent à la maison."],
