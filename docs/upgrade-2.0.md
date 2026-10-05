@@ -237,6 +237,7 @@ Only the library creates the reports and results. Their constructors are `@inter
 | `OcrResult` | `RecognizedText` |
 | `$results = (new OcrRunner($engine))->run($subtitle)` | `$results = (new OcrRunner($engine))->run($subtitle)->texts`. `run()` returns an `OcrReport` |
 | `GlyphOcrEngine::toOcrResult()`, `TesseractOcrEngine::fromTsv()` | `@internal` |
+| `new TesseractOcrEngine('deu+eng', 6, 'tesseract', 2.0, true, 128)` | `new TesseractOcrEngine(new TesseractOcrOptions(language: 'deu+eng', pageSegmentationMode: 6, program: 'tesseract', scale: 2.0, invert: true, threshold: 128))`. The constructor takes one `TesseractOcrOptions`, as `GlyphOcrEngine` takes `GlyphOcrOptions` |
 | `new GlyphOcrEngine($database, ['italicSlant' => 0.2, 'lineContext' => false])` | `new GlyphOcrEngine(new GlyphOcrOptions(database: $database, italicSlant: 0.2, lineContext: false))`. `GlyphOcrOptions` has one typed field per `GlyphOcr\Recognizer` setting and checks the values. A misspelled name is a PHP `Error` |
 | `DualSubtitleOptions::getSecondaryTagName()`, `WordHighlightOptions::getTagName()`, the `Parsers\WordGrouping` trait | `@internal` |
 | `HlsWebVttResult`, `HlsWebVttResult::segmentMillis()` | `HlsWebVttRendition`. `segmentMillis()` is gone |
@@ -333,6 +334,7 @@ These changes alter the output or the exit code of a call that needs no other ch
 | Karaoke | `WordHighlight::expand()` returned a new subtitle and left its input as it was | `WordHighlight::apply()` changes the subtitle that you pass | pass `clone $subtitle` |
 | Translation | `TranslationRunner::translate()` returned a translated copy | it translates the subtitle that you pass, after the last engine call succeeds | pass `clone $subtitle` |
 | OCR failures | a failed Tesseract run or a php-glyph-ocr error on an image threw `InvalidArgumentException`, error code 104 | they throw `OcrException`, error code 107. A missing `tesseract` program, Tesseract language or php-glyph-ocr package still throws `InvalidArgumentException` | catch `OcrException` or `SubtitleToolboxException` |
+| php-glyph-ocr version | Composer installed any version of `yama6a/php-glyph-ocr` next to the library | Composer refuses a version below 0.3, and 0.4 or later | `composer require yama6a/php-glyph-ocr:^0.3` |
 | CLI `--ocr-language` without installed data | the file failed with exit code 1 | the tool stops before the first file with exit code 2 | install the language |
 | `SubtitleCue::setLines()` with a value that is no string or array | threw `InvalidArgumentException` | throws a PHP `TypeError` | pass a string or a list of strings |
 | CLI `info --json` | `statistics.gap`, and `statistics.mostUsedWords` as an object of word and count | `statistics.gaps`, and `statistics.mostUsedWords` as a list of `{"word": ..., "count": ...}` | read the new keys |

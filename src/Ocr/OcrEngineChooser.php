@@ -47,7 +47,7 @@ final class OcrEngineChooser
                                   string $tesseractProgram = "tesseract"): OcrEngine
     {
         return match (self::choose($engine, $tesseractProgram)) {
-            OcrEngineName::Tesseract => new TesseractOcrEngine($tesseractLanguage, program: $tesseractProgram),
+            OcrEngineName::Tesseract => new TesseractOcrEngine(new TesseractOcrOptions($tesseractLanguage, program: $tesseractProgram)),
             OcrEngineName::Glyph     => new GlyphOcrEngine(),
         };
     }

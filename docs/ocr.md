@@ -122,17 +122,18 @@ winget install UB-Mannheim.TesseractOCR          # Windows, then add its folder 
 
 ```php
 use SubtitleToolbox\Ocr\TesseractOcrEngine;
+use SubtitleToolbox\Ocr\TesseractOcrOptions;
 
-$subtitle->recognizeText(new TesseractOcrEngine());                     // English
-$subtitle->recognizeText(new TesseractOcrEngine('deu+eng'));            // German and English
-$subtitle->recognizeText(new TesseractOcrEngine(), 'rus');              // the language of recognizeText() wins
-$subtitle->recognizeText(new TesseractOcrEngine(program: 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'));
+$subtitle->recognizeText(new TesseractOcrEngine());                                          // English
+$subtitle->recognizeText(new TesseractOcrEngine(new TesseractOcrOptions(language: 'deu+eng')));  // German and English
+$subtitle->recognizeText(new TesseractOcrEngine(), 'rus');                                   // the language of recognizeText() wins
+$subtitle->recognizeText(new TesseractOcrEngine(new TesseractOcrOptions(program: 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe')));
 ```
 
 - **Languages**: pass [Tesseract language codes](https://tesseract-ocr.github.io/tessdoc/Data-Files-in-different-versions.html), joined with `+`. The English data comes with the program, except on Alpine. Each other language is a package, for example `tesseract-ocr-rus`.
 - **Missing program**: the first `recognize()` call checks the program and the languages. It throws `InvalidArgumentException` with the install commands, or with the list of installed languages. A failed run of `tesseract` throws `OcrException`.
 - **Images**: the engine draws each cue image on black, inverts it to dark text on white, and adds a 10-pixel white border. It writes the result to a temporary PGM file and deletes the file after the call.
-- **Options**: `pageSegmentationMode` is the `--psm` value, default 6, one block of text. `scale` from 1 to 8 scales the image up, default 2 on screens below 720 lines and 1 above. `invert` and `threshold` change the image steps. The defaults read the test files with the fewest errors: scaling DVD text by 2 and inverting fixed the errors on small text, a threshold added errors.
+- **Options**: `TesseractOcrOptions` holds the settings. `language` is the language for cues where `recognizeText()` passes none, default `eng`. `program` is the path of `tesseract`. `pageSegmentationMode` is the `--psm` value, default 6, one block of text. `scale` from 1 to 8 scales the image up, default 2 on screens below 720 lines and 1 above. `invert` and `threshold` change the image steps. The defaults read the test files with the fewest errors: scaling DVD text by 2 and inverting fixed the errors on small text, a threshold added errors.
 - **Lines and confidence**: each Tesseract text line becomes one line. The confidence is the mean word confidence of the cue, from 0 to 1, or null for a cue without text.
 - **Italic**: Tesseract 4 and later do not report italic text, so the lines have no `<i>` tags.
 - **Speed**: each cue starts one `tesseract` process. Loading the language model takes about 110 ms of each call.
@@ -155,6 +156,7 @@ file_put_contents('movie.srt', $subtitle->toString(Format::SubRip));
 ```
 
 - **Package**: without php-glyph-ocr, `new GlyphOcrEngine()` throws `InvalidArgumentException` with the `composer require` command.
+- **Version**: the library works with php-glyph-ocr 0.3. The `conflict` entry of `composer.json` stops Composer from installing an older or a 0.4 or later version next to it.
 - **Database**: `GlyphOcrOptions::$database` is a `GlyphOcr\GlyphDatabase`. The default is `GlyphDatabase::subtitleFonts()`. It holds glyphs of DejaVu Sans, Liberation Sans and Noto Sans, upright and italic, and then the Latin database of Subtitle Edit for other fonts. Liberation Sans has the metrics of Arial. The database takes about 76 MB of memory, so engines that exist at the same time share one copy.
 - **Subtitle Edit output**: `new GlyphOcrEngine(new GlyphOcrOptions(database: GlyphDatabase::latin(), lineContext: false))` reads the text as the nOCR engine of Subtitle Edit does.
 - **Options**: the constructor takes a `GlyphOcrOptions`. Each field except `database` sets the parameter of the same name of `GlyphOcr\Recognizer` in php-glyph-ocr 0.3, with the same default. An invalid value throws `InvalidArgumentException` in the `GlyphOcrOptions` constructor. A recognizer error on an image throws `OcrException`.

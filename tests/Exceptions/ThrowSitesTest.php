@@ -51,6 +51,7 @@ use SubtitleToolbox\Ocr\OcrEngineChooser;
 use SubtitleToolbox\Ocr\OcrEngineName;
 use SubtitleToolbox\Ocr\RecognizedText;
 use SubtitleToolbox\Ocr\TesseractOcrEngine;
+use SubtitleToolbox\Ocr\TesseractOcrOptions;
 use SubtitleToolbox\Parsers\AssemblyAiParser;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\AwsTranscribeParser;
@@ -397,17 +398,17 @@ class ThrowSitesTest extends TestCase
             "Ocr/OcrEngineChooser.php: engine missing"      => [fn () => OcrEngineChooser::choose(OcrEngineName::Tesseract, __DIR__ . "/none"), ...$invalid],
             "Ocr/RecognizedText.php: line is no string"          => [fn () => new RecognizedText([5]), ...$invalid],
             "Ocr/RecognizedText.php: confidence above 1"         => [fn () => new RecognizedText(["text"], 2), ...$invalid],
-            "Ocr/TesseractOcrEngine.php: mode 14"           => [fn () => new TesseractOcrEngine(pageSegmentationMode: 14), ...$invalid],
-            "Ocr/TesseractOcrEngine.php: scale 0.5"         => [fn () => new TesseractOcrEngine(scale: 0.5), ...$invalid],
-            "Ocr/TesseractOcrEngine.php: threshold 0"       => [fn () => new TesseractOcrEngine(threshold: 0), ...$invalid],
-            "Ocr/TesseractOcrEngine.php: program missing"   => [fn () => (new TesseractOcrEngine(program: __DIR__ . "/none"))
+            "Ocr/TesseractOcrOptions.php: mode 14"          => [fn () => new TesseractOcrOptions(pageSegmentationMode: 14), ...$invalid],
+            "Ocr/TesseractOcrOptions.php: scale 0.5"        => [fn () => new TesseractOcrOptions(scale: 0.5), ...$invalid],
+            "Ocr/TesseractOcrOptions.php: threshold 0"      => [fn () => new TesseractOcrOptions(threshold: 0), ...$invalid],
+            "Ocr/TesseractOcrEngine.php: program missing"   => [fn () => (new TesseractOcrEngine(new TesseractOcrOptions(program: __DIR__ . "/none")))
                 ->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), null), ...$invalid],
-            "Ocr/TesseractOcrEngine.php: language missing"  => [fn () => (new TesseractOcrEngine(program: self::FAKE_TESSERACT))
+            "Ocr/TesseractOcrEngine.php: language missing"  => [fn () => (new TesseractOcrEngine(new TesseractOcrOptions(program: self::FAKE_TESSERACT)))
                 ->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), "xyz"), ...$invalid],
             "Ocr/TesseractOcrEngine.php: program fails"     => [function (): void {
                 putenv("FAKE_TESSERACT_FAIL=1");
                 try {
-                    (new TesseractOcrEngine(program: self::FAKE_TESSERACT))->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), null);
+                    (new TesseractOcrEngine(new TesseractOcrOptions(program: self::FAKE_TESSERACT)))->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), null);
                 } finally {
                     putenv("FAKE_TESSERACT_FAIL");
                 }
