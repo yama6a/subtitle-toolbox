@@ -251,7 +251,7 @@ Each service result is a `*Report` with `public readonly` fields, or a value obj
 |:--- |:--- |
 | `$exception->getErrorCode()` | `$exception->getCode()` |
 | `new ParsingException($message, $lineNumber)` | the same, plus an optional third argument `$previous`. The other library exceptions take `($message, $previous)` |
-| `catch (InvalidArgumentException $e)` around `recognizeText()` or `OcrRunner::run()` | `catch (OcrException $e)` for a failed OCR run, error code 107 |
+| `catch (InvalidArgumentException $e)` around `recognizeText()` or `OcrRunner::run()` | `catch (OcrException $e)` for a failed OCR run on an image, error code 107. A missing engine or language still throws `InvalidArgumentException` |
 
 ## Command line tool
 See [cli.md](cli.md) for every command and option.
@@ -327,7 +327,8 @@ These changes alter the output or the exit code of a call that needs no other ch
 | Stored TTML head that is not valid XML | `toString(Format::Ttml)` threw `InvalidFormatterException`, error code 101 | it throws `InvalidArgumentException`, error code 104 | catch `InvalidArgumentException` |
 | Karaoke | `WordHighlight::expand()` returned a new subtitle and left its input as it was | `WordHighlight::apply()` changes the subtitle that you pass | pass `clone $subtitle` |
 | Translation | `TranslationRunner::translate()` returned a translated copy | it translates the subtitle that you pass, after the last engine call succeeds | pass `clone $subtitle` |
-| OCR failures | a failed Tesseract run, a missing `tesseract` program or language, or a php-glyph-ocr error on an image threw `InvalidArgumentException`, error code 104 | they throw `OcrException`, error code 107 | catch `OcrException` or `SubtitleToolboxException` |
+| OCR failures | a failed Tesseract run or a php-glyph-ocr error on an image threw `InvalidArgumentException`, error code 104 | they throw `OcrException`, error code 107. A missing `tesseract` program, Tesseract language or php-glyph-ocr package still throws `InvalidArgumentException` | catch `OcrException` or `SubtitleToolboxException` |
+| CLI `--ocr-language` without installed data | the file failed with exit code 1 | the tool stops before the first file with exit code 2 | install the language |
 | `SubtitleCue::setLines()` with a value that is no string or array | threw `InvalidArgumentException` | throws a PHP `TypeError` | pass a string or a list of strings |
 | CLI `info --json` | `statistics.gap`, and `statistics.mostUsedWords` as an object of word and count | `statistics.gaps`, and `statistics.mostUsedWords` as a list of `{"word": ..., "count": ...}` | read the new keys |
 | CLI `info` text output | the line `Gap:` | the line `Gaps:` | read the new label |

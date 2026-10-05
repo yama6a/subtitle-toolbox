@@ -385,8 +385,7 @@ vendor/bin/subtitle-toolbox convert movie.idx movie.srt --ocr --ocr-database my-
 ```
 
 - **Engine**: `--ocr-engine` forces one engine. A forced engine that is not installed stops the tool with exit code 2 and an install hint.
-- **Language**: `--ocr-language` takes Tesseract language codes. A language without installed data stops the file with exit code 1 and lists the installed languages. The glyph engine ignores the option and prints a warning.
-
+- **Language**: `--ocr-language` takes Tesseract language codes. A language without installed data stops the tool before the first file with exit code 2 and lists the installed languages. The glyph engine ignores the option and prints a warning.
 - **Database**: `--ocr-database` loads a `.nocr` file in place of the subtitle fonts database. See [Training a database](ocr.md#training-a-database).
 - **No engine**: without Tesseract and php-glyph-ocr, `--ocr` stops with exit code 2 and prints the install commands of both.
 - **Progress**: the tool prints `movie.sup: OCR 100/1500` to standard error after every 100 image cues and after the last one.

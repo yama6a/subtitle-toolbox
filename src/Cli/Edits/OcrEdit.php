@@ -79,6 +79,10 @@ final class OcrEdit extends Edit
         }
         try {
             $engine = OcrEngineChooser::choose($engine);
+            if ($engine === OcrEngineName::Tesseract) {
+                $language = $arguments->value("ocr-language") ?? "eng";
+                (new TesseractOcrEngine($language))->requireLanguages($language);
+            }
         } catch (InvalidArgumentException $exception) {
             Command::fail($exception->getMessage());
         }

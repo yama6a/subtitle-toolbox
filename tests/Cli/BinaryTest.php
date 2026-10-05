@@ -1401,9 +1401,9 @@ class BinaryTest extends TestCase
         $this->assertSame([2, "", "Error: Cannot run OCR with Tesseract - the program \"tesseract\" is missing! " .
                                   TesseractOcrEngine::INSTALL_HINT . "\n$usage"],
                           $this->runWithPath($this->dir, ["convert", "text.sup", "text.srt", "--ocr", "--ocr-engine", "tesseract"]));
-        $this->assertSame([1, "", "text.sup: OcrException (Error #107): Cannot run OCR with Tesseract in the language \"fra\" - the language data of " .
+        $this->assertSame([2, "", "Error: Cannot run OCR with Tesseract in the language \"fra\" - the language data of " .
                                   "fra is missing! Install it, for example with apt install tesseract-ocr-fra. The " .
-                                  "installed languages are: deu, eng, osd.\n"],
+                                  "installed languages are: deu, eng, osd.\n$usage"],
                           $this->runWithFakeTesseract(["convert", "text.sup", "text.srt", "--ocr", "--ocr-language", "fra"]));
         $this->assertFileDoesNotExist("$this->dir/text.srt");
     }
