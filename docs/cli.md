@@ -264,7 +264,7 @@ vendor/bin/subtitle-toolbox convert movie.srt movie.timed.srt --video-fps 24 --s
 - **Library only**: the cumulative mode and the word limit of `WordHighlightOptions` have no option. Call `WordHighlight::apply()` for them.
 
 ## JSON output
-`info`, `validate` and `diff` print JSON with `--json`: one object for one input, a list of objects for several.
+`info`, `validate` and `diff` print JSON with `--json`: a list with one object for each input, also for one input. `diff` prints one object for its pair of files. A file that fails has no object, so the list is `[]` when all files fail.
 
 | Command | Object |
 |:--- |:--- |

@@ -102,7 +102,7 @@ class ApplicationTest extends TestCase
         [$code, $stdout, $stderr] = self::runApplication(["info", "-", "--json"], file_get_contents(__DIR__ . "/../files/cli/shop.vtt"));
 
         $this->assertSame([0, ""], [$code, $stderr]);
-        $this->assertSame(["file" => "stdin", "format" => "vtt"], array_slice(json_decode($stdout, true), 0, 2));
+        $this->assertSame(["file" => "stdin", "format" => "vtt"], array_slice(json_decode($stdout, true)[0], 0, 2));
     }
 
 
@@ -233,8 +233,8 @@ class ApplicationTest extends TestCase
     {
         $this->assertStringContainsString("\nExit codes: 0 success, 1 a file failed, broke a validation rule or differs in diff, 2 invalid arguments.\n",
                                           self::runApplication(["--help"])[1]);
-        $this->assertMatchesRegularExpression('/^  --json +Print the differences as one JSON object\.$/m', self::runApplication(["diff", "--help"])[1]);
-        $this->assertMatchesRegularExpression('/^  --json +Print JSON: one object for one input file, a list of objects for several\.$/m',
+        $this->assertMatchesRegularExpression('/^  --json +Print the differences as JSON: a list with one object for the pair of files\.$/m', self::runApplication(["diff", "--help"])[1]);
+        $this->assertMatchesRegularExpression('/^  --json +Print JSON: a list with one object for each input file, also for one file\.$/m',
                                               self::runApplication(["info", "--help"])[1]);
     }
 
