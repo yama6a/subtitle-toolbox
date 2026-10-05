@@ -68,12 +68,12 @@ final class WordHighlight
             $cues[] = (clone $cue)
                 ->setStart($wordStart)
                 ->setEnd($wordEnd)
-                ->setLinesByArray(self::highlight($lines, $word, count($times), $options))
+                ->setLines(self::highlight($lines, $word, count($times), $options))
                 ->setIdentifier($cues === [] ? $cue->getIdentifier() : null);
         }
 
         if ($cues === []) {
-            return [(clone $cue)->setLinesByArray(self::highlight($lines, -1, count($times), $options))];
+            return [(clone $cue)->setLines(self::highlight($lines, -1, count($times), $options))];
         }
 
         return $cues;

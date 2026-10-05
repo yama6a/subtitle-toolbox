@@ -135,7 +135,7 @@ class SccRealFileTest extends TestCase
         $this->assertSame(["\u{266A} SOFT PIANO MUSIC \u{266A}"], $cues[3]->getLines());
         $this->assertSame(["\u{201C}CAFÉ NORD\u{201D} \u{2014} OPEN DAILY."], $cues[7]->getLines());
         $this->assertSame(["<font color=\"#ffff00\">RAIN IS LIKELY TONIGHT.</font>", "TAKE AN UMBRELLA."], $cues[6]->getLines());
-        $this->assertSame(["mode" => "pop-on", "rows" => [1], "columns" => [9]], $cues[4]->getFormatData(SccParser::FORMAT_DATA_KEY));
+        $this->assertSame(["mode" => "pop-on", "rows" => [1], "columns" => [9]], $cues[4]->findFormatData(SccParser::FORMAT_DATA_KEY));
     }
 
 
@@ -146,7 +146,7 @@ class SccRealFileTest extends TestCase
 
         $this->assertSame(["&gt;&gt; GOOD MORNING. HERE IS THE"], $lines[1]);
         $this->assertSame(["WEATHER FOR TODAY.", "CLOUDS IN THE MORNING,", "SUN IN THE AFTERNOON."], $lines[4]);
-        $this->assertSame(["roll-up", [13, 14, 15]], [$cues[4]->getFormatData(SccParser::FORMAT_DATA_KEY)["mode"], $cues[4]->getFormatData(SccParser::FORMAT_DATA_KEY)["rows"]]);
+        $this->assertSame(["roll-up", [13, 14, 15]], [$cues[4]->findFormatData(SccParser::FORMAT_DATA_KEY)["mode"], $cues[4]->findFormatData(SccParser::FORMAT_DATA_KEY)["rows"]]);
     }
 
 
@@ -174,7 +174,7 @@ class SccRealFileTest extends TestCase
         return array_map(
             fn (SubtitleCue $cue): array => [
                 $cue->getStart(), $cue->getEnd(), $cue->getLines(), $cue->getAlignment(),
-                $cue->getFormatData(SccParser::FORMAT_DATA_KEY)["rows"], $cue->getFormatData(SccParser::FORMAT_DATA_KEY)["columns"],
+                $cue->findFormatData(SccParser::FORMAT_DATA_KEY)["rows"], $cue->findFormatData(SccParser::FORMAT_DATA_KEY)["columns"],
             ],
             $subtitle->getCues()
         );

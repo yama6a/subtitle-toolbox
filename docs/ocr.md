@@ -71,7 +71,7 @@ $subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: n
 $subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions($idx, language: 'de')));   // first track with "id: de"
 $subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions($idx, track: 1)));         // track with "index: 1"
 
-$subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);   // "de", from the id line
+$subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);  // "de", from the id line
 ```
 
 - **Parse**: pass the `.sub` content and a `VobSubReadOptions` with the `.idx` content. Without it, the parser throws `InvalidArgumentException`. Format detection does not know VobSub, because it sees only one file. The command line tool takes the `.idx` file as input and reads the `.sub` file next to it.

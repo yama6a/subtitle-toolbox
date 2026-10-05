@@ -34,8 +34,8 @@ class EbuStlParserTest extends TestCase
 
         $this->assertSame(["<i>Café</i>"], $cue->getLines());
         $this->assertSame([1.2, 2.4], [$cue->getStart(), $cue->getEnd()]);
-        $this->assertSame("en", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
-        $this->assertNull($subtitle->getMetadata(Subtitle::METADATA_TITLE));
+        $this->assertSame("en", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertNull($subtitle->findMetadata(Subtitle::METADATA_TITLE));
     }
 
 
@@ -50,7 +50,7 @@ class EbuStlParserTest extends TestCase
 
         $this->assertCount(2, $subtitle->getCues());
         $this->assertSame(str_repeat("a", 111) . "é end", $subtitle->getCues()[0]->getText());
-        $this->assertCount(4, $subtitle->getCues()[0]->getFormatData("stl")["blocks"]);
+        $this->assertCount(4, $subtitle->getCues()[0]->findFormatData("stl")["blocks"]);
     }
 
 
@@ -107,8 +107,8 @@ class EbuStlParserTest extends TestCase
             self::tti(1, "Text", vertical: $vertical, justification: $justification), new ReadOptions());
 
         $this->assertSame($alignment, $subtitle->getCues()[0]->getAlignment());
-        $this->assertSame($vertical, $subtitle->getCues()[0]->getFormatData("stl")["verticalPosition"]);
-        $this->assertSame($justification, $subtitle->getCues()[0]->getFormatData("stl")["justificationCode"]);
+        $this->assertSame($vertical, $subtitle->getCues()[0]->findFormatData("stl")["verticalPosition"]);
+        $this->assertSame($justification, $subtitle->getCues()[0]->findFormatData("stl")["justificationCode"]);
     }
 
 
@@ -155,6 +155,6 @@ class EbuStlParserTest extends TestCase
         $subtitle = (new EbuStlParser())->parse(self::gsi(), new ReadOptions());
 
         $this->assertSame([], $subtitle->getCues());
-        $this->assertSame(0, $subtitle->getFormatData("stl")["counts"]["TNB"]);
+        $this->assertSame(0, $subtitle->findFormatData("stl")["counts"]["TNB"]);
     }
 }

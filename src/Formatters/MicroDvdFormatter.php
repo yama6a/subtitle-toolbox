@@ -46,7 +46,7 @@ final class MicroDvdFormatter extends SubtitleFormatter
 
     private function formatText(SubtitleCue $cue, bool $stripAll): string
     {
-        $storedLines = $cue->getFormatData(MicroDvdParser::FORMAT_DATA_KEY)["lines"] ?? [];
+        $storedLines = $cue->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["lines"] ?? [];
         $lines       = array_map(fn (string $line): array => $this->readLine($line), $cue->getLines());
 
         $keepStoredCodes = !$stripAll && count($storedLines) === count($lines);

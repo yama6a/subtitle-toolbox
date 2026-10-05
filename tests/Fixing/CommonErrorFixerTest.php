@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Fixing;
 use GlyphOcr\GlyphDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\LineEnding;
@@ -251,17 +251,8 @@ class CommonErrorFixerTest extends TestCase
 
     public function testDialogueDashTakesTheStyleOfTheOption(): void
     {
-        $this->assertSame(["-Hi.", "-Hello."], self::fixLines(["- Hi.", "-  Hello."], new CommonErrorOptions(dialogueDash: "-"))[0]);
-        $this->assertSame(["\u{2013} Hi."], self::fixLines(["-Hi."], new CommonErrorOptions(dialogueDash: "\u{2013} "))[0]);
-    }
-
-
-    public function testRejectsADialogueDashThatIsNoDash(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("The dialogue dash must be a hyphen, an en dash or an em dash");
-
-        new CommonErrorOptions(dialogueDash: "* ");
+        $this->assertSame(["-Hi.", "-Hello."], self::fixLines(["- Hi.", "-  Hello."], new CommonErrorOptions(dialogueDashStyle: DialogueDashStyle::Hyphen))[0]);
+        $this->assertSame(["\u{2013} Hi."], self::fixLines(["-Hi."], new CommonErrorOptions(dialogueDashStyle: DialogueDashStyle::EnDashSpace))[0]);
     }
 
 

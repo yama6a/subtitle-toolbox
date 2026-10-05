@@ -111,8 +111,8 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString(file_get_contents('episode.ass'), Format::Ass);
-$subtitle->getFormatData('ass')['scriptInfo']['PlayResX'];      // '1920'
-$subtitle->getCues()[0]->getFormatData('ass')['fields'];        // ['Layer' => '0', 'Style' => 'Default', ...]
+$subtitle->findFormatData('ass')['scriptInfo']['PlayResX'];     // '1920'
+$subtitle->getCues()[0]->findFormatData('ass')['fields'];       // ['Layer' => '0', 'Style' => 'Default', ...]
 $subtitle->toString(Format::Ass);
 $subtitle->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(karaokeTag: AssKaraokeTag::Fill)));   // \kf
 ```
@@ -173,7 +173,7 @@ $csv = $english->toString(Format::Csv, new WriteOptions(format: new CsvWriteOpti
 | `text` | the cue lines, one per line break in the cell | the text without tags and entities, lines joined by a line break |
 | `speaker` | `<v Name>` at the start of the first line | the name of the leading `<v>` tag |
 | `identifier` | the cue identifier | the cue identifier |
-| any other column | `getFormatData('csv')['columns']` of the cue, by header name | the same cell |
+| any other column | `findFormatData('csv')['columns']` of the cue, by header name | the same cell |
 
 - **Column mapping**: `CsvColumns` maps each role to a header name or to a 0-based column index. Header names match without case. A role without a mapping uses the header with its own name, such as `start`, when the table has one.
 - **Required columns**: a table without `start` or `text` throws `ParsingException`. So does a mapped header that the table lacks. `header: false` needs a column index for each mapped role, and at least for `start` and `text`.
@@ -201,7 +201,7 @@ use SubtitleToolbox\WriteOptions;
 $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('news.stl'));  // detects EBU STL
 $subtitle = Subtitle::fromString(file_get_contents('news.stl'), Format::EbuStl,
     new ReadOptions(format: new EbuStlReadOptions(subtractStartOfProgramme: true))); // cue times minus the start of programme
-$subtitle->getFormatData('stl')['gsi']['TCP'];                                    // '10000000'
+$subtitle->findFormatData('stl')['gsi']['TCP'];                                   // '10000000'
 $subtitle->toString(Format::EbuStl, new WriteOptions(format: new EbuStlWriteOptions(frameRate: 30)));  // 25 or 30
 ```
 
@@ -226,7 +226,7 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.itt'), Format::Itt);
-$subtitle->getFormatData('itt');   // ['timeBase' => 'smpte', 'frameRate' => '24', 'frameRateMultiplier' => '999 1000', 'dropMode' => 'nonDrop']
+$subtitle->findFormatData('itt');  // ['timeBase' => 'smpte', 'frameRate' => '24', 'frameRateMultiplier' => '999 1000', 'dropMode' => 'nonDrop']
 $subtitle->toString(Format::Itt);
 Subtitle::fromStringAutoDetectFormat($srt)->toString(Format::Itt, new WriteOptions(format: new IttWriteOptions(frameRate: 23.976)));
 ```
@@ -247,8 +247,8 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('song.lrc'), Format::Lyrics, new ReadOptions(lastCueDuration: 4));
-$subtitle->getMetadata(Subtitle::METADATA_TITLE);                          // from [ti:]
-$subtitle->getFormatData('lrc');                                           // ['idTags' => ['by' => 'Jane Doe']]
+$subtitle->findMetadata(Subtitle::METADATA_TITLE);                         // from [ti:]
+$subtitle->findFormatData('lrc');                                          // ['idTags' => ['by' => 'Jane Doe']]
 $subtitle->toString(Format::Lyrics);                                       // ID tags first, then the lyrics
 ```
 
@@ -279,7 +279,7 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWrite
 ```
 
 - **Frame rate**: `MicroDvdReadOptions::$frameRate` wins over a `{1}{1}<fps>` first line. The parser never reads that line as a cue. Without either, the parser throws `ParsingException`.
-- `$subtitle->getFormatData('microdvd')['frameRate']` returns the frame rate that the parser used.
+- `$subtitle->findFormatData('microdvd')['frameRate']` returns the frame rate that the parser used.
 - **Control codes**: `{y:b}`, `{y:i}`, `{y:u}`, `{y:s}` and `{c:$BBGGRR}` become core markup. The parser reads the codes at the start of each `|`-separated line. A code later in the line stays text. A lower-case code styles one line. An upper-case code styles the whole cue. The `microdvd` format data keeps other control codes.
 - **Output**: the formatter writes control codes only for tags that wrap a whole line. It strips other tags. An unchanged cue keeps its original control codes.
 
@@ -336,8 +336,8 @@ use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami);   // the first class of the STYLE block
 $subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami, new ReadOptions(format: new SamiReadOptions(language: 'FRCC')));   // the FRCC class
-$subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);                              // 'fr-FR', from the lang property of .FRCC
-$subtitle->getFormatData('sami');                                                 // keys style, class and samiParam
+$subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);                             // 'fr-FR', from the lang property of .FRCC
+$subtitle->findFormatData('sami');                                                // keys style, class and samiParam
 ```
 
 - **Language class**: a SAMI file holds one CSS class per language, for example `.FRCC { Name: French; lang: fr-FR; }`. The parser reads the class in `SamiReadOptions::$language`, else the first class of the STYLE block. Without a STYLE block, it reads the first class that a `<P>` uses. A `<P>` without a class belongs to every class.
@@ -365,8 +365,8 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('show.scc'));  // detects SCC
-$subtitle->getFormatData('scc');                                                  // ['dropFrame' => true]
-$subtitle->getCues()[0]->getFormatData('scc');                                    // ['mode' => 'pop-on', 'rows' => [14, 15], 'columns' => [4, 8]]
+$subtitle->findFormatData('scc');                                                 // ['dropFrame' => true]
+$subtitle->getCues()[0]->findFormatData('scc');                                   // ['mode' => 'pop-on', 'rows' => [14, 15], 'columns' => [4, 8]]
 Subtitle::fromString($content, Format::Scc, new ReadOptions(format: new SccReadOptions(channel: 2)));   // CC2 or CC4
 
 $subtitle->wrapLines(32, 4)->toString(Format::Scc);
@@ -386,7 +386,7 @@ $subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dr
 | Input | Parser result | Formatter output |
 |:--- |:--- |:--- |
 | `0:00:01.5` | 1.5 s. Accepts a dot, one to three hour digits and one to three millisecond digits. | `00:00:01,500` |
-| `X1:100 X2:600 Y1:40 Y2:80` after the end time | `getFormatData('srt')['coordinates']` | the same coordinates |
+| `X1:100 X2:600 Y1:40 Y2:80` after the end time | `findFormatData('srt')['coordinates']` | the same coordinates |
 | `{\an8}` anywhere in the cue | alignment 8. The first tag wins. SSA `{\a6}` also becomes 8. | `{\an8}` at the start of the first line, nothing for 2 or `null` |
 | `{\b1}`, `{\i1}`, `{\u1}`, `{\s1}` and their `0` forms | `<b>`, `<i>`, `<u>`, `<s>` and their closing tags. An open tag closes at the end of the cue. | the HTML-like tags |
 
@@ -404,7 +404,7 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::SubViewer);
-$subtitle->getFormatData('subviewer');   // ['version' => 2, 'header' => ['DELAY' => '0', 'CD TRACK' => '0'], 'style' => '[COLF]&HFFFFFF,[STYLE]bd,[SIZE]18,[FONT]Arial']
+$subtitle->findFormatData('subviewer');  // ['version' => 2, 'header' => ['DELAY' => '0', 'CD TRACK' => '0'], 'style' => '[COLF]&HFFFFFF,[STYLE]bd,[SIZE]18,[FONT]Arial']
 $subtitle->toString(Format::SubViewer);                                             // SubViewer 2
 $subtitle->toString(Format::SubViewer, new WriteOptions(format: new SubViewerWriteOptions(version: SubViewerVersion::V1)));  // SubViewer 1
 ```
@@ -424,8 +424,8 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.ttml'), Format::Ttml);
-$subtitle->getFormatData('ttml')['head'];              // <head> without ttm:title, as XML
-$subtitle->getCues()[0]->getFormatData('ttml');        // ['attributes' => ['region' => 'bottom'], 'div' => [...]]
+$subtitle->findFormatData('ttml')['head'];             // <head> without ttm:title, as XML
+$subtitle->getCues()[0]->findFormatData('ttml');       // ['attributes' => ['region' => 'bottom'], 'div' => [...]]
 $subtitle->toString(Format::Ttml);
 ```
 
@@ -446,10 +446,10 @@ $subtitle->toString(Format::Ttml);
 |:--- |:--- |
 | `NOTE` block | `$subtitle->getComments()` |
 | Cue identifier | `$cue->getIdentifier()` |
-| Text after `WEBVTT`, lines up to the first empty line | `$subtitle->getFormatData('vtt')`, keys `header` and `headerLines` |
-| `STYLE` blocks, CSS not parsed | `$subtitle->getFormatData('vtt')['styles']` |
-| `REGION` blocks | `$subtitle->getFormatData('vtt')['regions']`, one `name => value` array per region |
-| Cue settings `vertical`, `line`, `position`, `size`, `align`, `region` | `$cue->getFormatData('vtt')`, exact values |
+| Text after `WEBVTT`, lines up to the first empty line | `$subtitle->findFormatData('vtt')`, keys `header` and `headerLines` |
+| `STYLE` blocks, CSS not parsed | `$subtitle->findFormatData('vtt')['styles']` |
+| `REGION` blocks | `$subtitle->findFormatData('vtt')['regions']`, one `name => value` array per region |
+| Cue settings `vertical`, `line`, `position`, `size`, `align`, `region` | `$cue->findFormatData('vtt')`, exact values |
 | `&nbsp;`, `&lrm;`, `&rlm;` | the characters U+00A0, U+200E, U+200F |
 
 - **Alignment from cue settings**: `line:0` is the top row, `line:50%,center` the middle row, and no `line`, `line:-1` or `line:100%,end` the bottom row. `align:left`, `center` and `right` set the column. Other values, `align:start`, `align:end` and `vertical` give no alignment.

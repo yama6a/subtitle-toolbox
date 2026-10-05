@@ -105,7 +105,7 @@ class HlsWebVttJoinerTest extends TestCase
                                          file_get_contents(self::FILES . "shaka-vtt-072.vtt")]);
 
         $this->assertSame([], $joined->getCues());
-        $this->assertSame([], $joined->getFormatData("vtt"));
+        $this->assertSame([], $joined->findFormatData("vtt"));
     }
 
 

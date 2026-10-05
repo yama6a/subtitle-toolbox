@@ -67,7 +67,7 @@ class MatroskaReaderTest extends TestCase
             ],
             $this->cues($subtitle),
         );
-        $this->assertSame("de", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("de", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
     }
 
 
@@ -133,7 +133,7 @@ class MatroskaReaderTest extends TestCase
             ],
             $this->cues($subtitle),
         );
-        $this->assertSame("eng", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("eng", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
     }
 
 

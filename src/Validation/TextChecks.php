@@ -50,7 +50,7 @@ final class TextChecks
         }
 
         if ($rules->dialogueDashStyle !== null) {
-            $style = '/^' . preg_quote($rules->dialogueDashStyle, "/") . '(?=\S)/u';
+            $style = '/^' . preg_quote($rules->dialogueDashStyle->value, "/") . '(?=\S)/u';
             $counts[ValidationRule::DialogueDashStyle->value] = [count(array_filter(
                 $visible,
                 fn (string $line): bool => self::startsWithDialogueDash($line) && preg_match($style, ltrim($line)) !== 1

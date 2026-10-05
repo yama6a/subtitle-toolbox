@@ -131,7 +131,7 @@ class LoadSaveTest extends TestCase
 
         $german = Subtitle::loadTrack($mkv, 3);
         $this->assertSame(Format::SubRip, $german->getFormat());
-        $this->assertSame("de", $german->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("de", $german->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame(MatroskaReader::open($mkv)->extract(3)->toArray(), $german->toArray());
 
         try {
@@ -233,7 +233,7 @@ class LoadSaveTest extends TestCase
         );
         $this->assertNotSame(Subtitle::load($path, Format::VobSub)->toArray(), $second->toArray());
 
-        $language = $second->getMetadata(Subtitle::METADATA_LANGUAGE);
+        $language = $second->findMetadata(Subtitle::METADATA_LANGUAGE);
         $this->assertSame($second->toArray(), Subtitle::load($path, Format::VobSub, new ReadOptions(format: new VobSubReadOptions(language: $language)))->toArray());
     }
 

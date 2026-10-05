@@ -41,12 +41,12 @@ class WhisperJsonParserTest extends TestCase
     {
         $subtitle = Subtitle::fromStringAutoDetectFormat(self::ISSUE_EXAMPLE);
 
-        $this->assertSame("en", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
-        $this->assertSame(["task" => "transcribe", "language" => "english", "duration" => 8.47], $subtitle->getFormatData("whisper"));
+        $this->assertSame("en", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame(["task" => "transcribe", "language" => "english", "duration" => 8.47], $subtitle->findFormatData("whisper"));
         $this->assertSame([[0.0, 3.32, "The beach was quiet."], [3.9, 5.1, "Nobody came."]],
                           array_map(fn (SubtitleCue $cue) => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $subtitle->getCues()));
         $this->assertSame(["id" => 0, "words" => [["word" => "The", "start" => 0.0, "end" => 0.24], ["word" => "beach", "start" => 0.24, "end" => 0.71]]],
-                          $subtitle->getCues()[0]->getFormatData("whisper"));
+                          $subtitle->getCues()[0]->findFormatData("whisper"));
     }
 
 
@@ -112,7 +112,7 @@ class WhisperJsonParserTest extends TestCase
     {
         $subtitle = (new WhisperJsonParser())->parse(json_encode(["language" => $language, "segments" => []]), new ReadOptions());
 
-        $this->assertSame($code, $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame($code, $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
     }
 
 
@@ -125,9 +125,9 @@ class WhisperJsonParserTest extends TestCase
                                     '{"text": ".", "offsets": {"from": 2000, "to": 2100}}, {"text": "[_TT_125]", "offsets": {"from": 3500, "to": 3500}}]}]}');
         $cue      = $subtitle->getCues()[0];
 
-        $this->assertSame("nl", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("nl", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame([1.0, 3.5, "<00:00:01.000>Good <00:00:01.400>morning."], [$cue->getStart(), $cue->getEnd(), $cue->getText()]);
-        $this->assertCount(6, $cue->getFormatData("whisper")["tokens"]);
+        $this->assertCount(6, $cue->findFormatData("whisper")["tokens"]);
     }
 
 

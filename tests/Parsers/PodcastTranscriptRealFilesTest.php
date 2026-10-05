@@ -74,7 +74,7 @@ class PodcastTranscriptRealFilesTest extends TestCase
         $again    = (new PodcastTranscriptParser())->parse($json, new ReadOptions());
 
         $this->assertSame(self::cues($subtitle), self::cues($again));
-        $this->assertSame($subtitle->getFormatData("podcast-transcript"), $again->getFormatData("podcast-transcript"));
+        $this->assertSame($subtitle->findFormatData("podcast-transcript"), $again->findFormatData("podcast-transcript"));
     }
 
 
@@ -98,6 +98,6 @@ class PodcastTranscriptRealFilesTest extends TestCase
     {
         $subtitle = self::parse("podcast_transcript_convert_from_html.json");
 
-        $this->assertSame(["version" => "1.0.0", "metadata" => ["title" => "Library news", "episode" => 4]], $subtitle->getFormatData("podcast-transcript"));
+        $this->assertSame(["version" => "1.0.0", "metadata" => ["title" => "Library news", "episode" => 4]], $subtitle->findFormatData("podcast-transcript"));
     }
 }

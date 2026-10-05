@@ -43,8 +43,8 @@ class JsonParserTest extends TestCase
         $subtitle = (new JsonParser())->parse("\xEF\xBB\xBF" . '{"version": 1, "formatData": {"x": {"list": [{"base64": "AAE="}]}}, ' .
                                               '"cues": [{"start": 1, "end": 2, "lines": [], "formatData": {"image": {"png": {"base64": "iVBORw=="}}}}]}', new ReadOptions());
 
-        $this->assertSame(["list" => ["\x00\x01"]], $subtitle->getFormatData("x"));
-        $this->assertSame(["png" => "\x89PNG"], $subtitle->getCues()[0]->getFormatData("image"));
+        $this->assertSame(["list" => ["\x00\x01"]], $subtitle->findFormatData("x"));
+        $this->assertSame(["png" => "\x89PNG"], $subtitle->getCues()[0]->findFormatData("image"));
     }
 
 
@@ -52,7 +52,7 @@ class JsonParserTest extends TestCase
     {
         $subtitle = (new JsonParser())->parse('{"version": 1, "formatData": {"x": {"base64": "AAE=", "note": "y"}}, "cues": []}', new ReadOptions());
 
-        $this->assertSame(["base64" => "AAE=", "note" => "y"], $subtitle->getFormatData("x"));
+        $this->assertSame(["base64" => "AAE=", "note" => "y"], $subtitle->findFormatData("x"));
     }
 
 

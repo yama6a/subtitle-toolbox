@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
+use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Validation\ValidationViolation;
@@ -111,7 +112,7 @@ final class ValidateCommand extends ReportCommand
             noDoubleSpaces: $arguments->has("check-double-spaces") || $base->noDoubleSpaces,
             noLeadingOrTrailingSpaces: $arguments->has("check-leading-or-trailing-spaces") || $base->noLeadingOrTrailingSpaces,
             noUnbalancedTags: $arguments->has("check-unbalanced-tags") || $base->noUnbalancedTags,
-            dialogueDashStyle: $arguments->value("dialogue-dash") ?? $base->dialogueDashStyle,
+            dialogueDashStyle: self::dialogueDashStyle($arguments->value("dialogue-dash")) ?? $base->dialogueDashStyle,
             maxSpeakersPerCue: $arguments->positiveInt("max-speakers") ?? $base->maxSpeakersPerCue,
             maxWordsPerMinute: $arguments->positiveFloat("max-wpm") ?? $base->maxWordsPerMinute,
             minSecondsPerWord: $arguments->positiveFloat("min-seconds-per-word") ?? $base->minSecondsPerWord,
@@ -166,5 +167,16 @@ final class ValidateCommand extends ReportCommand
     protected function exitCode(): int
     {
         return $this->failed > 0 || $this->withProblems > 0 ? Application::EXIT_FAILURE : Application::EXIT_OK;
+    }
+
+
+    private static function dialogueDashStyle(?string $style): ?DialogueDashStyle
+    {
+        if ($style === null) {
+            return null;
+        }
+
+        return DialogueDashStyle::tryFrom($style) ?? self::fail("The option --dialogue-dash must be a hyphen, an en " .
+            "dash or an em dash, with or without one space after it, got \"$style\".");
     }
 }

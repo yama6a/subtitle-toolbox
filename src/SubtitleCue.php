@@ -95,20 +95,10 @@ final class SubtitleCue
      */
     public function setLines(string|array $lines): self
     {
-        return is_array($lines) ? $this->setLinesByArray($lines) : $this->setLinesByString($lines);
-    }
+        if (is_string($lines)) {
+            $lines = explode(LineEnding::Lf->value, $lines);
+        }
 
-
-    public function setLinesByString(string $lines): self
-    {
-        $this->setLinesByArray(explode(LineEnding::Lf->value, $lines));
-
-        return $this;
-    }
-
-
-    public function setLinesByArray(array $lines): self
-    {
         $this->lines = [];
         foreach ($lines as $line) {
             $line = StringHelpers::cleanString($line);
@@ -208,7 +198,7 @@ final class SubtitleCue
     /**
      * Returns the data that only the given format reads, or an empty array.
      */
-    public function getFormatData(string $format): array
+    public function findFormatData(string $format): array
     {
         return $this->formatData[$format] ?? [];
     }

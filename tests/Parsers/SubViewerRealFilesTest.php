@@ -89,7 +89,7 @@ class SubViewerRealFilesTest extends TestCase
             array_map($this->describeCue(...), $reparsed->getCues())
         );
         $this->assertSame($subtitle->getAllMetadata(), $reparsed->getAllMetadata());
-        $this->assertSame($subtitle->getFormatData("subviewer"), $reparsed->getFormatData("subviewer"));
+        $this->assertSame($subtitle->findFormatData("subviewer"), $reparsed->findFormatData("subviewer"));
     }
 
 
@@ -134,7 +134,7 @@ class SubViewerRealFilesTest extends TestCase
                 ],
                 "style"   => "[COLF]&HFFFFFF,[STYLE]bd,[SIZE]18,[FONT]Arial",
             ],
-            $subtitle->getFormatData("subviewer")
+            $subtitle->findFormatData("subviewer")
         );
         $this->assertSame(["Flour &amp; water &lt;and&gt; a pinch of salt."], $subtitle->getCues()[2]->getLines());
     }
@@ -148,8 +148,8 @@ class SubViewerRealFilesTest extends TestCase
             [[3.0, 6.0], [8.0, 11.0], [11.0, 14.0], [17.0, 22.0]],
             array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues())
         );
-        $this->assertSame(["version" => 1, "header" => ["DELAY" => "0"]], $subtitle->getFormatData("subviewer"));
-        $this->assertSame("Tom Berg", $subtitle->getMetadata(Subtitle::METADATA_AUTHOR));
+        $this->assertSame(["version" => 1, "header" => ["DELAY" => "0"]], $subtitle->findFormatData("subviewer"));
+        $this->assertSame("Tom Berg", $subtitle->findMetadata(Subtitle::METADATA_AUTHOR));
     }
 
 

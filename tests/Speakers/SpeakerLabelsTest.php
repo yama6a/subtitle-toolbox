@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Speakers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
@@ -183,18 +184,18 @@ class SpeakerLabelsTest extends TestCase
 
 
     /**
-     * @return array<string, array{string, string, list<string>}>
+     * @return array<string, array{string, DialogueDashStyle, list<string>}>
      */
     public static function dashCases(): array
     {
         return [
-            "two lines"            => ["<v Anna>Where?\n<v Ben>Home.", "- ", ["- Where?", "- Home."]],
-            "one line"             => ["<v Anna>Where? <v Ben>Home.", "- ", ["- Where?", "- Home."]],
-            "one speaker"          => ["<v Anna>Where are\nyou going?", "- ", ["Where are", "you going?"]],
-            "text without speaker" => ["Where?\n<v Ben>Home.", "- ", ["- Where?", "- Home."]],
-            "dash already there"   => ["<v Anna>- Where?\n<v Ben>Home.", "- ", ["- Where?", "- Home."]],
-            "own dash"             => ["<v Anna>Where?\n<v Ben>Home.", "-", ["-Where?", "-Home."]],
-            "three speakers"       => ["<v Anna>One.\n<v Ben>Two.\n<v Clara>Three.", "- ", ["- One.", "- Two.", "- Three."]],
+            "two lines"            => ["<v Anna>Where?\n<v Ben>Home.", DialogueDashStyle::HyphenSpace, ["- Where?", "- Home."]],
+            "one line"             => ["<v Anna>Where? <v Ben>Home.", DialogueDashStyle::HyphenSpace, ["- Where?", "- Home."]],
+            "one speaker"          => ["<v Anna>Where are\nyou going?", DialogueDashStyle::HyphenSpace, ["Where are", "you going?"]],
+            "text without speaker" => ["Where?\n<v Ben>Home.", DialogueDashStyle::HyphenSpace, ["- Where?", "- Home."]],
+            "dash already there"   => ["<v Anna>- Where?\n<v Ben>Home.", DialogueDashStyle::HyphenSpace, ["- Where?", "- Home."]],
+            "own dash"             => ["<v Anna>Where?\n<v Ben>Home.", DialogueDashStyle::Hyphen, ["-Where?", "-Home."]],
+            "three speakers"       => ["<v Anna>One.\n<v Ben>Two.\n<v Clara>Three.", DialogueDashStyle::HyphenSpace, ["- One.", "- Two.", "- Three."]],
         ];
     }
 
@@ -203,9 +204,9 @@ class SpeakerLabelsTest extends TestCase
      * @param list<string> $expected
      */
     #[DataProvider("dashCases")]
-    public function testToDialogueDashes(string $text, string $dash, array $expected): void
+    public function testToDialogueDashes(string $text, DialogueDashStyle $dash, array $expected): void
     {
-        $this->assertSame([$expected], self::lines(self::apply(self::subtitle($text), new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes, dash: $dash))));
+        $this->assertSame([$expected], self::lines(self::apply(self::subtitle($text), new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes, dialogueDashStyle: $dash))));
     }
 
 
@@ -365,7 +366,7 @@ class SpeakerLabelsTest extends TestCase
         $this->assertCount(4, $cues);
         $this->assertSame([0.0, 2.4, "<v 0>Did you lock the back door?"], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $this->assertSame([6.3, 8.0, "<v 0>Then we can go."], [$cues[3]->getStart(), $cues[3]->getEnd(), $cues[3]->getText()]);
-        $this->assertSame("?", $cues[2]->getFormatData("whisper")["speaker"]);
+        $this->assertSame("?", $cues[2]->findFormatData("whisper")["speaker"]);
         $this->assertSame([0 => 2, 1 => 1, "?" => 1], SpeakerLabels::list($subtitle));
         $this->assertSame(file_get_contents(self::FILES . "whisper_cpp_diarize.vtt"), $subtitle->toString(Format::WebVtt, self::noBom()));
     }
@@ -376,7 +377,7 @@ class SpeakerLabelsTest extends TestCase
         $subtitle = self::whisper("../whisper/real/whisperx_diarize.json");
 
         $this->assertSame("<v SPEAKER_00>The market opens on Saturday.", $subtitle->getCues()[0]->getText());
-        $this->assertSame("SPEAKER_00", $subtitle->getCues()[0]->getFormatData("whisper")["speaker"]);
+        $this->assertSame("SPEAKER_00", $subtitle->getCues()[0]->findFormatData("whisper")["speaker"]);
 
         SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(rename: ["SPEAKER_00" => "Anna", "SPEAKER_01" => "Ben"]));
         $this->assertSame(["Anna" => 1, "Ben" => 2], SpeakerLabels::list($subtitle));

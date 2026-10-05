@@ -13,6 +13,7 @@ The calls below use these imports:
 
 ```php
 use SubtitleToolbox\CueLimits;
+use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
 use SubtitleToolbox\LineEnding;
@@ -58,10 +59,10 @@ use SubtitleToolbox\Validation\ValidationRules;
 | a class that extends a parser, such as `class MyParser extends SubRipParser` | every parser except `SubtitleParser` is `final`. Call the parser from your own class and change the `Subtitle` that `parse()` returns |
 | a class that extends a formatter, such as `class MyFormatter extends SubRipFormatter` | every formatter except `SubtitleFormatter` is `final`. Call the formatter from your own class and change the string that `format()` returns |
 | `SubRipParser::splitIntoBlocks()`, `parseBlock()`, `parseCueBlock()`, and the same `WebVttParser` methods with `numberedBlocks()`, `parseHeader()` and `parseSettings()` | `@internal`. Read one cue at a time with `SubRipStreamReader` or `WebVttStreamReader` |
-| `CsvParser::detectDelimiter()`, `records()`, `parseTime()` | private. `parse()` keeps the detected delimiter in `getFormatData('csv')['delimiter']` |
+| `CsvParser::detectDelimiter()`, `records()`, `parseTime()` | private. `parse()` keeps the detected delimiter in `findFormatData('csv')['delimiter']` |
 | the constants and static helpers of `EbuStlParser`, such as `GSI_FIELDS`, `LANGUAGES` and `readGsi()` | `@internal` |
 | the namespace constants of `TtmlParser`, such as `NAMESPACE_TTML` | `@internal` |
-| `AssParser::ASS_STYLE_FORMAT`, `SSA_STYLE_FORMAT`, `ASS_EVENT_FORMAT`, `SSA_EVENT_FORMAT` | `@internal` or private. `getFormatData('ass')['styleFormat']` and `['eventFormat']` hold the fields of a parsed file |
+| `AssParser::ASS_STYLE_FORMAT`, `SSA_STYLE_FORMAT`, `ASS_EVENT_FORMAT`, `SSA_EVENT_FORMAT` | `@internal` or private. `findFormatData('ass')['styleFormat']` and `['eventFormat']` hold the fields of a parsed file |
 | `LyricsParser::REGEX` | removed |
 | `SubRipFormatter::formatCueBlock()`, `WebVttFormatter::formatCueBlock()` | `@internal`. Write one cue at a time with `SubRipStreamWriter` or `WebVttStreamWriter` |
 | `PodcastTranscriptFormatter::segments()` | `@internal`. Read the `segments` key of `json_decode($subtitle->toString(Format::PodcastTranscript), true)` |
@@ -154,7 +155,7 @@ Common one-step edits stay methods on `Subtitle`, for example `shift()`, `fixOve
 | `$karaoke = WordHighlight::expand($subtitle, $options)` | `WordHighlight::apply($karaoke = clone $subtitle, $options)` |
 | `$ranges = ProfanityFilter::apply($subtitle, $options)` | `$ranges = ProfanityFilter::apply($subtitle, $options)->muteRanges` |
 | `SpeakerLabels::toPrefix($subtitle)` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Prefix))` |
-| `SpeakerLabels::toDialogueDashes($subtitle, '- ')` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes, dash: '- '))` |
+| `SpeakerLabels::toDialogueDashes($subtitle, '- ')` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes, dialogueDashStyle: DialogueDashStyle::HyphenSpace))` |
 | `SpeakerLabels::toColours($subtitle, $colours)` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Colors, colors: $colours))` |
 | `SpeakerLabels::fromPrefix($subtitle)` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(readPrefixes: true))` |
 | `SpeakerLabels::rename($subtitle, ['MAN' => 'TOM'])` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(rename: ['MAN' => 'TOM']))` |
@@ -168,6 +169,8 @@ Common one-step edits stay methods on `Subtitle`, for example `shift()`, `fixOve
 ## Subtitle and cues
 A method that returns a new `Subtitle` starts with `with` or `to`. A method that changes the subtitle is a verb.
 
+A lookup that starts with `get` returns a value or throws when nothing matches. A lookup that starts with `find` returns null or an empty array when nothing matches. A plain getter of a field, such as `getIdentifier()`, keeps `get`.
+
 | 1.x | 2.0 |
 |:--- |:--- |
 | `$subtitle->slice(10, 20, true)` | `$subtitle->withSlice(10, 20, true)` |
@@ -176,6 +179,12 @@ A method that returns a new `Subtitle` starts with `with` or `to`. A method that
 | `$subtitle->addCue($cue, false)` in a loop, then `reIndexCues()` | `$subtitle->addCues($cues)`. It adds all cues and sorts once. `addCue($cue)` sorts after each cue |
 | `$subtitle->removeCue($index, false)` | `$subtitle->removeCue($index)`. It always numbers the cues from 0 again. Remove many cues with `removeCuesWhere()` |
 | `$subtitle->changeCase('upper', 'tr')` | `$subtitle->changeCase(CaseMode::Upper, 'tr')`. The enum also has `Lower` and `Sentence` |
+| `$cue->setLinesByArray(['Hi.', 'Bye.'])`, `$cue->setLinesByString("Hi.\nBye.")` | `$cue->setLines(['Hi.', 'Bye.'])`, `$cue->setLines("Hi.\nBye.")` |
+| `$subtitle->getCuesAt(83.2)` | `$subtitle->findCuesAt(83.2)` |
+| `$subtitle->getCueIndexAt(83.2)` | `$subtitle->findCueIndexAt(83.2)` |
+| `$subtitle->getCuesBetween(600, 660)` | `$subtitle->findCuesBetween(600, 660)` |
+| `$subtitle->getMetadata('title')` | `$subtitle->findMetadata('title')` |
+| `$subtitle->getFormatData('ass')`, `$cue->getFormatData('ass')` | `$subtitle->findFormatData('ass')`, `$cue->findFormatData('ass')` |
 | `$subtitle->replaceText('/x+/', 'y', true, false)` | `$subtitle->replaceText('/x+/', 'y', new ReplaceTextOptions(regex: true, caseSensitive: false))` |
 | `$subtitle->getComments()[0]['text']`, `['beforeCueIndex']` | `$subtitle->getComments()[0]->text`, `->beforeCueIndex`. `getComments()` returns readonly `Comment` objects |
 | `$subtitle->convertFrameRate(fromFps: 25, toFps: 23.976)` | `$subtitle->convertFrameRate(from: 25, to: 23.976)` |
@@ -207,6 +216,8 @@ Each service result is a `*Report` with `public readonly` fields, or a value obj
 | `ValidationRules::netflixEnglish(fps: 24)` | `ValidationRules::netflixEnglish(frameRate: 24)` |
 | `YouTubeChapters::check()` returns `['rule' => YouTubeChapters::RULE_MIN_DURATION, 'chapterIndex' => 2, ...]` | it returns `ValidationViolation` objects. `RULE_FIRST_CHAPTER_AT_ZERO`, `RULE_MIN_CHAPTERS` and `RULE_MIN_DURATION` become `ValidationRule::FirstChapterAtZero`, `MinChapters` and `MinDuration`. `chapterIndex` becomes `cueIndex` |
 | `CommonErrorFixer::RULES`, `AppliedFix::$rule` as a string | `CommonErrorRule::cases()` in run order, `AppliedFix::$rule` as a `CommonErrorRule` |
+| `new CommonErrorOptions(dialogueDash: '-')` | `new CommonErrorOptions(dialogueDashStyle: DialogueDashStyle::Hyphen)`. `DialogueDashStyle` has a case for a hyphen, U+2010, an en dash and an em dash, each with and without a space |
+| `new ValidationRules(dialogueDashStyle: "\u{2013} ")` | `new ValidationRules(dialogueDashStyle: DialogueDashStyle::EnDashSpace)` |
 | `CommonErrorFixer::apply($subtitle, new CommonErrorOptions(dryRun: true))` | `CommonErrorFixer::preview($subtitle, new CommonErrorOptions())` |
 | `WordHighlightOptions::MODE_WORD`, `MODE_CUMULATIVE` | `WordHighlightMode::Word`, `WordHighlightMode::Cumulative` |
 | `ProfanityOptions::MASK_STARS`, `MASK_FIRST_LETTER`, `MASK_REMOVE`, `MASK_NONE` | `ProfanityMask::Stars`, `FirstLetter`, `Remove`, `None` |

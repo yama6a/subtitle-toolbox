@@ -29,7 +29,7 @@ final class HearingImpairedRemover
         foreach ($subtitle->getCues() as $index => $cue) {
             $before  = array_values($cue->getLines());
             $hadText = Markup::hasVisibleText($before);
-            $cue->setLinesByArray(self::removeFromLines($before, $options));
+            $cue->setLines(self::removeFromLines($before, $options));
 
             if ($hadText && !Markup::hasVisibleText($cue->getLines())) {
                 $removedCues[$cue] = true;
@@ -55,7 +55,7 @@ final class HearingImpairedRemover
         $cue    = new SubtitleCue(0, 1, $line);
         $before = $cue->getLines();
 
-        return $cue->setLinesByArray(self::removeFromLines($before, $options))->getLines() !== $before;
+        return $cue->setLines(self::removeFromLines($before, $options))->getLines() !== $before;
     }
 
 

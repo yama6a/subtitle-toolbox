@@ -50,7 +50,7 @@ final class CommonErrorFixer
 
     private static function run(Subtitle $subtitle, CommonErrorOptions $options, bool $change): CommonErrorReport
     {
-        $language    = self::language($options->language ?? $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $language    = self::language($options->language ?? $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
         $cues        = $subtitle->getCues();
         $indexes     = array_keys($cues);
         $fixes       = [];
@@ -78,7 +78,7 @@ final class CommonErrorFixer
             if (!$change || $lines === $original) {
                 continue;
             }
-            $cue->setLinesByArray($lines);
+            $cue->setLines($lines);
             if (Markup::plainLines($cue->getLines()) === [] && Markup::plainLines($original) !== []) {
                 $removedCues[$cue] = true;
             }
@@ -123,7 +123,7 @@ final class CommonErrorFixer
                 self::missingSpaceAfterPunctuation($text)),
             CommonErrorRule::DialogueDashes  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => !$first ? $text : self::replace(
                 '/^[' . self::DASHES . '](?![' . self::DASHES . '])' . self::SPACES . '*(?=[^\s\p{N}])/u',
-                $options->dialogueDash,
+                $options->dialogueDashStyle->value,
                 $text
             )),
         };

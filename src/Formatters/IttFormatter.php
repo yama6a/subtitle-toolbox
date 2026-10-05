@@ -54,7 +54,7 @@ final class IttFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
         $fps                      = $this->formatOptions($options)?->frameRate;
-        [$frameRate, $multiplier] = $this->frameRateParameters($subtitle->getFormatData(IttParser::FORMAT_DATA_KEY), $fps);
+        [$frameRate, $multiplier] = $this->frameRateParameters($subtitle->findFormatData(IttParser::FORMAT_DATA_KEY), $fps);
         $rate                     = new FrameRate((float) $frameRate * $this->multiplierFactor($multiplier));
 
         $ttml = $this->toTtmlSubtitle($subtitle);
@@ -119,8 +119,8 @@ final class IttFormatter extends SubtitleFormatter
     private function toTtmlSubtitle(Subtitle $subtitle): Subtitle
     {
         $ttml = new Subtitle();
-        $ttml->setMetadata(Subtitle::METADATA_LANGUAGE, $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
-        $ttml->setMetadata(Subtitle::METADATA_TITLE, $subtitle->getMetadata(Subtitle::METADATA_TITLE));
+        $ttml->setMetadata(Subtitle::METADATA_LANGUAGE, $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
+        $ttml->setMetadata(Subtitle::METADATA_TITLE, $subtitle->findMetadata(Subtitle::METADATA_TITLE));
         $ttml->setFormatData(TtmlParser::FORMAT_DATA_KEY, [
             "namespace"  => TtmlNamespaces::TTML,
             "namespaces" => ["ttp" => TtmlNamespaces::PARAMETER[0]],

@@ -119,7 +119,7 @@ class SubRipParserTest extends TestCase
 
         $this->assertSame(4.0, $cue->getEnd());
         $this->assertSame(["The train leaves soon"], $cue->getLines());
-        $this->assertSame(["coordinates" => ["x1" => 100, "x2" => 600, "y1" => 40, "y2" => 80]], $cue->getFormatData("srt"));
+        $this->assertSame(["coordinates" => ["x1" => 100, "x2" => 600, "y1" => 40, "y2" => 80]], $cue->findFormatData("srt"));
     }
 
 

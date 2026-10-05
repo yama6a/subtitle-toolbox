@@ -34,7 +34,7 @@ final class ProfanityFilter
             }
 
             $hadText = Markup::hasVisibleText($lines);
-            $cue->setLinesByArray($changed);
+            $cue->setLines($changed);
             if ($hadText && !Markup::hasVisibleText($cue->getLines())) {
                 $removedCues[$cue] = true;
             }

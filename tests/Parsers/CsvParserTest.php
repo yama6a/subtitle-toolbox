@@ -54,7 +54,7 @@ class CsvParserTest extends TestCase
     {
         $csv = implode($delimiter, ["Start", "End", "Text"]) . "\n" . implode($delimiter, ["1", "2", "\"a, b; c\""]) . "\n";
 
-        $this->assertSame($delimiter, (new CsvParser())->parse($csv, new ReadOptions())->getFormatData(CsvParser::FORMAT_DATA_KEY)["delimiter"]);
+        $this->assertSame($delimiter, (new CsvParser())->parse($csv, new ReadOptions())->findFormatData(CsvParser::FORMAT_DATA_KEY)["delimiter"]);
         $this->assertSame([[1.0, 2.0, ["a, b; c"]]], $this->describe($csv));
     }
 
@@ -178,7 +178,7 @@ class CsvParserTest extends TestCase
         $cue      = $subtitle->getCues()[0];
 
         $this->assertSame("shot-1", $cue->getIdentifier());
-        $this->assertSame(["columns" => ["Take" => "3"]], $cue->getFormatData("csv"));
+        $this->assertSame(["columns" => ["Take" => "3"]], $cue->findFormatData("csv"));
         $this->assertSame([
             "delimiter"  => ",",
             "header"     => ["ID", "Start", "End", "Text", "Take"],
@@ -186,7 +186,7 @@ class CsvParserTest extends TestCase
             "width"      => 5,
             "timeFormat" => CsvTimeFormat::Seconds->value,
             "frameRate"  => null,
-        ], $subtitle->getFormatData("csv"));
+        ], $subtitle->findFormatData("csv"));
     }
 
 

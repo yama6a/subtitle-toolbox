@@ -235,7 +235,7 @@ class WordHighlightTest extends TestCase
         foreach ($cues as $wordCue) {
             $this->assertSame(8, $wordCue->getAlignment());
             $this->assertTrue($wordCue->isForced());
-            $this->assertSame(["fields" => ["Style" => "Karaoke"]], $wordCue->getFormatData("ass"));
+            $this->assertSame(["fields" => ["Style" => "Karaoke"]], $wordCue->findFormatData("ass"));
         }
     }
 
@@ -252,7 +252,7 @@ class WordHighlightTest extends TestCase
 
         $karaoke = self::expand($subtitle, new WordHighlightOptions());
 
-        $this->assertSame("Beach", $karaoke->getMetadata(Subtitle::METADATA_TITLE));
+        $this->assertSame("Beach", $karaoke->findMetadata(Subtitle::METADATA_TITLE));
         $this->assertEquals([
             new Comment("Before the second cue", 4),
             new Comment("At the end", 6),

@@ -40,7 +40,7 @@ trait ShortCueMerging
             }
 
             [$this->cues, $anchors] = CueList::join($this->cues, [$cues[$first], $cues[$first + 1]], $anchors, false);
-            $cues[$first]->setLinesByArray($lines);
+            $cues[$first]->setLines($lines);
             array_splice($cues, $first + 1, 1);
             $index = $first;
         }

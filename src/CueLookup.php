@@ -36,7 +36,7 @@ trait CueLookup
      *
      * @return array<int, SubtitleCue>
      */
-    public function getCuesAt(float $time): array
+    public function findCuesAt(float $time): array
     {
         return $this->findCuesOverlapping($time, $time, true);
     }
@@ -45,9 +45,9 @@ trait CueLookup
     /**
      * Returns the lowest index of the cues on screen at $time, or null when no cue is on screen.
      */
-    public function getCueIndexAt(float $time): ?int
+    public function findCueIndexAt(float $time): ?int
     {
-        return array_key_first($this->getCuesAt($time));
+        return array_key_first($this->findCuesAt($time));
     }
 
 
@@ -56,7 +56,7 @@ trait CueLookup
      *
      * @return array<int, SubtitleCue>
      */
-    public function getCuesBetween(float $from, float $to): array
+    public function findCuesBetween(float $from, float $to): array
     {
         if ($from > $to) {
             throw new InvalidArgumentException("The range start $from must not be after the range end $to.");

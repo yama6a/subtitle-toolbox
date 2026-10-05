@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Validation;
 
+use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\FrameRate;
 
@@ -24,7 +25,7 @@ final class ValidationRules
         public readonly bool $noDoubleSpaces = false,
         public readonly bool $noLeadingOrTrailingSpaces = false,
         public readonly bool $noUnbalancedTags = false,
-        public readonly ?string $dialogueDashStyle = null,
+        public readonly ?DialogueDashStyle $dialogueDashStyle = null,
         public readonly ?int $maxSpeakersPerCue = null,
         public readonly ?float $maxWordsPerMinute = null,
         public readonly ?float $minSecondsPerWord = null,
@@ -34,10 +35,6 @@ final class ValidationRules
         public readonly bool $noUnsortedCues = false,
         public readonly bool $noNegativeDuration = false,
     ) {
-        if ($dialogueDashStyle !== null && preg_match("/^[-\x{2010}\x{2013}\x{2014}] ?$/u", $dialogueDashStyle) !== 1) {
-            throw new InvalidArgumentException("The dialogue dash style must be a hyphen, an en dash or an em dash, " .
-                                               "with or without one space after it, got \"$dialogueDashStyle\".");
-        }
         if ($allowedCharacters !== null && TextChecks::isCharacterClass($allowedCharacters)
             && @preg_match(TextChecks::characterClassPattern($allowedCharacters) . "u", "") === false) {
             throw new InvalidArgumentException("The allowed characters \"$allowedCharacters\" are no valid regular " .

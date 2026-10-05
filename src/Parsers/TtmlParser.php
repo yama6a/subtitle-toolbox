@@ -245,7 +245,7 @@ final class TtmlParser extends SubtitleParser
                 }
                 $this->paragraphIndex++;
                 if ($divAttributes !== []) {
-                    $cue->setFormatData(self::FORMAT_DATA_KEY, [...$cue->getFormatData(self::FORMAT_DATA_KEY), "div" => $divAttributes]);
+                    $cue->setFormatData(self::FORMAT_DATA_KEY, [...$cue->findFormatData(self::FORMAT_DATA_KEY), "div" => $divAttributes]);
                 }
                 $cues[] = $cue;
             }

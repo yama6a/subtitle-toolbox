@@ -60,7 +60,7 @@ final class SpeakerLabels
         }
         match ($options->to) {
             SpeakerStyle::Prefix         => self::toPrefix($subtitle, $options->writeUpperCase, $options->separator),
-            SpeakerStyle::DialogueDashes => self::toDialogueDashes($subtitle, $options->dash),
+            SpeakerStyle::DialogueDashes => self::toDialogueDashes($subtitle, $options->dialogueDashStyle->value),
             SpeakerStyle::Colors        => self::toColors($subtitle, $options->colors),
             null                         => null,
         };
@@ -78,7 +78,7 @@ final class SpeakerLabels
     private static function rename(Subtitle $subtitle, array $names): void
     {
         foreach ($subtitle->getCues() as $cue) {
-            $cue->setLinesByArray(array_map(fn (string $line): string => preg_replace_callback(
+            $cue->setLines(array_map(fn (string $line): string => preg_replace_callback(
                 '/<v(\.[^\s>]*)?\s+([^>]*)>/',
                 function (array $match) use ($names): string {
                     $name = Markup::decodeEntities(trim($match[2]));
@@ -184,7 +184,7 @@ final class SpeakerLabels
             }
 
             if ($result !== $lines) {
-                $cue->setLinesByArray($result);
+                $cue->setLines($result);
             }
         }
     }
@@ -199,7 +199,7 @@ final class SpeakerLabels
     {
         foreach ($subtitle->getCues() as $cue) {
             if (preg_grep('/<\/?v[\s.>]/', $cue->getLines()) !== []) {
-                $cue->setLinesByArray($fn(self::speakerLines($cue->getLines())));
+                $cue->setLines($fn(self::speakerLines($cue->getLines())));
             }
         }
     }

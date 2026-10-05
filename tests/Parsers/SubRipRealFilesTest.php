@@ -93,7 +93,7 @@ class SubRipRealFilesTest extends TestCase
     {
         $cues = $this->parseFile("own_alignment_and_coordinates.srt")->getCues();
 
-        $this->assertSame(["coordinates" => ["x1" => 0, "x2" => 0, "y1" => 50, "y2" => 100]], $cues[1]->getFormatData("srt"));
+        $this->assertSame(["coordinates" => ["x1" => 0, "x2" => 0, "y1" => 50, "y2" => 100]], $cues[1]->findFormatData("srt"));
         $this->assertSame(
             [null, null, 8, 4, 7, 8, 9, null, null, null],
             array_map(fn(SubtitleCue $cue) => $cue->getAlignment(), $cues)
@@ -157,6 +157,6 @@ class SubRipRealFilesTest extends TestCase
             fn(string $line) => trim($line) !== ""
         ));
 
-        return [$cue->getStart(), $cue->getEnd(), $lines, $alignment, $cue->getFormatData("srt")];
+        return [$cue->getStart(), $cue->getEnd(), $lines, $alignment, $cue->findFormatData("srt")];
     }
 }

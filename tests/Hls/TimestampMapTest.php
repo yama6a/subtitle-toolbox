@@ -69,7 +69,7 @@ class TimestampMapTest extends TestCase
     {
         $vtt = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/hls/shaka-vtt-071.vtt"), Format::WebVtt);
 
-        $this->assertSame(["X-TIMESTAMP-MAP=LOCAL:01:00:00.000,MPEGTS:324000000"], $vtt->getFormatData("vtt")["headerLines"]);
+        $this->assertSame(["X-TIMESTAMP-MAP=LOCAL:01:00:00.000,MPEGTS:324000000"], $vtt->findFormatData("vtt")["headerLines"]);
         $this->assertSame(324000000, TimestampMap::fromSubtitle($vtt)->mpegts);
         $this->assertNull(TimestampMap::fromSubtitle(Subtitle::fromString("WEBVTT\n", Format::WebVtt)));
     }

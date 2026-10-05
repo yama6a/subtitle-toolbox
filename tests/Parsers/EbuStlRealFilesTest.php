@@ -71,7 +71,7 @@ class EbuStlRealFilesTest extends TestCase
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . $file), Format::EbuStl);
         foreach ($subtitle->getCues() as $cue) {
-            $cue->setFormatData("stl", ["blocks" => []] + $cue->getFormatData("stl"));
+            $cue->setFormatData("stl", ["blocks" => []] + $cue->findFormatData("stl"));
         }
 
         $reparsed = Subtitle::fromString($subtitle->toString(Format::EbuStl), Format::EbuStl);
@@ -84,7 +84,7 @@ class EbuStlRealFilesTest extends TestCase
     public function testRealFileMetadataAndGsiFields(): void
     {
         $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "harbour_open_30fps.stl"), Format::EbuStl);
-        $gsi      = $subtitle->getFormatData("stl")["gsi"];
+        $gsi      = $subtitle->findFormatData("stl")["gsi"];
 
         $this->assertSame(["title" => "Météo du port", "language" => "fr"], $subtitle->getAllMetadata());
         $this->assertSame(["850", "STL30.01", "0", "00", "002", "15", "FRA"], [
@@ -101,10 +101,10 @@ class EbuStlRealFilesTest extends TestCase
         $this->assertSame([8, 4, 3], [$cues[1]->getAlignment(), $cues[2]->getAlignment(), $cues[3]->getAlignment()]);
         $this->assertSame(
             ["subtitleGroupNumber" => 0, "cumulativeStatus" => 3, "verticalPosition" => 7, "justificationCode" => 1],
-            array_intersect_key($cues[2]->getFormatData("stl"), $keys)
+            array_intersect_key($cues[2]->findFormatData("stl"), $keys)
         );
         $this->assertSame("<u>Les bateaux</u>\n<u>restent au port.</u>", $cues[2]->getText());
-        $this->assertSame(1, $cues[3]->getFormatData("stl")["subtitleGroupNumber"]);
+        $this->assertSame(1, $cues[3]->findFormatData("stl")["subtitleGroupNumber"]);
     }
 
 
@@ -118,7 +118,7 @@ class EbuStlRealFilesTest extends TestCase
         $this->assertSame(7, $cues[2]->getAlignment());
         $this->assertSame("Sign: \u{2018}Open\u{2019} \u{00A4}", $cues[3]->getText());
         $this->assertSame(6, $cues[3]->getAlignment());
-        $this->assertCount(2, $cues[3]->getFormatData("stl")["blocks"]);
+        $this->assertCount(2, $cues[3]->findFormatData("stl")["blocks"]);
         $this->assertCount(4, $cues[4]->getLines());
         $this->assertSame("<font color=\"#ffff00\">Rye bread and white bread are baked</font>", $cues[4]->getLines()[2]);
         $this->assertEquals([new Comment("Check the price list before air.", 3)], $subtitle->getComments());

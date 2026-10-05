@@ -81,7 +81,7 @@ class CueEditingTest extends TestCase
 
         $this->assertSame($this->describeCues($harbour), $this->describeCues($reparsed));
         $this->assertEquals($harbour->getComments(), $reparsed->getComments());
-        $this->assertSame($harbour->getFormatData("vtt"), $reparsed->getFormatData("vtt"));
+        $this->assertSame($harbour->findFormatData("vtt"), $reparsed->findFormatData("vtt"));
     }
 
 
@@ -115,8 +115,8 @@ class CueEditingTest extends TestCase
 
         $this->assertSame([[1.0, 2.0, "one"], [3.0, 4.0, "two"], [11.0, 12.0, "three"]], $this->describeCues($subtitle));
         $this->assertSame(["title" => "Part one", "language" => "en"], $subtitle->getAllMetadata());
-        $this->assertSame(["header" => "first"], $subtitle->getFormatData("vtt"));
-        $this->assertSame(["scriptInfo" => []], $subtitle->getFormatData("ass"));
+        $this->assertSame(["header" => "first"], $subtitle->findFormatData("vtt"));
+        $this->assertSame(["scriptInfo" => []], $subtitle->findFormatData("ass"));
         $this->assertEquals([
             new Comment("before two", 1),
             new Comment("end of part one", 2),
@@ -170,8 +170,8 @@ class CueEditingTest extends TestCase
 
         $this->assertSame([[2.0, 3.0, "one"], [4.0, 6.0, "two"], [7.0, 8.0, "three"]], $this->describeCues($slice));
         $this->assertSame(["title" => "Clip"], $slice->getAllMetadata());
-        $this->assertSame(["header" => "clip"], $slice->getFormatData("vtt"));
-        $this->assertSame(["line" => "0"], $slice->getCues()[1]->getFormatData("vtt"));
+        $this->assertSame(["header" => "clip"], $slice->findFormatData("vtt"));
+        $this->assertSame(["line" => "0"], $slice->getCues()[1]->findFormatData("vtt"));
         $this->assertSame("middle", $slice->getCues()[1]->getIdentifier());
         $this->assertNotSame($subtitle->getCues()[1], $slice->getCues()[1]);
         $this->assertSame([1.0, 3.0, "one"], $this->describeCues($subtitle)[0]);

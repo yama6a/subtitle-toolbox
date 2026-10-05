@@ -50,10 +50,10 @@ final class MpSubFormatter extends SubtitleFormatter
 
     private function getHeader(Subtitle $subtitle, ?FrameRate $frameRate): string
     {
-        $formatData = $subtitle->getFormatData(MpSubParser::FORMAT_DATA_KEY);
+        $formatData = $subtitle->findFormatData(MpSubParser::FORMAT_DATA_KEY);
         $headers    = [
-            "TITLE"  => $subtitle->getMetadata(Subtitle::METADATA_TITLE) ?? "",
-            "AUTHOR" => $subtitle->getMetadata(Subtitle::METADATA_AUTHOR) ?? "",
+            "TITLE"  => $subtitle->findMetadata(Subtitle::METADATA_TITLE) ?? "",
+            "AUTHOR" => $subtitle->findMetadata(Subtitle::METADATA_AUTHOR) ?? "",
             "TYPE"   => $formatData["TYPE"] ?? self::DEFAULT_TYPE,
         ];
         foreach ($formatData as $key => $value) {
