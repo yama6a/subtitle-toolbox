@@ -62,6 +62,15 @@ abstract class Command
 
 
     /**
+     * Reports a file outside the inputs that the command cannot read or write. The tool then exits with code 3.
+     */
+    public static function failFile(string $message): never
+    {
+        throw new FileFailure($message);
+    }
+
+
+    /**
      * Returns the help of the command. $topic is the word after --help, or null. Only convert reads it.
      */
     public function help(?string $topic = null): string

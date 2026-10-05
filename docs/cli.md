@@ -48,8 +48,16 @@ php subtitle-toolbox.phar --version
 
 - **Help**: `subtitle-toolbox help CMD` and `subtitle-toolbox CMD --help` list the options of a command. For `convert`, they list the common options and the option groups, see [Order](#order).
 - **Version**: `subtitle-toolbox --version` prints the installed release, for example `2.0.0`, or `dev` in a Git checkout.
-- **Exit code**: 0 when all files succeed, 1 when a file fails, breaks a validation rule or differs in `diff`, 2 for invalid arguments. `--ocr` also exits with 2 before the first file when no OCR engine is installed, or when the data of the `--ocr-language` is missing, see [OCR](#ocr).
-- **Failures**: a failed file prints `FILE: MESSAGE` to standard error. The message of a library exception starts with its class, for example `ParsingException (Error #100):`. Any other PHP error prints its class and message, for example `movie.json: TypeError: ...`, and fails that file with exit code 1. An error outside a file prints `Error: CLASS: MESSAGE` and exits with code 1.
+- **Exit code**: see the table. A batch with a failed file exits with 3, also when another file broke a rule.
+
+| Code | Meaning | Example |
+|:--- |:--- |:--- |
+| 0 | every file succeeded, and `validate` and `diff` found nothing | `validate movie.srt --preset bbc` with no broken rule |
+| 1 | a result: `validate` found a broken rule, or `diff` found a difference | `diff old.srt new.srt` for 2 files that differ |
+| 2 | a usage error, before the tool reads a file | an unknown option, a directory without subtitle files, `--ass-karaoke-tag` with `--to srt`, `validate --video-fps` without `--preset netflix-en`. `--ocr` without an installed OCR engine or without the data of the `--ocr-language`, see [OCR](#ocr) |
+| 3 | a file could not be read or written | a missing input, a file that does not parse, an output that cannot be written, a `--mask-words` file that cannot be read |
+
+- **Failures**: a failed file prints `FILE: MESSAGE` to standard error. The message of a library exception starts with its class, for example `ParsingException (Error #100):`. Any other PHP error prints its class and message, for example `movie.json: TypeError: ...`, and fails that file with exit code 3. An error outside a file prints `Error: MESSAGE` and exits with code 3.
 - **Stable parts**: semantic versioning covers the binary, its commands, options, the meaning of each exit code and `--json` shapes. The text output and the messages can change in a minor release. The PHP classes in `src/Cli` are `@internal` and can change in any release. See [compatibility.md](compatibility.md).
 - **Messages**: where a library message names a PHP method or option, the tool names the CLI option. For example "Call loadTrack() with one of them" becomes "Pass --track N with one of them".
 

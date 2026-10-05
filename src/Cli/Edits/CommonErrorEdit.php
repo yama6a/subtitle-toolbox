@@ -86,7 +86,7 @@ final class CommonErrorEdit extends Edit
         }
         $xml = is_file($path) ? @file_get_contents($path) : false;
         if ($xml === false) {
-            Command::fail("Cannot read the replace list $path.");
+            Command::failFile("Cannot read the replace list $path.");
         }
 
         try {

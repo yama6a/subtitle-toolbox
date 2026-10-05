@@ -129,7 +129,11 @@ final class DiffCommand extends ReportCommand
 
     protected function exitCode(): int
     {
-        return $this->failed > 0 || $this->different ? Application::EXIT_FAILURE : Application::EXIT_OK;
+        return match (true) {
+            $this->failed > 0 => Application::EXIT_FILE,
+            $this->different  => Application::EXIT_RESULT,
+            default           => Application::EXIT_OK,
+        };
     }
 
 

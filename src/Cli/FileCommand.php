@@ -215,7 +215,7 @@ abstract class FileCommand extends Command
 
     protected function exitCode(): int
     {
-        return $this->failed > 0 ? Application::EXIT_FAILURE : Application::EXIT_OK;
+        return $this->failed > 0 ? Application::EXIT_FILE : Application::EXIT_OK;
     }
 
 

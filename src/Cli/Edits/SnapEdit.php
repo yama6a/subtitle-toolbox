@@ -110,7 +110,7 @@ final class SnapEdit extends Edit
     {
         $content = is_file($path) ? @file_get_contents($path) : false;
         if ($content === false) {
-            Command::fail("Cannot read the shot change file $path.");
+            Command::failFile("Cannot read the shot change file $path.");
         }
 
         try {

@@ -107,7 +107,7 @@ final class MaskingEdit extends Edit
     {
         $content = is_file($path) ? @file_get_contents($path) : false;
         if ($content === false) {
-            Command::fail("Cannot read the word file $path.");
+            Command::failFile("Cannot read the word file $path.");
         }
 
         $lines = preg_split('/\R/', StringHelpers::removeUtf8Bom($content));

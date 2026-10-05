@@ -128,7 +128,7 @@ final class OcrEdit extends Edit
         try {
             return $path === null ? GlyphDatabase::subtitleFonts() : GlyphDatabase::fromFile($path);
         } catch (GlyphOcrException $exception) {
-            return Command::fail($exception->getMessage());
+            return Command::failFile($exception->getMessage());
         }
     }
 }

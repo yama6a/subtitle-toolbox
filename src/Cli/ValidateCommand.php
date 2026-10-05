@@ -94,6 +94,9 @@ final class ValidateCommand extends ReportCommand
         if ($preset !== null && !in_array($preset, self::PRESETS, true)) {
             self::fail("Unknown preset \"$preset\". Known presets: " . implode(", ", self::PRESETS) . ".");
         }
+        if ($arguments->has("video-fps") && $preset !== "netflix-en") {
+            self::fail("--video-fps sets the frame rate of the netflix-en gap rule. Pass --preset netflix-en, or leave out --video-fps.");
+        }
         $base = match ($preset) {
             null         => new ValidationRules(),
             "bbc"        => ValidationRules::bbc(),
@@ -166,7 +169,11 @@ final class ValidateCommand extends ReportCommand
 
     protected function exitCode(): int
     {
-        return $this->failed > 0 || $this->withProblems > 0 ? Application::EXIT_FAILURE : Application::EXIT_OK;
+        return match (true) {
+            $this->failed > 0       => Application::EXIT_FILE,
+            $this->withProblems > 0 => Application::EXIT_RESULT,
+            default                 => Application::EXIT_OK,
+        };
     }
 
 

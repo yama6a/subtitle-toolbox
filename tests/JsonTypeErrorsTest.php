@@ -252,7 +252,7 @@ class JsonTypeErrorsTest extends TestCase
 
         [$code, $error] = self::runWith([new Cli\ConvertCommand()], ["convert", $path, "--to", "scc"]);
 
-        $this->assertSame([1, "$path: ParsingException (Error #100): The field formatData.scc.dropFrame must be a boolean.\n"], [$code, $error]);
+        $this->assertSame([3, "$path: ParsingException (Error #100): The field formatData.scc.dropFrame must be a boolean.\n"], [$code, $error]);
     }
 
 
@@ -293,7 +293,7 @@ class JsonTypeErrorsTest extends TestCase
 
         [$code, $error] = self::runWith([$command], ["info", $first, $second, "--keep-going"]);
 
-        $this->assertSame(1, $code);
+        $this->assertSame(3, $code);
         $this->assertStringStartsWith("$first: TypeError: Broken value\n$second: TypeError: Broken value\n", $error);
     }
 
@@ -337,6 +337,6 @@ class JsonTypeErrorsTest extends TestCase
             }
         };
 
-        $this->assertSame([1, "Error: Error: Broken state\n"], self::runWith([$command], ["formats"]));
+        $this->assertSame([3, "Error: Error: Broken state\n"], self::runWith([$command], ["formats"]));
     }
 }
