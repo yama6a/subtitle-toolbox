@@ -106,7 +106,7 @@ apk add tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-deu  # Alpine
 dnf install tesseract tesseract-langpack-deu                         # Fedora
 brew install tesseract tesseract-lang                                # macOS, all languages
 winget install UB-Mannheim.TesseractOCR                              # Windows, then add it to the PATH
-docker run --rm -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:tesseract convert movie.sup movie.srt --ocr --ocr-language deu
+docker run --rm -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:tesseract convert movie.sup --to srt -o movie.srt --ocr --ocr-language deu
 ```
 
 Each language is one package, for example `tesseract-ocr-rus`. See [ocr.md](docs/ocr.md) for the options and the measurements.
@@ -115,14 +115,14 @@ Each language is one package, for example `tesseract-ocr-rus`. See [ocr.md](docs
 Composer installs `vendor/bin/subtitle-toolbox`. Every [GitHub release](https://github.com/yama6a/subtitle-toolbox/releases) also ships it as a PHAR file and as the container image `ghcr.io/yama6a/subtitle-toolbox`.
 
 ```sh
-vendor/bin/subtitle-toolbox convert movie.srt movie.vtt
-vendor/bin/subtitle-toolbox retime season1/ --from-fps 25 --to-fps 23.976 --in-place
-vendor/bin/subtitle-toolbox convert movie.mkv movie.srt --track 3 --ocr
+vendor/bin/subtitle-toolbox convert movie.srt --to vtt -o movie.vtt
+vendor/bin/subtitle-toolbox retime season1/ --from-fps 25 --to-fps 23.976 --output-dir fixed/
+vendor/bin/subtitle-toolbox convert movie.mkv --to srt -o movie.srt --track 3 --ocr
 
 curl -fsSLO https://github.com/yama6a/subtitle-toolbox/releases/latest/download/subtitle-toolbox.phar
 php subtitle-toolbox.phar validate movie.srt --preset netflix-en
 
-docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox convert movie.sup movie.srt --ocr
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox convert movie.sup --to srt -o movie.srt --ocr
 ```
 
 See [cli.md](docs/cli.md) for all commands and options. `subtitle-toolbox convert --help` lists the option groups of `convert`, and `convert --help GROUP` the options of one group.
