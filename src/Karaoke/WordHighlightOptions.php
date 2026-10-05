@@ -33,6 +33,8 @@ final class WordHighlightOptions
 
     /**
      * Returns the tag name of the style, for example "font" for font color="#ffff00".
+     *
+     * @internal
      */
     public function getTagName(): string
     {

@@ -36,6 +36,8 @@ final class DualSubtitleOptions
 
     /**
      * Returns the tag name of the secondary style, for example "font" for font color="#ffff00", or null.
+     *
+     * @internal
      */
     public function getSecondaryTagName(): ?string
     {

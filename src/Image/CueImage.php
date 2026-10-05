@@ -46,6 +46,8 @@ final class CueImage
 
     /**
      * Returns why an image of $width x $height pixels is too large, or null when it fits MAX_SIDE and MAX_PIXELS.
+     *
+     * @internal
      */
     public static function sizeLimitError(int $width, int $height): ?string
     {
