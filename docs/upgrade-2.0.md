@@ -200,6 +200,7 @@ A lookup that starts with `get` returns a value or throws when nothing matches. 
 | `$subtitle->getComments()[0]['text']`, `['beforeCueIndex']` | `$subtitle->getComments()[0]->text`, `->beforeCueIndex`. `getComments()` returns readonly `Comment` objects |
 | `$subtitle->convertFrameRate(fromFps: 25, toFps: 23.976)` | `$subtitle->convertFrameRate(from: 25, to: 23.976)` |
 | `$subtitle->wrapLines(maxCharsPerLine: 42)` | `$subtitle->wrapLines(maxCharactersPerLine: 42)` |
+| `$subtitle->wrapLines(42, maxLines: 3)` | `$subtitle->wrapLines(42, maxLinesPerCue: 3)`, the name of `CueLimits` and `ValidationRules` |
 | `new MergeShortCuesOptions(maxCharactersPerLine: 37, maxGap: 0.5)` | `new MergeShortCuesOptions(limits: new CueLimits(maxCharactersPerLine: 37), maxGap: 0.5)`. `CueLimits` holds `maxCharactersPerLine`, `maxLinesPerCue`, `minDuration`, `maxDuration` and `maxCharactersPerSecond`. `ResegmentOptions` takes it too |
 | `new MergeShortCuesOptions(maxLines: 1)` | `new MergeShortCuesOptions(limits: new CueLimits(maxLinesPerCue: 1))` |
 | `$options->maxLines` of `MergeShortCuesOptions` or `ResegmentOptions`, and the same for `maxCharactersPerLine`, `minDuration`, `maxDuration` and `maxCharactersPerSecond` | `$options->limits->maxLinesPerCue`, `$options->limits->maxCharactersPerLine` and so on |
