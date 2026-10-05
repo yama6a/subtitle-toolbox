@@ -15,6 +15,7 @@ use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\Dual\DualSubtitle;
 use SubtitleToolbox\Dual\DualSubtitleMode;
 use SubtitleToolbox\Dual\DualSubtitleOptions;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\CaseMode;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
@@ -414,6 +415,25 @@ class BinaryTest extends TestCase
                           $this->runBinary(["convert", "trip.srt", "--to", "vtt", "-o", "blocker/out/trip.vtt"]));
         $this->assertSame(3, $this->runBinary(["validate", "trip.srt", "missing.srt", "--max-cpl", "20", "--keep-going"])[0]);
         $this->assertSame(3, $this->runBinary(["diff", "trip.srt", "missing.srt"])[0]);
+    }
+
+
+    public function testContentThatTheOutputFormatCannotHoldFailsThatFileWithExitCode3(): void
+    {
+        file_put_contents("$this->dir/five.srt", "1\n00:00:01,000 --> 00:00:03,000\nA\nB\nC\nD\nE\n");
+        file_put_contents("$this->dir/one.srt", "1\n00:00:01,000 --> 00:00:03,000\nHello\n");
+        try {
+            Subtitle::load("$this->dir/five.srt", Format::SubRip)->toString(Format::Scc);
+            $this->fail("SCC holds at most 4 lines.");
+        } catch (UnwritableContentException) {
+        }
+
+        $this->assertSame(
+            [3, "one.srt -> out/one.scc\n2 files: 1 succeeded, 1 failed.\n",
+             "five.srt: Cue #0 at 1 s has 5 lines, but SCC allows 4. Pass --structure-wrap --structure-max-cpl 32 --structure-max-lines 4.\n"],
+            $this->runBinary(["convert", "five.srt", "one.srt", "--to", "scc", "--output-dir", "out", "--keep-going"])
+        );
+        $this->assertFileDoesNotExist("$this->dir/out/five.scc");
     }
 
 
@@ -1027,6 +1047,20 @@ class BinaryTest extends TestCase
         $this->assertStringStartsWith("trip.srt\n  Format:                srt\n  Cues:                  3\n", $stdout);
         $this->assertStringContainsString("  Gaps:                  min -0.5, average 0.25, max 1 s\n", $stdout);
         $this->assertSame("", $stderr);
+    }
+
+
+    public function testInfoAsJsonGivesNullForStatisticsWithoutData(): void
+    {
+        [$code, $stdout] = $this->runBinary(["info", "-", "--json"], "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHi\n");
+        $statistics = json_decode($stdout, true)[0]["statistics"];
+        $this->assertSame([0, null, 1], [$code, $statistics["gaps"], $statistics["span"]]);
+
+        [$code, $stdout] = $this->runBinary(["info", "-", "--json"], "WEBVTT\n");
+        $statistics = json_decode($stdout, true)[0]["statistics"];
+        $this->assertSame([0, null, null, null, null, null], [$code, $statistics["span"], $statistics["charactersPerSecond"],
+                          $statistics["wordsPerMinute"], $statistics["charactersPerLine"], $statistics["gaps"]]);
+        $this->assertStringContainsString("  Gaps:                  -\n", $this->runBinary(["info", "-"], "WEBVTT\n")[1]);
     }
 
 

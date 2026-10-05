@@ -55,7 +55,7 @@ php subtitle-toolbox.phar --version
 | 0 | every file succeeded, and `validate` and `diff` found nothing | `validate movie.srt --preset bbc` with no broken rule |
 | 1 | a result: `validate` found a broken rule, or `diff` found a difference | `diff old.srt new.srt` for 2 files that differ |
 | 2 | a usage error, before the tool reads a file | an unknown option, a directory without subtitle files, `--ass-karaoke-tag` with `--to srt`, `validate --video-fps` without `--preset netflix-en`. `--ocr` without an installed OCR engine or without the data of the `--ocr-language`, see [OCR](#ocr) |
-| 3 | a file could not be read or written | a missing input, a file that does not parse, an output that cannot be written, a `--mask-words` file that cannot be read |
+| 3 | a file could not be read or written | a missing input, a file that does not parse, an output that cannot be written, content that the output format cannot hold such as 5 lines in SCC, a `--mask-words` file that cannot be read |
 
 - **Failures**: a failed file prints `FILE: MESSAGE` to standard error. The message of a library exception starts with its class, for example `ParsingException (Error #100):`. Any other PHP error prints its class and message, for example `movie.json: TypeError: ...`, and fails that file with exit code 3. An error outside a file, such as a `--mask-words` file that cannot be read, prints `Error: MESSAGE` and exits with code 3. A PHP error outside a file also prints its class.
 - **Stable parts**: semantic versioning covers the binary, its commands, options, the meaning of each exit code and `--json` shapes. The text output and the messages can change in a minor release. The PHP classes in `src/Cli` are `@internal` and can change in any release. See [compatibility.md](compatibility.md).
@@ -279,7 +279,7 @@ vendor/bin/subtitle-toolbox convert movie.srt movie.timed.srt --video-fps 24 --s
 
 | Command | Object |
 |:--- |:--- |
-| `info` | `file`, `format`, `metadata`, `statistics`, `imageCues` and `warnings`. `statistics` is `SubtitleStatistics::toArray()`, with `gaps` and a `mostUsedWords` list of `{"word", "count"}` |
+| `info` | `file`, `format`, `metadata`, `statistics`, `imageCues` and `warnings`. `statistics` is `SubtitleStatistics::toArray()`, with `gaps` and a `mostUsedWords` list of `{"word", "count"}`. A statistic without data is null, for example `gaps` of a file with 1 cue. The text output prints `-` |
 | `info` of an MKV or WebM file without `--track` | `file`, `container` with the value `matroska`, and `tracks` |
 | `validate` | `file`, `format`, `valid`, `violations` and `warnings`. A violation has `cueIndex`, `rule`, `value`, `infinite` and `limit` |
 | `diff` | `oldFile`, `newFile`, `equal`, `differences`, `oldWarnings` and `newWarnings`. A difference has `kind`, `oldIndex`, `newIndex`, `old` and `new`. A cue has `start`, `end`, `lines` and `forced` |
