@@ -93,7 +93,7 @@ $subtitle->recognizeText(OcrEngineChooser::create(OcrEngineName::Glyph));   // a
 OcrEngineChooser::choose();                                                 // OcrEngineName::Tesseract or OcrEngineName::Glyph
 ```
 
-- **Missing engines**: `choose()` and `create()` throw `InvalidArgumentException` when neither engine is installed, or when the forced engine is missing. The message holds the install commands. A missing Tesseract language throws `InvalidArgumentException` at the first `recognize()` call.
+- **Missing engines**: `choose()` and `create()` throw `InvalidArgumentException` when neither engine is installed, or when the forced engine is missing. The message holds the install commands. For a missing Tesseract language, see [Tesseract](#tesseract).
 - **Program path**: the third argument of `create()` and the second of `choose()` is the path of the `tesseract` program, default `tesseract` on the `PATH`.
 
 | | Tesseract | php-glyph-ocr |
@@ -131,7 +131,7 @@ $subtitle->recognizeText(new TesseractOcrEngine(new TesseractOcrOptions(program:
 ```
 
 - **Languages**: pass [Tesseract language codes](https://tesseract-ocr.github.io/tessdoc/Data-Files-in-different-versions.html), joined with `+`. The English data comes with the program, except on Alpine. Each other language is a package, for example `tesseract-ocr-rus`.
-- **Missing program**: the first `recognize()` call checks the program and the languages. It throws `InvalidArgumentException` with the install commands, or with the list of installed languages. A failed run of `tesseract` throws `OcrException`.
+- **Missing program or language**: every `recognize()` call checks its language against the installed languages. The engine checks the program and reads the installed languages once per program path. A missing program or language throws `InvalidArgumentException` with the install commands, or with the list of installed languages. A failed run of `tesseract` throws `OcrException`.
 - **Images**: the engine draws each cue image on black, inverts it to dark text on white, and adds a 10-pixel white border. It writes the result to a temporary PGM file and deletes the file after the call.
 - **Options**: `TesseractOcrOptions` holds the settings. `language` is the language for cues where `recognizeText()` passes none, default `eng`. `program` is the path of `tesseract`. `pageSegmentationMode` is the `--psm` value, default 6, one block of text. `scale` from 1 to 8 scales the image up, default 2 on screens below 720 lines and 1 above. `invert` and `threshold` change the image steps. The defaults read the test files with the fewest errors: scaling DVD text by 2 and inverting fixed the errors on small text, a threshold added errors.
 - **Lines and confidence**: each Tesseract text line becomes one line. The confidence is the mean word confidence of the cue, from 0 to 1, or null for a cue without text.

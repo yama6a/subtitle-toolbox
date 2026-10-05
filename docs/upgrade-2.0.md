@@ -271,7 +271,7 @@ See [cli.md](cli.md) for every command and option.
 
 | 1.x | 2.0 |
 |:--- |:--- |
-| `--from ytchapter`, `--to podcast`, and the same for `ogm` and `ffmeta` | still works. The new names are `youtube-chapters`, `podcast-chapters`, `ogm-chapters` and `ffmeta-chapters`. `formats` and `info` print the new names |
+| `--from ytchapter`, `--to podcast`, and the same for `ogm` and `ffmeta` | still works. The new names are `youtube-chapters`, `podcast-chapters`, `ogm-chapters` and `ffmeta-chapters`. `formats`, `info` and the `format` field of `validate --json` print the new names |
 | `convert --case-language de` | `convert --language de` |
 | `convert --replace FROM=TO --regex --ignore-case` | `convert --replace FROM=TO --replace-regex --replace-ignore-case` |
 | `convert --karaoke-tag kf` | `convert --ass-karaoke-tag kf` |
@@ -283,7 +283,8 @@ See [cli.md](cli.md) for every command and option.
 | `convert call.json --to srt` for Deepgram JSON | `convert call.json --from deepgram --to srt`. Chapters and cloud speech JSON always need `--from` |
 | none | `diff` and `dual` read the second file with `--from2` and `--track2`. `convert` and `dual` take `--in-place`. `diff`, `dual` and `hls` take `--keep-going` |
 | `convert --speakers colours` | `convert --speakers colors` |
-| `info --json`, `validate --json` or `diff --json` with one input printed one object | they always print a list, with one object for each input. Read `[0]` for one input |
+| `info --json` or `validate --json` with one input printed one object. `diff --json` always printed one object | they always print a list, with one object for each input, or one object for the pair of files of `diff`. Read `[0]` for one input |
+| `info --json`, `validate --json` or `diff --json` printed nothing when every file failed | they print `[]` |
 | `validate --json` with `results`, each with `cueIndex` and `cueNumber` | `violations`, each with `cueIndex` only. `cueIndex` starts at 0, so the cue number is `cueIndex + 1` |
 | `diff --json` with `old` and `new` for the file names | `oldFile` and `newFile`. Each difference keeps `old` and `new` for the cues |
 | only `info --json` had `warnings` | `validate --json` has `warnings` too, and `diff --json` has `oldWarnings` and `newWarnings`. `diff`, `dual` and `sync --reference` also print the warnings of their second file to standard error |
