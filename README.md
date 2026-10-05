@@ -127,7 +127,14 @@ docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtit
 
 See [cli.md](docs/cli.md) for all commands and options. `subtitle-toolbox convert --help` lists the option groups of `convert`, and `convert --help GROUP` the options of one group.
 
-The commands, options, output and exit codes of the tool follow semantic versioning. Its PHP classes in `SubtitleToolbox\Cli` are internal.
+## Backward compatibility
+Semantic versioning covers the public PHP API and the command line tool: its commands, options, exit codes and `--json` shapes.
+
+- Enums can get new cases in a minor release. Give a `match` on an enum a `default` arm.
+- Exception message text and CLI text output can change. Exception classes and codes stay.
+- Classes and methods marked `@internal`, and the PHP classes in `SubtitleToolbox\Cli`, are not covered.
+
+See [compatibility.md](docs/compatibility.md) for the full rules.
 
 ## Contributing and releases
 Pull requests are welcome. Run the tests with `composer test`.

@@ -8,6 +8,8 @@ composer require ymakhloufi/subtitle-toolbox:^2.0
 
 2.0 has the same requirements as 1.x: PHP 8.2 or later, `ext-dom` and `ext-iconv`.
 
+[compatibility.md](compatibility.md) says what semantic versioning covers in 2.x.
+
 ## New names
 The calls below use these imports:
 
@@ -200,7 +202,7 @@ A lookup that starts with `get` returns a value or throws when nothing matches. 
 | `StringHelpers::UNIX_LINE_ENDING`, `WINDOWS_LINE_ENDING`, `MAC_LINE_ENDING` | `LineEnding::Lf->value`, `LineEnding::Crlf->value`, `"\r"` |
 | `StringHelpers` methods other than `convertToUtf8()` and `isValidUtf8()` | `@internal` |
 | `Markup::CORE_TAGS`, `WORD_TIMESTAMP_REGEX`, `unescapeText()`, `escapeTextLike()`, `splitTags()`, `plainLines()`, `countCharacters()`, `characters()`, `words()`, `toSingleLine()`, `openCoreTags()`, `closeCoreTags()`, `coreTimestamp()` | `@internal`. [markup.md](markup.md) lists the public members |
-| `Cea608`, `CodePage`, `Iso6937`, `EbmlReader`, `PaletteReducer` and the traits of `Subtitle` | `@internal` |
+| `Cea608`, `CodePage`, `Iso6937`, `EbmlReader`, `PaletteReducer`, `ImageFormatter` and the traits of `Subtitle` | `@internal` |
 | `SccParser::HEADER`, `MODE_POP_ON`, `MODE_ROLL_UP`, `MODE_PAINT_ON`, `SubViewerParser::START_SCRIPT`, `METADATA_TAGS`, `CsvParser::DELIMITERS`, `LyricsParser::METADATA_TAGS`, `FfMetadataChaptersParser::METADATA_KEYS`, `WebVttParser::REGION_SETTINGS`, `WebVttParser::CUE_SETTINGS`, `CsvParser::checkDelimiter()` | `@internal`. The SCC format data keeps the values `pop-on`, `roll-up` and `paint-on` |
 | a class that extends `Subtitle`, `SubtitleCue`, `FrameRate`, `Markup`, `SubtitleStatistics`, a stream writer or an exception class | every concrete class is `final`, except `InvalidParserException`. Wrap the class in your own class |
 | `new ValidationRules(noIndexGaps: true)`, `ValidationResult::RULE_INDEX_GAP` | removed. Cue indexes have no gaps, because `removeCue()` always numbers the cues from 0 again |
@@ -269,7 +271,7 @@ See [cli.md](cli.md) for every command and option.
 | `validate --json` with `results`, each with `cueIndex` and `cueNumber` | `violations`, each with `cueIndex` only. `cueIndex` starts at 0, so the cue number is `cueIndex + 1` |
 | `diff --json` with `old` and `new` for the file names | `oldFile` and `newFile`. Each difference keeps `old` and `new` for the cues |
 | only `info --json` had `warnings` | `validate --json` has `warnings` too, and `diff --json` has `oldWarnings` and `newWarnings`. `diff`, `dual` and `sync --reference` also print the warnings of their second file to standard error |
-| the classes in `SubtitleToolbox\Cli`, for example a subclass of `InfoCommand` | `@internal`, and every class that is not abstract is final. Run the binary. Only its commands, options, output and exit codes are stable |
+| the classes in `SubtitleToolbox\Cli`, for example a subclass of `InfoCommand` | `@internal`, and every class that is not abstract is final. Run the binary. Only its commands, options, exit codes and `--json` shapes are stable |
 
 ### Removed commands
 2.0 removes the commands `shift`, `scale`, `fps` with its alias `sync-fps`, `fix`, `strip-sdh` and `snap`. They fail like any unknown command: exit code 2 and a pointer to the command list. Use the `retime` or `convert` call of the table.
@@ -322,7 +324,7 @@ These changes alter the output or the exit code of a call that needs no other ch
 | Stored TTML head that is not valid XML | `toString(Format::Ttml)` threw `InvalidFormatterException`, error code 101 | it throws `InvalidArgumentException`, error code 104 | catch `InvalidArgumentException` |
 | Karaoke | `WordHighlight::expand()` returned a new subtitle and left its input as it was | `WordHighlight::apply()` changes the subtitle that you pass | pass `clone $subtitle` |
 | Translation | `TranslationRunner::translate()` returned a translated copy | it translates the subtitle that you pass, after the last engine call succeeds | pass `clone $subtitle` |
-| OCR failures | a failed Tesseract run, a missing `tesseract` program or language, or a php-glyph-ocr error on an image threw `InvalidArgumentException`, error code 104 | they throw `OcrException`, error code 107. The CLI message starts with `OcrException (Error #107): ` | catch `OcrException` or `SubtitleToolboxException` |
+| OCR failures | a failed Tesseract run, a missing `tesseract` program or language, or a php-glyph-ocr error on an image threw `InvalidArgumentException`, error code 104 | they throw `OcrException`, error code 107 | catch `OcrException` or `SubtitleToolboxException` |
 | `SubtitleCue::setLines()` with a value that is no string or array | threw `InvalidArgumentException` | throws a PHP `TypeError` | pass a string or a list of strings |
 | CLI `info --json` | `statistics.gap`, and `statistics.mostUsedWords` as an object of word and count | `statistics.gaps`, and `statistics.mostUsedWords` as a list of `{"word": ..., "count": ...}` | read the new keys |
 | CLI `info` text output | the line `Gap:` | the line `Gaps:` | read the new label |

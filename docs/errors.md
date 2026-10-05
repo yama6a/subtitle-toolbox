@@ -26,10 +26,10 @@ try {
 | `OcrException` | `\RuntimeException` | 107 | an OCR engine that fails on a valid image: Tesseract exits with an error, the `tesseract` program or its language data is missing, or php-glyph-ocr cannot read the image |
 
 - **SPL classes**: each class extends an SPL class, so `catch (\InvalidArgumentException $e)` and `catch (\RuntimeException $e)` also work.
-- **Messages**: `InvalidArgumentException` and `CueNotFoundException` keep the plain message. The other classes start it with the class name and the code, for example `ParsingException (Error #100): `.
+- **Messages**: `InvalidArgumentException` and `CueNotFoundException` keep the plain message. The other classes start it with the class name and the code, for example `ParsingException (Error #100): `. The message text is not API and can change in a minor release. Test the class and `getCode()`, see [compatibility.md](compatibility.md).
 - **Previous exception**: every constructor takes the message, then an optional `$previous` exception. `ParsingException` takes the line number before it. `getPrevious()` returns it.
 - **Final classes**: every exception class is `final`, except `InvalidParserException`, which `UnknownFormatException` extends.
-- **Line number**: `ParsingException::getLineNumber()` returns the 1-based input line when the parser knows it, and null otherwise. Then the message ends with ` (line 12)`.
+- **Line number**: `ParsingException::getLineNumber()` returns the 1-based input line when the parser knows it, and null otherwise. The message then ends with the line, for example ` (line 12)`. Read the line from `getLineNumber()`, not from the message.
 
 These readers set the line number:
 
