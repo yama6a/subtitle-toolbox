@@ -8,6 +8,8 @@ final class AppliedFix
 {
     /**
      * Records that $rule changed the text of the cue at $cueIndex from $before to $after, with lines joined by "\n".
+     *
+     * @internal CommonErrorFixer::apply() and preview() create the fixes.
      */
     public function __construct(
         public readonly int $cueIndex,

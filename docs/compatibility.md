@@ -21,6 +21,6 @@ The library follows semantic versioning. A 2.x minor or patch release does not b
 A fix that a 2.x minor release adds to `CommonErrorFixer` is off by default. So `CommonErrorFixer::apply()` with the same `CommonErrorOptions`, and the CLI `--errors-fix`, give the same output in every 2.x release. Turn the new fix on with its option.
 
 ## Not covered
-- **`@internal`**: a class, method or constant marked `@internal` can change in any release. An example is `ImageFormatter`.
+- **`@internal`**: a class, method or constant marked `@internal` can change in any release. Examples are `ImageFormatter`, and the constructors of the reports and results that the library returns, such as `CommonErrorReport`, `ValidationViolation` and `ParseWarning`. Read their fields, but do not create them. `RecognizedText` stays public, because an `OcrEngine` returns it. The constructor of `Comment` also stays public.
 - **Parsers and formatters as base classes**: only the library extends `SubtitleParser` and `SubtitleFormatter`. Their protected members can change in any release. Call a parser or formatter from your own class.
 - **`SubtitleToolbox\Cli`**: the PHP classes of the command line tool. Run the binary instead.

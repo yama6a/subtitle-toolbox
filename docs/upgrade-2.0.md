@@ -211,6 +211,8 @@ A lookup that starts with `get` returns a value or throws when nothing matches. 
 ## Services and reports
 Each service result is a `*Report` with `public readonly` fields, or a value object with `public readonly` fields. String constant sets are backed enums. The value of each case is the 1.x string.
 
+Only the library creates the reports and results. Their constructors are `@internal`: `CommonErrorReport`, `HearingImpairedReport`, `OcrReport`, `ProfanityReport`, `ReferenceSyncReport`, `ResegmentReport`, `ShotChangeReport`, `SpeakerLabelReport`, `TranslationReport`, `WordHighlightReport`, `AppliedFix`, `CueDifference`, `ValidationViolation`, `TranslationWarning`, `MuteRange`, `MatroskaTrack`, `HlsWebVttRendition`, and `ParseWarning` with `ParseWarning::skipped()`. `RecognizedText` and `Comment` keep public constructors.
+
 | 1.x | 2.0 |
 |:--- |:--- |
 | `SubtitleToolbox\HearingImpairedRemover`, `HearingImpairedOptions`, `HearingImpairedReport` | `SubtitleToolbox\HearingImpaired\HearingImpairedRemover` and the same for the other 2 |
