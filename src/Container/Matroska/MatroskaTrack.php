@@ -27,6 +27,8 @@ final class MatroskaTrack
 
     /**
      * Returns the codec, the language, the name and the flags, for example `S_TEXT/UTF8, de, "Deutsch", default`.
+     *
+     * @internal
      */
     public function describe(): string
     {

@@ -97,6 +97,7 @@ No parser constructor takes an argument. Pass the setting to `ReadOptions`.
 | `new PodcastTranscriptParser([PodcastTranscriptParser::OPTION_KEEP_SEGMENTS => true], 10)` | `new ReadOptions(lastCueDuration: 10, format: new TranscriptReadOptions(keepSegments: true))` |
 | `new CsvParser($columns, ';', 10)` | `new ReadOptions(lastCueDuration: 10, format: new CsvReadOptions($columns, ';'))` |
 | `new CsvColumns(start: 'TC', frameRate: 25)` | `new CsvReadOptions(new CsvColumns(start: 'TC'), frameRate: 25)` |
+| `CsvColumns::ROLES` | `@internal` |
 | `new SccParser(2)` | `new ReadOptions(format: new SccReadOptions(channel: 2))` |
 | `new EbuStlParser(true)` | `new ReadOptions(format: new EbuStlReadOptions(subtractStartOfProgramme: true))` |
 | `new FfMetadataChaptersParser(3600)`, and the YouTube, Podcasting 2.0 and OGM chapter parsers | `new ReadOptions(format: new ChapterReadOptions(mediaDuration: 3600))` |
@@ -261,6 +262,7 @@ Only the library creates the reports and results. Their constructors are `@inter
 |:--- |:--- |
 | `$exception->getErrorCode()` | `$exception->getCode()` |
 | `new ParsingException($message, $lineNumber)` | the same, plus an optional third argument `$previous`. The other library exceptions take `($message, $previous)` |
+| `catch (GenericException $e)` | `catch (SubtitleToolboxException $e)`. `GenericException` is `@internal` |
 | `catch (InvalidArgumentException $e)` around `recognizeText()` or `OcrRunner::run()` | `catch (OcrException $e)` for a failed OCR run on an image, error code 107. A missing engine or language still throws `InvalidArgumentException` |
 
 ## Command line tool

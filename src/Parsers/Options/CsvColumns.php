@@ -12,6 +12,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
  */
 final class CsvColumns
 {
+    /** @internal */
     public const ROLES = ["identifier", "start", "end", "duration", "speaker", "text"];
 
 

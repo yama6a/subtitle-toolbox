@@ -169,10 +169,12 @@ final class MatroskaReader
 
     /**
      * Returns the format of the parser that extract() uses for the track, or null for a codec that it does not read.
+     *
+     * @throws InvalidArgumentException for a number that is not a subtitle track, as extract() does.
      */
     public function trackFormat(int $trackNumber): ?Format
     {
-        return self::FORMATS[$this->tracks[$trackNumber]->codecId ?? ""] ?? null;
+        return self::FORMATS[$this->subtitleTrack($trackNumber)->codecId] ?? null;
     }
 
 
@@ -183,10 +185,7 @@ final class MatroskaReader
     public function extract(int $trackNumber, ?ReadOptions $options = null): Subtitle
     {
         $options ??= new ReadOptions();
-        $track = $this->tracks[$trackNumber] ?? null;
-        if ($track === null) {
-            throw new InvalidArgumentException("The file has no subtitle track with the number $trackNumber.");
-        }
+        $track = $this->subtitleTrack($trackNumber);
         if (!in_array($track->codecId, self::CODECS, true)) {
             throw new ParsingException("Track $trackNumber has the codec $track->codecId. The reader extracts only " .
                                        implode(", ", self::CODECS) . ".");
@@ -212,6 +211,13 @@ final class MatroskaReader
         }
 
         return $subtitle;
+    }
+
+
+    private function subtitleTrack(int $trackNumber): MatroskaTrack
+    {
+        return $this->tracks[$trackNumber]
+            ?? throw new InvalidArgumentException("The file has no subtitle track with the number $trackNumber.");
     }
 
 

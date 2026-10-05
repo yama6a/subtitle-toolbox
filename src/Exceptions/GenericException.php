@@ -6,6 +6,9 @@ namespace SubtitleToolbox\Exceptions;
 
 /**
  * GenericException starts the message with the short class name and the code, for example "ParsingException (Error #100): ".
+ * Catch SubtitleToolboxException instead.
+ *
+ * @internal
  */
 abstract class GenericException extends \RuntimeException implements SubtitleToolboxException
 {

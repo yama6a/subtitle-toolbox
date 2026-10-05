@@ -227,6 +227,19 @@ class MatroskaReaderTest extends TestCase
     }
 
 
+    public function testTrackFormatIsNullForAnUnreadCodecAndThrowsForAVideoTrack(): void
+    {
+        $mkv = MatroskaReader::open(self::DIR . "text_tracks.mkv");
+
+        $this->assertSame([Format::SubRip, Format::Ass, Format::WebVtt, Format::Ass, null],
+                          array_map($mkv->trackFormat(...), [3, 4, 5, 6, 7]));
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("The file has no subtitle track with the number 1.");
+
+        $mkv->trackFormat(1);
+    }
+
+
     public function testThrowsForBzlibCompression(): void
     {
         $this->expectException(ParsingException::class);
