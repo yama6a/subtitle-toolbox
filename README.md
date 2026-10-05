@@ -64,7 +64,7 @@ $subtitle->save('movie.vtt');                                   // WebVTT, from 
 | Plain text | `PlainText` | `txt` | `.txt` | no | yes | transcript |
 | Whisper JSON | `Whisper` | `whisper` | `.json` | yes | no | OpenAI API, openai-whisper, faster-whisper, WhisperX, whisper.cpp |
 | Cloud speech-to-text JSON | `AwsTranscribe`, `Deepgram`, `AssemblyAi`, `GoogleSpeech` | `aws-transcribe`, `deepgram`, `assemblyai`, `google-speech` | `.json` | yes | no | Amazon Transcribe, Deepgram, AssemblyAI, Google Cloud Speech-to-Text. Not detected |
-| YouTube timed text | `YouTube` | `youtube` | `.json3`, `.srv3`, `.srv1` | yes | no | json3, srv1, srv2, srv3 and transcript XML |
+| YouTube timed text | `YouTubeTimedText` | `youtube` | `.json3`, `.srv3`, `.srv1` | yes | no | json3, srv1, srv2, srv3 and transcript XML |
 | Podcasting 2.0 transcript JSON | `PodcastTranscript` | `podcast-transcript` | `.json` | yes | yes | |
 | HTML transcript | `HtmlTranscript` | `html` | `.html`, `.htm` | yes | yes | the Podcasting 2.0 HTML format |
 | YouTube chapters | `YouTubeChapters` | `youtube-chapters` | `.txt` | yes | yes | chapter list in a video description. Not detected |

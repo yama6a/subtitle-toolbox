@@ -58,7 +58,7 @@ final class FormatDetector
         Format::Pgs->value      => '/\APG.{8}[\x14-\x17\x80]/s',
         Format::EbuStl->value   => '/\A\d{3}STL(?:25|30)\.01/',
         Format::Scc->value      => '/\AScenarist_SCC V1\.0[ \t]*$/m',
-        Format::YouTube->value  => '/\A' . self::XML_PROLOG . '<(?:timedtext|transcript)[\s>\/]/s',
+        Format::YouTubeTimedText->value => '/\A' . self::XML_PROLOG . '<(?:timedtext|transcript)[\s>\/]/s',
         Format::Mpl2->value     => '/\A\[\d+\]\[\d+\]/',
         Format::TmPlayer->value => '/\A\d+:[0-5]\d:[0-5]\d(?:,\d+)?[:=]/',
         Format::HtmlTranscript->value => '/\A' . self::XML_PROLOG . '(?=<)(?=.*?<cite[\s>])(?=.*?<time[\s>])/is',
@@ -102,7 +102,7 @@ final class FormatDetector
             (is_int($version) || is_float($version)) && is_array($data->cues ?? null) => Format::Json,
             self::firstItemHas($segments, "startTime", "body")                         => Format::PodcastTranscript,
             is_array($segments) || is_array($data->transcription ?? null)              => Format::Whisper,
-            self::firstItemHas($events, "tStartMs")                                    => Format::YouTube,
+            self::firstItemHas($events, "tStartMs")                                    => Format::YouTubeTimedText,
             default                                                                    => null,
         };
     }

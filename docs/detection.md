@@ -21,7 +21,7 @@ Content that starts with `{` and is a JSON object goes to the JSON checks. Detec
 | 1 | `Json` | a numeric `"version"` and a `"cues"` list |
 | 2 | `PodcastTranscript` | a `"segments"` list whose first segment has `"startTime"` and `"body"` |
 | 3 | `Whisper` | a `"segments"` or `"transcription"` list |
-| 4 | `YouTube` | an `"events"` list whose first event has `"tStartMs"` |
+| 4 | `YouTubeTimedText` | an `"events"` list whose first event has `"tStartMs"` |
 
 A JSON object that matches none of these gives null. Invalid JSON gives null too, unless a text signature matches it, such as MicroDVD `{24}{72}`.
 
@@ -42,7 +42,7 @@ Other content goes to the signatures of the text and binary formats. Detection c
 | 11 | `Pgs` | the bytes `PG`, then a known segment type |
 | 12 | `EbuStl` | a 3-digit code page such as `850`, then `STL25.01` or `STL30.01` |
 | 13 | `Scc` | `Scenarist_SCC V1.0` |
-| 14 | `YouTube` | a `<timedtext>` or `<transcript>` root |
+| 14 | `YouTubeTimedText` | a `<timedtext>` or `<transcript>` root |
 | 15 | `Mpl2` | `[12][45]` |
 | 16 | `TmPlayer` | `00:00:01:`, `0:00:01=` or `00:00:01,1=` |
 | 17 | `HtmlTranscript` | a tag at the start, and a `<cite>` and a `<time>` element |

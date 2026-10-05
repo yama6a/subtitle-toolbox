@@ -74,8 +74,8 @@ use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
-$subtitle = Subtitle::fromString(file_get_contents('video.en.json3'), Format::YouTube);
-$subtitle = Subtitle::fromString(file_get_contents('video.en.srv3'), Format::YouTube, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
+$subtitle = Subtitle::fromString(file_get_contents('video.en.json3'), Format::YouTubeTimedText);
+$subtitle = Subtitle::fromString(file_get_contents('video.en.srv3'), Format::YouTubeTimedText, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
 $subtitle->getCues()[0]->getText();                                          // '<00:00:01.200>Hello <00:00:01.600>world'
 $subtitle->findFormatData('youtube')['format'];                              // 'srv3'
 ```

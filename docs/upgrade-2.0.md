@@ -50,6 +50,7 @@ use SubtitleToolbox\Validation\ValidationRules;
 | `FormatRegistry::names()` | `array_map(fn (Format $f) => $f->value, Format::cases())` |
 | `FormatRegistry::extensions('ass')` | `Format::Ass->extensions()` |
 | the format names `'ytchapter'`, `'podcast'`, `'ogm'` and `'ffmeta'`, for example in `FormatRegistry::find()` | `Format::YouTubeChapters`, `Format::PodcastChapters`, `Format::OgmChapters` and `Format::FfMetadataChapters`. Their values are `'youtube-chapters'`, `'podcast-chapters'`, `'ogm-chapters'` and `'ffmeta-chapters'`. `Format::tryFrom('ytchapter')` returns null |
+| the format name `'youtube'`, `YouTubeTimedTextParser::class` | `Format::YouTubeTimedText`. Its value stays `'youtube'`. YouTube chapters are `Format::YouTubeChapters` |
 | `FormatRegistry::find('srt')`, `FormatRegistry::forExtension('srt')` | `Format::tryFrom('srt')` for a format name, `Format::fromPath('movie.srt')` for an extension |
 | `FormatRegistry::parserClass('vobsub')`, `FormatRegistry::formatterClass('vobsub')` | `Format::VobSub->canRead()`, `Format::VobSub->canWrite()` |
 | a format name from user input, such as `'srt'` | `Format::from('srt')`, or `Format::tryFrom()` for null on an unknown name |
