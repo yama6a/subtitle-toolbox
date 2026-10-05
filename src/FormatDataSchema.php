@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
-use SubtitleToolbox\Exceptions\ParsingException;
-
 /**
- * FormatDataSchema checks the types of the format data fields that the formatters read, so that fromArray() and
- * JsonParser reject a bad field with its path before a formatter fails on it. Other fields pass as they are.
+ * FormatDataSchema checks the types of the format data fields that the formatters read, so that setFormatData(),
+ * fromArray() and JsonParser reject a bad field with its path before a formatter fails on it. Other fields pass as they are.
  *
  * The format data of a format is an object of fields, or "strings" for an object of strings with any keys.
  * A type is "string", "int", "bool", "number", "scalar", "ttiBlock" or "timeBase", with "?" in front for null too,
@@ -31,8 +29,8 @@ final class FormatDataSchema
             "sectionOrder"       => self::STRINGS,
             "scriptInfoComments" => self::STRINGS,
             "scriptInfo"         => ["list", "string"],
-            "stylesSection"      => "string",
-            "styleFormat"        => self::STRINGS,
+            "stylesSection"      => "?string",
+            "styleFormat"        => ["?list", "string"],
             "styles"             => ["list", ["list", "string"]],
             "eventFormat"        => self::STRINGS,
             "commentEvents"      => ["list", self::ATTRIBUTES],
@@ -151,36 +149,29 @@ final class FormatDataSchema
 
 
     /**
-     * Throws ParsingException with the path of the first field of $data, the format data of format data key $key, that has the wrong type.
+     * Returns the error message for the first field of $data, the format data under format data key $key, that has the
+     * wrong type, or null when every field has the right type.
      *
      * @param string $path the path of $data, for example "cues[3].formatData.ass"
      */
-    public static function check(string $key, array $data, string $path, bool $isCue): void
+    public static function problem(string $key, array $data, string $path, bool $isCue): ?string
     {
         $fields = ($isCue ? self::CUE : self::FILE)[$key] ?? null;
         if ($fields === "strings") {
-            self::checkType(["list", "string"], $data, $path);
-        } elseif ($fields !== null && $data !== []) {
-            self::checkType(["object", $fields], $data, $path);
+            return self::checkType(["list", "string"], $data, $path);
         }
+
+        return $fields !== null && $data !== [] ? self::checkType(["object", $fields], $data, $path) : null;
     }
 
 
-    private static function checkType(string|array $type, mixed $value, string $path): void
+    private static function checkType(string|array $type, mixed $value, string $path): ?string
     {
         if (is_string($type) && str_starts_with($type, "?")) {
-            if ($value !== null) {
-                self::checkType(substr($type, 1), $value, $path);
-            }
-
-            return;
+            return $value === null ? null : self::checkType(substr($type, 1), $value, $path);
         }
         if (is_array($type) && str_starts_with($type[0], "?")) {
-            if ($value !== null) {
-                self::checkType([substr($type[0], 1), ...array_slice($type, 1)], $value, $path);
-            }
-
-            return;
+            return $value === null ? null : self::checkType([substr($type[0], 1), ...array_slice($type, 1)], $value, $path);
         }
 
         $valid = match (is_array($type) ? $type[0] : $type) {
@@ -195,13 +186,13 @@ final class FormatDataSchema
             default    => is_array($value),
         };
         if (!$valid) {
-            throw new ParsingException("The field $path must be " . self::describe($type) . ".");
+            return "The field $path must be " . self::describe($type) . ".";
         }
         if (!is_array($type) || $type[0] === "range") {
-            return;
+            return null;
         }
 
-        match ($type[0]) {
+        return match ($type[0]) {
             "list"   => self::checkItems($type[1], $value, $path),
             "names"  => self::checkNames($type[1], $value, $path),
             "keys"   => self::checkKeys($type[1], $type[2], $value, $path),
@@ -210,54 +201,74 @@ final class FormatDataSchema
     }
 
 
-    private static function checkItems(string|array $type, array $value, string $path): void
+    private static function checkItems(string|array $type, array $value, string $path): ?string
     {
         foreach ($value as $key => $item) {
-            self::checkType($type, $item, self::child($path, $key));
+            $problem = self::checkType($type, $item, self::child($path, $key));
+            if ($problem !== null) {
+                return $problem;
+            }
         }
+
+        return null;
     }
 
 
-    private static function checkNames(string|array $type, array $value, string $path): void
+    private static function checkNames(string|array $type, array $value, string $path): ?string
     {
         foreach ($value as $key => $item) {
             if (!is_string($key)) {
-                throw new ParsingException("The field $path must be an object whose keys are names, not numbers.");
+                return "The field $path must be an object whose keys are names, not numbers.";
             }
-            self::checkType($type, $item, "$path.$key");
+            $problem = self::checkType($type, $item, "$path.$key");
+            if ($problem !== null) {
+                return $problem;
+            }
         }
+
+        return null;
     }
 
 
     /**
      * @param list<string> $names
      */
-    private static function checkKeys(array $names, string|array $type, array $value, string $path): void
+    private static function checkKeys(array $names, string|array $type, array $value, string $path): ?string
     {
         foreach ($value as $key => $item) {
             if (!in_array($key, $names, true)) {
-                throw new ParsingException("The field $path must hold only the keys " . implode(", ", $names) . ".");
+                return "The field $path must hold only the keys " . implode(", ", $names) . ".";
             }
-            self::checkType($type, $item, "$path.$key");
+            $problem = self::checkType($type, $item, "$path.$key");
+            if ($problem !== null) {
+                return $problem;
+            }
         }
+
+        return null;
     }
 
 
     /**
      * @param array<string, string|array> $fields
      */
-    private static function checkFields(array $fields, array $value, string $path): void
+    private static function checkFields(array $fields, array $value, string $path): ?string
     {
         foreach ($fields as $key => $type) {
             $name = ltrim($key, "!");
             if (!array_key_exists($name, $value)) {
                 if ($key !== $name) {
-                    throw new ParsingException("The field $path.$name is missing.");
+                    return "The field $path.$name is missing.";
                 }
                 continue;
             }
-            self::checkType($type, $value[$name], "$path.$name");
+            $problem = self::checkType($type, $value[$name], "$path.$name");
+            if ($problem !== null) {
+                return $problem;
+            }
         }
+
+        return null;
     }
 
 

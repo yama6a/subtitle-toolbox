@@ -64,7 +64,7 @@ $subtitle->save('movie.vtt');                                   // WebVTT, from 
 | Plain text | `PlainText` | `txt` | `.txt` | no | yes | transcript |
 | Whisper JSON | `Whisper` | `whisper` | `.json` | yes | no | OpenAI API, openai-whisper, faster-whisper, WhisperX, whisper.cpp |
 | Cloud speech-to-text JSON | `AwsTranscribe`, `Deepgram`, `AssemblyAi`, `GoogleSpeech` | `aws-transcribe`, `deepgram`, `assemblyai`, `google-speech` | `.json` | yes | no | Amazon Transcribe, Deepgram, AssemblyAI, Google Cloud Speech-to-Text. Not detected |
-| YouTube timed text | `YouTube` | `youtube` | `.json3`, `.srv3`, `.srv1` | yes | no | json3, srv1, srv2, srv3 and transcript XML |
+| YouTube timed text | `YouTubeTimedText` | `youtube` | `.json3`, `.srv3`, `.srv1` | yes | no | json3, srv1, srv2, srv3 and transcript XML |
 | Podcasting 2.0 transcript JSON | `PodcastTranscript` | `podcast-transcript` | `.json` | yes | yes | |
 | HTML transcript | `HtmlTranscript` | `html` | `.html`, `.htm` | yes | yes | the Podcasting 2.0 HTML format |
 | YouTube chapters | `YouTubeChapters` | `youtube-chapters` | `.txt` | yes | yes | chapter list in a video description. Not detected |
@@ -128,10 +128,11 @@ docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtit
 See [cli.md](docs/cli.md) for all commands and options. `subtitle-toolbox convert --help` lists the option groups of `convert`, and `convert --help GROUP` the options of one group.
 
 ## Backward compatibility
-Semantic versioning covers the public PHP API and the command line tool: its commands, options, exit codes and `--json` shapes.
+Semantic versioning covers the public PHP API and the command line tool: its commands, options, the meaning of its exit codes and `--json` shapes.
 
 - Enums can get new cases in a minor release. Give a `match` on an enum a `default` arm.
-- Exception message text and CLI text output can change. Exception classes and codes stay.
+- Exception message text and CLI text output can change. Exception classes and codes stay. The class or exit code that a given cause gives can change.
+- A bug fix or a new format can change the written bytes, the parsed cues and the detected format, also in a patch release.
 - Classes and methods marked `@internal`, and the PHP classes in `SubtitleToolbox\Cli`, are not covered.
 
 See [compatibility.md](docs/compatibility.md) for the full rules.

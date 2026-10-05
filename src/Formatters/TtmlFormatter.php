@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use DOMDocument;
 use DOMElement;
 use DOMNode;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\TtmlNamespaces;
@@ -147,7 +147,7 @@ final class TtmlFormatter extends SubtitleFormatter
 
         $head = $loaded ? $document->documentElement->firstChild : null;
         if (!$head instanceof DOMElement || $head->localName !== "head") {
-            throw new InvalidArgumentException("The stored TTML head is not a well-formed <head> element!");
+            throw new UnwritableContentException("The stored TTML head is not a well-formed <head> element!");
         }
 
         $this->headDocument  = $document;

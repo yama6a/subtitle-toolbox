@@ -51,6 +51,7 @@ use SubtitleToolbox\Ocr\OcrEngineChooser;
 use SubtitleToolbox\Ocr\OcrEngineName;
 use SubtitleToolbox\Ocr\RecognizedText;
 use SubtitleToolbox\Ocr\TesseractOcrEngine;
+use SubtitleToolbox\Ocr\TesseractOcrOptions;
 use SubtitleToolbox\Parsers\AssemblyAiParser;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\AwsTranscribeParser;
@@ -122,6 +123,7 @@ class ThrowSitesTest extends TestCase
         CueNotFoundException::class         => 105,
         UnknownFormatException::class       => 106,
         OcrException::class                 => 107,
+        UnwritableContentException::class   => 108,
     ];
 
     private const IDX = "# VobSub index file, v7 (do not modify this line!)\nsize: 720x576\n" .
@@ -234,10 +236,11 @@ class ThrowSitesTest extends TestCase
      */
     public static function throwSites(): array
     {
-        $invalid  = [\InvalidArgumentException::class, InvalidArgumentException::class];
-        $parsing  = [ParsingException::class, ParsingException::class];
-        $ocr      = [\RuntimeException::class, OcrException::class];
-        $imageCue = (new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(1, 2));
+        $invalid    = [\InvalidArgumentException::class, InvalidArgumentException::class];
+        $parsing    = [ParsingException::class, ParsingException::class];
+        $ocr        = [\RuntimeException::class, OcrException::class];
+        $unwritable = [\InvalidArgumentException::class, UnwritableContentException::class];
+        $imageCue   = (new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(1, 2));
 
         $cue = ["start" => 1, "end" => 2, "lines" => ["text"]];
 
@@ -257,6 +260,7 @@ class ThrowSitesTest extends TestCase
             "ArrayConversion.php: cue alignment"            => [fn () => self::fromArray(["cues" => [["alignment" => 10] + $cue]]), ...$parsing],
             "ArrayConversion.php: cue forced"               => [fn () => self::fromArray(["cues" => [["forced" => 1] + $cue]]), ...$parsing],
             "ArrayConversion.php: format data no object"    => [fn () => self::fromArray(["formatData" => ["srt" => 5]]), ...$parsing],
+            "ArrayConversion.php: format data field type"   => [fn () => self::fromArray(["formatData" => ["scc" => ["dropFrame" => "x"]]]), ...$parsing],
             "ArrayConversion.php: map no object"            => [fn () => self::fromArray(["metadata" => 5]), ...$parsing],
             "ArrayConversion.php: comments no list"         => [fn () => self::fromArray(["comments" => 5]), ...$parsing],
             "Cli/Command.php: unknown option"               => [fn () => Arguments::parse(["--nope"], []), ...$invalid],
@@ -284,7 +288,7 @@ class ThrowSitesTest extends TestCase
             "Container/Matroska/MatroskaReader.php: unknown size of Tracks" => [fn () => MatroskaReader::open(self::stream(
                                                                 MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT,
                                                                 MkvFixtureWriter::unknownSizeElement(MkvFixtureWriter::TRACKS, "")))), ...$parsing],
-            "CueLimits.php: maximum lines 0"                => [fn () => new CueLimits(maxLines: 0), ...$invalid],
+            "CueLimits.php: maximum lines 0"                => [fn () => new CueLimits(maxLinesPerCue: 0), ...$invalid],
             "CueLimits.php: negative minimum duration"      => [fn () => new CueLimits(minDuration: -1), ...$invalid],
             "CueLimits.php: maximum duration 0"             => [fn () => new CueLimits(maxDuration: 0), ...$invalid],
             "CueEditing.php: slice start after end"         => [fn () => self::subtitle()->withSlice(5, 1), ...$invalid],
@@ -304,15 +308,15 @@ class ThrowSitesTest extends TestCase
             "Fixing/OcrReplaceList.php: invalid regex"      => [fn () => new OcrReplaceList(regularExpressions: ["/(/" => ""]), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid XML"        => [fn () => OcrReplaceList::fromSubtitleEditXml("<ReplaceList>"), ...$parsing],
             "Formatters/JsonOutput.php: invalid UTF-8" => [fn () => Subtitle::load(self::FILES . "cli/latin1.srt", Format::SubRip)->toString(Format::Json),
-                ...$invalid],
+                ...$unwritable],
             "Formatters/CsvFormatter.php: frames without rate" => [fn () => self::subtitle()->toString(Format::Csv,
                 new WriteOptions(format: new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames))), ...$invalid],
             "Formatters/EbuStlFormatter.php: code table 09" => [fn () => self::subtitle()->setFormatData(EbuStlParser::FORMAT_DATA_KEY,
                 ["gsi" => ["CCT" => "09"]])->toString(Format::EbuStl), ...$invalid],
             "Formatters/EbuStlFormatter.php: subtitle number 65536" => [fn () => self::subtitle()->setFormatData(EbuStlParser::FORMAT_DATA_KEY,
-                ["firstSubtitleNumber" => 65536])->toString(Format::EbuStl), ...$invalid],
+                ["firstSubtitleNumber" => 65536])->toString(Format::EbuStl), ...$unwritable],
             "Formatters/EbuStlFormatter.php: text too long" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 30000)))
-                ->toString(Format::EbuStl), ...$invalid],
+                ->toString(Format::EbuStl), ...$unwritable],
             "Formatters/IttFormatter.php: no frame rate"    => [fn () => (new IttFormatter())->format(self::subtitle(), new WriteOptions()), ...$invalid],
             "Formatters/MicroDvdFormatter.php: no frame rate" => [fn () => (new MicroDvdFormatter())->format(self::subtitle(), new WriteOptions()),
                                                                 ...$invalid],
@@ -324,28 +328,24 @@ class ThrowSitesTest extends TestCase
             "Formatters/Options/MicroDvdWriteOptions.php: frame rate 0" => [fn () => new MicroDvdWriteOptions(frameRate: 0), ...$invalid],
             "Formatters/Options/MpSubWriteOptions.php: frame rate 0" => [fn () => new MpSubWriteOptions(frameRate: 0), ...$invalid],
             "Formatters/Options/PlainTextWriteOptions.php: negative paragraph gap" => [fn () => new PlainTextWriteOptions(paragraphGap: -1), ...$invalid],
-            "Formatters/PgsFormatter.php: text cue"         => [fn () => self::subtitle()->toString(Format::Pgs), ...$invalid],
+            "Formatters/PgsFormatter.php: text cue"         => [fn () => self::subtitle()->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: negative x"       => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), -1, 0, 1, 1, 9, 9))
-                ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$invalid],
+                ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: PNG size"         => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), 0, 0, 2, 1, 9, 9))
-                ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$invalid],
+                ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: negative time"    => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), 0, 0, 1, 1, 9, 9))
-                ->toCue(new SubtitleCue(-1, 2)))->toString(Format::Pgs), ...$invalid],
+                ->toCue(new SubtitleCue(-1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/SccFormatter.php: 5 lines"          => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, ["1", "2", "3", "4", "5"]))
-                ->toString(Format::Scc), ...$invalid],
+                ->toString(Format::Scc), ...$unwritable],
             "Formatters/SccFormatter.php: 33 characters"    => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 33)))
-                ->toString(Format::Scc), ...$invalid],
+                ->toString(Format::Scc), ...$unwritable],
             "Formatters/SccFormatter.php: no CEA-608 character" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, "\u{20AC}"))
-                ->toString(Format::Scc), ...$invalid],
+                ->toString(Format::Scc), ...$unwritable],
             "Formatters/SubtitleFormatter.php: options of another format" => [fn () => self::subtitle()->toString(Format::SubRip,
                 new WriteOptions(format: new CsvWriteOptions())), ...$invalid],
             "Formatters/TtmlFormatter.php: stored head"     => [fn () => self::subtitle()->setFormatData(TtmlParser::FORMAT_DATA_KEY, ["head" => "<p/>"])
-                ->toString(Format::Ttml), ...$invalid],
+                ->toString(Format::Ttml), ...$unwritable],
             "FrameRate.php: frame rate 0"                   => [fn () => new FrameRate(0), ...$invalid],
-            "FormatDataSchema.php: wrong type"              => [fn () => self::fromArray(["formatData" => ["scc" => ["dropFrame" => "x"]]]), ...$parsing],
-            "FormatDataSchema.php: numeric key"             => [fn () => self::fromArray(["formatData" => ["ttml" => ["body" => ["x"]]]]), ...$parsing],
-            "FormatDataSchema.php: unknown key"             => [fn () => self::fromArray(["formatData" => ["csv" => ["header" => null, "width" => 1, "roles" => ["x" => 0]]]]), ...$parsing],
-            "FormatDataSchema.php: missing field"           => [fn () => self::fromArray(["formatData" => ["csv" => ["delimiter" => ","]]]), ...$parsing],
             "HearingImpaired/HearingImpairedOptions.php: empty bracket"     => [fn () => new HearingImpairedOptions(customBrackets: [["{", ""]]), ...$invalid],
             "Hls/HlsSegmentOptions.php: segment duration 0" => [fn () => new HlsSegmentOptions(segmentDuration: 0), ...$invalid],
             "Hls/HlsSegmentOptions.php: no %d in pattern"   => [fn () => new HlsSegmentOptions(fileNamePattern: "sub.vtt"), ...$invalid],
@@ -395,17 +395,17 @@ class ThrowSitesTest extends TestCase
             "Ocr/OcrEngineChooser.php: engine missing"      => [fn () => OcrEngineChooser::choose(OcrEngineName::Tesseract, __DIR__ . "/none"), ...$invalid],
             "Ocr/RecognizedText.php: line is no string"          => [fn () => new RecognizedText([5]), ...$invalid],
             "Ocr/RecognizedText.php: confidence above 1"         => [fn () => new RecognizedText(["text"], 2), ...$invalid],
-            "Ocr/TesseractOcrEngine.php: mode 14"           => [fn () => new TesseractOcrEngine(pageSegmentationMode: 14), ...$invalid],
-            "Ocr/TesseractOcrEngine.php: scale 0.5"         => [fn () => new TesseractOcrEngine(scale: 0.5), ...$invalid],
-            "Ocr/TesseractOcrEngine.php: threshold 0"       => [fn () => new TesseractOcrEngine(threshold: 0), ...$invalid],
-            "Ocr/TesseractOcrEngine.php: program missing"   => [fn () => (new TesseractOcrEngine(program: __DIR__ . "/none"))
+            "Ocr/TesseractOcrOptions.php: mode 14"          => [fn () => new TesseractOcrOptions(pageSegmentationMode: 14), ...$invalid],
+            "Ocr/TesseractOcrOptions.php: scale 0.5"        => [fn () => new TesseractOcrOptions(scale: 0.5), ...$invalid],
+            "Ocr/TesseractOcrOptions.php: threshold 0"      => [fn () => new TesseractOcrOptions(threshold: 0), ...$invalid],
+            "Ocr/TesseractOcrEngine.php: program missing"   => [fn () => (new TesseractOcrEngine(new TesseractOcrOptions(program: __DIR__ . "/none")))
                 ->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), null), ...$invalid],
-            "Ocr/TesseractOcrEngine.php: language missing"  => [fn () => (new TesseractOcrEngine(program: self::FAKE_TESSERACT))
+            "Ocr/TesseractOcrEngine.php: language missing"  => [fn () => (new TesseractOcrEngine(new TesseractOcrOptions(program: self::FAKE_TESSERACT)))
                 ->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), "xyz"), ...$invalid],
             "Ocr/TesseractOcrEngine.php: program fails"     => [function (): void {
                 putenv("FAKE_TESSERACT_FAIL=1");
                 try {
-                    (new TesseractOcrEngine(program: self::FAKE_TESSERACT))->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), null);
+                    (new TesseractOcrEngine(new TesseractOcrOptions(program: self::FAKE_TESSERACT)))->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), null);
                 } finally {
                     putenv("FAKE_TESSERACT_FAIL");
                 }
@@ -497,7 +497,7 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Parsers/SamiParser.php: unknown class"         => [fn () => (new SamiParser())->parse(
                 "<SAMI><BODY><SYNC Start=0><P Class=ENCC>text</BODY></SAMI>", new ReadOptions(format: new SamiReadOptions("FRCC"))), ...$parsing],
-            "Parsers/Options/SamiReadOptions.php: empty language"   => [fn () => new SamiReadOptions(" "), ...$invalid],
+            "Parsers/Options/SamiReadOptions.php: empty language class"   => [fn () => new SamiReadOptions(" "), ...$invalid],
             "Parsers/SbvParser.php: no timestamps"          => [fn () => (new SbvParser())->parse("text\nmore", new ReadOptions()), ...$parsing],
             "Parsers/SbvParser.php: no text lines"          => [fn () => (new SbvParser())->parse("0:00:01.000,0:00:02.000", new ReadOptions()), ...$parsing],
             "Parsers/SbvParser.php: invalid time"           => [fn () => (new SbvParser())->parse("soon,0:00:02.000\ntext", new ReadOptions()), ...$parsing],
@@ -640,7 +640,9 @@ class ThrowSitesTest extends TestCase
             "Subtitle.php: remove a missing cue"            => [fn () => self::subtitle()->removeCue(9),
                                                                 \RuntimeException::class, CueNotFoundException::class],
             "Subtitle.php: negative comment index"          => [fn () => self::subtitle()->addComment("note", -1), ...$invalid],
+            "Subtitle.php: format data field type"          => [fn () => (new Subtitle())->setFormatData("scc", ["dropFrame" => "x"]), ...$invalid],
             "SubtitleCue.php: alignment 10"                 => [fn () => (new SubtitleCue())->setAlignment(10), ...$invalid],
+            "SubtitleCue.php: format data field type"       => [fn () => (new SubtitleCue())->setFormatData("srt", ["coordinates" => 5]), ...$invalid],
             "Sync/ReferenceSyncOptions.php: offset beyond a day" => [fn () => new ReferenceSyncOptions(new Subtitle(), maxOffset: 1e20), ...$invalid],
             "Sync/ReferenceSyncOptions.php: offset range too wide" => [fn () => new ReferenceSyncOptions(new Subtitle(), -5000, 5000), ...$invalid],
             "Sync/ReferenceSyncOptions.php: offsets in reverse" => [fn () => new ReferenceSyncOptions(new Subtitle(), 5, 1), ...$invalid],

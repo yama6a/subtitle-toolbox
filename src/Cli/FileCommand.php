@@ -27,7 +27,7 @@ abstract class FileCommand extends Command
 
     private const TRANSCRIPT_FORMATS = [
         Format::Whisper, Format::AssemblyAi, Format::AwsTranscribe, Format::Deepgram, Format::GoogleSpeech,
-        Format::YouTube, Format::PodcastTranscript,
+        Format::YouTubeTimedText, Format::PodcastTranscript,
     ];
 
     // The 1.x names of the chapter formats, kept so that 1.x scripts still run.

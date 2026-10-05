@@ -19,6 +19,7 @@ use SubtitleToolbox\Ocr\OcrEngine;
 use SubtitleToolbox\Ocr\OcrEngineChooser;
 use SubtitleToolbox\Ocr\OcrEngineName;
 use SubtitleToolbox\Ocr\TesseractOcrEngine;
+use SubtitleToolbox\Ocr\TesseractOcrOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -82,7 +83,7 @@ final class OcrEdit extends Edit
             $engine = OcrEngineChooser::choose($engine);
             if ($engine === OcrEngineName::Tesseract) {
                 $language = $arguments->value("ocr-language") ?? "eng";
-                (new TesseractOcrEngine($language))->requireLanguages($language);
+                (new TesseractOcrEngine(new TesseractOcrOptions($language)))->requireLanguages($language);
             }
         } catch (InvalidArgumentException $exception) {
             Command::fail($exception->getMessage());
@@ -110,7 +111,7 @@ final class OcrEdit extends Edit
     private function engine(Console $console): OcrEngine
     {
         if ($this->engine === OcrEngineName::Tesseract) {
-            return new TesseractOcrEngine($this->language ?? "eng");
+            return new TesseractOcrEngine(new TesseractOcrOptions($this->language ?? "eng"));
         }
         if ($this->language !== null && !$this->warnedAboutLanguage) {
             $console->err("Warning: the glyph engine ignores --ocr-language.\n");

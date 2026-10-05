@@ -367,4 +367,16 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $object->setFormatData("ass", []);
         $this->assertSame([], $object->findFormatData("ass"));
     }
+
+
+    public function testSetFormatDataRejectsAFieldThatAFormatterReadsWithTheWrongType(): void
+    {
+        $subtitle = (new Subtitle())->setFormatData("scc", ["dropFrame" => true, "note" => 5]);
+        $this->assertSame(["dropFrame" => true, "note" => 5], $subtitle->findFormatData("scc"));
+
+        $this->expectException(\SubtitleToolbox\Exceptions\InvalidArgumentException::class);
+        $this->expectExceptionMessage("The field formatData.scc.dropFrame must be a boolean.");
+
+        $subtitle->setFormatData("scc", ["dropFrame" => "yes"]);
+    }
 }

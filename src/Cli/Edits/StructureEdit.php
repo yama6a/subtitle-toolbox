@@ -90,7 +90,7 @@ final class StructureEdit extends Edit
 
     public function apply(Subtitle $subtitle, Console $console, string $label): Subtitle
     {
-        $limits = new CueLimits(maxCharactersPerLine: $this->maxCharactersPerLine, maxLines: $this->maxLines);
+        $limits = new CueLimits(maxCharactersPerLine: $this->maxCharactersPerLine, maxLinesPerCue: $this->maxLines);
         if ($this->resegmentWordGap !== null) {
             Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::ByWords, $limits, $this->resegmentWordGap));
         }

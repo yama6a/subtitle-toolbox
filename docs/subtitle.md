@@ -46,6 +46,7 @@ $subtitle->findFormatData('ass');                       // [] when not set
 
 - **Alignment**: a number from 1 to 9 in numeric keypad layout. 1 is bottom left, 2 is bottom center, 8 is top center. `null` means the format default, bottom center.
 - **Format data**: the data of a format that has no shared field, for example ASS styles. Only the formatter of the same format reads it. The key is the value of the `Format` case, for example `ass` for `Format::Ass` and `microdvd` for `Format::MicroDvd`. Each parser holds its key in `FORMAT_DATA_KEY`. CSV and TSV share the key `csv`. [formats.md](formats.md) lists the fields of each format.
+- **Checks**: `setFormatData()` checks the fields that a formatter reads, as `fromArray()` does. A field of the wrong type throws `InvalidArgumentException` with its path, for example `The field formatData.scc.dropFrame must be a boolean.` Other fields pass as they are.
 
 ## Finding cues
 ```php
@@ -120,4 +121,4 @@ json_encode($stats->toArray());            // all numbers and the 10 most used w
 - **Cues without text**: an image cue counts in `cueCount`, the display time, the span and the gaps. The text numbers leave it out.
 - **Reading speed**: a cue with a duration of 0 has no characters per second and no words per minute.
 - **Gap**: the start of a cue minus the latest end of the earlier cues. An overlap gives a negative gap.
-- **No cues**: all numbers are 0.
+- **No data**: a range with no value to measure is null, for example `gaps` with fewer than 2 cues, or `charactersPerSecond` without a cue that has text and a duration. Without cues, `span` is null too, and the counts and `totalDisplayTime` are 0. `toArray()` writes the same nulls.

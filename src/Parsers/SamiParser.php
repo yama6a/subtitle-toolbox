@@ -322,11 +322,11 @@ final class SamiParser extends SubtitleParser
             }
         }
 
-        $language = $this->formatOptions()->language;
-        if ($language !== null) {
-            $key = strtolower($language);
+        $languageClass = $this->formatOptions()->languageClass;
+        if ($languageClass !== null) {
+            $key = strtolower($languageClass);
             if (!isset($classes[$key]) && !isset($used[$key])) {
-                throw new ParsingException("The SAMI file has no class $language.");
+                throw new ParsingException("The SAMI file has no class $languageClass.");
             }
 
             return $classes[$key]["name"] ?? $used[$key];

@@ -218,7 +218,7 @@ final class Resegmenter
     {
         $duration = round($end - $start, 3);
         if ($duration > round($options->limits->maxDuration, 3)
-            || LineWrapper::wrapToFit($lines, $options->limits->maxCharactersPerLine, $options->limits->maxLines) === null) {
+            || LineWrapper::wrapToFit($lines, $options->limits->maxCharactersPerLine, $options->limits->maxLinesPerCue) === null) {
             return false;
         }
         if ($options->limits->maxCharactersPerSecond === null) {
@@ -240,8 +240,8 @@ final class Resegmenter
      */
     private static function wrap(array $lines, ResegmentOptions $options): array
     {
-        return LineWrapper::wrapToFit($lines, $options->limits->maxCharactersPerLine, $options->limits->maxLines)
-            ?? LineWrapper::wrap($lines, $options->limits->maxCharactersPerLine, $options->limits->maxLines);
+        return LineWrapper::wrapToFit($lines, $options->limits->maxCharactersPerLine, $options->limits->maxLinesPerCue)
+            ?? LineWrapper::wrap($lines, $options->limits->maxCharactersPerLine, $options->limits->maxLinesPerCue);
     }
 
 

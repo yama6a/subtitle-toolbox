@@ -21,7 +21,7 @@ Subtitle::loadAutoDetectFormat('/media/one-track.webm');       // reads the only
 | `S_TEXT/WEBVTT` | a WebVTT subtitle with its header, cue settings, identifiers and comments |
 | `S_HDMV/PGS` | image cues from `PgsParser`, see [ocr.md](ocr.md#pgs) |
 
-- **Tracks**: `Subtitle::tracks()` lists only tracks of type subtitle. `MatroskaTrack`, in the same namespace, has `number`, `codecId`, `language`, `name`, `default` and `forced`. `describe()` joins them, for example `S_TEXT/UTF8, de, "Deutsch", default`. It writes U+FFFD for each byte of the name that is not valid UTF-8.
+- **Tracks**: `Subtitle::tracks()` lists only tracks of type subtitle. `MatroskaTrack`, in the same namespace, has `number`, `codecId`, `language`, `name`, `default` and `forced`.
 - **Format**: `getFormat()` of the subtitle is the format of the codec in the table.
 - **Detection**: `loadAutoDetectFormat()` and `fromStringAutoDetectFormat()` know an MKV or WebM file by its first 4 bytes, not by its extension.
 - **Language**: `LanguageBCP47`, else `Language`, else `eng`, as the spec defines. `loadTrack()` puts it into the `language` metadata.
@@ -31,5 +31,5 @@ Subtitle::loadAutoDetectFormat('/media/one-track.webm');       // reads the only
 - **Live recordings**: the reader accepts a file with elements of unknown size, as live recordings write them.
 - **Memory**: the reader skips video and audio data, so memory grows with the subtitle track, not with the file. A 4 GB file needs a few MB.
 - **Speed**: the reader walks the whole file for each `loadTrack()` call. A 2-hour, 4 GB file takes about 3 s of CPU time. On a network volume it takes 30 to 45 s.
-- **Errors**: `loadTrack()` throws `InvalidArgumentException` for a number that is not a subtitle track. It throws `ParsingException` for other codecs such as `S_VOBSUB`, for laced subtitle blocks and for a file that is not Matroska or WebM.
+- **Errors**: `loadTrack()`, `MatroskaReader::extract()` and `MatroskaReader::trackFormat()` throw `InvalidArgumentException` for a number that is not a subtitle track. `trackFormat()` returns null for a codec that the reader does not extract, such as `S_VOBSUB`. `loadTrack()` and `extract()` throw `ParsingException` for other codecs such as `S_VOBSUB`, for laced subtitle blocks and for a file that is not Matroska or WebM.
 - **Spec**: [Matroska elements](https://www.matroska.org/technical/elements.html), [Matroska subtitles](https://www.matroska.org/technical/subtitles.html).

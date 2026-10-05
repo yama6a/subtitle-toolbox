@@ -809,7 +809,7 @@ class BinaryTest extends TestCase
     {
         copy(__DIR__ . "/../files/short-cues/own_speech_to_text.srt", "$this->dir/speech.srt");
         $narrow = Subtitle::fromStringAutoDetectFormat($this->file("speech.srt"))
-            ->mergeShortCues(new MergeShortCuesOptions(limits: new CueLimits(maxCharactersPerLine: 20, maxLines: 3)))
+            ->mergeShortCues(new MergeShortCuesOptions(limits: new CueLimits(maxCharactersPerLine: 20, maxLinesPerCue: 3)))
             ->toString(Format::SubRip);
 
         $this->assertSame(
@@ -836,7 +836,7 @@ class BinaryTest extends TestCase
         $this->assertSame([0, $split(new ResegmentOptions(ResegmentMode::SplitLong)), ""], [$code, $stdout, $stderr]);
         $this->assertGreaterThan(count(Subtitle::fromStringAutoDetectFormat($this->file("whisper.json"))->getCues()), substr_count($stdout, " --> "));
         $this->assertSame(
-            [0, $split(new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 30, maxLines: 1))), ""],
+            [0, $split(new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 30, maxLinesPerCue: 1))), ""],
             $this->runBinary(["convert", "whisper.json", "--structure-split-long", "--structure-max-cpl", "30", "--structure-max-lines", "1", "--to", "vtt", "-o", "-"])
         );
     }
@@ -877,7 +877,7 @@ class BinaryTest extends TestCase
         $this->assertFileEquals(self::FILES . "resegmenting/own_whisper_long_segments_resegmented.srt", "$this->dir/lecture.srt");
 
         $resegmented = $withWords();
-        Resegmenter::apply($resegmented, new ResegmentOptions(ResegmentMode::ByWords, limits: new CueLimits(maxCharactersPerLine: 30, maxLines: 1), maxWordGap: 0.3));
+        Resegmenter::apply($resegmented, new ResegmentOptions(ResegmentMode::ByWords, limits: new CueLimits(maxCharactersPerLine: 30, maxLinesPerCue: 1), maxWordGap: 0.3));
         $this->assertSame(
             [0, $resegmented->toString(Format::SubRip), ""],
             $this->runBinary(["convert", "lecture.json", "--structure-resegment", "--structure-max-cpl", "30", "--structure-max-lines", "1", "--structure-max-word-gap", "0.3",

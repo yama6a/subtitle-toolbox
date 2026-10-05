@@ -148,12 +148,12 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Reads the subtitle track with the TrackNumber $track of an MKV or WebM file. The codec of the track picks the
+     * Reads the subtitle track with the TrackNumber $trackNumber of an MKV or WebM file. The codec of the track picks the
      * parser. tracks() lists the track numbers.
      */
-    public static function loadTrack(string $path, int $track, ?ReadOptions $options = null): self
+    public static function loadTrack(string $path, int $trackNumber, ?ReadOptions $options = null): self
     {
-        return self::readTrack(MatroskaReader::open(self::checkedPath($path)), $track, $options ?? new ReadOptions());
+        return self::readTrack(MatroskaReader::open(self::checkedPath($path)), $trackNumber, $options ?? new ReadOptions());
     }
 
 
@@ -547,20 +547,29 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Returns the data that only the given format reads, or an empty array.
+     * Returns the data under $key, the value of a Format case such as "ass", or an empty array.
      */
-    public function findFormatData(string $format): array
+    public function findFormatData(string $key): array
     {
-        return $this->formatData[$format] ?? [];
+        return $this->formatData[$key] ?? [];
     }
 
 
-    public function setFormatData(string $format, array $data): self
+    /**
+     * Stores $data under $key. An empty array removes the key.
+     *
+     * @throws InvalidArgumentException when a field that a formatter reads has the wrong type, as fromArray() checks it.
+     */
+    public function setFormatData(string $key, array $data): self
     {
+        $problem = FormatDataSchema::problem($key, $data, "formatData.$key", false);
+        if ($problem !== null) {
+            throw new InvalidArgumentException($problem);
+        }
         if ($data === []) {
-            unset($this->formatData[$format]);
+            unset($this->formatData[$key]);
         } else {
-            $this->formatData[$format] = $data;
+            $this->formatData[$key] = $data;
         }
 
         return $this;

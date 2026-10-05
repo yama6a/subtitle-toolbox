@@ -18,7 +18,7 @@ use SubtitleToolbox\SubtitleCue;
 
 final class YouTubeTimedTextParser extends SubtitleParser
 {
-    public const FORMAT_DATA_KEY = Format::YouTube->value;
+    public const FORMAT_DATA_KEY = Format::YouTubeTimedText->value;
 
     // A window anchor point runs from 0, top left, to 8, bottom right, row by row.
     private const ALIGNMENTS = [7, 8, 9, 4, 5, 6, 1, 2, 3];

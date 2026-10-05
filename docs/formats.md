@@ -337,12 +337,12 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami);   // the first class of the STYLE block
-$subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami, new ReadOptions(format: new SamiReadOptions(language: 'FRCC')));   // the FRCC class
+$subtitle = Subtitle::fromString(file_get_contents('movie.smi'), Format::Sami, new ReadOptions(format: new SamiReadOptions(languageClass: 'FRCC')));   // the FRCC class
 $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);                             // 'fr-FR', from the lang property of .FRCC
 $subtitle->findFormatData('sami');                                                // keys style, class and samiParam
 ```
 
-- **Language class**: a SAMI file holds one CSS class per language, for example `.FRCC { Name: French; lang: fr-FR; }`. The parser reads the class in `SamiReadOptions::$language`, else the first class of the STYLE block. Without a STYLE block, it reads the first class that a `<P>` uses. A `<P>` without a class belongs to every class.
+- **Language class**: a SAMI file holds one CSS class per language, for example `.FRCC { Name: French; lang: fr-FR; }`. The parser reads the class in `SamiReadOptions::$languageClass`, else the first class of the STYLE block. Without a STYLE block, it reads the first class that a `<P>` uses. A `<P>` without a class belongs to every class.
 - **End times**: a cue ends at the next `SYNC` that has a `<P>` of the same class, or no `<P>` at all. A `SYNC` with only `&nbsp;` ends a cue and starts none. The last cue lasts `ReadOptions::$lastCueDuration`, 5 s by default.
 - **Text**: a line break in the file is a space, as in HTML. Only `<br>` starts a new cue line. `<b>`, `<i>`, `<u>`, `<s>`, `<strike>` and `<font color>` become core markup. `<font color>` accepts `#rrggbb`, `rrggbb` and the 16 color names of HTML 4. The parser drops other tags from the cue text.
 - **Formatter**: it keeps `<b>`, `<i>`, `<u>`, `<s>` and `<font>` and strips all other tags. It writes the stored `<TITLE>`, STYLE block and `<SAMIParam>`, without the rules of the other language classes. Without a stored block, it names the class after the language metadata, for example `KOKRCC` for `ko-KR`, or `SUBTTL` without a language.
@@ -382,7 +382,7 @@ $subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dr
 - **Position**: rows 1 to 4 give alignment 8, and all other rows give `null`. The `scc` format data keeps the row and column of each line. The formatter writes them back when they still fit the cue. Else it places the lines by the alignment, at the bottom and centred by default.
 - **Timing of the formatter**: it loads each caption before the cue start, so the caption shows on the first frame of the cue. When the frames after the previous caption are too few for the load, the caption shows late. Of two overlapping cues, the later one replaces the earlier one.
 - **Markup**: styles become `<i>`, `<u>` and `<font color>` with `#ffffff`, `#00ff00`, `#0000ff`, `#00ffff`, `#ff0000`, `#ffff00` and `#ff00ff`, and back. The formatter writes other colors as white and strips all other tags. A style change inside a word adds a space.
-- **Limits**: the formatter throws `InvalidArgumentException` for more than 4 lines, more than 32 characters per line, or a character outside the CEA-608 character sets. Call `wrapLines(32, 4)` first.
+- **Limits**: the formatter throws `UnwritableContentException` for more than 4 lines, more than 32 characters per line, or a character outside the CEA-608 character sets. Call `wrapLines(32, 4)` first.
 
 ## SubRip
 | Input | Parser result | Formatter output |

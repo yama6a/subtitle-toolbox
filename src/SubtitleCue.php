@@ -196,11 +196,11 @@ final class SubtitleCue
 
 
     /**
-     * Returns the data that only the given format reads, or an empty array.
+     * Returns the data under $key, the value of a Format case such as "ass", or an empty array.
      */
-    public function findFormatData(string $format): array
+    public function findFormatData(string $key): array
     {
-        return $this->formatData[$format] ?? [];
+        return $this->formatData[$key] ?? [];
     }
 
 
@@ -215,12 +215,21 @@ final class SubtitleCue
     }
 
 
-    public function setFormatData(string $format, array $data): self
+    /**
+     * Stores $data under $key. An empty array removes the key.
+     *
+     * @throws InvalidArgumentException when a field that a formatter reads has the wrong type, as fromArray() checks it.
+     */
+    public function setFormatData(string $key, array $data): self
     {
+        $problem = FormatDataSchema::problem($key, $data, "formatData.$key", true);
+        if ($problem !== null) {
+            throw new InvalidArgumentException($problem);
+        }
         if ($data === []) {
-            unset($this->formatData[$format]);
+            unset($this->formatData[$key]);
         } else {
-            $this->formatData[$format] = $data;
+            $this->formatData[$key] = $data;
         }
 
         return $this;

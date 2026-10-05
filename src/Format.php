@@ -37,7 +37,7 @@ enum Format: string
     case VobSub             = "vobsub";
     case WebVtt             = "vtt";
     case Whisper            = "whisper";
-    case YouTube            = "youtube";
+    case YouTubeTimedText   = "youtube";
     case OgmChapters        = "ogm-chapters";
     case PodcastChapters    = "podcast-chapters";
     case PodcastTranscript  = "podcast-transcript";

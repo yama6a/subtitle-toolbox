@@ -14,21 +14,21 @@ final class CueLimits
 {
     /**
      * @param int    $maxCharactersPerLine   visible characters
-     * @param int    $maxLines               lines per cue
+     * @param int    $maxLinesPerCue         lines per cue
      * @param float  $minDuration            seconds
      * @param float  $maxDuration            seconds
      * @param ?float $maxCharactersPerSecond visible characters of all lines divided by the duration, null for no limit
      */
     public function __construct(
         public readonly int $maxCharactersPerLine = 42,
-        public readonly int $maxLines = 2,
+        public readonly int $maxLinesPerCue = 2,
         public readonly float $minDuration = 1,
         public readonly float $maxDuration = 7,
         public readonly ?float $maxCharactersPerSecond = null,
     ) {
-        if ($maxCharactersPerLine < 1 || $maxLines < 1) {
+        if ($maxCharactersPerLine < 1 || $maxLinesPerCue < 1) {
             throw new InvalidArgumentException("The maximum characters per line and the maximum lines must be at " .
-                                               "least 1, got $maxCharactersPerLine and $maxLines.");
+                                               "least 1, got $maxCharactersPerLine and $maxLinesPerCue.");
         }
 
         if ($minDuration < 0) {

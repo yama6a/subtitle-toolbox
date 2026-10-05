@@ -24,10 +24,10 @@ final class TranslationRunner
 
 
     /**
-     * Translates the text of each cue with the engine and sets the language metadata to $target. The subtitle changes
-     * only when every engine call succeeds.
+     * Translates the text of each cue with the engine and sets the language metadata to $targetLanguage. The subtitle
+     * changes only when every engine call succeeds.
      */
-    public function translate(Subtitle $subtitle, string $source, string $target, ?TranslationOptions $options = null): TranslationReport
+    public function translate(Subtitle $subtitle, string $sourceLanguage, string $targetLanguage, ?TranslationOptions $options = null): TranslationReport
     {
         $options  = $options ?? new TranslationOptions();
         $warnings = [];
@@ -40,7 +40,7 @@ final class TranslationRunner
 
         foreach ($this->batches($requests, $options->maxCharactersPerRequest) as $batch) {
             $texts        = array_column($batch, "text");
-            $translations = $this->engine->translate($texts, $source, $target);
+            $translations = $this->engine->translate($texts, $sourceLanguage, $targetLanguage);
             if (!array_is_list($translations) || count($translations) !== count($texts) ||
                 count(array_filter($translations, "is_string")) !== count($texts)) {
                 throw new InvalidArgumentException("The translation engine must return one string per text, " .
@@ -55,7 +55,7 @@ final class TranslationRunner
         foreach ($subtitle->getCues() as $cueIndex => $cue) {
             $cue->setLines($cues[$cueIndex]->getLines());
         }
-        $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $target);
+        $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $targetLanguage);
         usort($warnings, fn (TranslationWarning $warning1, TranslationWarning $warning2): int => $warning1->cueIndex <=> $warning2->cueIndex);
 
         return new TranslationReport($warnings);

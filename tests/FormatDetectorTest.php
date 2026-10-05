@@ -31,7 +31,7 @@ class FormatDetectorTest extends TestCase
         "ttml"     => Format::Ttml,
         "vtt"      => Format::WebVtt,
         "whisper"  => Format::Whisper,
-        "youtube"  => Format::YouTube,
+        "youtube"  => Format::YouTubeTimedText,
     ];
 
     // Chapters and cloud speech JSON load only with an explicit format.
@@ -136,12 +136,12 @@ class FormatDetectorTest extends TestCase
             "Whisper JSON with words"    => ["{\"segments\": [], \"words\": [{\"word\": \"Hi\", \"start\": 0, \"end\": 1}], " .
                                              "\"results\": [{\"x\": 1}]}", Format::Whisper],
             "YouTube json3"              => ["{\"wireMagic\": \"pb3\", \"events\": [ {\"tStartMs\": 0, \"id\": 1}, {\"tStartMs\": 0, \"segs\": []} ]}",
-                                             Format::YouTube],
+                                             Format::YouTubeTimedText],
             "Whisper JSON with a BOM"    => ["\xEF\xBB\xBF\r\n{\"text\": \"\", \"segments\": []}", Format::Whisper],
             "Whisper JSON with a cues key" => ["{\"version\": \"1\", \"cues\": [], \"segments\": []}", Format::Whisper],
             "YouTube srv3"               => ["<?xml version=\"1.0\" encoding=\"utf-8\" ?><timedtext format=\"3\">\n<body>\n</body>\n</timedtext>\n",
-                                             Format::YouTube],
-            "YouTube srv1"               => ["<transcript><text start=\"1.2\" dur=\"2.3\">Hello</text></transcript>", Format::YouTube],
+                                             Format::YouTubeTimedText],
+            "YouTube srv1"               => ["<transcript><text start=\"1.2\" dur=\"2.3\">Hello</text></transcript>", Format::YouTubeTimedText],
             "JSON with an events list"   => ["{\"version\": 1, \"formatData\": {\"x\": {\"events\": [{\"tStartMs\": 0}]}}, \"cues\": []}", Format::Json],
             "MPL2"                       => ["[10][25]Hello|/world\n", Format::Mpl2],
             "MicroDVD next to MPL2"      => ["{10}{25}Hello|world\n", Format::MicroDvd],

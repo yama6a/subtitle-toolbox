@@ -63,7 +63,7 @@ class JsonTypeErrorsTest extends TestCase
             "AWS item"             => [Format::AwsTranscribe, "aws-transcribe/real/weather_items_only.json", ["results", "items", 0, "start_time"], "items[0].start_time must be a time"],
             "Google word"          => [Format::GoogleSpeech, "google-speech/real/restaurant_v2_diarization.json", ["results", 0, "alternatives", 0, "words", 0, "startOffset"], "words[0].startTime must be a time"],
             "Podcasting 2.0"       => [Format::PodcastTranscript, "podcast/real/podcast_transcript_convert_from_srt.json", ["segments", 0, "startTime"], "segments[0].startTime must be a number"],
-            "YouTube json3"        => [Format::YouTube, "youtube/real/manual.en.json3", ["events", 0, "tStartMs"], "events[0].tStartMs must be a number"],
+            "YouTube json3"        => [Format::YouTubeTimedText, "youtube/real/manual.en.json3", ["events", 0, "tStartMs"], "events[0].tStartMs must be a number"],
         ];
     }
 
@@ -113,7 +113,7 @@ class JsonTypeErrorsTest extends TestCase
     public function testYouTubeEventsAsAnObjectThrowParsingException(): void
     {
         self::assertThrowsParsing("The JSON has no \"events\" list.",
-                                  fn () => Subtitle::fromString('{"events": {"a": {"tStartMs": "x"}}}', Format::YouTube, new ReadOptions(lenient: true)));
+                                  fn () => Subtitle::fromString('{"events": {"a": {"tStartMs": "x"}}}', Format::YouTubeTimedText, new ReadOptions(lenient: true)));
     }
 
 

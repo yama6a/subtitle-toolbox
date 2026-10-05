@@ -48,14 +48,14 @@ php subtitle-toolbox.phar --version
 
 - **Help**: `subtitle-toolbox help CMD` and `subtitle-toolbox CMD --help` list the options of a command. For `convert`, they list the common options and the option groups, see [Order](#order).
 - **Version**: `subtitle-toolbox --version` prints the installed release, for example `2.0.0`, or `dev` in a Git checkout.
-- **Exit code**: 0 when all files succeed, 1 when a file fails, breaks a validation rule or differs in `diff`, 2 for invalid arguments.
+- **Exit code**: 0 when all files succeed, 1 when a file fails, breaks a validation rule or differs in `diff`, 2 for invalid arguments. `--ocr` also exits with 2 before the first file when no OCR engine is installed, or when the data of the `--ocr-language` is missing, see [OCR](#ocr).
 - **Failures**: a failed file prints `FILE: MESSAGE` to standard error. The message of a library exception starts with its class, for example `ParsingException (Error #100):`. Any other PHP error prints its class and message, for example `movie.json: TypeError: ...`, and fails that file with exit code 1. An error outside a file prints `Error: CLASS: MESSAGE` and exits with code 1.
-- **Stable parts**: semantic versioning covers the binary, its commands, options, exit codes and `--json` shapes. The text output and the messages can change in a minor release. The PHP classes in `src/Cli` are `@internal` and can change in any release. See [compatibility.md](compatibility.md).
+- **Stable parts**: semantic versioning covers the binary, its commands, options, the meaning of each exit code and `--json` shapes. The text output and the messages can change in a minor release. The PHP classes in `src/Cli` are `@internal` and can change in any release. See [compatibility.md](compatibility.md).
 - **Messages**: where a library message names a PHP method or option, the tool names the CLI option. For example "Call loadTrack() with one of them" becomes "Pass --track N with one of them".
 
 ## Input and output
 - **Inputs**: a file, a directory, a glob such as `"season1/*.srt"`, or `-` for standard input. A directory gives its files with a known extension.
-- **Input format**: `--from`, else format detection on the content, else the file extension. Chapters and cloud speech-to-text JSON need `--from`, for example `--from deepgram` or `--from ffmeta-chapters`. The tool reads like `Subtitle::loadAutoDetectFormat()`, see [formats.md](formats.md#load-and-save).
+- **Input format**: `--from`, else format detection on the content, else the file extension. Chapters and cloud speech-to-text JSON need `--from`, for example `--from deepgram` or `--from ffmeta-chapters`. `--from` and `--to` also take the 1.x names `ytchapter`, `podcast`, `ogm` and `ffmeta`. The tool reads like `Subtitle::loadAutoDetectFormat()`, see [formats.md](formats.md#load-and-save).
 - **Output**: `-o` or `--output` for one file, `--output-dir`, or `--in-place`. `--output -` writes standard output. `convert`, `retime`, `sync` and `dual` take all 4. `hls` takes only `--output-dir`.
 - **Default output**: without these options, one input goes to standard output. With 2 or more inputs, each output goes next to its input, with the extension of the output format. The tool counts the inputs after it expands directories and globs.
 
@@ -227,7 +227,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 | `--structure-wrap` | `wrapLines()` with `--structure-max-cpl` and `--structure-max-lines` |
 | `--structure-merge-duplicates` | `removeDuplicateCues()` |
 | `--structure-max-cpl CHARS` | `maxCharactersPerLine` of `--structure-resegment`, `--structure-merge-short`, `--structure-split-long` and `--structure-wrap`, default 42 |
-| `--structure-max-lines LINES` | `maxLines` of `--structure-resegment`, `--structure-merge-short`, `--structure-split-long` and `--structure-wrap`, default 2 |
+| `--structure-max-lines LINES` | `maxLinesPerCue` of `--structure-resegment`, `--structure-merge-short`, `--structure-split-long` and `--structure-wrap`, default 2 |
 
 - **Limits without their fix**: `--structure-max-cpl`, `--structure-max-lines` and `--timing-min-gap` alone are a usage error, exit code 2. The message names the fix options that use them.
 
@@ -264,7 +264,7 @@ vendor/bin/subtitle-toolbox convert movie.srt movie.timed.srt --video-fps 24 --s
 - **Library only**: the cumulative mode and the word limit of `WordHighlightOptions` have no option. Call `WordHighlight::apply()` for them.
 
 ## JSON output
-`info`, `validate` and `diff` print JSON with `--json`: a list with one object for each input, also for one input. `diff` prints one object for its pair of files. A file that fails has no object, so the list is `[]` when all files fail.
+`info`, `validate` and `diff` print JSON with `--json`: a list with one object for each input, also for one input. For `diff`, the list holds one object for its pair of files. A file that fails has no object, so the list is `[]` when all files fail.
 
 | Command | Object |
 |:--- |:--- |

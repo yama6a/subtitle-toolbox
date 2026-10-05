@@ -7,27 +7,27 @@ namespace SubtitleToolbox;
 final class SubtitleStatistics
 {
     /**
-     * @param int                                           $cueCount            The number of cues, also image cues.
-     * @param int                                           $wordCount           The number of words of the text without tags.
-     * @param int                                           $characterCount      The characters without tags, with an entity such as &amp; as one character.
-     * @param float                                         $totalDisplayTime    The sum of the cue durations in seconds.
-     * @param float                                         $span                The seconds from the first start to the last end.
-     * @param array{min: float, average: float, max: float} $charactersPerSecond The reading speed of the cues with text and a duration.
-     * @param array{min: float, average: float, max: float} $wordsPerMinute      The words per minute of the cues with text and a duration.
-     * @param array{min: float, average: float, max: float} $charactersPerLine   The characters of the lines with text.
-     * @param array{min: float, average: float, max: float} $gaps                The seconds from the latest end of the earlier cues to the start of each cue, negative for an overlap.
-     * @param list<array{word: string, count: int}>         $mostUsedWords       Every word in lower case with its count, the most used first.
+     * @param int                                            $cueCount            The number of cues, also image cues.
+     * @param int                                            $wordCount           The number of words of the text without tags.
+     * @param int                                            $characterCount      The characters without tags, with an entity such as &amp; as one character.
+     * @param float                                          $totalDisplayTime    The sum of the cue durations in seconds.
+     * @param ?float                                         $span                The seconds from the first start to the last end, null without cues.
+     * @param ?array{min: float, average: float, max: float} $charactersPerSecond The reading speed of the cues with text and a duration, null without such cues.
+     * @param ?array{min: float, average: float, max: float} $wordsPerMinute      The words per minute of the cues with text and a duration, null without such cues.
+     * @param ?array{min: float, average: float, max: float} $charactersPerLine   The characters of the lines with text, null without such lines.
+     * @param ?array{min: float, average: float, max: float} $gaps                The seconds from the latest end of the earlier cues to the start of each cue, negative for an overlap. Null with fewer than 2 cues.
+     * @param list<array{word: string, count: int}>          $mostUsedWords       Every word in lower case with its count, the most used first.
      */
     private function __construct(
         public readonly int $cueCount,
         public readonly int $wordCount,
         public readonly int $characterCount,
         public readonly float $totalDisplayTime,
-        public readonly float $span,
-        public readonly array $charactersPerSecond,
-        public readonly array $wordsPerMinute,
-        public readonly array $charactersPerLine,
-        public readonly array $gaps,
+        public readonly ?float $span,
+        public readonly ?array $charactersPerSecond,
+        public readonly ?array $wordsPerMinute,
+        public readonly ?array $charactersPerLine,
+        public readonly ?array $gaps,
         public readonly array $mostUsedWords,
     ) {
     }
@@ -41,7 +41,7 @@ final class SubtitleStatistics
         $cues = array_values($subtitle->getCues());
         usort($cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
 
-        $span = 0.0;
+        $span = null;
         if ($cues !== []) {
             $firstStart = min(array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $cues));
             $lastEnd    = max(array_map(fn (SubtitleCue $cue): float => $cue->getEnd(), $cues));
@@ -151,12 +151,12 @@ final class SubtitleStatistics
     /**
      * @param list<int|float> $values
      *
-     * @return array{min: float, average: float, max: float}
+     * @return ?array{min: float, average: float, max: float}
      */
-    private static function range(array $values): array
+    private static function range(array $values): ?array
     {
         if ($values === []) {
-            return ["min" => 0.0, "average" => 0.0, "max" => 0.0];
+            return null;
         }
 
         return [
