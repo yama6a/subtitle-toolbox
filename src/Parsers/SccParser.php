@@ -111,9 +111,13 @@ final class SccParser extends SubtitleParser
             }
 
             $start = $this->frameToSeconds($state["frame"]);
-            $end   = isset($states[$idx + 1]) ? $this->frameToSeconds($states[$idx + 1]["frame"]) : $start + $this->options->lastCueDuration;
-            if ($end <= $start) {
-                continue;
+            if (!isset($states[$idx + 1])) {
+                $end = $start + $this->options->lastCueDuration;
+            } else {
+                $end = $this->frameToSeconds($states[$idx + 1]["frame"]);
+                if ($end <= $start) {
+                    continue;
+                }
             }
 
             $cue = new SubtitleCue($start, $end, array_column($state["lines"], "text"));

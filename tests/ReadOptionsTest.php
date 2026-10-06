@@ -57,6 +57,16 @@ class ReadOptionsTest extends TestCase
     }
 
 
+    #[DataProvider("lastCuesWithoutEnd")]
+    public function testALastCueDurationOf0KeepsTheLastCue(Format $format, string $file, ?FormatReadOptions $formatOptions, float $start): void
+    {
+        $content = file_get_contents(self::FILES . $file);
+        $cues    = Subtitle::fromString($content, $format, new ReadOptions(lastCueDuration: 0, format: $formatOptions))->getCues();
+
+        $this->assertSame([$start, $start], [end($cues)->getStart(), end($cues)->getEnd()]);
+    }
+
+
     public function testANegativeLastCueDurationThrows(): void
     {
         $this->expectException(InvalidArgumentException::class);
