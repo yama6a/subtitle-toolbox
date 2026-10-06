@@ -48,9 +48,13 @@ final class StringHelpers
 
     /**
      * Converts $str to UTF-8 from the encoding that its BOM names, or else from $sourceEncoding when it is not null.
+     *
+     * @param TextEncoding|string|null $sourceEncoding A TextEncoding case, or any other name that iconv accepts, for example "CP1125".
      */
-    public static function convertToUtf8(string $str, ?string $sourceEncoding = null): string
+    public static function convertToUtf8(string $str, TextEncoding|string|null $sourceEncoding = null): string
     {
+        $sourceEncoding = $sourceEncoding instanceof TextEncoding ? $sourceEncoding->value : $sourceEncoding;
+
         if (self::hasUtf8Bom($str)) {
             return $str;
         }
