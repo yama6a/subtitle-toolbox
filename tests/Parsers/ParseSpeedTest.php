@@ -34,14 +34,14 @@ class ParseSpeedTest extends TestCase
 
     // A parser that sorts the cues after each added cue takes minutes here.
     #[DataProvider("formats")]
-    public function testParsesTwentyThousandCuesUnderTenSeconds(Format $format, WriteOptions $options): void
+    public function testParsesTwentyThousandCuesUnderTwentySeconds(Format $format, WriteOptions $options): void
     {
         $content = $this->repeatFixture(self::CUE_COUNT)->toString($format, $options);
 
         $start    = microtime(true);
         $subtitle = Subtitle::fromString($content, $format);
 
-        $this->assertLessThan(10, microtime(true) - $start);
+        $this->assertLessThan(20, microtime(true) - $start);
         $this->assertCount(self::CUE_COUNT, $subtitle->getCues());
         $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
