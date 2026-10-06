@@ -43,8 +43,8 @@ final class HlsCommand extends FileCommand
 
     protected function details(): string
     {
-        return "Each segment starts with an X-TIMESTAMP-MAP header and holds every cue that overlaps it, with its full\n" .
-               "times. The playlist is a VOD media playlist.";
+        return "Each segment starts with an X-TIMESTAMP-MAP header and holds every cue that overlaps it, with its full times. " .
+               "The playlist is a VOD media playlist.";
     }
 
 

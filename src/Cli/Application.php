@@ -107,7 +107,7 @@ final class Application
 
     private function runHelp(array $arguments): int
     {
-        if ($arguments === []) {
+        if ($arguments === [] || $arguments[0] === "help") {
             $this->console->out($this->help());
 
             return self::EXIT_OK;
@@ -156,30 +156,27 @@ final class Application
 
     private function help(): string
     {
-        $commands = Command::table([
+        $name      = self::NAME;
+        $commands  = Command::table([
             ...array_map(fn (Command $command): array => [$command->name(), $command->summary()], $this->commands),
             ["help", "Shows the help of a command."],
         ]);
+        $about     = Command::wrap(
+            "Run \"$name help <command>\" or \"$name <command> --help\" for the options of a command. " .
+            "A file argument of - reads standard input. One input goes to standard output, or to -o FILE. " .
+            "Several inputs need --output-dir DIR. The tool never overwrites a file."
+        );
+        $exitCodes = Command::table([
+            [(string)self::EXIT_OK, "Success."],
+            [(string)self::EXIT_RESULT, "A file broke a validation rule, or diff found a difference."],
+            [(string)self::EXIT_USAGE, "Invalid arguments."],
+            [(string)self::EXIT_FILE, "A file could not be read or written."],
+        ]);
+        $options   = Command::table([["-h, --help", "Show this help."], ["-V, --version", "Print the version."]]);
 
-        $name    = self::NAME;
-        $version = Version::get();
-
-        return <<<HELP
-            $name $version
-            Converts, retimes, checks and fixes subtitle files.
-
-            Usage: $name <command> [<file>...] [options]
-
-            Commands:
-            $commands
-            Run "$name help <command>" or "$name <command> --help" for the options of a command.
-            A file argument of - reads standard input. One input goes to standard output, or to -o FILE.
-            Several inputs need --output-dir DIR. The tool never overwrites a file.
-
-            Exit codes: 0 success, 1 a file broke a validation rule or differs in diff, 2 invalid arguments,
-            3 a file could not be read or written.
-            Options: -h, --help shows this help, -V, --version prints the version.
-
-            HELP;
+        return "$name " . Version::get() . "\n" .
+               "Converts, retimes, checks and fixes subtitle files.\n\n" .
+               "Usage: $name <command> [<file>...] [options]\n\n" .
+               "Commands:\n$commands\n$about\nExit codes:\n$exitCodes\nOptions:\n$options";
     }
 }

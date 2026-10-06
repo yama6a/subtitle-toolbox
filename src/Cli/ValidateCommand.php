@@ -52,10 +52,9 @@ final class ValidateCommand extends ReportCommand
     protected function details(): string
     {
         return "Prints one line per broken rule. Cue numbers start at 1. The exit code is 1 when a file breaks a rule.\n" .
-               "The netflix-en preset has the limits of the Netflix English (USA) Timed Text Style Guide: 20 characters\n" .
-               "per second, 42 characters per line, 2 lines, 5/6 s to 7 s, a gap of 2 frames and no overlaps.\n" .
-               "The bbc preset has the limits of the BBC Subtitle Guidelines: 37 characters per line, 180 words per\n" .
-               "minute and 0.3 s per word.\n" .
+               "The netflix-en preset has the limits of the Netflix English (USA) Timed Text Style Guide: 20 characters per second, " .
+               "42 characters per line, 2 lines, 5/6 s to 7 s, a gap of 2 frames and no overlaps.\n" .
+               "The bbc preset has the limits of the BBC Subtitle Guidelines: 37 characters per line, 180 words per minute and 0.3 s per word.\n" .
                "A rule option overrides the value of the preset.";
     }
 

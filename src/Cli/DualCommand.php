@@ -40,10 +40,10 @@ final class DualCommand extends WriteCommand
 
     protected function details(): string
     {
-        return "stack joins each secondary cue with the primary cue that it overlaps most, below its lines.\n" .
-               "top-bottom keeps both cues and moves the secondary one to the top. SubRip, WebVTT, ASS and TTML write\n" .
-               "the position. The output takes the format of the primary file unless --to sets it. The result goes to\n" .
-               "standard output, or to the file of -o.";
+        return "stack joins each secondary cue with the primary cue that it overlaps most, below its lines. " .
+               "top-bottom keeps both cues and moves the secondary one to the top. SubRip, WebVTT, ASS and TTML write the position. " .
+               "The output takes the format of the primary file unless --to sets it. " .
+               "The result goes to standard output, to the file of -o, or into --output-dir with the base name of the primary file.";
     }
 
 
@@ -63,6 +63,17 @@ final class DualCommand extends WriteCommand
     protected function toDescription(): string
     {
         return "Output format. Default: the format of the primary file.";
+    }
+
+
+    protected function outputOptions(): array
+    {
+        return array_map(
+            fn (Option $option): Option => $option->name === "output-dir"
+                ? Option::value("output-dir", "DIR", "Write the output into this directory, with the base name of the primary file.")
+                : $option,
+            parent::outputOptions()
+        );
     }
 
 

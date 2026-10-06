@@ -42,7 +42,7 @@ final class SnapEdit extends Edit
         return [
             Option::value("snap-shot-changes", "FILE", "Time cues to these shot changes: one time per line in seconds or hh:mm:ss.mmm, or the log of the FFmpeg showinfo filter."),
             Option::value("video-fps", "RATE", "Frame rate of the video, for the shot changes and the --snap- options. Required with them."),
-            Option::value("snap-window-frames", "FRAMES", "Largest move to a shot change, and largest gap that closes. Default: half a second."),
+            Option::value("snap-window-frames", "FRAMES", "Largest move to a shot change, and largest gap that closes. Default: half the --video-fps, rounded to the nearest frame with a half frame rounded down. 12 at 24 and 25 fps, 15 at 30 fps."),
             Option::value("snap-min-gap-frames", "FRAMES", "Gap between a cue and the next cue or shot change. Default: 2."),
             Option::value("snap-min-duration-frames", "FRAMES", "No move makes a cue shorter than this. Default: 20."),
             Option::flag("no-snap-chain", "Keep small gaps between cues."),

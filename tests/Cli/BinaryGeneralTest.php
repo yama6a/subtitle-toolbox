@@ -68,7 +68,7 @@ class BinaryGeneralTest extends BinaryTestCase
         "detected from the content, else taken from the file extension", "as for --from", "as for --primary-from",
         "UTF-8", "stop at the first failure", "the input format", "the format of the primary file",
         "the frame rate of a MicroDVD or iTT input", "the BOM rule of the output format", "the end of the last cue",
-        "half a second", "tesseract when it is installed", "the subtitle fonts database of php-glyph-ocr",
+        "half the --video-fps, rounded to the nearest frame with a half frame rounded down", "tesseract when it is installed", "the subtitle fonts database of php-glyph-ocr",
         "the environment variable of the engine", "the engine detects it",
     ];
 
@@ -94,7 +94,7 @@ class BinaryGeneralTest extends BinaryTestCase
     {
         $found = [];
         foreach (self::COMMANDS as $command) {
-            [, $help] = $this->runBinary([$command, "--help", ...($command === "convert" ? ["all"] : [])]);
+            $help = self::unwrapHelp($this->runBinary([$command, "--help", ...($command === "convert" ? ["all"] : [])])[1]);
             preg_match_all('/^  (?:-\w, )?--([\w-]+)\N*? Default: (.+?)\.(?: |$)/m', $help, $matches, PREG_SET_ORDER);
             foreach ($matches as [, $option, $default]) {
                 $found[$option] = true;
@@ -167,6 +167,7 @@ class BinaryGeneralTest extends BinaryTestCase
         $this->assertSame("", $stderr);
         $this->assertSame([0, $stdout, ""], $this->runBinary(["--help"]));
         $this->assertSame([0, $stdout, ""], $this->runBinary(["help"]));
+        $this->assertSame([0, $stdout, ""], $this->runBinary(["help", "help"]));
     }
 
 
@@ -198,7 +199,7 @@ class BinaryGeneralTest extends BinaryTestCase
 
     public function testHelpTextsDescribeWhatTheOptionsDo(): void
     {
-        $convert = $this->runBinary(["convert", "--help"])[1];
+        $convert = self::unwrapHelp($this->runBinary(["convert", "--help"])[1]);
         $this->assertMatchesRegularExpression('/^  --lenient +Skip or repair broken cues and print a warning for each\. ' .
                                               'SCC, PGS, VobSub and chapter input ignore it\.$/m', $convert);
         $this->assertMatchesRegularExpression('/^  --encoding NAME +.*A BOM in the input overrides it\.$/m', $convert);
@@ -209,14 +210,14 @@ class BinaryGeneralTest extends BinaryTestCase
         $this->assertMatchesRegularExpression('/^  --to FORMAT +Output format\./m', $convert);
         $this->assertStringNotContainsString("SubRip, WebVTT and SBV", $convert);
 
-        $structure = $this->runBinary(["convert", "--help", "structure"])[1];
+        $structure = self::unwrapHelp($this->runBinary(["convert", "--help", "structure"])[1]);
         $this->assertMatchesRegularExpression('/^  --structure-split-long +.*at sentence ends, clause ends or spaces\.$/m', $structure);
         $this->assertMatchesRegularExpression('/^  --structure-merge-short +.*at most 0\.25 s away.*$/m', $structure);
-        $info = $this->runBinary(["info", "--help"])[1];
+        $info = self::unwrapHelp($this->runBinary(["info", "--help"])[1]);
         $this->assertDoesNotMatchRegularExpression('/--output-fps|--video-fps/', $info);
         $this->assertMatchesRegularExpression('/^  --fps RATE +Same as --input-fps\.$/m', $info);
 
-        $validate = $this->runBinary(["validate", "--help"])[1];
+        $validate = self::unwrapHelp($this->runBinary(["validate", "--help"])[1]);
         $this->assertMatchesRegularExpression('/^  --video-fps RATE +Frame rate of the video, for the 2-frame gap of netflix-en\. Default: 23\.976\.$/m', $validate);
         $this->assertMatchesRegularExpression('/^  --fps RATE +Sets --input-fps and --video-fps\. Each of them overrides it\.$/m', $validate);
         $this->assertDoesNotMatchRegularExpression('/--output-fps/', $validate);

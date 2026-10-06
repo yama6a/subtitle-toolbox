@@ -103,7 +103,7 @@ class OptionUsageTest extends BinaryTestCase
 
         [$code, $help] = $this->runBinary(["help"]);
         $this->assertSame(0, $code);
-        $this->assertSame(1, preg_match('/^Commands:\n((?:  \S+ .*\n)+)/m', $help, $match));
+        $this->assertSame(1, preg_match('/^Commands:\n((?:  .*\n)+)/m', $help, $match));
         preg_match_all('/^  (\S+)/m', $match[1], $commands);
 
         $options = [];
