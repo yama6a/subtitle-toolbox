@@ -41,7 +41,7 @@ use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
-$subtitle = Subtitle::fromString($transcribeJson, Format::AwsTranscribe);    // format detection does not find cloud speech JSON
+$subtitle = Subtitle::fromString($transcribeJson, Format::AwsTranscribe);    // format detection does not find cloud speech-to-text JSON
 $subtitle = Subtitle::fromString($deepgramResponseBody, Format::Deepgram, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true, speakerVoices: true)));
 $subtitle->getCues()[2]->getText();                                          // '<v 0><00:00:06.500>Thank <00:00:06.800>you.'
 $subtitle->getCues()[2]->findFormatData('deepgram')['confidence'];           // 0.9637655

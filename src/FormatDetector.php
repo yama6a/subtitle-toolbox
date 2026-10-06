@@ -67,7 +67,7 @@ final class FormatDetector
 
     /**
      * Returns the subtitle format of $content, or null when no format matches. It never returns chapters or cloud
-     * speech JSON. Content that starts with `{` and is a JSON object goes to the JSON key checks only.
+     * speech-to-text JSON. Content that starts with `{` and is a JSON object goes to the JSON key checks only.
      */
     public static function detect(string $content): ?Format
     {

@@ -88,8 +88,8 @@ enum Format: string
 
 
     /**
-     * Returns false for chapters and cloud speech JSON. Their content looks like other formats, so they load only
-     * when the caller names them. True means only that the format is not excluded from auto-detection.
+     * Returns false for chapters and cloud speech-to-text JSON. Their content looks like other formats, so they load
+     * only when the caller names them. True means only that the format is not excluded from auto-detection.
      * It does not mean that the format can be read or that detection finds it by content.
      */
     public function isAutoDetected(): bool
