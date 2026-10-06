@@ -14,8 +14,9 @@ trait ShortCueMerging
     /**
      * Joins each short cue with the next cue, or else with the previous cue, when the joined cue fits the limits of $options.
      */
-    public function mergeShortCues(MergeShortCuesOptions $options): self
+    public function mergeShortCues(?MergeShortCuesOptions $options = null): self
     {
+        $options ??= new MergeShortCuesOptions();
         $anchors = CommentAnchors::of($this->cues, $this->comments);
         $cues    = CueList::inStartOrder($this->cues);
         $index   = 0;

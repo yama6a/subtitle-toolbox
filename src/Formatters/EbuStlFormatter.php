@@ -35,8 +35,9 @@ final class EbuStlFormatter extends SubtitleFormatter
     private const MAX_EXTENSION_BLOCKS  = 0xF0;
 
 
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $data = $subtitle->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
         $gsi  = ($data["gsi"] ?? []) + self::DEFAULT_GSI;
         $fps  = $this->formatOptions($options)?->frameRate ?? EbuStl::FRAME_RATES[$gsi["DFC"] ?? ""] ?? 25;

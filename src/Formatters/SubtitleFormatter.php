@@ -21,7 +21,7 @@ abstract class SubtitleFormatter
     protected const FORMAT_OPTIONS = null;
 
 
-    abstract public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string;
+    abstract public function format(Subtitle $subtitle, ?WriteOptions $options = null): string;
 
 
     /**

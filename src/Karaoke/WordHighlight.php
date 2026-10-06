@@ -14,8 +14,9 @@ final class WordHighlight
     /**
      * Replaces each cue with one cue per timed word, in which the style marks the active word.
      */
-    public static function apply(Subtitle $subtitle, WordHighlightOptions $options): WordHighlightReport
+    public static function apply(Subtitle $subtitle, ?WordHighlightOptions $options = null): WordHighlightReport
     {
+        $options ??= new WordHighlightOptions();
         $anchors  = CommentAnchors::of($subtitle->getCues(), $subtitle->getComments());
         $firstNew = new \SplObjectStorage();
         $groups   = [];

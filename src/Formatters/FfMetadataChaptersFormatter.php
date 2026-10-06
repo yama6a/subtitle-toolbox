@@ -15,8 +15,9 @@ final class FfMetadataChaptersFormatter extends SubtitleFormatter
     private const DEFAULT_TIME_BASE = "1/1000";
 
 
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $stored = $subtitle->findFormatData(FfMetadataChaptersParser::FORMAT_DATA_KEY);
         $output = ";FFMETADATA1\n" . $this->tags($this->globalTags($subtitle, $stored["tags"] ?? []));
         foreach ($stored["streams"] ?? [] as $streamTags) {

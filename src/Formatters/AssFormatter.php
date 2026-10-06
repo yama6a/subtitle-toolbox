@@ -33,8 +33,9 @@ final class AssFormatter extends SubtitleFormatter
     private const LEGACY_ALIGNMENTS = [1 => 1, 2 => 2, 3 => 3, 7 => 5, 8 => 6, 9 => 7, 4 => 9, 5 => 10, 6 => 11];
 
 
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $data       = $subtitle->findFormatData(AssParser::FORMAT_DATA_KEY) + $this->defaultData();
         $karaokeTag = ($this->formatOptions($options) ?? new AssWriteOptions())->karaokeTag;
 

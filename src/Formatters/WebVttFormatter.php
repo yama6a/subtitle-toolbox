@@ -22,8 +22,9 @@ final class WebVttFormatter extends SubtitleFormatter
     private const ALIGNMENT_COLUMNS = [1 => "align:left", 2 => "", 3 => "align:right"];
 
 
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $fileData = $subtitle->findFormatData(WebVttParser::FORMAT_DATA_KEY);
         $header   = "WEBVTT";
         if (($fileData["header"] ?? "") !== "") {

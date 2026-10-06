@@ -22,8 +22,9 @@ final class MpSubFormatter extends SubtitleFormatter
     private const DEFAULT_NOTE = "Created with the PHP Subtitle Toolbox (https://github.com/yama6a/subtitle-toolbox)";
 
 
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $fps         = $this->formatOptions($options)?->frameRate;
         $frameRate   = $fps === null ? null : new FrameRate($fps);
         $output      = $this->getHeader($subtitle, $frameRate);

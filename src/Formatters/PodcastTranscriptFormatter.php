@@ -25,8 +25,9 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
     /**
      * Writes the Podcasting 2.0 JSON transcript, one segment per cue and speaker.
      */
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $podcast      = $this->formatOptions($options) ?? new PodcastTranscriptWriteOptions();
         $wordSegments = $podcast->wordSegments;
         $fileData     = $subtitle->findFormatData(PodcastTranscriptParser::FORMAT_DATA_KEY);

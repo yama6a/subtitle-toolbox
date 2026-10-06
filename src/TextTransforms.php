@@ -33,8 +33,9 @@ trait TextTransforms
     /**
      * Replaces $search with $replace in the text between tags.
      */
-    public function replaceText(string $search, string $replace, ReplaceTextOptions $options = new ReplaceTextOptions()): self
+    public function replaceText(string $search, string $replace, ?ReplaceTextOptions $options = null): self
     {
+        $options ??= new ReplaceTextOptions();
         $regex         = $options->regex;
         $caseSensitive = $options->caseSensitive;
         if ($search === "") {

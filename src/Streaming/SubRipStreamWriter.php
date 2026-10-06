@@ -20,12 +20,16 @@ final class SubRipStreamWriter implements CueStreamWriter
 
     private int $cueIndex = 0;
 
+    private readonly WriteOptions $options;
+
 
     /**
      * @param resource|string $stream a stream resource, or a file path that the writer opens and closes
      */
-    public function __construct($stream, private readonly WriteOptions $options = new WriteOptions())
+    public function __construct($stream, ?WriteOptions $options = null)
     {
+        $options ??= new WriteOptions();
+        $this->options = $options;
         $this->formatter  = new SubRipFormatter();
         $prefix           = $this->formatter->format(new Subtitle(), $options);
         $this->ownsHandle = !is_resource($stream);

@@ -19,8 +19,9 @@ final class SamiFormatter extends SubtitleFormatter
     private const NBSP = "\u{00A0}";
 
 
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $stripAll = $options->stripTags;
         $data     = $subtitle->findFormatData(SamiParser::FORMAT_DATA_KEY);
         $language = $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);

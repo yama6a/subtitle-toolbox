@@ -21,8 +21,9 @@ final class HlsWebVttSegmenter
      *
      * @see https://datatracker.ietf.org/doc/html/rfc8216#section-3.5
      */
-    public static function segment(Subtitle $subtitle, HlsSegmentOptions $options = new HlsSegmentOptions()): HlsWebVttRendition
+    public static function segment(Subtitle $subtitle, ?HlsSegmentOptions $options = null): HlsWebVttRendition
     {
+        $options ??= new HlsSegmentOptions();
         $cues              = array_values($subtitle->getCues());
         $totalMilliseconds = $options->mediaDuration === null
             ? max([0, ...array_map(fn (SubtitleCue $cue): int => Timecode::totalMilliseconds($cue->getEnd()), $cues)])

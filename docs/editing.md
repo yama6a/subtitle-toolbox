@@ -68,6 +68,8 @@ $subtitle->mergeShortCues(new MergeShortCuesOptions(
     maxGap: 0.25,
 ));
 // 00:01:02,100 --> 00:01:04,100  Wait. Where are you going?
+
+$subtitle->mergeShortCues();   // the default limits of new MergeShortCuesOptions()
 ```
 
 `CueLimits` holds the limits that `MergeShortCuesOptions` and `ResegmentOptions` share.
@@ -181,6 +183,7 @@ use SubtitleToolbox\Subtitle;
 $english = Subtitle::fromStringAutoDetectFormat(file_get_contents('movie.en.srt'));
 $german  = Subtitle::fromStringAutoDetectFormat(file_get_contents('movie.de.srt'));
 
+$dual = DualSubtitle::fromPair($english, $german);   // stack mode, the German line without a style
 $dual = DualSubtitle::fromPair($english, $german, new DualSubtitleOptions(secondaryStyle: 'i'));
 $dual = DualSubtitle::fromPair($english, $german, new DualSubtitleOptions(
     mode: DualSubtitleMode::TopBottom,              // English at the bottom, German at the top

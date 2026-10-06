@@ -55,8 +55,9 @@ final class TtmlFormatter extends SubtitleFormatter
     private array $forcedRegions;
 
 
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $fileData        = $subtitle->findFormatData(TtmlParser::FORMAT_DATA_KEY);
         $this->namespace = ($fileData["namespace"] ?? "") ?: TtmlNamespaces::TTML;
         $this->prepareNamespaces($fileData["namespaces"] ?? []);

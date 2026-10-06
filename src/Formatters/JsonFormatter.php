@@ -17,8 +17,9 @@ final class JsonFormatter extends SubtitleFormatter implements ImageFormatter
     /**
      * Writes Subtitle::toArray() as JSON, with each format data string that is not valid UTF-8 as {"base64": "..."}.
      */
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $json  = $this->formatOptions($options) ?? new JsonWriteOptions();
         $array = $subtitle->toArray($json->withFormatData);
 

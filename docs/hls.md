@@ -8,6 +8,7 @@ use SubtitleToolbox\Hls\HlsWebVttJoiner;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\Hls\TimestampMap;
 
+$hls = HlsWebVttSegmenter::segment($subtitle);   // 6 s segments named sub0.vtt, sub1.vtt and on
 $hls = HlsWebVttSegmenter::segment($subtitle, new HlsSegmentOptions(
     segmentDuration: 6,                 // seconds
     mpegts: 900000,                     // MPEG-2 timestamp at which subtitle time 0 plays

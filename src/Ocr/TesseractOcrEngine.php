@@ -22,9 +22,13 @@ final class TesseractOcrEngine implements OcrEngine
     /** @var array<string, list<string>> the installed languages by program */
     private static array $languages = [];
 
+    private readonly TesseractOcrOptions $options;
 
-    public function __construct(private readonly TesseractOcrOptions $options = new TesseractOcrOptions())
+
+    public function __construct(?TesseractOcrOptions $options = null)
     {
+        $options ??= new TesseractOcrOptions();
+        $this->options = $options;
     }
 
 

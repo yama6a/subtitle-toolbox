@@ -12,8 +12,9 @@ use SubtitleToolbox\WriteOptions;
 
 final class TmPlayerFormatter extends SubtitleFormatter
 {
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $cues = [];
         foreach ($subtitle->getCues() as $cue) {
             $lines = Markup::plainLines($cue->getLines());

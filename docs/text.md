@@ -33,7 +33,7 @@ $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>
 use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
 use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
 
-$report = HearingImpairedRemover::apply($subtitle, new HearingImpairedOptions());   // '(laughs) You came back.' becomes 'You came back.'
+$report = HearingImpairedRemover::apply($subtitle);   // '(laughs) You came back.' becomes 'You came back.'
 $report->removedLines;                      // the lines that went, the lines of removed cues included
 $report->removedCues;                       // the cues that had text and have none left
 
@@ -42,7 +42,7 @@ HearingImpairedRemover::apply($subtitle, new HearingImpairedOptions(
     customBrackets: [['{', '}'], ['*', '*']],
     lyrics: true,                           // removes '# The wheels go round #'
 ));
-HearingImpairedRemover::isAnnotation('JOHN: Hi.', new HearingImpairedOptions());   // true, apply() would change the line
+HearingImpairedRemover::isAnnotation('JOHN: Hi.');   // true, apply() would change the line
 ```
 
 | Option | Default | Removes |
@@ -83,7 +83,7 @@ $report->changedCues;                              // the cues whose lines chang
 $subtitle->toString(Format::SubRip);
 ```
 
-`apply()` runs the steps that the options ask for, in this order: `readPrefixes`, `rename`, `to`.
+`apply()` runs the steps that the options ask for, in this order: `readPrefixes`, `rename`, `to`. The options are required, because `new SpeakerLabelOptions()` selects no step.
 
 | Option | Input | Output |
 |:--- |:--- |:--- |
@@ -221,6 +221,7 @@ CommonErrorFixer::apply($subtitle, new CommonErrorOptions(
     replaceList: OcrReplaceList::fromSubtitleEditXml(file_get_contents('fra_OCRFixReplaceList_User.xml')),
 ));
 CommonErrorFixer::preview($subtitle, new CommonErrorOptions(language: 'en'));   // lists the fixes and changes nothing
+CommonErrorFixer::apply($subtitle);                                            // the default rules, the language from the metadata
 ```
 
 | Option | Before | After |
