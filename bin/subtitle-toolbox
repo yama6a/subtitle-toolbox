@@ -5,6 +5,11 @@ declare(strict_types=1);
 
 use SubtitleToolbox\Cli\Application;
 
+// A PHP warning on standard output would corrupt subtitle output written there.
+if (filter_var(ini_get("display_errors"), FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) !== false) {
+    ini_set("display_errors", "stderr");
+}
+
 $autoloaders = [
     $GLOBALS["_composer_autoload_path"] ?? null,
     __DIR__ . "/../vendor/autoload.php",
