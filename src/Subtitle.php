@@ -209,12 +209,25 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Returns the format that load(), loadAutoDetectFormat(), loadTrack() or a fromString call read, or null for a
-     * subtitle from new Subtitle() or fromArray(). For an MKV track, it is the format of the track codec.
+     * Returns the format that load(), loadAutoDetectFormat(), loadTrack(), MatroskaReader::extract() or a fromString call
+     * read, or null for a subtitle from new Subtitle() or fromArray(). For an MKV track, it is the format of the track codec.
      */
     public function getFormat(): ?Format
     {
         return $this->format;
+    }
+
+
+    /**
+     * Sets the format that getFormat() returns. MatroskaReader::extract() calls it with the format of the track codec.
+     *
+     * @internal
+     */
+    public function setFormat(?Format $format): self
+    {
+        $this->format = $format;
+
+        return $this;
     }
 
 
@@ -232,10 +245,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     private static function readTrack(MatroskaReader $reader, int $track, ReadOptions $options): self
     {
-        $subtitle         = $reader->extract($track, $options);
-        $subtitle->format = $reader->trackFormat($track);
-
-        return $subtitle;
+        return $reader->extract($track, $options);
     }
 
 
@@ -398,9 +408,12 @@ final class Subtitle implements \IteratorAggregate, \Countable
             $formatOptions = new CsvWriteOptions($delimiter, $csv->timeFormat, $csv->frameRate, $csv->secondText,
                                             $csv->secondTextHeader, $csv->escapeFormulas);
         }
-        if ($format === Format::MicroDvd && $formatOptions === null) {
-            $formatOptions = new MicroDvdWriteOptions($this->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
-                ?? throw new InvalidArgumentException("MicroDVD output needs the frame rate of the video. Pass MicroDvdWriteOptions::frameRate."));
+        if ($format === Format::MicroDvd && ($formatOptions === null || ($formatOptions instanceof MicroDvdWriteOptions && $formatOptions->frameRate === null))) {
+            $formatOptions = new MicroDvdWriteOptions(
+                $this->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
+                    ?? throw new InvalidArgumentException("MicroDVD output needs the frame rate of the video. Pass MicroDvdWriteOptions::frameRate."),
+                $formatOptions instanceof MicroDvdWriteOptions && $formatOptions->writeFrameRateLine,
+            );
         }
         if ($format === Format::Itt && ($formatOptions === null || ($formatOptions instanceof IttWriteOptions && $formatOptions->frameRate === null))
             && !isset($this->findFormatData(IttParser::FORMAT_DATA_KEY)["frameRate"])) {

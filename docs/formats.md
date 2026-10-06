@@ -102,7 +102,7 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWrite
 - **BOM**: ASS, CSV, TSV, LRC, MPSub, SubRip and WebVTT write a UTF-8 BOM by default. The other formatters do not.
 - **Strip all tags**: ASS, EBU STL, iTT, MicroDVD, SAMI, SubRip, TTML and WebVTT read `stripTags`.
 - **Image cues**: see [ocr.md](ocr.md#image-cues).
-- **Precedence**: a field that you set wins over the format data of the subtitle. For example, `IttWriteOptions(frameRate: 25)` wins over the frame rate that `IttParser` stored. A field left at `null` takes the stored value.
+- **Precedence**: a field that you set wins over the format data of the subtitle. For example, `IttWriteOptions(frameRate: 25)` wins over the frame rate that `IttParser` stored. A field left at `null` takes the stored value, for example `MicroDvdWriteOptions(writeFrameRateLine: true)` with a MicroDVD input.
 - **Frame rate**: every `frameRate` field is a `float`. Each format checks the values it can write, for example 25 or 30 for EBU STL.
 - **Errors**: an options class of another format throws `InvalidArgumentException`, for example `CsvWriteOptions` for SubRip. Each options class checks its values when you create it, so `new CsvWriteOptions(delimiter: '|')` throws at once.
 
@@ -279,9 +279,10 @@ $subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::MicroDv
 $subtitle = Subtitle::fromString(file_get_contents('movie.sub'), Format::MicroDvd);   // reads {1}{1}23.976
 
 $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(
-    frameRate: 23.976,               // required
+    frameRate: 23.976,               // null (default) takes the frame rate that the parser stored
     writeFrameRateLine: true,        // writes {1}{1}23.976 first
 )));
+$subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(writeFrameRateLine: true)));
 ```
 
 - **Frame rate**: `MicroDvdReadOptions::$frameRate` wins over a `{1}{1}<fps>` first line. The parser never reads that line as a cue. Without either, the parser throws `ParsingException`.
