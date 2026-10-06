@@ -13,6 +13,7 @@ use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\EbuStlReadOptions;
 use SubtitleToolbox\ParseWarningAction;
+use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -225,56 +226,41 @@ final class EbuStlParser extends SubtitleParser
      */
     private static function decodeLines(string $bytes, string $characterCodeTable): array
     {
-        $lines  = [];
-        $line   = "";
-        $open   = [];
-        $wanted = ["color" => self::WHITE, "i" => false, "u" => false];
-        $run    = "";
-
-        $flush = function () use (&$line, &$open, &$wanted, &$run, $characterCodeTable): void {
-            $text    = self::decodeCharacters($run, $characterCodeTable);
-            $run     = "";
-            $spaces  = strspn($text, " ");
-            $line   .= substr($text, 0, $spaces);
-            if ($spaces === strlen($text)) {
-                return;
-            }
-
-            [$closing, $opening] = self::syncTags($open, $wanted);
-            $line = self::appendClosingTags($line, $closing) . $opening . Markup::escapeText(substr($text, $spaces));
-        };
-
+        $lines = [];
+        $runs  = [];
+        $style = ["color" => self::WHITE, "i" => false, "u" => false];
+        $text  = "";
         foreach (str_split($bytes) as $byte) {
             $code = ord($byte);
             if (($code >= 0x20 && $code < 0x80) || $code >= 0xA0) {
-                $run .= $byte;
+                $text .= $byte;
                 continue;
             }
 
-            $flush();
+            $runs[] = [self::decodeCharacters($text, $characterCodeTable), self::runStyle($style)];
+            $text   = "";
             if ($code < 0x20) {
-                $line .= " ";
+                $runs[] = [" ", []];
             }
 
             match (true) {
-                $code < 0x08                  => $wanted["color"] = $code,
-                $code === EbuStl::ITALICS_ON    => $wanted["i"] = true,
-                $code === EbuStl::ITALICS_OFF   => $wanted["i"] = false,
-                $code === EbuStl::UNDERLINE_ON  => $wanted["u"] = true,
-                $code === EbuStl::UNDERLINE_OFF => $wanted["u"] = false,
-                default                       => null,
+                $code < 0x08                    => $style["color"] = $code,
+                $code === EbuStl::ITALICS_ON    => $style["i"] = true,
+                $code === EbuStl::ITALICS_OFF   => $style["i"] = false,
+                $code === EbuStl::UNDERLINE_ON  => $style["u"] = true,
+                $code === EbuStl::UNDERLINE_OFF => $style["u"] = false,
+                default                         => null,
             };
 
             if ($code === EbuStl::NEW_LINE) {
-                $lines[]          = self::appendClosingTags($line, self::closeTags($open));
-                $line             = "";
-                $open             = [];
-                $wanted["color"] = self::WHITE;
+                $lines[]        = StyleRuns::toMarkup($runs, true);
+                $runs           = [];
+                $style["color"] = self::WHITE;
             }
         }
 
-        $flush();
-        $lines[] = self::appendClosingTags($line, self::closeTags($open));
+        $runs[]  = [self::decodeCharacters($text, $characterCodeTable), self::runStyle($style)];
+        $lines[] = StyleRuns::toMarkup($runs, true);
 
         return $lines;
     }
@@ -289,52 +275,11 @@ final class EbuStlParser extends SubtitleParser
 
 
     /**
-     * Closes the open tags that no longer apply and opens the wanted ones. Returns the closing and the opening tags.
-     *
-     * @param list<string> $open tags such as "i" or "font:#ff0000", outermost first
-     *
-     * @return array{string, string}
+     * @param array{color: int, i: bool, u: bool} $style
+     * @return array{color: ?string, i: bool, u: bool}
      */
-    private static function syncTags(array &$open, array $wanted): array
+    private static function runStyle(array $style): array
     {
-        $tags = array_keys(array_filter(["i" => $wanted["i"], "u" => $wanted["u"]]));
-        if ($wanted["color"] !== self::WHITE) {
-            array_unshift($tags, "font:" . EbuStl::COLORS[$wanted["color"]]);
-        }
-
-        $keep = 0;
-        while ($keep < count($open) && in_array($open[$keep], $tags, true)) {
-            $keep++;
-        }
-
-        $closing = self::closeTags(array_slice($open, $keep));
-        $opening = "";
-        $open    = array_slice($open, 0, $keep);
-        foreach (array_diff($tags, $open) as $tag) {
-            $open[]   = $tag;
-            $opening .= str_starts_with($tag, "font:") ? "<font color=\"" . substr($tag, 5) . "\">" : "<$tag>";
-        }
-
-        return [$closing, $opening];
-    }
-
-
-    /**
-     * Appends closing tags before the trailing spaces of $line, so that the spaces stay outside the tags.
-     */
-    private static function appendClosingTags(string $line, string $closing): string
-    {
-        $text = rtrim($line, " ");
-
-        return $text . $closing . substr($line, strlen($text));
-    }
-
-
-    private static function closeTags(array $open): string
-    {
-        return implode("", array_map(
-            fn (string $tag): string => str_starts_with($tag, "font:") ? "</font>" : "</$tag>",
-            array_reverse($open)
-        ));
+        return ["color" => $style["color"] === self::WHITE ? null : EbuStl::COLORS[$style["color"]]] + $style;
     }
 }

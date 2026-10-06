@@ -246,13 +246,13 @@ final class AssFormatter extends SubtitleFormatter
                 $parts[] = ["text", $this->escapeText(Markup::decodeEntities($token))];
             } elseif (preg_match('/^<(\/?)([bius])>$/', $token, $matches)) {
                 $parts[] = ["tag", "\\" . $matches[2] . ($matches[1] === "" ? "1" : "0")];
-            } elseif (preg_match('/^<font\b[^>]*>$/', $token)) {
-                $color    = preg_match('/color=["\']?#([0-9a-fA-F]{6})/', $token, $matches) ? strtoupper($matches[1]) : null;
+            } elseif (preg_match('/^<font\b[^>]*>$/i', $token)) {
+                $color    = preg_match('/^#([0-9a-fA-F]{6})/', trim(Markup::fontColor($token) ?? ""), $matches) ? strtoupper($matches[1]) : null;
                 $colors[] = $color;
                 if ($color !== null) {
                     $parts[] = ["tag", $this->colorTag($color)];
                 }
-            } elseif ($token === "</font>") {
+            } elseif (strcasecmp($token, "</font>") === 0) {
                 if (array_pop($colors) !== null) {
                     $outer   = array_values(array_filter($colors));
                     $parts[] = ["tag", $outer === [] ? "\\c" : $this->colorTag(end($outer))];
@@ -300,7 +300,7 @@ final class AssFormatter extends SubtitleFormatter
 
     private function colorTag(string $rgb): string
     {
-        return "\\c&H" . substr($rgb, 4, 2) . substr($rgb, 2, 2) . substr($rgb, 0, 2) . "&";
+        return "\\c&H" . Markup::rgbToBgr($rgb) . "&";
     }
 
 

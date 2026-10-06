@@ -12,6 +12,7 @@ use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\StringHelpers;
+use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -125,7 +126,7 @@ final class MicroDvdParser extends SubtitleParser
                 }
             }
 
-            $lineText = trim(Markup::escapeText(substr($rawLine, strlen($prefix))));
+            $lineText = trim(substr($rawLine, strlen($prefix)));
             if ($lineText === "") {
                 continue;
             }
@@ -139,9 +140,7 @@ final class MicroDvdParser extends SubtitleParser
         foreach ($lineTexts as $index => $lineText) {
             $color   = $lineStyles[$index]["color"] ?? $cueStyle["color"];
             $tags    = array_values(array_intersect(self::STYLE_TAGS, [...$cueStyle["tags"], ...$lineStyles[$index]["tags"]]));
-            $markup  = ($color === null ? "" : "<font color=\"$color\">") . implode("", array_map(fn (string $tag): string => "<$tag>", $tags));
-            $lines[] = $markup . $lineText . implode("", array_map(fn (string $tag): string => "</$tag>", array_reverse($tags))) .
-                       ($color === null ? "" : "</font>");
+            $lines[] = StyleRuns::toMarkup([[$lineText, ["color" => $color, ...array_fill_keys($tags, true)]]]);
 
             $lineCodes[$index] += ["color" => $color, "tags" => $tags];
         }
@@ -161,8 +160,8 @@ final class MicroDvdParser extends SubtitleParser
             return $style;
         }
 
-        if ($letter === "c" && preg_match('/^\$([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$/', $value, $bgr)) {
-            $style["color"] = strtolower("#" . $bgr[3] . $bgr[2] . $bgr[1]);
+        if ($letter === "c" && preg_match('/^\$([0-9A-Fa-f]{6})$/', $value, $bgr)) {
+            $style["color"] = "#" . strtolower(Markup::bgrToRgb($bgr[1]));
 
             return $style;
         }

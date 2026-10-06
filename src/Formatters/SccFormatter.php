@@ -211,11 +211,12 @@ final class SccFormatter extends SubtitleFormatter
 
     private function fontColor(string $attributes): ?int
     {
-        if (!preg_match("/\bcolor\s*=\s*(?:\"([^\"]*)\"|'([^']*)'|([^\s\"']+))/i", $attributes, $color)) {
+        $color = Markup::fontColor($attributes);
+        if ($color === null) {
             return null;
         }
 
-        $color = strtolower(trim(Markup::decodeEntities(($color[1] ?? "") . ($color[2] ?? "") . ($color[3] ?? ""))));
+        $color = strtolower(trim(Markup::decodeEntities($color)));
         $index = array_search(substr($color, 0, 7), Cea608::COLORS, true);
 
         return $index !== false ? $index : self::NAMED_COLORS[$color] ?? null;

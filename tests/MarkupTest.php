@@ -302,4 +302,24 @@ class MarkupTest extends TestCase
         );
         $this->assertSame("a &lt; b", Markup::insertWordTimestamps("a < b", [["a", null], ["b", null]]));
     }
+
+
+    public function testFontColorReadsTheColorAsWrittenWithAnyQuotesAndCase(): void
+    {
+        $this->assertSame("#FF0000", Markup::fontColor(" color=\"#FF0000\""));
+        $this->assertSame("#FF0000", Markup::fontColor(" color='#FF0000'"));
+        $this->assertSame("red", Markup::fontColor("<font color=red>"));
+        $this->assertSame(" #ff0000 ", Markup::fontColor(" face=\"Arial\" COLOR = \" #ff0000 \""));
+        $this->assertSame("&quot;x", Markup::fontColor(" color='&quot;x'"));
+        $this->assertNull(Markup::fontColor(" face=\"Arial\""));
+        $this->assertNull(Markup::fontColor(" bgcolor=\"#ff0000\""));
+    }
+
+
+    public function testBgrAndRgbSwapTheFirstAndLastByte(): void
+    {
+        $this->assertSame("FF8000", Markup::bgrToRgb("0080FF"));
+        $this->assertSame("0080ff", Markup::rgbToBgr("ff8000"));
+        $this->assertSame("123456", Markup::rgbToBgr(Markup::bgrToRgb("123456")));
+    }
 }

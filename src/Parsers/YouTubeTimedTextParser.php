@@ -13,6 +13,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\StringHelpers;
+use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -373,21 +374,9 @@ final class YouTubeTimedTextParser extends SubtitleParser
 
     private function styled(string $text, array $style): string
     {
-        $opening = ($style["color"] ?? null) === null ? "" : "<font color=\"{$style["color"]}\">";
-        $closing = $opening === "" ? "" : "</font>";
-        foreach (["b", "i", "u"] as $tag) {
-            if (!empty($style[$tag])) {
-                $opening .= "<$tag>";
-                $closing  = "</$tag>" . $closing;
-            }
-        }
-
-        $lines = [];
-        foreach (explode("\n", Markup::escapeText(StringHelpers::normalizeEOLs($text))) as $line) {
-            preg_match('/\A(\s*)(.*?)(\s*)\z/s', $line, $parts);
-            $lines[] = $parts[2] === "" ? $line : $parts[1] . $opening . $parts[2] . $closing . $parts[3];
-        }
-
-        return implode("\n", $lines);
+        return implode("\n", array_map(
+            fn (string $line): string => StyleRuns::toMarkup([[$line, $style]], true),
+            explode("\n", StringHelpers::normalizeEOLs($text))
+        ));
     }
 }

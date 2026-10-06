@@ -282,8 +282,8 @@ final class EbuStlFormatter extends SubtitleFormatter
                 }
 
                 $tag = strtolower($token);
-                if (preg_match('/^<font\s+color\s*=\s*["\']?(#[0-9a-f]{6})["\']?\s*>$/', $tag, $matches)) {
-                    $color    = array_search($matches[1], EbuStl::COLORS, true);
+                if (preg_match('/^<font\b[^>]*>$/', $tag)) {
+                    $color    = array_search(trim(Markup::fontColor($tag) ?? ""), EbuStl::COLORS, true);
                     $colors[] = $color === false ? end($colors) : $color;
                     $bytes    .= $color === false ? "" : chr($color);
                     continue;

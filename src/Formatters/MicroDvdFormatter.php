@@ -65,7 +65,7 @@ final class MicroDvdFormatter extends SubtitleFormatter
 
             $codes = "";
             if (!$stripAll) {
-                $codes .= $line["color"] === null ? "" : "{c:$" . strtoupper(substr($line["color"], 5, 2) . substr($line["color"], 3, 2) . substr($line["color"], 1, 2)) . "}";
+                $codes .= $line["color"] === null ? "" : "{c:$" . strtoupper(Markup::rgbToBgr(substr($line["color"], 1))) . "}";
                 $codes .= implode("", array_map(fn (string $tag): string => "{y:$tag}", $line["tags"]));
             }
             $texts[] = $codes . ($storedLines[$index]["otherCodes"] ?? "") . $line["text"];
@@ -89,10 +89,11 @@ final class MicroDvdFormatter extends SubtitleFormatter
                 $tags[] = $matches[1];
                 $line   = $matches[2];
             } elseif ($color === null &&
-                      preg_match('/^<font color=(["\']?)(#[0-9a-fA-F]{6})\1>(.*)<\/font>$/s', $line, $matches) &&
-                      !preg_match('/<\/?font\b/', $matches[3])) {
-                $color = strtolower($matches[2]);
-                $line  = $matches[3];
+                      preg_match('/^<font\b([^>]*)>(.*)<\/font>$/si', $line, $matches) &&
+                      preg_match('/^#[0-9a-fA-F]{6}$/', trim(Markup::fontColor($matches[1]) ?? ""), $hex) &&
+                      !preg_match('/<\/?font\b/i', $matches[2])) {
+                $color = strtolower($hex[0]);
+                $line  = $matches[2];
             } else {
                 break;
             }

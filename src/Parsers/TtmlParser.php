@@ -12,6 +12,7 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
+use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -458,66 +459,19 @@ final class TtmlParser extends SubtitleParser
      */
     private function runsToMarkup(array $runs, ?string &$openAgent): string
     {
-        $markup = "";
-        $stack  = [];
+        $markup    = "";
+        $agentRuns = [];
         foreach ($runs as $run) {
-            if ($run["text"] === "") {
-                continue;
-            }
-            if (trim($run["text"]) === "") {
-                $markup .= $run["text"];
-                continue;
-            }
-
-            if ($run["agent"] !== $openAgent) {
-                $markup .= $this->closeTags($stack, 0);
-                $stack   = [];
-                $markup .= $openAgent === null ? "" : "</v>";
-                $markup .= $run["agent"] === null ? "" : Markup::voiceTag($run["agent"]);
+            if (trim($run["text"]) !== "" && $run["agent"] !== $openAgent) {
+                $markup   .= StyleRuns::toMarkup($agentRuns) . ($openAgent === null ? "" : "</v>")
+                    . ($run["agent"] === null ? "" : Markup::voiceTag($run["agent"]));
+                $agentRuns = [];
                 $openAgent = $run["agent"];
             }
-
-            $wanted = $this->styleToTags($run["style"]);
-            $common = 0;
-            while ($common < count($stack) && $common < count($wanted) && $stack[$common] === $wanted[$common]) {
-                $common++;
-            }
-            $markup .= $this->closeTags($stack, $common);
-            foreach (array_slice($wanted, $common) as $tag) {
-                $markup .= $tag;
-            }
-            $stack   = $wanted;
-            $markup .= Markup::escapeText($run["text"]);
+            $agentRuns[] = [$run["text"], $run["style"]];
         }
 
-        return $markup . $this->closeTags($stack, 0);
-    }
-
-
-    private function closeTags(array $stack, int $keep): string
-    {
-        $markup = "";
-        for ($idx = count($stack) - 1; $idx >= $keep; $idx--) {
-            $markup .= "</" . substr(strtok($stack[$idx], " >"), 1) . ">";
-        }
-
-        return $markup;
-    }
-
-
-    private function styleToTags(array $style): array
-    {
-        $tags = [];
-        if ($style["color"] !== null) {
-            $tags[] = "<font color=\"{$style["color"]}\">";
-        }
-        foreach (["b", "i", "u", "s"] as $tag) {
-            if ($style[$tag]) {
-                $tags[] = "<$tag>";
-            }
-        }
-
-        return $tags;
+        return $markup . StyleRuns::toMarkup($agentRuns);
     }
 
 
