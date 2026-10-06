@@ -12,7 +12,7 @@ use SubtitleToolbox\OptionChecks;
  * The settings of GlyphOcrEngine. Each field except $database is the parameter of the same name of the
  * GlyphOcr\Recognizer constructor in php-glyph-ocr 0.3, with the same default and the same allowed values.
  */
-final class GlyphOcrOptions
+final readonly class GlyphOcrOptions
 {
     /**
      * @param GlyphDatabase|null $database       the glyphs to match, or null for GlyphDatabase::subtitleFonts()
@@ -32,16 +32,16 @@ final class GlyphOcrOptions
      *                                           capital I or lower case l. False keeps the database text, as Subtitle Edit does
      */
     public function __construct(
-        public readonly ?GlyphDatabase $database = null,
-        public readonly int $inkThreshold = 200,
-        public readonly ?int $spaceWidth = null,
-        public readonly int $maxWrongPixels = 25,
-        public readonly bool $fixLatinCase = true,
-        public readonly string $unknownText = "*",
-        public readonly float $italicSlant = 0.0,
-        public readonly bool $rightToLeft = false,
-        public readonly int $minLineHeight = 12,
-        public readonly bool $lineContext = true,
+        public ?GlyphDatabase $database = null,
+        public int $inkThreshold = 200,
+        public ?int $spaceWidth = null,
+        public int $maxWrongPixels = 25,
+        public bool $fixLatinCase = true,
+        public string $unknownText = "*",
+        public float $italicSlant = 0.0,
+        public bool $rightToLeft = false,
+        public int $minLineHeight = 12,
+        public bool $lineContext = true,
     ) {
         if ($inkThreshold < 1 || $inkThreshold > 765) {
             throw new InvalidArgumentException("Cannot create GlyphOcrOptions with ink threshold $inkThreshold - " .
