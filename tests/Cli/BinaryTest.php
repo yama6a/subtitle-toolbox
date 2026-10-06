@@ -131,6 +131,23 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testPhpWarningGoesToStandardErrorAndKeepsTheOutputClean(): void
+    {
+        file_put_contents(
+            "$this->dir/warn.php",
+            "<?php register_shutdown_function(static fn () => trigger_error(\"test warning 266\", E_USER_WARNING));\n"
+        );
+        $prepend = ["-d", "auto_prepend_file=$this->dir/warn.php", "-d", "log_errors=0"];
+        $arguments = ["convert", "trip.srt", "--to", "vtt", "-o", "-"];
+
+        [$code, $stdout, $stderr] = $this->runBinary($arguments, "", "-d", "display_errors=1", ...$prepend);
+        $this->assertSame([0, $this->tripAs(Format::WebVtt)], [$code, $stdout]);
+        $this->assertStringContainsString("test warning 266", $stderr);
+
+        $this->assertSame([0, $this->tripAs(Format::WebVtt), ""], $this->runBinary($arguments, "", "-d", "display_errors=0", ...$prepend));
+    }
+
+
     public function testVersionPrintsTheVersionAlone(): void
     {
         [$code, $stdout, $stderr] = $this->runBinary(["--version"]);
