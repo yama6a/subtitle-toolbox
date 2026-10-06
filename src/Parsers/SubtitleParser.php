@@ -127,15 +127,14 @@ abstract class SubtitleParser
 
     /**
      * Yields the trimmed lines of each block between empty lines, keyed by the 1-based number of its first line.
-     * The keys of $lines are the 0-based line numbers. An input without text yields one block with an empty line.
+     * The keys of $lines are the 0-based line numbers. An input without text yields no block.
      *
      * @return Generator<int, list<string>>
      */
     protected function splitAtEmptyLines(iterable $lines): Generator
     {
-        $block   = [];
-        $start   = 1;
-        $yielded = false;
+        $block = [];
+        $start = 1;
         foreach ($lines as $index => $line) {
             $line = trim(StringHelpers::normalizeSpaces($line));
             if ($line !== "") {
@@ -147,15 +146,12 @@ abstract class SubtitleParser
             }
             if ($block !== []) {
                 yield $start => $block;
-                $yielded = true;
-                $block   = [];
+                $block = [];
             }
         }
 
         if ($block !== []) {
             yield $start => $block;
-        } elseif (!$yielded) {
-            yield 1 => [""];
         }
     }
 

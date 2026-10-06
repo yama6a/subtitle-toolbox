@@ -70,12 +70,6 @@ final class SubRipParser extends SubtitleParser
             return [$this->parseCueBlock($rawLines, $index)];
         }
 
-        if ($rawLines === [""]) {
-            $this->warn("The file has no cues.", $lineNumber, $index, $rawLines, ParseWarningAction::Skipped);
-
-            return [];
-        }
-
         $cues  = [];
         $parts = $this->repairMissingEmptyLines($rawLines, $lineNumber, $index, $this->isTimingLine(...), true);
         foreach ($parts as $offset => $part) {

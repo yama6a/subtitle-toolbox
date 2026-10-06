@@ -62,13 +62,7 @@ class BinaryFormatMatrixTest extends BinaryTestCase
     ];
 
     /** Bugs that the matrix found, as "input>output" => outcome. Remove a pair when its bug is fixed. */
-    private const KNOWN_BUGS = [
-        // An empty SubRip or SBV file does not read back: "Block #0 doesn't seem to have a cue-number on its first line!"
-        "pgs>srt" => "readback exit 3",
-        "pgs>sbv" => "readback exit 3",
-        "vobsub>srt" => "readback exit 3",
-        "vobsub>sbv" => "readback exit 3",
-    ];
+    private const KNOWN_BUGS = [];
 
     /** The PGS writer renders no text, so each text input fails with exit 3. */
     private const PGS_OUTPUT_FAILURE = "convert exit 3";

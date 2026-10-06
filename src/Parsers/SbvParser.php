@@ -7,7 +7,6 @@ namespace SubtitleToolbox\Parsers;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -24,11 +23,6 @@ final class SbvParser extends SubtitleParser
         $parsedCues = [];
         $idx        = 0;
         foreach ($this->splitAtEmptyLines(explode(LineEnding::Lf->value, $rawSubtitle)) as $lineNumber => $rawLines) {
-            if ($this->lenient && $rawLines === [""]) {
-                $this->warn("The file has no cues.", $lineNumber, $idx, $rawLines, ParseWarningAction::Skipped);
-                break;
-            }
-
             $parts = $this->repairMissingEmptyLines($rawLines, $lineNumber, $idx, $this->isTimingLine(...), false);
             foreach ($parts as $offset => $part) {
                 try {
