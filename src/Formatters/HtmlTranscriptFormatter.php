@@ -41,8 +41,7 @@ final class HtmlTranscriptFormatter extends SubtitleFormatter
             if ($paragraph["speaker"] !== null) {
                 $html .= "<cite>" . Markup::escapeText($paragraph["speaker"]) . ":</cite>" . LineEnding::Lf->value;
             }
-            [$hours, $minutes, $seconds] = Timecode::seconds(floor($paragraph["start"]));
-            $time = $hours > 0 ? sprintf("%d:%02d:%02d", $hours, $minutes, $seconds) : sprintf("%d:%02d", $minutes, $seconds);
+            $time = Timecode::shortClock($paragraph["start"]);
             $html .= "<time>$time</time>" . LineEnding::Lf->value .
                      "<p>" . Markup::escapeText(implode(" ", $paragraph["bodies"])) . "</p>" . LineEnding::Lf->value;
         }

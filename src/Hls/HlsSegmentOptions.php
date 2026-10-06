@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Hls;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\OptionChecks;
+use SubtitleToolbox\Timecode;
 
 final class HlsSegmentOptions
 {
@@ -53,7 +54,7 @@ final class HlsSegmentOptions
      */
     public function segmentMilliseconds(): int
     {
-        return (int) round($this->segmentDuration * 1000);
+        return Timecode::totalMilliseconds($this->segmentDuration);
     }
 
 

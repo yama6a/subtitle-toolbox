@@ -9,6 +9,7 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
 final class SamiFormatter extends SubtitleFormatter
@@ -39,11 +40,11 @@ final class SamiFormatter extends SubtitleFormatter
 
         $cues = array_values($subtitle->getCues());
         foreach ($cues as $index => $cue) {
-            $end    = $this->toMilliseconds($cue->getEnd());
-            $output .= "<SYNC Start=" . $this->toMilliseconds($cue->getStart()) . ">" . $this->formatParagraphs($cue, $class, $stripAll) . $eol;
+            $end    = Timecode::totalMilliseconds($cue->getEnd());
+            $output .= "<SYNC Start=" . Timecode::totalMilliseconds($cue->getStart()) . ">" . $this->formatParagraphs($cue, $class, $stripAll) . $eol;
 
             $next = $cues[$index + 1] ?? null;
-            if ($next === null || $this->toMilliseconds($next->getStart()) > $end) {
+            if ($next === null || Timecode::totalMilliseconds($next->getStart()) > $end) {
                 $output .= "<SYNC Start=$end>" . $this->openParagraph($class, []) . "&nbsp;$eol";
             }
         }
@@ -123,11 +124,5 @@ final class SamiFormatter extends SubtitleFormatter
         $rules = $language === null ? "Name: Subtitles;" : "Name: $language; lang: $language;";
 
         return "<!--{$eol}P { font-family: Arial; text-align: center; }$eol.$class { $rules }$eol-->";
-    }
-
-
-    private function toMilliseconds(float $seconds): int
-    {
-        return (int) round($seconds * 1000);
     }
 }

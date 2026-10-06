@@ -15,20 +15,20 @@ final class HlsWebVttRendition
     /**
      * @internal HlsWebVttSegmenter::segment() creates the rendition.
      *
-     * @param Closure(): Generator<string, string> $segments yields file name => WebVTT content
-     * @param int                                  $totalMillis the milliseconds that the playlist covers
+     * @param Closure(): Generator<string, string> $segments          yields file name => WebVTT content
+     * @param int                                  $totalMilliseconds the milliseconds that the playlist covers
      */
     public function __construct(
         private readonly Closure $segments,
         private readonly HlsSegmentOptions $options,
-        private readonly int $totalMillis,
+        private readonly int $totalMilliseconds,
     ) {
     }
 
 
     public function getSegmentCount(): int
     {
-        return intdiv($this->totalMillis + $this->options->segmentMilliseconds() - 1, $this->options->segmentMilliseconds());
+        return intdiv($this->totalMilliseconds + $this->options->segmentMilliseconds() - 1, $this->options->segmentMilliseconds());
     }
 
 
@@ -51,9 +51,9 @@ final class HlsWebVttRendition
      */
     public function getDurations(): Generator
     {
-        $segmentMillis = $this->options->segmentMilliseconds();
-        for ($startMillis = 0, $index = 0; $startMillis < $this->totalMillis; $startMillis += $segmentMillis, $index++) {
-            yield $this->options->fileName($index) => (min($startMillis + $segmentMillis, $this->totalMillis) - $startMillis) / 1000.0;
+        $segmentMilliseconds = $this->options->segmentMilliseconds();
+        for ($startMilliseconds = 0, $index = 0; $startMilliseconds < $this->totalMilliseconds; $startMilliseconds += $segmentMilliseconds, $index++) {
+            yield $this->options->fileName($index) => (min($startMilliseconds + $segmentMilliseconds, $this->totalMilliseconds) - $startMilliseconds) / 1000.0;
         }
     }
 
