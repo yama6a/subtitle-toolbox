@@ -12,10 +12,26 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\RealFiles;
 
 class AssParserTest extends TestCase
 {
+    use RealFiles;
+
+
     private const EVENTS_HEADER = "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n";
+
+
+    private static function realFilesDir(): string
+    {
+        return "ass/real/";
+    }
+
+
+    private static function realFilesFormat(): Format
+    {
+        return Format::Ass;
+    }
 
 
     public static function realFiles(): array
@@ -285,12 +301,6 @@ class AssParserTest extends TestCase
         $this->expectException(ParsingException::class);
 
         $this->parseEvents($content);
-    }
-
-
-    private function parseFile(string $file): Subtitle
-    {
-        return Subtitle::fromString(file_get_contents(__DIR__ . "/../files/ass/real/$file"), Format::Ass);
     }
 
 

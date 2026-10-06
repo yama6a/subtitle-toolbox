@@ -14,11 +14,27 @@ use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\RealFiles;
 use SubtitleToolbox\WriteOptions;
 
 class Mpl2ParserTest extends TestCase
 {
+    use RealFiles;
+
+
     private const DIR = __DIR__ . "/../files/mpl2/";
+
+
+    private static function realFilesDir(): string
+    {
+        return "mpl2/real/";
+    }
+
+
+    private static function realFilesFormat(): Format
+    {
+        return Format::Mpl2;
+    }
 
 
     /**
@@ -59,7 +75,7 @@ class Mpl2ParserTest extends TestCase
     #[DataProvider("realFiles")]
     public function testRealFileParses(string $file, ?string $encoding, int $cueCount, array $firstCue, array $lastCue): void
     {
-        $cues = $this->parseFile($file, $encoding)->getCues();
+        $cues = $this->parseFile($file, new ReadOptions(encoding: $encoding))->getCues();
 
         $this->assertCount($cueCount, $cues);
         $this->assertSame($firstCue, $this->row($cues[0]));
@@ -70,7 +86,7 @@ class Mpl2ParserTest extends TestCase
     #[DataProvider("realFiles")]
     public function testRealFileSurvivesARoundTrip(string $file, ?string $encoding, int $cueCount, array $firstCue, array $lastCue, ?WriteOptions $options): void
     {
-        $subtitle  = $this->parseFile($file, $encoding);
+        $subtitle  = $this->parseFile($file, new ReadOptions(encoding: $encoding));
         $formatted = $subtitle->toString(Format::Mpl2, $options ?? new WriteOptions());
 
         $this->assertEquals($subtitle->getCues(), (new Mpl2Parser())->parse($formatted, new ReadOptions())->getCues());
@@ -138,12 +154,6 @@ class Mpl2ParserTest extends TestCase
         $subtitle = Subtitle::fromStringAutoDetectFormat("[12][45]Where are you?|/Home.\r\n");
 
         $this->assertSame("[12][45]Where are you?|/Home.\n", $subtitle->toString(Format::Mpl2));
-    }
-
-
-    private function parseFile(string $file, ?string $encoding): Subtitle
-    {
-        return Subtitle::fromString(file_get_contents(self::DIR . "real/$file"), Format::Mpl2, new ReadOptions(encoding: $encoding));
     }
 
 

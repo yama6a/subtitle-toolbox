@@ -8,10 +8,25 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\RealFiles;
 
 class SbvRealFilesTest extends TestCase
 {
+    use RealFiles;
+
+
+    private static function realFilesDir(): string
+    {
+        return "sbv/real/";
+    }
+
+
+    private static function realFilesFormat(): Format
+    {
+        return Format::Sbv;
+    }
+
+
     public static function realFiles(): array
     {
         return [
@@ -70,17 +85,5 @@ class SbvRealFilesTest extends TestCase
         $expected = rtrim(str_replace("\r\n", "\n", file_get_contents(__DIR__ . "/../files/sbv/real/" . $fileName)), "\n") . "\n";
 
         $this->assertSame($expected, $this->parseFile($fileName)->toString(Format::Sbv));
-    }
-
-
-    private function parseFile(string $fileName): Subtitle
-    {
-        return Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sbv/real/" . $fileName), Format::Sbv);
-    }
-
-
-    private function describeCue(SubtitleCue $cue): array
-    {
-        return [$cue->getStart(), $cue->getEnd(), $cue->getLines()];
     }
 }

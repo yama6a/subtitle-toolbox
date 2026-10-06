@@ -14,11 +14,27 @@ use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\RealFiles;
 use SubtitleToolbox\WriteOptions;
 
 class TmPlayerParserTest extends TestCase
 {
+    use RealFiles;
+
+
     private const DIR = __DIR__ . "/../files/tmplayer/";
+
+
+    private static function realFilesDir(): string
+    {
+        return "tmplayer/real/";
+    }
+
+
+    private static function realFilesFormat(): Format
+    {
+        return Format::TmPlayer;
+    }
 
 
     /**
@@ -161,12 +177,6 @@ class TmPlayerParserTest extends TestCase
     public function testSubtitleParseDetectsTmPlayer(): void
     {
         $this->assertCount(2, Subtitle::fromStringAutoDetectFormat("00:00:01:Where are you?\r\n00:00:04:Home.\r\n")->getCues());
-    }
-
-
-    private function parseFile(string $file, ReadOptions $options = new ReadOptions()): Subtitle
-    {
-        return Subtitle::fromString(file_get_contents(self::DIR . "real/$file"), Format::TmPlayer, $options);
     }
 
 
