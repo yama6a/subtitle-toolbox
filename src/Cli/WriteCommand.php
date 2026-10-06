@@ -106,6 +106,10 @@ abstract class WriteCommand extends FileCommand
         if ($this->output !== null && str_ends_with($this->output, "/")) {
             self::fail("The output $this->output ends with a slash. Pass a file name, or pass --output-dir $this->output.");
         }
+        $lastPart = $this->output === null ? null : substr((string)strrchr("/$this->output", "/"), 1);
+        if ($lastPart === "." || $lastPart === "..") {
+            self::fail("The output $this->output ends with \"$lastPart\". Pass a file name, or pass --output-dir $this->output.");
+        }
         if ($this->output !== null && $this->output !== self::DASH && is_dir(self::realTarget($this->output))) {
             self::fail("The output $this->output is a directory. Pass --output-dir $this->output.");
         }

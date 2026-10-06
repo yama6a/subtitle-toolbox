@@ -358,6 +358,19 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testAnOutputThatEndsWithADotPartIsAUsageError(): void
+    {
+        foreach (["newdir/." => ".", "newdir/.." => "..", "." => ".", ".." => ".."] as $output => $lastPart) {
+            $this->assertSame(
+                [2, "", "Error: The output $output ends with \"$lastPart\". Pass a file name, or pass --output-dir $output.\n" .
+                        "Run \"subtitle-toolbox help convert\" for the usage.\n"],
+                $this->runBinary(["convert", "trip.srt", "--to", "srt", "-o", $output])
+            );
+        }
+        $this->assertDirectoryDoesNotExist("$this->dir/newdir");
+    }
+
+
     public function testAnOutputThatIsADirectoryNamesOutputDir(): void
     {
         mkdir("$this->dir/out");

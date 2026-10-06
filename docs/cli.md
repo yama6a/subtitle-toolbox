@@ -87,7 +87,7 @@ php subtitle-toolbox.phar --version
 | an output exists | `-o movie.vtt` with an existing `movie.vtt` |
 | 2 inputs would write the same output | `a/movie.srt b/movie.srt --output-dir out` |
 | an output is a file that the command reads | `-o movie.srt` with the input `movie.srt` |
-| `-o` ends with a slash | `-o out/` |
+| `-o` ends with a slash, or its last part is `.` or `..` | `-o out/`, `-o out/.`, `-o ..` |
 | `-o` names a directory | `-o out` with an existing directory `out`. Pass `--output-dir out` |
 | `--output-dir` names a file, also for `hls` | `--output-dir movie.srt` |
 
