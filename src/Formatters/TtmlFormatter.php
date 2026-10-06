@@ -71,14 +71,15 @@ final class TtmlFormatter extends SubtitleFormatter
             $this->insertChild($this->head, $element, $this->head->firstChild, 2);
         }
 
+        // Regions and agents go into the head while the paragraphs are formatted, so the IDs of the body come later.
         $divs = [];
         foreach ($subtitle->getCues() as $cue) {
-            $div       = $this->formatAttributes($cue->findFormatData(TtmlParser::FORMAT_DATA_KEY)["div"] ?? [], []);
-            $paragraph = "      " . $this->formatParagraph($cue, $options, $fileData === []) . self::NL;
+            $div       = $this->writableAttributes($cue->findFormatData(TtmlParser::FORMAT_DATA_KEY)["div"] ?? [], []);
+            $paragraph = [$this->paragraphId($cue), $this->formatParagraph($cue, $options, $fileData === [])];
             if ($divs !== [] && $divs[count($divs) - 1]["attributes"] === $div) {
-                $divs[count($divs) - 1]["content"] .= $paragraph;
+                $divs[count($divs) - 1]["paragraphs"][] = $paragraph;
             } else {
-                $divs[] = ["attributes" => $div, "content" => $paragraph];
+                $divs[] = ["attributes" => $div, "paragraphs" => [$paragraph]];
             }
         }
 
@@ -90,7 +91,12 @@ final class TtmlFormatter extends SubtitleFormatter
             $output .= "    <div/>" . self::NL;
         }
         foreach ($divs as $div) {
-            $output .= "    <div{$div["attributes"]}>" . self::NL . $div["content"] . "    </div>" . self::NL;
+            $output .= "    <div" . $this->formatWritableAttributes($div["attributes"]) . ">" . self::NL;
+            foreach ($div["paragraphs"] as [$id, $paragraph]) {
+                $idAttribute = $id === null ? "" : $this->formatAttribute("xml:id", $this->unusedId($id));
+                $output     .= "      <p$idAttribute$paragraph" . self::NL;
+            }
+            $output .= "    </div>" . self::NL;
         }
 
         return $this->applyOutputOptions($output . "  </body>" . self::NL . "</tt>" . self::NL, $options);
@@ -185,7 +191,7 @@ final class TtmlFormatter extends SubtitleFormatter
             [$prefix, $localName] = str_contains($name, ":") ? explode(":", $name, 2) : ["", $name];
             $isParameter = in_array($this->namespaces[$prefix] ?? null, TtmlNamespaces::PARAMETER, true);
             if ($this->isWritable($name) && !($isParameter && in_array($localName, self::SKIPPED_ROOT_PARAMETERS, true))) {
-                $output .= $this->formatAttribute($name, $value);
+                $output .= $this->formatAttribute($name, $name === "xml:id" ? $this->unusedId($value) : $value);
             }
         }
 
@@ -193,14 +199,20 @@ final class TtmlFormatter extends SubtitleFormatter
     }
 
 
+    private function paragraphId(SubtitleCue $cue): ?string
+    {
+        $identifier = $cue->getIdentifier();
+
+        return $identifier !== null && preg_match("/^[A-Za-z_][\w.-]*$/", $identifier) ? $identifier : null;
+    }
+
+
+    /**
+     * Returns the paragraph without "<p" and without xml:id, so that the caller adds the ID in output order.
+     */
     private function formatParagraph(SubtitleCue $cue, WriteOptions $options, bool $isForeignSubtitle): string
     {
-        $attributes = "";
-        $identifier = $cue->getIdentifier();
-        if ($identifier !== null && preg_match("/^[A-Za-z_][\w.-]*$/", $identifier)) {
-            $attributes .= $this->formatAttribute("xml:id", $identifier);
-        }
-        $attributes .= $this->formatAttribute("begin", sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getStart())));
+        $attributes  = $this->formatAttribute("begin", sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getStart())));
         $attributes .= $this->formatAttribute("end", sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getEnd())));
 
         $cueData     = $cue->findFormatData(TtmlParser::FORMAT_DATA_KEY);
@@ -222,7 +234,7 @@ final class TtmlFormatter extends SubtitleFormatter
 
         $text = implode(self::NL, $cue->getLines());
         if ($options->stripTags) {
-            return "<p$attributes>" . $this->formatText(Markup::stripAllTags($text)) . "</p>";
+            return "$attributes>" . $this->formatText(Markup::stripAllTags($text)) . "</p>";
         }
 
         [$agent, $content] = $this->markupToTtml($text);
@@ -230,7 +242,7 @@ final class TtmlFormatter extends SubtitleFormatter
             $attributes .= $this->formatAttribute("$this->ttm:agent", $this->agentId($agent));
         }
 
-        return "<p$attributes>$content</p>";
+        return "$attributes>$content</p>";
     }
 
 
@@ -492,11 +504,25 @@ final class TtmlFormatter extends SubtitleFormatter
 
     private function formatAttributes(array $attributes, array $skip): string
     {
+        return $this->formatWritableAttributes($this->writableAttributes($attributes, $skip));
+    }
+
+
+    private function writableAttributes(array $attributes, array $skip): array
+    {
+        return array_filter(
+            $attributes,
+            fn (string $name): bool => $this->isWritable($name) && !in_array($name, $skip, true),
+            ARRAY_FILTER_USE_KEY
+        );
+    }
+
+
+    private function formatWritableAttributes(array $attributes): string
+    {
         $output = "";
         foreach ($attributes as $name => $value) {
-            if ($this->isWritable($name) && !in_array($name, $skip, true)) {
-                $output .= $this->formatAttribute($name, $value);
-            }
+            $output .= $this->formatAttribute($name, $name === "xml:id" ? $this->unusedId($value) : $value);
         }
 
         return $output;
