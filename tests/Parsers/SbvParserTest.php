@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 class SbvParserTest extends TestCase
@@ -139,5 +141,28 @@ class SbvParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("Block #1 doesn't have any text lines");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sbv/missing_text.sbv"), Format::Sbv);
+    }
+
+
+    public static function inputsWithoutCues(): array
+    {
+        return [
+            "empty"               => [""],
+            "BOM only"            => ["\xEF\xBB\xBF"],
+            "whitespace only"     => [" \n\t\r\n\n  "],
+            "BOM and empty lines" => ["\xEF\xBB\xBF\r\n\r\n"],
+        ];
+    }
+
+
+    #[DataProvider("inputsWithoutCues")]
+    public function testAFileWithoutCuesReadsAsZeroCues(string $content): void
+    {
+        foreach ([new ReadOptions(), new ReadOptions(lenient: true)] as $options) {
+            $subtitle = Subtitle::fromString($content, Format::Sbv, $options);
+
+            $this->assertSame([], $subtitle->getCues());
+            $this->assertSame([], $subtitle->getParseWarnings());
+        }
     }
 }

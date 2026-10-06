@@ -482,13 +482,13 @@ class LenientParsingTest extends TestCase
     }
 
 
-    public function testAnEmptyFileGivesNoCuesAndOneWarning(): void
+    public function testAnEmptyFileGivesNoCuesAndNoWarning(): void
     {
         foreach ([new SubRipParser(), new SbvParser()] as $parser) {
             $subtitle = $parser->parse(" \n\n", new ReadOptions(lenient: true));
 
             $this->assertSame([], $subtitle->getCues());
-            $this->assertSame([[1, 0, self::SKIPPED, "The file has no cues."]], $this->warningRows($subtitle->getParseWarnings()));
+            $this->assertSame([], $subtitle->getParseWarnings());
         }
     }
 

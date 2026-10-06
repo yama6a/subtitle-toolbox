@@ -26,6 +26,7 @@ class StreamReaderEdgeCasesTest extends TestCase
             "blank lines and spaces" => ["\n\n  1\n00:00:01,000  -->  00:00:02,000\n\tA \t tab\n \n\t\n\n2\n00:00:03,000 --> 00:00:04,000\nB & <i>c</i> <3\n\n\n"],
             "BOM only"               => ["\xEF\xBB\xBF"],
             "empty"                  => [""],
+            "whitespace only"        => [" \n\t\r\n\n  "],
             "no text"                => ["1\n00:00:01,000 --> 00:00:02,000\n\n2\n00:00:03,000 --> 00:00:04,000\nB\n"],
         ];
     }

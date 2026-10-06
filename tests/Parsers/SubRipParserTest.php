@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 class SubRipParserTest extends TestCase
@@ -266,5 +268,28 @@ class SubRipParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         Subtitle::fromString("1\n00:01:39, --> 00:01:41,000\nText\n", Format::SubRip);
+    }
+
+
+    public static function inputsWithoutCues(): array
+    {
+        return [
+            "empty"               => [""],
+            "BOM only"            => ["\xEF\xBB\xBF"],
+            "whitespace only"     => [" \n\t\r\n\n  "],
+            "BOM and empty lines" => ["\xEF\xBB\xBF\r\n\r\n"],
+        ];
+    }
+
+
+    #[DataProvider("inputsWithoutCues")]
+    public function testAFileWithoutCuesReadsAsZeroCues(string $content): void
+    {
+        foreach ([new ReadOptions(), new ReadOptions(lenient: true)] as $options) {
+            $subtitle = Subtitle::fromString($content, Format::SubRip, $options);
+
+            $this->assertSame([], $subtitle->getCues());
+            $this->assertSame([], $subtitle->getParseWarnings());
+        }
     }
 }
