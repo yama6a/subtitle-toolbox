@@ -1,0 +1,216 @@
+<?php
+
+declare(strict_types=1);
+
+namespace SubtitleToolbox\Cli;
+
+use SubtitleToolbox\Tests\Support\BinaryTestCase;
+
+/**
+ * Converts one fixture of each readable format to each writable format with the binary, and reads each output back.
+ */
+class BinaryFormatMatrixTest extends BinaryTestCase
+{
+    private const INPUTS = [
+        "ass"                => "ass/real/own_aegisub.ass",
+        "csv"                => "csv/real/mantas_done_shape.csv",
+        "ffmeta-chapters"    => "chapters/ffmetadata/real/ffmpeg_mp4_export.ffmeta",
+        "html"               => "html/real/spec_example_shape.html",
+        "itt"                => "itt/real/fcp_23976_styles.itt",
+        "json"               => "json/real/own_aegisub.json",
+        "assemblyai"         => "assemblyai/real/hike_utterances_speakers.json",
+        "aws-transcribe"     => "aws-transcribe/real/library_speakers_language_id.json",
+        "deepgram"           => "deepgram/real/pool_utterances_diarize.json",
+        "google-speech"      => "google-speech/real/restaurant_v2_diarization.json",
+        "lrc"                => "lrc/real/lrc-maker-nami.lrc",
+        "microdvd"           => "microdvd/real/sub_microdvd_with_styles.sub",
+        "mpsub"              => "mpsub/real/mplayer_doc_time.sub",
+        "pgs"                => "pgs/text_1080p.sup",
+        "sami"               => "sami/real/pysubs2_source_id.smi",
+        "sbv"                => "sbv/real/youtube_studio_lf.sbv",
+        "scc"                => "scc/real/popon_broadcast_df.scc",
+        "srt"                => "srt/real/own_styled.srt",
+        "stl"                => "stl/real/bakery_teletext_25fps.stl",
+        "subviewer"          => "subviewer/real/subviewer2_crlf.sub",
+        "ttml"               => "ttml/real/bbc_ebu_tt_d.ttml",
+        "tsv"                => "csv/real/sheets_export.tsv",
+        "mpl2"               => "mpl2/real/subtitle_edit_shape.txt",
+        "tmplayer"           => "tmplayer/real/tmplayer_multiline_bom.txt",
+        "vobsub"             => "vobsub/text-pal.idx",
+        "vtt"                => "vtt/real/w3c_voices.vtt",
+        "whisper"            => "whisper/real/openai_whisper_word_timestamps.json",
+        "youtube"            => "youtube/real/manual.en.json3",
+        "ogm-chapters"       => "chapters/ogm/real/mkvextract_simple.txt",
+        "podcast-chapters"   => "chapters/podcast/real/spec_basic_example.json",
+        "podcast-transcript" => "podcast/real/spec_word_segments.json",
+        "youtube-chapters"   => "chapters/youtube/real/video_description.txt",
+    ];
+
+    /** Every conversion gets these options. They prevent the failures for a missing frame rate and for image cues. */
+    private const CONVERT_OPTIONS = ["--input-fps", "25", "--output-fps", "25", "--skip-image-cues"];
+
+    /** SCC output also gets these options, because SCC allows 32 characters per line and 4 lines per cue. */
+    private const SCC_OPTIONS = ["--structure-split-long", "--structure-wrap", "--structure-max-cpl", "32", "--structure-max-lines", "4"];
+
+    /** Conversions that fail on purpose, as "input>output" => outcome. Pairs that are not listed must succeed. */
+    private const EXPECTED_FAILURES = [
+        // CEA-608 cannot show the Chinese characters of the LRC fixture.
+        "lrc>scc" => "convert exit 3",
+        // --skip-image-cues leaves no cue, so the plain text output is empty.
+        "pgs>txt" => "empty",
+        "vobsub>txt" => "empty",
+    ];
+
+    /** Bugs that the matrix found, as "input>output" => outcome. Remove a pair when its bug is fixed. */
+    private const KNOWN_BUGS = [
+        // An empty SubRip or SBV file does not read back: "Block #0 doesn't seem to have a cue-number on its first line!"
+        "pgs>srt" => "readback exit 3",
+        "pgs>sbv" => "readback exit 3",
+        "vobsub>srt" => "readback exit 3",
+        "vobsub>sbv" => "readback exit 3",
+    ];
+
+    /** The PGS writer renders no text, so each text input fails with exit 3. */
+    private const PGS_OUTPUT_FAILURE = "convert exit 3";
+
+    private const PARALLEL_PROCESSES = 4;
+
+
+    public function testInputsCoverEveryReadableFormat(): void
+    {
+        [$readable] = $this->formats();
+
+        $this->assertSame($readable, array_keys(self::INPUTS));
+    }
+
+
+    public function testEveryReadableFormatConvertsToEveryWritableFormat(): void
+    {
+        [, $writable] = $this->formats();
+
+        $converts = [];
+        foreach (self::INPUTS as $input => $fixture) {
+            foreach ($writable as $output) {
+                $options = $output === "scc" ? [...self::CONVERT_OPTIONS, ...self::SCC_OPTIONS] : self::CONVERT_OPTIONS;
+                $converts["$input>$output"] = ["convert", self::FILES . $fixture, "--from", $input, "--to", $output,
+                                               "-o", "$this->dir/$input-to-$output.out", ...$options];
+            }
+        }
+
+        $outcomes  = [];
+        $readbacks = [];
+        foreach ($this->runParallel($converts) as $pair => [$code, $stdout, $stderr]) {
+            [$input, $output] = explode(">", $pair);
+            $file = "$this->dir/$input-to-$output.out";
+            if (self::hasPhpError($stderr)) {
+                $outcomes[$pair] = "convert PHP error: $stderr";
+            } elseif ($code !== 0) {
+                $outcomes[$pair] = "convert exit $code";
+            } elseif ($stdout !== self::FILES . self::INPUTS[$input] . " -> $file\n" || $stderr !== "") {
+                $outcomes[$pair] = "convert output: " . $stdout . $stderr;
+            } elseif ($output === "txt") {
+                $outcomes[$pair] = filesize($file) > 0 ? "ok" : "empty";
+            } else {
+                $readbacks[$pair] = ["info", $file, "--from", $output, "--input-fps", "25"];
+            }
+        }
+        foreach ($this->runParallel($readbacks) as $pair => [$code, , $stderr]) {
+            $outcomes[$pair] = match (true) {
+                self::hasPhpError($stderr) => "readback PHP error: $stderr",
+                $code !== 0                => "readback exit $code",
+                $stderr !== ""             => "readback stderr: $stderr",
+                default                    => "ok",
+            };
+        }
+
+        $expected = [];
+        foreach (array_keys($converts) as $pair) {
+            $pgsOutput = str_ends_with($pair, ">pgs") && !in_array($pair, ["pgs>pgs", "vobsub>pgs"], true);
+            $expected[$pair] = self::EXPECTED_FAILURES[$pair] ?? self::KNOWN_BUGS[$pair] ?? ($pgsOutput ? self::PGS_OUTPUT_FAILURE : "ok");
+        }
+        ksort($expected);
+        ksort($outcomes);
+        $this->assertSame($expected, $outcomes);
+    }
+
+
+    private static function hasPhpError(string $stderr): bool
+    {
+        return preg_match('/^(PHP )?(Fatal error|Warning|Notice|Deprecated):/m', $stderr) === 1;
+    }
+
+
+    /**
+     * Reads the format table of the formats command.
+     *
+     * @return array{list<string>, list<string>} the readable and the writable format names, in table order
+     */
+    private function formats(): array
+    {
+        [$code, $stdout] = $this->runBinary(["formats"]);
+        $this->assertSame(0, $code);
+
+        $readable = [];
+        $writable = [];
+        foreach (array_slice(explode("\n", trim($stdout)), 1) as $line) {
+            $columns = preg_split('/\s+/', trim($line));
+            [$name, $read, $write] = [$columns[0], $columns[count($columns) - 2], $columns[count($columns) - 1]];
+            if ($read === "yes") {
+                $readable[] = $name;
+            }
+            if ($write === "yes") {
+                $writable[] = $name;
+            }
+        }
+
+        return [$readable, $writable];
+    }
+
+
+    /**
+     * Runs the binary once for each argument list, some processes at a time. Standard output and error go to files,
+     * so a process with much output cannot block on a full pipe.
+     *
+     * @param array<string, list<string>> $jobs
+     *
+     * @return array<string, array{int, string, string}> exit code, standard output and standard error of each job
+     */
+    private function runParallel(array $jobs): array
+    {
+        $results = [];
+        $running = [];
+        $queue = $jobs;
+        $count = 0;
+        while ($queue !== [] || $running !== []) {
+            while ($queue !== [] && count($running) < self::PARALLEL_PROCESSES) {
+                $key = array_key_first($queue);
+                $arguments = $queue[$key];
+                unset($queue[$key]);
+                $log = "$this->dir/job-" . $count++;
+                $process = proc_open(
+                    [PHP_BINARY, "-d", "error_reporting=-1", "-d", "display_errors=stderr", self::BIN, ...$arguments],
+                    [0 => ["file", "/dev/null", "r"], 1 => ["file", "$log.out", "w"], 2 => ["file", "$log.err", "w"]],
+                    $pipes,
+                    $this->dir
+                );
+                $running[$key] = [$process, $log];
+            }
+            foreach ($running as $key => [$process, $log]) {
+                $status = proc_get_status($process);
+                if ($status["running"]) {
+                    continue;
+                }
+                proc_close($process);
+                $results[$key] = [$status["exitcode"], file_get_contents("$log.out"), file_get_contents("$log.err")];
+                unlink("$log.out");
+                unlink("$log.err");
+                unset($running[$key]);
+            }
+            if ($running !== []) {
+                usleep(2000);
+            }
+        }
+
+        return array_replace(array_intersect_key($jobs, $results), $results);
+    }
+}
