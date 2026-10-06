@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Sync\ReferenceSync;
@@ -106,13 +105,8 @@ final class SyncCommand extends WriteCommand
             return;
         }
 
-        $content = self::readSideFile($log);
-
-        try {
-            $this->reference = SpeechReference::fromFfmpegSilencedetect($content, $arguments->positiveFloat("media-duration"));
-        } catch (ParsingException $exception) {
-            self::failSideFile($log, $exception->getMessage());
-        }
+        $this->reference = self::parseSideFile($log, fn (string $content): Subtitle =>
+            SpeechReference::fromFfmpegSilencedetect($content, $arguments->positiveFloat("media-duration")));
     }
 
 

@@ -8,7 +8,6 @@ use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
-use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Fixing\CommonErrorFixer;
 use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Fixing\OcrReplaceList;
@@ -84,10 +83,6 @@ final class CommonErrorEdit extends Edit
         if ($path === null) {
             return null;
         }
-        try {
-            return OcrReplaceList::fromSubtitleEditXml(Command::readSideFile($path));
-        } catch (ParsingException $exception) {
-            return Command::failSideFile($path, $exception->getMessage());
-        }
+        return Command::parseSideFile($path, OcrReplaceList::fromSubtitleEditXml(...));
     }
 }

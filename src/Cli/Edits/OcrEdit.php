@@ -83,14 +83,12 @@ final class OcrEdit extends Edit
         if ($engine === OcrEngineName::Tesseract) {
             (new TesseractOcrEngine($tesseractOptions))->requireLanguages();
         }
-        $database = $arguments->value("ocr-database");
+        $database     = $arguments->value("ocr-database");
+        $glyphOptions = new GlyphOcrOptions(...Command::given([
+            "database" => $database === null ? null : Command::parseSideFile($database, GlyphDatabase::fromBytes(...), GlyphOcrException::class),
+        ]));
 
-        return new self(
-            $engine,
-            $language,
-            $tesseractOptions,
-            new GlyphOcrOptions(...Command::given(["database" => $database === null ? null : self::loadDatabase($database)])),
-        );
+        return new self($engine, $language, $tesseractOptions, $glyphOptions);
     }
 
 
@@ -117,17 +115,5 @@ final class OcrEdit extends Edit
 
         // A new engine for each file, because the recognizer learns the glyph heights of one stream.
         return new GlyphOcrEngine($this->glyphOptions);
-    }
-
-
-    private static function loadDatabase(string $path): GlyphDatabase
-    {
-        $bytes = Command::readSideFile($path);
-
-        try {
-            return GlyphDatabase::fromBytes($bytes);
-        } catch (GlyphOcrException $exception) {
-            return Command::failSideFile($path, $exception->getMessage());
-        }
     }
 }

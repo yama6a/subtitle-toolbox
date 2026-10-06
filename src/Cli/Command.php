@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Exceptions\SubtitleToolboxException;
 
 /**
@@ -89,6 +90,29 @@ abstract class Command
         }
 
         return $content;
+    }
+
+
+    /**
+     * Returns $parse applied to the content of a side file. Fails with exit code 3 when the file is missing or
+     * unreadable, or when $parse throws a $failure.
+     *
+     * @template T
+     *
+     * @param callable(string): T      $parse
+     * @param class-string<\Throwable> $failure
+     *
+     * @return T
+     */
+    public static function parseSideFile(string $path, callable $parse, string $failure = ParsingException::class): mixed
+    {
+        $content = self::readSideFile($path);
+
+        try {
+            return $parse($content);
+        } catch (\Throwable $exception) {
+            return $exception instanceof $failure ? self::failSideFile($path, $exception->getMessage()) : throw $exception;
+        }
     }
 
 

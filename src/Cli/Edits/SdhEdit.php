@@ -51,7 +51,8 @@ final class SdhEdit extends Edit
 
     public static function fromArguments(Arguments $arguments): ?static
     {
-        self::needs($arguments, "sdh", array_map(fn (Option $option): string => $option->name, array_slice(self::options(), 1)));
+        self::needs($arguments, "sdh", ["sdh-keep-square-brackets", "sdh-keep-parentheses", "sdh-keep-speaker-labels", "sdh-keep-music-lines",
+                                        "sdh-any-case-labels", "sdh-lyrics", "sdh-brackets"]);
         if (!$arguments->has("sdh")) {
             return null;
         }

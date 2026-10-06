@@ -99,6 +99,8 @@ php subtitle-toolbox.phar --version
 - **Standard input**: `-` takes `-o FILE`, not `--output-dir`. With `--output-dir`, the tool fails with exit code 2.
 - **Batch**: the tool prints one line per file and a summary. It stops at the first failed file, unless you pass `--keep-going`.
 - **Option names**: `--no-X` always turns X off, for example `--no-bom`. A time option is in seconds, unless its name ends in `-frames`.
+- **Defaults**: `subtitle-toolbox help COMMAND` prints the default of each option after `Default:`. This page does not repeat the values. Without the option, the tool passes no value, so the library default applies.
+- **Choice values**: a value from a fixed list ignores case. `--line-ending CRLF`, `--mode Top-Bottom` and `--preset BBC` work.
 - **Encoding**: `--encoding` names the encoding of the input, for example `Windows-1252`. See [encodings.md](encodings.md).
 - **Output bytes**: `--line-ending lf|crlf`, `--bom` and `--no-bom`.
 - **Broken files**: `--lenient` skips or repairs broken cues and prints one warning for each broken cue in each file that a command reads, also a second file or a `--reference`, see [lenient-parsing.md](lenient-parsing.md).
@@ -202,7 +204,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --to srt --output-dir fixed/ -
 |:--- |:--- |
 | `--ocr` | reads the text of image cues, see [OCR](#ocr) |
 | `--ocr-engine ENGINE` | `tesseract` or `glyph`. Default: `tesseract` when it is installed |
-| `--ocr-language CODE` | the Tesseract language, for example `deu` or `deu+eng`. Default: `eng` |
+| `--ocr-language CODE` | the Tesseract language, for example `deu` or `deu+eng` |
 | `--ocr-database FILE` | the `.nocr` glyph database for `--ocr`. It selects the glyph engine |
 | `--forced-only` | keeps only the [forced cues](subtitle.md#forced-cues) |
 
@@ -229,10 +231,10 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --to srt --output-dir fixed/ -
 | Option | Effect |
 |:--- |:--- |
 | `--mask-words FILE` | masks the words of a word file, as [`ProfanityFilter::apply()`](text.md#profanity-filter) does |
-| `--mask STYLE` | `stars` (default), `first-letter`, `remove`, or `none`. `none` keeps the text and only finds the times for `--mute-edl` and `--mute-filter` |
+| `--mask STYLE` | `stars`, `first-letter`, `remove`, or `none`. `none` keeps the text and only finds the times for `--mute-edl` and `--mute-filter` |
 | `--mute-edl FILE` | writes the times of the matches to an EDL file with [`MuteRange::toEdl()`](text.md#profanity-filter), for Kodi and MPlayer |
 | `--mute-filter FILE` | writes the FFmpeg volume filter of `MuteRange::toFfmpegVolumeFilter()` |
-| `--mute-padding SECONDS` | widens each time range on both sides, default 0 |
+| `--mute-padding SECONDS` | widens each time range on both sides |
 
 ```sh
 vendor/bin/subtitle-toolbox convert movie.srt --to srt -o clean.srt --mask-words words.txt --mute-filter mute.txt --mute-padding 0.1
@@ -248,14 +250,14 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 
 | Option | Calls |
 |:--- |:--- |
-| `--structure-resegment` | `Resegmenter::apply()` with `ResegmentMode::ByWords`. `--structure-max-word-gap` sets `maxWordGap`, default 0.6 s. It turns on `--word-timestamps` |
+| `--structure-resegment` | `Resegmenter::apply()` with `ResegmentMode::ByWords`. `--structure-max-word-gap` sets `maxWordGap`. It turns on `--word-timestamps` |
 | `--structure-unwrap` | `unwrapLines()` |
 | `--structure-merge-short` | `mergeShortCues()` with the default options |
 | `--structure-split-long` | `Resegmenter::apply()` with `ResegmentMode::SplitLong` and the default options |
 | `--structure-wrap` | `wrapLines()` with `--structure-max-cpl` and `--structure-max-lines` |
 | `--structure-merge-duplicates` | `removeDuplicateCues()` |
-| `--structure-max-cpl CHARS` | `maxCharactersPerLine` of `--structure-resegment`, `--structure-merge-short`, `--structure-split-long` and `--structure-wrap`, default 42 |
-| `--structure-max-lines LINES` | `maxLinesPerCue` of `--structure-resegment`, `--structure-merge-short`, `--structure-split-long` and `--structure-wrap`, default 2 |
+| `--structure-max-cpl CHARS` | `maxCharactersPerLine` of `--structure-resegment`, `--structure-merge-short`, `--structure-split-long` and `--structure-wrap` |
+| `--structure-max-lines LINES` | `maxLinesPerCue` of `--structure-resegment`, `--structure-merge-short`, `--structure-split-long` and `--structure-wrap` |
 
 - **Limits without their fix**: `--structure-max-cpl`, `--structure-max-lines` and `--timing-min-gap` alone are a usage error, exit code 2. The message names the fix options that use them.
 
@@ -266,11 +268,11 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 |:--- |:--- |
 | `--snap-shot-changes FILE` | [`ShotChangeTiming::apply()`](editing.md#shot-changes-and-gaps) with the shot changes of the file: the log of the FFmpeg `showinfo` filter, or one time per line in seconds or `hh:mm:ss.mmm` |
 | `--video-fps RATE` | `frameRate`, the frame rate of the shot changes and of the frame options. Required with the `--snap-` options |
-| `--snap-window-frames FRAMES` | `snapWindowFrames`, default half a second |
-| `--snap-min-gap-frames FRAMES` | `minGapFrames`, default 2 |
-| `--snap-min-duration-frames FRAMES` | `minDurationFrames`, default 20 |
+| `--snap-window-frames FRAMES` | `snapWindowFrames` |
+| `--snap-min-gap-frames FRAMES` | `minGapFrames` |
+| `--snap-min-duration-frames FRAMES` | `minDurationFrames` |
 | `--no-snap-chain` | `chain: false` |
-| `--timing-fix-overlaps` | `fixOverlaps()` with `--timing-min-gap` seconds, default 0 |
+| `--timing-fix-overlaps` | `fixOverlaps()` with `--timing-min-gap` seconds |
 | `--timing-min-duration SECONDS` | `extendShortCues()` with `--timing-min-gap` |
 | `--timing-min-gap SECONDS` | the gap of `--timing-fix-overlaps` and `--timing-min-duration` |
 
@@ -286,8 +288,8 @@ vendor/bin/subtitle-toolbox convert movie.srt --to srt -o movie.timed.srt --vide
 | Option | Effect |
 |:--- |:--- |
 | `--karaoke` | writes one cue per word with the active word styled, with [`WordHighlight::apply()`](text.md#word-highlight-and-karaoke) |
-| `--karaoke-style TAG` | `b`, `i`, `u` (default), `s` or `'font color="#ffff00"'` |
-| `--ass-karaoke-tag TAG` | `k` (default), `kf` or `ko`, the ASS tag for word timestamps, see [formats.md](formats.md#ass-and-ssa). Needs ASS output. Pass only one of `--karaoke` and `--ass-karaoke-tag` |
+| `--karaoke-style TAG` | `b`, `i`, `u`, `s` or `'font color="#ffff00"'` |
+| `--ass-karaoke-tag TAG` | `k`, `kf` or `ko`, the ASS tag for word timestamps, see [formats.md](formats.md#ass-and-ssa). Needs ASS output. Pass only one of `--karaoke` and `--ass-karaoke-tag` |
 
 - **Library only**: the cumulative mode and the word limit of `WordHighlightOptions` have no option. Call `WordHighlight::apply()` for them.
 
@@ -312,7 +314,7 @@ vendor/bin/subtitle-toolbox convert movie.srt --to srt -o movie.timed.srt --vide
 - **MKV and WebM**: see [MKV and WebM](#mkv-and-webm).
 
 ## Validate
-`--preset` takes `netflix-en` or `bbc`, see [validation.md](validation.md#presets). A rule option overrides the value of the preset. `--video-fps` sets the frame rate for the 2-frame gap of `netflix-en`, default 23.976.
+`--preset` takes `netflix-en` or `bbc`, see [validation.md](validation.md#presets). A rule option overrides the value of the preset. `--video-fps` sets the frame rate for the 2-frame gap of `netflix-en`.
 
 | Option | Rule |
 |:--- |:--- |
@@ -345,9 +347,9 @@ movie.de.srt: scale 1.04271, offset -2.3 s, score 0.89
 |:--- |:--- |
 | `--reference FILE` | the subtitle in sync with the video, in any format that the tool reads. A Whisper JSON transcript of the audio also works |
 | `--silence-log FILE`, `--media-duration SECONDS` | the speech in an FFmpeg `silencedetect` log as the reference, with [`SpeechReference`](sync.md#sync-to-speech) |
-| `--min-offset SECONDS`, `--max-offset SECONDS` | `minOffset` and `maxOffset`, default -60 and 60. From -86400 to 86400 and at most 7200 apart, see [sync.md](sync.md#sync-to-a-reference-subtitle) |
+| `--min-offset SECONDS`, `--max-offset SECONDS` | `minOffset` and `maxOffset`. From -86400 to 86400 and at most 7200 apart, see [sync.md](sync.md#sync-to-a-reference-subtitle) |
 | `--no-scale` | `searchScale: false` |
-| `--max-splits N`, `--split-penalty SCORE` | `maxSplits` from 0 to 10, default 0, and `splitPenalty`, default 0.1 |
+| `--max-splits N`, `--split-penalty SCORE` | `maxSplits` from 0 to 10, and `splitPenalty` |
 
 - **Score**: below 0.5, the tool also prints that the files likely do not match. The exit code stays 0.
 - **Splits**: for each part, the tool prints a line such as `movie.de.srt: from 414.32 s: offset 147.7 s`.
@@ -363,7 +365,7 @@ vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-format
 
 | Option | Sets |
 |:--- |:--- |
-| `--time-tolerance SECONDS` | `timeTolerance`, default 0.001 |
+| `--time-tolerance SECONDS` | `timeTolerance` |
 | `--ignore-formatting`, `--ignore-whitespace`, `--text-only` | `ignoreFormatting`, `ignoreWhitespace`, `textOnly` |
 | `--from2 FORMAT`, `--track2 NUMBER` | the format and the MKV or WebM track of the new file. `--from` and `--track` apply to the old file |
 | `--json` | prints JSON, see [JSON output](#json-output) |
@@ -408,10 +410,10 @@ vendor/bin/subtitle-toolbox dual --primary movie.en.srt --secondary movie.de.srt
 |:--- |:--- |
 | `--primary FILE` | the subtitle whose cues set the times, or `-` for standard input. Required |
 | `--secondary FILE` | the subtitle in the second language. Required |
-| `--mode MODE` | `stack` (default) or `top-bottom` |
+| `--mode MODE` | `stack` or `top-bottom` |
 | `--secondary-style TAG` | `secondaryStyle`, for example `i` or `'font color="#ffff00"'` |
-| `--secondary-alignment 1-9` | `secondaryAlignment` for `top-bottom`, default 8 |
-| `--snap-tolerance SECONDS` | `snapTolerance` for `top-bottom`, default 0.25 |
+| `--secondary-alignment 1-9` | `secondaryAlignment` for `top-bottom` |
+| `--snap-tolerance SECONDS` | `snapTolerance` for `top-bottom` |
 | `--primary-from FORMAT`, `--primary-track NUMBER` | the format and the MKV or WebM track of the primary file. `dual` has no `--from` and `--track` |
 | `--secondary-from FORMAT`, `--secondary-track NUMBER` | the format and the MKV or WebM track of the secondary file |
 
@@ -427,15 +429,15 @@ vendor/bin/subtitle-toolbox hls movie.srt --output-dir hls/ --segment 6 --media-
 
 This writes `hls/sub0.vtt` to `hls/sub899.vtt` and `hls/subs.m3u8`.
 
-| Option | Default | Sets |
-|:--- |:--- |:--- |
-| `--output-dir DIR` | required | the directory of the segments and the playlist |
-| `--segment SECONDS` | 6 | `segmentDuration` |
-| `--playlist NAME` | `subs.m3u8` | the file name of the playlist |
-| `--pattern PATTERN` | `sub%d.vtt` | `fileNamePattern`. `%d` is the segment number from 0 |
-| `--mpegts TICKS` | 900000 | `mpegts`, the 90 kHz MPEG-2 timestamp at which subtitle time 0 plays |
-| `--local SECONDS` | 0 | `local`, the WebVTT cue time that maps to `--mpegts` |
-| `--media-duration SECONDS` | the end of the last cue | `mediaDuration`. Set it to the video duration, so the playlist covers the whole video |
+| Option | Sets |
+|:--- |:--- |
+| `--output-dir DIR` | the directory of the segments and the playlist. Required |
+| `--segment SECONDS` | `segmentDuration` |
+| `--playlist NAME` | the file name of the playlist |
+| `--pattern PATTERN` | `fileNamePattern`. `%d` is the segment number from 0 |
+| `--mpegts TICKS` | `mpegts`, the 90 kHz MPEG-2 timestamp at which subtitle time 0 plays. A whole number of 0 or more |
+| `--local SECONDS` | `local`, the WebVTT cue time that maps to `--mpegts` |
+| `--media-duration SECONDS` | `mediaDuration`. Set it to the video duration, so the playlist covers the whole video. Without it, the playlist ends with the last cue |
 
 - **Overwrite**: `hls` fails with exit code 2 before it reads the input when the playlist exists, or when any file in `--output-dir` matches `--pattern`. The playlist can be outside `--output-dir`, so `--output-dir new --playlist ../keep.txt` fails when `keep.txt` exists. The segment count is known only after the read, so `hls/sub950.vtt` blocks a run that writes 900 segments.
 - **Names**: `hls` fails with exit code 2 before it writes a file when `--playlist` matches `--pattern`, for example `--playlist sub0.vtt`. It also fails when the playlist or a segment would overwrite the input.
