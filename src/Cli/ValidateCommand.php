@@ -19,6 +19,15 @@ final class ValidateCommand extends ReportCommand
 
     private const DEFAULT_FPS = 23.976;
 
+    private const FLAGS = [
+        "check-overlaps"                   => "noOverlap",
+        "check-empty-cues"                 => "noEmptyCues",
+        "check-double-spaces"              => "noDoubleSpaces",
+        "check-leading-or-trailing-spaces" => "noLeadingOrTrailingSpaces",
+        "check-unbalanced-tags"            => "noUnbalancedTags",
+        "check-all-caps-lines"             => "noAllCapsLines",
+    ];
+
     private ?ValidationRules $rules = null;
 
     private int $withProblems = 0;
@@ -103,25 +112,7 @@ final class ValidateCommand extends ReportCommand
             "netflix-en" => ValidationRules::netflixEnglish(self::rate($arguments, "video-fps") ?? self::DEFAULT_FPS),
         };
 
-        $this->rules = new ValidationRules(
-            maxCharactersPerSecond: $arguments->positiveFloat("max-cps") ?? $base->maxCharactersPerSecond,
-            maxCharactersPerLine: $arguments->positiveInt("max-cpl") ?? $base->maxCharactersPerLine,
-            maxLinesPerCue: $arguments->positiveInt("max-lines") ?? $base->maxLinesPerCue,
-            minDuration: $arguments->positiveFloat("min-duration") ?? $base->minDuration,
-            maxDuration: $arguments->positiveFloat("max-duration") ?? $base->maxDuration,
-            minGap: $arguments->positiveFloat("min-gap") ?? $base->minGap,
-            noOverlap: $arguments->has("check-overlaps") || $base->noOverlap,
-            noEmptyCues: $arguments->has("check-empty-cues") || $base->noEmptyCues,
-            noDoubleSpaces: $arguments->has("check-double-spaces") || $base->noDoubleSpaces,
-            noLeadingOrTrailingSpaces: $arguments->has("check-leading-or-trailing-spaces") || $base->noLeadingOrTrailingSpaces,
-            noUnbalancedTags: $arguments->has("check-unbalanced-tags") || $base->noUnbalancedTags,
-            dialogueDashStyle: self::dialogueDashStyle($arguments->value("dialogue-dash")) ?? $base->dialogueDashStyle,
-            maxSpeakersPerCue: $arguments->positiveInt("max-speakers") ?? $base->maxSpeakersPerCue,
-            maxWordsPerMinute: $arguments->positiveFloat("max-wpm") ?? $base->maxWordsPerMinute,
-            minSecondsPerWord: $arguments->positiveFloat("min-seconds-per-word") ?? $base->minSecondsPerWord,
-            allowedCharacters: $arguments->value("allowed-characters") ?? $base->allowedCharacters,
-            noAllCapsLines: $arguments->has("check-all-caps-lines") || $base->noAllCapsLines,
-        );
+        $this->rules = self::rules($arguments, $base);
         if ($this->rules == new ValidationRules()) {
             self::fail("Pass --preset or at least one rule option.");
         }
@@ -138,22 +129,14 @@ final class ValidateCommand extends ReportCommand
         $label = self::label($input);
         $text  = $violations === [] ? "$label: no problems\n" : "";
         foreach ($violations as $violation) {
-            $limit = $violation->limit === null ? "" : ", limit " . self::number($violation->limit);
-            $text .= "$label: cue " . ($violation->cueIndex + 1) . ": " . $violation->rule->value . " " .
-                     self::number($violation->value) . "$limit\n";
+            $text .= self::violationLine($label, $violation);
         }
 
         $this->emit($console, $text, [
             "file"       => $input,
             "format"     => $format->value,
             "valid"      => $violations === [],
-            "violations" => array_map(fn (ValidationViolation $violation): array => [
-                "cueIndex" => $violation->cueIndex,
-                "rule"     => $violation->rule->value,
-                "value"    => is_float($violation->value) && is_infinite($violation->value) ? null : $violation->value,
-                "infinite" => is_float($violation->value) && is_infinite($violation->value),
-                "limit"    => $violation->limit,
-            ], $violations),
+            "violations" => array_map(self::violationJson(...), $violations),
             "warnings"   => self::warningsJson($this->parseWarnings),
         ]);
     }
@@ -175,6 +158,61 @@ final class ValidateCommand extends ReportCommand
             $this->withProblems > 0 => Application::EXIT_RESULT,
             default                 => Application::EXIT_OK,
         };
+    }
+
+
+    /**
+     * Returns the rules of $base with the rule options in $arguments over them.
+     */
+    public static function rules(Arguments $arguments, ValidationRules $base): ValidationRules
+    {
+        $overrides = [
+            "maxCharactersPerSecond" => $arguments->positiveFloat("max-cps"),
+            "maxCharactersPerLine"   => $arguments->positiveInt("max-cpl"),
+            "maxLinesPerCue"         => $arguments->positiveInt("max-lines"),
+            "minDuration"            => $arguments->positiveFloat("min-duration"),
+            "maxDuration"            => $arguments->positiveFloat("max-duration"),
+            "minGap"                 => $arguments->positiveFloat("min-gap"),
+            "dialogueDashStyle"      => self::dialogueDashStyle($arguments->value("dialogue-dash")),
+            "maxSpeakersPerCue"      => $arguments->positiveInt("max-speakers"),
+            "maxWordsPerMinute"      => $arguments->positiveFloat("max-wpm"),
+            "minSecondsPerWord"      => $arguments->positiveFloat("min-seconds-per-word"),
+            "allowedCharacters"      => $arguments->value("allowed-characters"),
+        ];
+        foreach (self::FLAGS as $option => $field) {
+            $overrides[$field] = $arguments->has($option) ? true : null;
+        }
+
+        return OptionsCopy::with($base, array_filter($overrides, fn (mixed $value): bool => $value !== null));
+    }
+
+
+    /**
+     * Returns the text line of $violation. A violation without a cue gets no cue number.
+     */
+    public static function violationLine(string $label, ValidationViolation $violation): string
+    {
+        $cue   = $violation->cueIndex === null ? "" : "cue " . ($violation->cueIndex + 1) . ": ";
+        $limit = $violation->limit === null ? "" : ", limit " . self::number($violation->limit);
+
+        return "$label: $cue" . $violation->rule->value . " " . self::number($violation->value) . "$limit\n";
+    }
+
+
+    /**
+     * @return array{cueIndex: ?int, rule: string, value: int|float|null, infinite: bool, limit: int|float|null}
+     */
+    public static function violationJson(ValidationViolation $violation): array
+    {
+        $infinite = is_float($violation->value) && is_infinite($violation->value);
+
+        return [
+            "cueIndex" => $violation->cueIndex,
+            "rule"     => $violation->rule->value,
+            "value"    => $infinite ? null : $violation->value,
+            "infinite" => $infinite,
+            "limit"    => $violation->limit,
+        ];
     }
 
 

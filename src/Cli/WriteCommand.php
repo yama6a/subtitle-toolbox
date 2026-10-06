@@ -404,11 +404,6 @@ abstract class WriteCommand extends FileCommand
             default                                                         => $this->commandFormatterOptions($outputFormat, $arguments),
         };
 
-        return new WriteOptions(
-            lineEnding: $this->writeOptions->lineEnding,
-            bom: $this->writeOptions->bom,
-            skipImageCues: $this->writeOptions->skipImageCues,
-            format: $format,
-        );
+        return OptionsCopy::with($this->writeOptions, ["format" => $format]);
     }
 }
