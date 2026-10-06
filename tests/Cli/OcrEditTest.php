@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
+use GlyphOcr\GlyphDatabase;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Cli\Edits\OcrEdit;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
@@ -26,5 +27,26 @@ class OcrEditTest extends TestCase
 
         $this->assertNotNull($database->get());
         $this->assertSame($database->get(), $second->database());
+    }
+
+
+    public function testTheOcrDatabaseLoadsOnceInLoadSideFiles(): void
+    {
+        $path = sys_get_temp_dir() . "/ocr-edit-" . bin2hex(random_bytes(4)) . ".nocr";
+        $edit = OcrEdit::fromArguments(Arguments::parse(["--ocr", "--ocr-database", $path], OcrEdit::options()));
+        (new GlyphDatabase())->save($path);
+        try {
+            $edit->loadSideFiles();
+        } finally {
+            unlink($path);
+        }
+        $console = new Console(fopen("php://memory", "rb"), fopen("php://memory", "wb"), fopen("php://memory", "wb"));
+        $engine  = new \ReflectionMethod($edit, "engine");
+
+        $first  = $engine->invoke($edit, $console);
+        $second = $engine->invoke($edit, $console);
+
+        $this->assertInstanceOf(GlyphOcrEngine::class, $first);
+        $this->assertSame($first->database(), $second->database());
     }
 }

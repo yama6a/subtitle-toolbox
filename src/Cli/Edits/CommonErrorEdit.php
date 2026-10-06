@@ -8,6 +8,7 @@ use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
+use SubtitleToolbox\Cli\OptionsCopy;
 use SubtitleToolbox\Fixing\CommonErrorFixer;
 use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Fixing\OcrReplaceList;
@@ -19,8 +20,9 @@ use SubtitleToolbox\Subtitle;
 final class CommonErrorEdit extends Edit
 {
     private function __construct(
-        private readonly CommonErrorOptions $options,
+        private CommonErrorOptions $options,
         private readonly bool $list,
+        private readonly ?string $replaceListPath,
     ) {
     }
 
@@ -55,12 +57,20 @@ final class CommonErrorEdit extends Edit
         }
 
         return new self(
-            new CommonErrorOptions(
-                language: $arguments->value("language"),
-                replaceList: self::loadReplaceList($arguments->value("errors-replace-list")),
-            ),
+            new CommonErrorOptions(language: $arguments->value("language")),
             $arguments->has("errors-list-fixes"),
+            $arguments->value("errors-replace-list"),
         );
+    }
+
+
+    public function loadSideFiles(): void
+    {
+        if ($this->replaceListPath !== null) {
+            $this->options = OptionsCopy::with($this->options, [
+                "replaceList" => Command::parseSideFile($this->replaceListPath, OcrReplaceList::fromSubtitleEditXml(...)),
+            ]);
+        }
     }
 
 
@@ -75,14 +85,5 @@ final class CommonErrorEdit extends Edit
         }
 
         return $subtitle;
-    }
-
-
-    private static function loadReplaceList(?string $path): ?OcrReplaceList
-    {
-        if ($path === null) {
-            return null;
-        }
-        return Command::parseSideFile($path, OcrReplaceList::fromSubtitleEditXml(...));
     }
 }

@@ -38,7 +38,7 @@ abstract class Edit
 
 
     /**
-     * Returns the edit, or null when $arguments hold no option that turns it on. Fails on invalid values.
+     * Returns the edit, or null when $arguments hold no option that turns it on. Fails on invalid values. Reads no file.
      */
     abstract public static function fromArguments(Arguments $arguments): ?static;
 
@@ -47,6 +47,14 @@ abstract class Edit
      * Changes $subtitle and returns it, or returns a new subtitle. $label names the input in messages.
      */
     abstract public function apply(Subtitle $subtitle, Console $console, string $label): Subtitle;
+
+
+    /**
+     * Loads the files that the options of the edit name. The command calls it once, after all checks of its arguments.
+     */
+    public function loadSideFiles(): void
+    {
+    }
 
 
     /**
