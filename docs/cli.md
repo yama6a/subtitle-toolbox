@@ -100,7 +100,7 @@ php subtitle-toolbox.phar --version
 - **Option names**: `--no-X` always turns X off, for example `--no-bom`. A time option is in seconds, unless its name ends in `-frames`.
 - **Encoding**: `--encoding` names the encoding of the input, for example `Windows-1252`. See [encodings.md](encodings.md).
 - **Output bytes**: `--line-ending lf|crlf`, `--bom` and `--no-bom`.
-- **Broken files**: `--lenient` skips or repairs broken cues and prints a warning for each file that a command reads, also a second file or a `--reference`, see [lenient-parsing.md](lenient-parsing.md).
+- **Broken files**: `--lenient` skips or repairs broken cues and prints one warning for each broken cue in each file that a command reads, also a second file or a `--reference`, see [lenient-parsing.md](lenient-parsing.md).
 - **Frame rate**: see [Frame rates](#frame-rates).
 - **Word timestamps**: `--word-timestamps` keeps the word times of the speech-to-text JSON formats, YouTube timed text and Podcasting 2.0 transcripts. `--structure-resegment`, `--karaoke` and `--ass-karaoke-tag` turn it on.
 - **MKV and WebM**: `--track` picks a subtitle track, see [MKV and WebM](#mkv-and-webm).
@@ -182,7 +182,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --to srt --output-dir fixed/ -
 ```
 
 ### Order
-`convert` always runs the edits in this order, whatever the order of the options. The options form groups. `convert --help GROUP` lists the options of one group, and `convert --help all` lists every option. A word after `--help` that holds a dot or a slash, or names a file, is no group, so `convert in.srt -h out.srt` prints the convert help. A group prefix is the group name, for example `--structure-wrap` and `--timing-min-gap`. An option that turns a default off puts `--no-` before the prefix, for example `--no-snap-chain`.
+`convert` always runs the edits in this order, whatever the order of the options. The options form groups. `convert --help GROUP` lists the options of one group, and `convert --help all` lists every option. A word after `--help` that holds a dot or a slash, or names a file, is no group, so `convert in.srt -h out.srt` prints the convert help. Most groups use the group name as the option prefix, for example `--structure-wrap` and `--timing-min-gap`. The `retime`, `text` and `masking` groups have no prefixed option. In the `snap` group, `--video-fps` has no prefix. An option that turns a default off puts `--no-` before the prefix, for example `--no-snap-chain`.
 
 | Step | Group | Options | Why here |
 |:--- |:--- |:--- |:--- |
