@@ -42,8 +42,11 @@ final class OcrEngineChooser
 
     /**
      * Creates the engine that choose() names, with default options. Tesseract reads $tesseractLanguage.
+     *
+     * @param OcrLanguage|string $tesseractLanguage An OcrLanguage case, or the name of any installed Tesseract model,
+     *                                              for example a custom trained model. php-glyph-ocr ignores it.
      */
-    public static function create(?OcrEngineName $engine = null, string $tesseractLanguage = "eng",
+    public static function create(?OcrEngineName $engine = null, OcrLanguage|string $tesseractLanguage = "eng",
                                   string $tesseractProgram = "tesseract"): OcrEngine
     {
         return match (self::choose($engine, $tesseractProgram)) {

@@ -8,6 +8,7 @@ An **image cue** is a cue with a PNG image in the format data key `image`. It ha
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
+use SubtitleToolbox\Ocr\OcrLanguage;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\WriteOptions;
@@ -16,6 +17,7 @@ $image = CueImage::fromCue($cue);                    // $image->png, x, y, width
 file_put_contents('cue.png', $image->png);
 
 $subtitle->recognizeText(new GlyphOcrEngine());      // sets the lines of each image cue without text
+$subtitle->recognizeText($engine, OcrLanguage::German);   // the engine receives 'deu'
 $subtitle->toString(Format::SubRip);
 
 $subtitle->toString(Format::SubRip, new WriteOptions(skipImageCues: true));   // drops image cues without text
@@ -23,7 +25,7 @@ $subtitle->toString(Format::SubRip, new WriteOptions(skipImageCues: true));   //
 
 - **Text formats**: `toString()` throws `ImageCueWithoutTextException` for an image cue without text. So a file without OCR fails at once, and does not become a valid file with missing cues.
 - **After OCR**: the cue keeps its image, so `PgsFormatter` can still write it.
-- **Language**: `recognizeText()` passes the language code to the engine as it is. Use a code that the engine knows, for example `eng` for Tesseract.
+- **Language**: pass an `OcrLanguage` case, for example `OcrLanguage::German`. The engine receives its value, the Tesseract model name `deu`. A string such as `'deu+eng'` or the name of a custom trained model reaches the engine as it is.
 - **Confidence**: `(new OcrRunner($engine))->run($subtitle, 'eng')` does the same as `recognizeText()`. It returns an `OcrReport` whose `texts` hold the `RecognizedText` of each cue by cue index.
 - **Forced flag**: `CueImage::toCue()` sets the forced flag of the cue from the `forced` field of the image. OCR keeps the flag.
 - **PNG**: `PngEncoder::encode($width, $height, $pixels)` makes a PNG from a list of `0xRRGGBBAA` integers. It needs no ext-gd. It compresses with ext-zlib when it is loaded, and else writes larger, uncompressed PNG files. `PngDecoder::decode($png)` returns the width, the height and the pixels of a PNG without interlacing. It needs ext-zlib.
@@ -86,11 +88,13 @@ $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);  // "de", from the id line
 ```php
 use SubtitleToolbox\Ocr\OcrEngineChooser;
 use SubtitleToolbox\Ocr\OcrEngineName;
+use SubtitleToolbox\Ocr\OcrLanguage;
 
-$subtitle->recognizeText(OcrEngineChooser::create());                       // Tesseract in English, or php-glyph-ocr
-$subtitle->recognizeText(OcrEngineChooser::create(null, 'deu+eng'));        // Tesseract in German and English
-$subtitle->recognizeText(OcrEngineChooser::create(OcrEngineName::Glyph));   // always php-glyph-ocr
-OcrEngineChooser::choose();                                                 // OcrEngineName::Tesseract or OcrEngineName::Glyph
+$subtitle->recognizeText(OcrEngineChooser::create());                            // Tesseract in English, or php-glyph-ocr
+$subtitle->recognizeText(OcrEngineChooser::create(null, OcrLanguage::German));   // Tesseract in German
+$subtitle->recognizeText(OcrEngineChooser::create(null, 'deu+eng'));             // Tesseract in German and English
+$subtitle->recognizeText(OcrEngineChooser::create(OcrEngineName::Glyph));        // always php-glyph-ocr
+OcrEngineChooser::choose();                                                      // OcrEngineName::Tesseract or OcrEngineName::Glyph
 ```
 
 - **Missing engines**: `choose()` and `create()` throw `InvalidArgumentException` when neither engine is installed, or when the forced engine is missing. The message holds the install commands. For a missing Tesseract language, see [Tesseract](#tesseract).
@@ -121,19 +125,21 @@ winget install UB-Mannheim.TesseractOCR          # Windows, then add its folder 
 ```
 
 ```php
+use SubtitleToolbox\Ocr\OcrLanguage;
 use SubtitleToolbox\Ocr\TesseractOcrEngine;
 use SubtitleToolbox\Ocr\TesseractOcrOptions;
 
 $subtitle->recognizeText(new TesseractOcrEngine());                                          // English
+$subtitle->recognizeText(new TesseractOcrEngine(new TesseractOcrOptions(OcrLanguage::German)));  // German
 $subtitle->recognizeText(new TesseractOcrEngine(new TesseractOcrOptions(language: 'deu+eng')));  // German and English
-$subtitle->recognizeText(new TesseractOcrEngine(), 'rus');                                   // the language of recognizeText() wins
+$subtitle->recognizeText(new TesseractOcrEngine(), OcrLanguage::Russian);                    // the language of recognizeText() wins
 $subtitle->recognizeText(new TesseractOcrEngine(new TesseractOcrOptions(program: 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe')));
 ```
 
-- **Languages**: pass [Tesseract language codes](https://tesseract-ocr.github.io/tessdoc/Data-Files-in-different-versions.html), joined with `+`. The English data comes with the program, except on Alpine. Each other language is a package, for example `tesseract-ocr-rus`.
+- **Languages**: `OcrLanguage` has a case for each language model of the official [tessdata set](https://tesseract-ocr.github.io/tessdoc/Data-Files-in-different-versions.html), for example `OcrLanguage::SerbianLatin` for `srp_latn`. For two or more languages, pass the model names as a string joined with `+`, for example `'deu+eng'`. The English data comes with the program, except on Alpine. Each other language is a package, for example `tesseract-ocr-rus`.
 - **Missing program or language**: every `recognize()` call checks its language against the installed languages. The engine checks the program and reads the installed languages once per program path. A missing program or language throws `InvalidArgumentException` with the install commands, or with the list of installed languages. A failed run of `tesseract` throws `OcrException`.
 - **Images**: the engine draws each cue image on black, inverts it to dark text on white, and adds a 10-pixel white border. It writes the result to a temporary PGM file and deletes the file after the call.
-- **Options**: `TesseractOcrOptions` holds the settings. `language` is the language for cues where `recognizeText()` passes none, default `eng`. `program` is the path of `tesseract`. `pageSegmentationMode` is the `--psm` value, default 6, one block of text. `scale` from 1 to 8 scales the image up, default 2 on screens below 720 lines and 1 above. `invert` and `threshold` change the image steps. The defaults read the test files with the fewest errors: scaling DVD text by 2 and inverting fixed the errors on small text, a threshold added errors.
+- **Options**: `TesseractOcrOptions` holds the settings. `language` is the language for cues where `recognizeText()` passes none, default `eng`. The constructor takes an `OcrLanguage` case or a string, and the property holds the string. `program` is the path of `tesseract`. `pageSegmentationMode` is the `--psm` value, default 6, one block of text. `scale` from 1 to 8 scales the image up, default 2 on screens below 720 lines and 1 above. `invert` and `threshold` change the image steps. The defaults read the test files with the fewest errors: scaling DVD text by 2 and inverting fixed the errors on small text, a threshold added errors.
 - **Lines and confidence**: each Tesseract text line becomes one line. The confidence is the mean word confidence of the cue, from 0 to 1, or null for a cue without text.
 - **Italic**: Tesseract 4 and later do not report italic text, so the lines have no `<i>` tags.
 - **Speed**: each cue starts one `tesseract` process. Loading the language model takes about 110 ms of each call.
@@ -242,5 +248,6 @@ final class WebServiceEngine implements OcrEngine
 $subtitle->recognizeText(new WebServiceEngine(), 'eng');
 ```
 
+- **Language**: the engine receives a model name string or null. `recognizeText()` and `OcrRunner` turn an `OcrLanguage` case into its value first.
 - **Lines**: the engine returns plain text or core markup, for example `<i>` for italic text. Empty lines are dropped.
 - **Confidence**: pass a value from 0 to 1 as the second argument of `RecognizedText`, or leave it null.

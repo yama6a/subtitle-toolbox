@@ -68,6 +68,21 @@ class OcrRunnerTest extends TestCase
     }
 
 
+    public function testAnOcrLanguageCaseAndItsModelNameReachTheEngineAsTheSameString(): void
+    {
+        $engine = new FakeOcrEngine();
+
+        $this->makeSubtitle()->recognizeText($engine, OcrLanguage::German);
+        $this->makeSubtitle()->recognizeText($engine, "deu");
+        (new OcrRunner($engine))->run($this->makeSubtitle(), OcrLanguage::ChineseSimplified);
+        (new OcrRunner($engine))->run($this->makeSubtitle(), "chi_sim");
+        (new OcrRunner($engine))->run($this->makeSubtitle(), "my_custom_model");
+
+        $this->assertSame(["deu", "deu", "deu", "deu", "chi_sim", "chi_sim", "chi_sim", "chi_sim", "my_custom_model",
+                           "my_custom_model"], array_column($engine->calls, "language"));
+    }
+
+
     public function testRunWithoutImageCuesDoesNotCallTheEngine(): void
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "Text"));

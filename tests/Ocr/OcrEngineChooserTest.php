@@ -52,6 +52,19 @@ class OcrEngineChooserTest extends TestCase
     }
 
 
+    public function testCreatesTesseractWithAnOcrLanguageCaseAsItsModelName(): void
+    {
+        $fromCase   = OcrEngineChooser::create(null, OcrLanguage::German, self::FAKE);
+        $fromString = OcrEngineChooser::create(null, "deu", self::FAKE);
+        $image      = new CueImage(PngEncoder::encode(1, 1, [0]), 0, 0, 1, 1, 1920, 1080);
+
+        $this->assertSame("deu psm6", $fromCase->recognize($image, null)->lines[0]);
+        $this->assertSame($fromString->recognize($image, null)->lines, $fromCase->recognize($image, null)->lines);
+        $this->assertSame("deu", (new TesseractOcrOptions(OcrLanguage::German))->language);
+        $this->assertSame("deu+eng", (new TesseractOcrOptions(language: "deu+eng"))->language);
+    }
+
+
     public function testForcedTesseractThrowsWhenItIsMissing(): void
     {
         $this->expectException(InvalidArgumentException::class);

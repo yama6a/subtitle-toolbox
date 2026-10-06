@@ -16,9 +16,13 @@ final class OcrRunner
 
     /**
      * Sets the lines of every image cue without text to the text that the engine reads, and keeps the images.
+     *
+     * @param OcrLanguage|string|null $language An OcrLanguage case, or the name of any installed Tesseract model, for
+     *                                          example a custom trained model. php-glyph-ocr ignores it.
      */
-    public function run(Subtitle $subtitle, ?string $language = null): OcrReport
+    public function run(Subtitle $subtitle, OcrLanguage|string|null $language = null): OcrReport
     {
+        $language = $language instanceof OcrLanguage ? $language->value : $language;
         $results = [];
         foreach ($subtitle->getCues() as $cueIndex => $cue) {
             if (CueImage::isImageCue($cue) && $cue->getLines() === []) {
