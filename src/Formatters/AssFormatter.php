@@ -202,7 +202,7 @@ final class AssFormatter extends SubtitleFormatter
             $parts[] = ["tag", $isSsa ? "\\a" . self::LEGACY_ALIGNMENTS[$cue->getAlignment()] : "\\an" . $cue->getAlignment()];
         }
 
-        $tokens = $stripAll ? [Markup::stripAllTags($text)] : preg_split('/(<[^>]*>)/', $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+        $tokens = $stripAll ? [Markup::stripAllTags($text)] : Markup::splitTags($text);
         $parts  = [...$parts, ...$this->convertTokens($tokens, $cue, $karaokeTag)];
 
         $output = "";
@@ -225,7 +225,7 @@ final class AssFormatter extends SubtitleFormatter
 
 
     /**
-     * @param list<string> $tokens text and core markup tags
+     * @param list<string> $tokens text runs at the even indexes and core markup tags at the odd indexes
      *
      * @return list<array{string, string}> override tags and escaped text
      */
@@ -239,9 +239,11 @@ final class AssFormatter extends SubtitleFormatter
 
         $colors         = [];
         $timestampIndex = 0;
-        foreach ($tokens as $token) {
-            if (!str_starts_with($token, "<")) {
-                $parts[] = ["text", $this->escapeText(Markup::decodeEntities($token))];
+        foreach ($tokens as $index => $token) {
+            if ($index % 2 === 0) {
+                if ($token !== "") {
+                    $parts[] = ["text", $this->escapeText(Markup::decodeEntities($token))];
+                }
             } elseif (preg_match('/^<(\/?)([bius])>$/', $token, $matches)) {
                 $parts[] = ["tag", "\\" . $matches[2] . ($matches[1] === "" ? "1" : "0")];
             } elseif (preg_match('/^<font\b[^>]*>$/i', $token)) {
@@ -274,11 +276,11 @@ final class AssFormatter extends SubtitleFormatter
         $startCs    = (int) round($cue->getStart() * 100);
         $times      = [];
         $textBefore = false;
-        foreach ($tokens as $token) {
-            $seconds = Markup::wordTimestampSeconds($token);
+        foreach ($tokens as $index => $token) {
+            $seconds = $index % 2 === 1 ? Markup::wordTimestampSeconds($token) : null;
             if ($seconds !== null) {
                 $times[] = max($startCs, (int) round($seconds * 100));
-            } elseif ($times === [] && !str_starts_with($token, "<") && trim($token) !== "") {
+            } elseif ($times === [] && $index % 2 === 0 && trim($token) !== "") {
                 $textBefore = true;
             }
         }

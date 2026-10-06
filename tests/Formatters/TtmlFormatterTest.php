@@ -104,6 +104,18 @@ class TtmlFormatterTest extends TestCase
     }
 
 
+    public function testKeepsTextThatLooksLikeATag(): void
+    {
+        $output = (new Subtitle())->addCue(new SubtitleCue(1, 2, ["a < b > c", "<i>a</i>< b > c"]))->toString(Format::Ttml);
+
+        $this->assertStringContainsString(
+            "<p begin=\"00:00:01.000\" end=\"00:00:02.000\" region=\"bottomCenter\">a &lt; b &gt; c<br/>"
+            . "<span tts:fontStyle=\"italic\">a</span>&lt; b &gt; c</p>",
+            $output
+        );
+    }
+
+
     public function testDfxpFileKeepsItsNamespaceAndAgents(): void
     {
         $dfxp     = "<tt xmlns=\"http://www.w3.org/2006/10/ttaf1\" xmlns:m=\"http://www.w3.org/2006/10/ttaf1#metadata\""

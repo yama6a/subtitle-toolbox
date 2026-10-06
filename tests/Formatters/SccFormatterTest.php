@@ -103,6 +103,15 @@ class SccFormatterTest extends TestCase
     }
 
 
+    public function testKeepsTextThatLooksLikeATag(): void
+    {
+        $output = $this->subtitle(new SubtitleCue(2.0, 4.0, "a < b > c"))->toString(Format::Scc);
+
+        $this->assertStringContainsString("6120 bc20 6220 3e20 e380", $output);
+        $this->assertSame(["a &lt; b &gt; c"], Subtitle::fromString($output, Format::Scc)->getCues()[0]->getLines());
+    }
+
+
     public static function alignmentProvider(): array
     {
         return [

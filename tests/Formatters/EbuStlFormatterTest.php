@@ -111,6 +111,8 @@ class EbuStlFormatterTest extends TestCase
             "other colours dropped"  => ["<font color=\"#123456\">dark</font> text", "dark text"],
             "open tags closed"       => ["<i><b>bold</b> italic", "\x80bold italic\x81"],
             "entities decoded"       => ["a &lt; b &amp; c", "a < b & c"],
+            "text like a tag"        => ["a < b > c", "a < b > c"],
+            "text like a tag at end" => ["<i>a</i>< b > c", "\x80a\x81< b > c"],
             "dollar and currency"    => ["$5 or 5\u{00A4}", "\xA45 or 5\x24"],
             "outside the table"      => ["\u{4E2D} ok", "? ok"],
         ];

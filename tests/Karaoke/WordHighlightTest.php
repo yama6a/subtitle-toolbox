@@ -56,6 +56,17 @@ class WordHighlightTest extends TestCase
     }
 
 
+    public function testKeepsTextThatLooksLikeATag(): void
+    {
+        $karaoke = self::expand(
+            TestSubtitles::fromCues([new SubtitleCue(0, 1, "<00:00:00.000>a <00:00:00.500>< b > c")]),
+            new WordHighlightOptions(style: "u")
+        );
+
+        $this->assertSame(["<u>a</u> < b > c", "a <u>< b > c</u>"], array_column(TestSubtitles::describe($karaoke), 2));
+    }
+
+
     public function testApplyChangesTheInputAndReportsTheCueCounts(): void
     {
         $subtitle = TestSubtitles::fromCues([new SubtitleCue(0, 1.6, self::BEACH)]);

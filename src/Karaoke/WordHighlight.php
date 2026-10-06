@@ -91,14 +91,14 @@ final class WordHighlight
         $times = [];
         foreach ($cue->getLines() as $line) {
             $items  = [];
-            $tokens = preg_split('/(<[^>]*>)/', $line, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
-            foreach ($tokens as $token) {
-                $time = Markup::wordTimestampSeconds($token);
+            foreach (Markup::splitTags($line) as $index => $token) {
+                $isTag = $index % 2 === 1;
+                $time  = $isTag ? Markup::wordTimestampSeconds($token) : null;
                 if ($time !== null) {
                     $times[] = $time;
-                } elseif (str_starts_with($token, "<")) {
+                } elseif ($isTag) {
                     $items[] = ["tag", $token, count($times) - 1];
-                } else {
+                } elseif ($token !== "") {
                     $items[] = ["text", $token, count($times) - 1];
                 }
             }

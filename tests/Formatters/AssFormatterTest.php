@@ -143,6 +143,8 @@ class AssFormatterTest extends TestCase
             "last tag of a kind wins" => [["<b>a</b><b>b</b>"], "{\\b1}a{\\b1}b{\\b0}"],
             "other tags are stripped" => [["<c.yellow>a</c> <lang en>b</lang>"], "a b"],
             "entities are decoded"    => [["1 &lt; 2 &amp;&amp; 3&nbsp;&gt; 2"], "1 < 2 && 3\\h> 2"],
+            "text like a tag"         => [["a < b > c"], "a < b > c"],
+            "text like a tag after"   => [["<i>a</i>< b > c"], "{\\i1}a{\\i0}< b > c"],
             "speaker"                 => [["<v.loud Fred, Jr.>Hi", "there"], "Hi\\Nthere", "Fred Jr."],
         ];
     }
