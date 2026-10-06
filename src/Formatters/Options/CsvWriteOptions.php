@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters\Options;
 
 use SubtitleToolbox\FrameRate;
-use SubtitleToolbox\Parsers\CsvParser;
+use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Subtitle;
 
 /**
@@ -22,7 +22,7 @@ final class CsvWriteOptions implements FormatWriteOptions
         public readonly bool $escapeFormulas = false,        // puts ' before a cell that starts with =, +, - or @
     ) {
         if ($delimiter !== null) {
-            CsvParser::checkDelimiter($delimiter);
+            CsvReadOptions::checkDelimiter($delimiter);
         }
         if ($frameRate !== null) {
             FrameRate::check($frameRate, "The CSV frame rate must be greater than 0, got %s.");

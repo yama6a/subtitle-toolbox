@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
@@ -20,19 +19,7 @@ final class CsvParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::Csv->value;
 
-    /** @internal */
-    public const DELIMITERS = [",", ";", "\t"];
-
     private CsvColumns $columns;
-
-
-    /** @internal */
-    public static function checkDelimiter(mixed $delimiter): void
-    {
-        if (!in_array($delimiter, self::DELIMITERS, true)) {
-            throw new InvalidArgumentException("The CSV delimiter must be \",\", \";\" or a tab.");
-        }
-    }
 
 
     protected static function formatOptionsClass(): string
@@ -112,7 +99,7 @@ final class CsvParser extends SubtitleParser
      */
     private static function detectDelimiter(string $content): string
     {
-        $counts = array_fill_keys(self::DELIMITERS, 0);
+        $counts = array_fill_keys(CsvReadOptions::DELIMITERS, 0);
         $quoted = false;
         $length = strlen($content);
         for ($i = 0; $i < $length; $i++) {
