@@ -23,15 +23,7 @@ The library needs PHP 8.2 or later with `ext-dom` and `ext-iconv`. These extensi
 - `ext-zlib` for PGS output and compressed MKV tracks
 - `ext-curl` for the DeepL and Google translation engines
 
-The command line tool also comes as a PHAR file and as two container images. The `-tesseract` image includes Tesseract for OCR.
-
-```sh
-curl -fsSLO https://github.com/yama6a/subtitle-toolbox/releases/latest/download/subtitle-toolbox.phar
-php subtitle-toolbox.phar formats
-
-docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox convert movie.srt --to vtt -o movie.vtt
-docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:tesseract convert movie.sup --to srt -o movie.srt --ocr
-```
+The command line tool also comes as a PHAR file and as two container images. The `-tesseract` image includes Tesseract for OCR. See [Install without Composer](docs/cli.md#install-without-composer) for the commands.
 
 ## Supported formats
 | Format | Case | Name | Extensions | Read | Write | Notes |

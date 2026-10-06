@@ -28,11 +28,11 @@ $subtitle->toString(Format::SubRip, new WriteOptions(skipImageCues: true));   //
 - **Confidence**: `(new OcrRunner($engine))->run($subtitle, 'eng')` does the same as `recognizeText()`. It returns an `OcrReport` whose `texts` hold the `RecognizedText` of each cue by cue index.
 - **Forced flag**: `CueImage::toCue()` sets the forced flag of the cue from the `forced` field of the image. OCR keeps the flag.
 - **PNG**: `PngEncoder::encode($width, $height, $pixels)` makes a PNG from a list of `0xRRGGBBAA` integers. It needs no ext-gd. It compresses with ext-zlib when it is loaded. Otherwise it writes larger, uncompressed PNG files. `PngDecoder::decode($png)` returns the width, the height and the pixels of a PNG without interlacing. It needs ext-zlib.
-- **Size limit**: an image is at most 7,680 pixels wide or high and has at most 8,294,400 pixels, the pixels of a 3840x2160 frame. A larger PGS object or VobSub bitmap throws `ParsingException`. `new CueImage()` and `PngDecoder::decode()` throw `InvalidArgumentException`. The limits are `CueImage::MAX_SIDE` and `CueImage::MAX_PIXELS`. A full 3840x2160 image needs about 330 MB of PHP memory to encode and decode, so raise `memory_limit` for such files.
+- **Size limit**: an image is at most 7,680 pixels wide or high. It has at most 8,294,400 pixels, the pixels of a 3840x2160 frame. A larger PGS object or VobSub bitmap throws `ParsingException`. `new CueImage()` and `PngDecoder::decode()` throw `InvalidArgumentException`. The limits are `CueImage::MAX_SIDE` and `CueImage::MAX_PIXELS`. A full 3840x2160 image needs about 330 MB of PHP memory to encode and decode, so raise `memory_limit` for such files.
 - **Text errors**: [common error fixes](text.md#fixing-common-errors) correct OCR errors such as `lt's` for `It's`.
 
 ## PGS
-Blu-ray discs and many MKV files store subtitles as PGS bitmaps in `.sup` files.
+Blu-ray discs and many MKV files store subtitles as PGS bitmaps in `.sup` files. A **display set** is the group of PGS segments that changes the screen at one time.
 
 ```php
 use SubtitleToolbox\Format;
@@ -67,9 +67,9 @@ use SubtitleToolbox\Subtitle;
 
 $sub      = file_get_contents('movie.sub');
 $idx      = file_get_contents('movie.idx');
-$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions($idx)));                   // first track
-$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions($idx, language: 'de')));   // first track with "id: de"
-$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions($idx, track: 1)));         // track with "index: 1"
+$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions(idx: $idx)));                   // first track
+$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions(idx: $idx, language: 'de')));   // first track with "id: de"
+$subtitle = Subtitle::fromString($sub, Format::VobSub, new ReadOptions(format: new VobSubReadOptions(idx: $idx, track: 1)));         // track with "index: 1"
 
 $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);  // "de", from the id line
 ```
@@ -96,8 +96,8 @@ $subtitle->recognizeText(OcrEngineChooser::create(OcrEngineName::Glyph));       
 OcrEngineChooser::choose();                                                      // OcrEngineName::Tesseract or OcrEngineName::Glyph
 ```
 
-- **Missing engines**: `choose()` and `create()` throw `InvalidArgumentException` when neither engine is installed, or when the forced engine is missing. The message holds the install commands. For a missing Tesseract language, see [Tesseract](#tesseract).
-- **Program path**: the third argument of `create()` and the second of `choose()` is the path of the `tesseract` program, default `tesseract` on the `PATH`.
+- **Missing engines**: `choose()` and `create()` throw `InvalidArgumentException` when neither engine is installed, or when the engine that the first argument names is missing. The message holds the install commands. For a missing Tesseract language, see [Tesseract](#tesseract).
+- **Program path**: the third argument of `create()` and the second argument of `choose()` set the path of the `tesseract` program. The default is `tesseract` on the `PATH`.
 
 | | Tesseract | php-glyph-ocr |
 |:--- |:--- |:--- |
@@ -110,7 +110,7 @@ OcrEngineChooser::choose();                                                     
 | Italic | not detected | detected, as `<i>` |
 | Memory | about 35 MB in the `tesseract` process | about 76 MB for the database |
 
-The test files are the generated fixtures in `tests/files/pgs` and `tests/files/vobsub`, read with Tesseract 5.5.0 and its fast models on an x86-64 machine. The times include the start of the engine. Real files with other fonts give lower numbers for both engines.
+The test files are the generated fixtures in `tests/files/pgs` and `tests/files/vobsub`. Tesseract 5.5.0 reads them with the `tessdata_fast` models, the fast and small model set, on an x86-64 machine. The times include the start of the engine. Real files with other fonts give lower numbers for both engines.
 
 ## Tesseract
 `TesseractOcrEngine` runs the [Tesseract](https://github.com/tesseract-ocr/tesseract) program, an open-source OCR engine under Apache-2.0. PHP starts it as a separate process with `proc_open`, so it needs no PHP extension.
@@ -135,10 +135,10 @@ $subtitle->recognizeText(new TesseractOcrEngine(), OcrLanguage::Russian);       
 $subtitle->recognizeText(new TesseractOcrEngine(new TesseractOcrOptions(program: 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe')));
 ```
 
-- **Languages**: `OcrLanguage` has a case for each language model of the official [tessdata set](https://tesseract-ocr.github.io/tessdoc/Data-Files-in-different-versions.html), for example `OcrLanguage::SerbianLatin` for `srp_latn`. For two or more languages, pass the model names as a string joined with `+`, for example `'deu+eng'`. The English data comes with the program, except on Alpine. Each other language is a package, for example `tesseract-ocr-rus`.
+- **Languages**: `OcrLanguage` has a case for each language model of the official [tessdata set](https://tesseract-ocr.github.io/tessdoc/Data-Files-in-different-versions.html), for example `OcrLanguage::SerbianLatin` for `srp_latn`. For two or more languages, pass the model names as a string joined with `+`, for example `'deu+eng'`. The English data comes with the program, except on Alpine. On Debian and Ubuntu, each other language is a package, for example `tesseract-ocr-rus`. On macOS, `tesseract-lang` holds all languages.
 - **Missing program or language**: every `recognize()` call checks its language against the installed languages. The engine checks the program and reads the installed languages once per program path. A missing program or language throws `InvalidArgumentException` with the install commands, or with the list of installed languages. A failed run of `tesseract` throws `OcrException`.
-- **Images**: the engine draws each cue image on black, inverts it to dark text on white, and adds a 10-pixel white border. It writes the result to a temporary PGM file and deletes the file after the call.
-- **Options**: `TesseractOcrOptions` holds the settings. `language` is the language for cues where `recognizeText()` passes none, default `eng`. The constructor takes an `OcrLanguage` case or a string, and the property holds the string. `program` is the path of `tesseract`. `pageSegmentationMode` is the `--psm` value, default 6, one block of text. `scale` from 1 to 8 scales the image up, default 2 on screens below 720 lines and 1 above. `invert` and `threshold` change the image steps. The defaults read the test files with the fewest errors: scaling DVD text by 2 and inverting fixed the errors on small text, a threshold added errors.
+- **Images**: the engine turns each cue image into dark text on white and passes it to Tesseract in a temporary file.
+- **Options**: `TesseractOcrOptions` holds the settings. `language` is the language for cues where `recognizeText()` passes none, default `eng`. The constructor takes an `OcrLanguage` case or a string, and the property holds the string. `program` is the path of `tesseract`. `pageSegmentationMode` is the `--psm` value, default 6, one block of text. `scale` from 1 to 8 scales the image up, default 2 on screens below 720 lines and 1 above. `invert` and `threshold` change the image before Tesseract reads it. The defaults give the fewest errors on the test files.
 - **Lines and confidence**: each Tesseract text line becomes one line. The confidence is the mean word confidence of the cue, from 0 to 1, or null for a cue without text.
 - **Italic**: Tesseract 4 and later do not report italic text, so the lines have no `<i>` tags.
 - **Speed**: each cue starts one `tesseract` process. Loading the language model takes about 110 ms of each call.
@@ -162,14 +162,14 @@ file_put_contents('movie.srt', $subtitle->toString(Format::SubRip));
 
 - **Package**: without php-glyph-ocr, `new GlyphOcrEngine()` throws `InvalidArgumentException` with the `composer require` command.
 - **Version**: the library works with php-glyph-ocr 0.3. The `conflict` entry of `composer.json` stops Composer from installing an older or a 0.4 or later version next to it.
-- **Database**: `GlyphOcrOptions::$database` is a `GlyphOcr\GlyphDatabase`. `GlyphDatabase::subtitleFonts()` holds glyphs of DejaVu Sans, Liberation Sans and Noto Sans, upright and italic, and then the Latin database of Subtitle Edit for other fonts. Liberation Sans has the metrics of Arial. The database takes about 76 MB of memory, so engines that exist at the same time share one copy.
+- **Database**: `GlyphOcrOptions::$database` is a `GlyphOcr\GlyphDatabase`. `GlyphDatabase::subtitleFonts()` holds upright and italic glyphs of DejaVu Sans, Liberation Sans and Noto Sans. For other fonts, it adds the Latin database of Subtitle Edit. Liberation Sans has the metrics of Arial. The database takes about 76 MB of memory, so engines that exist at the same time share one copy.
 - **Subtitle Edit output**: `new GlyphOcrEngine(new GlyphOcrOptions(database: GlyphDatabase::latin(), lineContext: false))` reads the text as the nOCR engine of Subtitle Edit does.
 - **Options**: the constructor takes a `GlyphOcrOptions`. Each field except `database` sets the parameter of the same name of `GlyphOcr\Recognizer` in php-glyph-ocr 0.3, with the same default. An invalid value throws `InvalidArgumentException` in the `GlyphOcrOptions` constructor. A recognizer error on an image throws `OcrException`.
 
 | Field | Default | Allowed values | Effect |
 |:--- |:--- |:--- |:--- |
 | `database` | null | a `GlyphDatabase` or null | the glyphs to match. Null is `GlyphDatabase::subtitleFonts()` |
-| `inkThreshold` | 200 | 1 to 765 | a pixel is ink when the sum of its premultiplied red, green and blue is at least this. A dark outline is no ink |
+| `inkThreshold` | 200 | 1 to 765 | a pixel is ink when the sum of its red, green and blue, each multiplied by alpha, is at least this. A dark outline is no ink |
 | `spaceWidth` | null | 1 or more, or null | the empty columns between two glyphs that make a space. Null derives it from the glyph height of each line |
 | `maxWrongPixels` | 25 | 0 or more | the pixels that a loose match may get wrong |
 | `fixLatinCase` | true | true or false | picks upper or lower case for letters such as o and O from their height |
@@ -190,10 +190,10 @@ $subtitle->recognizeText(new GlyphOcrEngine(new GlyphOcrOptions(italicSlant: 0.2
 - **Italic**: a word becomes italic when most of its characters match italic glyphs.
 - **Language**: the engine ignores the language argument. The database sets the characters it knows.
 - **Confidence**: the `RecognizedText` confidence is the mean confidence of the glyphs of the cue. A glyph that matches nothing reads as `unknownText` with confidence 0.
-- **I and l**: most sans-serif fonts draw capital I and lower case l as the same bar. The engine compares each bar with the capitals and the ascenders of its line, so it reads both letters correctly in the test files. The option `GlyphOcrOptions::$lineContext` controls this and is on by default. Fix remaining errors with [`CommonErrorFixer`](text.md#fixing-common-errors).
+- **I and l**: most sans-serif fonts draw capital I and lower case l as the same bar. The engine compares each bar with the capitals and the ascenders of its line. So it reads both letters correctly in the test files. The option `GlyphOcrOptions::$lineContext` controls this and is on by default. Fix remaining errors with [`CommonErrorFixer`](text.md#fixing-common-errors).
 - **Limits**: the text must have one color on a transparent or dark background.
-- **Accuracy**: the default database reads the 1080p Blu-ray test file in Liberation Sans with 100% correct characters, and small DVD text with 98%. Other fonts give more errors. Training a database for the font of your file fixes most of them.
-- **Speed and memory**: OCR of a 1,500-cue 1080p PGS file takes about 2 minutes on one core with PHP 8.5. It needs up to 170 MB of memory. Raise `memory_limit` above the default 128 MB for a long file.
+- **Accuracy**: the default database reads the 1080p Blu-ray test file in Liberation Sans with 100% correct characters. It reads the 576p DVD test file with 98.5%. Other fonts give more errors. Training a database for the font of your file fixes most of them.
+- **Speed and memory**: OCR of a 1,500-cue 1080p PGS file takes about 2 minutes on one core with PHP 8.5. It needs up to 170 MB of memory. Raise `memory_limit` above the default 128 MB for such a file.
 
 ### Training a database
 Train a glyph from a sample that a person confirmed. Then save the database and pass it to the engine:
@@ -248,5 +248,5 @@ $subtitle->recognizeText(new WebServiceEngine(), 'eng');
 ```
 
 - **Language**: the engine receives a model name string or null. `recognizeText()` and `OcrRunner` turn an `OcrLanguage` case into its value first.
-- **Lines**: the engine returns plain text or core markup, for example `<i>` for italic text. Empty lines are dropped.
+- **Lines**: the engine returns plain text or core markup, for example `<i>` for italic text. The library drops empty lines.
 - **Confidence**: pass a value from 0 to 1 as the second argument of `RecognizedText`, or leave it null.
