@@ -102,6 +102,13 @@ abstract class WriteCommand extends FileCommand
         if ($this->output !== null && $arguments->has("output-dir")) {
             self::fail("Pass only one of --output and --output-dir.");
         }
+        self::checkOutputDirectory($arguments->value("output-dir"));
+        if ($this->output !== null && str_ends_with($this->output, "/")) {
+            self::fail("The output $this->output ends with a slash. Pass a file name, or pass --output-dir $this->output.");
+        }
+        if ($this->output !== null && $this->output !== self::DASH && is_dir(self::realTarget($this->output))) {
+            self::fail("The output $this->output is a directory. Pass --output-dir $this->output.");
+        }
         if ($this->output !== null && $this->toFormat !== null && $this->output !== self::DASH) {
             $named = Format::fromPath($this->output);
             if ($named !== null && !in_array(strtolower(pathinfo($this->output, PATHINFO_EXTENSION)), $this->toFormat->extensions(), true)) {
@@ -157,7 +164,7 @@ abstract class WriteCommand extends FileCommand
             if (isset($writers[$real])) {
                 self::fail("$writers[$real] and $input would both write $target. Pass them in two runs.");
             }
-            $this->checkNewFile($target, $real, "The output $target");
+            $this->checkNewFile($real, "The output $target");
             $writers[$real]               = $input;
             $this->plannedTargets[$input] = $real;
         }
@@ -166,21 +173,21 @@ abstract class WriteCommand extends FileCommand
             if (isset($writers[$real])) {
                 self::fail("The --$option file $path is also the output of $writers[$real].");
             }
-            $this->checkNewFile($path, $real, "The --$option file $path");
+            $this->checkNewFile($real, "The --$option file $path");
             $writers[$real] = "--$option";
         }
     }
 
 
     /**
-     * Fails when the file $path, with the real path $real, is a file that the command reads or exists.
+     * Fails when the output $name, with the real path $real, is a file that the command reads or exists.
      */
-    private function checkNewFile(string $path, string $real, string $name): void
+    private function checkNewFile(string $real, string $name): void
     {
         if (in_array($real, $this->readPaths, true)) {
             self::fail("$name is a file that the command reads. Pass another output file or directory.");
         }
-        if (OutputFiles::exists($path)) {
+        if (OutputFiles::exists($real)) {
             self::fail("$name exists. The tool never overwrites a file. Remove it, or pass another output file or directory.");
         }
     }
@@ -348,7 +355,7 @@ abstract class WriteCommand extends FileCommand
         if (in_array($real, $this->plannedTargets, true)) {
             self::fail("The output $target is also the output of another input.");
         }
-        $this->checkNewFile($target, $real, "The output $target");
+        $this->checkNewFile($real, "The output $target");
     }
 
 

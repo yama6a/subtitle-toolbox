@@ -80,7 +80,19 @@ php subtitle-toolbox.phar --version
 - **Output format**: `--to FORMAT`. `convert` requires it, also when the format stays the same, for example `convert movie.srt --to srt --timing-fix-overlaps`. Without `--to`, `retime`, `sync` and `translate` keep the input format, and `dual` keeps the format of the primary file.
 - **Output extension**: the extension of `-o` never picks the format. An extension of another format than `--to` fails with exit code 2, for example `convert movie.srt --to srt -o movie.vtt`. An extension of no format, such as `.bak`, works.
 - **Never overwrite**: no command overwrites a file. This covers subtitle outputs, the files of `--mute-edl` and `--mute-filter`, and the `hls` playlist and segments.
-- **Check before the work**: before it reads the first input, the tool collects every output path. It fails with exit code 2 and writes nothing when an output exists, when 2 inputs would write the same output, or when an output is a file that the command reads. The `.sub` file of a VobSub input and the files of options such as `--mask-words` and `--reference` count as read files. A file passed twice, such as `movie.srt ./movie.srt`, counts once.
+- **Check before the work**: before it reads the first input, the tool collects every output path. It fails with exit code 2 and writes nothing in these cases:
+
+| Case | Example |
+|:--- |:--- |
+| an output exists | `-o movie.vtt` with an existing `movie.vtt` |
+| 2 inputs would write the same output | `a/movie.srt b/movie.srt --output-dir out` |
+| an output is a file that the command reads | `-o movie.srt` with the input `movie.srt` |
+| `-o` ends with a slash | `-o out/` |
+| `-o` names a directory | `-o out` with an existing directory `out`. Pass `--output-dir out` |
+| `--output-dir` names a file, also for `hls` | `--output-dir movie.srt` |
+
+- **Read files**: the `.sub` file of a VobSub input and the files of options such as `--mask-words` and `--reference` count as read files. A file passed twice, such as `movie.srt ./movie.srt`, counts once.
+- **Output paths**: the tool resolves `..` in an output path before it checks the path or creates a directory. `-o new/../keep.vtt` writes `keep.vtt` and creates no directory `new`. With an existing `keep.vtt`, it fails with exit code 2.
 - **Race**: the tool creates each file with exclusive create (`fopen($path, 'x')`). When another process creates the file between the check and the write, the create fails. The tool then removes every file that it wrote in the run and exits with code 3.
 - **Standard output**: the tool does not check it. A shell redirect such as `> movie.vtt` overwrites a file. `-o -` also writes standard output.
 - **Standard input**: `-` takes `-o FILE`, not `--output-dir`. With `--output-dir`, the tool fails with exit code 2.
@@ -420,7 +432,7 @@ This writes `hls/sub0.vtt` to `hls/sub899.vtt` and `hls/subs.m3u8`.
 | `--local SECONDS` | 0 | `local`, the WebVTT cue time that maps to `--mpegts` |
 | `--media-duration SECONDS` | the end of the last cue | `mediaDuration`. Set it to the video duration, so the playlist covers the whole video |
 
-- **Overwrite**: `hls` fails with exit code 2 before it reads the input when the playlist exists, or when any file in `--output-dir` matches `--pattern`. The segment count is known only after the read, so `hls/sub950.vtt` blocks a run that writes 900 segments.
+- **Overwrite**: `hls` fails with exit code 2 before it reads the input when the playlist exists, or when any file in `--output-dir` matches `--pattern`. The playlist can be outside `--output-dir`, so `--output-dir new --playlist ../keep.txt` fails when `keep.txt` exists. The segment count is known only after the read, so `hls/sub950.vtt` blocks a run that writes 900 segments.
 - **Names**: `hls` fails with exit code 2 before it writes a file when `--playlist` matches `--pattern`, for example `--playlist sub0.vtt`. It also fails when the playlist or a segment would overwrite the input.
 
 ## OCR

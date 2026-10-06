@@ -186,10 +186,22 @@ abstract class FileCommand extends Command
 
 
     /**
+     * Fails when $directory, the value of --output-dir, names a file.
+     */
+    protected static function checkOutputDirectory(?string $directory): void
+    {
+        $real = $directory === null ? null : self::realTarget($directory);
+        if ($real !== null && OutputFiles::exists($real) && !is_dir($real)) {
+            self::fail("The --output-dir $directory is a file. Pass a directory.");
+        }
+    }
+
+
+    /**
      * Returns the real path of a file that may not exist yet: the real path of its nearest existing directory plus
      * the rest of the path.
      */
-    protected static function realTarget(string $path): string
+    public static function realTarget(string $path): string
     {
         $real = realpath($path);
         if ($real !== false) {
