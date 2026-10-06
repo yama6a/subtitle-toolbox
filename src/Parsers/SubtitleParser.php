@@ -155,6 +155,15 @@ abstract class SubtitleParser
 
 
     /**
+     * Returns true for an int or float that is finite and 0 or more. A time in a JSON format must pass it.
+     */
+    protected static function isTime(mixed $value): bool
+    {
+        return (is_int($value) || is_float($value)) && is_finite($value) && $value >= 0;
+    }
+
+
+    /**
      * Returns the lines of $content without the line endings. A line ends at LF, CR LF or CR.
      *
      * @return list<string>

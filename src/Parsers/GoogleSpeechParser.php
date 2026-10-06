@@ -73,7 +73,7 @@ final class GoogleSpeechParser extends SubtitleParser
                 $this->fail($exception, null, $index, [RawJson::encode($result)]);
                 continue;
             }
-            $previousEnd = is_int($resultEnd) || (is_float($resultEnd) && is_finite($resultEnd)) ? round($resultEnd, 3) : $end;
+            $previousEnd = self::isTime($resultEnd) ? round($resultEnd, 3) : $end;
 
             $formatData = array_diff_key($result, ["alternatives" => true]) + array_diff_key($alternative ?? [], ["transcript" => true]);
             $cue        = $this->cue($start, $end, $text, $words, null, $formatData);

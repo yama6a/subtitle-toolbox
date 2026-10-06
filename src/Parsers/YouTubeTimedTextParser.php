@@ -132,7 +132,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
     private function milliseconds(mixed $object, string $key, string $path, ?int $default = null): int|float
     {
         $value = is_array($object) ? $object[$key] ?? $default : null;
-        if (!is_int($value) && (!is_float($value) || !is_finite($value))) {
+        if (!self::isTime($value)) {
             throw new ParsingException("The field $path.$key must be a number.");
         }
 
@@ -309,7 +309,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
     private function time(DOMElement $element, string $name, ?string $default = null): float
     {
         $value = $element->hasAttribute($name) ? trim($element->getAttribute($name)) : $default;
-        if ($value === null || !is_numeric($value) || (float) $value < 0 || !is_finite((float) $value)) {
+        if ($value === null || !is_numeric($value) || !self::isTime((float) $value)) {
             throw new ParsingException("The <{$element->nodeName}> element has no valid \"$name\" attribute.", $element->getLineNo());
         }
 

@@ -33,11 +33,11 @@ final class PodcastChaptersParser extends SubtitleParser
         $chapters = [];
         foreach ($data["chapters"] as $index => $chapter) {
             $start = is_array($chapter) ? $chapter["startTime"] ?? null : null;
-            if (!is_int($start) && (!is_float($start) || !is_finite($start))) {
+            if (!self::isTime($start)) {
                 throw new ParsingException("The field chapters[$index].startTime must be a number.");
             }
             $end   = $chapter["endTime"] ?? null;
-            if ($end !== null && !is_int($end) && (!is_float($end) || !is_finite($end))) {
+            if ($end !== null && !self::isTime($end)) {
                 throw new ParsingException("The field chapters[$index].endTime must be a number.");
             }
             $title = $chapter["title"] ?? null;

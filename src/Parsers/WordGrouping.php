@@ -35,11 +35,12 @@ trait WordGrouping
         if (is_string($value) && is_numeric($value)) {
             $value = (float) $value;
         }
-        if ((!is_int($value) && !is_float($value)) || !is_finite($value * $unit)) {
+        $seconds = is_int($value) || is_float($value) ? $value * $unit : null;
+        if (!self::isTime($seconds)) {
             throw new ParsingException("The field $path must be a time.");
         }
 
-        return round($value * $unit, 3);
+        return round($seconds, 3);
     }
 
 

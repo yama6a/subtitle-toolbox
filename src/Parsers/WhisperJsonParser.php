@@ -122,7 +122,7 @@ final class WhisperJsonParser extends SubtitleParser
             foreach ($words as $word) {
                 $timedWords[] = [
                     is_string($word["word"] ?? null) ? trim($word["word"]) : "",
-                    is_int($word["start"] ?? null) || is_float($word["start"] ?? null) ? round($word["start"], 3) : null,
+                    self::isTime($word["start"] ?? null) ? round($word["start"], 3) : null,
                 ];
             }
 
@@ -158,7 +158,7 @@ final class WhisperJsonParser extends SubtitleParser
 
                 if ($words === [] || str_starts_with($tokenText, " ")) {
                     $from    = $token["offsets"]["from"] ?? null;
-                    $words[] = ["", is_int($from) || is_float($from) ? round($from / 1000, 3) : null];
+                    $words[] = ["", self::isTime($from) ? round($from / 1000, 3) : null];
                 }
                 $words[count($words) - 1][0] .= $tokenText;
             }
@@ -185,7 +185,7 @@ final class WhisperJsonParser extends SubtitleParser
     private function seconds(mixed $object, string $key, string $path): float
     {
         $value = is_array($object) ? $object[$key] ?? null : null;
-        if (!is_int($value) && (!is_float($value) || !is_finite($value))) {
+        if (!self::isTime($value)) {
             throw new ParsingException("The field $path.$key must be a number.");
         }
 
