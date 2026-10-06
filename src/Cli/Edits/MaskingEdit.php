@@ -103,12 +103,7 @@ final class MaskingEdit extends Edit
      */
     private static function readWordFile(string $path): array
     {
-        $content = is_file($path) ? @file_get_contents($path) : false;
-        if ($content === false) {
-            Command::failFile("Cannot read the word file $path.");
-        }
-
-        $lines = preg_split('/\R/', StringHelpers::removeUtf8Bom($content));
+        $lines = preg_split('/\R/', StringHelpers::removeUtf8Bom(Command::readSideFile($path)));
 
         return array_values(array_filter(array_map("trim", $lines), fn (string $line): bool => $line !== ""));
     }

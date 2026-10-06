@@ -125,10 +125,12 @@ final class OcrEdit extends Edit
 
     private static function loadDatabase(?string $path): GlyphDatabase
     {
+        $bytes = $path === null ? null : Command::readSideFile($path);
+
         try {
-            return $path === null ? GlyphDatabase::subtitleFonts() : GlyphDatabase::fromFile($path);
+            return $bytes === null ? GlyphDatabase::subtitleFonts() : GlyphDatabase::fromBytes($bytes);
         } catch (GlyphOcrException $exception) {
-            return Command::failFile($exception->getMessage());
+            return $path === null ? Command::failFile($exception->getMessage()) : Command::failSideFile($path, $exception->getMessage());
         }
     }
 }

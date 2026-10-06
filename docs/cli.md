@@ -56,9 +56,10 @@ php subtitle-toolbox.phar --version
 | 0 | every file succeeded, and `validate` and `diff` found nothing | `validate movie.srt --preset bbc` with no broken rule |
 | 1 | a result: `validate` found a broken rule, or `diff` found a difference | `diff old.srt new.srt` for 2 files that differ |
 | 2 | a usage error, before the tool reads a file | an unknown option, a directory without subtitle files, an output that exists, a number too large for a float such as `--shift 1e999`, `--ass-karaoke-tag` with `--to srt`, `validate --video-fps` without `--preset netflix-en`. `--ocr` without an installed OCR engine or without the data of the `--ocr-language`, see [OCR](#ocr). `translate` without `ext-curl` or without an API key, see [Translate](#translate) |
-| 3 | a file could not be read or written | a missing input, a file that does not parse, an output that cannot be created, content that the output format cannot hold such as 5 lines in SCC, a `--mask-words` file that cannot be read, a translation service that answers with an error |
+| 3 | a file could not be read or written | a missing input, a file that does not parse, an output that cannot be created, content that the output format cannot hold such as 5 lines in SCC, a side file that is missing or does not parse, a translation service that answers with an error |
 
-- **Failures**: a failed file prints `FILE: MESSAGE` to standard error. The message of a library exception starts with its class, for example `ParsingException (Error #100):`. Any other PHP error prints its class and message, for example `movie.json: TypeError: ...`, and fails that file with exit code 3. An error outside a file, such as a `--mask-words` file that cannot be read or an output that cannot be created, prints `Error: MESSAGE` and exits with code 3. A PHP error outside a file also prints its class.
+- **Failures**: a failed file prints `FILE: MESSAGE` to standard error. The message of a library exception starts with its class, for example `ParsingException (Error #100):`. Any other PHP error prints its class and message, for example `movie.json: TypeError: ...`, and fails that file with exit code 3. An error outside a file, such as an output that cannot be created, prints `Error: MESSAGE` and exits with code 3. A PHP error outside a file also prints its class.
+- **Side files**: a side file is a file that an option names besides the inputs: `--reference`, `--silence-log`, `--mask-words`, `--errors-replace-list`, `--snap-shot-changes` and `--ocr-database`. A side file that is missing or does not parse stops the run before the first input, also with `--keep-going`. The tool prints `Error: PATH: MESSAGE`, for example `Error: words.txt: The file does not exist.`, and exits with code 3.
 - **Stable parts**: semantic versioning covers the binary, its commands, options, the meaning of each exit code and `--json` shapes. The text output and the messages can change in a minor release. The PHP classes in `src/Cli` are `@internal` and can change in any release. See [compatibility.md](compatibility.md).
 - **Messages**: where a library message names a PHP method or option, the tool names the CLI option. For example "Call loadTrack() with one of them" becomes "Pass --track N with one of them".
 
@@ -351,6 +352,7 @@ movie.de.srt: scale 1.04271, offset -2.3 s, score 0.89
 - **Score**: below 0.5, the tool also prints that the files likely do not match. The exit code stays 0.
 - **Splits**: for each part, the tool prints a line such as `movie.de.srt: from 414.32 s: offset 147.7 s`.
 - **Reference**: the tool detects the format of the reference. `--from` and `--track` apply only to the input.
+- **Load order**: the tool reads the reference or the silence log once, after the checks of the arguments. So `sync a.srt b.srt --reference missing.srt` fails with exit code 2, because 2 inputs need `--output-dir`.
 
 ## Diff
 `diff` compares an old and a new file with [`SubtitleDiff`](compare.md) and prints `toText()`. The files can have different formats. The exit code is 1 when they differ, as with `diff`. Equal files give no output. The first argument must name one file. A directory or a glob that matches more than one file fails with exit code 2.
@@ -365,6 +367,8 @@ vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-format
 | `--ignore-formatting`, `--ignore-whitespace`, `--text-only` | `ignoreFormatting`, `ignoreWhitespace`, `textOnly` |
 | `--from2 FORMAT`, `--track2 NUMBER` | the format and the MKV or WebM track of the new file. `--from` and `--track` apply to the old file |
 | `--json` | prints JSON, see [JSON output](#json-output) |
+
+- **New file**: a new file that is missing or does not parse fails with exit code 3. The message names only the new file, for example `episode1_v2.srt: The file does not exist.`
 
 ## Translate
 `translate` translates the cue text with [`TranslationRunner`](translation.md) and the built-in engine `DeepLEngine` or `GoogleTranslateEngine`. It needs the PHP extension curl.
@@ -412,6 +416,7 @@ vendor/bin/subtitle-toolbox dual --primary movie.en.srt --secondary movie.de.srt
 | `--secondary-from FORMAT`, `--secondary-track NUMBER` | the format and the MKV or WebM track of the secondary file |
 
 - **Output**: one result, so it goes to standard output unless `-o` or `--output-dir` sets a file.
+- **Secondary file**: a secondary file that is missing or does not parse fails with exit code 3. The message names only the secondary file, for example `movie.de.srt: The file does not exist.`
 
 ## HLS
 `hls` cuts one subtitle into WebVTT segments with [`HlsWebVttSegmenter`](hls.md) and writes them with the playlist into `--output-dir`.

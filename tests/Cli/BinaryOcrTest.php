@@ -89,7 +89,7 @@ class BinaryOcrTest extends BinaryTestCase
 
         $this->assertSame([2, "", "Error: Pass --ocr with --ocr-database.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
                           $this->runBinary(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr-database", "broken.nocr"]));
-        $this->assertSame([3, "", "Error: Cannot read the glyph database - the data is not gzip-compressed!\n"],
+        $this->assertSame([3, "", "Error: broken.nocr: Cannot read the glyph database - the data is not gzip-compressed!\n"],
                           $this->runBinary(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr", "--ocr-database", "broken.nocr"]));
         $this->assertFileDoesNotExist("$this->dir/text.srt");
     }

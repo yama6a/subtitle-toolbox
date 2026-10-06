@@ -178,27 +178,27 @@ class BinaryGeneralTest extends BinaryTestCase
             "track on stdin"   => [["convert", "-", "--from", "srt", "--to", "vtt", "-o", "-"], "movie.mkv",
                                    "stdin: InvalidParserException (Error #102): The input is an MKV or WebM file. Pass --track N.\n"],
             "track2"           => [["diff", "trip.srt", "movie.mkv"], "",
-                                   "trip.srt: movie.mkv: " . sprintf($tracks, "Pass --track2 N with one of them:")],
+                                   "movie.mkv: " . sprintf($tracks, "Pass --track2 N with one of them:")],
             "reference track"  => [["sync", "trip.srt", "--reference", "movie.mkv"], "",
-                                   "trip.srt: movie.mkv: " . sprintf($tracks, "Write one of them to a subtitle file with convert --track N first:")],
+                                   "Error: movie.mkv: " . sprintf($tracks, "Write one of them to a subtitle file with convert --track N first:")],
             "from"             => [["convert", "call.json", "--to", "srt", "-o", "-"], "",
                                    "call.json: " . sprintf($format, "Pass --from FORMAT. Chapters and cloud speech-to-text JSON always need it, " .
                                                                     "for example --from deepgram.")],
             "from2"            => [["diff", "trip.srt", "call.json"], "",
-                                   "trip.srt: call.json: " . sprintf($format, "Pass --from2 FORMAT. Chapters and cloud speech-to-text JSON " .
+                                   "call.json: " . sprintf($format, "Pass --from2 FORMAT. Chapters and cloud speech-to-text JSON " .
                                                                               "always need it, for example --from2 deepgram.")],
             "primary track"    => [["dual", "--primary", "movie.mkv", "--secondary", "trip.srt"], "",
                                    "movie.mkv: " . sprintf($tracks, "Pass --primary-track N with one of them:")],
             "secondary track"  => [["dual", "--primary", "trip.srt", "--secondary", "movie.mkv"], "",
-                                   "trip.srt: movie.mkv: " . sprintf($tracks, "Pass --secondary-track N with one of them:")],
+                                   "movie.mkv: " . sprintf($tracks, "Pass --secondary-track N with one of them:")],
             "primary from"     => [["dual", "--primary", "call.json", "--secondary", "trip.srt"], "",
                                    "call.json: " . sprintf($format, "Pass --primary-from FORMAT. Chapters and cloud speech-to-text JSON " .
                                                                     "always need it, for example --primary-from deepgram.")],
             "secondary from"   => [["dual", "--primary", "trip.srt", "--secondary", "call.json"], "",
-                                   "trip.srt: call.json: " . sprintf($format, "Pass --secondary-from FORMAT. Chapters and cloud speech-to-text " .
+                                   "call.json: " . sprintf($format, "Pass --secondary-from FORMAT. Chapters and cloud speech-to-text " .
                                                                               "JSON always need it, for example --secondary-from deepgram.")],
             "reference format" => [["sync", "trip.srt", "--reference", "call.json"], "",
-                                   "trip.srt: call.json: " . sprintf($format, "Write it to a subtitle file with convert --from FORMAT first. " .
+                                   "Error: call.json: " . sprintf($format, "Write it to a subtitle file with convert --from FORMAT first. " .
                                                                               "Chapters and cloud speech-to-text JSON always need --from, " .
                                                                               "for example --from deepgram.")],
             "microdvd output"  => [["convert", "trip.srt", "--to", "microdvd", "-o", "-"], "",
@@ -232,6 +232,91 @@ class BinaryGeneralTest extends BinaryTestCase
 
         $this->assertSame([3, ""], [$code, $stdout]);
         $this->assertStringStartsWith($stderr, $actual);
+    }
+
+
+    /**
+     * @return array<string, array{list<string>, string}>
+     */
+    public static function sideFiles(): array
+    {
+        $convert  = ["convert", "trip.srt", "shop.vtt", "--to", "srt"];
+        $sync     = ["sync", "trip.srt", "shop.vtt"];
+        $parsing  = "ParsingException (Error #100): ";
+
+        return [
+            "reference missing"           => [[...$sync, "--reference", "missing.srt"], "missing.srt: The file does not exist.\n"],
+            "reference broken"            => [[...$sync, "--reference", "bad.srt"], "bad.srt: $parsing"],
+            "silence log missing"         => [[...$sync, "--silence-log", "missing.log", "--media-duration", "60"], "missing.log: The file does not exist.\n"],
+            "silence log broken"          => [[...$sync, "--silence-log", "bad.log", "--media-duration", "60"], "bad.log: $parsing"],
+            "word file missing"           => [[...$convert, "--mask-words", "missing.txt"], "missing.txt: The file does not exist.\n"],
+            "replace list missing"        => [[...$convert, "--errors-fix", "--errors-replace-list", "missing.xml"], "missing.xml: The file does not exist.\n"],
+            "replace list broken"         => [[...$convert, "--errors-fix", "--errors-replace-list", "bad.xml"], "bad.xml: $parsing"],
+            "shot change file missing"    => [[...$convert, "--video-fps", "24", "--snap-shot-changes", "missing.txt"], "missing.txt: The file does not exist.\n"],
+            "shot change file broken"     => [[...$convert, "--video-fps", "24", "--snap-shot-changes", "bad.txt"], "bad.txt: $parsing"],
+            "glyph database missing"      => [[...$convert, "--ocr", "--ocr-database", "missing.nocr"], "missing.nocr: The file does not exist.\n"],
+            "glyph database broken"       => [[...$convert, "--ocr", "--ocr-database", "bad.nocr"],
+                                              "bad.nocr: Cannot read the glyph database - the data is not gzip-compressed!\n"],
+        ];
+    }
+
+
+    /**
+     * @param list<string> $arguments
+     */
+    #[DataProvider("sideFiles")]
+    public function testMissingOrBrokenSideFileStopsTheRunBeforeTheFirstInput(array $arguments, string $message): void
+    {
+        file_put_contents("$this->dir/bad.srt", "Not a subtitle.\n");
+        file_put_contents("$this->dir/bad.log", "[silencedetect @ 0x1] channel: 0 | silence_start: 1.5\n");
+        file_put_contents("$this->dir/bad.xml", "<OCRFixReplaceList><WholeWords>");
+        file_put_contents("$this->dir/bad.txt", "Not a time.\n");
+        file_put_contents("$this->dir/bad.nocr", "Not a glyph database.");
+
+        [$code, $stdout, $stderr] = $this->runBinary([...$arguments, "--output-dir", "out", "--keep-going"]);
+
+        $this->assertSame([3, ""], [$code, $stdout]);
+        $this->assertStringStartsWith("Error: $message", $stderr);
+        $this->assertSame(1, substr_count($stderr, "\n"), $stderr);
+        $this->assertDirectoryDoesNotExist("$this->dir/out");
+    }
+
+
+    public function testUsageErrorComesBeforeAMissingReference(): void
+    {
+        $this->assertSame([2, "", "Error: 2 input files need --output-dir DIR. One input file goes to standard output or to -o FILE.\n" .
+                                  "Run \"subtitle-toolbox help sync\" for the usage.\n"],
+                          $this->runBinary(["sync", "trip.srt", "shop.vtt", "--reference", "missing.srt"]));
+    }
+
+
+    /**
+     * @return array<string, array{list<string>, string}>
+     */
+    public static function secondFiles(): array
+    {
+        return [
+            "diff missing" => [["diff", "trip.srt", "missing.srt"], "missing.srt: The file does not exist.\n"],
+            "diff broken"  => [["diff", "trip.srt", "bad.srt"], "bad.srt: ParsingException (Error #100): "],
+            "dual missing" => [["dual", "--primary", "trip.srt", "--secondary", "missing.srt"], "missing.srt: The file does not exist.\n"],
+            "dual broken"  => [["dual", "--primary", "trip.srt", "--secondary", "bad.srt"], "bad.srt: ParsingException (Error #100): "],
+        ];
+    }
+
+
+    /**
+     * @param list<string> $arguments
+     */
+    #[DataProvider("secondFiles")]
+    public function testFailureOfTheSecondFileNamesOnlyThatFile(array $arguments, string $message): void
+    {
+        file_put_contents("$this->dir/bad.srt", "Not a subtitle.\n");
+
+        [$code, $stdout, $stderr] = $this->runBinary($arguments);
+
+        $this->assertSame([3, ""], [$code, $stdout]);
+        $this->assertStringStartsWith($message, $stderr);
+        $this->assertStringNotContainsString("trip.srt", $stderr);
     }
 
 

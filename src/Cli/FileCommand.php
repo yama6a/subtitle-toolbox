@@ -57,6 +57,9 @@ abstract class FileCommand extends Command
     /** @var list<ParseWarning> */
     protected array $parseWarnings = [];
 
+    // The second file of diff and dual while it loads. A failure then names it instead of the input.
+    private ?string $failureLabel = null;
+
 
     /**
      * @return list<Option>
@@ -186,6 +189,14 @@ abstract class FileCommand extends Command
 
 
     /**
+     * Loads the side files that all inputs share. It runs after checkInputs() and before the first input.
+     */
+    protected function loadSideFiles(Arguments $arguments, Console $console): void
+    {
+    }
+
+
+    /**
      * Fails when $directory, the value of --output-dir, names a file.
      */
     protected static function checkOutputDirectory(?string $directory): void
@@ -265,8 +276,10 @@ abstract class FileCommand extends Command
             self::fail("Pass at least one input file, or - for standard input.");
         }
         $this->checkInputs($inputs, $arguments);
+        $this->loadSideFiles($arguments, $console);
 
         foreach ($inputs as $input) {
+            $this->failureLabel = null;
             try {
                 $read = $this->read($input, $arguments, $console);
                 if ($read !== null) {
@@ -278,7 +291,7 @@ abstract class FileCommand extends Command
             } catch (\Throwable $exception) {
                 $this->failed++;
                 $names = $this->fileOptionNames();
-                $console->err(self::label($input) . ": " . self::cliMessage(self::throwableMessage($exception), "--$names[track]", "--$names[from]") . "\n");
+                $console->err(($this->failureLabel ?? self::label($input)) . ": " . self::cliMessage(self::throwableMessage($exception), "--$names[track]", "--$names[from]") . "\n");
                 if (!$arguments->has("keep-going")) {
                     break;
                 }
@@ -468,35 +481,53 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Reads a file other than the input, such as a reference, without --from and --track. Detects the format unless
-     * $format or $track is given. $trackOption and $fromOption name the options that set $track and $format.
+     * Reads the subtitle of a side file, such as the reference of sync, and detects its format. A file that is missing
+     * or does not parse stops the run.
      */
-    protected function loadOtherFile(string $path, Console $console, ?Format $format = null, ?int $track = null,
-                                     ?string $trackOption = null, ?string $fromOption = null): Subtitle
+    protected function loadSideSubtitle(string $path, Console $console): Subtitle
     {
-        if (!is_file($path)) {
-            self::fail("$path: The file does not exist.");
-        }
-
         try {
-            $subtitle = $this->loadFile($path, $format, $track);
-        } catch (SubtitleToolboxException $exception) {
-            return self::fail("$path: " . self::cliMessage($exception->getMessage(), $trackOption, $fromOption));
+            return $this->loadOtherFile($path, $console);
+        } catch (\Throwable $exception) {
+            return self::failSideFile($path, self::throwableMessage($exception));
         }
-        self::printWarnings($console, $path, $subtitle->getParseWarnings());
+    }
+
+
+    /**
+     * Reads the second file of diff and dual with its format and track options. A failure names the second file.
+     */
+    protected function loadSecondFile(string $path, Arguments $arguments, Console $console): Subtitle
+    {
+        $names              = $this->fileOptionNames();
+        $this->failureLabel = $path;
+        $subtitle           = $this->loadOtherFile($path, $console, $this->secondFormat, $arguments->positiveInt($names["track2"]),
+                                                   "--" . $names["track2"], "--" . $names["from2"]);
+        $this->failureLabel = null;
 
         return $subtitle;
     }
 
 
     /**
-     * Reads the second file of diff and dual with its format and track options.
+     * Reads a file other than the input without --from and --track. Detects the format unless $format or $track is
+     * given. $trackOption and $fromOption name the options that set $track and $format.
      */
-    protected function loadSecondFile(string $path, Arguments $arguments, Console $console): Subtitle
+    private function loadOtherFile(string $path, Console $console, ?Format $format = null, ?int $track = null,
+                                   ?string $trackOption = null, ?string $fromOption = null): Subtitle
     {
-        $names = $this->fileOptionNames();
+        if (!is_file($path)) {
+            self::fail("The file does not exist.");
+        }
 
-        return $this->loadOtherFile($path, $console, $this->secondFormat, $arguments->positiveInt($names["track2"]), "--" . $names["track2"], "--" . $names["from2"]);
+        try {
+            $subtitle = $this->loadFile($path, $format, $track);
+        } catch (SubtitleToolboxException $exception) {
+            return self::fail(self::cliMessage($exception->getMessage(), $trackOption, $fromOption));
+        }
+        self::printWarnings($console, $path, $subtitle->getParseWarnings());
+
+        return $subtitle;
     }
 
 

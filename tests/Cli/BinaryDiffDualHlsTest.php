@@ -48,7 +48,7 @@ class BinaryDiffDualHlsTest extends BinaryTestCase
 
         $this->assertSame(2, $this->runBinary(["diff", "v1.srt"])[0]);
         $this->assertSame(2, $this->runBinary(["diff", "v1.srt", "v2.srt", "--time-tolerance", "-1"])[0]);
-        $this->assertSame([3, "", "v1.srt: missing.srt: The file does not exist.\n"], $this->runBinary(["diff", "v1.srt", "missing.srt"]));
+        $this->assertSame([3, "", "missing.srt: The file does not exist.\n"], $this->runBinary(["diff", "v1.srt", "missing.srt"]));
     }
 
 

@@ -84,15 +84,10 @@ final class CommonErrorEdit extends Edit
         if ($path === null) {
             return null;
         }
-        $xml = is_file($path) ? @file_get_contents($path) : false;
-        if ($xml === false) {
-            Command::failFile("Cannot read the replace list $path.");
-        }
-
         try {
-            return OcrReplaceList::fromSubtitleEditXml($xml);
+            return OcrReplaceList::fromSubtitleEditXml(Command::readSideFile($path));
         } catch (ParsingException $exception) {
-            return Command::fail("$path: " . $exception->getMessage());
+            return Command::failSideFile($path, $exception->getMessage());
         }
     }
 }

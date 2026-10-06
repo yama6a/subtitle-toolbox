@@ -108,15 +108,12 @@ final class SnapEdit extends Edit
      */
     private static function loadShotChanges(string $path): array
     {
-        $content = is_file($path) ? @file_get_contents($path) : false;
-        if ($content === false) {
-            Command::failFile("Cannot read the shot change file $path.");
-        }
+        $content = Command::readSideFile($path);
 
         try {
             return str_contains($content, "pts_time:") ? ShotChanges::fromFfmpegLog($content) : ShotChanges::fromText($content);
         } catch (ParsingException $exception) {
-            return Command::fail("$path: " . $exception->getMessage());
+            return Command::failSideFile($path, $exception->getMessage());
         }
     }
 }
