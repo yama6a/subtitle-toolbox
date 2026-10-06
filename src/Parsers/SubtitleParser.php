@@ -165,6 +165,29 @@ abstract class SubtitleParser
 
 
     /**
+     * Sorts the chapters by start and sets their ends. A chapter ends at its value in $ends, else at the start of the
+     * next chapter. The last chapter ends at ChapterReadOptions::$mediaDuration, but not before it starts.
+     *
+     * @param list<SubtitleCue> $chapters
+     * @param array<int, float|null> $ends the end that the file gives, keyed like $chapters
+     *
+     * @return list<SubtitleCue>
+     */
+    protected function endChapters(array $chapters, array $ends = []): array
+    {
+        uasort($chapters, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());
+        $keys     = array_keys($chapters);
+        $chapters = array_values($chapters);
+        foreach ($chapters as $index => $cue) {
+            $next = $chapters[$index + 1] ?? null;
+            $cue->setEnd($ends[$keys[$index]] ?? $next?->getStart() ?? max($cue->getStart(), $this->formatOptions()->mediaDuration ?? 0));
+        }
+
+        return $chapters;
+    }
+
+
+    /**
      * Returns the lines of $content without the line endings. A line ends at LF, CR LF or CR.
      *
      * @return list<string>

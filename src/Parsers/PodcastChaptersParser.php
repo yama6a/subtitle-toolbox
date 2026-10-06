@@ -31,6 +31,7 @@ final class PodcastChaptersParser extends SubtitleParser
         }
 
         $chapters = [];
+        $ends     = [];
         foreach ($data["chapters"] as $index => $chapter) {
             $start = is_array($chapter) ? $chapter["startTime"] ?? null : null;
             if (!self::isTime($start)) {
@@ -44,16 +45,11 @@ final class PodcastChaptersParser extends SubtitleParser
 
             $cue = new SubtitleCue($start, $start, is_string($title) ? Markup::escapeText($title) : "");
             $cue->setFormatData(self::FORMAT_DATA_KEY, array_diff_key($chapter, array_flip(["startTime", "endTime", "title"])));
-            $chapters[] = [$cue, $end === null ? null : (float) $end];
+            $chapters[] = $cue;
+            $ends[]     = $end === null ? null : (float) $end;
         }
-        usort($chapters, fn (array $a, array $b): int => $a[0]->getStart() <=> $b[0]->getStart());
 
-        $subtitle = new Subtitle();
-        foreach ($chapters as $index => [$cue, $end]) {
-            $next = $chapters[$index + 1][0] ?? null;
-            $cue->setEnd($end ?? $next?->getStart() ?? max($cue->getStart(), $this->formatOptions()->mediaDuration ?? 0));
-        }
-        $subtitle->addCues(array_column($chapters, 0));
+        $subtitle = (new Subtitle())->addCues($this->endChapters($chapters, $ends));
 
         foreach (["title" => Subtitle::METADATA_TITLE, "author" => Subtitle::METADATA_AUTHOR] as $field => $key) {
             if (is_string($data[$field] ?? null)) {
