@@ -185,8 +185,9 @@ final class MatroskaReader
     public function extract(int $trackNumber, ?ReadOptions $options = null): Subtitle
     {
         $options ??= new ReadOptions();
-        $track = $this->subtitleTrack($trackNumber);
-        if (!in_array($track->codecId, self::CODECS, true)) {
+        $track  = $this->subtitleTrack($trackNumber);
+        $format = self::FORMATS[$track->codecId] ?? null;
+        if ($format === null) {
             throw new ParsingException("Track $trackNumber has the codec $track->codecId. The reader extracts only " .
                                        implode(", ", self::CODECS) . ".");
         }
@@ -194,16 +195,18 @@ final class MatroskaReader
         $data         = $this->trackData[$trackNumber];
         $codecPrivate = $this->decode($trackNumber, $data["codecPrivate"], self::SCOPE_CODEC_PRIVATE);
         $blocks       = $this->readBlocks($trackNumber);
-        $lastDuration = $options->lastCueDuration;
+        if ($format !== Format::Pgs) {
+            $blocks = $this->withEnds($blocks, $data, $options->lastCueDuration);
+        }
 
-        $subtitle = match ($track->codecId) {
-            self::CODEC_PGS    => (new PgsParser())->parse($this->pgsStream($blocks), $options),
-            self::CODEC_WEBVTT => (new WebVttParser())->parse($this->webVttFile($codecPrivate, $this->withEnds($blocks, $data, $lastDuration)), $options),
-            self::CODEC_SUBRIP => (new SubRipParser())->parse($this->subRipFile($this->withEnds($blocks, $data, $lastDuration)), $options),
-            default            => (new AssParser())->parse($this->assFile($track, $codecPrivate, $this->withEnds($blocks, $data, $lastDuration)), $options),
+        $subtitle = match ($format) {
+            Format::Pgs    => (new PgsParser())->parse($this->pgsStream($blocks), $options),
+            Format::WebVtt => (new WebVttParser())->parse($this->webVttFile($codecPrivate, $blocks), $options),
+            Format::SubRip => (new SubRipParser())->parse($this->subRipFile($blocks), $options),
+            Format::Ass    => (new AssParser())->parse($this->assFile($track, $codecPrivate, $blocks), $options),
         };
 
-        $subtitle->setFormat($this->trackFormat($trackNumber));
+        $subtitle->setFormat($format);
         $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $track->language);
         if ($track->forced) {
             foreach ($subtitle->getCues() as $cue) {
