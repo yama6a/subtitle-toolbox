@@ -9,6 +9,7 @@ use JsonException;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\LineEnding;
+use SubtitleToolbox\OptionChecks;
 use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ParseWarningAction;
@@ -161,7 +162,7 @@ abstract class SubtitleParser
      */
     protected static function isTime(mixed $value): bool
     {
-        return (is_int($value) || is_float($value)) && is_finite($value) && $value >= 0;
+        return (is_int($value) || is_float($value)) && OptionChecks::isNonNegativeFinite($value);
     }
 
 
