@@ -182,6 +182,23 @@ class HlsWebVttSegmenterTest extends TestCase
     }
 
 
+    public function testCuesOutOfStartOrderGoToTheSegmentTheyStartIn(): void
+    {
+        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "A"), new SubtitleCue(30, 31, "B")]);
+        $subtitle->getCues()[0]->setStart(55)->setEnd(56);
+        $segments = iterator_to_array(HlsWebVttSegmenter::segment($subtitle, new HlsSegmentOptions(segmentDuration: 10))->getSegments());
+
+        $this->assertSame([
+            "sub0.vtt" => "WEBVTT\n" . self::MAP . "\n\n",
+            "sub1.vtt" => "WEBVTT\n" . self::MAP . "\n\n",
+            "sub2.vtt" => "WEBVTT\n" . self::MAP . "\n\n",
+            "sub3.vtt" => "WEBVTT\n" . self::MAP . "\n\n2\n00:00:30.000 --> 00:00:31.000\nB\n",
+            "sub4.vtt" => "WEBVTT\n" . self::MAP . "\n\n",
+            "sub5.vtt" => "WEBVTT\n" . self::MAP . "\n\n1\n00:00:55.000 --> 00:00:56.000\nA\n",
+        ], $segments);
+    }
+
+
     public function testSegmentsKeepTheFileDataAndReplaceAnOldMap(): void
     {
         $subtitle = Subtitle::fromString("WEBVTT Ferry\nX-TIMESTAMP-MAP=LOCAL:00:00:00.000,MPEGTS:0\nKind: captions\n\n" .
@@ -209,7 +226,10 @@ class HlsWebVttSegmenterTest extends TestCase
         foreach ([fn () => new HlsSegmentOptions(segmentDuration: 0), fn () => new HlsSegmentOptions(mediaDuration: 0.0001),
                   fn () => new HlsSegmentOptions(fileNamePattern: "sub.vtt"), fn () => new HlsSegmentOptions(fileNamePattern: "%s%d.vtt"),
                   fn () => new HlsSegmentOptions(fileNamePattern: "%d_%d.vtt"), fn () => new HlsSegmentOptions(mpegts: -1),
-                  fn () => new HlsSegmentOptions(local: -1)] as $index => $create) {
+                  fn () => new HlsSegmentOptions(local: -1), fn () => new HlsSegmentOptions(segmentDuration: NAN),
+                  fn () => new HlsSegmentOptions(segmentDuration: INF), fn () => new HlsSegmentOptions(mediaDuration: NAN),
+                  fn () => new HlsSegmentOptions(mediaDuration: INF), fn () => new HlsSegmentOptions(local: NAN),
+                  fn () => new HlsSegmentOptions(local: INF)] as $index => $create) {
             try {
                 $create();
                 $this->fail("No exception for case $index");

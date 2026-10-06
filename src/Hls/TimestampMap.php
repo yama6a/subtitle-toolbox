@@ -36,8 +36,8 @@ final class TimestampMap
                                                (self::MPEGTS_WRAP - 1) . ", got $mpegts.");
         }
 
-        if ($local < 0) {
-            throw new InvalidArgumentException("The LOCAL time must not be negative, got $local.");
+        if (!is_finite($local) || $local < 0) {
+            throw new InvalidArgumentException("The LOCAL time must be a finite number that is not negative, got " . self::text($local) . ".");
         }
     }
 
@@ -118,5 +118,12 @@ final class TimestampMap
         }
 
         return $ticks / self::CLOCK_RATE - $this->local;
+    }
+
+
+    // PHP 8.5 warns when a string holds NAN.
+    private static function text(float $value): string
+    {
+        return is_nan($value) ? "NAN" : (string) $value;
     }
 }
