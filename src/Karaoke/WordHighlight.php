@@ -189,9 +189,7 @@ final class WordHighlight
      */
     private static function removeEmptyTagPairs(string $line): string
     {
-        do {
-            $line = preg_replace('/<(b|i|u|s|font)\b[^>]*>(\s*)<\/\1>/', '$2', $line, -1, $count);
-        } while ($count > 0);
+        $line = Markup::removeEmptyTagPairs($line, withSpaces: true);
 
         return preg_replace(['/^((?:<[^\/][^>]*>)*)\s+/', '/\s+((?:<\/[^>]*>)*)$/'], '$1', $line);
     }

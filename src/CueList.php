@@ -64,8 +64,8 @@ final class CueList
      */
     public static function speakers(SubtitleCue $cue): array
     {
-        preg_match_all('/<v(?:\.[^\s>]*)?\s+([^>]*)>/i', $cue->getText(), $matches);
-        $speakers = array_unique(array_map("trim", $matches[1]));
+        preg_match_all('/' . Markup::VOICE_TAG . '/i', $cue->getText(), $matches);
+        $speakers = array_unique(array_map("trim", $matches[2]));
         sort($speakers);
 
         return $speakers;

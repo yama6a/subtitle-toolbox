@@ -18,7 +18,7 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
 
     private const VERSION = "1.0.0";
 
-    private const VOICE     = '/^<v(?:\.[^\s>]*)?(?:\s+([^>]*))?>$/';
+    private const VOICE     = '/^(?:' . Markup::VOICE_TAG . '|' . Markup::VOICE_TAG_START . '>)$/';
     private const VOICE_END = '/^<\/v\s*>$/';
 
 
@@ -99,7 +99,7 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
                     continue;
                 }
 
-                $name = $isVoice ? trim(Markup::decodeEntities($voice[1] ?? "")) : null;
+                $name = $isVoice ? trim(Markup::decodeEntities($voice[2] ?? "")) : null;
                 $name = $isTimestamp ? $speaker : ($name === "" ? null : $name);
                 if (!$isTimestamp && $name === $speaker) {
                     continue;

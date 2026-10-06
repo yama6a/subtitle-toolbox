@@ -172,7 +172,7 @@ final class HearingImpairedRemover
                 $map[]    = null;
             }
 
-            preg_match_all('/<[^<>]*>|&(?:lt|gt|amp);|[^<&]+|[<&]/', $line, $tokens, PREG_OFFSET_CAPTURE);
+            preg_match_all('/' . Markup::TAG . '|&(?:lt|gt|amp);|[^<&]+|[<&]/', $line, $tokens, PREG_OFFSET_CAPTURE);
             foreach ($tokens[0] as [$token, $offset]) {
                 if ($token[0] === "<" && strlen($token) > 1) {
                     continue;
@@ -240,13 +240,14 @@ final class HearingImpairedRemover
                 continue;
             }
 
+            // Any tag pair, such as <c.loud></c>, goes when the removed text was all it held.
             do {
                 $before = $line;
                 $line   = preg_replace('/<([a-zA-Z][a-zA-Z0-9]*)(?:[\s.][^<>]*)?>\h*<\/\1\s*>/', "", $line) ?? $line;
             } while ($line !== $before);
 
             if (trim($wasText) !== "" && in_array(trim(self::plainText($line)), ["", "-"], true)) {
-                preg_match_all('/<[^<>]*>/', $line, $tags);
+                preg_match_all('/' . Markup::TAG . '/', $line, $tags);
                 $pending   .= implode("", $tags[0]);
                 $anyRemoved = true;
                 continue;

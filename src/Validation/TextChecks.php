@@ -17,8 +17,6 @@ final class TextChecks
     // A dash before a digit, such as "-20 degrees", is a minus sign and starts no dialogue.
     private const DIALOGUE_DASH = '/^[' . self::DASHES . '](?![' . self::DASHES . '])[ \t\x{00A0}]*(?=[^\s\p{N}])/u';
 
-    private const STYLE_TAG = '/<(\/?)(b|i|u|s|font|v)(?=[\s.>])[^<>]*>/i';
-
 
     /**
      * Returns one result per text rule that the cue breaks.
@@ -141,8 +139,8 @@ final class TextChecks
     {
         $dashLines = count(array_filter($visible, fn (string $line): bool => self::startsWithDialogueDash($line)));
 
-        preg_match_all('/<v(?:\.[^\s<>]*)?\s+([^<>]*)>/', implode("\n", $markupLines), $matches);
-        $names = array_unique(array_map("trim", $matches[1]));
+        preg_match_all('/' . Markup::VOICE_TAG . '/', implode("\n", $markupLines), $matches);
+        $names = array_unique(array_map("trim", $matches[2]));
 
         return max($dashLines, count($names), $visible === [] ? 0 : 1);
     }
@@ -153,27 +151,9 @@ final class TextChecks
      */
     private static function unbalancedTags(string $text): int
     {
-        preg_match_all(self::STYLE_TAG, $text, $matches, PREG_SET_ORDER);
+        $tags = Markup::unbalancedTags([$text], Markup::CORE_TAGS, true);
 
-        $open       = [];
-        $unbalanced = 0;
-        foreach ($matches as [, $slash, $name]) {
-            $name = strtolower($name);
-            if ($slash === "") {
-                $open[] = $name;
-                continue;
-            }
-
-            $position = array_search($name, array_reverse($open, true), true);
-            if ($position === false) {
-                $unbalanced++;
-                continue;
-            }
-            $unbalanced += count(array_filter(array_slice($open, $position + 1), fn (string $tag): bool => $tag !== "v"));
-            $open        = array_slice($open, 0, $position);
-        }
-
-        return $unbalanced + count(array_filter($open, fn (string $tag): bool => $tag !== "v"));
+        return count($tags["stray"]) + count(array_filter([...$tags["inner"], ...$tags["open"]], fn (string $tag): bool => $tag !== "v"));
     }
 
 

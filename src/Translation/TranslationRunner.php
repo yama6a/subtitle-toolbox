@@ -11,7 +11,7 @@ use SubtitleToolbox\SubtitleCue;
 
 final class TranslationRunner
 {
-    private const TAG_REGEX                = '/(<\/?[a-zA-Z][^<>]*>|<\d{2,}:[0-5]\d:[0-5]\d\.\d{3}>)/';
+    private const TAG_REGEX                = '/((?=<\/?[a-zA-Z])' . Markup::TAG . '|<' . Markup::WORD_TIMESTAMP . '>)/';
     private const PLACEHOLDER_REGEX        = '/(<\/?x\d+\/?>)/';
     private const LOOSE_PLACEHOLDER_REGEX  = '/<\s*\/?\s*x\s*\d+\s*\/?\s*>/i';
     private const SENTENCE_END_REGEX       = '/[.?!\x{2026}\x{3002}\x{FF0E}\x{FF1F}\x{FF01}]["\'\x{201D}\x{2019}\x{00BB})\]]*$/u';
@@ -107,7 +107,7 @@ final class TranslationRunner
 
     private static function visibleText(SubtitleCue $cue): string
     {
-        return trim(Markup::plainText(implode(" ", $cue->getLines())));
+        return Markup::visibleText(implode(" ", $cue->getLines()));
     }
 
 

@@ -16,7 +16,6 @@ use SubtitleToolbox\SubtitleCue;
  */
 final class CommonErrorFixer
 {
-    private const STYLE_TAG    = '<(\/?)(b|i|u|s|font)(?:\s[^<>]*)?>';
     private const DASHES       = '\-\x{2010}\x{2013}\x{2014}';
     private const NOT_IN_WORD  = '(?<![\p{L}\p{N}\'\x{2019}])';
     private const WORD_ENDS    = '(?![\p{L}\p{N}\'\x{2019}])';
@@ -107,7 +106,8 @@ final class CommonErrorFixer
         return match ($rule) {
             CommonErrorRule::ReplaceList     => self::replaceList($lines, $options->replaceList, $continues),
             CommonErrorRule::UnbalancedTags  => self::unbalancedTags($lines),
-            CommonErrorRule::EmptyTags       => array_map(fn (string $line): string => self::emptyTags($line), $lines),
+            CommonErrorRule::EmptyTags       => array_map(fn (string $line): string =>
+                Markup::removeEmptyTagPairs($line, ignoreCase: true, withSpaces: true), $lines),
             CommonErrorRule::OcrPipe         => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrPipe($text, $language)),
             CommonErrorRule::OcrZeroInWords  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => self::ocrZero($text, $first)),
             CommonErrorRule::OcrLowercaseL   => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrLowercaseL($text, $language)),
@@ -151,47 +151,16 @@ final class CommonErrorFixer
      */
     private static function unbalancedTags(array $lines): array
     {
-        $open  = [];
-        $stray = [];
-        foreach ($lines as $lineIndex => $line) {
-            preg_match_all('/' . self::STYLE_TAG . '/i', $line, $tags, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
-            foreach ($tags as $tag) {
-                $name = strtolower($tag[2][0]);
-                if ($tag[1][0] === "") {
-                    $open[] = $name;
-                    continue;
-                }
-                $match = array_search($name, array_reverse($open, true), true);
-                if ($match === false) {
-                    $stray[$lineIndex][] = [$tag[0][1], strlen($tag[0][0])];
-                } else {
-                    unset($open[$match]);
-                }
-            }
-        }
-
-        foreach ($stray as $lineIndex => $spans) {
-            foreach (array_reverse($spans) as [$offset, $length]) {
-                $lines[$lineIndex] = substr_replace($lines[$lineIndex], "", $offset, $length);
-            }
+        $tags = Markup::unbalancedTags($lines, Markup::STYLE_TAGS);
+        foreach (array_reverse($tags["stray"]) as [$lineIndex, $offset, $length]) {
+            $lines[$lineIndex] = substr_replace($lines[$lineIndex], "", $offset, $length);
         }
         $last = count($lines) - 1;
-        foreach (array_reverse($open) as $name) {
+        foreach (array_reverse($tags["open"]) as $name) {
             $lines[$last] .= "</$name>";
         }
 
         return $lines;
-    }
-
-
-    private static function emptyTags(string $line): string
-    {
-        do {
-            $before = $line;
-            $line   = preg_replace('/<(b|i|u|s|font)(?:\s[^<>]*)?>(\s*)<\/\1>/i', '$2', $line) ?? $line;
-        } while ($line !== $before);
-
-        return $line;
     }
 
 

@@ -78,6 +78,7 @@ class CommonErrorFixerTest extends TestCase
                                                      ["<b><font color=\"#ff0000\">Hi", "you</font></b>"]],
             "stray closing tag"                  => ["unbalancedTags", "en", ["Hello</i> there"], ["Hello there"]],
             "speaker tag needs no closing tag"   => ["unbalancedTags", "en", ["<v Anna>Hello"], ["<v Anna>Hello"]],
+            "closing tag of a WebVTT class tag"  => ["unbalancedTags", "en", ["<b.loud>Hello</b> there"], ["<b.loud>Hello</b> there"]],
             "empty tag"                          => ["emptyTags", "en", ["Hi <i></i>there"], ["Hi there"]],
             "nested empty tags"                  => ["emptyTags", "en", ["Hi <b><i> </i></b>there"], ["Hi there"]],
             "dialogue dashes"                    => ["dialogueDashes", "en", ["-Hi.", "-Hello."], ["- Hi.", "- Hello."]],

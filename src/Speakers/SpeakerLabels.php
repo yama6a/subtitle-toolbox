@@ -16,7 +16,7 @@ final class SpeakerLabels
     /** White, yellow, cyan and green, the speaker colors of the BBC Subtitle Guidelines, in their order of use. */
     public const BBC_COLORS = ["#ffffff", "#ffff00", "#00ffff", "#00ff00"];
 
-    private const VOICE       = '/^<v(\.[^\s>]*)?(?:\s+([^>]*))?>$/';
+    private const VOICE       = '/^(?:' . Markup::VOICE_TAG . '|' . Markup::VOICE_TAG_START . '>)$/';
     private const VOICE_END   = '/^<\/v\s*>$/';
     private const OPEN_STYLE  = '/^<([a-zA-Z][a-zA-Z0-9]*)(?:[\s.][^>]*)?>$/';
     private const CLOSE_STYLE = '/^<\/([a-zA-Z][a-zA-Z0-9]*)\s*>$/';
@@ -79,7 +79,7 @@ final class SpeakerLabels
     {
         foreach ($subtitle->getCues() as $cue) {
             $cue->setLines(array_map(fn (string $line): string => preg_replace_callback(
-                '/<v(\.[^\s>]*)?\s+([^>]*)>/',
+                '/' . Markup::VOICE_TAG . '/',
                 function (array $match) use ($names): string {
                     $name = Markup::decodeEntities(trim($match[2]));
 
@@ -117,7 +117,7 @@ final class SpeakerLabels
             $speakers = count(array_filter(array_column($lines, 2)));
             $result   = [];
             foreach ($lines as [, $line, $startsSpeaker]) {
-                $hasDash  = preg_match('/^\h*-/', self::visibleText($line)) === 1;
+                $hasDash  = preg_match('/^\h*-/', Markup::visibleText($line)) === 1;
                 $result[] = $speakers >= 2 && $startsSpeaker && !$hasDash ? Markup::escapeText($dash) . $line : $line;
             }
 
@@ -172,7 +172,7 @@ final class SpeakerLabels
                 }
 
                 $tag = Markup::voiceTag($name);
-                if (self::visibleText($rest) === "") {
+                if (Markup::visibleText($rest) === "") {
                     $isLast   = $index === count($lines) - 1;
                     $pending  = $isLast ? null : $tag . $rest;
                     $result[] = $isLast ? $line : "";
@@ -222,7 +222,7 @@ final class SpeakerLabels
             $current = "";
             foreach (Markup::splitTags($line) as $index => $token) {
                 if ($index % 2 === 0) {
-                    $current .= $split && self::visibleText($current) === "" ? ltrim($token) : $token;
+                    $current .= $split && Markup::visibleText($current) === "" ? ltrim($token) : $token;
                     continue;
                 }
 
@@ -238,7 +238,7 @@ final class SpeakerLabels
                 if ($name === $speaker) {
                     continue;
                 }
-                if (self::visibleText($current) !== "") {
+                if (Markup::visibleText($current) !== "") {
                     $closing  = implode("", array_map(fn (array $tag): string => "</$tag[0]>", array_reverse($open)));
                     $result[] = [$speaker, rtrim($current) . $closing];
                     $current  = implode("", array_column($open, 1));
@@ -253,7 +253,7 @@ final class SpeakerLabels
         $previous = null;
         $seen     = false;
         foreach ($result as $index => [$lineSpeaker, $line]) {
-            $hasText          = self::visibleText($line) !== "";
+            $hasText          = Markup::visibleText($line) !== "";
             $result[$index][] = $hasText && (!$seen || $lineSpeaker !== $previous);
             $previous         = $hasText ? $lineSpeaker : $previous;
             $seen             = $seen || $hasText;
@@ -298,10 +298,10 @@ final class SpeakerLabels
             return [null, $line];
         }
 
-        $visible = preg_replace('/^\h*(?:-\h*)?/u', "", self::visibleText($line)) ?? "";
+        $visible = preg_replace('/^\h*(?:-\h*)?/u', "", Markup::visibleText($line)) ?? "";
         $name    = trim(explode(":", $visible, 2)[0]);
-        if (preg_match('/^\h*-/', self::visibleText($line)) === 1) {
-            $rest = preg_replace('/^((?:<[^<>]*>)*)\h*-\h*/', '$1', $rest) ?? $rest;
+        if (preg_match('/^\h*-/', Markup::visibleText($line)) === 1) {
+            $rest = preg_replace('/^((?:' . Markup::TAG . ')*)\h*-\h*/', '$1', $rest) ?? $rest;
         }
 
         return [preg_match('/\p{Ll}/u', $name) === 1 ? $name : self::titleCase($name), $rest];
@@ -330,11 +330,5 @@ final class SpeakerLabels
         (new Subtitle())->addCue($cue)->changeCase($mode);
 
         return Markup::decodeEntities($cue->getText());
-    }
-
-
-    private static function visibleText(string $line): string
-    {
-        return trim(Markup::plainText($line));
     }
 }

@@ -182,11 +182,8 @@ final class AssParser extends SubtitleParser
 
         [$lines, $alignment] = $this->convertText($fields[$text], $startTime, $wrapStyle === "2");
 
-        $name      = $this->findField($fields, "Name");
-        $firstLine = array_key_first(array_filter($lines, fn (string $line): bool => trim($line) !== ""));
-        if ($name !== null && $fields[$name] !== "" && $firstLine !== null) {
-            $lines[$firstLine] = "<v " . htmlspecialchars($fields[$name], ENT_NOQUOTES, "UTF-8") . ">" . ltrim($lines[$firstLine]);
-        }
+        $name  = $this->findField($fields, "Name");
+        $lines = Markup::addSpeaker($lines, $name === null ? "" : $fields[$name]);
 
         $cue = new SubtitleCue($startTime, $this->secondsFromString($fields[$end], $lineNumber), $lines);
         $cue->setAlignment($alignment);
@@ -287,7 +284,7 @@ final class AssParser extends SubtitleParser
                     $markup .= str_replace(
                         ["\\N", "\\n", "\\h"],
                         ["\n", $softBreakIsHard ? "\n" : " ", "\u{00A0}"],
-                        htmlspecialchars($part, ENT_NOQUOTES, "UTF-8")
+                        Markup::escapeText($part)
                     );
                 }
                 continue;
@@ -316,11 +313,7 @@ final class AssParser extends SubtitleParser
         }
         $markup .= $this->closeAll($openTags);
 
-        do {
-            $markup = preg_replace('/<(b|i|u|s|font)\b[^>]*><\/\1>/', "", $markup, -1, $count);
-        } while ($count > 0);
-
-        return [explode("\n", $markup), $alignment];
+        return [explode("\n", Markup::removeEmptyTagPairs($markup)), $alignment];
     }
 
 

@@ -223,6 +223,15 @@ class MarkupTest extends TestCase
     }
 
 
+    public function testHasVisibleTextAndKeepTagsReadALessThanSignBeforeASpaceAsText(): void
+    {
+        $this->assertTrue(Markup::hasVisibleText(["a < b > c"]));
+        $this->assertTrue(Markup::hasVisibleText(["< b>"]));
+        $this->assertSame("a < b > c", Markup::keepTags("a < b > c", []));
+        $this->assertSame("a < b > c", Markup::keepTags("a < b > c", ["b"]));
+    }
+
+
     public function testPlainTextRemovesTagsAndDecodesEntitiesWithoutTrimming(): void
     {
         $this->assertSame(" Tom & Jerry <3 ", Markup::plainText(" <i>Tom &amp; Jerry</i> &lt;3<00:00:01.000> "));

@@ -282,7 +282,7 @@ final class Resegmenter
             $openTags                     = Markup::openCoreTags($piece["text"], $openTags);
             $pieces[$index]["openAfter"]  = $openTags;
             $pieces[$index]["time"]       = null;
-            if (preg_match('/^(?:<[^>\d][^>]*>)*(<\d{2,}:[0-5]\d:[0-5]\d\.\d{3}>)/', $piece["text"], $matches) === 1) {
+            if (preg_match('/^(?:(?!<\d)' . Markup::TAG . ')*(<' . Markup::WORD_TIMESTAMP . '>)/', $piece["text"], $matches) === 1) {
                 $pieces[$index]["time"] = round(Markup::wordTimestampSeconds($matches[1]), 3);
             }
         }
@@ -299,8 +299,8 @@ final class Resegmenter
         $parts        = [""];
         $hasText      = false;
         $isAfterBreak = false;
-        foreach (preg_split('/(<[^>]*>)/', $word, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY) as $token) {
-            if (preg_match('/^<[^>]*>$/', $token) === 1) {
+        foreach (preg_split('/(' . Markup::TAG . ')/', $word, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY) as $token) {
+            if (preg_match('/^' . Markup::TAG . '$/', $token) === 1) {
                 $isTimestamp = preg_match(Markup::WORD_TIMESTAMP_REGEX, $token) === 1;
                 if ($hasText && (($isAfterBreak && !str_starts_with($token, "</")) || $isTimestamp)) {
                     $parts[]      = "";
