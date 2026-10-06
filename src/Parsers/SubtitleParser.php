@@ -28,7 +28,7 @@ abstract class SubtitleParser
 
     protected ReadOptions $options;
 
-    protected bool $lenient = false;
+    private ?FormatReadOptions $formatOptions = null;
 
     /** @var list<ParseWarning> */
     protected array $warnings = [];
@@ -64,11 +64,12 @@ abstract class SubtitleParser
 
 
     /**
-     * Returns ReadOptions::$format, or the defaults of formatOptionsClass() when it is null.
+     * Returns ReadOptions::$format, or the defaults of formatOptionsClass() when it is null. useOptions() builds the
+     * defaults once per read.
      */
     protected function formatOptions(): FormatReadOptions
     {
-        return $this->options->format ?? new (static::formatOptionsClass())();
+        return $this->formatOptions;
     }
 
 
@@ -89,9 +90,9 @@ abstract class SubtitleParser
             ));
         }
 
-        $this->options  = $options;
-        $this->lenient  = $options->lenient;
-        $this->warnings = [];
+        $this->options       = $options;
+        $this->formatOptions = $options->format ?? ($class === null ? null : new $class());
+        $this->warnings      = [];
 
         return $this;
     }
@@ -117,7 +118,7 @@ abstract class SubtitleParser
      */
     protected function fail(ParsingException $exception, ?int $lineNumber, ?int $blockIndex, array $block): void
     {
-        if (!$this->lenient) {
+        if (!$this->options->lenient) {
             throw $exception;
         }
 
@@ -267,7 +268,7 @@ abstract class SubtitleParser
      */
     protected function repairMissingEmptyLines(array $block, int $lineNumber, int $blockIndex, callable $isTimingLine, bool $withCueNumbers): array
     {
-        if (!$this->lenient) {
+        if (!$this->options->lenient) {
             return [0 => $block];
         }
 

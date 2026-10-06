@@ -80,7 +80,7 @@ final class MpSubParser extends SubtitleParser
                 continue;
             }
 
-            if ($this->lenient && !$hasFormat) {
+            if ($this->options->lenient && !$hasFormat) {
                 $this->warn(
                     "The file has no FORMAT line before line $lineNumber. The parser read the times as seconds.",
                     $lineNumber,

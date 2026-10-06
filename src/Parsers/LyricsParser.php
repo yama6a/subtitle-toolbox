@@ -37,7 +37,7 @@ final class LyricsParser extends SubtitleParser
     protected function read(string $rawSubtitle): Subtitle
     {
         $rawSubtitle = StringHelpers::normalizeEOLs($rawSubtitle);
-        if ($this->lenient) {
+        if ($this->options->lenient) {
             $this->warnBrokenTimeTags($this->lines($rawSubtitle));
         }
         $rawSubtitle = StringHelpers::normalizeSpaces($rawSubtitle);

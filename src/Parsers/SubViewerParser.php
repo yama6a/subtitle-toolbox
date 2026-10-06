@@ -154,7 +154,7 @@ final class SubViewerParser extends SubtitleParser
                 continue;
             }
 
-            if ($this->lenient && $this->hasOneBadTime($line)) {
+            if ($this->options->lenient && $this->hasOneBadTime($line)) {
                 $this->addCueWithText($parsedCues, $cue);
                 $this->warnSkipped($skipped);
                 $cue     = null;

@@ -45,7 +45,7 @@ final class JsonParser extends SubtitleParser
             }
         }
 
-        return $this->lenient ? $this->fromArraySkippingBrokenCues($data, $skipped) : Subtitle::fromArray($data);
+        return $this->options->lenient ? $this->fromArraySkippingBrokenCues($data, $skipped) : Subtitle::fromArray($data);
     }
 
 

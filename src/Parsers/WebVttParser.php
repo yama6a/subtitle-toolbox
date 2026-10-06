@@ -116,7 +116,7 @@ final class WebVttParser extends SubtitleParser
     {
         $isHeader = true;
         foreach ($this->collectBlocks($lines, false) as [$lineNumber, $block]) {
-            $timingOffset = $isHeader && $this->lenient ? $this->firstTimingLineOffset($block) : null;
+            $timingOffset = $isHeader && $this->options->lenient ? $this->firstTimingLineOffset($block) : null;
             $isHeader     = false;
             if ($timingOffset === null) {
                 yield $lineNumber => $block;

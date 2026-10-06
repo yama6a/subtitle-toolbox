@@ -58,7 +58,7 @@ final class SubRipParser extends SubtitleParser
      */
     public function parseBlock(array $rawLines, int $index, int $lineNumber): array
     {
-        if (!$this->lenient) {
+        if (!$this->options->lenient) {
             return [$this->parseCueBlock($rawLines, $index)];
         }
 

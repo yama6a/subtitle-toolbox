@@ -40,7 +40,7 @@ final class MicroDvdParser extends SubtitleParser
         // In lenient mode, the {1}{1}<fps> line can follow lines without frames.
         $firstLine = null;
         foreach ($rawLines as $lineIndex => $rawLine) {
-            if (!$this->lenient || preg_match(self::CUE_REGEX, $rawLine)) {
+            if (!$this->options->lenient || preg_match(self::CUE_REGEX, $rawLine)) {
                 $firstLine = $lineIndex;
                 break;
             }
