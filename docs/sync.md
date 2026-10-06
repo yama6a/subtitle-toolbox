@@ -10,9 +10,9 @@ use SubtitleToolbox\Sync\ReferenceSync;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
 
 $result = ReferenceSync::apply($german, new ReferenceSyncOptions(reference: $english));   // calls scale() and then shift() on $german
-$result->scale;                                                                // 1.04271 (25 / 23.976)
-$result->offset;                                                               // -2.3, added after the scale
-$result->score;                                                                // 0.89
+$result->scale;                                                                           // 1.04271 (25 / 23.976)
+$result->offset;                                                                          // -2.3, added after the scale
+$result->score;                                                                           // 0.89
 
 ReferenceSync::apply($german, new ReferenceSyncOptions(
     reference: $english,
@@ -47,7 +47,7 @@ $result->offset;           // -2.31, the offset of the first part. apply() shift
 ```
 
 - **Segments**: `from` and `to` are cue start times of the subtitle before the sync. A cue goes to the part that holds its start. Without a split, `getSegments()` returns one part from 0 to `INF`.
-- **Penalty**: a split stays only when it raises the score by more than `splitPenalty`. A part with 5% of the cue time raises the score by about 0.1. A split by chance in unrelated files raised the score by up to 0.04 with 300 cues and up to 0.12 with 60 cues. So a short file needs a higher penalty.
+- **Penalty**: a split stays only when it raises the score by more than `splitPenalty`. A part with 5% of the cue time raises the score by about 0.1. In unrelated files, a chance split raises the score by up to 0.04 with 300 cues. With 60 cues, it raises the score by up to 0.12. So a file with 60 cues or fewer needs a penalty above 0.12.
 - **Split points**: splits fall between cues.
 - **Overlaps**: `apply()` can move a part onto the next part. Then each cue of the earlier part that overlaps the later part ends 1 ms before the later part starts.
 - **Speed**: with `maxSplits: 2`, 2,000 cues against 2,000 cues take about 1.5 s.

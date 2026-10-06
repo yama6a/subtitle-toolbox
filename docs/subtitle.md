@@ -8,11 +8,11 @@ Every edit has one of 3 shapes:
 | Shape | Example | Returns |
 |:--- |:--- |:--- |
 | method on `Subtitle` | `$subtitle->shift(2)->wrapLines(42)` | `$this`, so calls chain |
-| method that starts with `with` or `to` | `$subtitle->withForcedCuesOnly()`, `$subtitle->withSlice(10, 20)`, `$subtitle->toArray()` | a new value. `with` gives a new `Subtitle`. `to` gives a conversion, such as an array. The original stays unchanged. |
-| service with `apply()` | `HearingImpairedRemover::apply($subtitle)` | a report. The service changes `$subtitle`. |
+| method that starts with `with` or `to` | `$subtitle->withForcedCuesOnly()`, `$subtitle->withSlice(10, 20)`, `$subtitle->toArray()` | a new value. `with` gives a new `Subtitle`. `to` gives a conversion, such as an array. The original stays unchanged |
+| service with `apply()` | `HearingImpairedRemover::apply($subtitle)` | a report. The service changes `$subtitle` |
 
 - **Names**: a method that returns a new `Subtitle` starts with `with`. A method that converts the subtitle to another type starts with `to`, such as `toArray()` or `toString()`. A method that changes the subtitle is a verb, such as `shift()` or `removeCuesWhere()`.
-- **Service**: a feature with many settings is a class with one static `apply(Subtitle $subtitle, ?XOptions $options = null): XReport`. The services are `Resegmenter`, `HearingImpairedRemover`, `ReferenceSync`, `ShotChangeTiming`, `CommonErrorFixer`, `WordHighlight`, `ProfanityFilter` and `SpeakerLabels`. `OcrRunner::run()` and `TranslationRunner::translate()` also change the subtitle and return a report. `DualSubtitle::fromPair()` builds a new subtitle from two.
+- **Service**: a service is a class with one static `apply(Subtitle $subtitle, ?XOptions $options = null): XReport`. The services are `Resegmenter`, `HearingImpairedRemover`, `ReferenceSync`, `ShotChangeTiming`, `CommonErrorFixer`, `WordHighlight`, `ProfanityFilter` and `SpeakerLabels`. `OcrRunner::run()` and `TranslationRunner::translate()` also change the subtitle and return a report. `DualSubtitle::fromPair()` builds a new subtitle from two.
 - **Options**: a method or constructor that takes an options object accepts `null` or no argument, and then uses `new XOptions()`. `Resegmenter`, `ReferenceSync`, `ShotChangeTiming` and `ProfanityFilter` require the options, because their options class has a required argument. `SpeakerLabels::apply()` and `validate()` require the options, because the default options change and check nothing.
 - **Keep the original**: `clone` copies the cues too. Pass `clone $subtitle` to a service or to a method that changes the subtitle, and the original stays unchanged.
 
@@ -67,7 +67,7 @@ $subtitle->removeCuesWhere(fn (SubtitleCue $cue) => $cue->getEnd() - $cue->getSt
 - **Overlaps**: cues can overlap, so `findCuesAt()` returns an array. `findCueIndexAt()` returns the lowest index of these cues.
 - **Keys**: `findCuesAt()`, `findCuesBetween()` and `findCues()` keep the cue index as the array key.
 - **Remove**: `removeCuesWhere()` moves a comment before a removed cue to the next kept cue, and then calls `reIndexCues()`.
-- **Add and remove**: `addCue()` sorts the cues by start time after each call. `addCues()` adds a list and sorts once, so use it for many cues. A comment after the last cue stays after the last cue, also when the added cue sorts last. `removeCue()` numbers the remaining cues from 0 again.
+- **Add and remove**: `addCue()` sorts the cues by start time after each call. `addCues()` adds a list and sorts once, so use it to add 2 or more cues. A comment after the last cue stays after the last cue, also when the added cue sorts last. `removeCue()` numbers the remaining cues from 0 again.
 - **No array access**: `$subtitle[3]` does not work. Use `getCues()`, `addCue()` and `removeCue()`, so the cue indexes and comments stay correct.
 - **Structure check**: `validate(ValidationRules::structure())` returns one violation per problem. It reports a subtitle without cues. It also reports a cue that starts before the previous cue starts or ends, and a cue that ends before it starts. See [validation](validation.md).
 
@@ -89,7 +89,8 @@ file_put_contents('movie.forced.itt', $forced->toString(Format::Itt));
 |:--- |:--- |:--- |
 | TTML, IMSC, DFXP | `itts:forcedDisplay="true"` on `p`, `span`, `div`, `body`, the region or a referenced style | the same attribute on `p` |
 | iTT | as TTML | the same attribute on `p` |
-| PGS, VobSub | the forced flag of the object or unit | PGS: the forced flag of the object. VobSub: no formatter |
+| PGS | the forced flag of the object | the forced flag of the object |
+| VobSub | the forced flag of the unit | no formatter |
 | MKV | the forced flag of the track, see [mkv.md](mkv.md) | no formatter |
 | JSON | `forced` | `forced` |
 | other formats | no flag | the flag is lost |
@@ -117,9 +118,9 @@ array_slice($stats->mostUsedWords, 0, 10); // [['word' => 'you', 'count' => 211]
 json_encode($stats->toArray());            // all numbers and the 10 most used words
 ```
 
-- **Characters**: the count leaves out tags and leading and trailing spaces. An entity such as `&amp;` and a UTF-8 letter of several bytes count as one character. [Validation](validation.md) counts the same way.
+- **Characters**: the count leaves out tags and leading and trailing spaces. An entity such as `&amp;` and a UTF-8 letter of several bytes count as one character.
 - **Words**: the text without tags, split at whitespace. A dialogue dash counts as a word. `mostUsedWords` lists every word, the most used first. It removes punctuation at the start and end of each word and compares in lower case.
 - **Cues without text**: an image cue counts in `cueCount`, the display time, the span and the gaps. The text numbers leave it out.
 - **Reading speed**: a cue with a duration of 0 has no characters per second and no words per minute.
 - **Gap**: the start of a cue minus the latest end of the earlier cues. An overlap gives a negative gap.
-- **No data**: a range with no value to measure is null, for example `gaps` with fewer than 2 cues, or `charactersPerSecond` without a cue that has text and a duration. Without cues, `span` is null too, and the counts and `totalDisplayTime` are 0. `toArray()` writes the same nulls.
+- **No data**: a range with no value to measure is null. Examples are `gaps` with fewer than 2 cues, and `charactersPerSecond` without a cue that has text and a duration. Without cues, `span` is null too, and the counts and `totalDisplayTime` are 0. `toArray()` writes the same nulls.

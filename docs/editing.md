@@ -1,6 +1,6 @@
 # Editing cues
 
-All methods on this page change the `Subtitle` in place and return it, unless the text says otherwise. To keep the original, edit a copy. `clone` copies the cues too:
+All methods on this page change the `Subtitle` in place and return it, unless the text says otherwise. To keep the original, edit a copy, see [Keep the original](subtitle.md#call-shapes):
 
 ```php
 $copy = clone $subtitle;
@@ -21,8 +21,8 @@ $subtitle->syncByTwoPoints(10, 12, 6260, 6005);      // 10 s becomes 12 s, 6260 
 
 - **Negative times**: a start or end time that becomes negative becomes 0. The cue stays in the subtitle.
 - **Word timestamps**: these 4 methods also move the word timestamps in the cue text, such as `<00:00:02.000>`. `merge()` with an offset and `withSlice()` with `$moveToZero` move them too. A word timestamp that becomes negative becomes 0.
-- **Cue boundaries**: `fixOverlaps()`, `extendShortCues()`, the [shot change timing](#shot-changes-and-gaps) and the snap of `DualSubtitle` move a start or end time without moving the speech, so the word timestamps keep their times.
-- **Speech-to-text format data**: the format data of Whisper, Deepgram, AssemblyAI, AWS Transcribe and Google input is a copy of the source file and keeps its times. Read the word times from the word timestamps in the cue text.
+- **Cue boundaries**: some methods move a start or end time without moving the speech. So the word timestamps keep their times. These are `fixOverlaps()`, `extendShortCues()`, the [shot change timing](#shot-changes-and-gaps) and the snap of `DualSubtitle`.
+- **Speech-to-text format data**: the format data of Whisper, Deepgram, AssemblyAI, AWS Transcribe and Google input is a copy of the source file. It keeps the times of the source file. Read the word times from the word timestamps in the cue text.
 - **Other ways to sync**: [sync.md](sync.md) finds the offset and scale from a reference subtitle or the speech in the audio.
 
 ## Merge, slice, split and join
@@ -54,7 +54,7 @@ $subtitle->unwrapLines();                         // join the lines of each cue 
 - **Text without spaces**: Chinese or Japanese text has no break points, so `wrapLines()` keeps such a line long.
 
 ## Short cues
-Speech-to-text output and fast dialogue often have many cues under 1 s. `mergeShortCues()` joins such a cue with its neighbour when the joined cue still fits the limits.
+Speech-to-text output and quick exchanges of 1 or 2 words often have cues under 1 s. `mergeShortCues()` joins such a cue with its neighbor when the joined cue still fits the limits.
 
 ```php
 use SubtitleToolbox\CueLimits;
@@ -92,8 +92,8 @@ $subtitle->mergeShortCues();   // the default limits of new MergeShortCuesOption
 
 - **Order**: the method walks the cues in start time order. It joins a short cue with the next cue. When the next cue does not fit, it tries the previous cue. A joined cue that is still short joins again.
 - **Never joined**: cues with different `<v>` speakers, different alignments or different forced flags, and image cues. A cue without a `<v>` tag and a cue with one have different speakers. Alignment `null` and alignment 2 count as the same.
-- **Joined cue**: it keeps the start, the identifier, the alignment and the format data of the first cue, and the end of the last cue. A comment before a joined cue moves before the result.
-- **Text**: the lines are joined with a space and wrapped as `wrapLines()` does. A line that starts with a dialogue dash stays on its own line, and then each such line must fit on one line. When both cues start with a `<v>` tag of the same speaker, the joined text keeps only the first tag.
+- **Joined cue**: it keeps the start, the identifier, the alignment and the format data of the first cue. It keeps the end of the last cue. A comment before a joined cue moves before the result.
+- **Text**: the method joins the lines with a space and wraps them as `wrapLines()` does. A line that starts with a dialogue dash stays on its own line. Each such line must then fit on one line. When both cues start with a `<v>` tag of the same speaker, the joined text keeps only the first tag.
 
 ## Long cues
 Speech-to-text tools such as Whisper write segments of 10 s and more. `wrapLines()` makes the lines shorter, but the cue stays too long to read. `Resegmenter` with `ResegmentMode::SplitLong` splits such a cue into cues that fit the limits.
@@ -105,15 +105,15 @@ use SubtitleToolbox\Resegmenting\Resegmenter;
 use SubtitleToolbox\Resegmenting\ResegmentOptions;
 
 // 00:00:00,000 --> 00:00:11,050  The tensor operators are optimized heavily for Apple silicon CPUs. Depending on
-//                                the computation size, Arm Neon SIMD instrisics or CBLAS Accelerate framework routines are used.
-$report = Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 42, maxLinesPerCue: 2)));
+//                                the computation size, Arm Neon SIMD intrinsics or CBLAS Accelerate framework routines are used.
+$report = Resegmenter::apply($subtitle, new ResegmentOptions(mode: ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 42, maxLinesPerCue: 2)));
 // 00:00:00,000 --> 00:00:04,231  The tensor operators are optimized heavily for Apple silicon CPUs.
 // 00:00:04,231 --> 00:00:06,441  Depending on the computation size,
-// 00:00:06,441 --> 00:00:11,050  Arm Neon SIMD instrisics or CBLAS Accelerate framework routines are used.
+// 00:00:06,441 --> 00:00:11,050  Arm Neon SIMD intrinsics or CBLAS Accelerate framework routines are used.
 $report->cuesBefore;   // 1
 $report->cuesAfter;    // 3
 
-Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::ByWords, maxWordGap: 0.6));
+Resegmenter::apply($subtitle, new ResegmentOptions(mode: ResegmentMode::ByWords, maxWordGap: 0.6));
 ```
 
 `ResegmentMode::ByWords` drops the cue boundaries and builds new cues from the word timestamps, for example from Whisper JSON read with `TranscriptReadOptions::$wordTimestamps`. Each cue then holds one sentence, or as much of it as fits.
@@ -126,13 +126,13 @@ Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::ByWords, maxWo
 
 - **Mode values**: `ResegmentMode::from('byWords')` returns `ResegmentMode::ByWords`. The values are `splitLong` and `byWords`.
 - **Limits**: a cue breaks the limits when its text does not fit `maxLinesPerCue` lines of `maxCharactersPerLine` characters, as `wrapLines()` wraps it. It also breaks them above `maxDuration` or `maxCharactersPerSecond`.
-- **Break points**, best first: a sentence end, a clause end, then the space closest to the middle. Among break points of the same kind, the one closest to the middle wins. A full stop before a word in lower case, as in "e.g. this", is no sentence end.
+- **Break points**: best first, a sentence end, a clause end, then the space closest to the middle. Among break points of the same kind, the one closest to the middle wins. A full stop before a word in lower case, as in "e.g. this", does not end a sentence.
 - **Splitting**: `SplitLong` splits a cue in two at the best break point. It splits each part again while the part breaks a limit. A cue stays unchanged when no break point keeps both parts at `minDuration` or longer.
 - **Checks**: with `minDuration: 8` and `maxDuration: 5`, each part of a split cue lasts 8 s or more and breaks `maxDuration`. So `SplitLong` throws `InvalidArgumentException` before it changes a cue, when `minDuration` is greater than `maxDuration` and a cue needs a split. `ByWords` does not use `minDuration`.
 - **Times**: a new cue starts at the word timestamp of its first word. Without one, the time splits in proportion to the visible characters.
-- **Text without spaces**, such as Japanese, splits after CJK punctuation and at word timestamps.
-- **Regrouping**: `ByWords` ends a cue after a sentence end, before a pause of `maxWordGap` seconds, and before a word that would break a limit. It never joins words of cues with different `<v>` speakers, alignments or forced flags. Cues without word timestamps stay unchanged.
-- **Tags**: a core markup tag that is open at a break closes at the end of the first cue and opens again in the next cue.
+- **Text without spaces**: text such as Japanese splits after CJK punctuation and at word timestamps.
+- **Regrouping**: `ByWords` ends a cue after a sentence end and before a pause of `maxWordGap` seconds. It also ends a cue before a word that would break a limit. It never joins words of cues with different `<v>` speakers, alignments or forced flags. Cues without word timestamps stay unchanged.
+- **Tags**: a core markup tag can be open at a break. It then closes at the end of the first cue and opens again in the next cue.
 - **Unchanged**: image cues and cues of one word.
 - **Cue data**: a new cue keeps the alignment, forced flag and format data of its source cue. Only the cue with the first word of a source cue keeps its identifier.
 
@@ -160,6 +160,8 @@ $report->movedStarts;   // the cue starts that moved by one frame or more
 $report->movedEnds;     // the cue ends that moved by one frame or more
 ```
 
+An **in-time** is the start time of a cue. An **out-time** is the end time of a cue.
+
 | Rule | Before, at 24 fps | After |
 |:--- |:--- |:--- |
 | An in-time up to `snapWindowFrames` frames after a shot change moves to the shot change. | shot change 62.500, cue starts 62.708 | starts 62.500 |
@@ -172,7 +174,7 @@ $report->movedEnds;     // the cue ends that moved by one frame or more
 ### Closing gaps
 Example at 24 fps with the default options: cue A ends at 10.000, cue B starts at 10.292. The gap is 7 frames. After `apply()`, A ends at 10.208, 2 frames before B.
 
-- **Rule**: a gap closes when it is longer than `minGapFrames` and shorter than `snapWindowFrames` frames, and no shot change lies inside it.
+- **Rule**: a gap closes when it is longer than `minGapFrames` and shorter than `snapWindowFrames` frames. No shot change may lie inside it.
 - **Result**: the earlier cue ends `minGapFrames` frames before the next cue starts. The gap shrinks to `minGapFrames`, not to 0.
 - **Without shot changes**: no gap holds a shot change, so only the length of the gap decides.
 - **Off**: `chain: false` keeps all gaps.
