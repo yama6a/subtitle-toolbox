@@ -237,12 +237,26 @@ class TesseractOcrEngineTest extends TestCase
     }
 
 
+    // Other test runs on the same machine share the temp directory, so the test checks only its own image file.
     public function testDeletesTheTemporaryImage(): void
     {
-        $before = glob(sys_get_temp_dir() . "/subtitle-toolbox-ocr-*");
-        (new TesseractOcrEngine(new TesseractOcrOptions(program: self::FAKE)))->recognize(self::image(), null);
+        $directory = sys_get_temp_dir() . "/subtitle-toolbox-ocr-test-" . bin2hex(random_bytes(8));
+        mkdir($directory);
+        $log = "$directory/image-path";
+        putenv("FAKE_TESSERACT_LOG=$log");
+        try {
+            (new TesseractOcrEngine(new TesseractOcrOptions(program: self::FAKE)))->recognize(self::image(), null);
+            $image = trim(file_get_contents($log));
+        } finally {
+            putenv("FAKE_TESSERACT_LOG");
+            if (is_file($log)) {
+                unlink($log);
+            }
+            rmdir($directory);
+        }
 
-        $this->assertSame($before, glob(sys_get_temp_dir() . "/subtitle-toolbox-ocr-*"));
+        $this->assertStringContainsString("subtitle-toolbox-ocr-", $image);
+        $this->assertFileDoesNotExist($image);
     }
 
 

@@ -9,6 +9,9 @@ if [ -n "$FAKE_TESSERACT_FAIL" ]; then
     exit 1
 fi
 image=$1
+if [ -n "$FAKE_TESSERACT_LOG" ]; then
+    echo "$image" > "$FAKE_TESSERACT_LOG"
+fi
 shift 2
 while [ $# -gt 0 ]; do
     case "$1" in
