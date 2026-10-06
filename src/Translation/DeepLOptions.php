@@ -27,6 +27,10 @@ final readonly class DeepLOptions
             throw new InvalidArgumentException("Cannot create DeepLOptions with an empty API key - pass the key of " .
                                                "your DeepL account!");
         }
+        if (trim($apiKey) !== $apiKey || preg_match('/[\x00-\x1F\x7F]/', $apiKey) === 1) {
+            throw new InvalidArgumentException("Cannot create DeepLOptions with this API key - the key has a control " .
+                                               "character, or a space at the start or end!");
+        }
         if ($baseUrl !== null && preg_match('#^https?://[^/]#i', $baseUrl) !== 1) {
             throw new InvalidArgumentException("Cannot create DeepLOptions with the base URL \"$baseUrl\" - the URL " .
                                                "must start with http:// or https://!");

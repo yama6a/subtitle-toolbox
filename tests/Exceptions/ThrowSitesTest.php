@@ -698,6 +698,7 @@ class ThrowSitesTest extends TestCase
             "Translation/DeepLEngine.php: no translations"  => [fn () => (new DeepLEngine(new DeepLOptions("key", httpClient: new FakeHttpClient([[200, "{}"]]))))
                                                                 ->translate(["a"], "en", "de"), ...$translation],
             "Translation/DeepLOptions.php: empty key"       => [fn () => new DeepLOptions(" "), ...$invalid],
+            "Translation/DeepLOptions.php: key with a line break" => [fn () => new DeepLOptions("abc:fx\r\n"), ...$invalid],
             "Translation/DeepLOptions.php: base URL without scheme" => [fn () => new DeepLOptions("key", "api.deepl.com"), ...$invalid],
             "Translation/GoogleTranslateEngine.php: HTTP 403" => [fn () => (new GoogleTranslateEngine(new GoogleTranslateOptions("key",
                                                                 httpClient: new FakeHttpClient([[403, ""]]))))->translate(["a"], "en", "fr"),
@@ -706,6 +707,7 @@ class ThrowSitesTest extends TestCase
                                                                 httpClient: new FakeHttpClient([[200, "{}"]]))))->translate(["a"], "en", "fr"),
                                                                 ...$translation],
             "Translation/GoogleTranslateOptions.php: empty key" => [fn () => new GoogleTranslateOptions(""), ...$invalid],
+            "Translation/GoogleTranslateOptions.php: key with a space" => [fn () => new GoogleTranslateOptions(" key"), ...$invalid],
             "Translation/GoogleTranslateOptions.php: base URL without scheme" => [fn () => new GoogleTranslateOptions("key", "ftp://example.com"),
                                                                 ...$invalid],
             "Translation/TranslationOptions.php: cue limit 0" => [fn () => new TranslationOptions(maxCuesPerSentence: 0), ...$invalid],

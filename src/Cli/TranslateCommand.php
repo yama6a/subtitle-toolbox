@@ -21,6 +21,9 @@ final class TranslateCommand extends WriteCommand
     // Points the engines at a local fake server in the tests. The help does not list it.
     private const URL_VARIABLE = "SUBTITLE_TOOLBOX_TRANSLATE_URL";
 
+    // The variable must not send the key to another machine.
+    private const LOCAL_HOSTS = ["127.0.0.1", "localhost", "[::1]"];
+
     private ?TranslationRunner $runner = null;
 
     private string $sourceLanguage = "";
@@ -74,13 +77,36 @@ final class TranslateCommand extends WriteCommand
         $apiKey   = $arguments->value("api-key") ?? (getenv($variable) ?: null)
             ?? self::fail("Pass --api-key or set the environment variable $variable.");
 
+        if (trim($apiKey) === "") {
+            self::fail("The API key is empty. Pass --api-key or set $variable.");
+        }
+        if (trim($apiKey) !== $apiKey || preg_match('/[\x00-\x1F\x7F]/', $apiKey) === 1) {
+            self::fail("The API key has a control character, or a space at the start or end. Pass the key without them.");
+        }
+
         $this->targetLanguage = $arguments->value("target-language") ?? self::fail("Pass --target-language, for example --target-language fr.");
         $this->sourceLanguage = $arguments->value("source-language") ?? "";
 
-        $baseUrl      = getenv(self::URL_VARIABLE) ?: null;
+        $baseUrl      = self::localTestUrl();
         $this->runner = new TranslationRunner($engine === "deepl"
             ? new DeepLEngine(new DeepLOptions(apiKey: $apiKey, baseUrl: $baseUrl))
             : new GoogleTranslateEngine(new GoogleTranslateOptions(apiKey: $apiKey, baseUrl: $baseUrl)));
+    }
+
+
+    /**
+     * Returns the scheme, host and port of SUBTITLE_TOOLBOX_TRANSLATE_URL when the host is this machine, else null.
+     */
+    public static function localTestUrl(): ?string
+    {
+        $parts = parse_url((string)getenv(self::URL_VARIABLE));
+        if (!is_array($parts) || !in_array(strtolower($parts["scheme"] ?? ""), ["http", "https"], true)
+            || !in_array(strtolower($parts["host"] ?? ""), self::LOCAL_HOSTS, true)) {
+            return null;
+        }
+
+        // Only the parsed parts go to curl, so that curl cannot read another host from the URL.
+        return "{$parts["scheme"]}://{$parts["host"]}" . (isset($parts["port"]) ? ":{$parts["port"]}" : "");
     }
 
 

@@ -43,7 +43,7 @@ class DeepLEngineTest extends TestCase
         $this->assertSame([[
             "url"     => "https://api.deepl.com/v2/translate",
             "headers" => ["Authorization: DeepL-Auth-Key " . self::KEY, "Content-Type: application/json"],
-            "body"    => ["text" => self::TEXTS, "target_lang" => "DE", "tag_handling" => "xml", "source_lang" => "EN"],
+            "body"    => ["text" => self::TEXTS, "target_lang" => "DE", "tag_handling" => "xml", "split_sentences" => "nonewlines", "source_lang" => "EN"],
         ]], $client->requests);
         $this->assertSame([
             "Der Zug nach Basel fährt um <x1>10:15</x1> von Gleis 4 ab.",
@@ -70,7 +70,8 @@ class DeepLEngineTest extends TestCase
         $client = new FakeHttpClient([[200, '{"translations": [{"detected_source_language": "DE", "text": "Run!"}]}']]);
 
         $this->assertSame(["Run!"], (new DeepLEngine(new DeepLOptions(self::KEY, httpClient: $client)))->translate(["Lauf!"], "", "en-US"));
-        $this->assertSame(["text" => ["Lauf!"], "target_lang" => "EN-US", "tag_handling" => "xml"], $client->requests[0]["body"]);
+        $this->assertSame(["text" => ["Lauf!"], "target_lang" => "EN-US", "tag_handling" => "xml", "split_sentences" => "nonewlines"],
+                          $client->requests[0]["body"]);
     }
 
 
@@ -152,5 +153,32 @@ class DeepLEngineTest extends TestCase
             array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $original->getCues()),
             array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $translated->getCues())
         );
+    }
+
+
+    public function testASourceLanguageWithARegionGoesOutWithoutTheRegion(): void
+    {
+        $client = new FakeHttpClient([[200, '{"translations": [{"text": "Lauf!"}]}']]);
+
+        (new DeepLEngine(new DeepLOptions(self::KEY, httpClient: $client)))->translate(["Run!"], "en-US", "de");
+
+        $this->assertSame(["EN", "DE"], [$client->requests[0]["body"]["source_lang"], $client->requests[0]["body"]["target_lang"]]);
+    }
+
+
+    public function testTheRunnerDecodesTheEntitiesOfTheAnswerOnce(): void
+    {
+        $echo     = new FakeHttpClient(respond: fn (array $body): array => [200, json_encode(["translations" => array_map(
+            fn (string $text): array => ["text" => $text],
+            $body["text"]
+        )])]);
+        $original = Subtitle::load(self::FILES . "own_entities.srt", Format::SubRip);
+        $copy     = clone $original;
+
+        (new TranslationRunner(new DeepLEngine(new DeepLOptions(self::KEY, httpClient: $echo))))->translate($copy, "en", "de");
+
+        $this->assertSame(["Write &amp;lt;i&amp;gt;Run&amp;lt;/i&amp;gt; for italics.", "Tom &amp;amp; Jerry is a cat and mouse act."],
+                          $echo->requests[0]["body"]["text"]);
+        $this->assertSame($original->toString(Format::SubRip), $copy->toString(Format::SubRip));
     }
 }

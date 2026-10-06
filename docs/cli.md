@@ -360,7 +360,7 @@ vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-format
 ```sh
 vendor/bin/subtitle-toolbox translate movie.de.srt --engine deepl --source-language de --target-language en-US -o movie.en.srt
 DEEPL_API_KEY=... vendor/bin/subtitle-toolbox translate movie.de.srt --engine deepl --target-language en-US
-vendor/bin/subtitle-toolbox translate season1/ --engine google --api-key "$KEY" --target-language fr --to vtt --output-dir fr/
+GOOGLE_TRANSLATE_API_KEY=... vendor/bin/subtitle-toolbox translate season1/ --engine google --target-language fr --to vtt --output-dir fr/
 ```
 
 | Option | Sets |
@@ -373,11 +373,12 @@ vendor/bin/subtitle-toolbox translate season1/ --engine google --api-key "$KEY" 
 
 - **Output**: one input goes to standard output, or to the file of `-o`. Several inputs need `--output-dir`. See [Input and output](#input-and-output).
 - **Key**: the tool reads only the variable of the chosen engine. With `--engine deepl`, a set `GOOGLE_TRANSLATE_API_KEY` does not help. The key never appears in the output or in error messages.
+- **Shared machine**: other users can read the arguments of a process, for example with `ps`, and the shell history keeps them. On a shared machine, set the variable in place of `--api-key`.
 - **Language codes**: the tool passes the codes to the service as they are and does not check them. The service rejects an unknown code, and the file fails.
 - **Usage errors**: a missing or unknown `--engine`, a missing key or a missing `--target-language` stops the tool with exit code 2 before it reads a file.
 - **Service errors**: a wrong key (HTTP 403), too many requests (HTTP 429), a used-up DeepL quota (HTTP 456) or no response fails the file with exit code 3 and a message that names the cause. `--keep-going` goes on with the next file.
 - **Warnings**: when the service drops a placeholder tag, the tool prints `movie.srt: cue 4: ...` to standard error and writes the cue without tags.
-- **No curl**: without `ext-curl`, `translate` stops with exit code 2 and names the extension. The other commands run without it. The container images include it. For the PHAR, install it with your PHP, for example `apt install php8.2-curl`.
+- **No curl**: without `ext-curl`, `translate` stops with exit code 2 and names the extension. The other commands run without it. The container images include it. For the PHAR, install the curl extension of your PHP.
 
 ## Dual
 `dual` merges a primary and a secondary subtitle with [`DualSubtitle::fromPair()`](editing.md#dual-subtitles). The output has the format of the primary file, unless `--to` sets another one.

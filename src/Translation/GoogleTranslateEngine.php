@@ -25,15 +25,14 @@ final class GoogleTranslateEngine implements TranslationEngine
      */
     public function __construct(GoogleTranslateOptions $options)
     {
-        $this->url    = rtrim($options->baseUrl ?? "https://translation.googleapis.com", "/") . "/language/translate/v2?key=" .
-                        rawurlencode($options->apiKey);
+        $this->url    = rtrim($options->baseUrl ?? "https://translation.googleapis.com", "/") . "/language/translate/v2";
         $this->apiKey = $options->apiKey;
         $this->client = $options->httpClient ?? new CurlHttpClient();
     }
 
 
     /**
-     * Translates the texts with format "html" and decodes the entities of the answer, except &lt; and &gt;.
+     * Translates the texts with format "html" and returns the answer as received. The runner decodes its entities.
      * An empty $sourceLanguage lets Google detect the language.
      */
     public function translate(array $texts, string $sourceLanguage, string $targetLanguage): array
@@ -60,7 +59,7 @@ final class GoogleTranslateEngine implements TranslationEngine
 
         [$status, $response] = $this->client->post(
             $this->url,
-            ["Content-Type: application/json"],
+            ["X-goog-api-key: $this->apiKey", "Content-Type: application/json"],
             json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE)
         );
 
@@ -82,19 +81,6 @@ final class GoogleTranslateEngine implements TranslationEngine
                                            count($texts) . " texts, or an answer that is not the JSON of translate v2.");
         }
 
-        return array_map(self::decodeEntities(...), $translations);
-    }
-
-
-    /**
-     * Keeps &lt; and &gt;, so that text which looks like a tag does not become one.
-     */
-    private static function decodeEntities(string $text): string
-    {
-        return preg_replace_callback('/&(?:[a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#[xX][0-9a-fA-F]+);/', function (array $match): string {
-            $decoded = html_entity_decode($match[0], ENT_QUOTES | ENT_HTML5, "UTF-8");
-
-            return $decoded === "<" || $decoded === ">" ? $match[0] : $decoded;
-        }, $text);
+        return $translations;
     }
 }

@@ -41,24 +41,24 @@ class GoogleTranslateEngineTest extends TestCase
         $translations = (new GoogleTranslateEngine(new GoogleTranslateOptions(self::KEY, httpClient: $client)))->translate(self::TEXTS, "en", "fr");
 
         $this->assertSame([[
-            "url"     => "https://translation.googleapis.com/language/translate/v2?key=AIzaSyD-example%2Bkey%2F42",
-            "headers" => ["Content-Type: application/json"],
+            "url"     => "https://translation.googleapis.com/language/translate/v2",
+            "headers" => ["X-goog-api-key: " . self::KEY, "Content-Type: application/json"],
             "body"    => ["q" => self::TEXTS, "target" => "fr", "format" => "html", "source" => "en"],
         ]], $client->requests);
         $this->assertSame([
             "Le train pour Bâle part du quai 4 à <x1>10:15</x1>.",
-            "<x1>Les billets & les réservations\nde places</x1> sont vendus ici.",
-            "- Cette place est-elle libre ?\n- Oui, c'est libre.",
+            "<x1>Les billets &amp; les réservations\nde places</x1> sont vendus ici.",
+            "- Cette place est-elle libre ?\n- Oui, c&#39;est libre.",
             "<x1>Le prochain arrêt est la gare centrale de Zurich.</x1>",
         ], $translations);
     }
 
 
-    public function testDecodesEntitiesButKeepsLessThanAndGreaterThan(): void
+    public function testReturnsTheAnswerAsReceivedForTheRunnerToDecode(): void
     {
         $client = new FakeHttpClient([[200, '{"data": {"translations": [{"translatedText": "l&#39;a &amp; &quot;b&quot; &lt;x1&gt; &#60; &eacute;"}]}}']]);
 
-        $this->assertSame(["l'a & \"b\" &lt;x1&gt; &#60; é"], (new GoogleTranslateEngine(new GoogleTranslateOptions(self::KEY, httpClient: $client)))->translate(["x"], "en", "fr"));
+        $this->assertSame(["l&#39;a &amp; &quot;b&quot; &lt;x1&gt; &#60; &eacute;"], (new GoogleTranslateEngine(new GoogleTranslateOptions(self::KEY, httpClient: $client)))->translate(["x"], "en", "fr"));
     }
 
 
@@ -69,7 +69,7 @@ class GoogleTranslateEngineTest extends TestCase
         $translations = (new GoogleTranslateEngine(new GoogleTranslateOptions("key", "http://127.0.0.1:8080/", $client)))->translate(["Lauf!"], "", "fr");
 
         $this->assertSame(["Cours !"], $translations);
-        $this->assertSame("http://127.0.0.1:8080/language/translate/v2?key=key", $client->requests[0]["url"]);
+        $this->assertSame("http://127.0.0.1:8080/language/translate/v2", $client->requests[0]["url"]);
         $this->assertSame(["q" => ["Lauf!"], "target" => "fr", "format" => "html"], $client->requests[0]["body"]);
     }
 
@@ -153,5 +153,23 @@ class GoogleTranslateEngineTest extends TestCase
             array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $original->getCues()),
             array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $translated->getCues())
         );
+    }
+
+
+    public function testTheRunnerDecodesTheEntitiesOfTheAnswerOnce(): void
+    {
+        $echo     = new FakeHttpClient(respond: fn (array $body): array => [200, json_encode(["data" => ["translations" => array_map(
+            fn (string $text): array => ["translatedText" => $text],
+            $body["q"]
+        )]])]);
+        $original = Subtitle::load(self::FILES . "own_entities.srt", Format::SubRip);
+        $copy     = clone $original;
+
+        (new TranslationRunner(new GoogleTranslateEngine(new GoogleTranslateOptions(self::KEY, httpClient: $echo))))->translate($copy, "en", "fr");
+
+        $this->assertSame(["Write &amp;lt;i&amp;gt;Run&amp;lt;/i&amp;gt; for italics.", "Tom &amp;amp; Jerry is a cat and mouse act."],
+                          $echo->requests[0]["body"]["q"]);
+        $this->assertSame($original->toString(Format::SubRip), $copy->toString(Format::SubRip));
+        $this->assertStringContainsString("Write &lt;i&gt;Run&lt;/i&gt; for italics.", $copy->toString(Format::SubRip));
     }
 }

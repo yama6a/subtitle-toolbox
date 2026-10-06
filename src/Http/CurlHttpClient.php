@@ -26,7 +26,7 @@ final class CurlHttpClient implements HttpClient
     {
         if (!self::isAvailable()) {
             throw new InvalidArgumentException("PHP has no ext-curl, which the DeepL and Google engines need. " .
-                                               "Install it, for example with apt install php8.2-curl.");
+                                               "Install the PHP curl extension.");
         }
     }
 
@@ -53,7 +53,7 @@ final class CurlHttpClient implements HttpClient
         ]);
         $response = curl_exec($handle);
         if (!is_string($response)) {
-            // The URL can hold an API key, so the message names the host only.
+            // A base URL can hold a user name and a password, so the message names the host only.
             throw new TranslationException("The request to " . parse_url($url, PHP_URL_HOST) . " failed: " . curl_error($handle));
         }
 

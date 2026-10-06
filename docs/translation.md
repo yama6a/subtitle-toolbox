@@ -23,7 +23,7 @@ $english->save('movie.en.srt');
 ```
 
 - **Sentences**: a cue that does not end with `.`, `?`, `!`, the ellipsis U+2026 or a CJK end mark such as U+3002 joins the next cue. Cue 1 `The train to Basel leaves` and cue 2 `from platform 4.` go out as one text. The runner splits the translation back in proportion to the characters of the cues, at a space. In Chinese, Japanese and Thai text it splits between two characters.
-- **Lines**: a cue that goes out alone keeps its line breaks when the engine keeps them. Cues that go out as one text come back with one line each. Call `wrapLines()` to break long lines again.
+- **Lines**: a cue that goes out alone keeps its line breaks when the engine keeps them. `DeepLEngine` sends `split_sentences: "nonewlines"`, so DeepL translates the 2 lines of a cue as one sentence. Cues that go out as one text come back with one line each. Call `wrapLines()` to break long lines again.
 - **Tags**: the runner replaces tags with numbered placeholders, for example `<i>Run!</i>` becomes `<x1>Run!</x1>`, and a word timestamp becomes `<x2/>`. It restores the tags after the translation. A tag that spans two cues of one sentence closes at the end of the first cue and opens again in the next.
 - **Dropped placeholder**: when the engine drops, adds or breaks a placeholder, the runner removes all tags of the text and adds a `TranslationWarning` for each cue.
 - **Not sent**: cues with only numbers, punctuation, symbols such as the music note U+266A, or no text keep their text.
@@ -57,19 +57,19 @@ $french->save('movie.fr.srt');
 | Engine | Options | Service | Key | Tags |
 |:--- |:--- |:--- |:--- |:--- |
 | `DeepLEngine` | `DeepLOptions` | DeepL API v2 | header `Authorization: DeepL-Auth-Key`. A key that ends in `:fx` goes to `api-free.deepl.com` | `tag_handling: "xml"` |
-| `GoogleTranslateEngine` | `GoogleTranslateOptions` | Cloud Translation Basic (v2) | query parameter `key` | `format: "html"`. The engine decodes entities such as `&#39;` in the answer |
+| `GoogleTranslateEngine` | `GoogleTranslateOptions` | Cloud Translation Basic (v2) | header `X-goog-api-key` | `format: "html"`. The runner decodes entities such as `&#39;` in the answer |
 
 | Option | Default | Sets |
 |:--- |:--- |:--- |
-| `apiKey` | required | the API key of the service. An empty key throws `InvalidArgumentException` |
+| `apiKey` | required | the API key of the service. An empty key, a key with a control character such as a line break, and a key with a space at the start or end throw `InvalidArgumentException` |
 | `baseUrl` | null, the host of the service | the scheme and host for the requests, for example a proxy. It must start with `http://` or `https://` |
 | `httpClient` | null, a client that uses `ext-curl` | the `HttpClient` that sends the requests |
 
-- **Language codes**: the engines pass the codes to the service as they are. DeepL gets them in upper case, for example `EN-US`, because its API expects that. The engines do not check the codes. The service rejects an unknown code.
+- **Language codes**: the engines pass the codes to the service as they are. DeepL gets them in upper case, for example `EN-US`, because its API expects that. DeepL takes a region only in the target language, so `DeepLEngine` sends the source language `en-US` as `EN`. The engines do not check the codes. The service rejects an unknown code.
 - **Source language**: an empty string lets the service detect the language.
 - **Request size**: DeepL takes at most 50 texts per request. `GoogleTranslateEngine` sends at most 128 texts per request. The engines split a longer list and join the results in order. `maxCharactersPerRequest`, default 5,000, keeps each request below the size limits of both services.
 - **Errors**: the engines throw `TranslationException` for HTTP errors such as 403 (wrong key), 429 (too many requests) and 456 (DeepL quota used up), for a request that gets no response, and for an answer they cannot read. The message names the cause and never holds the key.
-- **No curl**: without `ext-curl` and without an `httpClient`, the engine constructor throws `InvalidArgumentException` with a message that names the extension. `CurlHttpClient::isAvailable()` returns false then. Composer lists `ext-curl` under `suggest` only, because the rest of the library runs without it.
+- **No curl**: without `ext-curl` and without an `httpClient`, the engine constructor throws `InvalidArgumentException` with a message that names the extension. Check `extension_loaded('curl')` before you create an engine. Composer lists `ext-curl` under `suggest` only, because the rest of the library runs without it.
 - **Google v3**: the engine uses v2, because v3 needs an OAuth access token and a project ID in place of an API key.
 
 ## Your own HTTP client

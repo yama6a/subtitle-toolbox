@@ -34,7 +34,8 @@ final class DeepLEngine implements TranslationEngine
 
 
     /**
-     * Translates the texts with tag_handling "xml". An empty $sourceLanguage lets DeepL detect the language.
+     * Translates the texts with tag_handling "xml". An empty $sourceLanguage lets DeepL detect the language. A region in
+     * $sourceLanguage, such as "-US" in "en-US", does not go to DeepL.
      */
     public function translate(array $texts, string $sourceLanguage, string $targetLanguage): array
     {
@@ -53,9 +54,10 @@ final class DeepLEngine implements TranslationEngine
      */
     private function request(array $texts, string $sourceLanguage, string $targetLanguage): array
     {
-        $body = ["text" => $texts, "target_lang" => strtoupper($targetLanguage), "tag_handling" => "xml"];
+        // "nonewlines" keeps the 2 lines of a cue in one sentence. DeepL takes no region in source_lang, such as EN-US.
+        $body = ["text" => $texts, "target_lang" => strtoupper($targetLanguage), "tag_handling" => "xml", "split_sentences" => "nonewlines"];
         if ($sourceLanguage !== "") {
-            $body["source_lang"] = strtoupper($sourceLanguage);
+            $body["source_lang"] = strtoupper(explode("-", $sourceLanguage)[0]);
         }
 
         [$status, $response] = $this->client->post(

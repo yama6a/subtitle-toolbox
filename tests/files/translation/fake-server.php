@@ -11,7 +11,7 @@ $path = parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
 $body = file_get_contents("php://input");
 $key  = match ($path) {
     "/v2/translate"           => preg_replace('/^DeepL-Auth-Key /', "", $_SERVER["HTTP_AUTHORIZATION"] ?? ""),
-    "/language/translate/v2"  => $_GET["key"] ?? "",
+    "/language/translate/v2"  => $_SERVER["HTTP_X_GOOG_API_KEY"] ?? "",
     default                   => null,
 };
 

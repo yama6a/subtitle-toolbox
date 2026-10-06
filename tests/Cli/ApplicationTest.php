@@ -54,6 +54,21 @@ class ApplicationTest extends TestCase
     private string $serverLog = "";
 
 
+    /** @var array<string, string|false> the values of TRANSLATE_VARIABLES before the test */
+    private array $savedVariables = [];
+
+
+    protected function setUp(): void
+    {
+        foreach (self::TRANSLATE_VARIABLES as $variable) {
+            $this->savedVariables[$variable] = getenv($variable);
+            putenv($variable);
+        }
+        // A translate test without the fake server must not reach a real service.
+        putenv("SUBTITLE_TOOLBOX_TRANSLATE_URL=" . self::closedPortUrl());
+    }
+
+
     protected function tearDown(): void
     {
         $this->server?->stop();
@@ -61,9 +76,19 @@ class ApplicationTest extends TestCase
         if ($this->serverLog !== "") {
             @unlink($this->serverLog);
         }
-        foreach (self::TRANSLATE_VARIABLES as $variable) {
-            putenv($variable);
+        foreach ($this->savedVariables as $variable => $value) {
+            putenv($value === false ? $variable : "$variable=$value");
         }
+    }
+
+
+    private static function closedPortUrl(): string
+    {
+        $socket = stream_socket_server("tcp://127.0.0.1:0");
+        $name   = stream_socket_get_name($socket, false);
+        fclose($socket);
+
+        return "http://$name";
     }
 
 
@@ -638,9 +663,37 @@ class ApplicationTest extends TestCase
                           self::runApplication(["translate", "-", "--engine", "deepl", "--target-language", "de"]));
         $this->assertSame([2, "", "Error: Pass --target-language, for example --target-language fr.$usage"],
                           self::runApplication(["translate", "-", "--engine", "google"]));
+        $this->assertSame([2, "", "Error: The API key is empty. Pass --api-key or set DEEPL_API_KEY.$usage"],
+                          self::runApplication(["translate", "-", "--engine", "deepl", "--api-key", "", "--target-language", "de"]));
+        putenv("DEEPL_API_KEY= ");
+        $this->assertSame([2, "", "Error: The API key is empty. Pass --api-key or set DEEPL_API_KEY.$usage"],
+                          self::runApplication(["translate", "-", "--engine", "deepl", "--target-language", "de"]));
+        $this->assertSame([2, "", "Error: The API key has a control character, or a space at the start or end. Pass the key without them.$usage"],
+                          self::runApplication(["translate", "-", "--engine", "google", "--api-key", "key\r", "--target-language", "de"]));
         $this->assertSame([2, "", "Error: 2 input files need --output-dir DIR. One input file goes to standard output or to -o FILE.$usage"],
                           self::runApplication(["translate", self::TRANSLATION . "own_station.srt", self::FILES . "cli/latin1.srt",
                                                 "--engine", "google", "--target-language", "fr"]));
+    }
+
+
+    public function testTheTestUrlWorksOnlyForThisMachine(): void
+    {
+        $cases = [
+            "http://127.0.0.1:8080/x?y=1"         => "http://127.0.0.1:8080",
+            "https://localhost"                   => "https://localhost",
+            "http://[::1]:9000/"                  => "http://[::1]:9000",
+            "http://example.com"                  => null,
+            "http://127.0.0.1.example.com"        => null,
+            "http://localhost@example.com/"       => null,
+            "ftp://127.0.0.1"                     => null,
+            "127.0.0.1:8080"                      => null,
+        ];
+        foreach ($cases as $url => $expected) {
+            putenv("SUBTITLE_TOOLBOX_TRANSLATE_URL=$url");
+            $this->assertSame($expected, TranslateCommand::localTestUrl(), $url);
+        }
+        putenv("SUBTITLE_TOOLBOX_TRANSLATE_URL");
+        $this->assertNull(TranslateCommand::localTestUrl());
     }
 
 
@@ -668,7 +721,7 @@ class ApplicationTest extends TestCase
         $input  = self::TRANSLATION . "own_station.srt";
 
         $this->assertSame(
-            [2, "", "Error: PHP has no ext-curl, which the DeepL and Google engines need. Install it, for example with apt install php8.2-curl.\n" .
+            [2, "", "Error: PHP has no ext-curl, which the DeepL and Google engines need. Install the PHP curl extension.\n" .
                     "Run \"subtitle-toolbox help translate\" for the usage.\n"],
             WithoutCurl::run([$binary, "translate", $input, "--engine", "deepl", "--api-key", "key", "--target-language", "de"])
         );

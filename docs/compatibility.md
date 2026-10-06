@@ -38,5 +38,5 @@ Before 3.0 removes a class, method, option or command, at least one 2.x minor re
 - **Parsers and formatters as base classes**: do not extend `SubtitleParser` or `SubtitleFormatter`. Their protected members can change in any release. Call a parser or formatter from your own class.
 - **Exceptions as base classes**: do not extend an exception class. `InvalidArgumentException` and `InvalidParserException` are not `final`, because a library class extends each of them. Their protected `CODE` constant is not API. `GenericException` is not API, also as a parent.
 - **`SubtitleToolbox\Cli`**: the PHP classes of the command line tool. Run the binary instead.
-- **`SUBTITLE_TOOLBOX_TRANSLATE_URL`**: the environment variable that points `translate` at a fake server in the tests. It is a test hook and can change or go away in any release.
+- **`SUBTITLE_TOOLBOX_TRANSLATE_URL`**: the environment variable that points `translate` at a fake server in the tests. `translate` reads it only when its host is `127.0.0.1`, `localhost` or `[::1]`, and ignores it otherwise. It is a test hook and can change or go away in any release.
 - **`CurlHttpClient`**: the default `HttpClient` of the translation engines is `@internal`, also its timeouts. Implement `HttpClient` to set your own.
