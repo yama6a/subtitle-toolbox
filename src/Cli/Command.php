@@ -15,6 +15,8 @@ abstract class Command
 {
     public const JSON_FLAGS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE;
 
+    public const WIDTH = 80;
+
     abstract public function name(): string;
 
 
@@ -166,7 +168,7 @@ abstract class Command
 
     /**
      * Returns the rows as text columns, each line indented by $indent spaces. Every column but the last is padded to
-     * its widest cell, plus $gap spaces.
+     * its widest cell, plus $gap spaces. The last column wraps at WIDTH with a hanging indent.
      *
      * @param list<list<string>> $rows
      */
@@ -180,14 +182,54 @@ abstract class Command
         }
         $text = "";
         foreach ($rows as $row) {
-            $line = str_repeat(" ", $indent);
+            $prefix = str_repeat(" ", $indent);
             foreach (array_slice($row, 0, -1) as $column => $cell) {
-                $line .= str_pad($cell, $widths[$column] + $gap);
+                $prefix .= str_pad($cell, $widths[$column] + $gap);
             }
-            $text .= $line . end($row) . "\n";
+            $text .= self::wrapWords(explode(" ", end($row)), $prefix, str_repeat(" ", strlen($prefix)));
         }
 
         return $text;
+    }
+
+
+    /**
+     * Wraps each line of $text at WIDTH. A line that starts with a space is a command or an example and stays as it is.
+     */
+    public static function wrap(string $text): string
+    {
+        $wrapped = "";
+        foreach (explode("\n", $text) as $line) {
+            $wrapped .= $line === "" || $line[0] === " " ? rtrim($line) . "\n" : self::wrapWords(explode(" ", $line), "", "");
+        }
+
+        return $wrapped;
+    }
+
+
+    /**
+     * Joins the words into lines of at most WIDTH columns. The first line starts with $prefix, the others with
+     * $nextPrefix. A word wider than a line gets a line of its own.
+     *
+     * @param list<string> $words
+     */
+    private static function wrapWords(array $words, string $prefix, string $nextPrefix): string
+    {
+        $lines = [];
+        $line  = null;
+        foreach (array_filter($words, fn (string $word): bool => $word !== "") as $word) {
+            if ($line === null) {
+                $line = $prefix . $word;
+            } elseif (strlen("$line $word") > self::WIDTH) {
+                $lines[] = $line;
+                $line    = $nextPrefix . $word;
+            } else {
+                $line .= " $word";
+            }
+        }
+        $lines[] = $line ?? $prefix;
+
+        return implode("\n", array_map(rtrim(...), $lines)) . "\n";
     }
 
 
@@ -208,14 +250,16 @@ abstract class Command
 
     protected function helpHeader(): string
     {
-        $usage = [];
+        $usage = "";
         foreach ($this->usageLines() as $index => $line) {
-            $usage[] = ($index === 0 ? "Usage: " : "       ") . Application::NAME . " " . $this->name() . " $line";
+            $prefix = ($index === 0 ? "Usage: " : "       ") . Application::NAME . " " . $this->name();
+            preg_match_all('/\[[^\]]*\]|--\S+ [^\s\[<-]\S*|\S+/', $line, $words);
+            $usage .= self::wrapWords([$prefix, ...$words[0]], "", str_repeat(" ", strlen($prefix) + 1));
         }
 
-        $header = implode("\n", $usage) . "\n\n" . $this->summary() . "\n";
+        $header = $usage . "\n" . self::wrap($this->summary());
 
-        return $this->details() === "" ? $header : $header . "\n" . $this->details() . "\n";
+        return $this->details() === "" ? $header : $header . "\n" . self::wrap($this->details());
     }
 
 

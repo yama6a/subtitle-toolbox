@@ -37,9 +37,9 @@ final class InfoCommand extends ReportCommand
 
     protected function details(): string
     {
-        return "Times are in seconds. Characters leave out tags. The gap is the start of a cue minus the latest end of\n" .
-               "the earlier cues, so an overlap gives a negative gap. For an MKV or WebM file, info lists the subtitle tracks.\n" .
-               "Pass --track for the statistics of one track.";
+        return "Times are in seconds. Characters leave out tags. " .
+               "The gap is the start of a cue minus the latest end of the earlier cues, so an overlap gives a negative gap. " .
+               "For an MKV or WebM file, info lists the subtitle tracks. Pass --track for the statistics of one track.";
     }
 
 

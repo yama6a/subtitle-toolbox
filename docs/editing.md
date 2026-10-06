@@ -149,7 +149,7 @@ $shotChanges = ShotChanges::fromText("12.5\n00:01:02.500\n70\n");               
 $report = ShotChangeTiming::apply($subtitle, new ShotChangeOptions(
     frameRate: 24,
     shotChanges: $shotChanges,   // seconds. Without shot changes, apply() only closes small gaps.
-    snapWindowFrames: 12,        // frames, default half a second: 12 at 23.976, 24 and 25 fps, 15 at 29.97 fps
+    snapWindowFrames: 12,        // frames, default frameRate / 2 rounded half down: 12 at 23.976, 24 and 25 fps, 15 at 29.97 fps
     minGapFrames: 2,             // frames between a cue and the next cue or shot change, default 2
     chain: true,                 // true (default) closes small gaps, false keeps them
     minDurationFrames: 20,       // frames, default 20

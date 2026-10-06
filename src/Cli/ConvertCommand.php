@@ -42,9 +42,9 @@ final class ConvertCommand extends WriteCommand
 
     protected function details(): string
     {
-        return "--to sets the output format, also when it stays the same. One input file goes to standard output, or to\n" .
-               "the file of -o. Several input files need --output-dir. An input argument can be a file, a directory, a glob\n" .
-               "such as \"season1/*.srt\", or -. The tool never overwrites a file.";
+        return "--to sets the output format, also when it stays the same. One input file goes to standard output, or to the file of -o. " .
+               "Several input files need --output-dir. An input argument can be a file, a directory, a glob such as \"season1/*.srt\", or -. " .
+               "The tool never overwrites a file.";
     }
 
 
@@ -88,7 +88,7 @@ final class ConvertCommand extends WriteCommand
      */
     private static function groupHelp(string $class): string
     {
-        return $class::group() . ": " . $class::summary() . "\n" . self::optionList($class::options());
+        return self::wrap($class::group() . ": " . $class::summary()) . self::optionList($class::options());
     }
 
 

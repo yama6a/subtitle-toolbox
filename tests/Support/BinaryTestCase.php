@@ -72,6 +72,15 @@ abstract class BinaryTestCase extends TestCase
     }
 
 
+    /**
+     * Joins each wrapped help line to the line before it, so that an option and its whole description are on one line.
+     */
+    public static function unwrapHelp(string $help): string
+    {
+        return (string)preg_replace('/\n {3,}(?=\S)/', " ", $help);
+    }
+
+
     protected function file(string $name): string
     {
         return file_get_contents("$this->dir/$name");

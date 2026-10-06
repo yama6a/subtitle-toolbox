@@ -31,8 +31,8 @@ final class FormatsCommand extends Command
 
     protected function details(): string
     {
-        return "When two formats share an extension, the first one in the list owns it: .sub is MicroDVD and .json\n" .
-               "is the JSON of this library. Pass --from to read another one.";
+        return "When two formats share an extension, the first one in the list owns it: .sub is MicroDVD and .json is the JSON of this library. " .
+               "Pass --from to read another one.";
     }
 
 

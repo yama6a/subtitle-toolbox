@@ -48,6 +48,8 @@ php subtitle-toolbox.phar --version
 | `formats` | lists the format names and extensions for `--from` and `--to` |
 
 - **Help**: `subtitle-toolbox help CMD` and `subtitle-toolbox CMD --help` list the options of a command. For `convert`, they list the common options and the option groups, see [Order](#order).
+- **Command list**: `subtitle-toolbox`, `subtitle-toolbox help` and `subtitle-toolbox help help` list the commands and exit with 0.
+- **Help width**: every help line fits in 80 columns.
 - **Version**: `subtitle-toolbox --version` prints the installed release, for example `2.0.0`, or `dev` in a Git checkout.
 - **Exit code**: see the table. A batch with a failed file exits with 3, also when another file broke a rule.
 

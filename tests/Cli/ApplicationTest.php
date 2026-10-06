@@ -28,6 +28,7 @@ use SubtitleToolbox\Speakers\SpeakerLabelOptions;
 use SubtitleToolbox\Speakers\SpeakerLabels;
 use SubtitleToolbox\Speakers\SpeakerStyle;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Tests\Support\BinaryTestCase;
 use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\Timing\ShotChangeTiming;
 use SubtitleToolbox\Translation\DeepLEngine;
@@ -247,7 +248,8 @@ class ApplicationTest extends TestCase
 
         $this->assertSame([0, ""], [$code, $stderr]);
         $this->assertStringStartsWith("Usage: subtitle-toolbox convert <input> --to FORMAT [-o FILE] [options]\n" .
-                                      "       subtitle-toolbox convert <input>... --to FORMAT --output-dir DIR [options]\n", $stdout);
+                                      "       subtitle-toolbox convert <input>... --to FORMAT --output-dir DIR\n" .
+                                      "                                [options]\n", $stdout);
         $this->assertMatchesRegularExpression('/^  --encoding NAME +/m', $stdout);
         $this->assertMatchesRegularExpression('/^  --language CODE +/m', $stdout);
         $this->assertDoesNotMatchRegularExpression('/^  --(ocr|sdh|structure-wrap|shift|karaoke)\b/m', $stdout);
@@ -261,12 +263,14 @@ class ApplicationTest extends TestCase
     public function testConvertHelpOfOneGroupListsItsOptions(): void
     {
         $sdh = "sdh: Remove hearing-impaired annotations.\n" .
-               "  --sdh                       Remove hearing-impaired annotations such as [DOOR SLAMS], (laughs) and JOHN:. A cue with no text left goes.\n";
+               "  --sdh                       Remove hearing-impaired annotations such as [DOOR\n" .
+               "                              SLAMS], (laughs) and JOHN:. A cue with no text\n" .
+               "                              left goes.\n";
 
         $this->assertStringStartsWith($sdh, self::runApplication(["convert", "--help", "sdh"])[1]);
         $this->assertSame(self::runApplication(["convert", "--help", "sdh"]), self::runApplication(["convert", "-h", "sdh"]));
         $this->assertSame(self::runApplication(["convert", "--help", "sdh"]), self::runApplication(["help", "convert", "sdh"]));
-        $this->assertSame(9, substr_count(self::runApplication(["convert", "--help", "sdh"])[1], "\n"));
+        $this->assertSame(9, substr_count(BinaryTestCase::unwrapHelp(self::runApplication(["convert", "--help", "sdh"])[1]), "\n"));
     }
 
 
@@ -318,11 +322,13 @@ class ApplicationTest extends TestCase
 
         $this->assertSame([0, ""], [$code, $stderr]);
         $this->assertStringStartsWith(
-            "Usage: subtitle-toolbox retime <input>... [--shift SECONDS] [--scale FACTOR] [--from-fps RATE --to-fps RATE] [options]\n\n" .
-            "Shifts and scales all cue times, or fits them to a video with another frame rate.\n\n" .
-            "Pass one or more edits. retime applies them in this order: --shift, --scale, --from-fps and --to-fps.\n",
+            "Usage: subtitle-toolbox retime <input>... [--shift SECONDS] [--scale FACTOR]\n" .
+            "                               [--from-fps RATE --to-fps RATE] [options]\n\n" .
+            "Shifts and scales all cue times, or fits them to a video with another frame\nrate.\n\n" .
+            "Pass one or more edits. retime applies them in this order: --shift, --scale,\n--from-fps and --to-fps.",
             $stdout
         );
+        $stdout = BinaryTestCase::unwrapHelp($stdout);
         preg_match_all('/^  (?:-\w, )?--([\w-]+)/m', $stdout, $matches);
         $this->assertSame([
             "shift", "shift-after", "scale", "from-fps", "to-fps", "to", "output", "output-dir", "output-fps",
@@ -336,14 +342,42 @@ class ApplicationTest extends TestCase
     }
 
 
+    public function testEveryHelpPageFitsIn80ColumnsWithoutTrailingSpaces(): void
+    {
+        [, $help] = self::runApplication(["help"]);
+        preg_match_all('/^  ([a-z]+) {2,}\S/m', strstr(strstr($help, "Commands:\n"), "\n\n", true), $commands);
+        $this->assertCount(11, $commands[1]);
+
+        $pages = ["help" => $help];
+        foreach ($commands[1] as $command) {
+            $pages["help $command"] = self::runApplication(["help", $command])[1];
+        }
+        $pages["convert --help all"] = self::runApplication(["convert", "--help", "all"])[1];
+
+        foreach ($pages as $page => $text) {
+            $this->assertNotSame("", $text, $page);
+            foreach (explode("\n", $text) as $line) {
+                $this->assertLessThanOrEqual(80, mb_strlen($line), "$page: $line");
+                $this->assertSame(rtrim($line), $line, "$page: trailing space");
+            }
+        }
+    }
+
+
     public function testHelpDescribesTheDiffExitCodeAndJson(): void
     {
-        $this->assertStringContainsString("\nExit codes: 0 success, 1 a file broke a validation rule or differs in diff, 2 invalid arguments,\n" .
-                                          "3 a file could not be read or written.\n",
+        $this->assertStringContainsString("\nExit codes:\n" .
+                                          "  0  Success.\n" .
+                                          "  1  A file broke a validation rule, or diff found a difference.\n" .
+                                          "  2  Invalid arguments.\n" .
+                                          "  3  A file could not be read or written.\n\n" .
+                                          "Options:\n" .
+                                          "  -h, --help     Show this help.\n" .
+                                          "  -V, --version  Print the version.\n",
                                           self::runApplication(["--help"])[1]);
-        $this->assertMatchesRegularExpression('/^  --json +Print the differences as JSON: a list with one object for the pair of files\.$/m', self::runApplication(["diff", "--help"])[1]);
+        $this->assertMatchesRegularExpression('/^  --json +Print the differences as JSON: a list with one object for the pair of files\.$/m', BinaryTestCase::unwrapHelp(self::runApplication(["diff", "--help"])[1]));
         $this->assertMatchesRegularExpression('/^  --json +Print JSON: a list with one object for each input file, also for one file\.$/m',
-                                              self::runApplication(["info", "--help"])[1]);
+                                              BinaryTestCase::unwrapHelp(self::runApplication(["info", "--help"])[1]));
     }
 
 
@@ -704,8 +738,10 @@ class ApplicationTest extends TestCase
         [$code, $stdout, $stderr] = self::runApplication(["translate", "--help"]);
 
         $this->assertSame([0, ""], [$code, $stderr]);
-        $this->assertStringStartsWith("Usage: subtitle-toolbox translate <input>... --engine deepl|google --target-language CODE " .
-                                      "[--source-language CODE] [--api-key KEY] [options]\n", $stdout);
+        $this->assertStringStartsWith("Usage: subtitle-toolbox translate <input>... --engine deepl|google\n" .
+                                      "                                  --target-language CODE\n" .
+                                      "                                  [--source-language CODE] [--api-key KEY]\n" .
+                                      "                                  [options]\n", $stdout);
         preg_match_all('/^  (?:-\w, )?--([\w-]+)/m', $stdout, $matches);
         $this->assertSame(["engine", "api-key", "source-language", "target-language", "to", "output", "output-dir"], array_slice($matches[1], 0, 7));
         $this->assertNotContains("in-place", $matches[1]);
