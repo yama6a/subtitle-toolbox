@@ -30,7 +30,7 @@ final class HlsSegmentOptions
         public readonly ?float $mediaDuration = null,
     ) {
         if (!is_finite($segmentDuration) || round($segmentDuration, 3) <= 0) {
-            throw new InvalidArgumentException("The segment duration must be a finite number of at least 0.001 s, got $segmentDuration.");
+            throw new InvalidArgumentException("The segment duration must be a finite number of at least 0.001 s, got " . self::text($segmentDuration) . ".");
         }
 
         $placeholders = str_replace("%%", "", $fileNamePattern);
@@ -40,7 +40,7 @@ final class HlsSegmentOptions
         }
 
         if ($mediaDuration !== null && (!is_finite($mediaDuration) || round($mediaDuration, 3) <= 0)) {
-            throw new InvalidArgumentException("The media duration must be a finite number of at least 0.001 s, got $mediaDuration.");
+            throw new InvalidArgumentException("The media duration must be a finite number of at least 0.001 s, got " . self::text($mediaDuration) . ".");
         }
 
         $this->timestampMap = new TimestampMap($mpegts, $local);
@@ -62,5 +62,12 @@ final class HlsSegmentOptions
     public function fileName(int $index): string
     {
         return sprintf($this->fileNamePattern, $index);
+    }
+
+
+    // PHP 8.5 warns when a string holds NAN.
+    private static function text(float $value): string
+    {
+        return is_nan($value) ? "NAN" : (string) $value;
     }
 }
