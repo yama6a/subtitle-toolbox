@@ -477,6 +477,46 @@ final class Markup
 
 
     /**
+     * Returns the color attribute of a <font> tag as written, such as "#FF0000" for <FONT COLOR='#FF0000'>, or null
+     * when the tag has no color. $attributes holds the attributes or the whole tag. The value can have double quotes,
+     * single quotes or no quotes, and the name can have any case.
+     *
+     * @internal
+     */
+    public static function fontColor(string $attributes): ?string
+    {
+        if (!preg_match("/\bcolor\s*=\s*(?:\"([^\"]*)\"|'([^']*)'|([^\s\"'>]+))/i", $attributes, $color)) {
+            return null;
+        }
+
+        return ($color[1] ?? "") . ($color[2] ?? "") . ($color[3] ?? "");
+    }
+
+
+    /**
+     * Swaps the first and the last byte of a 6-digit hex color, for example "0000FF" in BGR order becomes "FF0000" in RGB.
+     * ASS and MicroDVD write colors in BGR order.
+     *
+     * @internal
+     */
+    public static function bgrToRgb(string $bgr): string
+    {
+        return substr($bgr, 4, 2) . substr($bgr, 2, 2) . substr($bgr, 0, 2);
+    }
+
+
+    /**
+     * Swaps the first and the last byte of a 6-digit hex color, for example "FF0000" in RGB order becomes "0000FF" in BGR.
+     *
+     * @internal
+     */
+    public static function rgbToBgr(string $rgb): string
+    {
+        return self::bgrToRgb($rgb);
+    }
+
+
+    /**
      * Returns the seconds of a core word timestamp such as "<00:01:02.500>", or null for other text.
      */
     public static function wordTimestampSeconds(string $timestamp): ?float

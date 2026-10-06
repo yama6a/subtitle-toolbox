@@ -8,9 +8,9 @@ use SubtitleToolbox\Encoding\Cea608;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
-use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\StringHelpers;
+use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -522,62 +522,11 @@ final class SccParser extends SubtitleParser
      */
     private function toMarkup(array $cells): string
     {
-        $open    = self::DEFAULT_ATTRIBUTES;
-        $text    = "";
-        $pending = "";
-        foreach ($cells as $cell) {
-            if ($cell["char"] === " ") {
-                $pending .= " ";
-                continue;
-            }
-
-            $wanted = ["color" => $cell["color"], "italic" => $cell["italic"], "underline" => $cell["underline"]];
-            if ($wanted !== $open) {
-                $text .= $this->switchTags($open, $wanted, $pending);
-                $open  = $wanted;
-            } else {
-                $text .= $pending;
-            }
-            $pending = "";
-            $text   .= Markup::escapeText($cell["char"]);
-        }
-
-        return $text . $this->switchTags($open, self::DEFAULT_ATTRIBUTES, "");
-    }
-
-
-    /**
-     * Closes the tags from the first attribute that changes, in the nesting order font, i, u, and opens the new ones.
-     */
-    private function switchTags(array $from, array $to, string $between): string
-    {
-        $keys    = ["color", "italic", "underline"];
-        $changed = 0;
-        while ($changed < 3 && $from[$keys[$changed]] === $to[$keys[$changed]]) {
-            $changed++;
-        }
-
-        $markup = "";
-        for ($idx = 2; $idx >= $changed; $idx--) {
-            $markup .= $this->tag($keys[$idx], $from, true);
-        }
-        $markup .= $between;
-        for ($idx = $changed; $idx <= 2; $idx++) {
-            $markup .= $this->tag($keys[$idx], $to, false);
-        }
-
-        return $markup;
-    }
-
-
-    private function tag(string $key, array $attributes, bool $closing): string
-    {
-        return match (true) {
-            $key === "color" && $attributes["color"] !== Cea608::WHITE => $closing ? "</font>" : "<font color=\"" . Cea608::COLORS[$attributes["color"]] . "\">",
-            $key === "italic" && $attributes["italic"]                => $closing ? "</i>" : "<i>",
-            $key === "underline" && $attributes["underline"]          => $closing ? "</u>" : "<u>",
-            default                                                   => "",
-        };
+        return StyleRuns::toMarkup(array_map(fn (array $cell): array => [$cell["char"], [
+            "color" => $cell["color"] === Cea608::WHITE ? null : Cea608::COLORS[$cell["color"]],
+            "i"     => $cell["italic"],
+            "u"     => $cell["underline"],
+        ]], $cells), true);
     }
 
 

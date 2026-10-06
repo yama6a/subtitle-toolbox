@@ -365,8 +365,6 @@ final class AssParser extends SubtitleParser
 
     private function fontTag(string $hex): string
     {
-        $bgr = substr(str_pad($hex, 6, "0", STR_PAD_LEFT), -6);
-
-        return "<font color=\"#" . strtolower(substr($bgr, 4, 2) . substr($bgr, 2, 2) . substr($bgr, 0, 2)) . "\">";
+        return "<font color=\"#" . strtolower(Markup::bgrToRgb(substr(str_pad($hex, 6, "0", STR_PAD_LEFT), -6))) . "\">";
     }
 }
