@@ -296,4 +296,14 @@ class MatroskaReaderTest extends TestCase
             $subtitle->getCues(),
         );
     }
+
+
+    public function testExtractSetsTheFormatOfTheTrackCodec(): void
+    {
+        $text = MatroskaReader::open(self::DIR . "text_tracks.mkv");
+
+        $this->assertSame([Format::SubRip, Format::Ass, Format::WebVtt, Format::Ass],
+                          array_map(fn (int $track): ?Format => $text->extract($track)->getFormat(), [3, 4, 5, 6]));
+        $this->assertSame(Format::Pgs, MatroskaReader::open(self::DIR . "pgs.mkv")->extract(3)->getFormat());
+    }
 }
