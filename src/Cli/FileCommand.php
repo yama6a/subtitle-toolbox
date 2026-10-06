@@ -522,11 +522,27 @@ abstract class FileCommand extends Command
         if ($track !== null) {
             return Subtitle::loadTrack($path, $track, $this->readOptions);
         }
+        if ($format === null && self::isMatroska($path)) {
+            return Subtitle::loadAutoDetectFormat($path, $this->readOptions);
+        }
         $format ??= $this->formatWithOptions(fn (): string => (string) file_get_contents($path), $path);
 
         return $format === null
             ? Subtitle::loadAutoDetectFormat($path, $this->readOptions)
             : Subtitle::load($path, $format, $this->readOptionsFor($format));
+    }
+
+
+    protected static function isMatroska(string $path): bool
+    {
+        $file = is_file($path) ? @fopen($path, "rb") : false;
+        if ($file === false) {
+            return false;
+        }
+        $magic = fread($file, strlen(MatroskaReader::EBML_MAGIC));
+        fclose($file);
+
+        return $magic === MatroskaReader::EBML_MAGIC;
     }
 
 

@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
+use SubtitleToolbox\Container\Matroska\MkvFixtureWriter;
 use SubtitleToolbox\CueLimits;
 use SubtitleToolbox\Diff\SubtitleDiff;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
@@ -49,6 +50,8 @@ use SubtitleToolbox\Timing\ShotChangeTiming;
 use SubtitleToolbox\Validation\ValidationViolation;
 use SubtitleToolbox\Validation\ValidationRules;
 use SubtitleToolbox\WriteOptions;
+
+require_once __DIR__ . "/../files/mkv/generator/MkvFixtureWriter.php";
 
 /**
  * Runs bin/subtitle-toolbox as a separate process in a temporary directory with copies of the fixtures.
@@ -93,13 +96,14 @@ class BinaryTest extends TestCase
 
     /**
      * @param list<string> $arguments
+     * @param string ...$phpOptions options of the php binary, such as "-d", "memory_limit=32M"
      *
      * @return array{int, string, string} exit code, standard output, standard error
      */
-    private function runBinary(array $arguments, string $stdin = ""): array
+    private function runBinary(array $arguments, string $stdin = "", string ...$phpOptions): array
     {
         $process = proc_open(
-            [PHP_BINARY, self::BIN, ...$arguments],
+            [PHP_BINARY, ...$phpOptions, self::BIN, ...$arguments],
             [0 => ["pipe", "r"], 1 => ["pipe", "w"], 2 => ["pipe", "w"]],
             $pipes,
             $this->dir
@@ -1430,6 +1434,25 @@ class BinaryTest extends TestCase
         $this->assertSame([3, "", "trip.srt: ParsingException (Error #100): The file is not a Matroska or WebM file.\n"],
                           $this->runBinary(["convert", "trip.srt", "--to", "vtt", "--track", "3", "-o", "-"]));
         $this->assertSame(2, $this->runBinary(["convert", "movie.mkv", "--to", "srt", "--track", "x"])[0]);
+    }
+
+
+    public function testInputOptionsStreamALargeMkvFile(): void
+    {
+        $file = fopen("$this->dir/large.webm", "wb");
+        fwrite($file, file_get_contents(self::FILES . "mkv/seek_head.mkv"));
+        fwrite($file, MkvFixtureWriter::id(MkvFixtureWriter::VOID) . MkvFixtureWriter::size(60 << 20));
+        $padding = str_repeat("\0", 1 << 20);
+        for ($megabyte = 0; $megabyte < 60; $megabyte++) {
+            fwrite($file, $padding);
+        }
+        fclose($file);
+        $expected = MatroskaReader::open(self::FILES . "mkv/seek_head.mkv")->extract(2)->toString(Format::SubRip);
+
+        foreach ([["--fps", "25"], ["--input-fps", "25"], ["--word-timestamps"]] as $options) {
+            $this->assertSame([0, $expected, ""],
+                              $this->runBinary(["convert", "large.webm", "--to", "srt", ...$options], "", "-d", "memory_limit=32M"));
+        }
     }
 
 

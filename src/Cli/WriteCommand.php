@@ -245,19 +245,6 @@ abstract class WriteCommand extends FileCommand
     }
 
 
-    private static function isMatroska(string $path): bool
-    {
-        $file = is_file($path) ? @fopen($path, "rb") : false;
-        if ($file === false) {
-            return false;
-        }
-        $magic = fread($file, strlen(MatroskaReader::EBML_MAGIC));
-        fclose($file);
-
-        return $magic === MatroskaReader::EBML_MAGIC;
-    }
-
-
     /**
      * Returns the real paths of $paths that exist, with the other file of each VobSub .idx and .sub pair.
      *
