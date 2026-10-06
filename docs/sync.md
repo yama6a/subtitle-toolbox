@@ -9,7 +9,7 @@ A German SRT for the 25 fps release is late and drifts against a 23.976 fps vide
 use SubtitleToolbox\Sync\ReferenceSync;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
 
-$result = ReferenceSync::apply($german, new ReferenceSyncOptions($english));   // calls scale() and then shift() on $german
+$result = ReferenceSync::apply($german, new ReferenceSyncOptions(reference: $english));   // calls scale() and then shift() on $german
 $result->scale;                                                                // 1.04271 (25 / 23.976)
 $result->offset;                                                               // -2.3, added after the scale
 $result->score;                                                                // 0.89
@@ -64,12 +64,12 @@ use SubtitleToolbox\Sync\SpeechReference;
 
 // ffmpeg -i movie.mkv -af silencedetect=noise=-30dB:d=0.4 -f null - 2> silence.log
 $speech = SpeechReference::fromFfmpegSilencedetect(file_get_contents('silence.log'), mediaDuration: 840);
-ReferenceSync::apply($german, new ReferenceSyncOptions($speech));
+ReferenceSync::apply($german, new ReferenceSyncOptions(reference: $speech));
 
 $speech = SpeechReference::fromIntervals([[1.2, 3.4], [5.0, 7.75]]);   // seconds, from any voice activity detector
 
 $transcript = Subtitle::fromString(file_get_contents('whisper.json'), Format::Whisper);   // a Whisper JSON transcript of the audio
-ReferenceSync::apply($german, new ReferenceSyncOptions($transcript));
+ReferenceSync::apply($german, new ReferenceSyncOptions(reference: $transcript));
 ```
 
 - **Log**: the reader takes the `silence_start` and `silence_end` lines of the FFmpeg `silencedetect` filter. Speech fills the time between the silences from 0 to `mediaDuration`. A silence without an end runs to `mediaDuration`.

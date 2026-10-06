@@ -129,7 +129,7 @@ use SubtitleToolbox\Ocr\TesseractOcrEngine;
 use SubtitleToolbox\Ocr\TesseractOcrOptions;
 
 $subtitle->recognizeText(new TesseractOcrEngine());                                          // English
-$subtitle->recognizeText(new TesseractOcrEngine(new TesseractOcrOptions(OcrLanguage::German)));  // German
+$subtitle->recognizeText(new TesseractOcrEngine(new TesseractOcrOptions(language: OcrLanguage::German)));  // German
 $subtitle->recognizeText(new TesseractOcrEngine(new TesseractOcrOptions(language: 'deu+eng')));  // German and English
 $subtitle->recognizeText(new TesseractOcrEngine(), OcrLanguage::Russian);                    // the language of recognizeText() wins
 $subtitle->recognizeText(new TesseractOcrEngine(new TesseractOcrOptions(program: 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe')));

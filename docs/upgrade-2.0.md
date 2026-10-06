@@ -4,9 +4,9 @@
 composer require ymakhloufi/subtitle-toolbox:^2.0
 ```
 
-2.0 needs PHP 8.2 or later with `ext-dom` and `ext-iconv`, as 1.x did. OCR without Tesseract needs version 0.3 of `yama6a/php-glyph-ocr`. [compatibility.md](compatibility.md) says what semantic versioning covers in 2.x.
+2.0 needs the same PHP version and extensions as 1.x. OCR without Tesseract needs version 0.3 of `yama6a/php-glyph-ocr`. [compatibility.md](compatibility.md) says what semantic versioning covers in 2.x.
 
-Each table puts a 1.x call next to the 2.0 call that does the same. In the examples, `$subtitle`, `$german` and `$english` are `Subtitle` objects. `$content` is the text of an SRT file. Each other variable holds the object that its name says, such as `$runner` for a `TranslationRunner`. [Behaviour changes](#behaviour-changes) lists the code that runs in both versions but gives another result.
+Each table puts a 1.x call next to the 2.0 call that does the same. In the examples, `$subtitle`, `$german` and `$english` are `Subtitle` objects. `$content` is the text of an SRT file. Each other variable holds the object that its name says, such as `$runner` for a `TranslationRunner`. [Behavior changes](#behavior-changes) lists the code that runs in both versions but gives another result.
 
 ## General rules
 PHP errors point out each of these changes. The tables show the main cases.
@@ -18,13 +18,13 @@ PHP errors point out each of these changes. The tables show the main cases.
 - **Internal members**: the methods and constants of parsers and formatters are `@internal`, private or removed. `FormatDetector`, `FormatRegistry`, `Cea608`, `CodePage`, `Iso6937`, `PaletteReducer`, `EbmlReader` and the `StringHelpers` methods other than `isValidUtf8()` and `convertToUtf8()` are `@internal`. Use the `Format` enum in place of `FormatDetector` and `FormatRegistry`.
 - **Copy or change**: a `Subtitle` method that returns a new subtitle starts with `with`. A method that converts the subtitle to another type starts with `to`. A method that changes the subtitle is a verb.
 - **get and find**: a lookup that starts with `find` returns null or an empty array when nothing matches. A lookup that starts with `get` throws.
-- **Services**: an edit with many settings is a service with a static `apply($subtitle, $options)`. It changes the subtitle that you pass and returns a report.
+- **Services**: a service is an edit class with a static `apply($subtitle, $options)`, for example `HearingImpairedRemover`. It changes the subtitle that you pass and returns a report.
 - **Results**: reports and other results have `public readonly` fields instead of getters. Only the library creates them.
 - **Enums**: each set of string constants, such as `ProfanityOptions::MASK_STARS`, is a backed enum. The value of each case is the 1.x string.
 - **Names**: the library writes names in full and in US spelling. For example, `fps` becomes `frameRate`, `maxLines` becomes `maxLinesPerCue` and `colour` becomes `color`.
 - **Namespaces**: the classes of hearing-impaired removal moved to `SubtitleToolbox\HearingImpaired`, of resegmenting to `SubtitleToolbox\Resegmenting`, and of dual subtitles to `SubtitleToolbox\Dual`.
 - **Strict types**: every library file declares `strict_types`. A callback that you pass, for example to `mapText()`, must return a string. Your own files without `strict_types` call the library as before.
-- **CLI classes**: the classes in `SubtitleToolbox\Cli` are `@internal`. The binary, its options, exit codes and `--json` shapes are the stable API.
+- **CLI classes**: the classes in `SubtitleToolbox\Cli` are `@internal`. See [compatibility.md](compatibility.md) for the parts of the CLI that stay stable.
 
 ## Load and save
 | 1.x | 2.0 |
@@ -64,8 +64,8 @@ The key of the format data is the value of the `Format` case. The values of the 
 | `new MicroDvdParser(23.976)` | `new ReadOptions(format: new MicroDvdReadOptions(frameRate: 23.976))` |
 | `new TmPlayerParser(4)` | `new ReadOptions(lastCueDuration: 4)` |
 | `new SamiParser('ENUSCC', 10)` | `new ReadOptions(lastCueDuration: 10, format: new SamiReadOptions(languageClass: 'ENUSCC'))` |
-| `new VobSubParser(file_get_contents('dvd.idx'), 1)` | `new ReadOptions(format: new VobSubReadOptions(file_get_contents('dvd.idx'), track: 1))` |
-| `new CsvParser(new CsvColumns(start: 'TC', frameRate: 25), ';')` | `new ReadOptions(format: new CsvReadOptions(new CsvColumns(start: 'TC'), ';', frameRate: 25))` |
+| `new VobSubParser(file_get_contents('dvd.idx'), 1)` | `new ReadOptions(format: new VobSubReadOptions(idx: file_get_contents('dvd.idx'), track: 1))` |
+| `new CsvParser(new CsvColumns(start: 'TC', frameRate: 25), ';')` | `new ReadOptions(format: new CsvReadOptions(columns: new CsvColumns(start: 'TC'), delimiter: ';', frameRate: 25))` |
 | `new SccParser(2)` | `new ReadOptions(format: new SccReadOptions(channel: 2))` |
 | `new EbuStlParser(true)` | `new ReadOptions(format: new EbuStlReadOptions(subtractStartOfProgramme: true))` |
 | `new FfMetadataChaptersParser(3600)` | `new ReadOptions(format: new ChapterReadOptions(mediaDuration: 3600))` |
@@ -127,7 +127,7 @@ The key of the format data is the value of the `Format` case. The values of the 
 | `CommonErrorFixer::fix($subtitle, new CommonErrorOptions())` | `CommonErrorFixer::apply($subtitle, new CommonErrorOptions())->fixes` |
 | `CommonErrorFixer::fix($subtitle, new CommonErrorOptions(dryRun: true))` | `CommonErrorFixer::preview($subtitle, new CommonErrorOptions())->fixes` |
 | `new CommonErrorOptions(dialogueDash: '-')` | `new CommonErrorOptions(dialogueDashStyle: DialogueDashStyle::Hyphen)` |
-| `ProfanityFilter::apply($subtitle, new ProfanityOptions(wordFile: 'words.txt'))` | `ProfanityFilter::apply($subtitle, new ProfanityOptions(['damn*', 'hell']))->muteRanges` |
+| `ProfanityFilter::apply($subtitle, new ProfanityOptions(wordFile: 'words.txt'))` | `ProfanityFilter::apply($subtitle, new ProfanityOptions(words: ['damn*', 'hell']))->muteRanges` |
 | `WordHighlight::expand($subtitle, new WordHighlightOptions())` | `WordHighlight::apply(clone $subtitle, new WordHighlightOptions())` |
 | `SpeakerLabels::fromPrefix($subtitle, false)` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(readPrefixes: true, readUpperCaseOnly: false))` |
 | `SpeakerLabels::toPrefix($subtitle, false, ' - ')` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Prefix, writeUpperCase: false, separator: ' - '))` |
@@ -135,15 +135,14 @@ The key of the format data is the value of the `Format` case. The values of the 
 | `SpeakerLabels::toColours($subtitle, SpeakerLabels::BBC_COLOURS)` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(to: SpeakerStyle::Colors, colors: SpeakerLabels::BBC_COLORS))` |
 | `SpeakerLabels::rename($subtitle, ['MAN' => 'TOM'])` | `SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(rename: ['MAN' => 'TOM']))` |
 | `DualSubtitle::merge($english, $german, new DualSubtitleOptions())` | `DualSubtitle::fromPair($english, $german, new DualSubtitleOptions())` |
-| `$runner->translate($german, 'de', 'en')` | `$runner->translate($copy = clone $german, 'de', 'en')->warnings` |
 
 ## Sync and timing
 | 1.x | 2.0 |
 |:--- |:--- |
 | `ReferenceSync::sync($german, $english)->apply($german)` | `ReferenceSync::apply($german, new ReferenceSyncOptions(reference: $english))` |
 | `ReferenceSync::sync($german, $english)->getOffset()` | `ReferenceSync::apply($german, new ReferenceSyncOptions(reference: $english))->offset` |
-| `ShotChangeTiming::apply($subtitle, [10.0, 20.0], new ShotChangeOptions(24, snapWindow: 12, minDuration: 20))` | `ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, [10.0, 20.0], snapWindowFrames: 12, minDurationFrames: 20))` |
-| `ShotChangeTiming::chainGaps($subtitle, new ShotChangeOptions(24))` | `ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24))` |
+| `ShotChangeTiming::apply($subtitle, [10.0, 20.0], new ShotChangeOptions(24, snapWindow: 12, minDuration: 20))` | `ShotChangeTiming::apply($subtitle, new ShotChangeOptions(frameRate: 24, shotChanges: [10.0, 20.0], snapWindowFrames: 12, minDurationFrames: 20))` |
+| `ShotChangeTiming::chainGaps($subtitle, new ShotChangeOptions(24))` | `ShotChangeTiming::apply($subtitle, new ShotChangeOptions(frameRate: 24))` |
 
 ## Validation and statistics
 | 1.x | 2.0 |
@@ -208,9 +207,11 @@ See [cli.md](cli.md) for every command and option.
 
 - **Output**: an output is never positional. One input goes to standard output or to `-o FILE`. Several inputs need `--output-dir DIR`. `convert` always needs `--to`.
 - **Extension**: the extension of `-o` never picks the format. An extension of another format than `--to` fails with exit code 2.
-- **Never overwrite**: no command overwrites a file. `--force` and `--in-place` are gone. The tool fails with exit code 2 before it reads a file when an output exists, when 2 inputs write the same output, or when an output is an input.
+- **Never overwrite**: no command overwrites a file. `--force` and `--in-place` are gone. The tool fails with exit code 2 before it reads a file in these cases:
+  - An output exists.
+  - 2 inputs write the same output.
+  - An output is an input.
 - **Format names**: `--from` and `--to` still take the 1.x names `ytchapter`, `podcast`, `ogm` and `ffmeta`. The output prints the new names.
-- **Detection**: chapters and cloud speech-to-text JSON always need `--from`.
 - **Second file**: `diff` reads the new file with `--from2` and `--track2`. `dual` reads its files with `--primary-from`, `--primary-track`, `--secondary-from` and `--secondary-track`. `diff` takes one old file. A directory or a glob that matches more than one file fails with exit code 2.
 - **Frame rate**: `--fps` still works and sets each frame rate that the command has. `--input-fps`, `--output-fps` and `--video-fps` set one each, see [Frame rates](cli.md#frame-rates).
 
@@ -267,7 +268,7 @@ Each call runs in both versions and prints another shape.
 - **Statistics**: `span`, `charactersPerSecond`, `wordsPerMinute`, `charactersPerLine` and `gaps` are null when there is nothing to measure, for example `gaps` with 1 cue. `SubtitleStatistics::toArray()` has the same keys.
 - **Library JSON**: the format data keys are the `Format` values, see [Formats](#formats). 2.0 keeps the data of an old key, and no formatter reads it. Rename the keys before you read 1.x JSON.
 
-## Behaviour changes
+## Behavior changes
 The same code runs in both versions and gives another result.
 
 | Change | 1.x | 2.0 | To keep the 1.x result |
@@ -279,7 +280,7 @@ The same code runs in both versions and gives another result.
 | `ParseWarning::$lineNumber` and `$blockIndex` without a value | 0 or -1 | null | test for null |
 | `ParseWarning::$message` | ends with " (line N)" for some formats | has no line suffix | read `$lineNumber` |
 | `SubtitleStatistics` without data | 0 | null | test for null |
-| `TranslationRunner::translate()` | returns a translated copy | translates the subtitle that you pass | `$runner->translate(clone $german, 'de', 'en')` |
+| `$runner->translate($german, 'de', 'en')` | returns a translated copy | translates `$german` and returns a `TranslationReport` | `$copy = clone $german;`, then `$runner->translate($copy, 'de', 'en')` |
 | CLI with one input and no `-o` | writes a file next to the input | writes to standard output | `-o FILE` |
 | CLI exit code of a file that fails | 1 | 3. Exit code 1 only means a broken `validate` rule or a `diff` difference | test for 3 |
 | CLI `--ocr-language` without its data | exit code 1 for each file | exit code 2 before the first file | install the language |

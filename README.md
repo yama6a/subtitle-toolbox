@@ -1,7 +1,7 @@
 # Subtitle Toolbox
 [![Packagist version](https://img.shields.io/packagist/v/ymakhloufi/subtitle-toolbox)](https://packagist.org/packages/ymakhloufi/subtitle-toolbox)
 [![CI](https://github.com/yama6a/subtitle-toolbox/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/yama6a/subtitle-toolbox/actions/workflows/ci.yaml)
-[![Licence](https://img.shields.io/packagist/l/ymakhloufi/subtitle-toolbox)](LICENSE)
+[![License](https://img.shields.io/packagist/l/ymakhloufi/subtitle-toolbox)](LICENSE)
 
 A PHP library and command line tool that reads, edits and writes subtitles, transcripts and chapter lists in more than 30 formats.
 
@@ -12,12 +12,16 @@ Upgrading from 1.x? See the [upgrade guide](docs/upgrade-2.0.md).
 composer require ymakhloufi/subtitle-toolbox
 # Optional, for OCR of PGS and VobSub image subtitles:
 composer require yama6a/php-glyph-ocr:^0.3   # php-glyph-ocr, the pure PHP OCR engine
-apt install tesseract-ocr                    # or Tesseract, for more than 100 languages, on Debian and Ubuntu
+apt install tesseract-ocr                    # or Tesseract on Debian and Ubuntu, for more than 100 languages
 ```
 
 The core package needs neither OCR engine. See [ocr.md](docs/ocr.md) for the install commands of other systems and languages.
 
-The library needs PHP 8.2 or later with `ext-dom` and `ext-iconv`. Optional: `ext-mbstring` for Unicode upper and lower case, `ext-zlib` for PGS output and compressed MKV tracks and `ext-curl` for the DeepL and Google translation engines.
+The library needs PHP 8.2 or later with `ext-dom` and `ext-iconv`. These extensions are optional:
+
+- `ext-mbstring` for Unicode upper and lower case
+- `ext-zlib` for PGS output and compressed MKV tracks
+- `ext-curl` for the DeepL and Google translation engines
 
 The command line tool also comes as a PHAR file and as two container images. The `-tesseract` image includes Tesseract for OCR.
 
@@ -63,7 +67,7 @@ docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtit
 | OGM chapters | `OgmChapters` | `ogm-chapters` | `.txt` | yes | yes | not detected from the content |
 | MKV and WebM tracks | | | `.mkv`, `.webm` | yes | no | text, ASS, SSA, WebVTT and PGS tracks |
 
-**Case** is the case of the enum `Format`, for example `Format::SubRip`. **Name** is the format name for `--from` and `--to`.
+**Case** is the case of the enum `Format`, for example `Format::SubRip`. **Name** is the format name for `--from` and `--to`. An **image cue** holds a bitmap in place of text.
 
 ## Command line tool
 Composer installs `vendor/bin/subtitle-toolbox`. Optional parts are in brackets.
@@ -204,17 +208,17 @@ use SubtitleToolbox\Sync\ReferenceSyncOptions;
 
 $german  = Subtitle::load('movie.de.srt', Format::SubRip);
 $english = Subtitle::load('movie.en.srt', Format::SubRip);
-$report  = ReferenceSync::apply($german, new ReferenceSyncOptions($english));
+$report  = ReferenceSync::apply($german, new ReferenceSyncOptions(reference: $english));
 echo "offset $report->offset s, scale $report->scale, score $report->score\n";
 ```
 
 Every exception implements `SubtitleToolboxException`. See [errors.md](docs/errors.md).
 
 ## OCR
-OCR turns the bitmaps of PGS and VobSub subtitles into text. The library uses Tesseract when it is installed. Otherwise it uses php-glyph-ocr. When neither engine is installed, the call throws `InvalidArgumentException` that names both engines. Tesseract reads more than 100 languages, php-glyph-ocr reads only Latin-script fonts. See [ocr.md](docs/ocr.md) for the install commands and a comparison of the engines.
+OCR turns the bitmaps of PGS and VobSub subtitles into text. The library uses Tesseract when it is installed. Otherwise it uses php-glyph-ocr. When neither engine is installed, the call throws `InvalidArgumentException` that names both engines. Tesseract reads more than 100 languages. php-glyph-ocr reads only Latin-script fonts. See [ocr.md](docs/ocr.md) for the install commands and a comparison of the engines.
 
 ## Compatibility
-Semantic versioning covers the public PHP API and the CLI commands, options, exit codes and `--json` shapes. See [compatibility.md](docs/compatibility.md) for what a minor or patch release can change.
+See [compatibility.md](docs/compatibility.md) for the parts that semantic versioning covers and for what a minor or patch release can change.
 
 ## Documentation
 [docs/README.md](docs/README.md) lists every page. The most used pages:
@@ -230,5 +234,5 @@ Semantic versioning covers the public PHP API and the CLI commands, options, exi
 ## Contributing
 Pull requests are welcome. Run the tests with `composer test`. Each pull request carries one label that sets the version bump: `major`, `minor`, `patch` or `skip-release`. Every merge to `master` publishes a release.
 
-## Licence
+## License
 MIT, see [LICENSE](LICENSE).

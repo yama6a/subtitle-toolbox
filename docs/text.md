@@ -140,8 +140,8 @@ $ranges[0]->end;                                 // 62.9
 file_put_contents('movie.edl', MuteRange::toEdl($ranges));     // "62.380 62.900 1\n"
 MuteRange::toFfmpegVolumeFilter($ranges);                       // "volume=enable='between(t,62.380,62.900)':volume=0"
 
-new ProfanityOptions(preg_split('/\R+/', trim(file_get_contents('words-en.txt'))));   // one word per line
-new ProfanityOptions(['hell'], fn (string $word): string => '[beep]');
+new ProfanityOptions(words: preg_split('/\R+/', trim(file_get_contents('words-en.txt'))));   // one word per line
+new ProfanityOptions(words: ['hell'], mask: fn (string $word): string => '[beep]');
 ```
 
 | Mask | `What the hell?` becomes |
