@@ -1458,6 +1458,16 @@ class BinaryTest extends TestCase
             "from2"            => [["diff", "trip.srt", "call.json"], "",
                                    "trip.srt: call.json: " . sprintf($format, "Pass --from2 FORMAT. Chapters and cloud speech-to-text JSON " .
                                                                               "always need it, for example --from2 deepgram.")],
+            "primary track"    => [["dual", "--primary", "movie.mkv", "--secondary", "trip.srt"], "",
+                                   "movie.mkv: " . sprintf($tracks, "Pass --primary-track N with one of them:")],
+            "secondary track"  => [["dual", "--primary", "trip.srt", "--secondary", "movie.mkv"], "",
+                                   "trip.srt: movie.mkv: " . sprintf($tracks, "Pass --secondary-track N with one of them:")],
+            "primary from"     => [["dual", "--primary", "call.json", "--secondary", "trip.srt"], "",
+                                   "call.json: " . sprintf($format, "Pass --primary-from FORMAT. Chapters and cloud speech-to-text JSON " .
+                                                                    "always need it, for example --primary-from deepgram.")],
+            "secondary from"   => [["dual", "--primary", "trip.srt", "--secondary", "call.json"], "",
+                                   "trip.srt: call.json: " . sprintf($format, "Pass --secondary-from FORMAT. Chapters and cloud speech-to-text " .
+                                                                              "JSON always need it, for example --secondary-from deepgram.")],
             "reference format" => [["sync", "trip.srt", "--reference", "call.json"], "",
                                    "trip.srt: call.json: " . sprintf($format, "Write it to a subtitle file with convert --from FORMAT first. " .
                                                                               "Chapters and cloud speech-to-text JSON always need --from, " .
@@ -1915,15 +1925,28 @@ class BinaryTest extends TestCase
     }
 
 
-    public function testDualReadsTheSecondaryFileWithTrack2(): void
+    public function testDualTakesTheFormatAndTrackOfEachFileByName(): void
     {
         copy(self::FILES . "dual/station_en.srt", "$this->dir/en.srt");
         copy(self::FILES . "mkv/text_tracks.mkv", "$this->dir/movie.mkv");
         $english = Subtitle::fromStringAutoDetectFormat($this->file("en.srt"));
+        $german  = MatroskaReader::open(self::FILES . "mkv/text_tracks.mkv")->extract(3);
+        $frames  = Subtitle::load(self::FIXTURES . "frames.sub", Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)));
 
-        $merged = DualSubtitle::fromPair($english, MatroskaReader::open(self::FILES . "mkv/text_tracks.mkv")->extract(3), new DualSubtitleOptions());
-        $this->assertSame([0, $merged->toString(Format::SubRip), ""],
-                          $this->runBinary(["dual", "--primary", "en.srt", "--secondary", "movie.mkv", "--track2", "3"]));
+        $this->assertSame([0, DualSubtitle::fromPair($english, $german, new DualSubtitleOptions())->toString(Format::SubRip), ""],
+                          $this->runBinary(["dual", "--primary", "en.srt", "--secondary", "movie.mkv", "--secondary-track", "3"]));
+        $this->assertSame([0, DualSubtitle::fromPair($german, $english, new DualSubtitleOptions())->toString(Format::SubRip), ""],
+                          $this->runBinary(["dual", "--primary", "movie.mkv", "--primary-track", "3", "--secondary", "en.srt"]));
+        $this->assertSame([0, DualSubtitle::fromPair($frames, $english, new DualSubtitleOptions())->toString(Format::MicroDvd), ""],
+                          $this->runBinary(["dual", "--primary", "frames.sub", "--primary-from", "microdvd", "--secondary", "en.srt", "--input-fps", "25"]));
+        $this->assertSame([3, ""], array_slice($this->runBinary(["dual", "--primary", "en.srt", "--secondary", "frames.sub", "--secondary-from", "subviewer"]), 0, 2));
+
+        foreach (["from" => "srt", "track" => "3", "from2" => "srt", "track2" => "3"] as $option => $value) {
+            $this->assertSame([2, "", "Error: Unknown option --$option.\nRun \"subtitle-toolbox help dual\" for the usage.\n"],
+                              $this->runBinary(["dual", "--primary", "en.srt", "--secondary", "movie.mkv", "--$option", $value]));
+        }
+        preg_match_all('/^  --((?:primary|secondary)(?:-from|-track)?) /m', $this->runBinary(["dual", "--help"])[1], $matches);
+        $this->assertSame(["primary", "secondary", "primary-from", "primary-track", "secondary-from", "secondary-track"], $matches[1]);
     }
 
 

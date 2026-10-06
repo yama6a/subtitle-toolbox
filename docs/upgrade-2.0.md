@@ -289,7 +289,8 @@ See [cli.md](cli.md) for every command and option.
 | `retime *.srt --shift 1 --in-place` | removed. Write with `--output-dir`, then move the files over the inputs |
 | `--force` of `convert`, `retime`, `sync`, `dual` and `hls` | removed. No command overwrites a file. Remove the old file first |
 | `convert call.json --to srt` for Deepgram JSON | `convert call.json --from deepgram --to srt`. Chapters and cloud speech JSON always need `--from` |
-| none | `diff` and `dual` read the second file with `--from2` and `--track2`. `diff`, `dual` and `hls` take `--keep-going` |
+| `dual --from srt --track 3` for the primary file | `dual --primary-from srt --primary-track 3` |
+| none | `diff` reads the new file with `--from2` and `--track2`. `dual` reads the secondary file with `--secondary-from` and `--secondary-track`. `diff`, `dual` and `hls` take `--keep-going` |
 | `convert --speakers colours` | `convert --speakers colors` |
 | `info --json` or `validate --json` with one input printed one object. `diff --json` always printed one object | they always print a list, with one object for each input, or one object for the pair of files of `diff`. Read `[0]` for one input |
 | `info --json`, `validate --json` or `diff --json` printed nothing when every file failed | they print `[]` |

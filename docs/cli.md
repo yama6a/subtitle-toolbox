@@ -135,7 +135,7 @@ movie.mkv
 - **Detection**: the tool knows an MKV or WebM file by its first 4 bytes, not by its extension. Standard input works too.
 - **Track**: a file with one subtitle track needs no `--track`. For a file with more, the tool fails and lists the tracks.
 - **Format**: an `S_TEXT/UTF8` track is SubRip, ASS and SSA tracks are ASS, `S_TEXT/WEBVTT` is WebVTT and `S_HDMV/PGS` is PGS. Without `--to`, `retime` and `sync` keep this format. `convert movie.mkv --to srt --track 3 --output-dir out` writes `out/movie.srt`.
-- **Second file**: `diff` and `dual` read the track of their second file with `--track2`, for example `diff old.mkv new.mkv --track 3 --track2 8`.
+- **Second file**: `diff` reads the track of the new file with `--track2`, for example `diff old.mkv new.mkv --track 3 --track2 8`. `dual` takes `--primary-track` and `--secondary-track`.
 - **Info**: without `--track`, `info` lists the tracks of a file whose extension names no subtitle format, such as `.mkv` and `.webm`. The JSON object has `file`, `container` and `tracks`. Each track has `number`, `codecId`, `language`, `name`, `default` and `forced`. With `--track`, `info` prints the statistics of the track.
 - **Directories**: a directory argument skips MKV and WebM files. Pass them by name or with a glob.
 - **Errors**: `S_VOBSUB` tracks, bzlib and LZO compression and encryption fail, see [mkv.md](mkv.md).
@@ -368,7 +368,8 @@ vendor/bin/subtitle-toolbox dual --primary movie.en.srt --secondary movie.de.srt
 | `--secondary-style TAG` | `secondaryStyle`, for example `i` or `'font color="#ffff00"'` |
 | `--secondary-alignment 1-9` | `secondaryAlignment` for `top-bottom`, default 8 |
 | `--snap-tolerance SECONDS` | `snapTolerance` for `top-bottom`, default 0.25 |
-| `--from2 FORMAT`, `--track2 NUMBER` | the format and the MKV or WebM track of the secondary file. `--from` and `--track` apply to the primary file |
+| `--primary-from FORMAT`, `--primary-track NUMBER` | the format and the MKV or WebM track of the primary file. `dual` has no `--from` and `--track` |
+| `--secondary-from FORMAT`, `--secondary-track NUMBER` | the format and the MKV or WebM track of the secondary file |
 
 - **Output**: one result, so it goes to standard output unless `-o` or `--output-dir` sets a file.
 

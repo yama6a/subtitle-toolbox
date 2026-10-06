@@ -44,8 +44,7 @@ final class DualCommand extends WriteCommand
         return "stack joins each secondary cue with the primary cue that it overlaps most, below its lines.\n" .
                "top-bottom keeps both cues and moves the secondary one to the top. SubRip, WebVTT, ASS and TTML write\n" .
                "the position. The output takes the format of the primary file unless --to sets it. The result goes to\n" .
-               "standard output, or to the file of -o. --from and --track apply to the primary file, --from2 and --track2\n" .
-               "to the secondary file.";
+               "standard output, or to the file of -o.";
     }
 
 
@@ -68,9 +67,24 @@ final class DualCommand extends WriteCommand
     }
 
 
+    protected function fileOptionNames(): array
+    {
+        return ["from" => "primary-from", "track" => "primary-track", "from2" => "secondary-from", "track2" => "secondary-track"];
+    }
+
+
     protected function inputOptions(): array
     {
-        return [...parent::inputOptions(), ...self::secondFileOptions("secondary")];
+        $options = [];
+        foreach (parent::inputOptions() as $option) {
+            $options[] = match ($option->name) {
+                "from"  => Option::value("primary-from", "FORMAT", "Format of the primary file. Default: detected from the content, else taken from the file extension."),
+                "track" => Option::value("primary-track", "NUMBER", "Subtitle track of an MKV or WebM primary file. Needed when the file has several."),
+                default => $option,
+            };
+        }
+
+        return [...$options, ...$this->secondFileOptions("secondary")];
     }
 
 

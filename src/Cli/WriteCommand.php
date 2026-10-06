@@ -207,7 +207,7 @@ abstract class WriteCommand extends FileCommand
         }
         $outputFormat = $this->toFormat;
         if ($outputFormat === null) {
-            $outputFormat = $this->peekFormat($input, $arguments->positiveInt("track"));
+            $outputFormat = $this->peekFormat($input, $this->inputTrack($arguments));
             $outputFormat = $outputFormat?->canWrite() ? $outputFormat : null;
         }
 
