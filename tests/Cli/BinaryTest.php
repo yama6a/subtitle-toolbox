@@ -329,6 +329,72 @@ class BinaryTest extends TestCase
     }
 
 
+    public function testAnOutputThroughAMissingDirectoryIsCheckedAtThePathItNames(): void
+    {
+        file_put_contents("$this->dir/keep.vtt", "old");
+
+        $this->assertSame(
+            [2, "", "Error: The output new/../keep.vtt exists. The tool never overwrites a file. Remove it, or pass another output file or " .
+                    "directory.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            $this->runBinary(["convert", "trip.srt", "--to", "vtt", "-o", "new/../keep.vtt"])
+        );
+        $this->assertSame("old", $this->file("keep.vtt"));
+
+        unlink("$this->dir/keep.vtt");
+        $this->assertSame([0, "trip.srt -> new/../keep.vtt\n", ""], $this->runBinary(["convert", "trip.srt", "--to", "vtt", "-o", "new/../keep.vtt"]));
+        $this->assertSame($this->tripAs(Format::WebVtt), $this->file("keep.vtt"));
+        $this->assertDirectoryDoesNotExist("$this->dir/new");
+    }
+
+
+    public function testAnOutputThatEndsWithASlashIsAUsageError(): void
+    {
+        $this->assertSame(
+            [2, "", "Error: The output newdir/ ends with a slash. Pass a file name, or pass --output-dir newdir/.\n" .
+                    "Run \"subtitle-toolbox help convert\" for the usage.\n"],
+            $this->runBinary(["convert", "trip.srt", "--to", "srt", "-o", "newdir/"])
+        );
+        $this->assertDirectoryDoesNotExist("$this->dir/newdir");
+    }
+
+
+    public function testAnOutputThatEndsWithADotPartIsAUsageError(): void
+    {
+        foreach (["newdir/." => ".", "newdir/.." => "..", "." => ".", ".." => ".."] as $output => $lastPart) {
+            $this->assertSame(
+                [2, "", "Error: The output $output ends with \"$lastPart\". Pass a file name, or pass --output-dir $output.\n" .
+                        "Run \"subtitle-toolbox help convert\" for the usage.\n"],
+                $this->runBinary(["convert", "trip.srt", "--to", "srt", "-o", $output])
+            );
+        }
+        $this->assertDirectoryDoesNotExist("$this->dir/newdir");
+    }
+
+
+    public function testAnOutputThatIsADirectoryNamesOutputDir(): void
+    {
+        mkdir("$this->dir/out");
+
+        $this->assertSame(
+            [2, "", "Error: The output out is a directory. Pass --output-dir out.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            $this->runBinary(["convert", "trip.srt", "--to", "srt", "-o", "out"])
+        );
+        $this->assertSame([], glob("$this->dir/out/*"));
+    }
+
+
+    public function testAnOutputDirThatIsAFileIsAUsageError(): void
+    {
+        foreach ([["convert", "trip.srt", "--to", "srt"], ["hls", "trip.srt"]] as $call) {
+            $this->assertSame(
+                [2, "", "Error: The --output-dir trip.srt is a file. Pass a directory.\nRun \"subtitle-toolbox help $call[0]\" for the usage.\n"],
+                $this->runBinary([...$call, "--output-dir", "trip.srt"])
+            );
+            $this->assertSame(file_get_contents(self::FIXTURES . "trip.srt"), $this->file("trip.srt"));
+        }
+    }
+
+
     public function testConvertWritesOneInputToStandardOutput(): void
     {
         $shop = Subtitle::fromStringAutoDetectFormat($this->file("shop.vtt"));
@@ -477,7 +543,7 @@ class BinaryTest extends TestCase
         $this->assertSame(1, $this->runBinary(["validate", "trip.srt", "--preset", "bbc", "--fps", "25"])[0]);
 
         $this->assertSame([3, "", "missing.srt: The file does not exist.\n"], $this->runBinary(["convert", "missing.srt", "--to", "vtt"]));
-        $this->assertSame([3, "", "Error: Cannot create the directory blocker/out.\n"],
+        $this->assertSame([3, "", "Error: Cannot create the directory " . realpath($this->dir) . "/blocker/out.\n"],
                           $this->runBinary(["convert", "trip.srt", "--to", "vtt", "-o", "blocker/out/trip.vtt"]));
         $this->assertSame(3, $this->runBinary(["validate", "trip.srt", "missing.srt", "--max-cpl", "20", "--keep-going"])[0]);
         $this->assertSame(3, $this->runBinary(["diff", "trip.srt", "missing.srt"])[0]);
@@ -2113,6 +2179,25 @@ class BinaryTest extends TestCase
             $this->assertSame([2, "", $error], $this->runBinary(["hls", ...$arguments]), $error);
             $this->assertSame($before, $this->snapshot(), $error);
         }
+    }
+
+
+    public function testHlsChecksAPlaylistThroughAMissingDirectoryBeforeTheRead(): void
+    {
+        file_put_contents("$this->dir/keep.txt", "old");
+
+        $this->assertSame(
+            [2, "", "Error: new/../keep.txt exists. The tool never overwrites a file. Remove the playlist and the segments, or pass another " .
+                    "--output-dir.\nRun \"subtitle-toolbox help hls\" for the usage.\n"],
+            $this->runBinary(["hls", "missing.srt", "--output-dir", "new", "--playlist", "../keep.txt"])
+        );
+        $this->assertSame("old", $this->file("keep.txt"));
+        $this->assertDirectoryDoesNotExist("$this->dir/new");
+
+        unlink("$this->dir/keep.txt");
+        $this->assertSame(0, $this->runBinary(["hls", "trip.srt", "--output-dir", "new", "--playlist", "../keep.txt"])[0]);
+        $this->assertStringStartsWith("#EXTM3U", $this->file("keep.txt"));
+        $this->assertFileExists("$this->dir/new/sub0.vtt");
     }
 
 

@@ -67,6 +67,7 @@ final class HlsCommand extends FileCommand
 
         $this->directory = $arguments->value("output-dir") ?? self::fail("Pass --output-dir DIR.");
         $this->playlist  = $arguments->value("playlist") ?? "subs.m3u8";
+        self::checkOutputDirectory($this->directory);
 
         $mpegts = $arguments->value("mpegts") ?? (string)HlsSegmentOptions::DEFAULT_MPEGTS;
         if (!ctype_digit($mpegts)) {
@@ -113,7 +114,7 @@ final class HlsCommand extends FileCommand
 
         // The segment count is known only after the read, so any file that matches the pattern counts as a segment.
         $directory = rtrim($this->directory, "/\\");
-        $existing  = OutputFiles::exists("$directory/$this->playlist") ? [$this->playlist] : [];
+        $existing  = OutputFiles::exists($playlist) ? [$this->playlist] : [];
         foreach (is_dir($directory) ? scandir($directory) ?: [] : [] as $name) {
             if ($this->isSegment(self::realTarget("$directory/$name"))) {
                 $existing[] = $name;

@@ -33,17 +33,19 @@ final class OutputFiles
 
     public function create(string $path, string $content): void
     {
-        $this->createDirectory(dirname($path));
+        // The checks of the run test this path, and mkdir("new/..") fails while new/ is missing.
+        $real = FileCommand::realTarget($path);
+        $this->createDirectory(dirname($real));
         if (self::$beforeCreate !== null) {
             (self::$beforeCreate)($path);
         }
 
         // Mode "x" is O_CREAT|O_EXCL: the create fails when the file appeared after the check of the run.
-        $file = @fopen($path, "xb");
+        $file = @fopen($real, "xb");
         if ($file === false) {
-            $this->fail(self::exists($path) ? "$path exists." : "Cannot create $path.");
+            $this->fail(self::exists($real) ? "$path exists." : "Cannot create $path.");
         }
-        $this->files[] = $path;
+        $this->files[] = $real;
         $written       = @fwrite($file, $content);
         fclose($file);
         if ($written !== strlen($content)) {
