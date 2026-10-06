@@ -29,8 +29,9 @@ final class GlyphOcrEngine implements OcrEngine
     /**
      * Reads image cues with the pure PHP OCR of the package yama6a/php-glyph-ocr, with its subtitle fonts database by default.
      */
-    public function __construct(GlyphOcrOptions $options = new GlyphOcrOptions())
+    public function __construct(?GlyphOcrOptions $options = null)
     {
+        $options ??= new GlyphOcrOptions();
         self::requireClass(Recognizer::class);
 
         $this->database   = $options->database ?? self::subtitleFontsDatabase();

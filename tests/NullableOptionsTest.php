@@ -17,10 +17,16 @@ use SubtitleToolbox\Hls\HlsSegmentOptions;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\Karaoke\WordHighlight;
 use SubtitleToolbox\Karaoke\WordHighlightOptions;
+use SubtitleToolbox\Ocr\GlyphOcrEngine;
+use SubtitleToolbox\Ocr\GlyphOcrOptions;
 use SubtitleToolbox\Ocr\TesseractOcrEngine;
 use SubtitleToolbox\Ocr\TesseractOcrOptions;
+use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Streaming\CueStreamReader;
+use SubtitleToolbox\Streaming\SubRipStreamReader;
 use SubtitleToolbox\Streaming\SubRipStreamWriter;
+use SubtitleToolbox\Streaming\WebVttStreamReader;
 use SubtitleToolbox\Streaming\WebVttStreamWriter;
 
 class NullableOptionsTest extends TestCase
@@ -62,6 +68,15 @@ class NullableOptionsTest extends TestCase
         rewind($stream);
 
         return stream_get_contents($stream);
+    }
+
+
+    /**
+     * @return array{list<SubtitleCue>, list<ParseWarning>}
+     */
+    private static function streamed(CueStreamReader $reader, string $file): array
+    {
+        return [iterator_to_array($reader->read(self::FILES . $file), false), $reader->getWarnings()];
     }
 
 
@@ -135,6 +150,20 @@ class NullableOptionsTest extends TestCase
         yield "WebVttStreamWriter::__construct" => [
             fn (array $o): string => self::written(fn ($stream, ...$o) => new WebVttStreamWriter($stream, ...$o), $o),
             new WriteOptions(),
+        ];
+        yield "SubRipStreamReader::__construct" => [
+            fn (array $o): array => self::streamed(new SubRipStreamReader(...$o), $srt),
+            new ReadOptions(),
+        ];
+        yield "WebVttStreamReader::__construct" => [
+            fn (array $o): array => self::streamed(new WebVttStreamReader(...$o), "vtt/real/w3c_regions.vtt"),
+            new ReadOptions(),
+        ];
+        yield "GlyphOcrEngine::__construct" => [
+            fn (array $o): string => (new PgsParser())->parse(file_get_contents(self::FILES . "pgs/text_1080p.sup"))
+                                                      ->recognizeText(new GlyphOcrEngine(...$o))
+                                                      ->toString(Format::SubRip),
+            new GlyphOcrOptions(),
         ];
         yield "TesseractOcrEngine::__construct" => [
             fn (array $o): TesseractOcrOptions => (new \ReflectionProperty(TesseractOcrEngine::class, "options"))
