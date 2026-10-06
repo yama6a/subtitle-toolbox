@@ -10,7 +10,7 @@ use SubtitleToolbox\ReadOptions;
 
 final class SubRipStreamReader implements CueStreamReader
 {
-    private SubRipParser $parser;
+    private readonly SubRipParser $parser;
 
     private readonly ReadOptions $options;
 
@@ -35,8 +35,8 @@ final class SubRipStreamReader implements CueStreamReader
 
     public function read($stream): Generator
     {
-        $this->parser = (new SubRipParser())->useOptions($this->options);
-        $index        = 0;
+        $this->parser->useOptions($this->options);
+        $index = 0;
         foreach ($this->parser->splitIntoBlocks(Streams::lines($stream)) as $lineNumber => $rawLines) {
             foreach ($this->parser->parseBlock($rawLines, $index++, $lineNumber) as $cue) {
                 yield $cue;
