@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Hls;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\OptionChecks;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Subtitle;
@@ -64,7 +65,7 @@ final class TimestampMap
                                        "integer MPEGTS value: $line");
         }
 
-        $seconds = (int) $local[1] * 3600 + (int) $local[2] * 60 + (int) $local[3] + (int) $local[4] / 1000;
+        $seconds = Timecode::toSeconds((int) $local[1], (int) $local[2], (int) $local[3], $local[4]);
 
         return new self((int) $attributes["MPEGTS"], $seconds);
     }
@@ -99,9 +100,7 @@ final class TimestampMap
      */
     public function toHeader(): string
     {
-        [$hours, $minutes, $seconds, $milliseconds] = Timecode::milliseconds($this->local);
-
-        return sprintf("%s=LOCAL:%02d:%02d:%02d.%03d,MPEGTS:%d", self::HEADER_NAME, $hours, $minutes, $seconds, $milliseconds, $this->mpegts);
+        return sprintf("%s=LOCAL:%s,MPEGTS:%d", self::HEADER_NAME, Markup::coreTimestamp($this->local), $this->mpegts);
     }
 
 

@@ -13,6 +13,7 @@ use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 final class WebVttParser extends SubtitleParser
 {
@@ -254,8 +255,8 @@ final class WebVttParser extends SubtitleParser
 
         $lines = str_replace(array_keys(self::ENTITIES), array_values(self::ENTITIES), array_slice($rawLines, 1));
         $cue   = new SubtitleCue(
-            $this->timeStringToMilliseconds($times[0]),
-            $this->timeStringToMilliseconds($matches[1]),
+            $this->secondsFromString($times[0]),
+            $this->secondsFromString($matches[1]),
             $lines
         );
         $cue->setIdentifier($identifier ?? null);
@@ -268,19 +269,14 @@ final class WebVttParser extends SubtitleParser
     }
 
 
-    private function timeStringToMilliseconds(string $timeString): float
+    private function secondsFromString(string $timeString): float
     {
         $timeString = trim($timeString);
         if (!preg_match("/^" . self::TIMESTAMP_PATTERN . "$/", $timeString, $matches)) {
             throw new ParsingException("The time-string of at least one cue could not be parsed: $timeString");
         }
 
-        $hours   = (int) $matches[2];
-        $minutes = (int) $matches[3];
-        $seconds = (int) $matches[4];
-        $millis  = (int) $matches[5];
-
-        return $hours * 3600 + $minutes * 60 + $seconds + $millis / 1000;
+        return Timecode::toSeconds((int) $matches[2], (int) $matches[3], (int) $matches[4], $matches[5]);
     }
 
 

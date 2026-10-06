@@ -9,12 +9,13 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 final class HtmlTranscriptParser extends SubtitleParser
 {
     private const ELEMENT = '/<(cite|time|p)(?:\s[^>]*)?>(.*?)<\/\1\s*>/is';
 
-    private const TIME = '/^(?:(\d+):)?(\d+):([0-5]?\d(?:[.,]\d+)?)$/';
+    private const TIME = '/^(?:(\d+):)?(\d+):([0-5]?\d)(?:[.,](\d+))?$/';
 
 
     /**
@@ -92,7 +93,7 @@ final class HtmlTranscriptParser extends SubtitleParser
             throw new ParsingException("The time \"$time\" is not valid.", $line);
         }
 
-        return round((int)$parts[1] * 3600 + (int)$parts[2] * 60 + (float)str_replace(",", ".", $parts[3]), 3);
+        return round(Timecode::toSeconds((int) $parts[1], (int) $parts[2], (int) $parts[3], $parts[4] ?? ""), 3);
     }
 
 

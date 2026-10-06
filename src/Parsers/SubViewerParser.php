@@ -12,6 +12,7 @@ use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 final class SubViewerParser extends SubtitleParser
 {
@@ -114,7 +115,7 @@ final class SubViewerParser extends SubtitleParser
             }
 
             if (preg_match(self::VERSION_1_TIME_REGEX, $line, $matches)) {
-                $afterTime = $matches[1] * 3600 + $matches[2] * 60 + $matches[3] + $delay;
+                $afterTime = Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3]) + $delay;
             }
         }
 
@@ -172,8 +173,8 @@ final class SubViewerParser extends SubtitleParser
                 $skipped = null;
                 $cueIndex++;
                 $cue = new SubtitleCue(
-                    $this->secondsFromParts($matches[1], $matches[2], $matches[3], $matches[4]),
-                    $this->secondsFromParts($matches[5], $matches[6], $matches[7], $matches[8]),
+                    Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]),
+                    Timecode::toSeconds((int) $matches[5], (int) $matches[6], (int) $matches[7], $matches[8]),
                     []
                 );
                 continue;
@@ -306,11 +307,5 @@ final class SubViewerParser extends SubtitleParser
         if ($cue !== null && $cue->getLines() !== []) {
             $cues[] = $cue;
         }
-    }
-
-
-    private function secondsFromParts(string $hours, string $minutes, string $seconds, string $fraction): float
-    {
-        return (int) $hours * 3600 + (int) $minutes * 60 + (int) $seconds + (float) ("0." . $fraction);
     }
 }

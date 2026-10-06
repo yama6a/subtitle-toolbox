@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Timing;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Timecode;
 
 final class ShotChanges
 {
@@ -38,8 +39,8 @@ final class ShotChanges
 
             if (preg_match('/^\d+(?:\.\d+)?$/', $line)) {
                 $times[] = (float)$line;
-            } elseif (preg_match('/^(\d+):([0-5]\d):([0-5]\d(?:\.\d+)?)$/', $line, $parts)) {
-                $times[] = $parts[1] * 3600 + $parts[2] * 60 + (float)$parts[3];
+            } elseif (preg_match('/^(\d+):([0-5]\d):([0-5]\d)(?:\.(\d+))?$/', $line, $parts)) {
+                $times[] = Timecode::toSeconds((int) $parts[1], (int) $parts[2], (int) $parts[3], $parts[4] ?? "");
             } else {
                 throw new ParsingException("Cannot read the shot change time \"$line\" - use seconds or hh:mm:ss.mmm.",
                                            $index + 1);

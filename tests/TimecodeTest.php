@@ -57,6 +57,41 @@ class TimecodeTest extends TestCase
     }
 
 
+    /**
+     * @return array<string, array{string, float}>
+     */
+    public static function fractions(): array
+    {
+        return [
+            "no fraction" => ["", 3723.0],
+            "1 digit"     => ["5", 3723.5],
+            "2 digits"    => ["05", 3723.05],
+            "3 digits"    => ["005", 3723.005],
+            "4 digits"    => ["1234", 3723.1234],
+        ];
+    }
+
+
+    #[DataProvider("fractions")]
+    public function testToSecondsReadsTheFractionAsDecimalDigits(string $fraction, float $expected): void
+    {
+        $this->assertSame($expected, Timecode::toSeconds(1, 2, 3, $fraction));
+    }
+
+
+    public function testToSecondsFromFramesCountsFramesAfterTheLastWholeSecond(): void
+    {
+        $this->assertSame(3723.48, Timecode::toSecondsFromFrames(1, 2, 3, 12, new FrameRate(25)));
+        $this->assertEqualsWithDelta(1.5005, Timecode::toSecondsFromFrames(0, 0, 1, 12, new FrameRate(24000 / 1001)), 0.00001);
+    }
+
+
+    public function testShortClockDropsTheHoursBelowOneHour(): void
+    {
+        $this->assertSame(["0:00", "1:02", "59:59", "1:02:05"], array_map(Timecode::shortClock(...), [0, 62.9, 3599.9, 3725]));
+    }
+
+
     #[DataProvider("frameRates")]
     public function testFramesRoundToTheNearestFrameBeforeTheySplit(float $fps, bool $dropFrame, array $expected): void
     {

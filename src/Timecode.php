@@ -7,8 +7,8 @@ namespace SubtitleToolbox;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 /**
- * Splits seconds into hours, minutes, seconds and one smaller unit. Each method rounds the total to its unit first,
- * so 1.996 s becomes 2 s and 0 centiseconds, never 1 s and 100 centiseconds.
+ * Splits seconds into hours, minutes, seconds and one smaller unit, and turns such parts back into seconds. Each split
+ * method rounds the total to its unit first, so 1.996 s becomes 2 s and 0 centiseconds, never 1 s and 100 centiseconds.
  *
  * @internal
  */
@@ -103,6 +103,46 @@ final class Timecode
         }
 
         return [...self::seconds($whole), $frame];
+    }
+
+
+    /**
+     * Returns the seconds of a time in parts. $fraction holds the decimal digits after the point, so "5" adds 0.5 s and
+     * "005" adds 0.005 s. The result is the float nearest to the decimal value.
+     *
+     * @internal
+     */
+    public static function toSeconds(int $hours, int $minutes, int $seconds, string $fraction = ""): float
+    {
+        $whole = $hours * 3600 + $minutes * 60 + $seconds;
+
+        return $fraction === "" ? (float) $whole : (float) "$whole.$fraction";
+    }
+
+
+    /**
+     * Returns the seconds of a time code that counts frames after the last whole second, for example 00:00:01:12 at
+     * 25 fps is 1.48 s.
+     *
+     * @internal
+     */
+    public static function toSecondsFromFrames(int $hours, int $minutes, int $seconds, int $frames, FrameRate $frameRate): float
+    {
+        return $hours * 3600 + $minutes * 60 + $seconds + $frameRate->framesToSeconds($frames);
+    }
+
+
+    /**
+     * Formats the whole seconds as m:ss below 1 hour and as h:mm:ss from 1 hour, for example 62.9 becomes "1:02" and
+     * 3725 becomes "1:02:05".
+     *
+     * @internal
+     */
+    public static function shortClock(float $seconds): string
+    {
+        [$hours, $minutes, $wholeSeconds] = self::seconds(floor($seconds));
+
+        return $hours > 0 ? sprintf("%d:%02d:%02d", $hours, $minutes, $wholeSeconds) : sprintf("%d:%02d", $minutes, $wholeSeconds);
     }
 
 
