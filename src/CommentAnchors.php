@@ -41,6 +41,25 @@ final class CommentAnchors
 
 
     /**
+     * Adds the parsed cues, then puts each comment before the cue that followed it in the file.
+     *
+     * @param list<SubtitleCue>              $cues     in file order
+     * @param list<array{0: string, 1: int}> $comments the text and the count of cues before it in the file
+     */
+    public static function addParsed(Subtitle $subtitle, array $cues, array $comments): Subtitle
+    {
+        $subtitle->addCues($cues);
+        foreach ($comments as [$text, $cueCount]) {
+            $anchor   = self::anchor($cues, $cueCount);
+            $cueIndex = $anchor === null ? false : array_search($anchor, $subtitle->getCues(), true);
+            $subtitle->addComment($text, $cueIndex === false ? count($subtitle) : $cueIndex);
+        }
+
+        return $subtitle;
+    }
+
+
+    /**
      * @param array<int, ?SubtitleCue> $anchors
      *
      * @return array<int, ?SubtitleCue>

@@ -148,3 +148,19 @@ write("library_hebrew.stl", gsi([
     tti(0, 2, 0xFF, 0, [0, 0, 3, 10], [0, 0, 6, 0], 22, 3, 0, teletextRows("\xE4\xF8\xEB\xE1\xFA \xE9\xE5\xF6\xE0\xFA \xE1\xF9\xE1\xF2.")),
     tti(0, 3, 0xFF, 0, [0, 0, 6, 10], [0, 0, 9, 0], 22, 3, 0, teletextRows("\xFA\xE5\xE3\xE4 \xE5\xEC\xE4\xFA\xF8\xE0\xE5\xFA.")),
 ]);
+
+
+// Open subtitles, 25 fps. The subtitles are out of time order, and comment blocks come before the second and after the last subtitle.
+$shop = [
+    tti(0, 1, 0xFF, 0, [0, 0, 5, 0], [0, 0, 7, 0], 20, 2, 0, "The shop is open."),
+    tti(0, 2, 0xFF, 0, [0, 0, 1, 0], [0, 0, 3, 0], 20, 2, 1, "The door opens before the shop."),
+    tti(0, 3, 0xFF, 0, [0, 0, 1, 0], [0, 0, 3, 0], 20, 2, 0, "The door opens."),
+    tti(0, 4, 0xFF, 0, [0, 0, 9, 0], [0, 0, 11, 0], 20, 2, 0, "The shop closes."),
+    tti(0, 5, 0xFF, 0, [0, 0, 11, 0], [0, 0, 11, 0], 20, 2, 1, "End of the shop scene."),
+];
+write("shop_comments_out_of_order.stl", gsi([
+    "CPN" => "850", "DFC" => "STL25.01", "DSC" => "0", "CCT" => "00", "LC" => "09", "OPT" => "Shop",
+    "CD" => "261006", "RD" => "261006", "RN" => "00", "TNB" => "00005", "TNS" => "00003", "TNG" => "001",
+    "MNC" => "40", "MNR" => "23", "TCS" => "1", "TCP" => "00000000", "TCF" => "00000500", "TND" => "1", "DSN" => "1",
+    "CO" => "GBR",
+]), $shop);

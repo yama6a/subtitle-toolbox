@@ -7,6 +7,7 @@
 | `harbour_open_30fps.stl` | Written for this repository by `../generate-fixtures.php`. Open subtitles at 30 fps, a code page 850 title, two subtitle groups and a cumulative set | MIT |
 | `library_hebrew.stl` | Written for this repository by `../generate-fixtures.php`. Character code table 04, ISO 8859-8 | MIT |
 | `market_arabic.stl` | Written for this repository by `../generate-fixtures.php`. Character code table 02, ISO 8859-6 | MIT |
+| `shop_comments_out_of_order.stl` | Written for this repository by `../generate-fixtures.php`. Subtitles out of time order, and a comment block before a subtitle that starts earlier than the subtitle before it | MIT |
 | `train_cyrillic.stl` | Written for this repository by `../generate-fixtures.php`. Character code table 01, ISO 8859-5 | MIT |
 | `weather_greek.stl` | Written for this repository by `../generate-fixtures.php`. Character code table 03, ISO 8859-7 | MIT |
 

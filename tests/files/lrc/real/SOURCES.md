@@ -9,3 +9,4 @@
 | subsrt-sample.lrc | Written for this repository in the shape of https://github.com/papnkukn/subsrt/blob/46deebd95703be9b6a76eb3c1aaf915713f30394/test/fixtures/sample.lrc | MIT |
 | handwritten-core.lrc | Written for this repository from the core format and ID tag description at https://en.wikipedia.org/wiki/LRC_(file_format) | MIT |
 | handwritten-enhanced.lrc | Written for this repository from the enhanced LRC (A2 extension) description at https://en.wikipedia.org/wiki/LRC_(file_format) | MIT |
+| own-comment-before-earlier-line.lrc | Written for this repository. Lines out of time order, and a `[#:...]` comment before a line that starts earlier than the line before it | MIT |

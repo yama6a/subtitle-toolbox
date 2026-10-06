@@ -136,6 +136,19 @@ class AssParserTest extends TestCase
     }
 
 
+    public function testCommentEventStaysBeforeItsEventWhenTheEventsAreOutOfTimeOrder(): void
+    {
+        $subtitle = $this->parseFile("own_comment_before_earlier_event.ass");
+
+        $this->assertSame(["The door opens.", "The shop is open.", "The shop closes."], array_map(fn (SubtitleCue $cue) => $cue->getText(), $subtitle->getCues()));
+        $this->assertEquals([
+            new Comment("The door opens before the shop", 0),
+            new Comment("The shop opens at nine", 1),
+            new Comment("End of the shop scene", 3),
+        ], $subtitle->getComments());
+    }
+
+
     public function testColumnsAreMappedByName(): void
     {
         $cue = $this->parseEvents(

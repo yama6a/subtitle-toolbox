@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use Generator;
+use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
@@ -42,6 +43,7 @@ final class WebVttParser extends SubtitleParser
         $lines      = array_merge(array_fill(0, $leadingLines, ""), explode(LineEnding::Lf->value, $rawSubtitle));
         $subtitle   = new Subtitle();
         $parsedCues = [];
+        $comments   = [];
         $fileData   = [];
         $seenCue    = false;
         $count      = 0;
@@ -60,7 +62,7 @@ final class WebVttParser extends SubtitleParser
                         $seenCue = true;
                         break;
                     case $this->startsWithKeyword($firstLine, "NOTE"):
-                        $subtitle->addComment($this->parseComment($rawLines), count($parsedCues));
+                        $comments[] = [$this->parseComment($rawLines), count($parsedCues)];
                         break;
                     case !$seenCue && $firstLine === "STYLE":
                         $fileData["styles"][] = implode(LineEnding::Lf->value, array_slice($rawLines, 1));
@@ -82,7 +84,7 @@ final class WebVttParser extends SubtitleParser
             }
         }
 
-        return $subtitle->addCues($parsedCues)->setFormatData(self::FORMAT_DATA_KEY, $fileData);
+        return CommentAnchors::addParsed($subtitle, $parsedCues, $comments)->setFormatData(self::FORMAT_DATA_KEY, $fileData);
     }
 
 
