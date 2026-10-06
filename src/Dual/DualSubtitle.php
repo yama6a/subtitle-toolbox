@@ -12,8 +12,9 @@ final class DualSubtitle
     /**
      * Returns a new subtitle with the cues of both inputs. Metadata, comments and format data come from $primary.
      */
-    public static function fromPair(Subtitle $primary, Subtitle $secondary, DualSubtitleOptions $options): Subtitle
+    public static function fromPair(Subtitle $primary, Subtitle $secondary, ?DualSubtitleOptions $options = null): Subtitle
     {
+        $options ??= new DualSubtitleOptions();
         $primaryCues   = array_map(fn (SubtitleCue $cue): SubtitleCue => clone $cue, $primary->getCues());
         $secondaryCues = array_map(
             fn (SubtitleCue $cue): SubtitleCue => self::copySecondaryCue($cue, $options),

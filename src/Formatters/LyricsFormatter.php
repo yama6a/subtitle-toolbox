@@ -15,8 +15,9 @@ use SubtitleToolbox\WriteOptions;
 
 final class LyricsFormatter extends SubtitleFormatter
 {
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $output   = $this->formatIdTags($subtitle);
         $cues     = array_values($subtitle->getCues());
         $comments = $subtitle->getComments();

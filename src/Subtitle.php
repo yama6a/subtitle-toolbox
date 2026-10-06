@@ -368,8 +368,9 @@ final class Subtitle implements \IteratorAggregate, \Countable
      * MicroDVD and iTT take the frame rate from the options, else from the format data of their parser. TSV writes
      * tabs and CSV from a TSV load writes commas, unless CsvWriteOptions::$delimiter is set.
      */
-    public function toString(Format $format, WriteOptions $options = new WriteOptions()): string
+    public function toString(Format $format, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $options = $this->withFormatDefaults($format, $options);
         $formatterClass = FormatRegistry::formatterClass($format)
             ?? throw new InvalidFormatterException("The format {$format->value} can be read but not written.");

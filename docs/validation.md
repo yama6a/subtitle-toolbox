@@ -17,6 +17,8 @@ $violations[0]->value;             // 45
 $violations[0]->limit;             // 37
 ```
 
+`validate()` requires the rules, because `new ValidationRules()` checks nothing.
+
 The value of a `ValidationRule` case is the name of its field in `ValidationRules`. `MinChapters` and `FirstChapterAtZero` have no field. `YouTubeChapters::check()` uses them, see [chapters.md](chapters.md).
 
 | Rule | Limit | Value |

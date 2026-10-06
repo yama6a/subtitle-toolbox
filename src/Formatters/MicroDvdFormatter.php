@@ -21,8 +21,9 @@ final class MicroDvdFormatter extends SubtitleFormatter
     private const STYLE_TAGS = ["b", "i", "u", "s"];
 
 
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $microDvd  = $this->formatOptions($options);
         $frameRate = new FrameRate($microDvd?->frameRate
             ?? $subtitle->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]

@@ -11,8 +11,9 @@ use SubtitleToolbox\WriteOptions;
 
 final class Mpl2Formatter extends SubtitleFormatter
 {
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $output = "";
         foreach ($subtitle->getCues() as $cue) {
             $output .= "[" . (int) round($cue->getStart() * 10) . "][" . (int) round($cue->getEnd() * 10) . "]" .

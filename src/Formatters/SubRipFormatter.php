@@ -15,8 +15,9 @@ use SubtitleToolbox\WriteOptions;
 
 final class SubRipFormatter extends SubtitleFormatter
 {
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $output = "";
         foreach (array_values($subtitle->getCues()) as $cueIndex => $cue) {
             $output .= $this->formatNumberedCue($cue, $cueIndex, $options);

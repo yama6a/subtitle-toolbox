@@ -32,8 +32,9 @@ final class CommonErrorFixer
     /**
      * Fixes common text and OCR errors in the cue text and reports each change.
      */
-    public static function apply(Subtitle $subtitle, CommonErrorOptions $options): CommonErrorReport
+    public static function apply(Subtitle $subtitle, ?CommonErrorOptions $options = null): CommonErrorReport
     {
+        $options ??= new CommonErrorOptions();
         return self::run($subtitle, $options, true);
     }
 
@@ -41,8 +42,9 @@ final class CommonErrorFixer
     /**
      * Returns the report that apply() would return, and leaves the subtitle as it is.
      */
-    public static function preview(Subtitle $subtitle, CommonErrorOptions $options): CommonErrorReport
+    public static function preview(Subtitle $subtitle, ?CommonErrorOptions $options = null): CommonErrorReport
     {
+        $options ??= new CommonErrorOptions();
         return self::run($subtitle, $options, false);
     }
 

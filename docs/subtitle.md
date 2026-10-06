@@ -9,10 +9,11 @@ Every edit has one of 3 shapes:
 |:--- |:--- |:--- |
 | method on `Subtitle` | `$subtitle->shift(2)->wrapLines(42)` | `$this`, so calls chain |
 | method that starts with `with` or `to` | `$subtitle->withForcedCuesOnly()`, `$subtitle->withSlice(10, 20)`, `$subtitle->toArray()` | a new value. `with` gives a new `Subtitle`. `to` gives a conversion, such as an array. The original stays unchanged. |
-| service with `apply()` | `HearingImpairedRemover::apply($subtitle, new HearingImpairedOptions())` | a report. The service changes `$subtitle`. |
+| service with `apply()` | `HearingImpairedRemover::apply($subtitle)` | a report. The service changes `$subtitle`. |
 
 - **Names**: a method that returns a new `Subtitle` starts with `with`. A method that converts the subtitle to another type starts with `to`, such as `toArray()` or `toString()`. A method that changes the subtitle is a verb, such as `shift()` or `removeCuesWhere()`.
-- **Service**: a feature with many settings is a class with one static `apply(Subtitle $subtitle, XOptions $options): XReport`. The services are `Resegmenter`, `HearingImpairedRemover`, `ReferenceSync`, `ShotChangeTiming`, `CommonErrorFixer`, `WordHighlight`, `ProfanityFilter` and `SpeakerLabels`. `OcrRunner::run()` and `TranslationRunner::translate()` also change the subtitle and return a report. `DualSubtitle::fromPair()` builds a new subtitle from two.
+- **Service**: a feature with many settings is a class with one static `apply(Subtitle $subtitle, ?XOptions $options = null): XReport`. The services are `Resegmenter`, `HearingImpairedRemover`, `ReferenceSync`, `ShotChangeTiming`, `CommonErrorFixer`, `WordHighlight`, `ProfanityFilter` and `SpeakerLabels`. `OcrRunner::run()` and `TranslationRunner::translate()` also change the subtitle and return a report. `DualSubtitle::fromPair()` builds a new subtitle from two.
+- **Options**: a method or constructor that takes an options object accepts `null` or no argument, and then uses `new XOptions()`. `Resegmenter`, `ReferenceSync`, `ShotChangeTiming` and `ProfanityFilter` require the options, because their options class has a required argument. `SpeakerLabels::apply()` and `validate()` require the options, because the default options change and check nothing.
 - **Keep the original**: `clone` copies the cues too. Pass `clone $subtitle` to a service or to a method that changes the subtitle, and the original stays unchanged.
 
 ## Metadata, comments and cue identifiers

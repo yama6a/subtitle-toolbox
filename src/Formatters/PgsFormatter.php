@@ -53,8 +53,9 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
     private array $ycrcb = [];
 
 
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $this->formatOptions($options);
         $cues = array_values($subtitle->getCues());
         usort($cues, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());

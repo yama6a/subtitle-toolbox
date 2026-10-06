@@ -32,8 +32,9 @@ abstract class SubtitleParser
      * Reads $content, which must be UTF-8 for a text format. In lenient mode, Subtitle::getParseWarnings() returns
      * what the parser skipped or repaired.
      */
-    final public function parse(string $content, ReadOptions $options): Subtitle
+    final public function parse(string $content, ?ReadOptions $options = null): Subtitle
     {
+        $options ??= new ReadOptions();
         $this->useOptions($options);
 
         return $this->read($content)->setParseWarnings($this->warnings);

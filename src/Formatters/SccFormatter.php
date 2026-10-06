@@ -37,8 +37,9 @@ final class SccFormatter extends SubtitleFormatter
     /**
      * @throws InvalidArgumentException for a cue with more than 4 lines, a line longer than 32 characters or a character that CEA-608 lacks.
      */
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $dropFrame = $this->formatOptions($options)?->dropFrame ?? $subtitle->findFormatData(SccParser::FORMAT_DATA_KEY)["dropFrame"] ?? true;
 
         $cues = $subtitle->getCues();

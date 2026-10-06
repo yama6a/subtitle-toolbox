@@ -22,8 +22,9 @@ final class HearingImpairedRemover
     /**
      * Removes sound descriptions, speaker labels and music lines that the options select, and removes cues that become empty.
      */
-    public static function apply(Subtitle $subtitle, HearingImpairedOptions $options): HearingImpairedReport
+    public static function apply(Subtitle $subtitle, ?HearingImpairedOptions $options = null): HearingImpairedReport
     {
+        $options ??= new HearingImpairedOptions();
         $removedLines = 0;
         $removedCues  = new \SplObjectStorage();
         foreach ($subtitle->getCues() as $index => $cue) {
@@ -50,8 +51,9 @@ final class HearingImpairedRemover
     /**
      * Returns true when apply() with $options changes $line or removes it.
      */
-    public static function isAnnotation(string $line, HearingImpairedOptions $options): bool
+    public static function isAnnotation(string $line, ?HearingImpairedOptions $options = null): bool
     {
+        $options ??= new HearingImpairedOptions();
         $cue    = new SubtitleCue(0, 1, $line);
         $before = $cue->getLines();
 

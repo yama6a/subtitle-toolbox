@@ -15,8 +15,9 @@ final class PodcastChaptersFormatter extends SubtitleFormatter
     private const VERSION = "1.2.0";
 
 
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $stored = $subtitle->findFormatData(PodcastChaptersParser::FORMAT_DATA_KEY);
         $data   = ["version" => $stored["version"] ?? self::VERSION];
         foreach (["author" => Subtitle::METADATA_AUTHOR, "title" => Subtitle::METADATA_TITLE] as $field => $key) {

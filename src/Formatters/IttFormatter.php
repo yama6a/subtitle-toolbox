@@ -51,8 +51,9 @@ final class IttFormatter extends SubtitleFormatter
      *
      * @throws InvalidArgumentException when neither IttWriteOptions nor the `itt` format data gives a supported frame rate.
      */
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $fps                      = $this->formatOptions($options)?->frameRate;
         [$frameRate, $multiplier] = $this->frameRateParameters($subtitle->findFormatData(IttParser::FORMAT_DATA_KEY), $fps);
         $rate                     = new FrameRate((float) $frameRate * $this->multiplierFactor($multiplier));

@@ -10,8 +10,9 @@ use SubtitleToolbox\WriteOptions;
 
 final class OgmChaptersFormatter extends SubtitleFormatter
 {
-    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
+    public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        $options ??= new WriteOptions();
         $output = "";
         foreach (array_values($subtitle->getCues()) as $index => $cue) {
             $number  = sprintf("CHAPTER%02d", $index + 1);
