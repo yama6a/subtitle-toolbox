@@ -21,6 +21,8 @@ final class SyncCommand extends WriteCommand
 
     private Subtitle $reference;
 
+    private ?float $mediaDuration = null;
+
 
     public function name(): string
     {
@@ -92,7 +94,7 @@ final class SyncCommand extends WriteCommand
         if ($arguments->has("silence-log") !== $arguments->has("media-duration")) {
             self::fail("Pass --media-duration with --silence-log.");
         }
-        $arguments->positiveFloat("media-duration");
+        $this->mediaDuration = $arguments->positiveFloat("media-duration");
     }
 
 
@@ -106,7 +108,7 @@ final class SyncCommand extends WriteCommand
         }
 
         $this->reference = self::parseSideFile($log, fn (string $content): Subtitle =>
-            SpeechReference::fromFfmpegSilencedetect($content, $arguments->positiveFloat("media-duration")));
+            SpeechReference::fromFfmpegSilencedetect($content, $this->mediaDuration));
     }
 
 
