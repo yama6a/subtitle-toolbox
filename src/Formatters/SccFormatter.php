@@ -9,6 +9,7 @@ use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\LineEnding;
+use SubtitleToolbox\LineWrapper;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\SccParser;
 use SubtitleToolbox\Subtitle;
@@ -126,12 +127,12 @@ final class SccFormatter extends SubtitleFormatter
 
         if (count($lines) > self::MAX_LINES) {
             throw new UnwritableContentException("Cue #$idx at {$cue->getStart()} s has " . count($lines) . " lines, " .
-                                                 "but SCC allows " . self::MAX_LINES . ". Call wrapLines(32, 4) first.");
+                                                 "but SCC allows " . self::MAX_LINES . ". " . self::fitHint($cue));
         }
         foreach ($lines as $characters) {
             if (count($characters) > Cea608::COLUMNS) {
                 throw new UnwritableContentException("Cue #$idx at {$cue->getStart()} s has a line with " . count($characters) .
-                                                     " characters, but SCC allows " . Cea608::COLUMNS . ". Call wrapLines(32, 4) first.");
+                                                     " characters, but SCC allows " . Cea608::COLUMNS . ". " . self::fitHint($cue));
             }
             foreach ($characters as $character) {
                 if (Cea608::encodeCharacter($character["char"]) === null) {
@@ -150,6 +151,17 @@ final class SccFormatter extends SubtitleFormatter
         }
 
         return $words;
+    }
+
+
+    /**
+     * Names wrapLines() when the cue text wraps into 4 lines or fewer at 32 characters, and also the split step when it does not.
+     */
+    private static function fitHint(SubtitleCue $cue): string
+    {
+        return count(LineWrapper::wrap($cue->getLines(), Cea608::COLUMNS, PHP_INT_MAX)) <= self::MAX_LINES
+            ? "Call wrapLines(32, 4) first."
+            : "Call Resegmenter::apply() with ResegmentMode::SplitLong and new CueLimits(32, 4), then wrapLines(32, 4).";
     }
 
 

@@ -454,6 +454,8 @@ abstract class FileCommand extends Command
             "Set MicroDvdReadOptions::frameRate or start the file with {1}{1}<fps>." => "Pass --fps or --input-fps, or start the file with {1}{1}<fps>.",
             "Pass CsvReadOptions::frameRate."                                    => "Pass --fps or --input-fps.",
             "Call wrapLines(32, 4) first."                                      => "Pass --structure-wrap --structure-max-cpl 32 --structure-max-lines 4.",
+            "Call Resegmenter::apply() with ResegmentMode::SplitLong and new CueLimits(32, 4), then wrapLines(32, 4)." =>
+                "Pass --structure-split-long --structure-wrap --structure-max-cpl 32 --structure-max-lines 4.",
         ]);
     }
 
