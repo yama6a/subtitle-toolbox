@@ -1,45 +1,99 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use Generator;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 
+/**
+ * The base class of the parsers of this library. Only the library extends it. Its protected members are not API and
+ * can change in any release.
+ */
 abstract class SubtitleParser
 {
+    protected ReadOptions $options;
+
     protected bool $lenient = false;
 
     /** @var list<ParseWarning> */
     protected array $warnings = [];
 
 
-    abstract public function parse(string $rawSubtitle): Subtitle;
+    /**
+     * Reads $content, which must be UTF-8 for a text format. In lenient mode, Subtitle::getParseWarnings() returns
+     * what the parser skipped or repaired.
+     */
+    final public function parse(string $content, ReadOptions $options): Subtitle
+    {
+        $this->useOptions($options);
+
+        return $this->read($content)->setParseWarnings($this->warnings);
+    }
+
+
+    abstract protected function read(string $content): Subtitle;
 
 
     /**
-     * Makes the parser skip or repair a broken block and record a ParseWarning instead of throwing. The SCC, PGS and VobSub parsers ignore it.
+     * Returns the FormatReadOptions class that this parser reads from ReadOptions::$format, or null for none.
+     *
+     * @return class-string<FormatReadOptions>|null
      */
-    public function setLenient(bool $lenient = true): static
+    protected static function formatOptionsClass(): ?string
     {
-        $this->lenient = $lenient;
+        return null;
+    }
+
+
+    /**
+     * Returns ReadOptions::$format, or the defaults of formatOptionsClass() when it is null.
+     */
+    protected function formatOptions(): FormatReadOptions
+    {
+        return $this->options->format ?? new (static::formatOptionsClass())();
+    }
+
+
+    /**
+     * Sets the options for the next read and clears the warnings. The stream readers call it before they call the
+     * block methods directly.
+     *
+     * @internal
+     */
+    public function useOptions(ReadOptions $options): static
+    {
+        $class = static::formatOptionsClass();
+        if ($options->format !== null && ($class === null || !$options->format instanceof $class)) {
+            throw new InvalidArgumentException(sprintf(
+                "%s does not read %s.",
+                substr(strrchr(static::class, "\\"), 1),
+                substr(strrchr($options->format::class, "\\"), 1)
+            ));
+        }
+
+        $this->options  = $options;
+        $this->lenient  = $options->lenient;
+        $this->warnings = [];
 
         return $this;
     }
 
 
-    public function isLenient(): bool
-    {
-        return $this->lenient;
-    }
-
-
     /**
-     * Returns the warnings of the last parse() call in lenient mode.
+     * Returns the warnings of the last read in lenient mode.
      *
      * @return list<ParseWarning>
+     *
+     * @internal
      */
     public function getWarnings(): array
     {
@@ -52,7 +106,7 @@ abstract class SubtitleParser
      *
      * @param list<string> $block
      */
-    protected function fail(ParsingException $exception, int $lineNumber, int $blockIndex, array $block): void
+    protected function fail(ParsingException $exception, ?int $lineNumber, ?int $blockIndex, array $block): void
     {
         if (!$this->lenient) {
             throw $exception;
@@ -65,7 +119,7 @@ abstract class SubtitleParser
     /**
      * @param list<string> $block
      */
-    protected function warn(string $message, int $lineNumber, int $blockIndex, array $block, string $action): void
+    protected function warn(string $message, ?int $lineNumber, ?int $blockIndex, array $block, ParseWarningAction $action): void
     {
         $this->warnings[] = new ParseWarning($message, $lineNumber, $blockIndex, $block, $action);
     }
@@ -127,7 +181,7 @@ abstract class SubtitleParser
                     $lineNumber + $offset,
                     $blockIndex,
                     $block,
-                    ParseWarning::REPAIRED
+                    ParseWarningAction::Repaired
                 );
             }
         }

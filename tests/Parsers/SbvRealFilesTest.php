@@ -1,10 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\SbvFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -51,14 +53,14 @@ class SbvRealFilesTest extends TestCase
     public function testRealFileSurvivesARoundTrip(string $fileName): void
     {
         $subtitle  = $this->parseFile($fileName);
-        $formatted = $subtitle->format(SbvFormatter::class);
-        $reparsed  = Subtitle::parse($formatted, SbvParser::class);
+        $formatted = $subtitle->toString(Format::Sbv);
+        $reparsed  = Subtitle::fromString($formatted, Format::Sbv);
 
         $this->assertSame(
             array_map($this->describeCue(...), $subtitle->getCues()),
             array_map($this->describeCue(...), $reparsed->getCues())
         );
-        $this->assertSame($formatted, $reparsed->format(SbvFormatter::class));
+        $this->assertSame($formatted, $reparsed->toString(Format::Sbv));
     }
 
 
@@ -67,13 +69,13 @@ class SbvRealFilesTest extends TestCase
     {
         $expected = rtrim(str_replace("\r\n", "\n", file_get_contents(__DIR__ . "/../files/sbv/real/" . $fileName)), "\n") . "\n";
 
-        $this->assertSame($expected, $this->parseFile($fileName)->format(SbvFormatter::class));
+        $this->assertSame($expected, $this->parseFile($fileName)->toString(Format::Sbv));
     }
 
 
     private function parseFile(string $fileName): Subtitle
     {
-        return Subtitle::parse(file_get_contents(__DIR__ . "/../files/sbv/real/" . $fileName), SbvParser::class);
+        return Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sbv/real/" . $fileName), Format::Sbv);
     }
 
 

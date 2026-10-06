@@ -1,49 +1,49 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class MicroDvdParser extends SubtitleParser
+final class MicroDvdParser extends SubtitleParser
 {
-    public const FORMAT_DATA_KEY = "sub";
+    public const FORMAT_DATA_KEY = Format::MicroDvd->value;
 
     private const STYLE_TAGS = ["b", "i", "u", "s"];
 
     private const CUE_REGEX = '/^\{(\d+)\}\{(\d+)\}(.*)$/';
 
-    protected ?float $frameRate;
 
-
-    /**
-     * Uses the given frame rate in place of the frame rate in a {1}{1}<fps> first line.
-     */
-    public function __construct(?float $frameRate = null)
+    protected static function formatOptionsClass(): string
     {
-        $this->frameRate = $frameRate;
+        return MicroDvdReadOptions::class;
     }
 
 
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
         $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
         $rawLines       = array_filter(
-            array_map("trim", explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle)),
+            array_map("trim", explode(LineEnding::Lf->value, $rawSubtitle)),
             fn (string $line): bool => $line !== ""
         );
         if ($this->lenient) {
             $rawLines = $this->skipLinesWithoutFrames($rawLines);
         }
 
-        $frameRate = $this->frameRate;
+        $frameRate = $this->formatOptions()->frameRate;
         $firstLine = reset($rawLines);
         if ($firstLine !== false && preg_match('/^\{1\}\{1\}(\d+(?:\.\d+)?)$/', $firstLine, $matches)) {
             $frameRate ??= (float) $matches[1];
@@ -51,7 +51,7 @@ class MicroDvdParser extends SubtitleParser
         }
 
         if ($frameRate === null) {
-            throw new ParsingException("The frame rate is unknown. Pass it to the constructor or start the file with {1}{1}<fps>.");
+            throw new ParsingException("The frame rate is unknown. Set MicroDvdReadOptions::frameRate or start the file with {1}{1}<fps>.");
         }
 
         try {
@@ -60,21 +60,22 @@ class MicroDvdParser extends SubtitleParser
             throw new ParsingException($exception->getMessage());
         }
 
-        $subtitle = new Subtitle();
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["frameRate" => $frameRate]);
         foreach ($rawLines as $lineNumber => $rawLine) {
             if (!preg_match(self::CUE_REGEX, $rawLine, $matches)) {
                 throw new ParsingException("Line " . ($lineNumber + 1) . " is not a MicroDVD cue: $rawLine", $lineNumber + 1);
             }
 
-            $subtitle->addCue($this->parseCue(
+            $parsedCues[] = $this->parseCue(
                 $frames->framesToSeconds((int) $matches[1]),
                 $frames->framesToSeconds((int) $matches[2]),
                 $matches[3]
-            ), false);
+            );
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 

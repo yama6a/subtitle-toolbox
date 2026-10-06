@@ -1,15 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Sync\ReferenceSync;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
 use SubtitleToolbox\Sync\SpeechReference;
 
-class SyncCommand extends WriteCommand
+/**
+ * @internal
+ */
+final class SyncCommand extends WriteCommand
 {
     private const LOW_SCORE = 0.5;
 
@@ -40,8 +46,8 @@ class SyncCommand extends WriteCommand
     {
         return "Only the cue times count, so the reference can be in another language. The scale is 1 or a factor\n" .
                "between 23.976, 24 and 25 fps. The tool prints the scale, the offset and a score from 0 to 1. A score\n" .
-               "below 0.5 means that the files likely do not match. Without --output, --output-dir or --in-place, the\n" .
-               "result of one input file goes to standard output.\n" .
+               "below 0.5 means that the files likely do not match. One input file goes to standard output, or to the file\n" .
+               "of -o. Several input files need --output-dir.\n" .
                "For a sync to the speech, run ffmpeg -i movie.mkv -af silencedetect=noise=-30dB:d=0.4 -f null - 2> silence.log\n" .
                "and pass --silence-log silence.log. A Whisper JSON transcript of the audio also works as --reference.";
     }
@@ -73,12 +79,17 @@ class SyncCommand extends WriteCommand
         if (!ctype_digit($maxSplits)) {
             self::fail("The option --max-splits needs a whole number, got \"$maxSplits\".");
         }
+        if (strlen(ltrim($maxSplits, "0")) > 2 || (int)$maxSplits > ReferenceSyncOptions::MAX_SPLITS) {
+            self::fail("The option --max-splits must be from 0 to " . ReferenceSyncOptions::MAX_SPLITS . ", got $maxSplits.");
+        }
         if (($arguments->float("split-penalty") ?? 0) < 0) {
             self::fail("The option --split-penalty must not be negative.");
         }
 
         try {
+            // The reference loads with the first input. Until then, an empty subtitle stands in for it.
             $this->syncOptions = new ReferenceSyncOptions(
+                reference: new Subtitle(),
                 minOffset: $arguments->float("min-offset") ?? -60,
                 maxOffset: $arguments->float("max-offset") ?? 60,
                 searchScale: !$arguments->has("no-scale"),
@@ -107,7 +118,7 @@ class SyncCommand extends WriteCommand
     {
         $log = $arguments->value("silence-log");
         if ($log === null) {
-            return $this->readSecondFile($arguments->value("reference"), $arguments, $console);
+            return $this->loadOtherFile($arguments->value("reference"), $console);
         }
 
         $content = is_file($log) ? @file_get_contents($log) : false;
@@ -123,16 +134,23 @@ class SyncCommand extends WriteCommand
     }
 
 
-    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         $this->reference ??= $this->loadReference($arguments, $console);
 
-        $result = ReferenceSync::sync($subtitle, $this->reference, $this->syncOptions);
-        $result->apply($subtitle);
+        $options = $this->syncOptions;
+        $result  = ReferenceSync::apply($subtitle, new ReferenceSyncOptions(
+            $this->reference,
+            $options->minOffset,
+            $options->maxOffset,
+            $options->searchScale,
+            $options->maxSplits,
+            $options->splitPenalty,
+        ));
 
         $label = self::label($input);
-        $text  = "$label: scale " . self::number($result->getScale(), 5) . ", offset " . self::number($result->getOffset(), 3) .
-                 " s, score " . self::number($result->getScore(), 2) . "\n";
+        $text  = "$label: scale " . self::number($result->scale, 5) . ", offset " . self::number($result->offset, 3) .
+                 " s, score " . self::number($result->score, 2) . "\n";
         $segments = $result->getSegments();
         if (count($segments) > 1) {
             foreach ($segments as $segment) {
@@ -140,16 +158,11 @@ class SyncCommand extends WriteCommand
             }
         }
         $console->err($text);
-        if ($result->getScore() < self::LOW_SCORE) {
+        if ($result->score < self::LOW_SCORE) {
             $console->err("$label: the score is below " . self::LOW_SCORE . ", so the files likely do not match.\n");
         }
 
         parent::process($input, $subtitle, $format, $arguments, $console);
-    }
-
-
-    protected function transform(Subtitle $subtitle, Arguments $arguments): void
-    {
     }
 
 

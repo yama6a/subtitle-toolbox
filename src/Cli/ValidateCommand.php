@@ -1,12 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Cli;
 
+use SubtitleToolbox\DialogueDashStyle;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\Validation\ValidationResult;
+use SubtitleToolbox\Validation\ValidationViolation;
 use SubtitleToolbox\Validation\ValidationRules;
 
-class ValidateCommand extends ReportCommand
+/**
+ * @internal
+ */
+final class ValidateCommand extends ReportCommand
 {
     private const PRESETS = ["netflix-en", "bbc"];
 
@@ -31,7 +38,7 @@ class ValidateCommand extends ReportCommand
 
     protected function usageLines(): array
     {
-        return ["<input>... --preset netflix-en|bbc [options]", "<input>... [--max-cpl CHARS] [--no-overlap] [...] [options]"];
+        return ["<input>... --preset netflix-en|bbc [options]", "<input>... [--max-cpl CHARS] [--check-overlaps] [...] [options]"];
     }
 
 
@@ -48,7 +55,7 @@ class ValidateCommand extends ReportCommand
 
     protected function fpsDescription(): string
     {
-        return "Frame rate of the video, for the 2-frame gap of netflix-en and for MicroDVD input. Default: 23.976.";
+        return "Sets --input-fps and --video-fps. Each of them overrides it.";
     }
 
 
@@ -56,23 +63,24 @@ class ValidateCommand extends ReportCommand
     {
         return [
             Option::value("preset", "NAME", "Rule set: netflix-en or bbc."),
+            Option::value("video-fps", "RATE", "Frame rate of the video, for the 2-frame gap of netflix-en. Default: 23.976."),
             Option::value("max-cps", "CHARS", "Maximum characters per second."),
             Option::value("max-cpl", "CHARS", "Maximum characters per line."),
             Option::value("max-lines", "LINES", "Maximum lines per cue."),
             Option::value("min-duration", "SECONDS", "Minimum duration of a cue."),
             Option::value("max-duration", "SECONDS", "Maximum duration of a cue."),
             Option::value("min-gap", "SECONDS", "Minimum gap between cues."),
-            Option::flag("no-overlap", "Report overlapping cues."),
-            Option::flag("no-empty-cues", "Report cues without text."),
+            Option::flag("check-overlaps", "Report overlapping cues."),
+            Option::flag("check-empty-cues", "Report cues without text."),
             Option::value("max-wpm", "WORDS", "Maximum words per minute."),
             Option::value("min-seconds-per-word", "SECONDS", "Minimum duration of a cue per word."),
             Option::value("max-speakers", "SPEAKERS", "Maximum speakers per cue, from dialogue dashes or <v> names."),
             Option::value("dialogue-dash", "STYLE", "Report dialogue dashes in another style than STYLE, for example \"- \" or \"-\"."),
             Option::value("allowed-characters", "CHARS", "Report other characters. CHARS is a list or a class such as \"[A-Za-z0-9 .,!?]\"."),
-            Option::flag("no-double-spaces", "Report two or more spaces between words."),
-            Option::flag("no-leading-or-trailing-spaces", "Report lines that start or end with a space."),
-            Option::flag("no-unbalanced-tags", "Report formatting tags without a partner tag."),
-            Option::flag("no-all-caps-lines", "Report lines in upper case only."),
+            Option::flag("check-double-spaces", "Report two or more spaces between words."),
+            Option::flag("check-leading-or-trailing-spaces", "Report lines that start or end with a space."),
+            Option::flag("check-unbalanced-tags", "Report formatting tags without a partner tag."),
+            Option::flag("check-all-caps-lines", "Report lines in upper case only."),
         ];
     }
 
@@ -86,10 +94,13 @@ class ValidateCommand extends ReportCommand
         if ($preset !== null && !in_array($preset, self::PRESETS, true)) {
             self::fail("Unknown preset \"$preset\". Known presets: " . implode(", ", self::PRESETS) . ".");
         }
+        if ($arguments->has("video-fps") && $preset !== "netflix-en") {
+            self::fail("--video-fps sets the frame rate of the netflix-en gap rule. Pass --preset netflix-en, or leave out --video-fps.");
+        }
         $base = match ($preset) {
             null         => new ValidationRules(),
             "bbc"        => ValidationRules::bbc(),
-            "netflix-en" => ValidationRules::netflixEnglish($this->fps ?? self::DEFAULT_FPS),
+            "netflix-en" => ValidationRules::netflixEnglish(self::rate($arguments, "video-fps") ?? self::DEFAULT_FPS),
         };
 
         $this->rules = new ValidationRules(
@@ -99,17 +110,17 @@ class ValidateCommand extends ReportCommand
             minDuration: $arguments->positiveFloat("min-duration") ?? $base->minDuration,
             maxDuration: $arguments->positiveFloat("max-duration") ?? $base->maxDuration,
             minGap: $arguments->positiveFloat("min-gap") ?? $base->minGap,
-            noOverlap: $arguments->has("no-overlap") || $base->noOverlap,
-            noEmptyCues: $arguments->has("no-empty-cues") || $base->noEmptyCues,
-            noDoubleSpaces: $arguments->has("no-double-spaces") || $base->noDoubleSpaces,
-            noLeadingOrTrailingSpaces: $arguments->has("no-leading-or-trailing-spaces") || $base->noLeadingOrTrailingSpaces,
-            noUnbalancedTags: $arguments->has("no-unbalanced-tags") || $base->noUnbalancedTags,
-            dialogueDashStyle: $arguments->value("dialogue-dash") ?? $base->dialogueDashStyle,
+            noOverlap: $arguments->has("check-overlaps") || $base->noOverlap,
+            noEmptyCues: $arguments->has("check-empty-cues") || $base->noEmptyCues,
+            noDoubleSpaces: $arguments->has("check-double-spaces") || $base->noDoubleSpaces,
+            noLeadingOrTrailingSpaces: $arguments->has("check-leading-or-trailing-spaces") || $base->noLeadingOrTrailingSpaces,
+            noUnbalancedTags: $arguments->has("check-unbalanced-tags") || $base->noUnbalancedTags,
+            dialogueDashStyle: self::dialogueDashStyle($arguments->value("dialogue-dash")) ?? $base->dialogueDashStyle,
             maxSpeakersPerCue: $arguments->positiveInt("max-speakers") ?? $base->maxSpeakersPerCue,
             maxWordsPerMinute: $arguments->positiveFloat("max-wpm") ?? $base->maxWordsPerMinute,
             minSecondsPerWord: $arguments->positiveFloat("min-seconds-per-word") ?? $base->minSecondsPerWord,
             allowedCharacters: $arguments->value("allowed-characters") ?? $base->allowedCharacters,
-            noAllCapsLines: $arguments->has("no-all-caps-lines") || $base->noAllCapsLines,
+            noAllCapsLines: $arguments->has("check-all-caps-lines") || $base->noAllCapsLines,
         );
         if ($this->rules == new ValidationRules()) {
             self::fail("Pass --preset or at least one rule option.");
@@ -117,32 +128,33 @@ class ValidateCommand extends ReportCommand
     }
 
 
-    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
-        $results = $subtitle->validate($this->rules);
-        if ($results !== []) {
+        $violations = $subtitle->validate($this->rules);
+        if ($violations !== []) {
             $this->withProblems++;
         }
 
         $label = self::label($input);
-        $text  = $results === [] ? "$label: no problems\n" : "";
-        foreach ($results as $result) {
-            $limit = $result->getLimit() === null ? "" : ", limit " . self::number($result->getLimit());
-            $text .= "$label: cue " . ($result->getCueIndex() + 1) . ": " . $result->getRule() . " " .
-                     self::number($result->getValue()) . "$limit\n";
+        $text  = $violations === [] ? "$label: no problems\n" : "";
+        foreach ($violations as $violation) {
+            $limit = $violation->limit === null ? "" : ", limit " . self::number($violation->limit);
+            $text .= "$label: cue " . ($violation->cueIndex + 1) . ": " . $violation->rule->value . " " .
+                     self::number($violation->value) . "$limit\n";
         }
 
         $this->emit($console, $text, [
-            "file"    => $label,
-            "format"  => $format,
-            "valid"   => $results === [],
-            "results" => array_map(fn (ValidationResult $result): array => [
-                "cueIndex"  => $result->getCueIndex(),
-                "cueNumber" => $result->getCueIndex() + 1,
-                "rule"      => $result->getRule(),
-                "value"     => self::jsonNumber($result->getValue()),
-                "limit"     => self::jsonNumber($result->getLimit()),
-            ], $results),
+            "file"       => $input,
+            "format"     => $format->value,
+            "valid"      => $violations === [],
+            "violations" => array_map(fn (ValidationViolation $violation): array => [
+                "cueIndex" => $violation->cueIndex,
+                "rule"     => $violation->rule->value,
+                "value"    => is_float($violation->value) && is_infinite($violation->value) ? null : $violation->value,
+                "infinite" => is_float($violation->value) && is_infinite($violation->value),
+                "limit"    => $violation->limit,
+            ], $violations),
+            "warnings"   => self::warningsJson($this->parseWarnings),
         ]);
     }
 
@@ -158,6 +170,21 @@ class ValidateCommand extends ReportCommand
 
     protected function exitCode(): int
     {
-        return $this->failed > 0 || $this->withProblems > 0 ? Application::EXIT_FAILURE : Application::EXIT_OK;
+        return match (true) {
+            $this->failed > 0       => Application::EXIT_FILE,
+            $this->withProblems > 0 => Application::EXIT_RESULT,
+            default                 => Application::EXIT_OK,
+        };
+    }
+
+
+    private static function dialogueDashStyle(?string $style): ?DialogueDashStyle
+    {
+        if ($style === null) {
+            return null;
+        }
+
+        return DialogueDashStyle::tryFrom($style) ?? self::fail("The option --dialogue-dash must be a hyphen, an en " .
+            "dash or an em dash, with or without one space after it, got \"$style\".");
     }
 }

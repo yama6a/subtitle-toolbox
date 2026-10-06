@@ -1,12 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
-class IttParser extends TtmlParser
+final class IttParser extends SubtitleParser
 {
-    public const FORMAT = "itt";
+    public const FORMAT_DATA_KEY = Format::Itt->value;
 
     private const TIMING_PARAMETERS = ["timeBase", "frameRate", "frameRateMultiplier", "dropMode"];
 
@@ -14,23 +17,24 @@ class IttParser extends TtmlParser
     /**
      * Parses the file as TTML and copies the SMPTE timing parameters of the root element to the `itt` format data.
      */
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
-        $subtitle = parent::parse($rawSubtitle);
-        $ttmlData = $subtitle->getFormatData(TtmlParser::FORMAT);
+        $subtitle       = (new TtmlParser())->parse($rawSubtitle, $this->options);
+        $this->warnings = $subtitle->getParseWarnings();
+        $ttmlData       = $subtitle->findFormatData(TtmlParser::FORMAT_DATA_KEY);
 
         $parameters = [];
         foreach ($ttmlData["attributes"] ?? [] as $name => $value) {
             [$prefix, $localName] = str_contains($name, ":") ? explode(":", $name, 2) : ["", $name];
             $namespace            = $ttmlData["namespaces"][$prefix] ?? null;
             if (in_array($localName, self::TIMING_PARAMETERS, true)
-                && (in_array($namespace, self::PARAMETER_NAMESPACES, true) || $namespace === null && $prefix === "ttp")) {
+                && (in_array($namespace, TtmlNamespaces::PARAMETER, true) || $namespace === null && $prefix === "ttp")) {
                 $parameters[$localName] = trim($value);
             }
         }
         $parameters = array_intersect_key(array_replace(array_flip(self::TIMING_PARAMETERS), $parameters), $parameters);
         if ($parameters !== []) {
-            $subtitle->setFormatData(self::FORMAT, $parameters);
+            $subtitle->setFormatData(self::FORMAT_DATA_KEY, $parameters);
         }
 
         return $subtitle;

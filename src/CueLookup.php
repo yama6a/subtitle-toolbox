@@ -1,17 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 use ArrayIterator;
-use Closure;
 use Iterator;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use WeakMap;
 
+/**
+ * @internal
+ */
 trait CueLookup
 {
-    /** @var WeakMap<Subtitle, array>|null */
-    private static ?WeakMap $cueLookupIndexes = null;
+    private ?array $cueLookupIndex = null;
 
 
     /**
@@ -34,7 +36,7 @@ trait CueLookup
      *
      * @return array<int, SubtitleCue>
      */
-    public function getCuesAt(float $time): array
+    public function findCuesAt(float $time): array
     {
         return $this->findCuesOverlapping($time, $time, true);
     }
@@ -43,9 +45,9 @@ trait CueLookup
     /**
      * Returns the lowest index of the cues on screen at $time, or null when no cue is on screen.
      */
-    public function getCueIndexAt(float $time): ?int
+    public function findCueIndexAt(float $time): ?int
     {
-        return array_key_first($this->getCuesAt($time));
+        return array_key_first($this->findCuesAt($time));
     }
 
 
@@ -54,7 +56,7 @@ trait CueLookup
      *
      * @return array<int, SubtitleCue>
      */
-    public function getCuesBetween(float $from, float $to): array
+    public function findCuesBetween(float $from, float $to): array
     {
         if ($from > $to) {
             throw new InvalidArgumentException("The range start $from must not be after the range end $to.");
@@ -65,26 +67,26 @@ trait CueLookup
 
 
     /**
-     * Returns the cues for which $fn returns true, keyed by cue index.
+     * Returns the cues for which $predicate returns true, keyed by cue index.
      *
-     * @param callable(SubtitleCue): bool $fn
+     * @param callable(SubtitleCue): bool $predicate
      * @return array<int, SubtitleCue>
      */
-    public function findCues(callable $fn): array
+    public function findCues(callable $predicate): array
     {
-        return array_filter($this->cues, $fn);
+        return array_filter($this->cues, $predicate);
     }
 
 
     /**
-     * Removes the cues for which $fn returns false and moves the comments before the removed cues to the next kept cue.
+     * Removes the cues for which $predicate returns true and moves the comments before the removed cues to the next kept cue.
      *
-     * @param callable(SubtitleCue): bool $fn
+     * @param callable(SubtitleCue): bool $predicate
      */
-    public function filterCues(callable $fn): self
+    public function removeCuesWhere(callable $predicate): self
     {
         foreach ($this->cues as $index => $cue) {
-            if (!$fn($cue)) {
+            if ($predicate($cue)) {
                 unset($this->cues[$index]);
             }
         }
@@ -130,22 +132,23 @@ trait CueLookup
 
 
     /**
-     * Returns the cached start and end times, and in start order a tree whose node holds the latest end of its cues.
+     * Returns the cues in start order as a tree whose node holds the latest end of its cues.
+     * A time setter of any cue or a change of the cue list makes the next call rebuild the tree.
      */
     private function getCueLookupIndex(): array
     {
-        self::$cueLookupIndexes ??= new WeakMap();
-
-        // array_column runs in C and needs the SubtitleCue scope to read the protected times.
-        [$starts, $ends] = Closure::bind(
-            static fn (array $cues): array => [array_column($cues, "start"), array_column($cues, "end")],
-            null,
-            SubtitleCue::class
-        )($this->cues);
-
-        $index = self::$cueLookupIndexes[$this] ?? null;
-        if ($index !== null && $index["cues"] === $this->cues && $index["starts"] === $starts && $index["ends"] === $ends) {
+        $timeEdits = SubtitleCue::timeEditCount();
+        $index     = $this->cueLookupIndex;
+        // The cached list shares its storage with $this->cues until either changes, so this check costs O(1).
+        if ($index !== null && $index["timeEdits"] === $timeEdits && $index["cues"] === $this->cues) {
             return $index;
+        }
+
+        $starts = [];
+        $ends   = [];
+        foreach ($this->cues as $cue) {
+            $starts[] = $cue->getStart();
+            $ends[]   = $cue->getEnd();
         }
 
         $count  = count($starts);
@@ -172,10 +175,10 @@ trait CueLookup
             }
         }
 
-        return self::$cueLookupIndexes[$this] = [
+        return $this->cueLookupIndex = [
             "cues"      => $this->cues,
+            "timeEdits" => $timeEdits,
             "starts"    => $starts,
-            "ends"      => $ends,
             "keys"      => array_keys($this->cues),
             "maxEnds"   => $maxEnds,
             "leafCount" => $leafCount,

@@ -1,25 +1,29 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Encoding\Cea608;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
+use SubtitleToolbox\Formatters\Options\SccWriteOptions;
+use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\SccParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
 /**
  * Writes pop-on captions for CEA-608 data channel 1, one byte pair per frame at 29.97 fps.
  *
  * @see http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
  */
-class SccFormatter extends SubtitleFormatter
+final class SccFormatter extends SubtitleFormatter
 {
-    /** true (default) writes drop-frame time codes such as 00:01:00;02, false writes non-drop time codes such as 00:01:00:00. */
-    public const OPTION_DROP_FRAME = "OPTION_DROP_FRAME";
+    protected const FORMAT_OPTIONS = SccWriteOptions::class;
 
     private const MAX_LINES = 4;
 
@@ -33,12 +37,9 @@ class SccFormatter extends SubtitleFormatter
     /**
      * @throws InvalidArgumentException for a cue with more than 4 lines, a line longer than 32 characters or a character that CEA-608 lacks.
      */
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $dropFrame = Options::flag($options, self::OPTION_DROP_FRAME) ?? $subtitle->getFormatData(SccParser::FORMAT)["dropFrame"] ?? true;
-        if (!is_bool($dropFrame)) {
-            throw new InvalidArgumentException("The option " . self::OPTION_DROP_FRAME . " must be true or false.");
-        }
+        $dropFrame = $this->formatOptions($options)?->dropFrame ?? $subtitle->findFormatData(SccParser::FORMAT_DATA_KEY)["dropFrame"] ?? true;
 
         $cues = $subtitle->getCues();
         uasort($cues, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());
@@ -123,18 +124,18 @@ class SccFormatter extends SubtitleFormatter
         }
 
         if (count($lines) > self::MAX_LINES) {
-            throw new InvalidArgumentException("Cue #$idx at {$cue->getStart()} s has " . count($lines) . " lines, " .
-                                               "but SCC allows " . self::MAX_LINES . ". Call wrapLines(32, 4) first.");
+            throw new UnwritableContentException("Cue #$idx at {$cue->getStart()} s has " . count($lines) . " lines, " .
+                                                 "but SCC allows " . self::MAX_LINES . ". Call wrapLines(32, 4) first.");
         }
         foreach ($lines as $characters) {
             if (count($characters) > Cea608::COLUMNS) {
-                throw new InvalidArgumentException("Cue #$idx at {$cue->getStart()} s has a line with " . count($characters) .
-                                                   " characters, but SCC allows " . Cea608::COLUMNS . ". Call wrapLines(32, 4) first.");
+                throw new UnwritableContentException("Cue #$idx at {$cue->getStart()} s has a line with " . count($characters) .
+                                                     " characters, but SCC allows " . Cea608::COLUMNS . ". Call wrapLines(32, 4) first.");
             }
             foreach ($characters as $character) {
                 if (Cea608::encodeCharacter($character["char"]) === null) {
-                    throw new InvalidArgumentException("Cue #$idx at {$cue->getStart()} s has the character \"{$character["char"]}\", " .
-                                                       "which CEA-608 cannot show.");
+                    throw new UnwritableContentException("Cue #$idx at {$cue->getStart()} s has the character \"{$character["char"]}\", " .
+                                                         "which CEA-608 cannot show.");
                 }
             }
         }
@@ -152,7 +153,7 @@ class SccFormatter extends SubtitleFormatter
 
 
     /**
-     * Splits a line of core markup into characters with their colour, italics and underline, without the spaces at both ends.
+     * Splits a line of core markup into characters with their color, italics and underline, without the spaces at both ends.
      *
      * @return list<array{char: string, color: int, italic: bool, underline: bool}>
      */
@@ -255,8 +256,8 @@ class SccFormatter extends SubtitleFormatter
 
 
     /**
-     * Returns the second bytes of the mid-row codes that change the style. A colour code turns italics off,
-     * and the italics code keeps the colour, as 47 CFR 15.119 (h)(1)(ii) says.
+     * Returns the second bytes of the mid-row codes that change the style. A color code turns italics off,
+     * and the italics code keeps the color, as 47 CFR 15.119 (h)(1)(ii) says.
      *
      * @return list<int>
      */
@@ -286,7 +287,7 @@ class SccFormatter extends SubtitleFormatter
     {
         $count     = count($cells);
         $alignment = $cue->getAlignment() ?? 2;
-        $stored    = $cue->getFormatData(SccParser::FORMAT);
+        $stored    = $cue->findFormatData(SccParser::FORMAT_DATA_KEY);
         $rows      = $stored["rows"] ?? null;
         $columns   = $stored["columns"] ?? null;
         $storedOk  = is_array($rows) && is_array($columns) && count($rows) === $count && count($columns) === $count
@@ -418,45 +419,29 @@ class SccFormatter extends SubtitleFormatter
     /**
      * Writes one line per run of consecutive frames, with an empty line between lines.
      *
-     * @param array<int, int> $timeline word by frame
+     * @param array<int, int> $wordsByFrame
      */
-    private function writeLines(array $timeline, bool $dropFrame): string
+    private function writeLines(array $wordsByFrame, bool $dropFrame): string
     {
-        ksort($timeline);
-        $lines    = [];
-        $previous = null;
-        foreach ($timeline as $frame => $word) {
+        ksort($wordsByFrame);
+        $frameRate = new FrameRate(30000 / 1001);
+        $lines     = [];
+        $previous  = null;
+        foreach ($wordsByFrame as $frame => $word) {
             if ($previous === null || $frame !== $previous + 1) {
-                $lines[] = $this->timecode($frame, $dropFrame) . "\t" . sprintf("%04x", $word);
+                [$hours, $minutes, $seconds, $frames] = Timecode::frameNumber($frame, $frameRate, $dropFrame);
+                $lines[] = sprintf("%02d:%02d:%02d%s%02d\t%04x", $hours, $minutes, $seconds, $dropFrame ? ";" : ":", $frames, $word);
             } else {
                 $lines[count($lines) - 1] .= sprintf(" %04x", $word);
             }
             $previous = $frame;
         }
 
-        $output = SccParser::HEADER . StringHelpers::UNIX_LINE_ENDING . StringHelpers::UNIX_LINE_ENDING;
+        $output = SccParser::HEADER . LineEnding::Lf->value . LineEnding::Lf->value;
         foreach ($lines as $line) {
-            $output .= $line . StringHelpers::UNIX_LINE_ENDING . StringHelpers::UNIX_LINE_ENDING;
+            $output .= $line . LineEnding::Lf->value . LineEnding::Lf->value;
         }
 
-        return rtrim($output, StringHelpers::UNIX_LINE_ENDING) . StringHelpers::UNIX_LINE_ENDING;
-    }
-
-
-    /**
-     * Writes a frame count as SMPTE time code. Drop-frame time code skips the frame numbers 00 and 01
-     * at the start of each minute except every tenth minute, so that it stays in step with the clock.
-     */
-    private function timecode(int $frame, bool $dropFrame): string
-    {
-        if ($dropFrame) {
-            $tenMinutes = intdiv($frame, 17982);
-            $rest       = $frame % 17982;
-            $frame     += 18 * $tenMinutes + ($rest > 1 ? 2 * intdiv($rest - 2, 1798) : 0);
-        }
-
-        $seconds = intdiv($frame, 30);
-
-        return sprintf("%02d:%02d:%02d%s%02d", intdiv($seconds, 3600), intdiv($seconds, 60) % 60, $seconds % 60, $dropFrame ? ";" : ":", $frame % 30);
+        return rtrim($output, LineEnding::Lf->value) . LineEnding::Lf->value;
     }
 }

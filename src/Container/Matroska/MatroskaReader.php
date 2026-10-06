@@ -1,17 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Container\Matroska;
 
 use Generator;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\AssFormatLines;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Streaming\Streams;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Timecode;
 
 /**
  * Reads the subtitle tracks of Matroska (.mkv, .mka, .mks) and WebM files. It skips video and audio data with fseek().
@@ -30,7 +36,16 @@ final class MatroskaReader
 
     public const CODECS = [self::CODEC_SUBRIP, self::CODEC_ASS, self::CODEC_SSA, self::CODEC_WEBVTT, self::CODEC_PGS];
 
-    public const DEFAULT_LAST_CUE_DURATION = 5.0;
+    /** The first 4 bytes of every Matroska and WebM file. */
+    public const EBML_MAGIC = "\x1A\x45\xDF\xA3";
+
+    private const FORMATS = [
+        self::CODEC_SUBRIP => Format::SubRip,
+        self::CODEC_ASS    => Format::Ass,
+        self::CODEC_SSA    => Format::Ass,
+        self::CODEC_WEBVTT => Format::WebVtt,
+        self::CODEC_PGS    => Format::Pgs,
+    ];
 
     private const ID_EBML             = 0x1A45DFA3;
     private const ID_DOC_TYPE         = 0x4282;
@@ -153,14 +168,24 @@ final class MatroskaReader
 
 
     /**
-     * Reads all blocks of the subtitle track with the TrackNumber $trackNumber.
+     * Returns the format of the parser that extract() uses for the track, or null for a codec that it does not read.
+     *
+     * @throws InvalidArgumentException for a number that is not a subtitle track, as extract() does.
      */
-    public function extract(int $trackNumber): Subtitle
+    public function trackFormat(int $trackNumber): ?Format
     {
-        $track = $this->tracks[$trackNumber] ?? null;
-        if ($track === null) {
-            throw new InvalidArgumentException("The file has no subtitle track with the number $trackNumber.");
-        }
+        return self::FORMATS[$this->subtitleTrack($trackNumber)->codecId] ?? null;
+    }
+
+
+    /**
+     * Reads all blocks of the subtitle track with the TrackNumber $trackNumber. ReadOptions::$lastCueDuration sets the
+     * end of a last text block without a duration.
+     */
+    public function extract(int $trackNumber, ?ReadOptions $options = null): Subtitle
+    {
+        $options ??= new ReadOptions();
+        $track = $this->subtitleTrack($trackNumber);
         if (!in_array($track->codecId, self::CODECS, true)) {
             throw new ParsingException("Track $trackNumber has the codec $track->codecId. The reader extracts only " .
                                        implode(", ", self::CODECS) . ".");
@@ -169,12 +194,13 @@ final class MatroskaReader
         $data         = $this->trackData[$trackNumber];
         $codecPrivate = $this->decode($trackNumber, $data["codecPrivate"], self::SCOPE_CODEC_PRIVATE);
         $blocks       = $this->readBlocks($trackNumber);
+        $lastDuration = $options->lastCueDuration;
 
         $subtitle = match ($track->codecId) {
-            self::CODEC_PGS    => (new PgsParser())->parse($this->pgsStream($blocks)),
-            self::CODEC_WEBVTT => (new WebVttParser())->parse($this->webVttFile($codecPrivate, $this->withEnds($blocks, $data))),
-            self::CODEC_SUBRIP => (new SubRipParser())->parse($this->subRipFile($this->withEnds($blocks, $data))),
-            default            => (new AssParser())->parse($this->assFile($track, $codecPrivate, $this->withEnds($blocks, $data))),
+            self::CODEC_PGS    => (new PgsParser())->parse($this->pgsStream($blocks), $options),
+            self::CODEC_WEBVTT => (new WebVttParser())->parse($this->webVttFile($codecPrivate, $this->withEnds($blocks, $data, $lastDuration)), $options),
+            self::CODEC_SUBRIP => (new SubRipParser())->parse($this->subRipFile($this->withEnds($blocks, $data, $lastDuration)), $options),
+            default            => (new AssParser())->parse($this->assFile($track, $codecPrivate, $this->withEnds($blocks, $data, $lastDuration)), $options),
         };
 
         $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $track->language);
@@ -185,6 +211,13 @@ final class MatroskaReader
         }
 
         return $subtitle;
+    }
+
+
+    private function subtitleTrack(int $trackNumber): MatroskaTrack
+    {
+        return $this->tracks[$trackNumber]
+            ?? throw new InvalidArgumentException("The file has no subtitle track with the number $trackNumber.");
     }
 
 
@@ -548,11 +581,11 @@ final class MatroskaReader
 
     /**
      * Converts the block times to milliseconds and sets the end of each block. A block without BlockDuration and
-     * DefaultDuration ends at the start of the next block, the last one after DEFAULT_LAST_CUE_DURATION.
+     * DefaultDuration ends at the start of the next block, the last one after $lastDuration seconds.
      *
      * @return list<array{start: int, end: int, data: string, additional: ?string}>
      */
-    private function withEnds(array $blocks, array $trackData): array
+    private function withEnds(array $blocks, array $trackData, float $lastDuration): array
     {
         $cues = [];
         foreach ($blocks as $index => $block) {
@@ -562,7 +595,7 @@ final class MatroskaReader
                 $block["duration"] !== null            => $this->milliseconds($startTime + $block["duration"] * $this->timestampScale),
                 $trackData["defaultDuration"] !== null => $this->milliseconds($startTime + $trackData["defaultDuration"]),
                 isset($blocks[$index + 1])             => $this->milliseconds($blocks[$index + 1]["start"] * $this->timestampScale),
-                default                                => $start + (int) (self::DEFAULT_LAST_CUE_DURATION * 1000),
+                default                                => $start + (int) ($lastDuration * 1000),
             };
 
             $cues[] = ["start" => $start, "end" => $end, "data" => $block["data"], "additional" => $block["additional"]];
@@ -591,7 +624,7 @@ final class MatroskaReader
     private function assFile(MatroskaTrack $track, string $codecPrivate, array $cues): string
     {
         $header = rtrim(StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($codecPrivate))) . "\n";
-        $format = $track->codecId === self::CODEC_SSA ? AssParser::SSA_EVENT_FORMAT : AssParser::ASS_EVENT_FORMAT;
+        $format = $track->codecId === self::CODEC_SSA ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT;
         if (!preg_match('/^\[Events\][ \t]*$/mi', $header)) {
             $header .= "\n[Events]\nFormat: " . implode(", ", $format) . "\n";
         } elseif (preg_match('/^\[Events\][ \t]*\n(?:(?!\[).*\n)*?Format:(.*)$/mi', $header, $matches)) {
@@ -689,10 +722,9 @@ final class MatroskaReader
 
     private function time(int $milliseconds, string $separator, bool $twoDigitHours): string
     {
-        $hours = intdiv($milliseconds, 3600000);
+        [$hours, $minutes, $seconds, $fraction] = Timecode::milliseconds($milliseconds / 1000);
 
-        return sprintf($twoDigitHours ? "%02d:%02d:%02d%s%03d" : "%d:%02d:%02d%s%03d", $hours, intdiv($milliseconds, 60000) % 60,
-                       intdiv($milliseconds, 1000) % 60, $separator, $milliseconds % 1000);
+        return sprintf($twoDigitHours ? "%02d:%02d:%02d%s%03d" : "%d:%02d:%02d%s%03d", $hours, $minutes, $seconds, $separator, $fraction);
     }
 
 

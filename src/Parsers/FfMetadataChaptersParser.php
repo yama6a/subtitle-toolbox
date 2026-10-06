@@ -1,18 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
 // Spec: https://ffmpeg.org/ffmpeg-formats.html#Metadata-1. The section reading follows libavformat/ffmetadec.c.
-class FfMetadataChaptersParser extends SubtitleParser
+final class FfMetadataChaptersParser extends SubtitleParser
 {
-    public const FORMAT_DATA_KEY = "ffmetadata";
+    public const FORMAT_DATA_KEY = Format::FfMetadataChapters->value;
 
+    /** @internal */
     public const METADATA_KEYS = [
         Subtitle::METADATA_TITLE, Subtitle::METADATA_AUTHOR, Subtitle::METADATA_ARTIST,
         Subtitle::METADATA_ALBUM, Subtitle::METADATA_LANGUAGE,
@@ -22,15 +27,13 @@ class FfMetadataChaptersParser extends SubtitleParser
     private const DEFAULT_TIME_BASE = "1/1000000000";
 
 
-    /**
-     * Creates a parser that ends the last chapter without an END line at $mediaDuration seconds, or at its own start when it is null.
-     */
-    public function __construct(private readonly ?float $mediaDuration = null)
+    protected static function formatOptionsClass(): string
     {
+        return ChapterReadOptions::class;
     }
 
 
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $content        = StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle));
@@ -142,9 +145,10 @@ class FfMetadataChaptersParser extends SubtitleParser
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["tags" => $global, "streams" => $streams]);
 
         usort($chapters, fn (array $a, array $b): int => $a["start"] <=> $b["start"]);
+        $parsedCues = [];
         foreach ($chapters as $index => $chapter) {
             $nextStart = $chapters[$index + 1]["start"] ?? null;
-            $end       = $chapter["end"] ?? $nextStart ?? max($chapter["start"], $this->mediaDuration ?? 0);
+            $end       = $chapter["end"] ?? $nextStart ?? max($chapter["start"], $this->formatOptions()->mediaDuration ?? 0);
             $title     = $chapter["tags"]["title"] ?? "";
 
             $cue = new SubtitleCue($chapter["start"], $end, Markup::escapeText($title));
@@ -152,9 +156,9 @@ class FfMetadataChaptersParser extends SubtitleParser
                 "timeBase" => $chapter["timeBase"],
                 "tags"     => array_diff_key($chapter["tags"], ["title" => true]),
             ]);
-            $subtitle->addCue($cue, false);
+            $parsedCues[] = $cue;
         }
 
-        return $subtitle;
+        return $subtitle->addCues($parsedCues);
     }
 }

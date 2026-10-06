@@ -1,35 +1,42 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
+use SubtitleToolbox\Container\Matroska\MatroskaReader;
+use SubtitleToolbox\Container\Matroska\MatroskaTrack;
 use SubtitleToolbox\Exceptions\CueNotFoundException;
 use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
+use SubtitleToolbox\Exceptions\UnknownFormatException;
 use SubtitleToolbox\Formatters\ImageFormatter;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
+use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
+use SubtitleToolbox\Formatters\Options\IttWriteOptions;
+use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\OcrEngine;
 use SubtitleToolbox\Ocr\OcrRunner;
-use SubtitleToolbox\Parsers\SubtitleParser;
+use SubtitleToolbox\Parsers\IttParser;
+use SubtitleToolbox\Parsers\MicroDvdParser;
+use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 
 
-class Subtitle implements \IteratorAggregate, \Countable
+final class Subtitle implements \IteratorAggregate, \Countable
 {
     use Retiming;
     use Validation;
     use CueEditing;
     use Fixes;
     use TextTransforms;
-    use HearingImpairedRemoval;
     use CueLookup;
     use ArrayConversion;
     use ShortCueMerging;
-    use Resegmenting;
 
-    /** @var array|SubtitleCue[] */
-    protected $cues;
+    /** @var array<int, SubtitleCue> */
+    private array $cues = [];
 
     public const METADATA_TITLE    = "title";
     public const METADATA_AUTHOR   = "author";
@@ -38,19 +45,18 @@ class Subtitle implements \IteratorAggregate, \Countable
     public const METADATA_LANGUAGE = "language";
 
     /** @var array<string, string> */
-    protected array $metadata = [];
+    private array $metadata = [];
 
-    /** @var list<array{text: string, beforeCueIndex: int}> */
-    protected array $comments = [];
+    /** @var list<Comment> */
+    private array $comments = [];
 
     /** @var array<string, array> */
-    protected array $formatData = [];
+    private array $formatData = [];
 
+    /** @var list<ParseWarning> */
+    private array $parseWarnings = [];
 
-    public function __construct()
-    {
-        $this->cues = [];
-    }
+    private ?Format $format = null;
 
 
     /**
@@ -58,63 +64,316 @@ class Subtitle implements \IteratorAggregate, \Countable
      */
     public function __clone()
     {
-        $this->cues = array_map(fn (SubtitleCue $cue): SubtitleCue => clone $cue, $this->cues);
+        $this->cues           = array_map(fn (SubtitleCue $cue): SubtitleCue => clone $cue, $this->cues);
+        $this->cueLookupIndex = null;
     }
 
 
     /**
-     * Parses $content with $parserClass, or with the parser that detectParser() returns when $parserClass is null.
-     * A UTF-16 or UTF-32 BOM, or else $sourceEncoding such as "Windows-1252", sets the encoding to convert from.
-     * A parser instance in place of the class name keeps its settings, such as lenient mode, and its warnings.
+     * Drops the cue lookup cache, because its edit count is only valid in the process that built it.
      */
-    public static function parse(string $content, string|SubtitleParser|null $parserClass = null, ?string $sourceEncoding = null): self
+    public function __wakeup(): void
     {
-        $content = StringHelpers::convertToUtf8($content, $sourceEncoding);
-
-        $parserClass ??= self::detectParser($content)
-            ?? throw new InvalidParserException("The subtitle format of the content is unknown. Pass a parser class.");
-
-        if ($parserClass instanceof SubtitleParser) {
-            return $parserClass->parse($content);
-        }
-
-        if (!is_subclass_of($parserClass, SubtitleParser::class)) {
-            throw new InvalidParserException("The supplied parser $parserClass " .
-                                             "is not of type " . SubtitleParser::class);
-        }
-
-        return (new $parserClass())->parse($content);
+        $this->cueLookupIndex = null;
     }
 
 
     /**
-     * Returns the parser class for the format of $content, or null when no known format matches.
+     * Reads the file at $path in $format. For Format::VobSub, $path is the .idx or the .sub file, and the other file
+     * must lie next to it. Its content replaces VobSubReadOptions::$idx. An MKV or WebM file throws, see loadTrack().
      */
-    public static function detectParser(string $content): ?string
+    public static function load(string $path, Format $format, ?ReadOptions $options = null): self
     {
-        return FormatDetector::detect($content);
+        $options ??= new ReadOptions();
+        if (self::isMatroskaFile($path)) {
+            throw new InvalidParserException("$path is an MKV or WebM file. Call loadTrack() with a track number.");
+        }
+        if ($format !== Format::VobSub) {
+            return self::fromString(self::readFile($path), $format, $options);
+        }
+
+        $extension = pathinfo($path, PATHINFO_EXTENSION);
+        $isIdx     = strtolower($extension) === "idx";
+        $other     = self::pairedFile($path, $isIdx ? "sub" : "idx");
+        [$idxPath, $subPath] = $isIdx ? [$path, $other] : [$other, $path];
+
+        $given = $options->format;
+        // The parser throws for the options of another format.
+        if ($given !== null && !$given instanceof VobSubReadOptions) {
+            return self::parseUtf8(self::readFile($subPath), Format::VobSub, $options);
+        }
+
+        $vobSubOptions = new ReadOptions(
+            encoding: $options->encoding,
+            lenient: $options->lenient,
+            lastCueDuration: $options->lastCueDuration,
+            format: new VobSubReadOptions(
+                StringHelpers::convertToUtf8(self::readFile($idxPath), $options->encoding),
+                $given?->track,
+                $given?->language,
+            ),
+        );
+
+        return self::parseUtf8(self::readFile($subPath), Format::VobSub, $vobSubOptions);
     }
 
 
     /**
-     * Writes the subtitle with $formatterClass and throws on an image cue without text, unless the formatter is an ImageFormatter.
+     * Reads the file at $path in the format that its content shows, else in the format of its extension. It tries only
+     * formats whose isAutoDetected() is true. An MKV or WebM file must hold exactly 1 subtitle track.
+     *
+     * @throws UnknownFormatException when no such format matches.
      */
-    public function format(string $formatterClass, array $options = []): string
+    public static function loadAutoDetectFormat(string $path, ?ReadOptions $options = null): self
     {
-        if (!is_subclass_of($formatterClass, SubtitleFormatter::class)) {
-            throw new InvalidFormatterException("The supplied formatter $formatterClass " .
-                                                "is not of type " . SubtitleFormatter::class);
+        $options ??= new ReadOptions();
+        if (self::isMatroskaFile($path)) {
+            return self::readOnlyTrack(MatroskaReader::open($path), $options);
         }
+
+        $content     = StringHelpers::convertToUtf8(self::readFile($path), $options->encoding);
+        $byExtension = Format::fromPath($path);
+        $format      = Format::detect($content);
+        // Detection returns TTML for an iTT file. IttParser reads the same cues and keeps the iTT timing.
+        if ($format === Format::Ttml && $byExtension === Format::Itt) {
+            $format = Format::Itt;
+        }
+        // An extension that a format without detection also uses, such as .json for Deepgram, says nothing.
+        $format ??= $byExtension !== null && self::extensionOnlyOfAutoDetectedFormats($path) && $byExtension->canRead()
+            ? $byExtension
+            : throw new UnknownFormatException(self::unknownFormatMessage("load()"));
+
+        return $format === Format::VobSub ? self::load($path, $format, $options) : self::parseUtf8($content, $format, $options);
+    }
+
+
+    /**
+     * Reads the subtitle track with the TrackNumber $trackNumber of an MKV or WebM file. The codec of the track picks the
+     * parser. tracks() lists the track numbers.
+     */
+    public static function loadTrack(string $path, int $trackNumber, ?ReadOptions $options = null): self
+    {
+        return self::readTrack(MatroskaReader::open(self::checkedPath($path)), $trackNumber, $options ?? new ReadOptions());
+    }
+
+
+    /**
+     * Returns the subtitle tracks of an MKV or WebM file.
+     *
+     * @return list<MatroskaTrack>
+     */
+    public static function tracks(string $path): array
+    {
+        return MatroskaReader::open(self::checkedPath($path))->getSubtitleTracks();
+    }
+
+
+    /**
+     * Reads $content in $format. A UTF-16 or UTF-32 BOM, or else ReadOptions::$encoding such as "Windows-1252", sets
+     * the encoding to convert from. MKV and WebM content throws, see loadTrack().
+     */
+    public static function fromString(string $content, Format $format, ?ReadOptions $options = null): self
+    {
+        if (str_starts_with($content, MatroskaReader::EBML_MAGIC)) {
+            throw new InvalidParserException("The content is an MKV or WebM file. Call loadTrack() with a track number.");
+        }
+        $options ??= new ReadOptions();
+
+        return self::parseUtf8(StringHelpers::convertToUtf8($content, $options->encoding), $format, $options);
+    }
+
+
+    /**
+     * Reads $content in the format that Format::detect() finds. It tries only formats whose isAutoDetected() is true.
+     * MKV and WebM content must hold exactly 1 subtitle track.
+     *
+     * @throws UnknownFormatException when no such format matches.
+     */
+    public static function fromStringAutoDetectFormat(string $content, ?ReadOptions $options = null): self
+    {
+        $options ??= new ReadOptions();
+        if (str_starts_with($content, MatroskaReader::EBML_MAGIC)) {
+            $stream = fopen("php://temp", "w+b");
+            fwrite($stream, $content);
+            rewind($stream);
+
+            return self::readOnlyTrack(MatroskaReader::open($stream), $options);
+        }
+
+        $content = StringHelpers::convertToUtf8($content, $options->encoding);
+        $format  = Format::detect($content) ?? throw new UnknownFormatException(self::unknownFormatMessage("fromString()"));
+
+        return self::parseUtf8($content, $format, $options);
+    }
+
+
+    /**
+     * Returns the format that load(), loadAutoDetectFormat(), loadTrack() or a fromString call read, or null for a
+     * subtitle from new Subtitle() or fromArray(). For an MKV track, it is the format of the track codec.
+     */
+    public function getFormat(): ?Format
+    {
+        return $this->format;
+    }
+
+
+    private static function parseUtf8(string $content, Format $format, ReadOptions $options): self
+    {
+        $parserClass = FormatRegistry::parserClass($format)
+            ?? throw new InvalidParserException("The format {$format->value} can be written but not read.");
+
+        $subtitle         = (new $parserClass())->parse($content, $options);
+        $subtitle->format = $format;
+
+        return $subtitle;
+    }
+
+
+    private static function readTrack(MatroskaReader $reader, int $track, ReadOptions $options): self
+    {
+        $subtitle         = $reader->extract($track, $options);
+        $subtitle->format = $reader->trackFormat($track);
+
+        return $subtitle;
+    }
+
+
+    private static function readOnlyTrack(MatroskaReader $reader, ReadOptions $options): self
+    {
+        $tracks = $reader->getSubtitleTracks();
+        if (count($tracks) !== 1) {
+            throw new InvalidParserException($tracks === [] ? "The MKV or WebM file has no subtitle track." :
+                "The MKV or WebM file has " . count($tracks) . " subtitle tracks. Call loadTrack() with one of them:\n" .
+                implode("\n", array_map(fn (MatroskaTrack $track): string => "  $track->number: " . $track->describe(), $tracks)));
+        }
+
+        return self::readTrack($reader, $tracks[0]->number, $options);
+    }
+
+
+    private static function unknownFormatMessage(string $call): string
+    {
+        return "Format detection found no subtitle format. Call $call with a format. " .
+                                          "Chapters and cloud speech-to-text JSON always need one, for example Format::Deepgram.";
+    }
+
+
+    private static function extensionOnlyOfAutoDetectedFormats(string $path): bool
+    {
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        foreach (Format::cases() as $format) {
+            if (!$format->isAutoDetected() && in_array($extension, $format->extensions(), true)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+
+    private static function pairedFile(string $path, string $extension): string
+    {
+        $own  = pathinfo($path, PATHINFO_EXTENSION);
+        $stem = match (true) {
+            $own !== ""                => substr($path, 0, -strlen($own)),
+            str_ends_with($path, ".") => $path,
+            default                    => "$path.",
+        };
+        foreach ([$extension, strtoupper($extension)] as $candidate) {
+            if (is_file($stem . $candidate)) {
+                return $stem . $candidate;
+            }
+        }
+
+        throw new InvalidArgumentException("VobSub needs the .$extension file next to $path, but $stem$extension does not exist.");
+    }
+
+
+    private static function checkedPath(string $path): string
+    {
+        if (!is_file($path)) {
+            throw new InvalidArgumentException("The file $path does not exist.");
+        }
+
+        return $path;
+    }
+
+
+    private static function readFile(string $path, ?int $length = null): string
+    {
+        $content = @file_get_contents(self::checkedPath($path), false, null, 0, $length);
+        if ($content === false) {
+            throw new InvalidArgumentException("Cannot read the file $path.");
+        }
+
+        return $content;
+    }
+
+
+    private static function isMatroskaFile(string $path): bool
+    {
+        return self::readFile($path, strlen(MatroskaReader::EBML_MAGIC)) === MatroskaReader::EBML_MAGIC;
+    }
+
+
+    /**
+     * Returns what the parser skipped or repaired in lenient mode. A subtitle that no parser read has none.
+     *
+     * @return list<ParseWarning>
+     */
+    public function getParseWarnings(): array
+    {
+        return $this->parseWarnings;
+    }
+
+
+    /**
+     * @internal SubtitleParser::parse() sets the warnings of its read.
+     *
+     * @param list<ParseWarning> $warnings
+     */
+    public function setParseWarnings(array $warnings): self
+    {
+        $this->parseWarnings = $warnings;
+
+        return $this;
+    }
+
+
+    /**
+     * Writes the subtitle to $path in $format, else in the format of the extension of $path. See toString().
+     */
+    public function save(string $path, ?Format $format = null, ?WriteOptions $options = null): void
+    {
+        $format ??= Format::fromPath($path)
+            ?? throw new InvalidFormatterException("The extension of $path names no format. Pass a format to save().");
+        $content  = $this->toString($format, $options ?? new WriteOptions());
+
+        if (@file_put_contents($path, $content) === false) {
+            throw new InvalidArgumentException("Cannot write the file $path.");
+        }
+    }
+
+
+    /**
+     * Writes the subtitle in $format and throws on an image cue without text, unless the format writes images.
+     * MicroDVD and iTT take the frame rate from the options, else from the format data of their parser. TSV writes
+     * tabs and CSV from a TSV load writes commas, unless CsvWriteOptions::$delimiter is set.
+     */
+    public function toString(Format $format, WriteOptions $options = new WriteOptions()): string
+    {
+        $options = $this->withFormatDefaults($format, $options);
+        $formatterClass = FormatRegistry::formatterClass($format)
+            ?? throw new InvalidFormatterException("The format {$format->value} can be read but not written.");
 
         $subtitle = $this;
         if (!is_subclass_of($formatterClass, ImageFormatter::class)) {
             $imageCueIndexes = array_keys(array_filter($this->cues, fn (SubtitleCue $cue): bool =>
                 CueImage::isImageCue($cue) && $cue->getLines() === []));
 
-            if ($imageCueIndexes !== [] && !(Options::flag($options, SubtitleFormatter::OPTION_SKIP_IMAGE_CUES) ?? false)) {
+            if ($imageCueIndexes !== [] && !$options->skipImageCues) {
                 throw new ImageCueWithoutTextException("Cue #{$imageCueIndexes[0]} holds an image but no text. " .
-                                                       "Run recognizeText() first, or pass the option " .
-                                                       "SubtitleFormatter::OPTION_SKIP_IMAGE_CUES.");
+                                                       "Run recognizeText() first, or pass WriteOptions(skipImageCues: true).");
             }
             if ($imageCueIndexes !== []) {
                 $subtitle = $this->withoutCues($imageCueIndexes);
@@ -125,8 +384,40 @@ class Subtitle implements \IteratorAggregate, \Countable
     }
 
 
+    private function withFormatDefaults(Format $format, WriteOptions $options): WriteOptions
+    {
+        $formatOptions = $options->format;
+        $delimiter = match (true) {
+            $format === Format::Tsv                                   => "\t",
+            $format === Format::Csv && $this->format === Format::Tsv => ",",
+            default                                                   => null,
+        };
+        $csv = $formatOptions ?? new CsvWriteOptions();
+        if ($delimiter !== null && $csv instanceof CsvWriteOptions && $csv->delimiter === null) {
+            $formatOptions = new CsvWriteOptions($delimiter, $csv->timeFormat, $csv->frameRate, $csv->secondText,
+                                            $csv->secondTextHeader, $csv->escapeFormulas);
+        }
+        if ($format === Format::MicroDvd && $formatOptions === null) {
+            $formatOptions = new MicroDvdWriteOptions($this->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
+                ?? throw new InvalidArgumentException("MicroDVD output needs the frame rate of the video. Pass MicroDvdWriteOptions::frameRate."));
+        }
+        if ($format === Format::Itt && ($formatOptions === null || ($formatOptions instanceof IttWriteOptions && $formatOptions->frameRate === null))
+            && !isset($this->findFormatData(IttParser::FORMAT_DATA_KEY)["frameRate"])) {
+            throw new InvalidArgumentException("iTT output needs the frame rate of the video. Pass IttWriteOptions::frameRate.");
+        }
+
+        return $formatOptions === $options->format ? $options : new WriteOptions(
+            $options->lineEnding,
+            $options->bom,
+            $options->stripTags,
+            $options->skipImageCues,
+            $formatOptions,
+        );
+    }
+
+
     /**
-     * @return array|SubtitleCue[]
+     * @return array<int, SubtitleCue>
      */
     public function getCues(): array
     {
@@ -134,19 +425,37 @@ class Subtitle implements \IteratorAggregate, \Countable
     }
 
 
-    public function addCue(SubtitleCue $cue, bool $reIndexAfterAdding = true): self
+    /**
+     * Adds the cue and sorts the cues by start time.
+     */
+    public function addCue(SubtitleCue $cue): self
     {
-        $this->cues[] = $cue;
-
-        if ($reIndexAfterAdding) {
-            $this->reIndexCues();
-        }
-
-        return $this;
+        return $this->addCues([$cue]);
     }
 
 
-    public function removeCue(int $cueIndex, bool $reIndexAfterRemoval = true): self
+    /**
+     * Adds the cues and sorts all cues by start time once.
+     *
+     * @param iterable<SubtitleCue> $cues
+     */
+    public function addCues(iterable $cues): self
+    {
+        foreach ($cues as $cue) {
+            if (!$cue instanceof SubtitleCue) {
+                throw new InvalidArgumentException("addCues() takes SubtitleCue objects only, got " . get_debug_type($cue) . ".");
+            }
+            $this->cues[] = $cue;
+        }
+
+        return $this->reIndexCues();
+    }
+
+
+    /**
+     * Removes the cue at $cueIndex and numbers the remaining cues from 0 again.
+     */
+    public function removeCue(int $cueIndex): self
     {
         if (!array_key_exists($cueIndex, $this->cues)) {
             throw new CueNotFoundException("Cannot remove cue $cueIndex - cue not found!");
@@ -154,18 +463,17 @@ class Subtitle implements \IteratorAggregate, \Countable
 
         unset($this->cues[$cueIndex]);
 
-        if ($reIndexAfterRemoval) {
-            $this->reIndexCues();
-        }
-
-        return $this;
+        return $this->reIndexCues();
     }
 
 
+    /**
+     * Sorts the cues by start time and numbers them from 0. Each comment stays before its cue.
+     */
     public function reIndexCues(): self
     {
         $commentCues = array_map(
-            fn (array $comment): ?SubtitleCue => $this->findCueAtOrAfter($comment["beforeCueIndex"]),
+            fn (Comment $comment): ?SubtitleCue => $this->findCueAtOrAfter($comment->beforeCueIndex),
             $this->comments
         );
 
@@ -174,7 +482,7 @@ class Subtitle implements \IteratorAggregate, \Countable
         foreach ($commentCues as $commentIndex => $cue) {
             $cueIndex = $cue === null ? false : array_search($cue, $this->cues, true);
 
-            $this->comments[$commentIndex]["beforeCueIndex"] = $cueIndex === false ? count($this->cues) : $cueIndex;
+            $this->comments[$commentIndex] = $this->comments[$commentIndex]->withBeforeCueIndex($cueIndex === false ? count($this->cues) : $cueIndex);
         }
         $this->sortComments();
 
@@ -182,40 +490,7 @@ class Subtitle implements \IteratorAggregate, \Countable
     }
 
 
-    public function getErrors(): array
-    {
-        $errors = [];
-
-        if (count($this->cues) === 0) {
-            $errors[] = "This subtitle contains no cues!";
-        }
-
-        $previousCueEnd   = 0;
-        $previousCueIndex = -1;
-        foreach ($this->cues as $cueIndex => $cue) {
-            if ($cue->getStart() < $previousCueEnd) {
-                $errors[] = "The start-time ({$cue->getStart()}) of cue #$cueIndex is " .
-                            "before its predecessor's end-time ($previousCueEnd)! " .
-                            "Try running reIndexCues() on the subtitle to fix it.";
-            }
-            $previousCueEnd = $cue->getEnd();
-
-            if ($cueIndex !== ++$previousCueIndex) {
-                $errors[] = "The cue-index of cue #$cueIndex is $cueIndex " .
-                            "but we expected it to be $previousCueIndex! " .
-                            "Try running reIndexCues() on the subtitle to fix it.";
-            }
-
-            if ($cue->getStart() > $cue->getEnd()) {
-                $errors[] = "The start-time of cue #$cueIndex is after its own end-time!";
-            }
-        }
-
-        return $errors;
-    }
-
-
-    public function getMetadata(string $key): ?string
+    public function findMetadata(string $key): ?string
     {
         return $this->metadata[$key] ?? null;
     }
@@ -246,7 +521,7 @@ class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * @return list<array{text: string, beforeCueIndex: int}>
+     * @return list<Comment>
      */
     public function getComments(): array
     {
@@ -264,7 +539,7 @@ class Subtitle implements \IteratorAggregate, \Countable
                                                 "the cue index must not be negative!");
         }
 
-        $this->comments[] = ["text" => $text, "beforeCueIndex" => $beforeCueIndex];
+        $this->comments[] = new Comment($text, $beforeCueIndex);
         $this->sortComments();
 
         return $this;
@@ -272,20 +547,29 @@ class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Returns the data that only the given format reads, or an empty array.
+     * Returns the data under $key, the value of a Format case such as "ass", or an empty array.
      */
-    public function getFormatData(string $format): array
+    public function findFormatData(string $key): array
     {
-        return $this->formatData[$format] ?? [];
+        return $this->formatData[$key] ?? [];
     }
 
 
-    public function setFormatData(string $format, array $data): self
+    /**
+     * Stores $data under $key. An empty array removes the key.
+     *
+     * @throws InvalidArgumentException when a field that a formatter reads has the wrong type, as fromArray() checks it.
+     */
+    public function setFormatData(string $key, array $data): self
     {
+        $problem = FormatDataSchema::problem($key, $data, "formatData.$key", false);
+        if ($problem !== null) {
+            throw new InvalidArgumentException($problem);
+        }
         if ($data === []) {
-            unset($this->formatData[$format]);
+            unset($this->formatData[$key]);
         } else {
-            $this->formatData[$format] = $data;
+            $this->formatData[$key] = $data;
         }
 
         return $this;
@@ -306,8 +590,7 @@ class Subtitle implements \IteratorAggregate, \Countable
 
     private function sortComments(): void
     {
-        usort($this->comments, fn (array $comment1, array $comment2): int =>
-            $comment1["beforeCueIndex"] <=> $comment2["beforeCueIndex"]);
+        usort($this->comments, fn (Comment $comment1, Comment $comment2): int => $comment1->beforeCueIndex <=> $comment2->beforeCueIndex);
     }
 
 
@@ -332,10 +615,10 @@ class Subtitle implements \IteratorAggregate, \Countable
 
         $copy->cues = array_values($kept);
         foreach ($copy->comments as $commentIndex => $comment) {
-            $copy->comments[$commentIndex]["beforeCueIndex"] = count(array_filter(
+            $copy->comments[$commentIndex] = $comment->withBeforeCueIndex(count(array_filter(
                 array_keys($kept),
-                fn (int $cueIndex): bool => $cueIndex < $comment["beforeCueIndex"]
-            ));
+                fn (int $cueIndex): bool => $cueIndex < $comment->beforeCueIndex
+            )));
         }
 
         return $copy;

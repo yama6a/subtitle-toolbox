@@ -3,7 +3,7 @@
 # Usage: .build/build-phar.sh <version> [output path]. Needs php, composer and box on the PATH.
 set -euo pipefail
 
-version=${1:?usage: build-phar.sh <version, for example 1.42.0> [output path]}
+version=${1:?usage: build-phar.sh <version, for example 2.0.0> [output path]}
 root=$(cd "$(dirname "$0")/.." && pwd)
 output=${2:-$root/subtitle-toolbox.phar}
 [[ $output == /* ]] || output=$PWD/$output

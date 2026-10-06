@@ -1,30 +1,30 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\Options\SubViewerVersion;
+use SubtitleToolbox\Formatters\Options\SubViewerWriteOptions;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\SubViewerParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
-class SubViewerFormatter extends SubtitleFormatter
+final class SubViewerFormatter extends SubtitleFormatter
 {
-    /** Formatter option that selects SubViewer 1 or 2. The default is 2. */
-    public const OPTION_VERSION = "OPTION_VERSION";
+    protected const FORMAT_OPTIONS = SubViewerWriteOptions::class;
 
     private const VERSION_1_DEFAULT_HEADER = ["SOURCE" => "", "PRG" => "", "FILEPATH" => "", "DELAY" => "0", "CD TRACK" => "0", "BEGIN" => ""];
     private const VERSION_2_DEFAULT_HEADER = ["SOURCE" => "", "PRG" => "", "FILEPATH" => "", "DELAY" => "0", "CD TRACK" => "0", "COMMENT" => ""];
 
 
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $version = $options[self::OPTION_VERSION] ?? 2;
-        if ($version !== 1 && $version !== 2) {
-            throw new InvalidArgumentException("The SubViewer version must be 1 or 2!");
-        }
-
-        $output = $version === 1 ? $this->formatVersion1($subtitle) : $this->formatVersion2($subtitle);
+        $version = ($this->formatOptions($options) ?? new SubViewerWriteOptions())->version;
+        $output  = $version === SubViewerVersion::V1 ? $this->formatVersion1($subtitle) : $this->formatVersion2($subtitle);
 
         return $this->applyOutputOptions($output, $options);
     }
@@ -40,9 +40,9 @@ class SubViewerFormatter extends SubtitleFormatter
 
         $output = "";
         foreach ($header as $tag => $value) {
-            $output .= "[$tag]" . StringHelpers::UNIX_LINE_ENDING . ($value === "" ? "" : $value . StringHelpers::UNIX_LINE_ENDING);
+            $output .= "[$tag]" . LineEnding::Lf->value . ($value === "" ? "" : $value . LineEnding::Lf->value);
         }
-        $output .= SubViewerParser::START_SCRIPT . StringHelpers::UNIX_LINE_ENDING;
+        $output .= SubViewerParser::START_SCRIPT . LineEnding::Lf->value;
 
         foreach ($subtitle->getCues() as $cue) {
             $lines = Markup::plainLines($cue->getLines());
@@ -51,27 +51,27 @@ class SubViewerFormatter extends SubtitleFormatter
                 continue;
             }
 
-            $output .= $this->formatVersion1Time($cue->getStart()) . StringHelpers::UNIX_LINE_ENDING .
-                       implode("|", $lines) . StringHelpers::UNIX_LINE_ENDING .
-                       $this->formatVersion1Time($cue->getEnd()) . StringHelpers::UNIX_LINE_ENDING .
-                       StringHelpers::UNIX_LINE_ENDING;
+            $output .= sprintf("[%02d:%02d:%02d]", ...Timecode::seconds($cue->getStart())) . LineEnding::Lf->value .
+                       implode("|", $lines) . LineEnding::Lf->value .
+                       sprintf("[%02d:%02d:%02d]", ...Timecode::seconds($cue->getEnd())) . LineEnding::Lf->value .
+                       LineEnding::Lf->value;
         }
 
-        return $output . "[end]" . StringHelpers::UNIX_LINE_ENDING . "******** END SCRIPT ********" . StringHelpers::UNIX_LINE_ENDING;
+        return $output . "[end]" . LineEnding::Lf->value . "******** END SCRIPT ********" . LineEnding::Lf->value;
     }
 
 
     private function formatVersion2(Subtitle $subtitle): string
     {
-        $output = "[INFORMATION]" . StringHelpers::UNIX_LINE_ENDING;
+        $output = "[INFORMATION]" . LineEnding::Lf->value;
         foreach ($this->headerTags($subtitle, self::VERSION_2_DEFAULT_HEADER) as $tag => $value) {
-            $output .= "[$tag]$value" . StringHelpers::UNIX_LINE_ENDING;
+            $output .= "[$tag]$value" . LineEnding::Lf->value;
         }
-        $output .= "[END INFORMATION]" . StringHelpers::UNIX_LINE_ENDING . "[SUBTITLE]" . StringHelpers::UNIX_LINE_ENDING;
+        $output .= "[END INFORMATION]" . LineEnding::Lf->value . "[SUBTITLE]" . LineEnding::Lf->value;
 
-        $style = $subtitle->getFormatData(SubViewerParser::FORMAT)["style"] ?? null;
+        $style = $subtitle->findFormatData(SubViewerParser::FORMAT_DATA_KEY)["style"] ?? null;
         if ($style !== null) {
-            $output .= $style . StringHelpers::UNIX_LINE_ENDING;
+            $output .= $style . LineEnding::Lf->value;
         }
 
         $blocks = [];
@@ -82,12 +82,12 @@ class SubViewerFormatter extends SubtitleFormatter
                 continue;
             }
 
-            $blocks[] = $this->formatVersion2Time($cue->getStart()) . "," . $this->formatVersion2Time($cue->getEnd()) .
-                        StringHelpers::UNIX_LINE_ENDING .
-                        implode("[br]", $lines) . StringHelpers::UNIX_LINE_ENDING;
+            $blocks[] = sprintf("%02d:%02d:%02d.%02d,%02d:%02d:%02d.%02d", ...Timecode::centiseconds($cue->getStart()), ...Timecode::centiseconds($cue->getEnd())) .
+                        LineEnding::Lf->value .
+                        implode("[br]", $lines) . LineEnding::Lf->value;
         }
 
-        return $output . implode(StringHelpers::UNIX_LINE_ENDING, $blocks);
+        return $output . implode(LineEnding::Lf->value, $blocks);
     }
 
 
@@ -99,30 +99,9 @@ class SubViewerFormatter extends SubtitleFormatter
     {
         $header = [];
         foreach (SubViewerParser::METADATA_TAGS as $tag => $metadataKey) {
-            $header[$tag] = $subtitle->getMetadata($metadataKey) ?? "";
+            $header[$tag] = $subtitle->findMetadata($metadataKey) ?? "";
         }
 
-        return $header + ($subtitle->getFormatData(SubViewerParser::FORMAT)["header"] ?? $defaultHeader);
-    }
-
-
-    private function formatVersion1Time(float $seconds): string
-    {
-        $totalSeconds = (int) round($seconds);
-
-        return sprintf("[%02d:%02d:%02d]", intdiv($totalSeconds, 3600), intdiv($totalSeconds, 60) % 60, $totalSeconds % 60);
-    }
-
-
-    private function formatVersion2Time(float $seconds): string
-    {
-        $totalCentis = (int) round($seconds * 100);
-
-        $hours   = intdiv($totalCentis, 360000);
-        $minutes = intdiv($totalCentis, 6000) % 60;
-        $secs    = intdiv($totalCentis, 100) % 60;
-        $centis  = $totalCentis % 100;
-
-        return sprintf("%02d:%02d:%02d.%02d", $hours, $minutes, $secs, $centis);
+        return $header + ($subtitle->findFormatData(SubViewerParser::FORMAT_DATA_KEY)["header"] ?? $defaultHeader);
     }
 }

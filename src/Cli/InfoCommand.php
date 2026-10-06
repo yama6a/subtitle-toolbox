@@ -1,15 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Container\Matroska\MatroskaTrack;
+use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
-use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\SubtitleStatistics;
 
-class InfoCommand extends ReportCommand
+/**
+ * @internal
+ */
+final class InfoCommand extends ReportCommand
 {
     public function name(): string
     {
@@ -43,16 +49,25 @@ class InfoCommand extends ReportCommand
     }
 
 
-    protected function listTracks(string $input, array $tracks, Console $console): bool
+    protected function listTracks(string $path, string $input, Console $console): bool
     {
-        $text = self::label($input) . "\n  Format: matroska\n";
+        if (Format::fromPath($input) !== null) {
+            return false;
+        }
+        try {
+            $tracks = Subtitle::tracks($path);
+        } catch (ParsingException) {
+            return false;
+        }
+
+        $text = self::label($input) . "\n  Container: matroska\n";
         foreach ($tracks as $track) {
-            $text .= "  Track $track->number: " . self::describeTrack($track) . "\n";
+            $text .= "  Track $track->number: " . $track->describe() . "\n";
         }
         $this->emit($console, ($this->succeeded > 0 ? "\n" : "") . $text, [
-            "file"   => self::label($input),
-            "format" => "matroska",
-            "tracks" => array_map(fn (MatroskaTrack $track): array => [
+            "file"      => $input,
+            "container" => "matroska",
+            "tracks"    => array_map(fn (MatroskaTrack $track): array => [
                 "number"   => $track->number,
                 "codecId"  => $track->codecId,
                 "language" => $track->language,
@@ -66,14 +81,15 @@ class InfoCommand extends ReportCommand
     }
 
 
-    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         $statistics = SubtitleStatistics::of($subtitle);
 
-        $range = fn (array $values): string => "min " . self::number($values["min"]) . ", average " .
-                                               self::number($values["average"]) . ", max " . self::number($values["max"]);
+        $range = fn (?array $values, string $unit = ""): string => $values === null ? "-" :
+            "min " . self::number($values["min"]) . ", average " . self::number($values["average"]) . ", max " .
+            self::number($values["max"]) . $unit;
         $words = [];
-        foreach ($statistics->getMostUsedWords(10) as $word => $count) {
+        foreach (array_slice($statistics->mostUsedWords, 0, 10) as ["word" => $word, "count" => $count]) {
             $words[] = "$word ($count)";
         }
 
@@ -81,8 +97,8 @@ class InfoCommand extends ReportCommand
         $imageCuesWithText = count(array_filter($imageCues, fn (SubtitleCue $cue): bool => $cue->getLines() !== []));
 
         $rows = [
-            "Format" => $format,
-            "Cues"   => (string)$statistics->getCueCount(),
+            "Format" => $format->value,
+            "Cues"   => (string)$statistics->cueCount,
         ];
         if ($this->parseWarnings !== []) {
             $rows["Warnings"] = (string)count($this->parseWarnings);
@@ -91,14 +107,14 @@ class InfoCommand extends ReportCommand
             $rows["Image cues"] = count($imageCues) . ", $imageCuesWithText with text";
         }
         $rows += [
-            "Words"                 => (string)$statistics->getWordCount(),
-            "Characters"            => (string)$statistics->getCharacterCount(),
-            "Display time"          => self::number($statistics->getTotalDisplayTime()) . " s",
-            "Span"                  => self::number($statistics->getSpan()) . " s",
-            "Characters per second" => $range($statistics->getCharactersPerSecond()),
-            "Words per minute"      => $range($statistics->getWordsPerMinute()),
-            "Characters per line"   => $range($statistics->getCharactersPerLine()),
-            "Gap"                   => $range($statistics->getGap()) . " s",
+            "Words"                 => (string)$statistics->wordCount,
+            "Characters"            => (string)$statistics->characterCount,
+            "Display time"          => self::number($statistics->totalDisplayTime) . " s",
+            "Span"                  => $statistics->span === null ? "-" : self::number($statistics->span) . " s",
+            "Characters per second" => $range($statistics->charactersPerSecond),
+            "Words per minute"      => $range($statistics->wordsPerMinute),
+            "Characters per line"   => $range($statistics->charactersPerLine),
+            "Gaps"                  => $range($statistics->gaps, " s"),
             "Most used words"       => implode(", ", $words),
         ];
         foreach ($subtitle->getAllMetadata() as $key => $value) {
@@ -111,20 +127,14 @@ class InfoCommand extends ReportCommand
             $text .= "  " . str_pad("$name:", $width + 1) . " $value\n";
         }
 
-        $data                  = $statistics->toArray();
-        $data["mostUsedWords"] = (object)$data["mostUsedWords"];
+        $data = $statistics->toArray();
         $this->emit($console, ($this->succeeded > 0 ? "\n" : "") . $text, [
-            "file"       => self::label($input),
-            "format"     => $format,
+            "file"       => $input,
+            "format"     => $format->value,
             "metadata"   => (object)$subtitle->getAllMetadata(),
             "statistics" => $data,
             "imageCues"  => ["count" => count($imageCues), "withText" => $imageCuesWithText],
-            "warnings"   => array_map(fn (ParseWarning $warning): array => [
-                "lineNumber" => $warning->lineNumber,
-                "blockIndex" => $warning->blockIndex,
-                "message"    => $warning->message,
-                "action"     => $warning->action,
-            ], $this->parseWarnings),
+            "warnings"   => self::warningsJson($this->parseWarnings),
         ]);
     }
 }

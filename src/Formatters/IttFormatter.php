@@ -1,30 +1,28 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use DOMDocument;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\Options\IttWriteOptions;
+use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\IttParser;
+use SubtitleToolbox\Parsers\TtmlNamespaces;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
 /**
  * @see https://help.apple.com/itc/videoaudioassetguide/en.lproj/static.html
  */
-class IttFormatter extends SubtitleFormatter
+final class IttFormatter extends SubtitleFormatter
 {
-    public const OPTION_FRAME_RATE = "OPTION_FRAME_RATE";
-
-    /** frames per second => [ttp:frameRate, ttp:frameRateMultiplier] */
-    private const FRAME_RATES = [
-        "23.976" => ["24", "999 1000"],
-        "24"     => ["24", "1 1"],
-        "25"     => ["25", "1 1"],
-        "29.97"  => ["30", "999 1000"],
-        "30"     => ["30", "1 1"],
-    ];
+    protected const FORMAT_OPTIONS = IttWriteOptions::class;
 
     private const HEAD = "<head>\n"
                          . "    <styling>\n"
@@ -49,33 +47,34 @@ class IttFormatter extends SubtitleFormatter
     /**
      * Writes an Apple iTunes Timed Text file with SMPTE times, one div, and a top and a bottom region.
      *
-     * OPTION_FRAME_RATE wins over the frame rate of the `itt` format data.
+     * IttWriteOptions::$frameRate wins over the frame rate of the `itt` format data.
      *
-     * @throws InvalidArgumentException when neither OPTION_FRAME_RATE nor the `itt` format data gives a supported frame rate.
+     * @throws InvalidArgumentException when neither IttWriteOptions nor the `itt` format data gives a supported frame rate.
      */
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        [$frameRate, $multiplier] = $this->frameRateParameters($subtitle->getFormatData(IttParser::FORMAT), $options);
-        $fps                      = (float) $frameRate * $this->multiplierFactor($multiplier);
+        $fps                      = $this->formatOptions($options)?->frameRate;
+        [$frameRate, $multiplier] = $this->frameRateParameters($subtitle->findFormatData(IttParser::FORMAT_DATA_KEY), $fps);
+        $rate                     = new FrameRate((float) $frameRate * $this->multiplierFactor($multiplier));
 
         $ttml = $this->toTtmlSubtitle($subtitle);
-        $xml  = (new TtmlFormatter())->format($ttml, array_diff_key($options, [self::OPTION_LINE_ENDING => 0, self::OPTION_BOM => 0, self::OPTION_FRAME_RATE => 0]));
+        $xml  = (new TtmlFormatter())->format($ttml, new WriteOptions(stripTags: $options->stripTags));
 
         $document = new DOMDocument();
         $document->loadXML($xml, LIBXML_NONET);
         $root = $document->documentElement;
-        $root->setAttributeNS(TtmlParser::PARAMETER_NAMESPACES[0], "ttp:timeBase", "smpte");
-        $root->setAttributeNS(TtmlParser::PARAMETER_NAMESPACES[0], "ttp:frameRate", $frameRate);
-        $root->setAttributeNS(TtmlParser::PARAMETER_NAMESPACES[0], "ttp:frameRateMultiplier", $multiplier);
-        $root->setAttributeNS(TtmlParser::PARAMETER_NAMESPACES[0], "ttp:dropMode", "nonDrop");
+        $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:timeBase", "smpte");
+        $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:frameRate", $frameRate);
+        $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:frameRateMultiplier", $multiplier);
+        $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:dropMode", "nonDrop");
 
         $cues       = $ttml->getCues();
-        $paragraphs = $document->getElementsByTagNameNS(TtmlParser::NAMESPACE_TTML, "p");
+        $paragraphs = $document->getElementsByTagNameNS(TtmlNamespaces::TTML, "p");
         foreach ($paragraphs as $idx => $paragraph) {
-            $begin = $this->frameIndex($cues[$idx]->getStart(), $fps);
-            $end   = max($begin + 1, $this->frameIndex($cues[$idx]->getEnd(), $fps));
-            $paragraph->setAttribute("begin", $this->formatFrameIndex($begin, (int) $frameRate));
-            $paragraph->setAttribute("end", $this->formatFrameIndex($end, (int) $frameRate));
+            $begin = $rate->secondsToFrames(max(0.0, $cues[$idx]->getStart()));
+            $end   = max($begin + 1, $rate->secondsToFrames(max(0.0, $cues[$idx]->getEnd())));
+            $paragraph->setAttribute("begin", sprintf("%02d:%02d:%02d:%02d", ...Timecode::frameNumber($begin, $rate)));
+            $paragraph->setAttribute("end", sprintf("%02d:%02d:%02d:%02d", ...Timecode::frameNumber($end, $rate)));
         }
 
         return $this->applyOutputOptions($document->saveXML(), $options);
@@ -85,41 +84,24 @@ class IttFormatter extends SubtitleFormatter
     /**
      * @return array{string, string} ttp:frameRate and ttp:frameRateMultiplier
      */
-    private function frameRateParameters(array $ittData, array $options): array
+    private function frameRateParameters(array $ittData, ?float $fps): array
     {
         $stored = null;
         if (isset($ittData["frameRate"])) {
             $multiplier = $ittData["frameRateMultiplier"] ?? "1 1";
-            $rate       = $this->supportedFrameRate((float) $ittData["frameRate"] * $this->multiplierFactor($multiplier));
-            if ($rate !== null && self::FRAME_RATES[$rate][0] === $ittData["frameRate"]) {
+            $rate       = IttFrameRates::supported((float) $ittData["frameRate"] * $this->multiplierFactor($multiplier));
+            if ($rate !== null && IttFrameRates::PARAMETERS[$rate][0] === $ittData["frameRate"]) {
                 $stored = [$rate, [$ittData["frameRate"], $multiplier]];
             }
         }
 
-        if (!isset($options[self::OPTION_FRAME_RATE])) {
-            return $stored[1] ?? throw new InvalidArgumentException("The ITT formatter needs the option " . self::OPTION_FRAME_RATE . ".");
+        if ($fps === null) {
+            return $stored[1] ?? throw new InvalidArgumentException("The ITT formatter needs IttWriteOptions with a frame rate.");
         }
-        $option = $this->supportedFrameRate((float) $options[self::OPTION_FRAME_RATE]);
-        if ($option === null) {
-            throw new InvalidArgumentException(
-                "The ITT formatter accepts the frame rates 23.976, 24, 25, 29.97 and 30, got {$options[self::OPTION_FRAME_RATE]}."
-            );
-        }
+        $option = IttFrameRates::supported($fps);
 
         // Keeps a parsed multiplier such as "1000 1001" when the option names the same frame rate.
-        return $stored !== null && $stored[0] === $option ? $stored[1] : self::FRAME_RATES[$option];
-    }
-
-
-    private function supportedFrameRate(float $fps): ?string
-    {
-        foreach (array_keys(self::FRAME_RATES) as $supported) {
-            if (abs($fps - (float) $supported) < 0.01) {
-                return (string) $supported;
-            }
-        }
-
-        return null;
+        return $stored !== null && $stored[0] === $option ? $stored[1] : IttFrameRates::PARAMETERS[$option];
     }
 
 
@@ -137,26 +119,27 @@ class IttFormatter extends SubtitleFormatter
     private function toTtmlSubtitle(Subtitle $subtitle): Subtitle
     {
         $ttml = new Subtitle();
-        $ttml->setMetadata(Subtitle::METADATA_LANGUAGE, $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
-        $ttml->setMetadata(Subtitle::METADATA_TITLE, $subtitle->getMetadata(Subtitle::METADATA_TITLE));
-        $ttml->setFormatData(TtmlParser::FORMAT, [
-            "namespace"  => TtmlParser::NAMESPACE_TTML,
-            "namespaces" => ["ttp" => TtmlParser::PARAMETER_NAMESPACES[0]],
+        $ttml->setMetadata(Subtitle::METADATA_LANGUAGE, $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
+        $ttml->setMetadata(Subtitle::METADATA_TITLE, $subtitle->findMetadata(Subtitle::METADATA_TITLE));
+        $ttml->setFormatData(TtmlParser::FORMAT_DATA_KEY, [
+            "namespace"  => TtmlNamespaces::TTML,
+            "namespaces" => ["ttp" => TtmlNamespaces::PARAMETER[0]],
             "head"       => self::HEAD,
             "body"       => ["style" => "normal"],
         ]);
 
+        $copies = [];
         foreach ($subtitle->getCues() as $cue) {
             $lines = array_map(fn (string $line): string => $this->keepSupportedMarkup($line), $cue->getLines());
             $copy  = (new SubtitleCue($cue->getStart(), $cue->getEnd(), $lines))
                 ->setIdentifier($cue->getIdentifier())
                 ->setForced($cue->isForced());
-            $copy->setFormatData(TtmlParser::FORMAT, [
+            $copy->setFormatData(TtmlParser::FORMAT_DATA_KEY, [
                 "attributes" => ["region" => in_array($cue->getAlignment(), [7, 8, 9], true) ? "top" : "bottom"],
             ]);
-            $ttml->addCue($copy, false);
+            $copies[] = $copy;
         }
-        $ttml->reIndexCues();
+        $ttml->addCues($copies);
 
         return $ttml;
     }
@@ -180,29 +163,6 @@ class IttFormatter extends SubtitleFormatter
                 return in_array($color, self::NAMED_COLORS, true) ? "<font color=\"$color\">" : "<font>";
             },
             $line
-        );
-    }
-
-
-    private function frameIndex(float $seconds, float $fps): int
-    {
-        return (int) round(max(0.0, $seconds) * $fps);
-    }
-
-
-    /**
-     * Writes a non-drop SMPTE time code, which counts $framesPerSecond labels per second, as TTML 1 section 6.2.3 defines.
-     */
-    private function formatFrameIndex(int $index, int $framesPerSecond): string
-    {
-        $seconds = intdiv($index, $framesPerSecond);
-
-        return sprintf(
-            "%02d:%02d:%02d:%02d",
-            intdiv($seconds, 3600),
-            intdiv($seconds, 60) % 60,
-            $seconds % 60,
-            $index % $framesPerSecond
         );
     }
 }

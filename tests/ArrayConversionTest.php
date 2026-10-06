@@ -1,18 +1,25 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Formatters\JsonFormatter;
-use SubtitleToolbox\Parsers\CsvColumns;
+use SubtitleToolbox\Parsers\Options\CsvColumns;
 use SubtitleToolbox\Parsers\CsvParser;
+use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\MicroDvdParser;
+use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
+use SubtitleToolbox\ReadOptions;
 
 class ArrayConversionTest extends TestCase
 {
     private const DIR = __DIR__ . "/files/";
+
+    // Format::detect() does not detect cloud speech JSON, so these fixtures load with the format of their directory.
+    private const CLOUD_SPEECH = ["assemblyai", "aws-transcribe", "deepgram", "google-speech"];
 
 
     private function bakery(): Subtitle
@@ -55,7 +62,7 @@ class ArrayConversionTest extends TestCase
             (clone $this->bakery())->setFormatData("ass", [])->getCues()[0],
             Subtitle::fromArray($array)->getCues()[0]
         );
-        $this->assertSame([], Subtitle::fromArray($array)->getCues()[1]->getFormatData("vtt"));
+        $this->assertSame([], Subtitle::fromArray($array)->getCues()[1]->findFormatData("vtt"));
     }
 
 
@@ -69,9 +76,12 @@ class ArrayConversionTest extends TestCase
 
     public function testFromArrayKeepsBinaryFormatDataAndTheCueOrder(): void
     {
-        $subtitle = new Subtitle();
-        $subtitle->addCue((new SubtitleCue(5, 6, "Late"))->setFormatData("image", ["png" => "\x89PNG\r\n\x1a\n"]), false);
-        $subtitle->addCue(new SubtitleCue(1, 2, "Early"), false);
+        $subtitle = (new Subtitle())->addCues([
+            (new SubtitleCue(1, 2, "Late"))->setFormatData("image", ["png" => "\x89PNG\r\n\x1a\n"]),
+            new SubtitleCue(3, 4, "Early"),
+        ]);
+        $subtitle->getCues()[0]->setStart(5)->setEnd(6);
+        $subtitle->getCues()[1]->setStart(1)->setEnd(2);
 
         $copy = Subtitle::fromArray($subtitle->toArray());
 
@@ -84,7 +94,7 @@ class ArrayConversionTest extends TestCase
     {
         $subtitle = (new Subtitle())->setMetadata("0", "zero");
 
-        $this->assertEquals($subtitle, Subtitle::parse($subtitle->format(JsonFormatter::class)));
+        $this->assertEquals($subtitle->toArray(), Subtitle::fromStringAutoDetectFormat($subtitle->toString(Format::Json))->toArray());
     }
 
 
@@ -156,16 +166,18 @@ class ArrayConversionTest extends TestCase
     #[DataProvider("realFiles")]
     public function testEveryRealFileSurvivesTheArrayAndJsonRoundTrip(string $file): void
     {
-        $content  = file_get_contents(self::DIR . $file);
-        $subtitle = match (true) {
-            str_starts_with($file, "microdvd/")          => (new MicroDvdParser(25))->parse($content),
-            $file === "csv/real/dubbing_script.csv"      => (new CsvParser(new CsvColumns(start: "Start TC", speaker: "Character", frameRate: 25)))->parse($content),
-            $file === "csv/real/excel_de_semicolon.csv"  => (new CsvParser(new CsvColumns(end: "Ende", speaker: "Sprecher")))->parse($content),
-            str_starts_with($file, "csv/")               => (new CsvParser())->parse($content),
-            default                                      => Subtitle::parse($content),
+        $content   = file_get_contents(self::DIR . $file);
+        $directory = explode("/", $file)[0];
+        $subtitle  = match (true) {
+            str_starts_with($file, "microdvd/")            => (new MicroDvdParser())->parse($content, new ReadOptions(format: new MicroDvdReadOptions(25))),
+            $file === "csv/real/dubbing_script.csv"        => (new CsvParser())->parse($content, new ReadOptions(format: new CsvReadOptions(new CsvColumns(start: "Start TC", speaker: "Character"), frameRate: 25))),
+            $file === "csv/real/excel_de_semicolon.csv"    => (new CsvParser())->parse($content, new ReadOptions(format: new CsvReadOptions(new CsvColumns(end: "Ende", speaker: "Sprecher")))),
+            str_starts_with($file, "csv/")                 => (new CsvParser())->parse($content, new ReadOptions()),
+            in_array($directory, self::CLOUD_SPEECH, true) => Subtitle::fromString($content, Format::from($directory)),
+            default                                        => Subtitle::fromStringAutoDetectFormat($content),
         };
 
-        $this->assertEquals($subtitle, Subtitle::fromArray($subtitle->toArray()));
-        $this->assertEquals($subtitle, Subtitle::parse($subtitle->format(JsonFormatter::class)));
+        $this->assertEquals($subtitle->toArray(), Subtitle::fromArray($subtitle->toArray())->toArray());
+        $this->assertEquals($subtitle->toArray(), Subtitle::fromStringAutoDetectFormat($subtitle->toString(Format::Json))->toArray());
     }
 }

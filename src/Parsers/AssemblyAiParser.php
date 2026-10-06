@@ -1,20 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
-class AssemblyAiParser extends SubtitleParser
+final class AssemblyAiParser extends SubtitleParser
 {
     use WordGrouping;
 
-    public const FORMAT_DATA_KEY = "assemblyai";
-
-    public const OPTION_WORD_TIMESTAMPS = "OPTION_WORD_TIMESTAMPS";
-
-    /** Writes the speaker of each cue as a <v> tag at the start of its cue, for example <v A>. */
-    public const OPTION_SPEAKER_VOICES = "OPTION_SPEAKER_VOICES";
+    public const FORMAT_DATA_KEY = Format::AssemblyAi->value;
 
     private const MILLISECONDS = 0.001;
 
@@ -22,7 +20,7 @@ class AssemblyAiParser extends SubtitleParser
     /**
      * Reads the JSON of an AssemblyAI transcript, one cue per utterance, else cues grouped from the words.
      */
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $data           = $this->decodeObject($rawSubtitle);
@@ -44,11 +42,7 @@ class AssemblyAiParser extends SubtitleParser
         }
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, array_diff_key($data, array_flip(["text", "words", "utterances"])));
 
-        foreach ($cues as $cue) {
-            $subtitle->addCue($cue, false);
-        }
-
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($cues);
     }
 
 
@@ -63,7 +57,7 @@ class AssemblyAiParser extends SubtitleParser
                 $text  = $this->text($utterance, "text", $path);
                 $words = $this->readWords(self::listOrEmpty($utterance["words"] ?? null), "$path.words");
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($utterance)]);
+                $this->fail($exception, null, $index, [RawJson::encode($utterance)]);
                 continue;
             }
 
@@ -87,7 +81,7 @@ class AssemblyAiParser extends SubtitleParser
                 $start = $this->seconds($word["start"] ?? null, "{$path}[$index].start", self::MILLISECONDS);
                 $end   = $this->seconds($word["end"] ?? null, "{$path}[$index].end", self::MILLISECONDS);
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($word)]);
+                $this->fail($exception, null, $index, [RawJson::encode($word)]);
                 continue;
             }
 

@@ -1,0 +1,1466 @@
+{
+    "ass/real/own_aegisub.ass": {
+        "fromPath": "ass",
+        "detect": "ass"
+    },
+    "ass/real/own_ffmpeg.ass": {
+        "fromPath": "ass",
+        "detect": "ass"
+    },
+    "ass/real/own_signs_crlf.ass": {
+        "fromPath": "ass",
+        "detect": "ass"
+    },
+    "ass/real/own_ssa_v4.ssa": {
+        "fromPath": "ass",
+        "detect": "ass"
+    },
+    "assemblyai/real/hike_utterances_speakers.json": {
+        "fromPath": "json",
+        "detect": "assemblyai"
+    },
+    "assemblyai/real/market_words_french.json": {
+        "fromPath": "json",
+        "detect": "assemblyai"
+    },
+    "aws-transcribe/real/library_speakers_language_id.json": {
+        "fromPath": "json",
+        "detect": "aws-transcribe"
+    },
+    "aws-transcribe/real/weather_items_only.json": {
+        "fromPath": "json",
+        "detect": "aws-transcribe"
+    },
+    "chapters/ffmetadata/real/ffmpeg_mp4_export.ffmeta": {
+        "fromPath": "ffmeta-chapters",
+        "detect": "ffmeta-chapters"
+    },
+    "chapters/ffmetadata/real/hand_written_crlf.ffmeta": {
+        "fromPath": "ffmeta-chapters",
+        "detect": "ffmeta-chapters"
+    },
+    "chapters/ffmetadata/real/m4b_audiobook.ffmeta": {
+        "fromPath": "ffmeta-chapters",
+        "detect": "ffmeta-chapters"
+    },
+    "chapters/ogm/real/mkvextract_simple.txt": {
+        "fromPath": "txt",
+        "detect": "ogm-chapters"
+    },
+    "chapters/ogm/real/windows_tool_crlf_bom.txt": {
+        "fromPath": "txt",
+        "detect": "ogm-chapters"
+    },
+    "chapters/podcast/real/hosting_export.json": {
+        "fromPath": "json",
+        "detect": "podcast-chapters"
+    },
+    "chapters/podcast/real/spec_basic_example.json": {
+        "fromPath": "json",
+        "detect": "podcast-chapters"
+    },
+    "chapters/podcast/real/spec_complex_example.json": {
+        "fromPath": "json",
+        "detect": "podcast-chapters"
+    },
+    "chapters/youtube/real/long_stream_chapters.txt": {
+        "fromPath": "txt",
+        "detect": null
+    },
+    "chapters/youtube/real/video_description.txt": {
+        "fromPath": "txt",
+        "detect": null
+    },
+    "cli/broken.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "cli/frames.sub": {
+        "fromPath": "microdvd",
+        "detect": "microdvd"
+    },
+    "cli/latin1.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "cli/notes.txt": {
+        "fromPath": "txt",
+        "detect": null
+    },
+    "cli/shop.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "cli/trip.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "csv/real/dubbing_script.csv": {
+        "fromPath": "csv",
+        "detect": null
+    },
+    "csv/real/excel_de_semicolon.csv": {
+        "fromPath": "csv",
+        "detect": null
+    },
+    "csv/real/mantas_done_shape.csv": {
+        "fromPath": "csv",
+        "detect": null
+    },
+    "csv/real/sheets_export.tsv": {
+        "fromPath": "tsv",
+        "detect": null
+    },
+    "deepgram/real/museum_words_punctuate.json": {
+        "fromPath": "json",
+        "detect": "deepgram"
+    },
+    "deepgram/real/pool_utterances_diarize.json": {
+        "fromPath": "json",
+        "detect": "deepgram"
+    },
+    "deepgram/real/train_paragraphs_german.json": {
+        "fromPath": "json",
+        "detect": "deepgram"
+    },
+    "diff/own_edited.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "diff/own_original.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "diff/own_report.txt": {
+        "fromPath": "txt",
+        "detect": null
+    },
+    "dual/station_de.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "dual/station_en.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "dual/station_stack.ass": {
+        "fromPath": "ass",
+        "detect": "ass"
+    },
+    "dual/station_stack.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "dual/station_stack.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "dual/station_top_bottom.ass": {
+        "fromPath": "ass",
+        "detect": "ass"
+    },
+    "dual/station_top_bottom.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "dual/station_top_bottom.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "editing/film_merged.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "editing/film_part1.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "editing/film_part2.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "editing/harbour_tour.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "editing/harbour_tour_deduplicated.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "editing/harbour_tour_joined.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "editing/harbour_tour_slice.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "editing/harbour_tour_split.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "encoding/french-windows-1252.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "encoding/japanese-shift_jis.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "encoding/korean-cp949.smi": {
+        "fromPath": "sami",
+        "detect": "sami"
+    },
+    "encoding/notepad-utf-16le.vtt": {
+        "fromPath": "vtt",
+        "detect": null
+    },
+    "encoding/russian-windows-1251.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "fixes/own_overlaps_and_short_cues.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "fixes/own_overlaps_and_short_cues_fixed.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "fixing/generate.php": {
+        "fromPath": null,
+        "detect": null
+    },
+    "fixing/ocr-de.fixed.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "fixing/ocr-de.ocr.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "fixing/ocr-de.sup": {
+        "fromPath": "pgs",
+        "detect": "pgs"
+    },
+    "fixing/ocr-en.fixed.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "fixing/ocr-en.ocr.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "fixing/ocr-en.sup": {
+        "fromPath": "pgs",
+        "detect": "pgs"
+    },
+    "fixing/ocr-es.fixed.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "fixing/ocr-es.ocr.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "fixing/ocr-es.sup": {
+        "fromPath": "pgs",
+        "detect": "pgs"
+    },
+    "fixing/ocr-fr.fixed.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "fixing/ocr-fr.ocr.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "fixing/ocr-fr.sup": {
+        "fromPath": "pgs",
+        "detect": "pgs"
+    },
+    "fixing/text-pal.fixed.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "fixing/text-pal.ocr.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "fixing/text_1080p.fixed.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "fixing/text_1080p.ocr.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "fixing/user_OCRFixReplaceList.xml": {
+        "fromPath": "ttml",
+        "detect": null
+    },
+    "fixing/web-errors.fixed.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "fixing/web-errors.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "forced/forced_inheritance.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "forced/forced_signs_2398.itt": {
+        "fromPath": "itt",
+        "detect": "ttml"
+    },
+    "forced/w3c_imsc11_forced.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "google-speech/real/bus_v1_long_running_operation.json": {
+        "fromPath": "json",
+        "detect": "google-speech"
+    },
+    "google-speech/real/restaurant_v2_diarization.json": {
+        "fromPath": "json",
+        "detect": "google-speech"
+    },
+    "hearing-impaired/own_sdh.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "hearing-impaired/own_sdh.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "hearing-impaired/own_sdh_removed.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "hearing-impaired/own_sdh_removed.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "hearing-impaired/own_sdh_removed_all_options.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "hls/node-webvtt-subs1.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "hls/own-fileSequence0.webvtt": {
+        "fromPath": null,
+        "detect": "vtt"
+    },
+    "hls/own-fileSequence1.webvtt": {
+        "fromPath": null,
+        "detect": "vtt"
+    },
+    "hls/own-fileSequence2.webvtt": {
+        "fromPath": null,
+        "detect": "vtt"
+    },
+    "hls/own-fileSequence3.webvtt": {
+        "fromPath": null,
+        "detect": "vtt"
+    },
+    "hls/own-prog_index.m3u8": {
+        "fromPath": null,
+        "detect": null
+    },
+    "hls/shaka-playlist-vtt.m3u8": {
+        "fromPath": null,
+        "detect": null
+    },
+    "hls/shaka-vtt-071.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "hls/shaka-vtt-072.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "html/real/hhmmss_empty_paragraphs.html": {
+        "fromPath": "html",
+        "detect": "html"
+    },
+    "html/real/spec_example_shape.html": {
+        "fromPath": "html",
+        "detect": "html"
+    },
+    "itt/real/avscript_testing.itt": {
+        "fromPath": "itt",
+        "detect": "ttml"
+    },
+    "itt/real/bom_2997_crlf.itt": {
+        "fromPath": "itt",
+        "detect": "ttml"
+    },
+    "itt/real/fcp_23976_styles.itt": {
+        "fromPath": "itt",
+        "detect": "ttml"
+    },
+    "json/real/own_aegisub.json": {
+        "fromPath": "json",
+        "detect": "json"
+    },
+    "json/real/own_alignment_and_coordinates.json": {
+        "fromPath": "json",
+        "detect": "json"
+    },
+    "json/real/own_image_cues.json": {
+        "fromPath": "json",
+        "detect": "json"
+    },
+    "karaoke/aegisub_window.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "karaoke/hebrew.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "karaoke/hebrew_word.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "karaoke/lrc_cumulative.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "karaoke/whisper_kf.ass": {
+        "fromPath": "ass",
+        "detect": "ass"
+    },
+    "karaoke/whisper_one_word.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "karaoke/whisper_word.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "lenient/bad_begin.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "lenient/bad_sync_start.smi": {
+        "fromPath": "sami",
+        "detect": "sami"
+    },
+    "lenient/bad_time_code.stl": {
+        "fromPath": "stl",
+        "detect": "stl"
+    },
+    "lenient/bad_time_line.sub": {
+        "fromPath": "microdvd",
+        "detect": null
+    },
+    "lenient/bad_timestamp.sbv": {
+        "fromPath": "sbv",
+        "detect": "sbv"
+    },
+    "lenient/bad_timestamp.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "lenient/bad_timestamp.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "lenient/bad_timing_line.mpsub": {
+        "fromPath": "mpsub",
+        "detect": null
+    },
+    "lenient/broken_events.ass": {
+        "fromPath": "ass",
+        "detect": "ass"
+    },
+    "lenient/broken_time_tag.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "lenient/generate-stl.php": {
+        "fromPath": null,
+        "detect": null
+    },
+    "lenient/missing_cue_numbers.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "lenient/missing_empty_line.sbv": {
+        "fromPath": "sbv",
+        "detect": "sbv"
+    },
+    "lenient/missing_empty_line.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "lenient/missing_empty_line.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "lenient/missing_end.json": {
+        "fromPath": "json",
+        "detect": "json"
+    },
+    "lenient/missing_segment_end.whisper.json": {
+        "fromPath": "json",
+        "detect": "whisper"
+    },
+    "lenient/mixed_line_endings.sbv": {
+        "fromPath": "sbv",
+        "detect": "sbv"
+    },
+    "lenient/mixed_line_endings.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "lenient/mixed_line_endings.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "lenient/release_name.sub": {
+        "fromPath": "microdvd",
+        "detect": null
+    },
+    "lenient/text_before_first_cue.sbv": {
+        "fromPath": "sbv",
+        "detect": null
+    },
+    "lenient/text_before_first_cue.srt": {
+        "fromPath": "srt",
+        "detect": null
+    },
+    "lenient/text_before_first_cue.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "lenient/truncated_last_cue.sbv": {
+        "fromPath": "sbv",
+        "detect": "sbv"
+    },
+    "lenient/truncated_last_cue.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "lenient/truncated_last_cue.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "lrc/exceeded_centi_accuracy.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "lrc/exceeded_minutes.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "lrc/exceeded_seconds.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "lrc/missing_text.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "lrc/missing_timestamps.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "lrc/real/handwritten-core.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "lrc/real/handwritten-enhanced.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "lrc/real/justan-1.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "lrc/real/justan-4.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "lrc/real/lrc-maker-nami.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "lrc/real/mantas-done-lrc.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "lrc/real/subsrt-sample.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "lrc/strip_xml.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "lrc/valid.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "lrc/with_id_tags.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "lrc/with_id_tags_formatted.lrc": {
+        "fromPath": "lrc",
+        "detect": "lrc"
+    },
+    "microdvd/real/sub_microdvd.sub": {
+        "fromPath": "microdvd",
+        "detect": "microdvd"
+    },
+    "microdvd/real/sub_microdvd_with_styles.sub": {
+        "fromPath": "microdvd",
+        "detect": "microdvd"
+    },
+    "microdvd/real/subsrt_sample.sub": {
+        "fromPath": "microdvd",
+        "detect": "microdvd"
+    },
+    "microdvd/valid.sub": {
+        "fromPath": "microdvd",
+        "detect": "microdvd"
+    },
+    "mkv/compressed.mkv": {
+        "fromPath": null,
+        "detect": null
+    },
+    "mkv/generator/MkvFixtureWriter.php": {
+        "fromPath": null,
+        "detect": null
+    },
+    "mkv/generator/MkvFixtures.php": {
+        "fromPath": null,
+        "detect": null
+    },
+    "mkv/generator/generate.php": {
+        "fromPath": null,
+        "detect": null
+    },
+    "mkv/pgs.mkv": {
+        "fromPath": null,
+        "detect": null
+    },
+    "mkv/seek_head.mkv": {
+        "fromPath": null,
+        "detect": null
+    },
+    "mkv/text_tracks.mkv": {
+        "fromPath": null,
+        "detect": null
+    },
+    "mkv/unknown_sizes.mkv": {
+        "fromPath": null,
+        "detect": null
+    },
+    "mpl2/lenient/broken.txt": {
+        "fromPath": "txt",
+        "detect": null
+    },
+    "mpl2/napiprojekt_cp1250.txt": {
+        "fromPath": "txt",
+        "detect": "mpl2"
+    },
+    "mpl2/real/pysubs2_shape_bom.txt": {
+        "fromPath": "txt",
+        "detect": "mpl2"
+    },
+    "mpl2/real/subtitle_edit_shape.txt": {
+        "fromPath": "txt",
+        "detect": "mpl2"
+    },
+    "mpsub/frames.mpsub": {
+        "fromPath": "mpsub",
+        "detect": "mpsub"
+    },
+    "mpsub/real/mplayer_doc_frames.sub": {
+        "fromPath": "microdvd",
+        "detect": "mpsub"
+    },
+    "mpsub/real/mplayer_doc_time.sub": {
+        "fromPath": "microdvd",
+        "detect": "mpsub"
+    },
+    "mpsub/valid.mpsub": {
+        "fromPath": "mpsub",
+        "detect": "mpsub"
+    },
+    "mpsub/valid_25fps.mpsub": {
+        "fromPath": "mpsub",
+        "detect": "mpsub"
+    },
+    "ocr/fake-tesseract/tesseract": {
+        "fromPath": null,
+        "detect": null
+    },
+    "ocr/fonts/Liberation-LICENSE.txt": {
+        "fromPath": "txt",
+        "detect": null
+    },
+    "ocr/fonts/LiberationSans-Italic.ttf": {
+        "fromPath": null,
+        "detect": null
+    },
+    "ocr/fonts/LiberationSans-Regular.ttf": {
+        "fromPath": null,
+        "detect": null
+    },
+    "ocr/generator/Rasterizer.php": {
+        "fromPath": null,
+        "detect": null
+    },
+    "ocr/generator/TextBitmap.php": {
+        "fromPath": null,
+        "detect": null
+    },
+    "ocr/generator/TrueTypeFont.php": {
+        "fromPath": null,
+        "detect": null
+    },
+    "pgs/generator/PgsFixtureWriter.php": {
+        "fromPath": null,
+        "detect": null
+    },
+    "pgs/generator/PgsFixtures.php": {
+        "fromPath": null,
+        "detect": null
+    },
+    "pgs/generator/generate.php": {
+        "fromPath": null,
+        "detect": null
+    },
+    "pgs/shapes_1080p.sup": {
+        "fromPath": "pgs",
+        "detect": "pgs"
+    },
+    "pgs/shapes_576p.sup": {
+        "fromPath": "pgs",
+        "detect": "pgs"
+    },
+    "pgs/text_1080p.ocr.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "pgs/text_1080p.sup": {
+        "fromPath": "pgs",
+        "detect": "pgs"
+    },
+    "pgs/text_cyrillic_1080p.sup": {
+        "fromPath": "pgs",
+        "detect": "pgs"
+    },
+    "plaintext/real/youtube_studio_lf.txt": {
+        "fromPath": "txt",
+        "detect": null
+    },
+    "plaintext/real/youtube_studio_lf_with_times.txt": {
+        "fromPath": "txt",
+        "detect": "lrc"
+    },
+    "podcast/real/podcast_transcript_convert_from_html.json": {
+        "fromPath": "json",
+        "detect": "podcast-transcript"
+    },
+    "podcast/real/podcast_transcript_convert_from_srt.json": {
+        "fromPath": "json",
+        "detect": "podcast-transcript"
+    },
+    "podcast/real/spec_word_segments.json": {
+        "fromPath": "json",
+        "detect": "podcast-transcript"
+    },
+    "profanity/keys.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "profanity/radio.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "profanity/words.txt": {
+        "fromPath": "txt",
+        "detect": null
+    },
+    "quotes-in-tags/own_names_with_quotes.ass": {
+        "fromPath": "ass",
+        "detect": "ass"
+    },
+    "resegmenting/own_whisper_long_segments.json": {
+        "fromPath": "json",
+        "detect": "whisper"
+    },
+    "resegmenting/own_whisper_long_segments_resegmented.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "resegmenting/own_whisper_long_segments_split.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "sami/real/mantas_smi.smi": {
+        "fromPath": "sami",
+        "detect": "sami"
+    },
+    "sami/real/mantas_smi_formatted.smi": {
+        "fromPath": "sami",
+        "detect": "sami"
+    },
+    "sami/real/multi_language.smi": {
+        "fromPath": "sami",
+        "detect": "sami"
+    },
+    "sami/real/pysubs2_source_id.smi": {
+        "fromPath": "sami",
+        "detect": "sami"
+    },
+    "sami/real/subsrt_sample.smi": {
+        "fromPath": "sami",
+        "detect": "sami"
+    },
+    "sbv/exceeded_minutes.sbv": {
+        "fromPath": "sbv",
+        "detect": "sbv"
+    },
+    "sbv/exceeded_seconds.sbv": {
+        "fromPath": "sbv",
+        "detect": "sbv"
+    },
+    "sbv/from_srt.sbv": {
+        "fromPath": "sbv",
+        "detect": "sbv"
+    },
+    "sbv/missing_milli_digits.sbv": {
+        "fromPath": "sbv",
+        "detect": null
+    },
+    "sbv/missing_text.sbv": {
+        "fromPath": "sbv",
+        "detect": "sbv"
+    },
+    "sbv/missing_timestamps.sbv": {
+        "fromPath": "sbv",
+        "detect": "sbv"
+    },
+    "sbv/real/subsrt_shape.sbv": {
+        "fromPath": "sbv",
+        "detect": "sbv"
+    },
+    "sbv/real/youtube_studio_crlf.sbv": {
+        "fromPath": "sbv",
+        "detect": "sbv"
+    },
+    "sbv/real/youtube_studio_lf.sbv": {
+        "fromPath": "sbv",
+        "detect": "sbv"
+    },
+    "sbv/special_characters.sbv": {
+        "fromPath": "sbv",
+        "detect": "sbv"
+    },
+    "sbv/srt_timestamps.sbv": {
+        "fromPath": "sbv",
+        "detect": null
+    },
+    "sbv/three_digit_hours.sbv": {
+        "fromPath": "sbv",
+        "detect": "sbv"
+    },
+    "sbv/two_digit_hours.sbv": {
+        "fromPath": "sbv",
+        "detect": "sbv"
+    },
+    "sbv/valid.sbv": {
+        "fromPath": "sbv",
+        "detect": "sbv"
+    },
+    "scc/generate.php": {
+        "fromPath": null,
+        "detect": null
+    },
+    "scc/real/interleaved_pac_tab.scc": {
+        "fromPath": "scc",
+        "detect": "scc"
+    },
+    "scc/real/out_of_order_lines.scc": {
+        "fromPath": "scc",
+        "detect": "scc"
+    },
+    "scc/real/painton_corrections.scc": {
+        "fromPath": "scc",
+        "detect": "scc"
+    },
+    "scc/real/popon_broadcast_df.scc": {
+        "fromPath": "scc",
+        "detect": "scc"
+    },
+    "scc/real/raw_data_row.scc": {
+        "fromPath": "scc",
+        "detect": "scc"
+    },
+    "scc/real/rollup_news_ndf.scc": {
+        "fromPath": "scc",
+        "detect": "scc"
+    },
+    "short-cues/own_interview.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "short-cues/own_interview_merged.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "short-cues/own_speech_to_text.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "short-cues/own_speech_to_text_merged.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "shot-changes/own_ffmpeg_showinfo.log": {
+        "fromPath": null,
+        "detect": null
+    },
+    "shot-changes/own_garden_24fps.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "shot-changes/own_garden_24fps_timed.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "shot-changes/own_scenes.txt": {
+        "fromPath": "txt",
+        "detect": null
+    },
+    "speakers/sdh_labels.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "speakers/sdh_labels_voices.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "speakers/voices.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "speakers/voices_colors.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "speakers/voices_dashes.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "speakers/voices_prefix.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "speakers/whisper_cpp_diarize.json": {
+        "fromPath": "json",
+        "detect": "whisper"
+    },
+    "speakers/whisper_cpp_diarize.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "speakers/whisperx_diarize_prefix.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/all_tags_stripped.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/exceeded_hours.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/exceeded_milli_accuracy.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/exceeded_minutes.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/exceeded_seconds.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/missing_cue_number.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/missing_text.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/missing_timestamps.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/real/language_subtitles_dots_tester.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/real/language_subtitles_ssa_extensions.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/real/own_alignment_and_coordinates.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/real/own_alignment_and_coordinates_formatted.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/real/own_cr_cr_lf.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/real/own_escaping.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/real/own_styled.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/real/own_timestamp_without_millis.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/strip_xml.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/valid.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "statistics/own_bakery.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "stl/generate-fixtures.php": {
+        "fromPath": null,
+        "detect": null
+    },
+    "stl/real/astisub_opn.stl": {
+        "fromPath": "stl",
+        "detect": "stl"
+    },
+    "stl/real/bakery_teletext_25fps.stl": {
+        "fromPath": "stl",
+        "detect": "stl"
+    },
+    "stl/real/harbour_open_30fps.stl": {
+        "fromPath": "stl",
+        "detect": "stl"
+    },
+    "stl/real/library_hebrew.stl": {
+        "fromPath": "stl",
+        "detect": "stl"
+    },
+    "stl/real/market_arabic.stl": {
+        "fromPath": "stl",
+        "detect": "stl"
+    },
+    "stl/real/train_cyrillic.stl": {
+        "fromPath": "stl",
+        "detect": "stl"
+    },
+    "stl/real/weather_greek.stl": {
+        "fromPath": "stl",
+        "detect": "stl"
+    },
+    "subviewer/real/mantas_headers_shape.sub": {
+        "fromPath": "microdvd",
+        "detect": "subviewer"
+    },
+    "subviewer/real/mantas_plain_shape.sub": {
+        "fromPath": "microdvd",
+        "detect": "subviewer"
+    },
+    "subviewer/real/subtitle_edit_v1_shape.sub": {
+        "fromPath": "microdvd",
+        "detect": "subviewer"
+    },
+    "subviewer/real/subviewer1_delay.sub": {
+        "fromPath": "microdvd",
+        "detect": "subviewer"
+    },
+    "subviewer/real/subviewer2_crlf.sub": {
+        "fromPath": "microdvd",
+        "detect": "subviewer"
+    },
+    "sync/own_ffmpeg_silencedetect.log": {
+        "fromPath": null,
+        "detect": null
+    },
+    "sync/own_reference_en.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "sync/own_reference_en_tv_break.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "sync/own_target_de_25fps.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "sync/own_target_de_split_synced.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "sync/own_target_de_synced.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "tmplayer/lenient/broken.txt": {
+        "fromPath": "txt",
+        "detect": null
+    },
+    "tmplayer/real/tmplayer_crlf.txt": {
+        "fromPath": "txt",
+        "detect": "tmplayer"
+    },
+    "tmplayer/real/tmplayer_multiline_bom.txt": {
+        "fromPath": "txt",
+        "detect": "tmplayer"
+    },
+    "tmplayer/real/tmplayer_plus.txt": {
+        "fromPath": "txt",
+        "detect": "tmplayer"
+    },
+    "transforms/own_cea608_caps.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "transforms/own_cea608_caps_cleaned.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "transforms/own_cea608_caps_sentence.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "transforms/own_multilingual_caps.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "translation/own_station.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "ttml/real/astisub_breaklines.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/astisub_merging_style.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/astisub_smpte.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/bbc_ebu_tt_d.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/mantas_dfxp_br.dfxp": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/mantas_duplicated_ids.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/mantas_fps_multiplier.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/mantas_multiple_divs.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/mantas_netflix_ticks.dfxp": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/mantas_ttml2.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/pysubs2_regions.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/smpte_drop_ntsc.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/w3c_dfxp_timing.dfxp": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/w3c_imsc11_frames.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/w3c_imsc11_line_gaps.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/w3c_imsc11_paragraphs.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/w3c_imsc11_regions.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/w3c_ttml1_cells.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/w3c_ttml1_timed_spans.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "ttml/real/w3c_ttml1_timing.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
+    "validation/own_netflix_checks.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "validation/own_text_checks.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vobsub/custom-colors-ntsc.idx": {
+        "fromPath": "vobsub",
+        "detect": null
+    },
+    "vobsub/custom-colors-ntsc.sub": {
+        "fromPath": "microdvd",
+        "detect": null
+    },
+    "vobsub/generate.php": {
+        "fromPath": null,
+        "detect": null
+    },
+    "vobsub/text-pal.idx": {
+        "fromPath": "vobsub",
+        "detect": null
+    },
+    "vobsub/text-pal.ocr.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "vobsub/text-pal.sub": {
+        "fromPath": "microdvd",
+        "detect": null
+    },
+    "vobsub/two-tracks-pal.idx": {
+        "fromPath": "vobsub",
+        "detect": null
+    },
+    "vobsub/two-tracks-pal.sub": {
+        "fromPath": "microdvd",
+        "detect": null
+    },
+    "vtt/all_xml_tags_stripped.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/exceeded_hours.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/exceeded_milli_accuracy.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/exceeded_minutes.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/exceeded_seconds.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/missing_cue_number.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/missing_hours.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/missing_text.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/missing_timestamps.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/missing_webvtt_header.vtt": {
+        "fromPath": "vtt",
+        "detect": "srt"
+    },
+    "vtt/no_empty_line_after_webvtt_header.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/real/astisub_carriage_return.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/real/astisub_html_entities.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/real/mantas_styles.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/real/w3c_chapters.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/real/w3c_comments.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/real/w3c_cue_settings.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/real/w3c_identifiers.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/real/w3c_regions.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/real/w3c_styles.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/real/w3c_timestamps.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/real/w3c_voices.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/real/webvttpy_comments.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/real/webvttpy_netflix.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/real/webvttpy_youtube.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/strip_xml.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/valid.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/with_styles_and_notes.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "vtt/with_styles_and_notes_formatted.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "whisper/real/faster_whisper_ctranslate2_segments.json": {
+        "fromPath": "json",
+        "detect": "whisper"
+    },
+    "whisper/real/faster_whisper_ctranslate2_words.json": {
+        "fromPath": "json",
+        "detect": "whisper"
+    },
+    "whisper/real/openai_api_verbose_json_french.json": {
+        "fromPath": "json",
+        "detect": "whisper"
+    },
+    "whisper/real/openai_api_verbose_json_words.json": {
+        "fromPath": "json",
+        "detect": "whisper"
+    },
+    "whisper/real/openai_whisper_german.json": {
+        "fromPath": "json",
+        "detect": "whisper"
+    },
+    "whisper/real/openai_whisper_word_timestamps.json": {
+        "fromPath": "json",
+        "detect": "whisper"
+    },
+    "whisper/real/whisper_cpp_oj.json": {
+        "fromPath": "json",
+        "detect": "whisper"
+    },
+    "whisper/real/whisper_cpp_ojf.json": {
+        "fromPath": "json",
+        "detect": "whisper"
+    },
+    "whisper/real/whisper_cpp_ojf_split_utf8.json": {
+        "fromPath": "json",
+        "detect": "whisper"
+    },
+    "whisper/real/whisperx_diarize.json": {
+        "fromPath": "json",
+        "detect": "whisper"
+    },
+    "youtube/real/auto.en.json3": {
+        "fromPath": "youtube",
+        "detect": "youtube"
+    },
+    "youtube/real/auto.en.srv3": {
+        "fromPath": "youtube",
+        "detect": "youtube"
+    },
+    "youtube/real/manual.en.json3": {
+        "fromPath": "youtube",
+        "detect": "youtube"
+    },
+    "youtube/real/styled.en.srv3": {
+        "fromPath": "youtube",
+        "detect": "youtube"
+    },
+    "youtube/real/transcript.en.srv1": {
+        "fromPath": "youtube",
+        "detect": "youtube"
+    }
+}

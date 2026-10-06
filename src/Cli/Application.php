@@ -1,16 +1,22 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Exceptions\SubtitleToolboxException;
 
-class Application
+/**
+ * @internal
+ */
+final class Application
 {
     public const NAME = "subtitle-toolbox";
 
-    public const EXIT_OK      = 0;
-    public const EXIT_FAILURE = 1;
-    public const EXIT_USAGE   = 2;
+    public const EXIT_OK     = 0;
+    public const EXIT_RESULT = 1;
+    public const EXIT_USAGE  = 2;
+    public const EXIT_FILE   = 3;
 
     private Console $console;
 
@@ -34,17 +40,12 @@ class Application
         );
         $this->commands = [
             new ConvertCommand(),
-            new ShiftCommand(),
-            new ScaleCommand(),
-            new FpsCommand(),
-            new FixCommand(),
-            new StripSdhCommand(),
+            new RetimeCommand(),
             new InfoCommand(),
             new ValidateCommand(),
             new SyncCommand(),
             new DiffCommand(),
             new DualCommand(),
-            new SnapCommand(),
             new HlsCommand(),
             new FormatsCommand(),
         ];
@@ -80,16 +81,25 @@ class Application
             return $this->usageError("Unknown command \"$name\".", "help");
         }
 
-        if (in_array("--help", $arguments, true) || in_array("-h", $arguments, true)) {
-            $this->console->out($command->help());
+        $help = array_key_first(array_filter($arguments, fn (string $argument): bool => $argument === "--help" || $argument === "-h"));
+        if ($help !== null) {
+            $topic = $arguments[$help + 1] ?? null;
 
-            return self::EXIT_OK;
+            return $this->printHelp($command, $topic !== null && !str_starts_with($topic, "-") ? $topic : null);
         }
 
         try {
-            return $command->execute(Arguments::parse($arguments, $command->options()), $this->console);
+            return $command->run($arguments, $this->console);
+        } catch (FileFailure $failure) {
+            $this->console->err("Error: " . $failure->getMessage() . "\n");
+
+            return self::EXIT_FILE;
         } catch (SubtitleToolboxException $exception) {
             return $this->usageError($exception->getMessage(), "help " . $command->name());
+        } catch (\Throwable $throwable) {
+            $this->console->err("Error: " . FileCommand::throwableMessage($throwable) . "\n");
+
+            return self::EXIT_FILE;
         }
     }
 
@@ -106,7 +116,18 @@ class Application
         if ($command === null) {
             return $this->usageError("Unknown command \"$arguments[0]\".", "help");
         }
-        $this->console->out($command->help());
+
+        return $this->printHelp($command, $arguments[1] ?? null);
+    }
+
+
+    private function printHelp(Command $command, ?string $topic): int
+    {
+        try {
+            $this->console->out($command->help($topic));
+        } catch (SubtitleToolboxException $exception) {
+            return $this->usageError($exception->getMessage(), "help " . $command->name());
+        }
 
         return self::EXIT_OK;
     }
@@ -115,7 +136,7 @@ class Application
     private function find(string $name): ?Command
     {
         foreach ($this->commands as $command) {
-            if ($command->name() === $name || in_array($name, $command->aliases(), true)) {
+            if ($command->name() === $name) {
                 return $command;
             }
         }
@@ -153,9 +174,11 @@ class Application
             Commands:
             $commands
             Run "$name help <command>" or "$name <command> --help" for the options of a command.
-            A file argument of - reads standard input. --output - writes standard output.
+            A file argument of - reads standard input. One input goes to standard output, or to -o FILE.
+            Several inputs need --output-dir DIR. The tool never overwrites a file.
 
-            Exit codes: 0 success, 1 a file failed or broke a validation rule, 2 invalid arguments.
+            Exit codes: 0 success, 1 a file broke a validation rule or differs in diff, 2 invalid arguments,
+            3 a file could not be read or written.
             Options: -h, --help shows this help, -V, --version prints the version.
 
             HELP;

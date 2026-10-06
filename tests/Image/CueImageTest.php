@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Image;
 
 use InvalidArgumentException;
@@ -25,7 +27,7 @@ class CueImageTest extends TestCase
             "screenWidth"  => 1920,
             "screenHeight" => 1080,
             "forced"       => true,
-        ], $cue->getFormatData("image"));
+        ], $cue->findFormatData("image"));
         $this->assertEquals($image, CueImage::fromCue($cue));
         $this->assertSame([], $cue->getLines());
     }

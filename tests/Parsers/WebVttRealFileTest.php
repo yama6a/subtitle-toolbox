@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\Comment;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -45,7 +48,7 @@ class WebVttRealFileTest extends TestCase
         float $lastEnd,
         string $lastText
     ): void {
-        $cues = array_values(Subtitle::parse(file_get_contents(self::DIR . $file), WebVttParser::class)->getCues());
+        $cues = array_values(Subtitle::fromString(file_get_contents(self::DIR . $file), Format::WebVtt)->getCues());
 
         $this->assertCount($cueCount, $cues);
         $this->assertSame([$firstStart, $firstEnd, $firstText], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
@@ -57,31 +60,31 @@ class WebVttRealFileTest extends TestCase
     #[DataProvider("realFileProvider")]
     public function testRealFileRoundTripKeepsAllData(string $file): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . $file), WebVttParser::class);
-        $output   = $subtitle->format(WebVttFormatter::class);
-        $reparsed = Subtitle::parse($output, WebVttParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . $file), Format::WebVtt);
+        $output   = $subtitle->toString(Format::WebVtt);
+        $reparsed = Subtitle::fromString($output, Format::WebVtt);
 
-        $this->assertSame($this->describe($subtitle), $this->describe($reparsed));
-        $this->assertSame($output, $reparsed->format(WebVttFormatter::class));
+        $this->assertEquals($this->describe($subtitle), $this->describe($reparsed));
+        $this->assertSame($output, $reparsed->toString(Format::WebVtt));
     }
 
 
     public function testRealFileRegionsAndCueSettings(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "w3c_regions.vtt"), WebVttParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "w3c_regions.vtt"), Format::WebVtt);
         $cue      = $subtitle->getCues()[1];
 
-        $this->assertSame(["fred", "bill"], array_column($subtitle->getFormatData("vtt")["regions"], "id"));
-        $this->assertSame(["region" => "bill", "align" => "right"], $cue->getFormatData("vtt"));
+        $this->assertSame(["fred", "bill"], array_column($subtitle->findFormatData("vtt")["regions"], "id"));
+        $this->assertSame(["region" => "bill", "align" => "right"], $cue->findFormatData("vtt"));
         $this->assertSame(3, $cue->getAlignment());
     }
 
 
     public function testRealFileYouTubeHeaderLinesAreKept(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "webvttpy_youtube.vtt"), WebVttParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "webvttpy_youtube.vtt"), Format::WebVtt);
 
-        $headerLines = $subtitle->getFormatData("vtt")["headerLines"];
+        $headerLines = $subtitle->findFormatData("vtt")["headerLines"];
         $this->assertSame(["Kind: captions", "Language: en", "Style:"], array_slice($headerLines, 0, 3));
         $this->assertSame("##", end($headerLines));
     }
@@ -89,28 +92,28 @@ class WebVttRealFileTest extends TestCase
 
     public function testRealFileCommentsAndHeaderText(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "webvttpy_comments.vtt"), WebVttParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "webvttpy_comments.vtt"), Format::WebVtt);
 
-        $this->assertSame(["header" => "- Translation of a weather report"], $subtitle->getFormatData("vtt"));
+        $this->assertSame(["header" => "- Translation of a weather report"], $subtitle->findFormatData("vtt"));
         $this->assertSame(
             [0, 2, 3],
             array_column($subtitle->getComments(), "beforeCueIndex")
         );
-        $this->assertSame("end of file", $subtitle->getComments()[2]["text"]);
+        $this->assertSame("end of file", $subtitle->getComments()[2]->text);
     }
 
 
     private function describe(Subtitle $subtitle): array
     {
         return [
-            $subtitle->getFormatData("vtt"),
+            $subtitle->findFormatData("vtt"),
             $subtitle->getComments(),
             array_map(fn (SubtitleCue $cue): array => [
                 $cue->getStart(),
                 $cue->getEnd(),
                 $cue->getLines(),
                 $cue->getAlignment(),
-                $cue->getFormatData("vtt"),
+                $cue->findFormatData("vtt"),
             ], $subtitle->getCues()),
         ];
     }

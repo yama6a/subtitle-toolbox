@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Ocr;
 
 use Closure;
@@ -8,17 +10,21 @@ use GlyphOcr\GlyphDatabase;
 use GlyphOcr\RecognitionResult;
 use GlyphOcr\RecognizedChar;
 use GlyphOcr\RecognizedLine;
+use GlyphOcr\Recognizer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Formatters\SubRipFormatter;
+use SubtitleToolbox\Exceptions\OcrException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\PgsFixtures;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\VobSubParser;
+use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 require_once __DIR__ . "/../files/pgs/generator/PgsFixtures.php";
@@ -39,14 +45,14 @@ class GlyphOcrEngineTest extends TestCase
     {
         return [
             "PGS 1080p, 44 to 60 px" => [
-                fn (): Subtitle => (new PgsParser())->parse(file_get_contents(self::PGS . "text_1080p.sup")),
+                fn (): Subtitle => (new PgsParser())->parse(file_get_contents(self::PGS . "text_1080p.sup"), new ReadOptions()),
                 self::PGS . "text_1080p.ocr.srt",
                 array_column(PgsFixtures::TEXT_CUES, 2),
                 1.0,
             ],
             "VobSub 576p, 24 to 30 px" => [
-                fn (): Subtitle => (new VobSubParser(file_get_contents(self::VOBSUB . "text-pal.idx")))
-                    ->parse(file_get_contents(self::VOBSUB . "text-pal.sub")),
+                fn (): Subtitle => (new VobSubParser())
+                    ->parse(file_get_contents(self::VOBSUB . "text-pal.sub"), new ReadOptions(format: new VobSubReadOptions(file_get_contents(self::VOBSUB . "text-pal.idx")))),
                 self::VOBSUB . "text-pal.ocr.srt",
                 array_column(TEXT_CUES, 2),
                 0.97,
@@ -61,7 +67,7 @@ class GlyphOcrEngineTest extends TestCase
     {
         $subtitle = $parse()->recognizeText(new GlyphOcrEngine());
 
-        $this->assertStringEqualsFile($golden, $subtitle->format(SubRipFormatter::class));
+        $this->assertStringEqualsFile($golden, $subtitle->toString(Format::SubRip));
 
         $errors = 0;
         $length = 0;
@@ -102,7 +108,7 @@ class GlyphOcrEngineTest extends TestCase
 
     public function testItalicWordsBecomeOneItalicRun(): void
     {
-        $result = GlyphOcrEngine::toOcrResult(new RecognitionResult([
+        $result = GlyphOcrEngine::toRecognizedText(new RecognitionResult([
             self::line("The wind turns", "II.IIIII.IIIII"),
             self::line("Snow is here.", "IIII.I...I..."),
             self::line("one more word", "...I.IIII.III"),
@@ -114,7 +120,7 @@ class GlyphOcrEngineTest extends TestCase
 
     public function testEscapesMarkupCharactersAndUsesTheMeanConfidence(): void
     {
-        $result = GlyphOcrEngine::toOcrResult(new RecognitionResult([
+        $result = GlyphOcrEngine::toRecognizedText(new RecognitionResult([
             new RecognizedLine([self::char("<", false, 0.5), self::char("&", false, 1.0), self::char(" "),
                                 self::char("b", false, 0.6)]),
         ]));
@@ -137,10 +143,10 @@ class GlyphOcrEngineTest extends TestCase
 
     public function testPassesTheDatabaseAndTheOptionsToTheRecognizer(): void
     {
-        $subtitle = (new PgsParser())->parse(file_get_contents(self::PGS . "text_1080p.sup"));
+        $subtitle = (new PgsParser())->parse(file_get_contents(self::PGS . "text_1080p.sup"), new ReadOptions());
         $image    = CueImage::fromCue($subtitle->getCues()[0]);
 
-        $result = (new GlyphOcrEngine(new GlyphDatabase(), ["unknownText" => "#"]))->recognize($image, "eng");
+        $result = (new GlyphOcrEngine(new GlyphOcrOptions(new GlyphDatabase(), unknownText: "#")))->recognize($image, "eng");
 
         $this->assertCount(1, $result->lines);
         $this->assertMatchesRegularExpression("/^#+( #+)+$/", $result->lines[0]);
@@ -148,28 +154,48 @@ class GlyphOcrEngineTest extends TestCase
     }
 
 
-    public function testUnknownOptionThrows(): void
+    public function testOptionsMatchTheRecognizerDefaults(): void
     {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot create a GlyphOcrEngine with the option \"database\"");
-
-        new GlyphOcrEngine(null, ["database" => GlyphDatabase::latin()]);
+        $options = new GlyphOcrOptions();
+        foreach ((new \ReflectionMethod(Recognizer::class, "__construct"))->getParameters() as $parameter) {
+            if ($parameter->getName() !== "database") {
+                $this->assertSame($parameter->getDefaultValue(), $options->{$parameter->getName()}, $parameter->getName());
+            }
+        }
+        $this->assertSame(array_column((new \ReflectionMethod(Recognizer::class, "__construct"))->getParameters(), "name"),
+                          array_column((new \ReflectionMethod(GlyphOcrOptions::class, "__construct"))->getParameters(), "name"));
     }
 
 
-    public function testInvalidOptionValueThrows(): void
+    /**
+     * @return array<string, array{Closure(): GlyphOcrOptions, string}>
+     */
+    public static function invalidOptions(): array
+    {
+        return [
+            "ink threshold 0"   => [fn () => new GlyphOcrOptions(inkThreshold: 0), "ink threshold 0 - it must be from 1 to 765"],
+            "ink threshold 766" => [fn () => new GlyphOcrOptions(inkThreshold: 766), "ink threshold 766 - it must be from 1 to 765"],
+            "space width 0"     => [fn () => new GlyphOcrOptions(spaceWidth: 0), "space width 0 - it must be at least 1"],
+            "wrong pixels -1"   => [fn () => new GlyphOcrOptions(maxWrongPixels: -1), "-1 wrong pixels - the number must be at least 0"],
+            "italic slant -0.1" => [fn () => new GlyphOcrOptions(italicSlant: -0.1), "italic slant -0.1 - it must be from 0 to 1"],
+            "line height 0"     => [fn () => new GlyphOcrOptions(minLineHeight: 0), "minimum line height 0 - it must be at least 1"],
+        ];
+    }
+
+
+    #[DataProvider("invalidOptions")]
+    public function testInvalidOptionThrows(Closure $create, string $message): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot create a GlyphOcrEngine - the recognizer says: Cannot create a recognizer " .
-                                      "with ink threshold 0");
+        $this->expectExceptionMessage("Cannot create GlyphOcrOptions with $message!");
 
-        new GlyphOcrEngine(null, ["inkThreshold" => 0]);
+        $create();
     }
 
 
     public function testImageThatIsNoPngThrows(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(OcrException::class);
         $this->expectExceptionMessage("Cannot read the cue image at 3, 4 - the recognizer says: Cannot decode the PNG");
 
         (new GlyphOcrEngine())->recognize(new CueImage("no png", 3, 4, 1, 1, 720, 576), null);

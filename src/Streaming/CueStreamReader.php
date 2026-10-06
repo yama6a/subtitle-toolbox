@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Streaming;
 
 use Generator;
+use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\SubtitleCue;
 
 interface CueStreamReader
@@ -15,4 +18,12 @@ interface CueStreamReader
      * @return Generator<int, SubtitleCue>
      */
     public function read($stream): Generator;
+
+
+    /**
+     * Returns the warnings of the current or last read() so far. Only a reader with ReadOptions::$lenient has warnings.
+     *
+     * @return list<ParseWarning>
+     */
+    public function getWarnings(): array;
 }

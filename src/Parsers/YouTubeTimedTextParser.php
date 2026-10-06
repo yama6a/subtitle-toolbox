@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use DOMDocument;
@@ -7,43 +9,38 @@ use DOMElement;
 use DOMText;
 use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class YouTubeTimedTextParser extends SubtitleParser
+final class YouTubeTimedTextParser extends SubtitleParser
 {
-    public const FORMAT_DATA_KEY = "youtube";
-
-    public const OPTION_WORD_TIMESTAMPS = "OPTION_WORD_TIMESTAMPS";
+    public const FORMAT_DATA_KEY = Format::YouTubeTimedText->value;
 
     // A window anchor point runs from 0, top left, to 8, bottom right, row by row.
     private const ALIGNMENTS = [7, 8, 9, 4, 5, 6, 1, 2, 3];
 
-    private bool $wordTimestamps;
 
-
-    /**
-     * Creates a parser that writes the word times of json3 and srv3 into the cue lines as core markup when OPTION_WORD_TIMESTAMPS is true.
-     */
-    public function __construct(array $options = [])
+    protected static function formatOptionsClass(): string
     {
-        $this->wordTimestamps = !empty(Options::flag($options, self::OPTION_WORD_TIMESTAMPS));
+        return TranscriptReadOptions::class;
     }
 
 
     /**
      * Reads the YouTube timed text formats json3, srv3, srv2 and srv1, which is also the transcript XML.
      */
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $content        = ltrim(StringHelpers::removeUtf8Bom($rawSubtitle));
         [$fileData, $captions] = str_starts_with($content, "{") ? $this->readJson($content) : $this->readXml($content);
 
-        $subtitle = new Subtitle();
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, $fileData);
         foreach ($this->endAtNextCaption($captions) as $caption) {
             $cue = new SubtitleCue($caption["start"], $caption["end"], explode("\n", $this->markup($caption["segments"], $caption["start"])));
@@ -54,10 +51,10 @@ class YouTubeTimedTextParser extends SubtitleParser
             if ($caption["formatData"] !== []) {
                 $cue->setFormatData(self::FORMAT_DATA_KEY, $caption["formatData"]);
             }
-            $subtitle->addCue($cue, false);
+            $parsedCues[] = $cue;
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 
@@ -68,7 +65,7 @@ class YouTubeTimedTextParser extends SubtitleParser
         } catch (JsonException $exception) {
             throw new ParsingException("The content is not valid JSON: {$exception->getMessage()}.");
         }
-        if (!is_array($data["events"] ?? null)) {
+        if (!is_array($data["events"] ?? null) || !array_is_list($data["events"])) {
             throw new ParsingException("The JSON has no \"events\" list.");
         }
 
@@ -95,7 +92,7 @@ class YouTubeTimedTextParser extends SubtitleParser
                     $extras[]   = is_array($seg) ? array_diff_key($seg, ["utf8" => true, "tOffsetMs" => true]) : [];
                 }
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($event)]);
+                $this->fail($exception, null, $index, [RawJson::encode($event)]);
                 continue;
             }
 
@@ -140,7 +137,7 @@ class YouTubeTimedTextParser extends SubtitleParser
     private function milliseconds(mixed $object, string $key, string $path, ?int $default = null): int|float
     {
         $value = is_array($object) ? $object[$key] ?? $default : null;
-        if (!is_int($value) && !is_float($value)) {
+        if (!is_int($value) && (!is_float($value) || !is_finite($value))) {
             throw new ParsingException("The field $path.$key must be a number.");
         }
 
@@ -317,7 +314,7 @@ class YouTubeTimedTextParser extends SubtitleParser
     private function time(DOMElement $element, string $name, ?string $default = null): float
     {
         $value = $element->hasAttribute($name) ? trim($element->getAttribute($name)) : $default;
-        if ($value === null || !is_numeric($value) || (float) $value < 0) {
+        if ($value === null || !is_numeric($value) || (float) $value < 0 || !is_finite((float) $value)) {
             throw new ParsingException("The <{$element->nodeName}> element has no valid \"$name\" attribute.", $element->getLineNo());
         }
 
@@ -355,7 +352,7 @@ class YouTubeTimedTextParser extends SubtitleParser
 
     private function markup(array $segments, float $start): string
     {
-        $timed  = $this->wordTimestamps && array_filter(array_column($segments, 1), fn (?float $offset): bool => $offset !== null) !== [];
+        $timed  = $this->formatOptions()->wordTimestamps && array_filter(array_column($segments, 1), fn (?float $offset): bool => $offset !== null) !== [];
         $markup = "";
         foreach ($segments as [$text, $offset, $style]) {
             if (!$timed) {

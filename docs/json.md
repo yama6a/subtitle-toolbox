@@ -3,14 +3,15 @@
 A web app stores the cues in a database and sends them to the browser as JSON. `toArray()`, `fromArray()`, `JsonFormatter` and `JsonParser` convert a subtitle without loss.
 
 ```php
-use SubtitleToolbox\Formatters\JsonFormatter;
-use SubtitleToolbox\Parsers\JsonParser;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\JsonWriteOptions;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\WriteOptions;
 
 $array = $subtitle->toArray();                     // toArray(false) leaves out the format data
 $copy  = Subtitle::fromArray($array);              // equal to $subtitle
-$json  = $subtitle->format(JsonFormatter::class, [JsonFormatter::OPTION_PRETTY_PRINT => true]);
-$copy  = Subtitle::parse($json, JsonParser::class);
+$json  = $subtitle->toString(Format::Json, new WriteOptions(format: new JsonWriteOptions(prettyPrint: true)));
+$copy  = Subtitle::fromString($json, Format::Json);
 ```
 
 `JsonFormatter` writes this shape. `toArray()` returns the same shape as a PHP array, with binary strings as they are.
@@ -34,7 +35,7 @@ $copy  = Subtitle::parse($json, JsonParser::class);
 |:--- |:--- |:--- |:--- |
 | `version` | integer | yes | 1. A later version of the shape gets a new number. `fromArray()` rejects all other numbers |
 | `metadata` | object of strings | no | the keys of `getAllMetadata()` |
-| `comments` | list of objects | no | `text` and `beforeCueIndex`, as `getComments()` returns them |
+| `comments` | list of objects | no | `text` and `beforeCueIndex`, the fields of the `Comment` objects that `getComments()` returns |
 | `formatData` | object of objects | no | the format data of the subtitle by format key |
 | `cues` | list of objects | yes | the cues in this order. `fromArray()` does not sort them |
 | `cues[].start`, `cues[].end` | number | yes | seconds, rounded to milliseconds |
@@ -45,7 +46,8 @@ $copy  = Subtitle::parse($json, JsonParser::class);
 | `cues[].formatData` | object of objects | no | the format data of the cue by format key |
 
 - **Binary data**: `JsonFormatter` writes each format data string that is not valid UTF-8 as `{"base64": "..."}`. The PNG of an image cue is such a string. `JsonParser` decodes every object in the format data that has `base64` as its only key.
-- **Errors**: `JsonParser` and `fromArray()` throw `ParsingException` with the path of the bad field, for example `The field cues[3].start must be a number.`
-- **Text**: cue lines and metadata must be UTF-8. Otherwise `JsonFormatter` throws `JsonException`. Parse a file in another encoding with its [source encoding](encodings.md).
-- **Options**: `OPTION_PRETTY_PRINT` indents with 4 spaces and ends with a newline. `OPTION_WITH_FORMAT_DATA => false` leaves out the format data. The options `lineEnding` and `bom` work as in the other formatters.
-- **Detection**: an object with a numeric `version` key and a `cues` list detects as `JsonParser`. Detection fails when more than about 70,000 cues come before the `version` key. Then pass `JsonParser::class`. `JsonFormatter` writes `version` first.
+- **Errors**: `JsonParser` and `fromArray()` throw `ParsingException` with the path of the bad field, for example `The field cues[3].start must be a number.` A time of `1e400` or more is not a number. The format data fields that a formatter reads get the same check, for example `The field formatData.scc.dropFrame must be a boolean.` Other format data fields pass as they are.
+- **Lenient mode**: `new ReadOptions(lenient: true)` skips a cue with a bad field, as [lenient-parsing.md](lenient-parsing.md) says. It also drops a bad metadata field, a bad comment and the bad format data of one format of the file, with a `ParseWarning` of `blockIndex` null. `fromArray()` has no lenient mode.
+- **Text**: cue lines and metadata must be UTF-8. Otherwise `JsonFormatter` throws `UnwritableContentException` with the `JsonException` as its previous exception. Parse a file in another encoding with its [source encoding](encodings.md).
+- **Options**: `JsonWriteOptions(prettyPrint: true)` indents with 4 spaces and ends with a newline. `JsonWriteOptions(withFormatData: false)` leaves out the format data. `lineEnding` and `bom` of `WriteOptions` work as in the other formatters.
+- **Detection**: an object with a numeric top-level `version` key and a `cues` list detects as `Format::Json`.

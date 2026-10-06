@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 use InvalidArgumentException;
@@ -23,7 +25,7 @@ class FrameRateTest extends \PHPUnit\Framework\TestCase
 
     public function testGetFps(): void
     {
-        $this->assertSame(23.976, (new FrameRate(23.976))->getFps());
+        $this->assertSame(23.976, (new FrameRate(23.976))->getFramesPerSecond());
     }
 
 

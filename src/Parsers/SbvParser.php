@@ -1,33 +1,37 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class SbvParser extends SubtitleParser
+final class SbvParser extends SubtitleParser
 {
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $rawSubtitle    = StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle));
 
-        $subtitle = new Subtitle();
-        $idx      = 0;
-        foreach ($this->splitAtEmptyLines(explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle)) as $lineNumber => $rawLines) {
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
+        $idx        = 0;
+        foreach ($this->splitAtEmptyLines(explode(LineEnding::Lf->value, $rawSubtitle)) as $lineNumber => $rawLines) {
             if ($this->lenient && $rawLines === [""]) {
-                $this->warn("The file has no cues.", $lineNumber, $idx, $rawLines, ParseWarning::SKIPPED);
+                $this->warn("The file has no cues.", $lineNumber, $idx, $rawLines, ParseWarningAction::Skipped);
                 break;
             }
 
             $parts = $this->repairMissingEmptyLines($rawLines, $lineNumber, $idx, $this->isTimingLine(...), false);
             foreach ($parts as $offset => $part) {
                 try {
-                    $subtitle->addCue($this->parseCueBlock($part, $idx), false);
+                    $parsedCues[] = $this->parseCueBlock($part, $idx);
                 } catch (ParsingException $exception) {
                     $this->fail($exception, $lineNumber + $offset, $idx, $part);
                 }
@@ -35,7 +39,7 @@ class SbvParser extends SubtitleParser
             $idx++;
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 

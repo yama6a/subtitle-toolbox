@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 // Writes the self-written EBU STL fixtures in real/ byte by byte, without the library code.
 // Run it with: php tests/files/stl/generate-fixtures.php
 

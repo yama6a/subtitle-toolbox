@@ -1,27 +1,28 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\Options\HtmlTranscriptWriteOptions;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
-class HtmlTranscriptFormatter extends SubtitleFormatter
+final class HtmlTranscriptFormatter extends SubtitleFormatter
 {
-    public const OPTION_PARAGRAPH_GAP = "paragraphGap";
+    protected const FORMAT_OPTIONS = HtmlTranscriptWriteOptions::class;
 
 
     /**
      * Writes the Podcasting 2.0 HTML transcript, a <cite>, <time> and <p> per paragraph. A speaker change or a gap of
-     * OPTION_PARAGRAPH_GAP seconds starts a new paragraph.
+     * HtmlTranscriptWriteOptions::$paragraphGap seconds starts a new paragraph.
      */
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $paragraphGap = $options[self::OPTION_PARAGRAPH_GAP] ?? 2.0;
-        if (!is_int($paragraphGap) && !is_float($paragraphGap)) {
-            throw new InvalidArgumentException("The option " . self::OPTION_PARAGRAPH_GAP . " must be a number of seconds.");
-        }
+        $paragraphGap = ($this->formatOptions($options) ?? new HtmlTranscriptWriteOptions())->paragraphGap;
 
         $paragraphs = [];
         $latestEnd  = null;
@@ -38,24 +39,14 @@ class HtmlTranscriptFormatter extends SubtitleFormatter
         $html = "";
         foreach ($paragraphs as $paragraph) {
             if ($paragraph["speaker"] !== null) {
-                $html .= "<cite>" . Markup::escapeText($paragraph["speaker"]) . ":</cite>" . StringHelpers::UNIX_LINE_ENDING;
+                $html .= "<cite>" . Markup::escapeText($paragraph["speaker"]) . ":</cite>" . LineEnding::Lf->value;
             }
-            $html .= "<time>" . $this->formatTime($paragraph["start"]) . "</time>" . StringHelpers::UNIX_LINE_ENDING .
-                     "<p>" . Markup::escapeText(implode(" ", $paragraph["bodies"])) . "</p>" . StringHelpers::UNIX_LINE_ENDING;
+            [$hours, $minutes, $seconds] = Timecode::seconds(floor($paragraph["start"]));
+            $time = $hours > 0 ? sprintf("%d:%02d:%02d", $hours, $minutes, $seconds) : sprintf("%d:%02d", $minutes, $seconds);
+            $html .= "<time>$time</time>" . LineEnding::Lf->value .
+                     "<p>" . Markup::escapeText(implode(" ", $paragraph["bodies"])) . "</p>" . LineEnding::Lf->value;
         }
 
         return $this->applyOutputOptions($html, $options);
-    }
-
-
-    private function formatTime(float $seconds): string
-    {
-        $totalSeconds = (int)floor($seconds);
-        $hours        = intdiv($totalSeconds, 3600);
-        $minutes      = intdiv($totalSeconds, 60) % 60;
-
-        return $hours > 0
-            ? sprintf("%d:%02d:%02d", $hours, $minutes, $totalSeconds % 60)
-            : sprintf("%d:%02d", $minutes, $totalSeconds % 60);
     }
 }

@@ -1,23 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class WhisperJsonParser extends SubtitleParser
+final class WhisperJsonParser extends SubtitleParser
 {
-    public const FORMAT_DATA_KEY = "whisper";
-
-    public const OPTION_WORD_TIMESTAMPS = "OPTION_WORD_TIMESTAMPS";
-
-    /** Writes the "speaker" field of each segment as a <v> tag at the start of its cue, for example <v SPEAKER_00>. */
-    public const OPTION_SPEAKER_VOICES = "OPTION_SPEAKER_VOICES";
+    public const FORMAT_DATA_KEY = Format::Whisper->value;
 
     // TO_LANGUAGE_CODE of openai/whisper, whisper/tokenizer.py. The OpenAI API returns these names in verbose_json.
     private const LANGUAGE_CODES = [
@@ -45,25 +43,17 @@ class WhisperJsonParser extends SubtitleParser
         "castilian" => "es", "mandarin" => "zh",
     ];
 
-    private bool $wordTimestamps;
-    private bool $speakerVoices;
 
-
-    /**
-     * Creates a parser that writes word timestamps and speakers as core markup when OPTION_WORD_TIMESTAMPS and
-     * OPTION_SPEAKER_VOICES are true.
-     */
-    public function __construct(array $options = [])
+    protected static function formatOptionsClass(): string
     {
-        $this->wordTimestamps = !empty(Options::flag($options, self::OPTION_WORD_TIMESTAMPS));
-        $this->speakerVoices  = !empty(Options::flag($options, self::OPTION_SPEAKER_VOICES));
+        return TranscriptReadOptions::class;
     }
 
 
     /**
      * Reads the JSON of the OpenAI transcription API, openai-whisper, faster-whisper, WhisperX and whisper.cpp, one cue per segment.
      */
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         try {
@@ -78,13 +68,14 @@ class WhisperJsonParser extends SubtitleParser
         }
 
         $segments = match (true) {
-            is_array($data["segments"] ?? null)      => $this->readSegments($data["segments"], $data["words"] ?? null),
-            is_array($data["transcription"] ?? null) => $this->readTranscription($data["transcription"]),
+            self::isList($data["segments"] ?? null)      => $this->readSegments($data["segments"], $data["words"] ?? null),
+            self::isList($data["transcription"] ?? null) => $this->readTranscription($data["transcription"]),
             default                                  => throw new ParsingException("The JSON has no \"segments\" or \"transcription\" list."),
         };
 
-        $subtitle = new Subtitle();
-        $language = $data["language"] ?? $data["result"]["language"] ?? null;
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
+        $language   = $data["language"] ?? $data["result"]["language"] ?? null;
         if (is_string($language) && $language !== "") {
             $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, self::LANGUAGE_CODES[strtolower($language)] ?? $language);
         }
@@ -97,17 +88,17 @@ class WhisperJsonParser extends SubtitleParser
                 continue;
             }
 
-            $markup  = $this->wordTimestamps ? Markup::insertWordTimestamps($text, $words) : Markup::escapeText($text);
+            $markup  = $this->formatOptions()->wordTimestamps ? Markup::insertWordTimestamps($text, $words) : Markup::escapeText($text);
             $speaker = is_string($formatData["speaker"] ?? null) ? trim($formatData["speaker"]) : "";
-            if ($this->speakerVoices && $speaker !== "") {
+            if ($this->formatOptions()->speakerVoices && $speaker !== "") {
                 $markup = Markup::voiceTag($speaker) . $markup;
             }
 
             $cue = new SubtitleCue($start, $end, $markup);
-            $subtitle->addCue($cue->setFormatData(self::FORMAT_DATA_KEY, $formatData), false);
+            $parsedCues[] = $cue->setFormatData(self::FORMAT_DATA_KEY, $formatData);
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 
@@ -125,7 +116,7 @@ class WhisperJsonParser extends SubtitleParser
                 $end   = $this->seconds($segment, "end", $path);
                 $text  = $this->text($segment, $path);
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($segment)]);
+                $this->fail($exception, null, $index, [RawJson::encode($segment)]);
                 continue;
             }
             $words = is_array($segment["words"] ?? null) ? $segment["words"] : [];
@@ -165,7 +156,7 @@ class WhisperJsonParser extends SubtitleParser
                 $end   = round($this->seconds($offsets, "to", "$path.offsets") / 1000, 3);
                 $text  = $this->text($segment, $path);
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($segment)]);
+                $this->fail($exception, null, $index, [RawJson::encode($segment)]);
                 continue;
             }
 
@@ -197,10 +188,16 @@ class WhisperJsonParser extends SubtitleParser
     }
 
 
+    private static function isList(mixed $value): bool
+    {
+        return is_array($value) && array_is_list($value);
+    }
+
+
     private function seconds(mixed $object, string $key, string $path): float
     {
         $value = is_array($object) ? $object[$key] ?? null : null;
-        if (!is_int($value) && !is_float($value)) {
+        if (!is_int($value) && (!is_float($value) || !is_finite($value))) {
             throw new ParsingException("The field $path.$key must be a number.");
         }
 

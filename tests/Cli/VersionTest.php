@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Cli;
 
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -17,6 +19,7 @@ class VersionTest extends TestCase
             "v prefix"       => ["v1.40.0", "1.40.0"],
             "box after tag"  => ["1.40.0-2-ge558e33", "1.40.0-2-ge558e33"],
             "branch"         => ["dev-master", "dev"],
+            "branch alias"   => ["2.x-dev", "dev"],
             "no version set" => ["1.0.0+no-version-set", "dev"],
             "empty"          => ["", "dev"],
             "unknown"        => [null, "dev"],

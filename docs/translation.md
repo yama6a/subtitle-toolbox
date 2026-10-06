@@ -1,19 +1,23 @@
 # Translation
 
-`TranslationRunner` sends the cue text to a machine translation engine and returns a translated copy. The `language` metadata of the copy becomes the target language. The original subtitle does not change.
+`TranslationRunner` sends the cue text to a machine translation engine and writes the translation into the cues. The `language` metadata becomes the target language. Pass a clone to keep the original.
 
 ```php
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Translation\TranslationOptions;
 use SubtitleToolbox\Translation\TranslationRunner;
 
-$runner  = new TranslationRunner(new DeepLEngine($apiKey));
-$english = $runner->translate($german, 'de', 'en-US');
-$english = $runner->translate($german, 'de', 'en-US', new TranslationOptions(
+$german  = Subtitle::load('movie.de.srt', Format::SubRip);
+$runner  = new TranslationRunner(new DeepLEngine($apiKey));   // DeepLEngine is your own engine, see Engines
+$report  = $runner->translate($english = clone $german, 'de', 'en-US');
+$report  = $runner->translate($english = clone $german, 'de', 'en-US', new TranslationOptions(
     joinSentences: true,              // send cues of one sentence as one text
     maxCuesPerSentence: 3,            // most cues in one text
     maxCharactersPerRequest: 5000,    // most characters in one engine call
 ));
-$runner->getWarnings();               // list of TranslationWarning with cueIndex and message
+$report->warnings;                    // list of TranslationWarning with cueIndex and message
+$english->save('movie.en.srt');
 ```
 
 - **Sentences**: a cue that does not end with `.`, `?`, `!`, the ellipsis U+2026 or a CJK end mark such as U+3002 joins the next cue. Cue 1 `The train to Basel leaves` and cue 2 `from platform 4.` go out as one text. The runner splits the translation back in proportion to the characters of the cues, at a space. In Chinese, Japanese and Thai text it splits between two characters.
@@ -22,10 +26,10 @@ $runner->getWarnings();               // list of TranslationWarning with cueInde
 - **Dropped placeholder**: when the engine drops, adds or breaks a placeholder, the runner removes all tags of the text and adds a `TranslationWarning` for each cue.
 - **Not sent**: cues with only numbers, punctuation, symbols such as the music note U+266A, or no text keep their text.
 - **Requests**: each engine call gets whole texts up to `maxCharactersPerRequest` characters. A longer text goes out alone.
-- **Engine errors**: `translate()` throws `InvalidArgumentException` when the engine does not return one string per text. Exceptions of the engine pass through.
+- **Engine errors**: `translate()` throws `InvalidArgumentException` when the engine does not return one string per text. Exceptions of the engine pass through. The subtitle changes only after the last engine call succeeds.
 
 ## Engines
-An engine is a class that implements `TranslationEngine`. This engine uses [deeplcom/deepl-php](https://github.com/DeepLcom/deepl-php):
+An engine is a class that implements `TranslationEngine`. The package ships no engine. This example engine uses [deeplcom/deepl-php](https://github.com/DeepLcom/deepl-php):
 
 ```php
 use DeepL\DeepLClient;

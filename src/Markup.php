@@ -1,13 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
-class Markup
+final class Markup
 {
     // Word timestamps such as <00:01:02.500> are core markup too, but they are no tag names that keepTags() keeps.
+    /** @internal */
     public const CORE_TAGS = ["b", "i", "u", "s", "font", "v"];
 
-    /** Matches a core word timestamp such as <00:01:02.500> and captures it as group 1. */
+    /**
+     * Matches a core word timestamp such as <00:01:02.500> and captures it as group 1.
+     *
+     * @internal
+     */
     public const WORD_TIMESTAMP_REGEX = "/(<\d{2,}:[0-5]\d:[0-5]\d\.\d{3}>)/";
 
 
@@ -95,6 +102,8 @@ class Markup
 
     /**
      * Decodes &lt;, &gt; and &amp;, the entities that escapeText() writes, and keeps all other entities.
+     *
+     * @internal
      */
     public static function unescapeText(string $text): string
     {
@@ -105,6 +114,8 @@ class Markup
     /**
      * Escapes a changed text run as escapeText() does, but keeps & and > unescaped where its raw form $raw has them
      * unescaped, as WebVTT text does. An & before an entity name gets escaped.
+     *
+     * @internal
      */
     public static function escapeTextLike(string $text, string $raw): string
     {
@@ -122,6 +133,8 @@ class Markup
      * Splits a line at its tags. The text runs are at the even indexes and the tags at the odd indexes.
      *
      * @return list<string>
+     *
+     * @internal
      */
     public static function splitTags(string $line): array
     {
@@ -187,6 +200,8 @@ class Markup
      *
      * @param list<string> $lines
      * @return list<string>
+     *
+     * @internal
      */
     public static function plainLines(array $lines): array
     {
@@ -208,6 +223,8 @@ class Markup
 
     /**
      * Counts UTF-8 characters, or bytes for invalid UTF-8 such as the Latin-1 bytes that MicroDVD keeps.
+     *
+     * @internal
      */
     public static function countCharacters(string $text): int
     {
@@ -220,6 +237,8 @@ class Markup
      * Splits text into UTF-8 characters, or into bytes when it is not valid UTF-8.
      *
      * @return list<string>
+     *
+     * @internal
      */
     public static function characters(string $text): array
     {
@@ -231,6 +250,8 @@ class Markup
      * Splits text at white space into words. The text must hold no tags.
      *
      * @return list<string>
+     *
+     * @internal
      */
     public static function words(string $text): array
     {
@@ -243,6 +264,8 @@ class Markup
 
     /**
      * Joins the lines of text with a space, for formats that hold one line per cue or comment.
+     *
+     * @internal
      */
     public static function toSingleLine(string $text): string
     {
@@ -255,6 +278,8 @@ class Markup
      *
      * @param list<array{name: string, tag: string}> $openTags
      * @return list<array{name: string, tag: string}> the lowercase tag name and the opening tag as written
+     *
+     * @internal
      */
     public static function openCoreTags(string $text, array $openTags = []): array
     {
@@ -286,6 +311,8 @@ class Markup
      * Returns the closing tags for the result of openCoreTags(), the last opened tag first.
      *
      * @param list<array{name: string, tag: string}> $openTags
+     *
+     * @internal
      */
     public static function closeCoreTags(array $openTags): string
     {
@@ -312,18 +339,31 @@ class Markup
 
 
     /**
+     * Replaces each core word timestamp in $text with the timestamp of $map(seconds). A time below 0 becomes 0.
+     *
+     * @param callable(float): float $map
+     */
+    public static function mapWordTimestamps(string $text, callable $map): string
+    {
+        if (!str_contains($text, "<")) {
+            return $text;
+        }
+
+        return preg_replace_callback(
+            self::WORD_TIMESTAMP_REGEX,
+            fn (array $match): string => "<" . self::coreTimestamp(max(0.0, $map(self::wordTimestampSeconds($match[1])))) . ">",
+            $text
+        ) ?? $text;
+    }
+
+
+    /**
      * Formats seconds as the body of a core word timestamp, for example 62.5 becomes "00:01:02.500".
+     *
+     * @internal
      */
     public static function coreTimestamp(float $seconds): string
     {
-        $milliseconds = (int) round($seconds * 1000);
-
-        return sprintf(
-            "%02d:%02d:%02d.%03d",
-            intdiv($milliseconds, 3600000),
-            intdiv($milliseconds, 60000) % 60,
-            intdiv($milliseconds, 1000) % 60,
-            $milliseconds % 1000
-        );
+        return sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($seconds));
     }
 }

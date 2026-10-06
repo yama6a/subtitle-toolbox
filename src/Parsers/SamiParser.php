@@ -1,26 +1,27 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use DOMDocument;
 use DOMElement;
 use DOMNode;
 use DOMText;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\SamiReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class SamiParser extends SubtitleParser
+final class SamiParser extends SubtitleParser
 {
-    public const FORMAT_DATA_KEY = "smi";
-
-    public const DEFAULT_LAST_CUE_DURATION = 10;
+    public const FORMAT_DATA_KEY = Format::Sami->value;
 
     private const STYLE_TAGS = ["b" => "b", "i" => "i", "u" => "u", "s" => "s", "strike" => "s"];
 
-    // The 16 colour names of HTML 4.01, section 6.5.
+    // The 16 color names of HTML 4.01, section 6.5.
     private const COLOR_NAMES = [
         "black"  => "#000000", "silver" => "#c0c0c0", "gray"   => "#808080", "white"   => "#ffffff",
         "maroon" => "#800000", "red"    => "#ff0000", "purple" => "#800080", "fuchsia" => "#ff00ff",
@@ -30,26 +31,14 @@ class SamiParser extends SubtitleParser
 
     private const NBSP = "\u{00A0}";
 
-    private ?string $languageClass;
 
-    private float $lastCueDuration;
-
-
-    /**
-     * Creates a parser that reads the given language class, or the first class of the STYLE block when null.
-     */
-    public function __construct(?string $languageClass = null, float $lastCueDuration = self::DEFAULT_LAST_CUE_DURATION)
+    protected static function formatOptionsClass(): string
     {
-        if ($lastCueDuration < 0) {
-            throw new InvalidArgumentException("The last cue duration must not be negative!");
-        }
-
-        $this->languageClass   = $languageClass;
-        $this->lastCueDuration = $lastCueDuration;
+        return SamiReadOptions::class;
     }
 
 
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $rawSubtitle    = StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle));
@@ -58,6 +47,7 @@ class SamiParser extends SubtitleParser
         }
 
         $subtitle   = new Subtitle();
+        $parsedCues = [];
         $formatData = [];
 
         if (preg_match('/<TITLE\b[^>]*>(.*?)<\/TITLE\s*>/is', $rawSubtitle, $matches) && trim($matches[1]) !== "") {
@@ -92,7 +82,7 @@ class SamiParser extends SubtitleParser
             }
 
             if ($openCue !== null) {
-                $subtitle->addCue($openCue->setEnd($sync["start"]), false);
+                $parsedCues[] = $openCue->setEnd($sync["start"]);
                 $openCue = null;
             }
 
@@ -109,10 +99,10 @@ class SamiParser extends SubtitleParser
         }
 
         if ($openCue !== null) {
-            $subtitle->addCue($openCue->setEnd($openCue->getStart() + $this->lastCueDuration), false);
+            $parsedCues[] = $openCue->setEnd($openCue->getStart() + $this->options->lastCueDuration);
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 
@@ -147,7 +137,10 @@ class SamiParser extends SubtitleParser
      */
     private function readSyncs(string $rawSubtitle): array
     {
-        $body = preg_replace('/^.*?<BODY\b[^>]*>|<\/BODY\s*>.*$/is', "", $rawSubtitle);
+        $body = substr($rawSubtitle, self::bodyStart($rawSubtitle));
+        if (preg_match('/<\/BODY\s*>/i', $body, $end, PREG_OFFSET_CAPTURE) === 1) {
+            $body = substr($body, 0, $end[0][1]);
+        }
         $body = preg_replace('/<\/SYNC\s*>/i', "", $body);
 
         $syncs = [];
@@ -187,9 +180,17 @@ class SamiParser extends SubtitleParser
 
     private function lineNumberInBody(string $rawSubtitle, string $body, int $offset): int
     {
-        $head = preg_match('/^.*?<BODY\b[^>]*>/is', $rawSubtitle, $matches) ? $matches[0] : "";
+        return 1 + substr_count($rawSubtitle, "\n", 0, self::bodyStart($rawSubtitle)) + substr_count(substr($body, 0, $offset), "\n");
+    }
 
-        return 1 + substr_count($head, "\n") + substr_count(substr($body, 0, $offset), "\n");
+
+    /**
+     * Returns the offset after the BODY start tag, or 0 without one. A pattern that starts with ^.*? would hit the
+     * PCRE backtrack limit on files over about 1 MB.
+     */
+    private static function bodyStart(string $rawSubtitle): int
+    {
+        return preg_match('/<BODY\b[^>]*>/i', $rawSubtitle, $start, PREG_OFFSET_CAPTURE) === 1 ? $start[0][1] + strlen($start[0][0]) : 0;
     }
 
 
@@ -321,10 +322,11 @@ class SamiParser extends SubtitleParser
             }
         }
 
-        if ($this->languageClass !== null) {
-            $key = strtolower($this->languageClass);
+        $languageClass = $this->formatOptions()->languageClass;
+        if ($languageClass !== null) {
+            $key = strtolower($languageClass);
             if (!isset($classes[$key]) && !isset($used[$key])) {
-                throw new ParsingException("The SAMI file has no class {$this->languageClass}.");
+                throw new ParsingException("The SAMI file has no class $languageClass.");
             }
 
             return $classes[$key]["name"] ?? $used[$key];

@@ -1,35 +1,51 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
-class SubtitleCue
+final class SubtitleCue
 {
-    /** @var float */
-    protected $start;
+    private float $start = 0;
 
-    /** @var float */
-    protected $end;
+    private float $end = 0;
 
-    /** @var array|string[] */
-    protected $lines;
+    /** @var list<string> */
+    private array $lines = [];
 
-    protected ?string $identifier = null;
+    private ?string $identifier = null;
 
-    protected ?int $alignment = null;
+    private ?int $alignment = null;
 
-    protected bool $forced = false;
+    private bool $forced = false;
 
     /** @var array<string, array> */
-    protected array $formatData = [];
+    private array $formatData = [];
+
+    private static int $timeEdits = 0;
 
 
-    public function __construct(float $start = 0, float $end = 0, $lines = "")
+    /**
+     * @param string|list<string> $lines
+     */
+    public function __construct(float $start = 0, float $end = 0, string|array $lines = "")
     {
         $this->setStart($start);
         $this->setEnd($end);
         $this->setLines($lines);
+    }
+
+
+    /**
+     * Returns how often setStart() and setEnd() ran on any cue, so a cache of cue times can tell when it is stale.
+     *
+     * @internal
+     */
+    public static function timeEditCount(): int
+    {
+        return self::$timeEdits;
     }
 
 
@@ -42,6 +58,7 @@ class SubtitleCue
     public function setStart(float $start): self
     {
         $this->start = round($start, 3);
+        self::$timeEdits++;
 
         return $this;
     }
@@ -56,13 +73,14 @@ class SubtitleCue
     public function setEnd(float $end): self
     {
         $this->end = round($end, 3);
+        self::$timeEdits++;
 
         return $this;
     }
 
 
     /**
-     * @return array|string[]
+     * @return list<string>
      */
     public function getLines(): array
     {
@@ -70,32 +88,20 @@ class SubtitleCue
     }
 
 
-    public function setLines($lines): self
+    /**
+     * Sets the lines from a list, or from a string with one line per "\n".
+     *
+     * @param string|list<string> $lines
+     */
+    public function setLines(string|array $lines): self
     {
-        return match (true) {
-            is_array($lines)  => $this->setLinesByArray($lines),
-            is_string($lines) => $this->setLinesByString($lines),
-            default           => throw new InvalidArgumentException(
-                "Can only set cue-text by string or array! " .
-                "Tried to set cue-text of cue [{$this->getStart()} >>> {$this->getEnd()}] by " .
-                (is_object($lines) ? $lines::class : gettype($lines))),
-        };
-    }
+        if (is_string($lines)) {
+            $lines = explode(LineEnding::Lf->value, $lines);
+        }
 
-
-    public function setLinesByString(string $lines): self
-    {
-        $this->setLinesByArray(explode(StringHelpers::UNIX_LINE_ENDING, $lines));
-
-        return $this;
-    }
-
-
-    public function setLinesByArray(array $lines): self
-    {
         $this->lines = [];
         foreach ($lines as $line) {
-            $line = StringHelpers::cleanString($line); // remove empty lines and such stuff
+            $line = StringHelpers::cleanString($line);
             if ($line !== "") {
                 $this->lines[] = $line;
             }
@@ -107,7 +113,7 @@ class SubtitleCue
 
     public function getText(): string
     {
-        return implode(StringHelpers::UNIX_LINE_ENDING, $this->lines);
+        return implode(LineEnding::Lf->value, $this->lines);
     }
 
 
@@ -117,6 +123,20 @@ class SubtitleCue
         if ($line !== '') {
             $this->lines[] = $line;
         }
+
+        return $this;
+    }
+
+
+    /**
+     * Replaces the time of each word timestamp in the lines, such as <00:00:02.000>, with $map(seconds).
+     * A time below 0 becomes 0.
+     *
+     * @param callable(float): float $map
+     */
+    public function mapWordTimestamps(callable $map): self
+    {
+        $this->lines = array_map(fn (string $line): string => Markup::mapWordTimestamps($line, $map), $this->lines);
 
         return $this;
     }
@@ -176,11 +196,11 @@ class SubtitleCue
 
 
     /**
-     * Returns the data that only the given format reads, or an empty array.
+     * Returns the data under $key, the value of a Format case such as "ass", or an empty array.
      */
-    public function getFormatData(string $format): array
+    public function findFormatData(string $key): array
     {
-        return $this->formatData[$format] ?? [];
+        return $this->formatData[$key] ?? [];
     }
 
 
@@ -195,12 +215,21 @@ class SubtitleCue
     }
 
 
-    public function setFormatData(string $format, array $data): self
+    /**
+     * Stores $data under $key. An empty array removes the key.
+     *
+     * @throws InvalidArgumentException when a field that a formatter reads has the wrong type, as fromArray() checks it.
+     */
+    public function setFormatData(string $key, array $data): self
     {
+        $problem = FormatDataSchema::problem($key, $data, "formatData.$key", true);
+        if ($problem !== null) {
+            throw new InvalidArgumentException($problem);
+        }
         if ($data === []) {
-            unset($this->formatData[$format]);
+            unset($this->formatData[$key]);
         } else {
-            $this->formatData[$format] = $data;
+            $this->formatData[$key] = $data;
         }
 
         return $this;

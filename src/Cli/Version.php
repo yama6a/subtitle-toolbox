@@ -1,12 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Cli;
 
 use Composer\InstalledVersions;
 
+/**
+ * @internal
+ */
 final class Version
 {
-    public const PACKAGE = "ymakhloufi/subtitle-toolbox";
+    private const PACKAGE = "ymakhloufi/subtitle-toolbox";
 
     // Box replaces this placeholder with the release version when it builds the PHAR. See .build/build-phar.sh.
     private const BUILD_VERSION = "@package_version@";
@@ -29,11 +34,11 @@ final class Version
 
 
     /**
-     * Turns "v1.40.0" into "1.40.0", and a branch or an unknown version, such as "dev-master", into "dev".
+     * Turns "v1.40.0" into "1.40.0", and a branch or an unknown version, such as "dev-master" or "2.x-dev", into "dev".
      */
     public static function normalize(?string $version): string
     {
-        if ($version === null || $version === "" || str_starts_with($version, "dev-") || str_contains($version, "no-version-set")) {
+        if ($version === null || $version === "" || str_starts_with($version, "dev-") || str_ends_with($version, "-dev") || str_contains($version, "no-version-set")) {
             return "dev";
         }
 

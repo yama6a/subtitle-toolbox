@@ -1,31 +1,25 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Diff\SubtitleDiff;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
-use SubtitleToolbox\Formatters\IttFormatter;
-use SubtitleToolbox\Formatters\LyricsFormatter;
-use SubtitleToolbox\Formatters\MicroDvdFormatter;
-use SubtitleToolbox\Formatters\MpSubFormatter;
-use SubtitleToolbox\Formatters\PlainTextFormatter;
-use SubtitleToolbox\Formatters\SamiFormatter;
-use SubtitleToolbox\Formatters\SbvFormatter;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
-use SubtitleToolbox\Formatters\SubViewerFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
-use SubtitleToolbox\Parsers\AssParser;
-use SubtitleToolbox\Validation\ValidationResult;
+use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
+use SubtitleToolbox\Formatters\Options\IttWriteOptions;
+use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
+use SubtitleToolbox\Validation\ValidationRule;
+use SubtitleToolbox\Validation\ValidationViolation;
 use SubtitleToolbox\Validation\ValidationRules;
 
 class QuotesInTagsTest extends TestCase
 {
     private function loadAss(): Subtitle
     {
-        return Subtitle::parse(file_get_contents(__DIR__ . "/files/quotes-in-tags/own_names_with_quotes.ass"), AssParser::class);
+        return Subtitle::fromString(file_get_contents(__DIR__ . "/files/quotes-in-tags/own_names_with_quotes.ass"), Format::Ass);
     }
 
 
@@ -48,7 +42,7 @@ class QuotesInTagsTest extends TestCase
             . "3\n00:00:06,500 --> 00:00:09,000\nThen I'll take the \"seeded\" loaf.\n\n"
             . "4\n00:00:09,500 --> 00:00:12,000\nTwo <i>warm</i> rolls.\n\n"
             . "5\n00:00:12,500 --> 00:00:15,000\n<font color=\"#ff0000\">Red</font> jam, please.\n",
-            $this->loadAss()->format(SubRipFormatter::class)
+            $this->loadAss()->toString(Format::SubRip)
         );
     }
 
@@ -61,7 +55,7 @@ class QuotesInTagsTest extends TestCase
             . "3\n00:00:06.500 --> 00:00:09.000\n<v Sam \"Ace\" Reed>Then I'll take the \"seeded\" loaf.\n\n"
             . "4\n00:00:09.500 --> 00:00:12.000\n<v Mo \"Baker>Two <i>warm</i> rolls.\n\n"
             . "5\n00:00:12.500 --> 00:00:15.000\n<v D'Arcy>Red jam, please.\n",
-            $this->loadAss()->format(WebVttFormatter::class)
+            $this->loadAss()->toString(Format::WebVtt)
         );
     }
 
@@ -70,7 +64,7 @@ class QuotesInTagsTest extends TestCase
     {
         $this->assertSame(
             "Hi. We're out of rye bread today. Then I'll take the \"seeded\" loaf. Two warm rolls. Red jam, please.\n",
-            $this->loadAss()->format(PlainTextFormatter::class)
+            $this->loadAss()->toString(Format::PlainText)
         );
     }
 
@@ -78,27 +72,27 @@ class QuotesInTagsTest extends TestCase
     public static function formatterProvider(): array
     {
         return [
-            "itt"       => [IttFormatter::class, [IttFormatter::OPTION_FRAME_RATE => 25]],
-            "lrc"       => [LyricsFormatter::class, []],
-            "microdvd"  => [MicroDvdFormatter::class, [MicroDvdFormatter::OPTION_FRAME_RATE => 25]],
-            "mpsub"     => [MpSubFormatter::class, []],
-            "sami"      => [SamiFormatter::class, []],
-            "sbv"       => [SbvFormatter::class, []],
-            "srt"       => [SubRipFormatter::class, []],
-            "subviewer" => [SubViewerFormatter::class, []],
-            "txt"       => [PlainTextFormatter::class, []],
-            "vtt"       => [WebVttFormatter::class, []],
+            "itt"       => [Format::Itt, new IttWriteOptions(frameRate: 25)],
+            "lrc"       => [Format::Lyrics, null],
+            "microdvd"  => [Format::MicroDvd, new MicroDvdWriteOptions(frameRate: 25)],
+            "mpsub"     => [Format::MpSub, null],
+            "sami"      => [Format::Sami, null],
+            "sbv"       => [Format::Sbv, null],
+            "srt"       => [Format::SubRip, null],
+            "subviewer" => [Format::SubViewer, null],
+            "txt"       => [Format::PlainText, null],
+            "vtt"       => [Format::WebVtt, null],
         ];
     }
 
 
     #[DataProvider("formatterProvider")]
-    public function testFormatterKeepsTextAfterQuotesInTags(string $formatterClass, array $options): void
+    public function testFormatterKeepsTextAfterQuotesInTags(Format $format, ?FormatWriteOptions $options): void
     {
         $subtitle = $this->makeSubtitle("<v O'Neil>We're out of rye.", '<v Mo "Baker>Two rolls.');
 
-        foreach ([[], [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS]] as $extra) {
-            $output = $subtitle->format($formatterClass, [...$options, ...$extra]);
+        foreach ([false, true] as $stripTags) {
+            $output = $subtitle->toString($format, new WriteOptions(stripTags: $stripTags, format: $options));
 
             $this->assertStringContainsString("We're out of rye.", $output);
             $this->assertStringContainsString("Two rolls.", $output);
@@ -108,7 +102,7 @@ class QuotesInTagsTest extends TestCase
 
     public function testStatisticsCountWordsAfterQuotesInTags(): void
     {
-        $this->assertSame(5, SubtitleStatistics::of($this->makeSubtitle("<v O'Neil>We're out of rye.", '<v Mo "Baker>Hi.'))->getWordCount());
+        $this->assertSame(5, SubtitleStatistics::of($this->makeSubtitle("<v O'Neil>We're out of rye.", '<v Mo "Baker>Hi.'))->wordCount);
     }
 
 
@@ -144,6 +138,6 @@ class QuotesInTagsTest extends TestCase
     {
         $results = $this->makeSubtitle("<v O'Neil>WE'RE OUT.")->validate(new ValidationRules(noEmptyCues: true, noAllCapsLines: true));
 
-        $this->assertSame([ValidationResult::RULE_NO_ALL_CAPS_LINES], array_map(fn (ValidationResult $result): string => $result->getRule(), $results));
+        $this->assertSame([ValidationRule::NoAllCapsLines], array_map(fn (ValidationViolation $result): ValidationRule => $result->rule, $results));
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Validation;
 
 use SubtitleToolbox\Markup;
@@ -21,7 +23,7 @@ final class TextChecks
     /**
      * Returns one result per text rule that the cue breaks.
      *
-     * @return list<ValidationResult>
+     * @return list<ValidationViolation>
      */
     public static function check(int $cueIndex, SubtitleCue $cue, float $duration, ValidationRules $rules): array
     {
@@ -30,26 +32,26 @@ final class TextChecks
         $counts  = [];
 
         if ($rules->noDoubleSpaces) {
-            $counts[ValidationResult::RULE_NO_DOUBLE_SPACES] = [array_sum(array_map(
+            $counts[ValidationRule::NoDoubleSpaces->value] = [array_sum(array_map(
                 fn (string $line): int => self::count('/(?<=\S)\h{2,}(?=\S)/u', '/(?<=\S)[ \t]{2,}(?=\S)/', $line),
                 $visible
             )), null];
         }
 
         if ($rules->noLeadingOrTrailingSpaces) {
-            $counts[ValidationResult::RULE_NO_LEADING_OR_TRAILING_SPACES] = [count(array_filter(
+            $counts[ValidationRule::NoLeadingOrTrailingSpaces->value] = [count(array_filter(
                 $visible,
                 fn (string $line): bool => self::count('/^\h|\h$/u', '/^[ \t]|[ \t]$/', $line) > 0
             )), null];
         }
 
         if ($rules->noUnbalancedTags) {
-            $counts[ValidationResult::RULE_NO_UNBALANCED_TAGS] = [self::unbalancedTags(implode("\n", $cue->getLines())), null];
+            $counts[ValidationRule::NoUnbalancedTags->value] = [self::unbalancedTags(implode("\n", $cue->getLines())), null];
         }
 
         if ($rules->dialogueDashStyle !== null) {
-            $style = '/^' . preg_quote($rules->dialogueDashStyle, "/") . '(?=\S)/u';
-            $counts[ValidationResult::RULE_DIALOGUE_DASH_STYLE] = [count(array_filter(
+            $style = '/^' . preg_quote($rules->dialogueDashStyle->value, "/") . '(?=\S)/u';
+            $counts[ValidationRule::DialogueDashStyle->value] = [count(array_filter(
                 $visible,
                 fn (string $line): bool => self::startsWithDialogueDash($line) && preg_match($style, ltrim($line)) !== 1
             )), null];
@@ -58,7 +60,7 @@ final class TextChecks
         if ($rules->maxSpeakersPerCue !== null) {
             $speakers = self::speakers($cue->getLines(), $visible);
             if ($speakers > $rules->maxSpeakersPerCue) {
-                $counts[ValidationResult::RULE_MAX_SPEAKERS_PER_CUE] = [$speakers, $rules->maxSpeakersPerCue];
+                $counts[ValidationRule::MaxSpeakersPerCue->value] = [$speakers, $rules->maxSpeakersPerCue];
             }
         }
 
@@ -66,24 +68,24 @@ final class TextChecks
         if ($rules->maxWordsPerMinute !== null && $words > 0) {
             $wordsPerMinute = $duration > 0 ? $words / $duration * 60 : INF;
             if ($wordsPerMinute > $rules->maxWordsPerMinute) {
-                $counts[ValidationResult::RULE_MAX_WORDS_PER_MINUTE] = [$wordsPerMinute, $rules->maxWordsPerMinute];
+                $counts[ValidationRule::MaxWordsPerMinute->value] = [$wordsPerMinute, $rules->maxWordsPerMinute];
             }
         }
 
         // Cue times have millisecond precision, so compare the duration with the needed time in milliseconds.
         if ($rules->minSecondsPerWord !== null && $words > 0 && $duration < round($rules->minSecondsPerWord * $words, 3)) {
-            $counts[ValidationResult::RULE_MIN_SECONDS_PER_WORD] = [$duration / $words, $rules->minSecondsPerWord];
+            $counts[ValidationRule::MinSecondsPerWord->value] = [$duration / $words, $rules->minSecondsPerWord];
         }
 
         if ($rules->allowedCharacters !== null) {
-            $counts[ValidationResult::RULE_ALLOWED_CHARACTERS] = [array_sum(array_map(
+            $counts[ValidationRule::AllowedCharacters->value] = [array_sum(array_map(
                 fn (string $line): int => self::disallowedCharacters($line, $rules->allowedCharacters),
                 $visible
             )), null];
         }
 
         if ($rules->noAllCapsLines) {
-            $counts[ValidationResult::RULE_NO_ALL_CAPS_LINES] = [count(array_filter(
+            $counts[ValidationRule::NoAllCapsLines->value] = [count(array_filter(
                 $visible,
                 fn (string $line): bool => self::isAllCaps($line)
             )), null];
@@ -93,7 +95,7 @@ final class TextChecks
         foreach ($counts as $rule => [$value, $limit]) {
             // A count rule gives the int 0 for a cue without problems. A limit rule is only set when the cue breaks it.
             if ($value !== 0) {
-                $results[] = new ValidationResult($cueIndex, $rule, $value, $limit);
+                $results[] = new ValidationViolation($cueIndex, ValidationRule::from($rule), $value, $limit);
             }
         }
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Ocr;
 
 use SubtitleToolbox\Image\CueImage;
@@ -18,10 +20,10 @@ final class FakeOcrEngine implements OcrEngine
     }
 
 
-    public function recognize(CueImage $image, ?string $language): OcrResult
+    public function recognize(CueImage $image, ?string $language): RecognizedText
     {
         $this->calls[] = ["image" => $image, "language" => $language];
 
-        return new OcrResult($this->lines, $this->confidence);
+        return new RecognizedText($this->lines, $this->confidence);
     }
 }

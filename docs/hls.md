@@ -18,6 +18,7 @@ $hls = HlsWebVttSegmenter::segment($subtitle, new HlsSegmentOptions(
 foreach ($hls->getSegments() as $name => $vtt) {   // 'sub0.vtt' => "WEBVTT\nX-TIMESTAMP-MAP=LOCAL:00:00:00.000,MPEGTS:900000\n\n..."
     file_put_contents("out/$name", $vtt);
 }
+$hls->getSegmentCount();                // 4 for 20 s and 6 s segments
 file_put_contents('out/subs.m3u8', $hls->getPlaylist());
 
 $subtitle = HlsWebVttJoiner::join([$vtt0, $vtt1, $vtt2, $vtt3]);    // cue times from the start of the stream
@@ -51,6 +52,7 @@ sub3.vtt
 - **Empty segments**: a segment without cues still has the header. Apple's [HLS authoring specification](https://developer.apple.com/documentation/http-live-streaming/hls-authoring-specification-for-apple-devices) requires a subtitle playlist for the whole content. Set `mediaDuration` to the video duration for that.
 - **Cue times**: a cue at subtitle time `t` gets the WebVTT time `t + local`.
 - **Playlist**: a VOD media playlist. Apple recommends 6 s segments.
+- **Memory**: `getSegments()` and `getDurations()` are generators. They write each segment when the loop reads it, so 600,000 segments of a 1,000-hour subtitle need about 40 MB, most of it for the playlist. `iterator_to_array($hls->getSegments())` returns all segments as an array.
 - **Segment files**: UTF-8 without BOM, LF line endings. The header text, other header lines, `STYLE` and `REGION` blocks of the subtitle go into each segment. An old `X-TIMESTAMP-MAP` line is replaced. Comments are not copied.
 
 ## Joining

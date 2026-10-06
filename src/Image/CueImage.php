@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Image;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
@@ -8,6 +10,12 @@ use SubtitleToolbox\SubtitleCue;
 final class CueImage
 {
     public const FORMAT_DATA_KEY = "image";
+
+    /** Largest width or height of an image in pixels. */
+    public const MAX_SIDE = 7680;
+
+    /** Largest number of pixels of an image: a full 3840x2160 frame. */
+    public const MAX_PIXELS = 3840 * 2160;
 
     private const INTEGER_KEYS = ["x", "y", "width", "height", "screenWidth", "screenHeight"];
 
@@ -29,6 +37,26 @@ final class CueImage
             throw new InvalidArgumentException("Cannot create a cue image of {$width}x{$height} pixels on a screen of " .
                                                "{$screenWidth}x{$screenHeight} pixels - every size must be at least 1!");
         }
+        $tooLarge = self::sizeLimitError($width, $height);
+        if ($tooLarge !== null) {
+            throw new InvalidArgumentException("Cannot create a cue image - $tooLarge");
+        }
+    }
+
+
+    /**
+     * Returns why an image of $width x $height pixels is too large, or null when it fits MAX_SIDE and MAX_PIXELS.
+     *
+     * @internal
+     */
+    public static function sizeLimitError(int $width, int $height): ?string
+    {
+        if ($width <= self::MAX_SIDE && $height <= self::MAX_SIDE && $width * $height <= self::MAX_PIXELS) {
+            return null;
+        }
+
+        return "an image of {$width}x{$height} pixels is larger than the limit of " . self::MAX_SIDE . " pixels per side " .
+               "and " . self::MAX_PIXELS . " pixels in total.";
     }
 
 
@@ -37,7 +65,7 @@ final class CueImage
      */
     public static function isImageCue(SubtitleCue $cue): bool
     {
-        return $cue->getFormatData(self::FORMAT_DATA_KEY) !== [];
+        return $cue->findFormatData(self::FORMAT_DATA_KEY) !== [];
     }
 
 
@@ -46,7 +74,7 @@ final class CueImage
      */
     public static function fromCue(SubtitleCue $cue): self
     {
-        $data = $cue->getFormatData(self::FORMAT_DATA_KEY);
+        $data = $cue->findFormatData(self::FORMAT_DATA_KEY);
         if ($data === []) {
             throw new InvalidArgumentException("Cannot read the image of cue [{$cue->getStart()} >>> {$cue->getEnd()}] - " .
                                                "the cue holds no image!");

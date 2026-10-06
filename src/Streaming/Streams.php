@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Streaming;
 
 use Generator;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\StringHelpers;
 
 /**
@@ -29,7 +32,7 @@ final class Streams
                     $first = false;
                 }
                 // fgets() ends at LF only, so a chunk can still hold the CR line endings of old Mac files.
-                $lines = explode(StringHelpers::UNIX_LINE_ENDING, StringHelpers::normalizeEOLs($chunk));
+                $lines = explode(LineEnding::Lf->value, StringHelpers::normalizeEOLs($chunk));
                 if (end($lines) === "") {
                     array_pop($lines);
                 }

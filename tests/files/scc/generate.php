@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 // Writes the SCC fixtures in real/. Run: php tests/files/scc/generate.php
 // The encoder here is separate from SccFormatter, so that the tests do not read back what the library writes.
 

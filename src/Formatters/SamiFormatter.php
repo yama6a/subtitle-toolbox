@@ -1,32 +1,34 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\SamiParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
-class SamiFormatter extends SubtitleFormatter
+final class SamiFormatter extends SubtitleFormatter
 {
-    public const DEFAULT_CLASS = "SUBTTL";
+    private const DEFAULT_CLASS = "SUBTTL";
 
     private const STYLE_TAGS = ["b", "i", "u", "s", "font"];
 
     private const NBSP = "\u{00A0}";
 
 
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $stripAll = (bool) (Options::flag($options, parent::OPTION_STRIP_ALL_XML_TAGS) ?? false);
-        $data     = $subtitle->getFormatData(SamiParser::FORMAT_DATA_KEY);
-        $language = $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE);
+        $stripAll = $options->stripTags;
+        $data     = $subtitle->findFormatData(SamiParser::FORMAT_DATA_KEY);
+        $language = $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);
         $class    = isset($data["style"]) || isset($data["class"]) ? ($data["class"] ?? null) : $this->classFor($language);
         $style    = isset($data["style"]) ? $this->keepOnlyClass($data["style"], $class) : $this->defaultStyle($class, $language);
-        $title    = $subtitle->getMetadata(Subtitle::METADATA_TITLE);
-        $eol      = StringHelpers::UNIX_LINE_ENDING;
+        $title    = $subtitle->findMetadata(Subtitle::METADATA_TITLE);
+        $eol      = LineEnding::Lf->value;
 
         $output = "<SAMI>$eol<HEAD>$eol";
         if ($title !== null) {
@@ -54,7 +56,7 @@ class SamiFormatter extends SubtitleFormatter
 
     private function formatParagraphs(SubtitleCue $cue, ?string $class, bool $stripAll): string
     {
-        $stored = $cue->getFormatData(SamiParser::FORMAT_DATA_KEY);
+        $stored = $cue->findFormatData(SamiParser::FORMAT_DATA_KEY);
         if (!$stripAll && isset($stored["paragraphs"]) && ($stored["lines"] ?? null) === $cue->getLines()) {
             return implode("", array_map(
                 fn (array $paragraph): string => $this->openParagraph($class, $paragraph["attributes"]) . $this->writeNbsp($paragraph["html"]),
@@ -119,7 +121,7 @@ class SamiFormatter extends SubtitleFormatter
 
     private function defaultStyle(?string $class, ?string $language): string
     {
-        $eol   = StringHelpers::UNIX_LINE_ENDING;
+        $eol   = LineEnding::Lf->value;
         $rules = $language === null ? "Name: Subtitles;" : "Name: $language; lang: $language;";
 
         return "<!--{$eol}P { font-family: Arial; text-align: center; }$eol.$class { $rules }$eol-->";

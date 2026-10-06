@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Hls;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 class TimestampMapTest extends TestCase
@@ -65,11 +67,11 @@ class TimestampMapTest extends TestCase
 
     public function testFromSubtitleReadsTheHeaderFromTheFormatData(): void
     {
-        $vtt = Subtitle::parse(file_get_contents(__DIR__ . "/../files/hls/shaka-vtt-071.vtt"), WebVttParser::class);
+        $vtt = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/hls/shaka-vtt-071.vtt"), Format::WebVtt);
 
-        $this->assertSame(["X-TIMESTAMP-MAP=LOCAL:01:00:00.000,MPEGTS:324000000"], $vtt->getFormatData("vtt")["headerLines"]);
+        $this->assertSame(["X-TIMESTAMP-MAP=LOCAL:01:00:00.000,MPEGTS:324000000"], $vtt->findFormatData("vtt")["headerLines"]);
         $this->assertSame(324000000, TimestampMap::fromSubtitle($vtt)->mpegts);
-        $this->assertNull(TimestampMap::fromSubtitle(Subtitle::parse("WEBVTT\n", WebVttParser::class)));
+        $this->assertNull(TimestampMap::fromSubtitle(Subtitle::fromString("WEBVTT\n", Format::WebVtt)));
     }
 
 

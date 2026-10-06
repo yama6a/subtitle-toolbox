@@ -1,17 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Container\Matroska;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Formatters\AssFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\PgsFixtures;
 use SubtitleToolbox\Parsers\PgsParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 require_once __DIR__ . "/../../files/mkv/generator/MkvFixtures.php";
 
@@ -64,7 +67,7 @@ class MatroskaReaderTest extends TestCase
             ],
             $this->cues($subtitle),
         );
-        $this->assertSame("de", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("de", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
     }
 
 
@@ -78,7 +81,7 @@ class MatroskaReaderTest extends TestCase
             "Dialogue: 0,0:00:01.00,0:00:04.00,Default,Guard,0,0,0,,The train to the coast leaves at eight.\n" .
             "Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,The bakery on the corner\\Nis open {\\i1}every{\\i0} day.\n" .
             "Dialogue: 0,0:00:11.00,0:00:13.50,Default,Guard,0,0,0,,Bring an umbrella, it may rain later.\n",
-            $subtitle->format(AssFormatter::class, ["bom" => false]),
+            $subtitle->toString(Format::Ass, new WriteOptions(bom: false)),
         );
         $this->assertSame(8, $subtitle->getCues()[0]->getAlignment());
         $this->assertFalse($subtitle->getCues()[0]->isForced());
@@ -98,7 +101,7 @@ class MatroskaReaderTest extends TestCase
         );
         $this->assertStringContainsString(
             "Dialogue: Marked=0,0:00:03.00,0:00:05.00,Default,,0000,0000,0000,,El tren sale a las ocho.",
-            $subtitle->format(AssFormatter::class),
+            $subtitle->toString(Format::Ass),
         );
     }
 
@@ -113,7 +116,7 @@ class MatroskaReaderTest extends TestCase
             "NOTE Deuxième annonce\n\n" .
             "2\n00:00:06.000 --> 00:00:08.500\nLa boulangerie ouvre à six heures.\nLe pain est <00:00:07.500>encore chaud.\n\n" .
             "3\n00:00:12.000 --> 00:00:14.000\nDemain, il fera beau.\n",
-            $subtitle->format(WebVttFormatter::class, ["bom" => false]),
+            $subtitle->toString(Format::WebVtt, new WriteOptions(bom: false)),
         );
     }
 
@@ -130,7 +133,7 @@ class MatroskaReaderTest extends TestCase
             ],
             $this->cues($subtitle),
         );
-        $this->assertSame("eng", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("eng", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
     }
 
 
@@ -181,7 +184,7 @@ class MatroskaReaderTest extends TestCase
     public function testExtractsPgsAsThePgsParserReadsTheSupFile(): void
     {
         $mkv      = MatroskaReader::open(self::DIR . "pgs.mkv");
-        $expected = (new PgsParser())->parse(PgsFixtures::shapes1080p())->getCues();
+        $expected = (new PgsParser())->parse(PgsFixtures::shapes1080p(), new ReadOptions())->getCues();
         $toArray  = fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getAllFormatData(), $cue->isForced()];
 
         $this->assertSame(array_map($toArray, $expected), array_map($toArray, $mkv->extract(3)->getCues()));
@@ -221,6 +224,19 @@ class MatroskaReaderTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         MatroskaReader::open(self::DIR . "text_tracks.mkv")->extract(1);
+    }
+
+
+    public function testTrackFormatIsNullForAnUnreadCodecAndThrowsForAVideoTrack(): void
+    {
+        $mkv = MatroskaReader::open(self::DIR . "text_tracks.mkv");
+
+        $this->assertSame([Format::SubRip, Format::Ass, Format::WebVtt, Format::Ass, null],
+                          array_map($mkv->trackFormat(...), [3, 4, 5, 6, 7]));
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("The file has no subtitle track with the number 1.");
+
+        $mkv->trackFormat(1);
     }
 
 

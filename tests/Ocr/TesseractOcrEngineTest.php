@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Ocr;
 
 use Closure;
@@ -7,12 +9,15 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\OcrException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\PgsFixtures;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\VobSubParser;
+use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 require_once __DIR__ . "/../files/pgs/generator/PgsFixtures.php";
@@ -48,20 +53,20 @@ class TesseractOcrEngineTest extends TestCase
     {
         return [
             "PGS 1080p, 44 to 60 px"              => [
-                fn (): Subtitle => (new PgsParser())->parse(file_get_contents(self::PGS . "text_1080p.sup")),
+                fn (): Subtitle => (new PgsParser())->parse(file_get_contents(self::PGS . "text_1080p.sup"), new ReadOptions()),
                 array_column(PgsFixtures::TEXT_CUES, 2),
                 "eng",
                 0.99,
             ],
             "VobSub 576p, 24 to 30 px"            => [
-                fn (): Subtitle => (new VobSubParser(file_get_contents(self::VOBSUB . "text-pal.idx")))
-                    ->parse(file_get_contents(self::VOBSUB . "text-pal.sub")),
+                fn (): Subtitle => (new VobSubParser())
+                    ->parse(file_get_contents(self::VOBSUB . "text-pal.sub"), new ReadOptions(format: new VobSubReadOptions(file_get_contents(self::VOBSUB . "text-pal.idx")))),
                 array_column(TEXT_CUES, 2),
                 "eng",
                 0.99,
             ],
             "PGS 1080p, Cyrillic, 44 to 60 px" => [
-                fn (): Subtitle => (new PgsParser())->parse(file_get_contents(self::PGS . "text_cyrillic_1080p.sup")),
+                fn (): Subtitle => (new PgsParser())->parse(file_get_contents(self::PGS . "text_cyrillic_1080p.sup"), new ReadOptions()),
                 array_column(PgsFixtures::CYRILLIC_CUES, 2),
                 "rus",
                 0.99,
@@ -121,7 +126,7 @@ class TesseractOcrEngineTest extends TestCase
 
     public function testPassesTheLanguageAndTheModeAndBuildsLinesFromTheTsv(): void
     {
-        $result = (new TesseractOcrEngine("deu+eng", 11, self::FAKE))->recognize(self::image(), null);
+        $result = (new TesseractOcrEngine(new TesseractOcrOptions("deu+eng", 11, self::FAKE)))->recognize(self::image(), null);
 
         $this->assertSame(["deu+eng psm11", "60x40"], $result->lines);
         $this->assertEqualsWithDelta(0.8, $result->confidence, 1e-9);
@@ -130,7 +135,7 @@ class TesseractOcrEngineTest extends TestCase
 
     public function testTheLanguageOfRecognizeWinsOverTheConstructor(): void
     {
-        $result = (new TesseractOcrEngine("deu", program: self::FAKE))->recognize(self::image(), "eng");
+        $result = (new TesseractOcrEngine(new TesseractOcrOptions("deu", program: self::FAKE)))->recognize(self::image(), "eng");
 
         $this->assertSame("eng psm6", $result->lines[0]);
     }
@@ -138,11 +143,11 @@ class TesseractOcrEngineTest extends TestCase
 
     public function testScalesSmallScreensTwiceAndAddsABorder(): void
     {
-        $engine = new TesseractOcrEngine(program: self::FAKE);
+        $engine = new TesseractOcrEngine(new TesseractOcrOptions(program: self::FAKE));
 
         $this->assertSame("60x40", $engine->recognize(self::image(40, 20, 1080), null)->lines[1]);
         $this->assertSame("100x60", $engine->recognize(self::image(40, 20, 576), null)->lines[1]);
-        $this->assertSame("140x80", (new TesseractOcrEngine(program: self::FAKE, scale: 3))->recognize(self::image(), null)->lines[1]);
+        $this->assertSame("140x80", (new TesseractOcrEngine(new TesseractOcrOptions(program: self::FAKE, scale: 3)))->recognize(self::image(), null)->lines[1]);
     }
 
 
@@ -157,7 +162,7 @@ class TesseractOcrEngineTest extends TestCase
         $this->assertStringStartsWith("P5\n24 21\n255\n", $pgm);
         $this->assertSame([255, 0, 255, 29], array_values(unpack("C4", substr($pgm, 13 + 10 * 24 + 10, 4))));
 
-        $pgm = $method->invoke(new TesseractOcrEngine(invert: false, threshold: 128), $image);
+        $pgm = $method->invoke(new TesseractOcrEngine(new TesseractOcrOptions(invert: false, threshold: 128)), $image);
 
         $this->assertSame([0, 255, 0, 255], array_values(unpack("C4", substr($pgm, 13 + 10 * 24 + 10, 4))));
     }
@@ -206,7 +211,7 @@ class TesseractOcrEngineTest extends TestCase
                                       "tesseract (macOS), or the installer from https://github.com/UB-Mannheim/" .
                                       "tesseract/wiki (Windows).");
 
-        (new TesseractOcrEngine(program: __DIR__ . "/no-such-program"))->recognize(self::image(), null);
+        (new TesseractOcrEngine(new TesseractOcrOptions(program: __DIR__ . "/no-such-program")))->recognize(self::image(), null);
     }
 
 
@@ -217,7 +222,7 @@ class TesseractOcrEngineTest extends TestCase
                                       "data of fra, jpn is missing! Install it, for example with apt install " .
                                       "tesseract-ocr-fra. The installed languages are: deu, eng, osd.");
 
-        (new TesseractOcrEngine(program: self::FAKE))->recognize(self::image(), "deu+fra+jpn");
+        (new TesseractOcrEngine(new TesseractOcrOptions(program: self::FAKE)))->recognize(self::image(), "deu+fra+jpn");
     }
 
 
@@ -225,17 +230,17 @@ class TesseractOcrEngineTest extends TestCase
     {
         putenv("FAKE_TESSERACT_FAIL=1");
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(OcrException::class);
         $this->expectExceptionMessage("Cannot read the cue image at 3, 4 - tesseract exits with code 1: Error during processing.");
 
-        (new TesseractOcrEngine(program: self::FAKE))->recognize(self::image(), null);
+        (new TesseractOcrEngine(new TesseractOcrOptions(program: self::FAKE)))->recognize(self::image(), null);
     }
 
 
     public function testDeletesTheTemporaryImage(): void
     {
         $before = glob(sys_get_temp_dir() . "/subtitle-toolbox-ocr-*");
-        (new TesseractOcrEngine(program: self::FAKE))->recognize(self::image(), null);
+        (new TesseractOcrEngine(new TesseractOcrOptions(program: self::FAKE)))->recognize(self::image(), null);
 
         $this->assertSame($before, glob(sys_get_temp_dir() . "/subtitle-toolbox-ocr-*"));
     }
@@ -259,8 +264,8 @@ class TesseractOcrEngineTest extends TestCase
     public function testInvalidOptionThrows(array $options, string $message): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot create a TesseractOcrEngine with $message");
+        $this->expectExceptionMessage("Cannot create TesseractOcrOptions with $message");
 
-        new TesseractOcrEngine(...$options);
+        new TesseractOcrOptions(...$options);
     }
 }

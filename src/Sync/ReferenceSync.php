@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Sync;
 
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 
 final class ReferenceSync
 {
@@ -12,21 +15,84 @@ final class ReferenceSync
 
 
     /**
-     * Finds the scale and offset that make the cue times of $target match those of $reference, without a change to $target.
+     * Finds the scale and offset that make the cue times of $subtitle match those of the reference in $options, and
+     * retimes $subtitle with them.
      */
-    public static function sync(Subtitle $target, Subtitle $reference, ?ReferenceSyncOptions $options = null): SyncResult
+    public static function apply(Subtitle $subtitle, ReferenceSyncOptions $options): ReferenceSyncReport
     {
-        $options ??= new ReferenceSyncOptions();
+        $result   = self::find($subtitle, $options);
+        $segments = $result->getSegments();
+        if (count($segments) > 1) {
+            self::retimeSegments($subtitle, $result->scale, $segments);
 
+            return $result;
+        }
+
+        if ($result->scale != 1) {
+            $subtitle->scale($result->scale);
+        }
+        if ($result->offset != 0) {
+            $subtitle->shift($result->offset);
+        }
+
+        return $result;
+    }
+
+
+    /**
+     * Scales and then shifts each cue with the segment that holds its start. An earlier cue ends before a later part starts.
+     *
+     * @param list<array{from: float, to: float, scale: float, offset: float}> $segments
+     */
+    private static function retimeSegments(Subtitle $target, float $scale, array $segments): void
+    {
+        $parts = array_fill(0, count($segments), []);
+        foreach ($target->getCues() as $cue) {
+            $index = count($segments) - 1;
+            while ($index > 0 && $cue->getStart() < $segments[$index]["from"]) {
+                $index--;
+            }
+            $parts[$index][] = $cue;
+        }
+
+        foreach ($parts as $index => $cues) {
+            foreach ($cues as $cue) {
+                $cue->setStart(max(0, $cue->getStart() * $scale + $segments[$index]["offset"]))
+                    ->setEnd(max(0, $cue->getEnd() * $scale + $segments[$index]["offset"]))
+                    ->mapWordTimestamps(fn (float $time): float => $time * $scale + $segments[$index]["offset"]);
+            }
+        }
+
+        for ($index = 1; $index < count($parts); $index++) {
+            if ($parts[$index] === []) {
+                continue;
+            }
+
+            $laterStart = min(array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $parts[$index]));
+            for ($earlier = 0; $earlier < $index; $earlier++) {
+                foreach ($parts[$earlier] as $cue) {
+                    if ($cue->getStart() < $laterStart && $cue->getEnd() > $laterStart - 0.001) {
+                        $cue->setEnd(max($cue->getStart(), $laterStart - 0.001));
+                    }
+                }
+            }
+        }
+
+        $target->reIndexCues();
+    }
+
+
+    private static function find(Subtitle $target, ReferenceSyncOptions $options): ReferenceSyncReport
+    {
         $targetSpans    = self::toSpans($target);
-        $referenceSpans = self::toSpans($reference);
+        $referenceSpans = self::toSpans($options->reference);
         if ($targetSpans === [] || $referenceSpans === []) {
-            return new SyncResult(0, 1, 0);
+            return new ReferenceSyncReport(0, 1, 0);
         }
 
         $targetTime    = self::totalTime($targetSpans);
         $referenceTime = self::totalTime($referenceSpans);
-        $best          = new SyncResult(0, 1, 0);
+        $best          = new ReferenceSyncReport(0, 1, 0);
         $bestSplit     = null;
 
         foreach (self::scaleFactors($options->searchScale) as $scale) {
@@ -38,8 +104,8 @@ final class ReferenceSync
             [$offset, $overlap] = self::refine($scaled, $referenceSpans, $coarseBest, $options);
 
             $score = $overlap / ($targetTime * $scale + $referenceTime - $overlap);
-            if ($score > $best->getScore() + 1e-9) {
-                $best = new SyncResult(round($offset, 3), $scale, min(1, max(0, $score)));
+            if ($score > $best->score + 1e-9) {
+                $best = new ReferenceSyncReport(round($offset, 3), $scale, min(1, max(0, $score)));
             }
 
             if ($options->maxSplits > 0) {
@@ -47,13 +113,13 @@ final class ReferenceSync
                     $partsScore = $partsOverlap / ($targetTime * $scale + $referenceTime - $partsOverlap);
                     $value      = $partsScore - (count($parts) - 1) * $options->splitPenalty;
                     if ($bestSplit === null || $value > $bestSplit[0] + 1e-9) {
-                        $bestSplit = [$value, new SyncResult($parts[0]["offset"], $scale, min(1, max(0, $partsScore)), $parts)];
+                        $bestSplit = [$value, new ReferenceSyncReport($parts[0]["offset"], $scale, min(1, max(0, $partsScore)), $parts)];
                     }
                 }
             }
         }
 
-        if ($bestSplit !== null && $bestSplit[0] > $best->getScore() + 1e-9) {
+        if ($bestSplit !== null && $bestSplit[0] > $best->score + 1e-9) {
             return $bestSplit[1];
         }
 

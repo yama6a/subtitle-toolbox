@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Ocr;
 
 use GlyphOcr\Exceptions\GlyphOcrException;
@@ -8,9 +10,8 @@ use GlyphOcr\Image;
 use GlyphOcr\RecognitionResult;
 use GlyphOcr\RecognizedChar;
 use GlyphOcr\Recognizer;
-use ReflectionMethod;
-use ReflectionParameter;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\OcrException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Markup;
 use WeakReference;
@@ -25,53 +26,48 @@ final class GlyphOcrEngine implements OcrEngine
 
     /**
      * Reads image cues with the pure PHP OCR of the package yama6a/php-glyph-ocr, with its subtitle fonts database by default.
-     *
-     * @param array<string, mixed> $options named arguments of the GlyphOcr\Recognizer constructor, for example
-     *                                      ["italicSlant" => 0.2]
      */
-    public function __construct(?GlyphDatabase $database = null, array $options = [])
+    public function __construct(GlyphOcrOptions $options = new GlyphOcrOptions())
     {
         self::requireClass(Recognizer::class);
 
-        $names = array_map(fn (ReflectionParameter $parameter): string => $parameter->getName(),
-                           (new ReflectionMethod(Recognizer::class, "__construct"))->getParameters());
-        foreach (array_keys($options) as $name) {
-            if ($name === "database" || !in_array($name, $names, true)) {
-                throw new InvalidArgumentException("Cannot create a GlyphOcrEngine with the option \"$name\" - " .
-                                                   "the recognizer options are: " .
-                                                   implode(", ", array_diff($names, ["database"])) . "!");
-            }
-        }
-
-        try {
-            $this->recognizer = new Recognizer($database ?? self::subtitleFontsDatabase(), ...$options);
-        } catch (GlyphOcrException $exception) {
-            throw new InvalidArgumentException("Cannot create a GlyphOcrEngine - the recognizer says: " .
-                                               $exception->getMessage(), $exception);
-        }
+        $this->recognizer = new Recognizer(
+            $options->database ?? self::subtitleFontsDatabase(),
+            inkThreshold: $options->inkThreshold,
+            spaceWidth: $options->spaceWidth,
+            maxWrongPixels: $options->maxWrongPixels,
+            fixLatinCase: $options->fixLatinCase,
+            unknownText: $options->unknownText,
+            italicSlant: $options->italicSlant,
+            rightToLeft: $options->rightToLeft,
+            minLineHeight: $options->minLineHeight,
+            lineContext: $options->lineContext,
+        );
     }
 
 
     /**
      * Reads the image with one recognizer for all cues, so it keeps the glyph heights it learned. It ignores $language.
      */
-    public function recognize(CueImage $image, ?string $language): OcrResult
+    public function recognize(CueImage $image, ?string $language): RecognizedText
     {
         try {
             $result = $this->recognizer->recognize(Image::fromPng($image->png));
         } catch (GlyphOcrException $exception) {
-            throw new InvalidArgumentException("Cannot read the cue image at {$image->x}, {$image->y} - the " .
-                                               "recognizer says: " . $exception->getMessage(), $exception);
+            throw new OcrException("Cannot read the cue image at {$image->x}, {$image->y} - the " .
+                                   "recognizer says: " . $exception->getMessage(), $exception);
         }
 
-        return self::toOcrResult($result);
+        return self::toRecognizedText($result);
     }
 
 
     /**
      * Maps each recognized line to one line of text. A word becomes italic when most of its characters are.
+     *
+     * @internal
      */
-    public static function toOcrResult(RecognitionResult $result): OcrResult
+    public static function toRecognizedText(RecognitionResult $result): RecognizedText
     {
         $lines = [];
         foreach ($result->lines as $line) {
@@ -104,7 +100,7 @@ final class GlyphOcrEngine implements OcrEngine
             $lines[] = $openItalic ? "$text</i>" : $text;
         }
 
-        return new OcrResult($lines, $result->confidence());
+        return new RecognizedText($lines, $result->confidence());
     }
 
 

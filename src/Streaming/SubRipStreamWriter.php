@@ -1,12 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Streaming;
 
 use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
-class SubRipStreamWriter implements CueStreamWriter
+final class SubRipStreamWriter implements CueStreamWriter
 {
     /** @var resource|null */
     private $handle;
@@ -19,10 +22,9 @@ class SubRipStreamWriter implements CueStreamWriter
 
 
     /**
-     * @param resource|string $stream  a stream resource, or a file path that the writer opens and closes
-     * @param array           $options the options of SubRipFormatter::format()
+     * @param resource|string $stream a stream resource, or a file path that the writer opens and closes
      */
-    public function __construct($stream, private readonly array $options = [])
+    public function __construct($stream, private readonly WriteOptions $options = new WriteOptions())
     {
         $this->formatter  = new SubRipFormatter();
         $prefix           = $this->formatter->format(new Subtitle(), $options);

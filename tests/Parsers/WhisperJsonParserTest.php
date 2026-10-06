@@ -1,10 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -30,20 +34,20 @@ class WhisperJsonParserTest extends TestCase
 
     private static function withWords(string $json): Subtitle
     {
-        return (new WhisperJsonParser([WhisperJsonParser::OPTION_WORD_TIMESTAMPS => true]))->parse($json);
+        return (new WhisperJsonParser())->parse($json, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
     }
 
 
     public function testReadsTheIssueExampleOneCuePerSegment(): void
     {
-        $subtitle = Subtitle::parse(self::ISSUE_EXAMPLE);
+        $subtitle = Subtitle::fromStringAutoDetectFormat(self::ISSUE_EXAMPLE);
 
-        $this->assertSame("en", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
-        $this->assertSame(["task" => "transcribe", "language" => "english", "duration" => 8.47], $subtitle->getFormatData("whisper"));
+        $this->assertSame("en", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame(["task" => "transcribe", "language" => "english", "duration" => 8.47], $subtitle->findFormatData("whisper"));
         $this->assertSame([[0.0, 3.32, "The beach was quiet."], [3.9, 5.1, "Nobody came."]],
                           array_map(fn (SubtitleCue $cue) => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $subtitle->getCues()));
         $this->assertSame(["id" => 0, "words" => [["word" => "The", "start" => 0.0, "end" => 0.24], ["word" => "beach", "start" => 0.24, "end" => 0.71]]],
-                          $subtitle->getCues()[0]->getFormatData("whisper"));
+                          $subtitle->getCues()[0]->findFormatData("whisper"));
     }
 
 
@@ -67,7 +71,7 @@ class WhisperJsonParserTest extends TestCase
     public function testEscapesTextWithoutTheOption(): void
     {
         $this->assertSame("Fish &amp; chips &lt;3", (new WhisperJsonParser())->parse(
-            '{"segments": [{"start": 0, "end": 1, "text": " Fish & chips <3"}]}')->getCues()[0]->getText());
+            '{"segments": [{"start": 0, "end": 1, "text": " Fish & chips <3"}]}', new ReadOptions())->getCues()[0]->getText());
     }
 
 
@@ -75,7 +79,7 @@ class WhisperJsonParserTest extends TestCase
     {
         $subtitle = (new WhisperJsonParser())->parse("\xEF\xBB\xBF" . '{"segments": [{"start": 0, "end": 1, "text": " One. "}, ' .
                                                      '{"start": 1, "end": 1, "text": ""}, {"start": 1, "end": 2, "text": "  "}, ' .
-                                                     '{"start": 2, "end": 3, "text": "Two."}]}');
+                                                     '{"start": 2, "end": 3, "text": "Two."}]}', new ReadOptions());
 
         $this->assertSame(["One.", "Two."], array_map(fn (SubtitleCue $cue) => $cue->getText(), $subtitle->getCues()));
     }
@@ -84,7 +88,7 @@ class WhisperJsonParserTest extends TestCase
     public function testKeepsALongSegmentAsOneCue(): void
     {
         $text = str_repeat("The bus stops at every corner on the way to the station. ", 8);
-        $cues = (new WhisperJsonParser())->parse(json_encode(["segments" => [["start" => 0, "end" => 30, "text" => $text]]]))->getCues();
+        $cues = (new WhisperJsonParser())->parse(json_encode(["segments" => [["start" => 0, "end" => 30, "text" => $text]]]), new ReadOptions())->getCues();
 
         $this->assertCount(1, $cues);
         $this->assertSame([trim($text)], $cues[0]->getLines());
@@ -107,9 +111,9 @@ class WhisperJsonParserTest extends TestCase
     #[DataProvider("languages")]
     public function testConvertsLanguageNamesToCodes(string $language, string $code): void
     {
-        $subtitle = (new WhisperJsonParser())->parse(json_encode(["language" => $language, "segments" => []]));
+        $subtitle = (new WhisperJsonParser())->parse(json_encode(["language" => $language, "segments" => []]), new ReadOptions());
 
-        $this->assertSame($code, $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame($code, $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
     }
 
 
@@ -122,9 +126,9 @@ class WhisperJsonParserTest extends TestCase
                                     '{"text": ".", "offsets": {"from": 2000, "to": 2100}}, {"text": "[_TT_125]", "offsets": {"from": 3500, "to": 3500}}]}]}');
         $cue      = $subtitle->getCues()[0];
 
-        $this->assertSame("nl", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("nl", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame([1.0, 3.5, "<00:00:01.000>Good <00:00:01.400>morning."], [$cue->getStart(), $cue->getEnd(), $cue->getText()]);
-        $this->assertCount(6, $cue->getFormatData("whisper")["tokens"]);
+        $this->assertCount(6, $cue->findFormatData("whisper")["tokens"]);
     }
 
 
@@ -149,6 +153,30 @@ class WhisperJsonParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage($message);
 
-        (new WhisperJsonParser())->parse($json);
+        (new WhisperJsonParser())->parse($json, new ReadOptions());
+    }
+
+
+    public function testASegmentWithANumberOutOfRangeFailsWithAParsingException(): void
+    {
+        $json = file_get_contents(__DIR__ . "/../files/whisper/own_out_of_range_number.json");
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("segments[1].start");
+        (new WhisperJsonParser())->parse($json, new ReadOptions());
+    }
+
+
+    public function testLenientModeSkipsASegmentWithANumberOutOfRange(): void
+    {
+        $json     = file_get_contents(__DIR__ . "/../files/whisper/own_out_of_range_number.json");
+        $subtitle = (new WhisperJsonParser())->parse($json, new ReadOptions(lenient: true));
+        $warnings = $subtitle->getParseWarnings();
+
+        $this->assertSame(["La boulangerie ouvre à sept heures."], $subtitle->getCues()[0]->getLines());
+        $this->assertCount(1, $subtitle->getCues());
+        $this->assertCount(1, $warnings);
+        $this->assertSame(1, $warnings[0]->blockIndex);
+        $this->assertStringContainsString('"avg_logprob":0,', $warnings[0]->block[0]);
     }
 }

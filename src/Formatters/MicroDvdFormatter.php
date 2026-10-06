@@ -1,43 +1,43 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\MicroDvdParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
-class MicroDvdFormatter extends SubtitleFormatter
+final class MicroDvdFormatter extends SubtitleFormatter
 {
-    public const OPTION_FRAME_RATE            = "OPTION_FRAME_RATE";
-    public const OPTION_WRITE_FRAME_RATE_LINE = "OPTION_WRITE_FRAME_RATE_LINE";
+    protected const FORMAT_OPTIONS = MicroDvdWriteOptions::class;
 
     private const STYLE_TAGS = ["b", "i", "u", "s"];
 
 
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        if (!isset($options[self::OPTION_FRAME_RATE])) {
-            throw new InvalidArgumentException("The MicroDVD formatter needs the option " . self::OPTION_FRAME_RATE . ".");
-        }
-
-        $frameRate = new FrameRate((float) $options[self::OPTION_FRAME_RATE]);
-        $stripAll  = (bool) (Options::flag($options, parent::OPTION_STRIP_ALL_XML_TAGS) ?? false);
+        $microDvd  = $this->formatOptions($options)
+                     ?? throw new InvalidArgumentException("The MicroDVD formatter needs MicroDvdWriteOptions with a frame rate.");
+        $frameRate = new FrameRate($microDvd->frameRate);
+        $stripAll  = $options->stripTags;
 
         $output = "";
-        if (!empty(Options::flag($options, self::OPTION_WRITE_FRAME_RATE_LINE))) {
-            $output .= "{1}{1}" . $frameRate->getFps() . StringHelpers::UNIX_LINE_ENDING;
+        if ($microDvd->writeFrameRateLine) {
+            $output .= "{1}{1}" . $frameRate->getFramesPerSecond() . LineEnding::Lf->value;
         }
 
         foreach ($subtitle->getCues() as $cue) {
             $output .= "{" . $frameRate->secondsToFrames($cue->getStart()) . "}" .
                        "{" . $frameRate->secondsToFrames($cue->getEnd()) . "}" .
                        $this->formatText($cue, $stripAll) .
-                       StringHelpers::UNIX_LINE_ENDING;
+                       LineEnding::Lf->value;
         }
 
         return $this->applyOutputOptions($output, $options);
@@ -46,7 +46,7 @@ class MicroDvdFormatter extends SubtitleFormatter
 
     private function formatText(SubtitleCue $cue, bool $stripAll): string
     {
-        $storedLines = $cue->getFormatData(MicroDvdParser::FORMAT_DATA_KEY)["lines"] ?? [];
+        $storedLines = $cue->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["lines"] ?? [];
         $lines       = array_map(fn (string $line): array => $this->readLine($line), $cue->getLines());
 
         $keepStoredCodes = !$stripAll && count($storedLines) === count($lines);

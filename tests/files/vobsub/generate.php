@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 // Writes the VobSub test fixtures in this folder. Run: php tests/files/vobsub/generate.php
 // The encoder here is separate from src/Parsers/VobSubParser.php, so the tests compare two implementations.
 

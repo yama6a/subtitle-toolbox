@@ -1,20 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\WriteOptions;
 
-class Mpl2Formatter extends SubtitleFormatter
+final class Mpl2Formatter extends SubtitleFormatter
 {
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
         $output = "";
         foreach ($subtitle->getCues() as $cue) {
             $output .= "[" . (int) round($cue->getStart() * 10) . "][" . (int) round($cue->getEnd() * 10) . "]" .
                        implode("|", self::linesWithItalics($cue->getLines())) .
-                       StringHelpers::UNIX_LINE_ENDING;
+                       LineEnding::Lf->value;
         }
 
         return $this->applyOutputOptions($output, $options);

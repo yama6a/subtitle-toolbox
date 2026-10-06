@@ -9,4 +9,4 @@
 | `harbour_tour_deduplicated.vtt` | Written for this repository. Expected `WebVttFormatter` output after `removeDuplicateCues()`. | MIT |
 | `harbour_tour_split.vtt` | Written for this repository. Expected `WebVttFormatter` output after `splitCue(2, 9.5, 1)`. | MIT |
 | `harbour_tour_joined.vtt` | Written for this repository. Expected `WebVttFormatter` output after `joinCues(3, 4)`. | MIT |
-| `harbour_tour_slice.vtt` | Written for this repository. Expected `WebVttFormatter` output after `slice(6, 16, true)`. | MIT |
+| `harbour_tour_slice.vtt` | Written for this repository. Expected `WebVttFormatter` output after `withSlice(6, 16, true)`. | MIT |

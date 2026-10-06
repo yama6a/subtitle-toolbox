@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Translation;
 
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Comment;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
-use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -18,7 +21,7 @@ class TranslationRunnerTest extends TestCase
 
     private static function readFile(string $path): Subtitle
     {
-        return Subtitle::parse(file_get_contents(self::FILES . $path), SubRipParser::class);
+        return Subtitle::fromString(file_get_contents(self::FILES . $path), Format::SubRip);
     }
 
 
@@ -70,7 +73,7 @@ class TranslationRunnerTest extends TestCase
         $engine   = new FakeTranslationEngine();
         $runner   = new TranslationRunner($engine);
 
-        $translated = $runner->translate($original, "en", "de");
+        $report = $runner->translate($translated = $original, "en", "de");
 
         $this->assertSame([[
             "texts"  => [
@@ -92,24 +95,51 @@ class TranslationRunnerTest extends TestCase
             ["<i>THE NEXT STOP IS</i>"],
             ["<i>ZURICH MAIN STATION.</i>"],
         ], self::lines($translated));
-        $this->assertSame([], $runner->getWarnings());
-        $this->assertSame("de", $translated->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame([], $report->warnings);
+        $this->assertSame("de", $translated->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertSame(1.0, $translated->getCues()[0]->getStart());
         $this->assertSame(21.0, $translated->getCues()[7]->getEnd());
     }
 
 
-    public function testTheOriginalSubtitleKeepsItsTextAndTheCopyKeepsTheComments(): void
+    public function testTranslateChangesTheCuesInPlaceAndKeepsTheComments(): void
     {
-        $original = self::readFile("translation/own_station.srt")->addComment("Station announcements", 3);
-        $before   = self::lines($original);
+        $subtitle = self::readFile("translation/own_station.srt")->addComment("Station announcements", 3);
+        $cue      = $subtitle->getCues()[0];
 
-        $translated = (new TranslationRunner(new FakeTranslationEngine()))->translate($original, "en", "de");
+        (new TranslationRunner(new FakeTranslationEngine()))->translate($subtitle, "en", "de");
 
-        $this->assertSame($before, self::lines($original));
-        $this->assertNull($original->getMetadata(Subtitle::METADATA_LANGUAGE));
-        $this->assertSame([["text" => "Station announcements", "beforeCueIndex" => 3]], $translated->getComments());
-        $this->assertNotSame($original->getCues()[0], $translated->getCues()[0]);
+        $this->assertSame($cue, $subtitle->getCues()[0]);
+        $this->assertSame(["THE TRAIN TO BASEL LEAVES"], $cue->getLines());
+        $this->assertSame("de", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("Station announcements", $subtitle->getComments()[0]->text);
+    }
+
+
+    public function testAFailingEngineLeavesTheSubtitleAsItWas(): void
+    {
+        $subtitle = self::subtitle(["one.", "two."]);
+        $before   = self::lines($subtitle);
+
+        $engine = new class implements TranslationEngine {
+            private int $calls = 0;
+
+
+            public function translate(array $texts, string $sourceLanguage, string $targetLanguage): array
+            {
+                return ++$this->calls === 1 ? ["EINS."] : throw new \RuntimeException("The engine is down.");
+            }
+        };
+
+        try {
+            (new TranslationRunner($engine))->translate($subtitle, "en", "de", new TranslationOptions(maxCharactersPerRequest: 4));
+            $this->fail("The second request did not throw.");
+        } catch (\RuntimeException $exception) {
+            $this->assertSame("The engine is down.", $exception->getMessage());
+        }
+
+        $this->assertSame($before, self::lines($subtitle));
+        $this->assertNull($subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
     }
 
 
@@ -117,13 +147,13 @@ class TranslationRunnerTest extends TestCase
     {
         $runner = new TranslationRunner(new FakeTranslationEngine(true));
 
-        $translated = $runner->translate(self::readFile("translation/own_station.srt"), "en", "de");
+        $report = $runner->translate($translated = self::readFile("translation/own_station.srt"), "en", "de");
 
         $this->assertSame(["FROM PLATFORM 4 AT 10:15."], $translated->getCues()[1]->getLines());
         $this->assertSame(["TICKETS &amp; SEAT", "RESERVATIONS ARE SOLD HERE."], $translated->getCues()[3]->getLines());
         $this->assertSame(["- IS THIS SEAT FREE?", "- YES, IT IS."], $translated->getCues()[5]->getLines());
-        $this->assertSame([0, 1, 3, 6, 7], array_map(fn (TranslationWarning $warning): int => $warning->cueIndex, $runner->getWarnings()));
-        $this->assertSame("The engine dropped or changed a placeholder tag. The cue has no tags.", $runner->getWarnings()[0]->message);
+        $this->assertSame([0, 1, 3, 6, 7], array_map(fn (TranslationWarning $warning): int => $warning->cueIndex, $report->warnings));
+        $this->assertSame("The engine dropped or changed a placeholder tag. The cue has no tags.", $report->warnings[0]->message);
     }
 
 
@@ -132,10 +162,10 @@ class TranslationRunnerTest extends TestCase
         foreach (["<x1>Run! </ x1>", "Run!</x1><x1>", "<x1>Run!</x1><x2/>", "<x1>Run!</x1></x1>"] as $translation) {
             $runner = new TranslationRunner(self::fixedEngine([$translation]));
 
-            $translated = $runner->translate(self::subtitle(["<i>Lauf!</i>"]), "de", "en");
+            $report = $runner->translate($translated = self::subtitle(["<i>Lauf!</i>"]), "de", "en");
 
             $this->assertSame([["Run!"]], self::lines($translated), $translation);
-            $this->assertCount(1, $runner->getWarnings(), $translation);
+            $this->assertCount(1, $report->warnings, $translation);
         }
     }
 
@@ -146,7 +176,7 @@ class TranslationRunnerTest extends TestCase
         $engine   = new FakeTranslationEngine();
         $runner   = new TranslationRunner($engine);
 
-        $translated = $runner->translate($original, "en", "fr");
+        $report = $runner->translate($translated = $original, "en", "fr");
 
         $this->assertSame([
             "<x1><x2>[train horn]</x2></x1> <x3>[rain]</x3> <x4>[train horn]</x4>",
@@ -166,7 +196,7 @@ class TranslationRunnerTest extends TestCase
             ["THE NEXT CUE IS NOT ITALIC"],
             ["<i>X</i>^3 * <i>X</i> = 100"],
         ], self::lines($translated));
-        $this->assertSame([], $runner->getWarnings());
+        $this->assertSame([], $report->warnings);
     }
 
 
@@ -174,7 +204,7 @@ class TranslationRunnerTest extends TestCase
     {
         $engine = new FakeTranslationEngine();
 
-        $translated = (new TranslationRunner($engine))->translate(self::readFile("srt/real/own_escaping.srt"), "en", "fr");
+        (new TranslationRunner($engine))->translate($translated = self::readFile("srt/real/own_escaping.srt"), "en", "fr");
 
         $this->assertSame("I &lt;3 bread &amp; jam <x1>Salt &amp; pepper</x1> on the <x2>left</x2> " .
                           "Platform 2 &gt; platform 1 &lt; platform 3", $engine->calls[0]["texts"][0]);
@@ -192,7 +222,7 @@ class TranslationRunnerTest extends TestCase
     {
         $engine = self::fixedEngine(["<x1>Tom & Jerry</x1> &#39;say&#39; a < b &amp; c&nbsp;d"]);
 
-        $translated = (new TranslationRunner($engine))->translate(self::subtitle(["<b>Tom &amp; Jerry</b> sagen a &lt; b"]), "de", "en");
+        (new TranslationRunner($engine))->translate($translated = self::subtitle(["<b>Tom &amp; Jerry</b> sagen a &lt; b"]), "de", "en");
 
         $this->assertSame(["<b>Tom &amp; Jerry</b> 'say' a &lt; b &amp; c\u{A0}d"], $translated->getCues()[0]->getLines());
     }
@@ -202,7 +232,7 @@ class TranslationRunnerTest extends TestCase
     {
         $engine = new FakeTranslationEngine();
 
-        $translated = (new TranslationRunner($engine))->translate(self::subtitle(["<v Fred>Hi <00:00:01.500>there."]), "en", "de");
+        (new TranslationRunner($engine))->translate($translated = self::subtitle(["<v Fred>Hi <00:00:01.500>there."]), "en", "de");
 
         $this->assertSame("<x1/>Hi <x2/>there.", $engine->calls[0]["texts"][0]);
         $this->assertSame(["<v Fred>HI <00:00:01.500>THERE."], $translated->getCues()[0]->getLines());
@@ -216,7 +246,7 @@ class TranslationRunnerTest extends TestCase
         $subtitle->addCue($image->toCue(new SubtitleCue(20, 21)));
         $engine   = new FakeTranslationEngine();
 
-        $translated = (new TranslationRunner($engine))->translate($subtitle, "en", "de");
+        (new TranslationRunner($engine))->translate($translated = $subtitle, "en", "de");
 
         $this->assertSame(["Hello."], $engine->calls[0]["texts"]);
         $this->assertSame([["\u{266A}\u{266B}"], ["1984"], ["..."], ["<i>\u{266A}</i>"], ["HELLO."], []], self::lines($translated));
@@ -228,10 +258,10 @@ class TranslationRunnerTest extends TestCase
     {
         $engine = new FakeTranslationEngine();
 
-        $translated = (new TranslationRunner($engine))->translate(new Subtitle(), "en", "de");
+        (new TranslationRunner($engine))->translate($translated = new Subtitle(), "en", "de");
 
         $this->assertSame([], $engine->calls);
-        $this->assertSame("de", $translated->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame("de", $translated->findMetadata(Subtitle::METADATA_LANGUAGE));
     }
 
 
@@ -265,7 +295,7 @@ class TranslationRunnerTest extends TestCase
         $subtitle = self::subtitle(["Regularly he takes part in events of", "the patient organization."]);
         $engine   = self::fixedEngine(["Er nimmt regelmässig an Veranstaltungen der Patientenorganisation teil."]);
 
-        $translated = (new TranslationRunner($engine))->translate($subtitle, "en", "de");
+        (new TranslationRunner($engine))->translate($translated = $subtitle, "en", "de");
 
         $this->assertSame([["Er nimmt regelmässig an Veranstaltungen der"], ["Patientenorganisation teil."]], self::lines($translated));
     }
@@ -276,7 +306,7 @@ class TranslationRunnerTest extends TestCase
         $subtitle = self::subtitle(["<i>The train", "leaves now.</i>"]);
         $engine   = self::fixedEngine(["<x1>\u{5217}\u{8F66}\u{73B0}\u{5728}\u{51FA}\u{53D1}\u{3002}</x1>"]);
 
-        $translated = (new TranslationRunner($engine))->translate($subtitle, "en", "zh");
+        (new TranslationRunner($engine))->translate($translated = $subtitle, "en", "zh");
 
         $this->assertSame([["<i>\u{5217}\u{8F66}\u{73B0}</i>"], ["<i>\u{5728}\u{51FA}\u{53D1}\u{3002}</i>"]], self::lines($translated));
     }
@@ -286,10 +316,10 @@ class TranslationRunnerTest extends TestCase
     {
         $runner = new TranslationRunner(self::fixedEngine(["Ja"]));
 
-        $translated = $runner->translate(self::subtitle(["Yes,", "of course."]), "en", "de");
+        $report = $runner->translate($translated = self::subtitle(["Yes,", "of course."]), "en", "de");
 
         $this->assertSame([["Ja"], []], self::lines($translated));
-        $this->assertSame(1, $runner->getWarnings()[0]->cueIndex);
+        $this->assertSame(1, $report->warnings[0]->cueIndex);
     }
 
 
@@ -298,7 +328,7 @@ class TranslationRunnerTest extends TestCase
         $subtitle = self::subtitle(["First sentence.", "Second sentence.", "Third one is", "split over cues.", str_repeat("Long. ", 10)]);
         $engine   = new FakeTranslationEngine();
 
-        $translated = (new TranslationRunner($engine))->translate($subtitle, "en", "de", new TranslationOptions(maxCharactersPerRequest: 32));
+        (new TranslationRunner($engine))->translate($translated = $subtitle, "en", "de", new TranslationOptions(maxCharactersPerRequest: 32));
 
         $this->assertSame([
             ["First sentence.", "Second sentence."],

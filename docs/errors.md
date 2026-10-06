@@ -4,12 +4,11 @@ Every exception of the library implements `SubtitleToolbox\Exceptions\SubtitleTo
 
 ```php
 use SubtitleToolbox\Exceptions\SubtitleToolboxException;
-use SubtitleToolbox\Formatters\WebVttFormatter;
-use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 try {
-    $vtt = Subtitle::parse($upload, SubRipParser::class)->format(WebVttFormatter::class);
+    $vtt = Subtitle::fromString($upload, Format::SubRip)->toString(Format::WebVtt);
 } catch (SubtitleToolboxException $e) {
     return response($e->getMessage(), 422);
 }
@@ -17,16 +16,21 @@ try {
 
 | Exception | Extends | `getCode()` | Thrown for |
 |:--- |:--- |:--- |:--- |
-| `ParsingException` | `\RuntimeException` | 100 | content that a parser or `fromArray()` cannot read, or an unknown source encoding |
-| `InvalidFormatterException` | `\RuntimeException` | 101 | a formatter class that is not a `SubtitleFormatter`, or a stored TTML head that is not valid XML |
-| `InvalidParserException` | `\RuntimeException` | 102 | a parser class that is not a `SubtitleParser`, or content that format detection does not know |
-| `ImageCueWithoutTextException` | `\RuntimeException` | 103 | an image cue without text in `format()` with a text formatter |
-| `InvalidArgumentException` | `\InvalidArgumentException` | 104 | an invalid argument or option, for example alignment 10, frame rate 0 or a missing `OPTION_FRAME_RATE` |
+| `ParsingException` | `\RuntimeException` | 100 | content that a parser or `fromArray()` cannot read, or a byte that is not valid in the source encoding |
+| `InvalidFormatterException` | `\RuntimeException` | 101 | `toString()` with a format that the library cannot write, or `save()` with an unknown extension |
+| `InvalidParserException` | `\RuntimeException` | 102 | `fromString()` with a format that the library cannot read. An MKV or WebM file in `load()` or `fromString()`. An MKV or WebM file without exactly 1 subtitle track in `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()` |
+| `ImageCueWithoutTextException` | `\RuntimeException` | 103 | an image cue without text in `toString()` with a text format |
+| `InvalidArgumentException` | `\InvalidArgumentException` | 104 | an invalid argument or option, for example alignment 10, frame rate 0, a missing MicroDVD output frame rate or the options class of another format. Also a missing OCR engine or Tesseract language |
 | `CueNotFoundException` | `\RuntimeException` | 105 | `removeCue()` with an index that has no cue |
+| `UnknownFormatException` | `InvalidParserException` | 106 | `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()` when detection finds no format |
+| `OcrException` | `\RuntimeException` | 107 | an OCR engine that fails on one image: Tesseract exits with an error, or php-glyph-ocr cannot read the image. A missing `tesseract` program, a missing Tesseract language or a missing php-glyph-ocr package throws `InvalidArgumentException` |
+| `UnwritableContentException` | `InvalidArgumentException` | 108 | `toString()` or `save()` with a subtitle that the output format cannot hold. Examples are more than 4 lines or 32 characters per line in SCC, a cue without an image in PGS, a subtitle number over 65535 in EBU STL, text that is not UTF-8 in a JSON format, and a stored TTML head that is not valid XML |
 
 - **SPL classes**: each class extends an SPL class, so `catch (\InvalidArgumentException $e)` and `catch (\RuntimeException $e)` also work.
-- **Messages**: the first four classes start the message with the class name and the code, for example `ParsingException (Error #100): `. The last two keep the plain message.
-- **Line number**: `ParsingException::getLineNumber()` returns the 1-based input line when the parser knows it, and null otherwise. Then the message ends with ` (line 12)`.
+- **Messages**: `InvalidArgumentException`, `UnwritableContentException` and `CueNotFoundException` keep the plain message. The other classes start it with the class name and the code, for example `ParsingException (Error #100): `. The message text is not API and can change in a minor release. Test the class and `getCode()`, see [compatibility.md](compatibility.md).
+- **Previous exception**: every constructor takes the message, then an optional `$previous` exception. `ParsingException` takes the line number before it. `getPrevious()` returns it.
+- **Final classes**: every exception class is `final`, except `InvalidParserException`, which `UnknownFormatException` extends, and `InvalidArgumentException`, which `UnwritableContentException` extends. Do not extend them, see [compatibility.md](compatibility.md#not-covered).
+- **Line number**: `ParsingException::getLineNumber()` returns the 1-based input line when the parser knows it, and null otherwise. The message then ends with the line, for example ` (line 12)`. Read the line from `getLineNumber()`, not from the message.
 
 These readers set the line number:
 

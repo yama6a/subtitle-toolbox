@@ -1,12 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 use InvalidArgumentException;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
-use SubtitleToolbox\Parsers\SubRipParser;
-use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\Validation\ValidationRules;
 
 class TextTransformsTest extends \PHPUnit\Framework\TestCase
 {
@@ -32,13 +31,13 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
 
     private function parseCaptions(): Subtitle
     {
-        return Subtitle::parse(file_get_contents(self::FILES . "own_cea608_caps.vtt"), WebVttParser::class);
+        return Subtitle::fromString(file_get_contents(self::FILES . "own_cea608_caps.vtt"), Format::WebVtt);
     }
 
 
     private function parseMultilingual(): Subtitle
     {
-        return Subtitle::parse(file_get_contents(self::FILES . "own_multilingual_caps.srt"), SubRipParser::class);
+        return Subtitle::fromString(file_get_contents(self::FILES . "own_multilingual_caps.srt"), Format::SubRip);
     }
 
 
@@ -53,9 +52,9 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
         $this->assertSame([10.177, 12.846, "THE BAKERY CAFÉ ON PLATFORM 2\nIS OPEN. ÄPFEL, STRASSE?"],
                           [$cues[4]->getStart(), $cues[4]->getEnd(), $cues[4]->getText()]);
 
-        $again = Subtitle::parse($subtitle->format(WebVttFormatter::class), WebVttParser::class);
+        $again = Subtitle::fromString($subtitle->toString(Format::WebVtt), Format::WebVtt);
         $this->assertSame($this->getTexts($subtitle), $this->getTexts($again));
-        $this->assertSame($subtitle->getComments(), $again->getComments());
+        $this->assertEquals($subtitle->getComments(), $again->getComments());
     }
 
 
@@ -63,22 +62,22 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     {
         $subtitle = $this->parseCaptions();
 
-        $this->assertSame($subtitle, $subtitle->changeCase("sentence"));
+        $this->assertSame($subtitle, $subtitle->changeCase(CaseMode::Sentence));
         $this->assertSame(file_get_contents(self::FILES . "own_cea608_caps_sentence.vtt"),
-                          $subtitle->format(WebVttFormatter::class));
+                          $subtitle->toString(Format::WebVtt));
     }
 
 
     public function testRealCaptionFileCleanedUp(): void
     {
         $subtitle = $this->parseCaptions()
-            ->replaceText('/\[[^\]]*\]/', "", true)
-            ->replaceText('/\.{4,}/', "...", true)
+            ->replaceText('/\[[^\]]*\]/', "", new ReplaceTextOptions(regex: true))
+            ->replaceText('/\.{4,}/', "...", new ReplaceTextOptions(regex: true))
             ->stripFormatting();
 
         $this->assertSame(file_get_contents(self::FILES . "own_cea608_caps_cleaned.vtt"),
-                          $subtitle->format(WebVttFormatter::class));
-        $this->assertSame([], $subtitle->getErrors());
+                          $subtitle->toString(Format::WebVtt));
+        $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
 
 
@@ -91,7 +90,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
         $this->assertSame([1.0, 3.5, "<b>ΟΔΟΣ ΣΤΑΘΜΟΥ 4</b>"], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $this->assertSame([8.5, 10.0, "<i>RAIN &lt;3 &amp; SNOW</i>"], [$cues[3]->getStart(), $cues[3]->getEnd(), $cues[3]->getText()]);
 
-        $again = Subtitle::parse($subtitle->format(SubRipFormatter::class), SubRipParser::class);
+        $again = Subtitle::fromString($subtitle->toString(Format::SubRip), Format::SubRip);
         $this->assertSame($this->getTexts($subtitle), $this->getTexts($again));
     }
 
@@ -103,7 +102,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
             "große bäckerei. öffnet um 6 uhr!",
             "<font color=\"#ffff00\">i\u{307}stasyon kapisi işikli.</font>",
             "<i>rain &lt;3 &amp; snow</i>",
-        ], $this->getTexts($this->parseMultilingual()->changeCase("lower")));
+        ], $this->getTexts($this->parseMultilingual()->changeCase(CaseMode::Lower)));
     }
 
 
@@ -114,7 +113,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
             "Große bäckereı. Öffnet um 6 uhr!",
             "<font color=\"#ffff00\">İstasyon kapısı ışıklı.</font>",
             "<i>Raın &lt;3 &amp; snow</i>",
-        ], $this->getTexts($this->parseMultilingual()->changeCase("sentence", "tr-TR")));
+        ], $this->getTexts($this->parseMultilingual()->changeCase(CaseMode::Sentence, "tr-TR")));
     }
 
 
@@ -123,27 +122,27 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
         $subtitle = $this->makeSubtitle("<i>stop</i>", "tom &amp; <font color=\"#ff0000\">jerry</font> &lt;3");
 
         $this->assertSame(["<i>STOP</i>", "TOM &amp; <font color=\"#ff0000\">JERRY</font> &lt;3"],
-                          $this->getTexts($subtitle->changeCase("upper")));
+                          $this->getTexts($subtitle->changeCase(CaseMode::Upper)));
     }
 
 
     public function testUpperCaseOfGermanAndTurkish(): void
     {
-        $this->assertSame(["STRASSE", "ISTANBUL"], $this->getTexts($this->makeSubtitle("straße", "istanbul")->changeCase("upper")));
-        $this->assertSame(["İSTANBUL KAPI"], $this->getTexts($this->makeSubtitle("istanbul kapı")->changeCase("upper", "tr")));
-        $this->assertSame(["istanbul kapı"], $this->getTexts($this->makeSubtitle("İSTANBUL KAPI")->changeCase("lower", "az")));
+        $this->assertSame(["STRASSE", "ISTANBUL"], $this->getTexts($this->makeSubtitle("straße", "istanbul")->changeCase(CaseMode::Upper)));
+        $this->assertSame(["İSTANBUL KAPI"], $this->getTexts($this->makeSubtitle("istanbul kapı")->changeCase(CaseMode::Upper, "tr")));
+        $this->assertSame(["istanbul kapı"], $this->getTexts($this->makeSubtitle("İSTANBUL KAPI")->changeCase(CaseMode::Lower, "az")));
     }
 
 
     public function testLowerCaseUsesGreekFinalSigma(): void
     {
-        $this->assertSame(["οδος σας, σ"], $this->getTexts($this->makeSubtitle("ΟΔΟΣ ΣΑΣ, Σ")->changeCase("lower")));
+        $this->assertSame(["οδος σας, σ"], $this->getTexts($this->makeSubtitle("ΟΔΟΣ ΣΑΣ, Σ")->changeCase(CaseMode::Lower)));
     }
 
 
     public function testCaseChangeKeepsBytesOfInvalidUtf8(): void
     {
-        $this->assertSame(["CAF\xe9 <i>NO\xebL</i>"], $this->getTexts($this->makeSubtitle("caf\xe9 <i>no\xebl</i>")->changeCase("upper")));
+        $this->assertSame(["CAF\xe9 <i>NO\xebL</i>"], $this->getTexts($this->makeSubtitle("caf\xe9 <i>no\xebl</i>")->changeCase(CaseMode::Upper)));
     }
 
 
@@ -161,14 +160,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
             "<i>Wait...</i> <b>What?!</b> \"No.\" Ok",
             "- Read www.example.com.\n- 3.5 km, then stop!",
             "Strasse. Ssad",
-        ], $this->getTexts($subtitle->changeCase("sentence")));
-    }
-
-
-    public function testChangeCaseRejectsUnknownMode(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->makeSubtitle("text")->changeCase("title");
+        ], $this->getTexts($subtitle->changeCase(CaseMode::Sentence)));
     }
 
 
@@ -207,7 +199,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     {
         $subtitle = $this->makeSubtitle("Wait.....", "<i>colour</i> and COLOUR");
 
-        $subtitle->replaceText('/\.{4,}/', "...", true)->replaceText('/col(ou)r/', 'col$1r!', true, false);
+        $subtitle->replaceText('/\.{4,}/', "...", new ReplaceTextOptions(regex: true))->replaceText('/col(ou)r/', 'col$1r!', new ReplaceTextOptions(regex: true, caseSensitive: false));
 
         $this->assertSame(["Wait...", "<i>colour!</i> and colOUr!"], $this->getTexts($subtitle));
     }
@@ -217,7 +209,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     {
         $subtitle = $this->makeSubtitle("Ärger and ärger", "Price: \$1");
 
-        $subtitle->replaceText("ÄRGER", "joy", false, false)->replaceText("price", '$1 \1', false, false);
+        $subtitle->replaceText("ÄRGER", "joy", new ReplaceTextOptions(caseSensitive: false))->replaceText("price", '$1 \1', new ReplaceTextOptions(caseSensitive: false));
 
         $this->assertSame(["joy and joy", '$1 \1: $1'], $this->getTexts($subtitle));
     }
@@ -234,7 +226,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
         }
 
         $this->expectException(InvalidArgumentException::class);
-        $subtitle->replaceText("/(/", "x", true);
+        $subtitle->replaceText("/(/", "x", new ReplaceTextOptions(regex: true));
     }
 
 
@@ -301,14 +293,14 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
         $subtitle->addCue(new SubtitleCue(10, 11, ""));
         $subtitle->addComment("before music", 1)->addComment("before door", 2)->addComment("before last", 3);
 
-        $subtitle->replaceText('/\[\w+\]/', "", true);
+        $subtitle->replaceText('/\[\w+\]/', "", new ReplaceTextOptions(regex: true));
 
         $this->assertSame(["first", "last", ""], $this->getTexts($subtitle));
-        $this->assertSame([
-            ["text" => "before music", "beforeCueIndex" => 1],
-            ["text" => "before door", "beforeCueIndex" => 1],
-            ["text" => "before last", "beforeCueIndex" => 1],
+        $this->assertEquals([
+            new Comment("before music", 1),
+            new Comment("before door", 1),
+            new Comment("before last", 1),
         ], $subtitle->getComments());
-        $this->assertSame([], $subtitle->getErrors());
+        $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
 }

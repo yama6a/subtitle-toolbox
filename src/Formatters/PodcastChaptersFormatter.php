@@ -1,24 +1,27 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\PodcastChaptersParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\WriteOptions;
 
-class PodcastChaptersFormatter extends SubtitleFormatter
+final class PodcastChaptersFormatter extends SubtitleFormatter
 {
     private const VERSION = "1.2.0";
 
 
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $stored = $subtitle->getFormatData(PodcastChaptersParser::FORMAT_DATA_KEY);
+        $stored = $subtitle->findFormatData(PodcastChaptersParser::FORMAT_DATA_KEY);
         $data   = ["version" => $stored["version"] ?? self::VERSION];
         foreach (["author" => Subtitle::METADATA_AUTHOR, "title" => Subtitle::METADATA_TITLE] as $field => $key) {
-            if ($subtitle->getMetadata($key) !== null) {
-                $data[$field] = $subtitle->getMetadata($key);
+            if ($subtitle->findMetadata($key) !== null) {
+                $data[$field] = $subtitle->findMetadata($key);
             }
         }
         $data += $stored;
@@ -35,12 +38,12 @@ class PodcastChaptersFormatter extends SubtitleFormatter
             if ($title !== "") {
                 $chapter["title"] = $title;
             }
-            $data["chapters"][] = $chapter + $cue->getFormatData(PodcastChaptersParser::FORMAT_DATA_KEY);
+            $data["chapters"][] = $chapter + $cue->findFormatData(PodcastChaptersParser::FORMAT_DATA_KEY);
         }
 
-        $json = json_encode($data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $json = JsonOutput::encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 
-        return $this->applyOutputOptions($json . StringHelpers::UNIX_LINE_ENDING, $options);
+        return $this->applyOutputOptions($json . LineEnding::Lf->value, $options);
     }
 
 

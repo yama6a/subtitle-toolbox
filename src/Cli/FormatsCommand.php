@@ -1,10 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\FormatRegistry;
+use SubtitleToolbox\Format;
 
-class FormatsCommand extends Command
+/**
+ * @internal
+ */
+final class FormatsCommand extends Command
 {
     public function name(): string
     {
@@ -44,12 +49,12 @@ class FormatsCommand extends Command
         }
 
         $rows = [["Name", "Extensions", "Read", "Write"]];
-        foreach (FormatRegistry::names() as $name) {
+        foreach (Format::cases() as $format) {
             $rows[] = [
-                $name,
-                implode(" ", array_map(fn (string $extension): string => ".$extension", FormatRegistry::extensions($name))),
-                FormatRegistry::parserClass($name) === null ? "no" : "yes",
-                FormatRegistry::formatterClass($name) === null ? "no" : "yes",
+                $format->value,
+                implode(" ", array_map(fn (string $extension): string => ".$extension", $format->extensions())),
+                $format->canRead() ? "yes" : "no",
+                $format->canWrite() ? "yes" : "no",
             ];
         }
 

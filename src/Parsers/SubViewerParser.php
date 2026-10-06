@@ -1,24 +1,30 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class SubViewerParser extends SubtitleParser
+final class SubViewerParser extends SubtitleParser
 {
-    public const FORMAT = "subviewer";
+    public const FORMAT_DATA_KEY = Format::SubViewer->value;
 
+    /** @internal */
     public const START_SCRIPT = "******** START SCRIPT ********";
 
-    public const DEFAULT_LAST_CUE_DURATION = 10;
-
-    /** Maps SubViewer header tags to the shared metadata keys of Subtitle. */
+    /**
+     * Maps SubViewer header tags to the shared metadata keys of Subtitle.
+     *
+     * @internal
+     */
     public const METADATA_TAGS = [
         "TITLE"  => Subtitle::METADATA_TITLE,
         "AUTHOR" => Subtitle::METADATA_AUTHOR,
@@ -30,28 +36,13 @@ class SubViewerParser extends SubtitleParser
     private const STYLE_TAGS           = ["[COLF]", "[SIZE]", "[FONT]", "[STYLE]"];
     private const VERSION_2_BLOCK_TAGS = ["INFORMATION", "END INFORMATION", "SUBTITLE"];
 
-    private float $lastCueDuration;
 
-
-    /**
-     * Creates a parser that ends a SubViewer 1 last cue without an end line the given number of seconds after its start.
-     */
-    public function __construct(float $lastCueDuration = self::DEFAULT_LAST_CUE_DURATION)
-    {
-        if ($lastCueDuration < 0) {
-            throw new InvalidArgumentException("The last cue duration must not be negative!");
-        }
-
-        $this->lastCueDuration = $lastCueDuration;
-    }
-
-
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
         $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
-        $lines          = array_map("trim", explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle));
+        $lines          = array_map("trim", explode(LineEnding::Lf->value, $rawSubtitle));
 
         $startScript = array_search(self::START_SCRIPT, $lines, true);
 
@@ -67,9 +58,10 @@ class SubViewerParser extends SubtitleParser
      */
     private function parseVersion1(array $headerLines, array $scriptLines): Subtitle
     {
-        $subtitle = new Subtitle();
-        $header   = [];
-        $delay    = 0;
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
+        $header     = [];
+        $delay      = 0;
         for ($idx = 0; $idx < count($headerLines); $idx++) {
             $line = $headerLines[$idx];
             if ($line === "") {
@@ -136,15 +128,15 @@ class SubViewerParser extends SubtitleParser
 
         foreach ($cues as $idx => $cue) {
             if (!$hasEndLine[$idx]) {
-                $cue->setEnd(isset($cues[$idx + 1]) ? $cues[$idx + 1]->getStart() : $cue->getStart() + $this->lastCueDuration);
+                $cue->setEnd(isset($cues[$idx + 1]) ? $cues[$idx + 1]->getStart() : $cue->getStart() + $this->options->lastCueDuration);
             }
 
-            $subtitle->addCue($cue, false);
+            $parsedCues[] = $cue;
         }
 
-        $subtitle->setFormatData(self::FORMAT, ["version" => 1, "header" => $header]);
+        $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["version" => 1, "header" => $header]);
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 
@@ -153,12 +145,13 @@ class SubViewerParser extends SubtitleParser
      */
     private function parseVersion2(array $lines): Subtitle
     {
-        $subtitle = new Subtitle();
-        $header   = [];
-        $style    = null;
-        $cue      = null;
-        $cueIndex = 0;
-        $skipped  = null;
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
+        $header     = [];
+        $style      = null;
+        $cue        = null;
+        $cueIndex   = 0;
+        $skipped    = null;
         foreach ($lines as $idx => $line) {
             $lineNumber = $idx + 1;
             if ($line === "") {
@@ -166,7 +159,7 @@ class SubViewerParser extends SubtitleParser
             }
 
             if ($this->lenient && $this->hasOneBadTime($line)) {
-                $this->addCueWithText($subtitle, $cue);
+                $this->addCueWithText($parsedCues, $cue);
                 $this->warnSkipped($skipped);
                 $cue     = null;
                 $skipped = [$lineNumber, $cueIndex++, [$line]];
@@ -174,7 +167,7 @@ class SubViewerParser extends SubtitleParser
             }
 
             if (preg_match(self::VERSION_2_TIME_REGEX, $line, $matches)) {
-                $this->addCueWithText($subtitle, $cue);
+                $this->addCueWithText($parsedCues, $cue);
                 $this->warnSkipped($skipped);
                 $skipped = null;
                 $cueIndex++;
@@ -220,15 +213,15 @@ class SubViewerParser extends SubtitleParser
                 $this->addHeaderTag($subtitle, $header, $tag, trim($matches[2]));
             }
         }
-        $this->addCueWithText($subtitle, $cue);
+        $this->addCueWithText($parsedCues, $cue);
         $this->warnSkipped($skipped);
 
-        $subtitle->setFormatData(self::FORMAT, array_filter(
+        $subtitle->setFormatData(self::FORMAT_DATA_KEY, array_filter(
             ["version" => 2, "header" => $header, "style" => $style],
             fn ($value): bool => $value !== null
         ));
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 
@@ -299,16 +292,19 @@ class SubViewerParser extends SubtitleParser
     {
         if ($skipped !== null) {
             [$lineNumber, $cueIndex, $block] = $skipped;
-            $this->warn("Line $lineNumber is a timing line with a bad time: $block[0]", $lineNumber, $cueIndex, $block, ParseWarning::SKIPPED);
+            $this->warn("Line $lineNumber is a timing line with a bad time: $block[0]", $lineNumber, $cueIndex, $block, ParseWarningAction::Skipped);
         }
     }
 
 
-    private function addCueWithText(Subtitle $subtitle, ?SubtitleCue $cue): void
+    /**
+     * @param list<SubtitleCue> $cues
+     */
+    private function addCueWithText(array &$cues, ?SubtitleCue $cue): void
     {
         // FFmpeg makes no event for a timing line without text.
         if ($cue !== null && $cue->getLines() !== []) {
-            $subtitle->addCue($cue, false);
+            $cues[] = $cue;
         }
     }
 

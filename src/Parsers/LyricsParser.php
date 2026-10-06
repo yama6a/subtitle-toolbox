@@ -1,23 +1,26 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class LyricsParser extends SubtitleParser
+final class LyricsParser extends SubtitleParser
 {
-    public const REGEX = "/^\[(\d{2,3}):([0-5]\d).(\d\d)\](.+)$/";
+    public const FORMAT_DATA_KEY = Format::Lyrics->value;
 
-    public const FORMAT = "lrc";
-
-    public const DEFAULT_LAST_CUE_DURATION = 10;
-
-    /** Maps LRC ID tags to the shared metadata keys of Subtitle. */
+    /**
+     * Maps LRC ID tags to the shared metadata keys of Subtitle.
+     *
+     * @internal
+     */
     public const METADATA_TAGS = [
         "ti" => Subtitle::METADATA_TITLE,
         "ar" => Subtitle::METADATA_ARTIST,
@@ -30,39 +33,25 @@ class LyricsParser extends SubtitleParser
     private const ID_TAG_REGEX         = "/^\[([A-Za-z][A-Za-z0-9_]*|#):(.*)\]$/";
     private const OFFSET_REGEX         = "/^[+-]?\d+$/";
 
-    private float $lastCueDuration;
 
-
-    /**
-     * Creates a parser that ends the last cue the given number of seconds after its start.
-     */
-    public function __construct(float $lastCueDuration = self::DEFAULT_LAST_CUE_DURATION)
-    {
-        if ($lastCueDuration < 0) {
-            throw new InvalidArgumentException("The last cue duration must not be negative!");
-        }
-
-        $this->lastCueDuration = $lastCueDuration;
-    }
-
-
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
         $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
         if ($this->lenient) {
-            $this->warnBrokenTimeTags(explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle));
+            $this->warnBrokenTimeTags(explode(LineEnding::Lf->value, $rawSubtitle));
         }
         $rawSubtitle = StringHelpers::normalizeSpaces($rawSubtitle);
         $rawSubtitle = StringHelpers::removeEmptyLines($rawSubtitle);
         $rawSubtitle = StringHelpers::trimEachLine($rawSubtitle);
 
-        $lines    = explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle);
-        $subtitle = new Subtitle();
-        $offset   = $this->findOffset($lines);
-        $idTags   = [];
-        $timeline = [];
+        $lines      = explode(LineEnding::Lf->value, $rawSubtitle);
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
+        $offset     = $this->findOffset($lines);
+        $idTags     = [];
+        $timeline   = [];
 
         foreach ($lines as $currentLine) {
             if (preg_match(self::TIMESTAMP_LINE_REGEX, $currentLine, $matches)) {
@@ -74,22 +63,22 @@ class LyricsParser extends SubtitleParser
                     $start = $this->toSeconds($timestamp, $offset);
                     $cue   = $text === "" ? null : new SubtitleCue($start, $start, $text);
                     if ($cue !== null) {
-                        $subtitle->addCue($cue, false);
+                        $parsedCues[] = $cue;
                     }
                     $timeline[] = ["time" => $start, "cue" => $cue];
                 }
                 continue;
             }
 
-            $this->addIdTag($subtitle, $idTags, $currentLine);
+            $this->addIdTag($subtitle, $idTags, $currentLine, count($parsedCues));
         }
 
         if ($idTags !== []) {
-            $subtitle->setFormatData(self::FORMAT, ["idTags" => $idTags]);
+            $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["idTags" => $idTags]);
         }
 
         $this->assignEndTimes($timeline);
-        $subtitle->reIndexCues();
+        $subtitle->addCues($parsedCues);
 
         return $subtitle;
     }
@@ -109,7 +98,7 @@ class LyricsParser extends SubtitleParser
 
             if (preg_match("/^\[\d/", $line) && !preg_match(self::TIMESTAMP_LINE_REGEX, $line)) {
                 $lineNumber = $lineIndex + 1;
-                $this->warn("Line $lineNumber has a time tag that could not be parsed: $line", $lineNumber, $blockIndex, [$line], ParseWarning::SKIPPED);
+                $this->warn("Line $lineNumber has a time tag that could not be parsed: $line", $lineNumber, $blockIndex, [$line], ParseWarningAction::Skipped);
             }
             $blockIndex++;
         }
@@ -137,7 +126,7 @@ class LyricsParser extends SubtitleParser
     /**
      * @param array<string, string> $idTags
      */
-    private function addIdTag(Subtitle $subtitle, array &$idTags, string $line): void
+    private function addIdTag(Subtitle $subtitle, array &$idTags, string $line, int $cueCount): void
     {
         if (!preg_match(self::ID_TAG_REGEX, $line, $matches)) {
             return;
@@ -147,7 +136,7 @@ class LyricsParser extends SubtitleParser
         $value = trim($matches[2]);
 
         if ($tag === "#") {
-            $subtitle->addComment($value, count($subtitle->getCues()));
+            $subtitle->addComment($value, $cueCount);
         } elseif (array_key_exists($tag, self::METADATA_TAGS)) {
             $subtitle->setMetadata(self::METADATA_TAGS[$tag], $value);
         } elseif ($tag !== "offset" || !preg_match(self::OFFSET_REGEX, $value)) {
@@ -170,13 +159,13 @@ class LyricsParser extends SubtitleParser
 
             $next = $timeline[$idx + 1] ?? null;
             if ($next === null) {
-                $entry["cue"]->setEnd($entry["time"] + $this->lastCueDuration);
+                $entry["cue"]->setEnd($entry["time"] + $this->options->lastCueDuration);
                 continue;
             }
 
             $entry["cue"]->setEnd($next["time"]);
             if ($next["cue"] === null) {
-                $entry["cue"]->setFormatData(self::FORMAT, ["endLine" => true]);
+                $entry["cue"]->setFormatData(self::FORMAT_DATA_KEY, ["endLine" => true]);
             }
         }
     }

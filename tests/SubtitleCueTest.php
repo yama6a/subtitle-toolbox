@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 use InvalidArgumentException;
@@ -79,10 +81,10 @@ class SubtitleCueTest extends TestCase
     }
 
 
-    public function testSetLinesByString()
+    public function testSetLinesFromString()
     {
         $cue = new SubtitleCue();
-        $cue->setLinesByString(
+        $cue->setLines(
             $text = (
                 ($line1 = "this is a line") .
                 "\n" .
@@ -97,10 +99,10 @@ class SubtitleCueTest extends TestCase
     }
 
 
-    public function testSetLinesByArray()
+    public function testSetLinesFromArray()
     {
         $cue = new SubtitleCue();
-        $cue->setLinesByArray($lines = [$line1 = "this is a line", $line2 = "with a linebreak"]);
+        $cue->setLines($lines = [$line1 = "this is a line", $line2 = "with a linebreak"]);
 
         $this->assertSame($line1 . "\n" . $line2, $cue->getText());
         $this->assertSame(2, count($cue->getLines()));
@@ -123,54 +125,10 @@ class SubtitleCueTest extends TestCase
     }
 
 
-    public function testSetLinesThrowsExceptionForUnexpectedBasicType()
+    public function testSetLinesRejectsOtherTypes(): void
     {
-        $cue = new SubtitleCue();
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Can only set cue-text by string or array!");
-        $this->expectExceptionMessage("by double");
-        $cue->setLines(123.456);
-    }
-
-
-    public function testSetLinesThrowsExceptionForUnexpectedObjectType()
-    {
-        $cue = new SubtitleCue();
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Can only set cue-text by string or array!");
-        $this->expectExceptionMessage("by stdClass");
-        $cue->setLines(new \stdClass());
-    }
-
-
-    public function testSetLinesExceptionNamesTheGettypeOfScalars(): void
-    {
-        $cue = new SubtitleCue(1.5, 2);
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Tried to set cue-text of cue [1.5 >>> 2] by NULL");
-        $cue->setLines(null);
-    }
-
-
-    public function testSetLinesExceptionNamesIntegerType(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("by integer");
-        (new SubtitleCue())->setLines(123);
-    }
-
-
-    public function testSetLinesExceptionNamesAnonymousClass(): void
-    {
-        $object = new class {
-        };
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("by " . get_class($object));
-        (new SubtitleCue())->setLines($object);
+        $this->expectException(\TypeError::class);
+        (new SubtitleCue())->setLines(123.456);
     }
 
 
@@ -230,19 +188,19 @@ class SubtitleCueTest extends TestCase
 
     public function testFormatDataIsEmptyByDefault(): void
     {
-        $this->assertSame([], (new SubtitleCue())->getFormatData("ass"));
+        $this->assertSame([], (new SubtitleCue())->findFormatData("ass"));
     }
 
 
-    public function testSetAndGetFormatDataPerFormat(): void
+    public function testSetAndFindFormatDataPerFormat(): void
     {
         $object = (new SubtitleCue())
             ->setFormatData("ass", ["style" => "Default", "marginV" => 10])
             ->setFormatData("vtt", ["region" => "top"]);
 
-        $this->assertSame(["style" => "Default", "marginV" => 10], $object->getFormatData("ass"));
-        $this->assertSame(["region" => "top"], $object->getFormatData("vtt"));
-        $this->assertSame([], $object->getFormatData("srt"));
+        $this->assertSame(["style" => "Default", "marginV" => 10], $object->findFormatData("ass"));
+        $this->assertSame(["region" => "top"], $object->findFormatData("vtt"));
+        $this->assertSame([], $object->findFormatData("srt"));
     }
 
 
@@ -252,10 +210,10 @@ class SubtitleCueTest extends TestCase
             ->setFormatData("ass", ["style" => "Default", "marginV" => 10])
             ->setFormatData("ass", ["style" => "Sign"]);
 
-        $this->assertSame(["style" => "Sign"], $object->getFormatData("ass"));
+        $this->assertSame(["style" => "Sign"], $object->findFormatData("ass"));
 
         $object->setFormatData("ass", []);
-        $this->assertSame([], $object->getFormatData("ass"));
+        $this->assertSame([], $object->findFormatData("ass"));
     }
 
 
@@ -268,5 +226,17 @@ class SubtitleCueTest extends TestCase
 
         $this->assertSame(["ass" => ["style" => "Default"]], $object->getAllFormatData());
         $this->assertSame([], (new SubtitleCue())->getAllFormatData());
+    }
+
+
+    public function testSetFormatDataRejectsAFieldThatAFormatterReadsWithTheWrongShape(): void
+    {
+        $cue = (new SubtitleCue())->setFormatData("srt", ["coordinates" => ["x1" => 1, "x2" => 2, "y1" => 3, "y2" => 4]]);
+        $this->assertSame(["x1" => 1, "x2" => 2, "y1" => 3, "y2" => 4], $cue->findFormatData("srt")["coordinates"]);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("The field formatData.srt.coordinates.x2 is missing.");
+
+        $cue->setFormatData("srt", ["coordinates" => ["x1" => 1]]);
     }
 }

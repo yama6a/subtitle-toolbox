@@ -1,48 +1,37 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class PodcastTranscriptParser extends SubtitleParser
+final class PodcastTranscriptParser extends SubtitleParser
 {
-    public const FORMAT_DATA_KEY = "podcast";
-
-    /** Makes one cue of each segment, also of a segment with a single word. */
-    public const OPTION_KEEP_SEGMENTS = "OPTION_KEEP_SEGMENTS";
-
-    /** Writes the start time of each joined single-word segment as a core word timestamp before the word. */
-    public const OPTION_WORD_TIMESTAMPS = "OPTION_WORD_TIMESTAMPS";
+    public const FORMAT_DATA_KEY = Format::PodcastTranscript->value;
 
     private const SEGMENT_FIELDS = ["speaker", "startTime", "endTime", "body"];
 
     private const SENTENCE_END = '/[.?!\x{2026}]["\'\x{201D}\x{2019})\]]*$/u';
 
-    private bool $keepSegments;
-    private bool $wordTimestamps;
 
-
-    /**
-     * Creates a parser that gives a segment without "endTime" the next later "startTime" as its end, and the last such
-     * segment a duration of $lastCueDuration seconds.
-     */
-    public function __construct(array $options = [], private readonly float $lastCueDuration = 10)
+    protected static function formatOptionsClass(): string
     {
-        $this->keepSegments   = !empty(Options::flag($options, self::OPTION_KEEP_SEGMENTS));
-        $this->wordTimestamps = !empty(Options::flag($options, self::OPTION_WORD_TIMESTAMPS));
+        return TranscriptReadOptions::class;
     }
 
 
     /**
      * Reads the Podcasting 2.0 JSON transcript, and joins single-word segments into cues by speaker and sentence end.
      */
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         try {
@@ -58,14 +47,15 @@ class PodcastTranscriptParser extends SubtitleParser
             throw new ParsingException("The JSON has no \"segments\" list.");
         }
 
-        $subtitle = new Subtitle();
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, array_diff_key($data, ["segments" => true]));
 
         foreach ($this->groups($this->readSegments($data["segments"])) as $group) {
             $speaker = $group[0]["speaker"];
             $words   = [];
             foreach ($group as $segment) {
-                $timestamp = count($group) > 1 && $this->wordTimestamps ? "<" . Markup::coreTimestamp($segment["start"]) . ">" : "";
+                $timestamp = count($group) > 1 && $this->formatOptions()->wordTimestamps ? "<" . Markup::coreTimestamp($segment["start"]) . ">" : "";
                 $words[]   = $timestamp . Markup::escapeText($segment["body"]);
             }
             $markup = implode(" ", $words);
@@ -77,10 +67,10 @@ class PodcastTranscriptParser extends SubtitleParser
             if (count($group) === 1 && $group[0]["other"] !== []) {
                 $cue->setFormatData(self::FORMAT_DATA_KEY, $group[0]["other"]);
             }
-            $subtitle->addCue($cue, false);
+            $parsedCues[] = $cue;
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 
@@ -94,7 +84,7 @@ class PodcastTranscriptParser extends SubtitleParser
             try {
                 $result[] = $this->readSegment($segment, "segments[$index]");
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($segment)]);
+                $this->fail($exception, null, $index, [RawJson::encode($segment)]);
             }
         }
 
@@ -107,7 +97,7 @@ class PodcastTranscriptParser extends SubtitleParser
             while ($next < count($result) && $result[$next]["start"] <= $segment["start"]) {
                 $next++;
             }
-            $result[$index]["end"] = $result[$next]["start"] ?? round($segment["start"] + $this->lastCueDuration, 3);
+            $result[$index]["end"] = $result[$next]["start"] ?? round($segment["start"] + $this->options->lastCueDuration, 3);
         }
 
         return array_values(array_filter($result, fn (array $segment): bool => $segment["body"] !== ""));
@@ -125,7 +115,7 @@ class PodcastTranscriptParser extends SubtitleParser
 
         foreach (["startTime" => "a number", "endTime" => "a number", "speaker" => "a string", "body" => "a string"] as $key => $type) {
             $value = $segment[$key] ?? null;
-            $valid = $type === "a string" ? is_string($value) : is_int($value) || is_float($value);
+            $valid = $type === "a string" ? is_string($value) : is_int($value) || (is_float($value) && is_finite($value));
             if (!$valid && ($key === "startTime" || $value !== null)) {
                 throw new ParsingException("The field $path.$key must be $type.");
             }
@@ -153,7 +143,7 @@ class PodcastTranscriptParser extends SubtitleParser
         $groups = [];
         $open   = false;
         foreach ($segments as $segment) {
-            $isWord = !$this->keepSegments && !str_contains($segment["body"], " ");
+            $isWord = !$this->formatOptions()->keepSegments && !str_contains($segment["body"], " ");
             $last   = $open ? $groups[count($groups) - 1] : null;
             if ($isWord && $last !== null && $last[0]["speaker"] === $segment["speaker"]) {
                 $groups[count($groups) - 1][] = $segment;

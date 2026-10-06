@@ -1,33 +1,27 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\Options\PlainTextWriteOptions;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
-class PlainTextFormatter extends SubtitleFormatter
+final class PlainTextFormatter extends SubtitleFormatter
 {
-    public const OPTION_JOIN_LINES    = "joinLines";
-    public const OPTION_JOIN_CUES     = "joinCues";
-    public const OPTION_PARAGRAPH_GAP = "paragraphGap";
-    public const OPTION_WITH_TIMES    = "withTimes";
+    protected const FORMAT_OPTIONS = PlainTextWriteOptions::class;
 
 
     /**
-     * Writes the text of the cues without markup and entities, in paragraphs that a gap of OPTION_PARAGRAPH_GAP seconds starts.
+     * Writes the text of the cues without markup and entities, in paragraphs that a gap of PlainTextWriteOptions::$paragraphGap seconds starts.
      */
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $joinLines    = Options::flag($options, self::OPTION_JOIN_LINES) ?? true;
-        $joinCues     = Options::flag($options, self::OPTION_JOIN_CUES) ?? true;
-        $paragraphGap = $options[self::OPTION_PARAGRAPH_GAP] ?? 2.0;
-        $withTimes    = Options::flag($options, self::OPTION_WITH_TIMES) ?? false;
-        if (!is_int($paragraphGap) && !is_float($paragraphGap)) {
-            throw new InvalidArgumentException("The option " . self::OPTION_PARAGRAPH_GAP . " must be a number of seconds.");
-        }
+        $plainText = $this->formatOptions($options) ?? new PlainTextWriteOptions();
 
         $paragraphs = [];
         $latestEnd  = null;
@@ -40,32 +34,24 @@ class PlainTextFormatter extends SubtitleFormatter
                 continue;
             }
 
-            if ($latestEnd === null || $cue->getStart() - $latestEnd >= $paragraphGap) {
+            if ($latestEnd === null || $cue->getStart() - $latestEnd >= $plainText->paragraphGap) {
                 $paragraphs[] = ["start" => $cue->getStart(), "cues" => []];
             }
-            $paragraphs[count($paragraphs) - 1]["cues"][] = implode($joinLines ? " " : StringHelpers::UNIX_LINE_ENDING, $lines);
+            $paragraphs[count($paragraphs) - 1]["cues"][] = implode($plainText->joinLines ? " " : LineEnding::Lf->value, $lines);
             $latestEnd = max($latestEnd ?? $cue->getEnd(), $cue->getEnd());
         }
 
         $blocks = array_map(fn (array $paragraph): string =>
-            ($withTimes ? $this->formatTime($paragraph["start"]) . " " : "") .
-            implode($joinCues ? " " : StringHelpers::UNIX_LINE_ENDING, $paragraph["cues"]) .
-            StringHelpers::UNIX_LINE_ENDING, $paragraphs);
+            ($plainText->withTimes ? sprintf("[%02d:%02d:%02d] ", ...Timecode::seconds(floor($paragraph["start"]))) : "") .
+            implode($plainText->joinCues ? " " : LineEnding::Lf->value, $paragraph["cues"]) .
+            LineEnding::Lf->value, $paragraphs);
 
-        return $this->applyOutputOptions(implode(StringHelpers::UNIX_LINE_ENDING, $blocks), $options);
+        return $this->applyOutputOptions(implode(LineEnding::Lf->value, $blocks), $options);
     }
 
 
     private function plainLine(string $line): string
     {
         return trim(preg_replace('/[ \t]+/', " ", Markup::plainText($line)));
-    }
-
-
-    private function formatTime(float $seconds): string
-    {
-        $totalSeconds = (int) floor($seconds);
-
-        return sprintf("[%02d:%02d:%02d]", intdiv($totalSeconds, 3600), intdiv($totalSeconds, 60) % 60, $totalSeconds % 60);
     }
 }

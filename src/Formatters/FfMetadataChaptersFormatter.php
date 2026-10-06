@@ -1,27 +1,30 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\WriteOptions;
 
-class FfMetadataChaptersFormatter extends SubtitleFormatter
+final class FfMetadataChaptersFormatter extends SubtitleFormatter
 {
     private const DEFAULT_TIME_BASE = "1/1000";
 
 
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $stored = $subtitle->getFormatData(FfMetadataChaptersParser::FORMAT_DATA_KEY);
+        $stored = $subtitle->findFormatData(FfMetadataChaptersParser::FORMAT_DATA_KEY);
         $output = ";FFMETADATA1\n" . $this->tags($this->globalTags($subtitle, $stored["tags"] ?? []));
         foreach ($stored["streams"] ?? [] as $streamTags) {
             $output .= "[STREAM]\n" . $this->tags($streamTags);
         }
 
         foreach ($subtitle->getCues() as $cue) {
-            $data     = $cue->getFormatData(FfMetadataChaptersParser::FORMAT_DATA_KEY);
+            $data     = $cue->findFormatData(FfMetadataChaptersParser::FORMAT_DATA_KEY);
             $timeBase = $data["timeBase"] ?? self::DEFAULT_TIME_BASE;
             [$numerator, $denominator] = array_map("intval", explode("/", $timeBase));
             $title    = implode("\n", Markup::plainLines($cue->getLines()));
@@ -41,7 +44,7 @@ class FfMetadataChaptersFormatter extends SubtitleFormatter
     {
         $tags = [];
         foreach ($storedTags + array_fill_keys(FfMetadataChaptersParser::METADATA_KEYS, null) as $key => $value) {
-            $tags[$key] = in_array($key, FfMetadataChaptersParser::METADATA_KEYS, true) ? $subtitle->getMetadata($key) : $value;
+            $tags[$key] = in_array($key, FfMetadataChaptersParser::METADATA_KEYS, true) ? $subtitle->findMetadata($key) : $value;
         }
 
         return array_filter($tags, fn (?string $value): bool => $value !== null);

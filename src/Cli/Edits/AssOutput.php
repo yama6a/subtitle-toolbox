@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+namespace SubtitleToolbox\Cli\Edits;
+
+use SubtitleToolbox\Cli\Arguments;
+use SubtitleToolbox\Cli\Command;
+use SubtitleToolbox\Cli\Option;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\AssKaraokeTag;
+use SubtitleToolbox\Formatters\Options\AssWriteOptions;
+
+/**
+ * The ASS writer settings of convert.
+ *
+ * @internal
+ */
+final class AssOutput
+{
+    private function __construct(private readonly AssKaraokeTag $karaokeTag)
+    {
+    }
+
+
+    public static function group(): string
+    {
+        return "ass";
+    }
+
+
+    public static function summary(): string
+    {
+        return "Set how ASS output writes word timestamps.";
+    }
+
+
+    /**
+     * @return list<Option>
+     */
+    public static function options(): array
+    {
+        return [Option::value("ass-karaoke-tag", "TAG", "Write word timestamps as ASS karaoke tags \\k, \\kf or \\ko: k, kf or ko. Default: k.")];
+    }
+
+
+    public static function fromArguments(Arguments $arguments): ?self
+    {
+        $tag = $arguments->value("ass-karaoke-tag");
+        if ($tag === null) {
+            return null;
+        }
+        if ($arguments->has("karaoke")) {
+            Command::fail("Pass only one of --karaoke and --ass-karaoke-tag.");
+        }
+
+        return new self(AssKaraokeTag::tryFrom($tag) ?? Command::fail("The option --ass-karaoke-tag must be k, kf or ko, got \"$tag\"."));
+    }
+
+
+    public function formatOptions(Format $outputFormat): AssWriteOptions
+    {
+        if ($outputFormat !== Format::Ass) {
+            Command::fail("Pass --to ass with --ass-karaoke-tag.");
+        }
+
+        return new AssWriteOptions($this->karaokeTag);
+    }
+}

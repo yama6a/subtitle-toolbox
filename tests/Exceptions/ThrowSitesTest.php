@@ -1,34 +1,43 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Exceptions;
 
 use Closure;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Cli\Arguments;
+use SubtitleToolbox\Cli\Command;
+use SubtitleToolbox\Cli\FileFailure;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Matroska\MkvFixtureWriter;
+use SubtitleToolbox\CueLimits;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
-use SubtitleToolbox\DualSubtitleOptions;
+use SubtitleToolbox\Dual\DualSubtitleOptions;
 use SubtitleToolbox\Encoding\Cea608;
-use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Fixing\OcrReplaceList;
-use SubtitleToolbox\FrameRate;
-use SubtitleToolbox\Formatters\AssFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\CsvFormatter;
+use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\Formatters\EbuStlFormatter;
-use SubtitleToolbox\Formatters\HtmlTranscriptFormatter;
 use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
-use SubtitleToolbox\Formatters\MpSubFormatter;
+use SubtitleToolbox\Formatters\Options\AssWriteOptions;
+use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
+use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
+use SubtitleToolbox\Formatters\Options\HtmlTranscriptWriteOptions;
+use SubtitleToolbox\Formatters\Options\IttWriteOptions;
+use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
+use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
+use SubtitleToolbox\Formatters\Options\PlainTextWriteOptions;
+use SubtitleToolbox\Formatters\Options\SubViewerWriteOptions;
 use SubtitleToolbox\Formatters\PgsFormatter;
-use SubtitleToolbox\Formatters\PlainTextFormatter;
 use SubtitleToolbox\Formatters\SccFormatter;
-use SubtitleToolbox\Formatters\SubRipFormatter;
 use SubtitleToolbox\Formatters\SubtitleFormatter;
-use SubtitleToolbox\Formatters\SubViewerFormatter;
 use SubtitleToolbox\Formatters\TtmlFormatter;
-use SubtitleToolbox\HearingImpairedOptions;
+use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
 use SubtitleToolbox\Hls\HlsSegmentOptions;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\Hls\TimestampMap;
@@ -39,54 +48,67 @@ use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Karaoke\WordHighlightOptions;
 use SubtitleToolbox\MergeShortCuesOptions;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
+use SubtitleToolbox\Ocr\GlyphOcrOptions;
 use SubtitleToolbox\Ocr\OcrEngineChooser;
-use SubtitleToolbox\Ocr\OcrResult;
+use SubtitleToolbox\Ocr\OcrEngineName;
+use SubtitleToolbox\Ocr\RecognizedText;
 use SubtitleToolbox\Ocr\TesseractOcrEngine;
+use SubtitleToolbox\Ocr\TesseractOcrOptions;
 use SubtitleToolbox\Parsers\AssemblyAiParser;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\AwsTranscribeParser;
-use SubtitleToolbox\Parsers\CsvColumns;
+use SubtitleToolbox\Parsers\Options\CsvColumns;
 use SubtitleToolbox\Parsers\CsvParser;
+use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\DeepgramParser;
 use SubtitleToolbox\Parsers\EbuStlParser;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\Parsers\GoogleSpeechParser;
 use SubtitleToolbox\Parsers\HtmlTranscriptParser;
 use SubtitleToolbox\Parsers\JsonParser;
-use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
+use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\OgmChaptersParser;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\PodcastChaptersParser;
 use SubtitleToolbox\Parsers\PodcastTranscriptParser;
 use SubtitleToolbox\Parsers\SamiParser;
+use SubtitleToolbox\Parsers\Options\SamiReadOptions;
 use SubtitleToolbox\Parsers\SbvParser;
 use SubtitleToolbox\Parsers\SccParser;
+use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\Parsers\SubRipParser;
 use SubtitleToolbox\Parsers\SubViewerParser;
-use SubtitleToolbox\Parsers\TmPlayerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\VobSubParser;
+use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 use SubtitleToolbox\Profanity\ProfanityOptions;
-use SubtitleToolbox\ResegmentOptions;
-use SubtitleToolbox\Speakers\SpeakerLabels;
+use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\ReplaceTextOptions;
+use SubtitleToolbox\Resegmenting\ResegmentMode;
+use SubtitleToolbox\Resegmenting\ResegmentOptions;
+use SubtitleToolbox\Speakers\SpeakerLabelOptions;
+use SubtitleToolbox\Speakers\SpeakerStyle;
 use SubtitleToolbox\Streaming\SubRipStreamReader;
 use SubtitleToolbox\Streaming\SubRipStreamWriter;
 use SubtitleToolbox\Streaming\WebVttStreamReader;
+use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
 use SubtitleToolbox\Sync\SpeechReference;
+use SubtitleToolbox\Timecode;
 use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\Timing\ShotChanges;
 use SubtitleToolbox\Translation\TranslationEngine;
 use SubtitleToolbox\Translation\TranslationOptions;
 use SubtitleToolbox\Translation\TranslationRunner;
 use SubtitleToolbox\Validation\ValidationRules;
+use SubtitleToolbox\WriteOptions;
 
 require_once __DIR__ . "/../files/mkv/generator/MkvFixtureWriter.php";
 
@@ -101,13 +123,21 @@ class ThrowSitesTest extends TestCase
         ImageCueWithoutTextException::class => 103,
         InvalidArgumentException::class     => 104,
         CueNotFoundException::class         => 105,
+        UnknownFormatException::class       => 106,
+        OcrException::class                 => 107,
+        UnwritableContentException::class   => 108,
     ];
+
+    // The CLI catches its own exceptions, so they need no error code.
+    private const CLI_CODES = [FileFailure::class => 0];
 
     private const IDX = "# VobSub index file, v7 (do not modify this line!)\nsize: 720x576\n" .
                         "palette: 000000, f0f0f0, cccccc, 999999, 3333fa, 1111bb, fa3333, bb1111, " .
                         "33fa33, 11bb11, fafa33, bbbb11, fa33fa, bb11bb, 33fafa, 11bbbb\n";
 
     private const IDX_WITH_TRACK = self::IDX . "id: en, index: 0\ntimestamp: 00:00:01:000, filepos: 000000000\n";
+
+    private const FILES = __DIR__ . "/../files/";
 
     private const FAKE_TESSERACT = __DIR__ . "/../files/ocr/fake-tesseract/tesseract";
 
@@ -143,6 +173,16 @@ class ThrowSitesTest extends TestCase
         $body = "\x81\x00\x00\x20" . $unit;
 
         return "\x00\x00\x01\xBA\x44\x00\x04\x00\x04\x01\x01\x89\xC3\xFA\xFF\xFF\x00\x00\x01\xBD" . pack("n", strlen($body)) . $body;
+    }
+
+
+    private static function unreadableFile(): string
+    {
+        $path = tempnam(sys_get_temp_dir(), "unreadable");
+        chmod($path, 0);
+        register_shutdown_function(fn () => @unlink($path));
+
+        return $path;
     }
 
 
@@ -201,9 +241,11 @@ class ThrowSitesTest extends TestCase
      */
     public static function throwSites(): array
     {
-        $invalid  = [\InvalidArgumentException::class, InvalidArgumentException::class];
-        $parsing  = [ParsingException::class, ParsingException::class];
-        $imageCue = (new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(1, 2));
+        $invalid    = [\InvalidArgumentException::class, InvalidArgumentException::class];
+        $parsing    = [ParsingException::class, ParsingException::class];
+        $ocr        = [\RuntimeException::class, OcrException::class];
+        $unwritable = [\InvalidArgumentException::class, UnwritableContentException::class];
+        $imageCue   = (new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(1, 2));
 
         $cue = ["start" => 1, "end" => 2, "lines" => ["text"]];
 
@@ -223,9 +265,11 @@ class ThrowSitesTest extends TestCase
             "ArrayConversion.php: cue alignment"            => [fn () => self::fromArray(["cues" => [["alignment" => 10] + $cue]]), ...$parsing],
             "ArrayConversion.php: cue forced"               => [fn () => self::fromArray(["cues" => [["forced" => 1] + $cue]]), ...$parsing],
             "ArrayConversion.php: format data no object"    => [fn () => self::fromArray(["formatData" => ["srt" => 5]]), ...$parsing],
+            "ArrayConversion.php: format data field type"   => [fn () => self::fromArray(["formatData" => ["scc" => ["dropFrame" => "x"]]]), ...$parsing],
             "ArrayConversion.php: map no object"            => [fn () => self::fromArray(["metadata" => 5]), ...$parsing],
             "ArrayConversion.php: comments no list"         => [fn () => self::fromArray(["comments" => 5]), ...$parsing],
             "Cli/Command.php: unknown option"               => [fn () => Arguments::parse(["--nope"], []), ...$invalid],
+            "Cli/Command.php: file failure"                 => [fn () => Command::failFile("Cannot read x."), \RuntimeException::class, FileFailure::class],
             "Container/Matroska/EbmlReader.php: invalid element header" => [fn () => MatroskaReader::open(self::stream("\0\0\0\0")), ...$parsing],
             "Container/Matroska/EbmlReader.php: cut off element data" => [fn () => self::mkv("", ["codecPrivate" => "abc"], "c"), ...$parsing],
             "Container/Matroska/MatroskaReader.php: stream not seekable" => [fn () => MatroskaReader::open(fopen("php://output", "wb")), ...$invalid],
@@ -250,77 +294,65 @@ class ThrowSitesTest extends TestCase
             "Container/Matroska/MatroskaReader.php: unknown size of Tracks" => [fn () => MatroskaReader::open(self::stream(
                                                                 MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT,
                                                                 MkvFixtureWriter::unknownSizeElement(MkvFixtureWriter::TRACKS, "")))), ...$parsing],
-            "CueEditing.php: slice start after end"         => [fn () => self::subtitle()->slice(5, 1), ...$invalid],
+            "CueLimits.php: maximum lines 0"                => [fn () => new CueLimits(maxLinesPerCue: 0), ...$invalid],
+            "CueLimits.php: negative minimum duration"      => [fn () => new CueLimits(minDuration: -1), ...$invalid],
+            "CueLimits.php: maximum duration 0"             => [fn () => new CueLimits(maxDuration: 0), ...$invalid],
+            "CueEditing.php: slice start after end"         => [fn () => self::subtitle()->withSlice(5, 1), ...$invalid],
             "CueEditing.php: split time outside the cue"    => [fn () => self::subtitle()->splitCue(0, 9, 1), ...$invalid],
             "CueEditing.php: split line out of range"       => [fn () => self::subtitle()->splitCue(0, 1.5, 5), ...$invalid],
             "CueEditing.php: join in the wrong order"       => [fn () => self::subtitle()->joinCues(1, 0), ...$invalid],
             "CueEditing.php: edit a missing cue"            => [fn () => self::subtitle()->splitCue(9, 1.5, 1), ...$invalid],
-            "CueLookup.php: range start after end"          => [fn () => self::subtitle()->getCuesBetween(10, 5), ...$invalid],
+            "CueLookup.php: range start after end"          => [fn () => self::subtitle()->findCuesBetween(10, 5), ...$invalid],
             "Diff/SubtitleDiffOptions.php: negative tolerance" => [fn () => new SubtitleDiffOptions(-1), ...$invalid],
-            "DualSubtitleOptions.php: unknown mode"         => [fn () => new DualSubtitleOptions("side"), ...$invalid],
-            "DualSubtitleOptions.php: negative snap"        => [fn () => new DualSubtitleOptions(snapTolerance: -1), ...$invalid],
-            "DualSubtitleOptions.php: unknown style"        => [fn () => new DualSubtitleOptions(secondaryStyle: "blink"), ...$invalid],
-            "DualSubtitleOptions.php: alignment 0"          => [fn () => new DualSubtitleOptions(secondaryAlignment: 0), ...$invalid],
+            "Dual/DualSubtitleOptions.php: negative snap"        => [fn () => new DualSubtitleOptions(snapTolerance: -1), ...$invalid],
+            "Dual/DualSubtitleOptions.php: unknown style"        => [fn () => new DualSubtitleOptions(secondaryStyle: "blink"), ...$invalid],
+            "Dual/DualSubtitleOptions.php: alignment 0"          => [fn () => new DualSubtitleOptions(secondaryAlignment: 0), ...$invalid],
             "Encoding/Cea608.php: row 16"                   => [fn () => Cea608::encodePac(16, 0), ...$invalid],
             "Fixes.php: minimum duration 0"                 => [fn () => self::subtitle()->extendShortCues(0), ...$invalid],
             "Fixes.php: maximum characters 0"               => [fn () => self::subtitle()->wrapLines(0), ...$invalid],
             "Fixes.php: negative gap"                       => [fn () => self::subtitle()->fixOverlaps(-1), ...$invalid],
-            "Fixing/CommonErrorOptions.php: dialogue dash"  => [fn () => new CommonErrorOptions(dialogueDash: "*"), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid regex"      => [fn () => new OcrReplaceList(regularExpressions: ["/(/" => ""]), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid XML"        => [fn () => OcrReplaceList::fromSubtitleEditXml("<ReplaceList>"), ...$parsing],
-            "Formatters/AssFormatter.php: karaoke tag"      => [fn () => self::subtitle()->format(AssFormatter::class,
-                                                                [AssFormatter::OPTION_KARAOKE_TAG => "K"]), ...$invalid],
-            "Formatters/CsvFormatter.php: time format"      => [fn () => self::subtitle()->format(CsvFormatter::class,
-                                                                [CsvFormatter::OPTION_TIME_FORMAT => "mm:ss"]), ...$invalid],
-            "Formatters/CsvFormatter.php: frames without rate" => [fn () => self::subtitle()->format(CsvFormatter::class,
-                                                                [CsvFormatter::OPTION_TIME_FORMAT => CsvParser::TIME_FRAMES]), ...$invalid],
-            "Formatters/CsvFormatter.php: second text"      => [fn () => self::subtitle()->format(CsvFormatter::class,
-                                                                [CsvFormatter::OPTION_SECOND_TEXT => "text"]), ...$invalid],
-            "Formatters/EbuStlFormatter.php: frame rate 24" => [fn () => self::subtitle()->format(EbuStlFormatter::class,
-                [EbuStlFormatter::OPTION_FRAME_RATE => 24]), ...$invalid],
+            "Formatters/JsonOutput.php: invalid UTF-8" => [fn () => Subtitle::load(self::FILES . "cli/latin1.srt", Format::SubRip)->toString(Format::Json),
+                ...$unwritable],
+            "Formatters/CsvFormatter.php: frames without rate" => [fn () => self::subtitle()->toString(Format::Csv,
+                new WriteOptions(format: new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames))), ...$invalid],
             "Formatters/EbuStlFormatter.php: code table 09" => [fn () => self::subtitle()->setFormatData(EbuStlParser::FORMAT_DATA_KEY,
-                ["gsi" => ["CCT" => "09"]])->format(EbuStlFormatter::class), ...$invalid],
+                ["gsi" => ["CCT" => "09"]])->toString(Format::EbuStl), ...$invalid],
             "Formatters/EbuStlFormatter.php: subtitle number 65536" => [fn () => self::subtitle()->setFormatData(EbuStlParser::FORMAT_DATA_KEY,
-                ["firstSubtitleNumber" => 65536])->format(EbuStlFormatter::class), ...$invalid],
+                ["firstSubtitleNumber" => 65536])->toString(Format::EbuStl), ...$unwritable],
             "Formatters/EbuStlFormatter.php: text too long" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 30000)))
-                ->format(EbuStlFormatter::class), ...$invalid],
-            "Formatters/HtmlTranscriptFormatter.php: paragraph gap" => [fn () => self::subtitle()->format(HtmlTranscriptFormatter::class,
-                [HtmlTranscriptFormatter::OPTION_PARAGRAPH_GAP => "2"]), ...$invalid],
-            "Formatters/IttFormatter.php: no frame rate"    => [fn () => self::subtitle()->format(IttFormatter::class), ...$invalid],
-            "Formatters/IttFormatter.php: unsupported frame rate" => [fn () => self::subtitle()->format(IttFormatter::class,
-                [IttFormatter::OPTION_FRAME_RATE => 50]), ...$invalid],
-            "Formatters/MicroDvdFormatter.php: no frame rate" => [fn () => self::subtitle()->format(MicroDvdFormatter::class), ...$invalid],
-            "Formatters/MpSubFormatter.php: fractional frame rate" => [fn () => self::subtitle()->format(MpSubFormatter::class,
-                [MpSubFormatter::OPTION_FRAME_RATE => 25.5]), ...$invalid],
-            "Formatters/PgsFormatter.php: text cue"         => [fn () => self::subtitle()->format(PgsFormatter::class), ...$invalid],
+                ->toString(Format::EbuStl), ...$unwritable],
+            "Formatters/IttFormatter.php: no frame rate"    => [fn () => (new IttFormatter())->format(self::subtitle(), new WriteOptions()), ...$invalid],
+            "Formatters/MicroDvdFormatter.php: no frame rate" => [fn () => (new MicroDvdFormatter())->format(self::subtitle(), new WriteOptions()),
+                                                                ...$invalid],
+            "Formatters/Options/CsvWriteOptions.php: frame rate 0" => [fn () => new CsvWriteOptions(frameRate: 0), ...$invalid],
+            "Formatters/Options/EbuStlWriteOptions.php: frame rate 24" => [fn () => new EbuStlWriteOptions(frameRate: 24), ...$invalid],
+            "Formatters/Options/HtmlTranscriptWriteOptions.php: negative paragraph gap" => [fn () => new HtmlTranscriptWriteOptions(paragraphGap: -1),
+                ...$invalid],
+            "Formatters/Options/IttWriteOptions.php: frame rate 50" => [fn () => new IttWriteOptions(frameRate: 50), ...$invalid],
+            "Formatters/Options/MicroDvdWriteOptions.php: frame rate 0" => [fn () => new MicroDvdWriteOptions(frameRate: 0), ...$invalid],
+            "Formatters/Options/MpSubWriteOptions.php: frame rate 0" => [fn () => new MpSubWriteOptions(frameRate: 0), ...$invalid],
+            "Formatters/Options/PlainTextWriteOptions.php: negative paragraph gap" => [fn () => new PlainTextWriteOptions(paragraphGap: -1), ...$invalid],
+            "Formatters/PgsFormatter.php: text cue"         => [fn () => self::subtitle()->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: negative x"       => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), -1, 0, 1, 1, 9, 9))
-                ->toCue(new SubtitleCue(1, 2)))->format(PgsFormatter::class), ...$invalid],
+                ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: PNG size"         => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), 0, 0, 2, 1, 9, 9))
-                ->toCue(new SubtitleCue(1, 2)))->format(PgsFormatter::class), ...$invalid],
+                ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: negative time"    => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), 0, 0, 1, 1, 9, 9))
-                ->toCue(new SubtitleCue(-1, 2)))->format(PgsFormatter::class), ...$invalid],
-            "Formatters/PlainTextFormatter.php: paragraph gap" => [fn () => self::subtitle()->format(PlainTextFormatter::class,
-                [PlainTextFormatter::OPTION_PARAGRAPH_GAP => "2"]), ...$invalid],
-            "Formatters/SccFormatter.php: drop frame option" => [fn () => self::subtitle()->format(SccFormatter::class,
-                [SccFormatter::OPTION_DROP_FRAME => "yes"]), ...$invalid],
+                ->toCue(new SubtitleCue(-1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/SccFormatter.php: 5 lines"          => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, ["1", "2", "3", "4", "5"]))
-                ->format(SccFormatter::class), ...$invalid],
+                ->toString(Format::Scc), ...$unwritable],
             "Formatters/SccFormatter.php: 33 characters"    => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 33)))
-                ->format(SccFormatter::class), ...$invalid],
+                ->toString(Format::Scc), ...$unwritable],
             "Formatters/SccFormatter.php: no CEA-608 character" => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, "\u{20AC}"))
-                ->format(SccFormatter::class), ...$invalid],
-            "Formatters/SubViewerFormatter.php: version 3"  => [fn () => self::subtitle()->format(SubViewerFormatter::class,
-                [SubViewerFormatter::OPTION_VERSION => 3]), ...$invalid],
-            "Formatters/SubtitleFormatter.php: line ending" => [fn () => self::subtitle()->format(SubRipFormatter::class,
-                [SubtitleFormatter::OPTION_LINE_ENDING => "\r"]), ...$invalid],
-            "Formatters/SubtitleFormatter.php: bom"         => [fn () => self::subtitle()->format(SubRipFormatter::class,
-                [SubtitleFormatter::OPTION_BOM => "yes"]), ...$invalid],
-            "Formatters/SubtitleFormatter.php: unknown option" => [fn () => self::subtitle()->format(SubRipFormatter::class,
-                ["lineEndings" => "\r\n"]), ...$invalid],
-            "Formatters/TtmlFormatter.php: stored head"     => [fn () => self::subtitle()->setFormatData(TtmlParser::FORMAT, ["head" => "<p/>"])
-                ->format(TtmlFormatter::class), InvalidFormatterException::class, InvalidFormatterException::class],
+                ->toString(Format::Scc), ...$unwritable],
+            "Formatters/SubtitleFormatter.php: options of another format" => [fn () => self::subtitle()->toString(Format::SubRip,
+                new WriteOptions(format: new CsvWriteOptions())), ...$invalid],
+            "Formatters/TtmlFormatter.php: stored head"     => [fn () => self::subtitle()->setFormatData(TtmlParser::FORMAT_DATA_KEY, ["head" => "<p/>"])
+                ->toString(Format::Ttml), ...$unwritable],
             "FrameRate.php: frame rate 0"                   => [fn () => new FrameRate(0), ...$invalid],
-            "HearingImpairedOptions.php: empty bracket"     => [fn () => new HearingImpairedOptions(customBrackets: [["{", ""]]), ...$invalid],
+            "HearingImpaired/HearingImpairedOptions.php: empty bracket"     => [fn () => new HearingImpairedOptions(customBrackets: [["{", ""]]), ...$invalid],
             "Hls/HlsSegmentOptions.php: segment duration 0" => [fn () => new HlsSegmentOptions(segmentDuration: 0), ...$invalid],
             "Hls/HlsSegmentOptions.php: no %d in pattern"   => [fn () => new HlsSegmentOptions(fileNamePattern: "sub.vtt"), ...$invalid],
             "Hls/HlsSegmentOptions.php: media duration 0"   => [fn () => new HlsSegmentOptions(mediaDuration: 0), ...$invalid],
@@ -330,6 +362,7 @@ class ThrowSitesTest extends TestCase
             "Hls/TimestampMap.php: other header"            => [fn () => TimestampMap::fromHeader("WEBVTT"), ...$parsing],
             "Hls/TimestampMap.php: no MPEGTS"               => [fn () => TimestampMap::fromHeader("X-TIMESTAMP-MAP=LOCAL:00:00.000"), ...$parsing],
             "Image/CueImage.php: width 0"                   => [fn () => new CueImage("png", 0, 0, 0, 1, 1, 1), ...$invalid],
+            "Image/CueImage.php: too large"                 => [fn () => new CueImage("png", 0, 0, 8000, 1, 1, 1), ...$invalid],
             "Image/CueImage.php: no image"                  => [fn () => CueImage::fromCue(new SubtitleCue(1, 2, "text")), ...$invalid],
             "Image/CueImage.php: no integer x"              => [fn () => CueImage::fromCue((new SubtitleCue(1, 2))
                 ->setFormatData(CueImage::FORMAT_DATA_KEY, ["png" => "png"])), ...$invalid],
@@ -343,6 +376,8 @@ class ThrowSitesTest extends TestCase
             "Image/PngDecoder.php: cut off chunk"           => [fn () => PngDecoder::decode(substr(self::png(), 0, 20)), ...$invalid],
             "Image/PngDecoder.php: no IHDR"                 => [fn () => PngDecoder::decode("\x89PNG\r\n\x1a\n"), ...$invalid],
             "Image/PngDecoder.php: interlaced"              => [fn () => PngDecoder::decode(self::pngWithIhdr(1) . self::pngChunk("IDAT", "")), ...$invalid],
+            "Image/PngDecoder.php: too large"               => [fn () => PngDecoder::decode("\x89PNG\r\n\x1a\n" .
+                self::pngChunk("IHDR", pack("NNCCCCC", 8000, 1, 8, 6, 0, 0, 0)) . self::pngChunk("IDAT", "")), ...$invalid],
             "Image/PngDecoder.php: invalid zlib data"       => [fn () => PngDecoder::decode(self::pngWithIhdr(0) . self::pngChunk("IDAT", "nope")), ...$invalid],
             "Image/PngDecoder.php: too few rows"            => [fn () => PngDecoder::decode(self::pngWithIhdr(0) . self::pngChunk("IDAT", gzcompress(""))),
                                                                 ...$invalid],
@@ -351,214 +386,227 @@ class ThrowSitesTest extends TestCase
             "Image/PngDecoder.php: zlib missing"            => [fn () => (new \ReflectionMethod(PngDecoder::class, "requireFunction"))
                 ->invoke(null, "gzuncompress_missing"), ...$invalid],
             "Karaoke/WordHighlightOptions.php: speaker style" => [fn () => new WordHighlightOptions(style: "v Ann"), ...$invalid],
-            "Karaoke/WordHighlightOptions.php: unknown mode"  => [fn () => new WordHighlightOptions(mode: "line"), ...$invalid],
             "Karaoke/WordHighlightOptions.php: 0 words"       => [fn () => new WordHighlightOptions(maxWordsPerCue: 0), ...$invalid],
-            "MergeShortCuesOptions.php: maximum lines 0"    => [fn () => new MergeShortCuesOptions(maxLines: 0), ...$invalid],
             "MergeShortCuesOptions.php: negative gap"       => [fn () => new MergeShortCuesOptions(maxGap: -1), ...$invalid],
-            "MergeShortCuesOptions.php: maximum duration 0" => [fn () => new MergeShortCuesOptions(maxDuration: 0), ...$invalid],
             "MergeShortCuesOptions.php: minimum characters 0" => [fn () => new MergeShortCuesOptions(minCharacters: 0), ...$invalid],
-            "Ocr/GlyphOcrEngine.php: unknown option"        => [fn () => new GlyphOcrEngine(null, ["speed" => 2]), ...$invalid],
-            "Ocr/GlyphOcrEngine.php: invalid option"        => [fn () => new GlyphOcrEngine(null, ["inkThreshold" => 0]), ...$invalid],
+            "Ocr/GlyphOcrOptions.php: ink threshold 0"      => [fn () => new GlyphOcrOptions(inkThreshold: 0), ...$invalid],
+            "Ocr/GlyphOcrOptions.php: space width 0"        => [fn () => new GlyphOcrOptions(spaceWidth: 0), ...$invalid],
+            "Ocr/GlyphOcrOptions.php: wrong pixels -1"      => [fn () => new GlyphOcrOptions(maxWrongPixels: -1), ...$invalid],
+            "Ocr/GlyphOcrOptions.php: italic slant 2"       => [fn () => new GlyphOcrOptions(italicSlant: 2.0), ...$invalid],
+            "Ocr/GlyphOcrOptions.php: line height 0"        => [fn () => new GlyphOcrOptions(minLineHeight: 0), ...$invalid],
             "Ocr/GlyphOcrEngine.php: no PNG"                => [fn () => (new GlyphOcrEngine())
-                ->recognize(new CueImage("png", 0, 0, 1, 1, 1, 1), null), ...$invalid],
+                ->recognize(new CueImage("png", 0, 0, 1, 1, 1, 1), null), ...$ocr],
             "Ocr/GlyphOcrEngine.php: package missing"       => [fn () => (new \ReflectionMethod(GlyphOcrEngine::class, "requireClass"))
                 ->invoke(null, "GlyphOcr\\Missing"), ...$invalid],
-            "Ocr/OcrEngineChooser.php: unknown engine"      => [fn () => OcrEngineChooser::choose("easyocr"), ...$invalid],
-            "Ocr/OcrResult.php: line is no string"          => [fn () => new OcrResult([5]), ...$invalid],
-            "Ocr/OcrResult.php: confidence above 1"         => [fn () => new OcrResult(["text"], 2), ...$invalid],
-            "Ocr/TesseractOcrEngine.php: mode 14"           => [fn () => new TesseractOcrEngine(pageSegmentationMode: 14), ...$invalid],
-            "Ocr/TesseractOcrEngine.php: scale 0.5"         => [fn () => new TesseractOcrEngine(scale: 0.5), ...$invalid],
-            "Ocr/TesseractOcrEngine.php: threshold 0"       => [fn () => new TesseractOcrEngine(threshold: 0), ...$invalid],
-            "Ocr/TesseractOcrEngine.php: program missing"   => [fn () => (new TesseractOcrEngine(program: __DIR__ . "/none"))
+            "Ocr/OcrEngineChooser.php: engine missing"      => [fn () => OcrEngineChooser::choose(OcrEngineName::Tesseract, __DIR__ . "/none"), ...$invalid],
+            "Ocr/RecognizedText.php: line is no string"          => [fn () => new RecognizedText([5]), ...$invalid],
+            "Ocr/RecognizedText.php: confidence above 1"         => [fn () => new RecognizedText(["text"], 2), ...$invalid],
+            "Ocr/TesseractOcrOptions.php: mode 14"          => [fn () => new TesseractOcrOptions(pageSegmentationMode: 14), ...$invalid],
+            "Ocr/TesseractOcrOptions.php: scale 0.5"        => [fn () => new TesseractOcrOptions(scale: 0.5), ...$invalid],
+            "Ocr/TesseractOcrOptions.php: threshold 0"      => [fn () => new TesseractOcrOptions(threshold: 0), ...$invalid],
+            "Ocr/TesseractOcrEngine.php: program missing"   => [fn () => (new TesseractOcrEngine(new TesseractOcrOptions(program: __DIR__ . "/none")))
                 ->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), null), ...$invalid],
-            "Ocr/TesseractOcrEngine.php: language missing"  => [fn () => (new TesseractOcrEngine(program: self::FAKE_TESSERACT))
+            "Ocr/TesseractOcrEngine.php: language missing"  => [fn () => (new TesseractOcrEngine(new TesseractOcrOptions(program: self::FAKE_TESSERACT)))
                 ->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), "xyz"), ...$invalid],
             "Ocr/TesseractOcrEngine.php: program fails"     => [function (): void {
                 putenv("FAKE_TESSERACT_FAIL=1");
                 try {
-                    (new TesseractOcrEngine(program: self::FAKE_TESSERACT))->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), null);
+                    (new TesseractOcrEngine(new TesseractOcrOptions(program: self::FAKE_TESSERACT)))->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), null);
                 } finally {
                     putenv("FAKE_TESSERACT_FAIL");
                 }
-            }, ...$invalid],
-            "Parsers/AssParser.php: no events section"      => [fn () => (new AssParser())->parse("[Script Info]\nTitle: x\n"), ...$parsing],
+            }, ...$ocr],
+            "Parsers/AssParser.php: no events section"      => [fn () => (new AssParser())->parse("[Script Info]\nTitle: x\n", new ReadOptions()), ...$parsing],
             "Parsers/AssParser.php: too few fields"         => [fn () => (new AssParser())->parse("[Events]\nFormat: Layer, Start, End, Text\n" .
-                                                                                                  "Dialogue: 0,0:00:01.00\n"), ...$parsing],
+                                                                                                  "Dialogue: 0,0:00:01.00\n", new ReadOptions()), ...$parsing],
             "Parsers/AssParser.php: no Start field"         => [fn () => (new AssParser())->parse("[Events]\nFormat: Layer, Text\n" .
-                                                                                                  "Dialogue: 0,text\n"), ...$parsing],
+                                                                                                  "Dialogue: 0,text\n", new ReadOptions()), ...$parsing],
             "Parsers/AssParser.php: invalid time"           => [fn () => (new AssParser())->parse("[Events]\nFormat: Start, End, Text\n" .
-                                                                                                  "Dialogue: soon,0:00:02.00,text\n"), ...$parsing],
-            "Parsers/AssemblyAiParser.php: no words"        => [fn () => (new AssemblyAiParser())->parse('{"text": "Hi"}'), ...$parsing],
-            "Parsers/AwsTranscribeParser.php: no items"     => [fn () => (new AwsTranscribeParser())->parse('{"results": {}}'), ...$parsing],
-            "Parsers/CsvColumns.php: negative index"        => [fn () => new CsvColumns(start: -1), ...$invalid],
-            "Parsers/CsvColumns.php: name without header"   => [fn () => new CsvColumns(start: 0, text: "Text", header: false), ...$invalid],
-            "Parsers/CsvParser.php: delimiter"              => [fn () => new CsvParser(delimiter: "|"), ...$invalid],
-            "Parsers/CsvParser.php: open quote"             => [fn () => (new CsvParser())->parse("start,text\n1,\"a"), ...$parsing],
-            "Parsers/CsvParser.php: bad time"               => [fn () => (new CsvParser())->parse("start,text\nsoon,a"), ...$parsing],
-            "Parsers/CsvParser.php: missing column"         => [fn () => (new CsvParser())->parse("start,end\n1,2"), ...$parsing],
-            "Parsers/DeepgramParser.php: no channels"       => [fn () => (new DeepgramParser())->parse('{"metadata": {}}'), ...$parsing],
-            "Parsers/EbuStlParser.php: no GSI block"        => [fn () => (new EbuStlParser())->parse("STL"), ...$parsing],
-            "Parsers/EbuStlParser.php: partial TTI block"   => [fn () => (new EbuStlParser())->parse(str_repeat(" ", 1025)), ...$parsing],
-            "Parsers/EbuStlParser.php: disk format code"    => [fn () => (new EbuStlParser())->parse(str_repeat(" ", 1024)), ...$parsing],
+                                                                                                  "Dialogue: soon,0:00:02.00,text\n", new ReadOptions()), ...$parsing],
+            "Parsers/AssemblyAiParser.php: no words"        => [fn () => (new AssemblyAiParser())->parse('{"text": "Hi"}', new ReadOptions()), ...$parsing],
+            "Parsers/AwsTranscribeParser.php: no items"     => [fn () => (new AwsTranscribeParser())->parse('{"results": {}}', new ReadOptions()), ...$parsing],
+            "Parsers/Options/CsvColumns.php: negative index"        => [fn () => new CsvColumns(start: -1), ...$invalid],
+            "Parsers/Options/CsvColumns.php: name without header"   => [fn () => new CsvColumns(start: 0, text: "Text", header: false), ...$invalid],
+            "Parsers/CsvParser.php: delimiter"              => [fn () => new CsvReadOptions(delimiter: "|"), ...$invalid],
+            "Parsers/CsvParser.php: open quote"             => [fn () => (new CsvParser())->parse("start,text\n1,\"a", new ReadOptions()), ...$parsing],
+            "Parsers/CsvParser.php: bad time"               => [fn () => (new CsvParser())->parse("start,text\nsoon,a", new ReadOptions()), ...$parsing],
+            "Parsers/CsvParser.php: missing column"         => [fn () => (new CsvParser())->parse("start,end\n1,2", new ReadOptions()), ...$parsing],
+            "Parsers/DeepgramParser.php: no channels"       => [fn () => (new DeepgramParser())->parse('{"metadata": {}}', new ReadOptions()), ...$parsing],
+            "Parsers/EbuStlParser.php: no GSI block"        => [fn () => (new EbuStlParser())->parse("STL", new ReadOptions()), ...$parsing],
+            "Parsers/EbuStlParser.php: partial TTI block"   => [fn () => (new EbuStlParser())->parse(str_repeat(" ", 1025), new ReadOptions()), ...$parsing],
+            "Parsers/EbuStlParser.php: disk format code"    => [fn () => (new EbuStlParser())->parse(str_repeat(" ", 1024), new ReadOptions()), ...$parsing],
             "Parsers/EbuStlParser.php: code table 09"       => [fn () => (new EbuStlParser())->parse(
-                str_pad("850STL25.01109", 1024, " ")), ...$parsing],
-            "Parsers/GoogleSpeechParser.php: no results"    => [fn () => (new GoogleSpeechParser())->parse('{"done": true}'), ...$parsing],
-            "Parsers/FfMetadataChaptersParser.php: no header" => [fn () => (new FfMetadataChaptersParser())->parse("title=x"), ...$parsing],
+                str_pad("850STL25.01109", 1024, " "), new ReadOptions()), ...$parsing],
+            "Parsers/GoogleSpeechParser.php: no results"    => [fn () => (new GoogleSpeechParser())->parse('{"done": true}', new ReadOptions()), ...$parsing],
+            "Parsers/GoogleSpeechParser.php: alternatives"  => [fn () => (new GoogleSpeechParser())->parse('{"results": [{"alternatives": "x"}]}', new ReadOptions()), ...$parsing],
+            "Parsers/FfMetadataChaptersParser.php: no header" => [fn () => (new FfMetadataChaptersParser())->parse("title=x", new ReadOptions()), ...$parsing],
             "Parsers/FfMetadataChaptersParser.php: time base 0" => [fn () => (new FfMetadataChaptersParser())->parse(
-                ";FFMETADATA1\n[CHAPTER]\nTIMEBASE=0/1\n"), ...$parsing],
-            "Parsers/HtmlTranscriptParser.php: no time"     => [fn () => (new HtmlTranscriptParser())->parse("<p>Hi</p>"), ...$parsing],
-            "Parsers/HtmlTranscriptParser.php: bad time"    => [fn () => (new HtmlTranscriptParser())->parse("<time>x</time><p>Hi</p>"),
+                ";FFMETADATA1\n[CHAPTER]\nTIMEBASE=0/1\n", new ReadOptions()), ...$parsing],
+            "Parsers/HtmlTranscriptParser.php: no time"     => [fn () => (new HtmlTranscriptParser())->parse("<p>Hi</p>", new ReadOptions()), ...$parsing],
+            "Parsers/HtmlTranscriptParser.php: bad time"    => [fn () => (new HtmlTranscriptParser())->parse("<time>x</time><p>Hi</p>", new ReadOptions()),
                                                                 ...$parsing],
-            "Parsers/JsonParser.php: no JSON"               => [fn () => (new JsonParser())->parse("{"), ...$parsing],
-            "Parsers/JsonParser.php: root no object"        => [fn () => (new JsonParser())->parse("[1]"), ...$parsing],
+            "Parsers/JsonParser.php: no JSON"               => [fn () => (new JsonParser())->parse("{", new ReadOptions()), ...$parsing],
+            "Parsers/JsonParser.php: root no object"        => [fn () => (new JsonParser())->parse("[1]", new ReadOptions()), ...$parsing],
             "Parsers/JsonParser.php: invalid base64"        => [fn () => (new JsonParser())->parse(
-                '{"version": 1, "cues": [], "formatData": {"stl": {"base64": "!"}}}'), ...$parsing],
-            "Parsers/LyricsParser.php: negative duration"   => [fn () => new LyricsParser(-1), ...$invalid],
-            "Parsers/MicroDvdParser.php: no frame rate"     => [fn () => (new MicroDvdParser())->parse("{0}{25}text"), ...$parsing],
-            "Parsers/MicroDvdParser.php: frame rate 0"      => [fn () => (new MicroDvdParser())->parse("{1}{1}0\n{0}{25}text"), ...$parsing],
-            "Parsers/MicroDvdParser.php: no cue"            => [fn () => (new MicroDvdParser(25))->parse("text"), ...$parsing],
-            "Parsers/MpSubParser.php: no timing line"       => [fn () => (new MpSubParser())->parse("FORMAT=TIME\ntext\n"), ...$parsing],
-            "Parsers/MpSubParser.php: negative duration"    => [fn () => (new MpSubParser())->parse("FORMAT=TIME\n0 -1\ntext\n"), ...$parsing],
-            "Parsers/MpSubParser.php: no text lines"        => [fn () => (new MpSubParser())->parse("FORMAT=TIME\n0 1\n\n"), ...$parsing],
-            "Parsers/MpSubParser.php: unknown FORMAT"       => [fn () => (new MpSubParser())->parse("FORMAT=FAST\n"), ...$parsing],
-            "Parsers/MpSubParser.php: frame rate 0"         => [fn () => (new MpSubParser())->parse("FORMAT=0\n"), ...$parsing],
+                '{"version": 1, "cues": [], "formatData": {"stl": {"base64": "!"}}}', new ReadOptions()), ...$parsing],
+            "Parsers/MicroDvdParser.php: no frame rate"     => [fn () => (new MicroDvdParser())->parse("{0}{25}text", new ReadOptions()), ...$parsing],
+            "Parsers/MicroDvdParser.php: frame rate 0"      => [fn () => (new MicroDvdParser())->parse("{1}{1}0\n{0}{25}text", new ReadOptions()), ...$parsing],
+            "Parsers/MicroDvdParser.php: no cue"            => [fn () => (new MicroDvdParser())->parse("text", new ReadOptions(format: new MicroDvdReadOptions(25))), ...$parsing],
+            "Parsers/MpSubParser.php: no timing line"       => [fn () => (new MpSubParser())->parse("FORMAT=TIME\ntext\n", new ReadOptions()), ...$parsing],
+            "Parsers/MpSubParser.php: negative duration"    => [fn () => (new MpSubParser())->parse("FORMAT=TIME\n0 -1\ntext\n", new ReadOptions()), ...$parsing],
+            "Parsers/MpSubParser.php: no text lines"        => [fn () => (new MpSubParser())->parse("FORMAT=TIME\n0 1\n\n", new ReadOptions()), ...$parsing],
+            "Parsers/MpSubParser.php: unknown FORMAT"       => [fn () => (new MpSubParser())->parse("FORMAT=FAST\n", new ReadOptions()), ...$parsing],
+            "Parsers/MpSubParser.php: frame rate 0"         => [fn () => (new MpSubParser())->parse("FORMAT=0\n", new ReadOptions()), ...$parsing],
             "Parsers/OgmChaptersParser.php: no name line"   => [fn () => (new OgmChaptersParser())->parse(
-                "CHAPTER01=00:00:00.000\nCHAPTER02=00:00:01.000\n"), ...$parsing],
-            "Parsers/OgmChaptersParser.php: no time line"   => [fn () => (new OgmChaptersParser())->parse("CHAPTER01NAME=x\n"), ...$parsing],
-            "Parsers/OgmChaptersParser.php: second 60"      => [fn () => (new OgmChaptersParser())->parse("CHAPTER01=00:00:60.000\n"), ...$parsing],
-            "Parsers/PgsParser.php: last cue duration 0"    => [fn () => new PgsParser(0), ...$invalid],
-            "Parsers/PgsParser.php: no magic bytes"         => [fn () => (new PgsParser())->parse("XG"), ...$parsing],
-            "Parsers/PgsParser.php: cut off header"         => [fn () => (new PgsParser())->parse("PG\0\0"), ...$parsing],
-            "Parsers/PgsParser.php: cut off data"           => [fn () => (new PgsParser())->parse(substr(self::pgsSegment(0x14, "\0\0"), 0, -1)),
+                "CHAPTER01=00:00:00.000\nCHAPTER02=00:00:01.000\n", new ReadOptions()), ...$parsing],
+            "Parsers/OgmChaptersParser.php: no time line"   => [fn () => (new OgmChaptersParser())->parse("CHAPTER01NAME=x\n", new ReadOptions()), ...$parsing],
+            "Parsers/OgmChaptersParser.php: second 60"      => [fn () => (new OgmChaptersParser())->parse("CHAPTER01=00:00:60.000\n", new ReadOptions()), ...$parsing],
+            "Parsers/PgsParser.php: no magic bytes"         => [fn () => (new PgsParser())->parse("XG", new ReadOptions()), ...$parsing],
+            "Parsers/PgsParser.php: cut off header"         => [fn () => (new PgsParser())->parse("PG\0\0", new ReadOptions()), ...$parsing],
+            "Parsers/PgsParser.php: cut off data"           => [fn () => (new PgsParser())->parse(substr(self::pgsSegment(0x14, "\0\0"), 0, -1), new ReadOptions()),
                                                                 ...$parsing],
-            "Parsers/PgsParser.php: cut off presentation"   => [fn () => (new PgsParser())->parse(self::pgsSegment(0x16, "\0\0")), ...$parsing],
+            "Parsers/PgsParser.php: cut off presentation"   => [fn () => (new PgsParser())->parse(self::pgsSegment(0x16, "\0\0"), new ReadOptions()), ...$parsing],
             "Parsers/PgsParser.php: cut off object"         => [fn () => (new PgsParser())->parse(self::pgsSegment(0x16,
-                "\x02\xD0\x02\x40\x10\0\1\x80\0\0\1")), ...$parsing],
+                "\x02\xD0\x02\x40\x10\0\1\x80\0\0\1"), new ReadOptions()), ...$parsing],
             "Parsers/PgsParser.php: cut off cropping"       => [fn () => (new PgsParser())->parse(self::pgsSegment(0x16,
-                "\x02\xD0\x02\x40\x10\0\1\x80\0\0\1" . "\0\0\0\x80\0\0\0\0")), ...$parsing],
-            "Parsers/PgsParser.php: cut off definition"     => [fn () => (new PgsParser())->parse(self::pgsSegment(0x15, "\0\1\0\x80")), ...$parsing],
+                "\x02\xD0\x02\x40\x10\0\1\x80\0\0\1" . "\0\0\0\x80\0\0\0\0"), new ReadOptions()), ...$parsing],
+            "Parsers/PgsParser.php: cut off definition"     => [fn () => (new PgsParser())->parse(self::pgsSegment(0x15, "\0\1\0\x80"), new ReadOptions()), ...$parsing],
             "Parsers/PgsParser.php: short bitmap"           => [fn () => (new PgsParser())->parse(
                 self::pgsSegment(0x16, "\x02\xD0\x02\x40\x10\0\1\x80\0\0\1" . "\0\7\0\0\0\0\0\0") .
                 self::pgsSegment(0x14, "\0\0\1\x10\x80\x80\xFF") .
                 self::pgsSegment(0x15, "\0\7\0\xC0\0\0\7\0\4\0\2\1\1\0\0") .
-                self::pgsSegment(0x80, "")), ...$parsing],
-            "Parsers/PodcastChaptersParser.php: no JSON"    => [fn () => (new PodcastChaptersParser())->parse("{"), ...$parsing],
-            "Parsers/PodcastChaptersParser.php: no chapters" => [fn () => (new PodcastChaptersParser())->parse('{"version": "1.2.0"}'), ...$parsing],
+                self::pgsSegment(0x80, ""), new ReadOptions()), ...$parsing],
+            "Parsers/PgsParser.php: object too large"       => [fn () => (new PgsParser())->parse(
+                self::pgsSegment(0x15, "\0\7\0\xC0\0\0\4" . pack("nn", 8000, 1)), new ReadOptions()), ...$parsing],
+            "Parsers/PgsParser.php: objects too far apart"  => [fn () => (new PgsParser())->parse(
+                self::pgsSegment(0x16, "\x02\xD0\x02\x40\x10\0\1\x80\0\0\2" . "\0\1\0\0\0\0\0\0" . "\0\2\0\0" . pack("nn", 8000, 0)) .
+                self::pgsSegment(0x14, "\0\0\1\x10\x80\x80\xFF") .
+                self::pgsSegment(0x15, "\0\1\0\xC0\0\0\5\0\1\0\1\1") .
+                self::pgsSegment(0x15, "\0\2\0\xC0\0\0\5\0\1\0\1\1") .
+                self::pgsSegment(0x80, ""), new ReadOptions()), ...$parsing],
+            "Parsers/PodcastChaptersParser.php: no JSON"    => [fn () => (new PodcastChaptersParser())->parse("{", new ReadOptions()), ...$parsing],
+            "Parsers/PodcastChaptersParser.php: no chapters" => [fn () => (new PodcastChaptersParser())->parse('{"version": "1.2.0"}', new ReadOptions()), ...$parsing],
             "Parsers/PodcastChaptersParser.php: start no number" => [fn () => (new PodcastChaptersParser())->parse(
-                '{"chapters": [{"title": "x"}]}'), ...$parsing],
-            "Parsers/PodcastTranscriptParser.php: no JSON"  => [fn () => (new PodcastTranscriptParser())->parse("{"), ...$parsing],
-            "Parsers/PodcastTranscriptParser.php: root no object" => [fn () => (new PodcastTranscriptParser())->parse("[1]"), ...$parsing],
-            "Parsers/PodcastTranscriptParser.php: no segments" => [fn () => (new PodcastTranscriptParser())->parse('{"version": "1.0.0"}'),
+                '{"chapters": [{"title": "x"}]}', new ReadOptions()), ...$parsing],
+            "Parsers/PodcastChaptersParser.php: end no number" => [fn () => (new PodcastChaptersParser())->parse(
+                '{"chapters": [{"startTime": 1, "endTime": "2"}]}', new ReadOptions()), ...$parsing],
+            "Parsers/PodcastTranscriptParser.php: no JSON"  => [fn () => (new PodcastTranscriptParser())->parse("{", new ReadOptions()), ...$parsing],
+            "Parsers/PodcastTranscriptParser.php: root no object" => [fn () => (new PodcastTranscriptParser())->parse("[1]", new ReadOptions()), ...$parsing],
+            "Parsers/PodcastTranscriptParser.php: no segments" => [fn () => (new PodcastTranscriptParser())->parse('{"version": "1.0.0"}', new ReadOptions()),
                                                                 ...$parsing],
-            "Parsers/PodcastTranscriptParser.php: segment no object" => [fn () => (new PodcastTranscriptParser())->parse('{"segments": [1]}'),
+            "Parsers/PodcastTranscriptParser.php: segment no object" => [fn () => (new PodcastTranscriptParser())->parse('{"segments": [1]}', new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/PodcastTranscriptParser.php: time no number" => [fn () => (new PodcastTranscriptParser())->parse(
-                '{"segments": [{"startTime": "0"}]}'), ...$parsing],
-            "Parsers/SamiParser.php: negative duration"     => [fn () => new SamiParser(null, -1), ...$invalid],
-            "Parsers/SamiParser.php: invalid UTF-8"         => [fn () => (new SamiParser())->parse("<SAMI>\xFF</SAMI>"), ...$parsing],
-            "Parsers/SamiParser.php: no Start attribute"    => [fn () => (new SamiParser())->parse("<SAMI><BODY><SYNC>text</BODY></SAMI>"),
+                '{"segments": [{"startTime": "0"}]}', new ReadOptions()), ...$parsing],
+            "Parsers/SamiParser.php: invalid UTF-8"         => [fn () => (new SamiParser())->parse("<SAMI>\xFF</SAMI>", new ReadOptions()), ...$parsing],
+            "Parsers/SamiParser.php: no Start attribute"    => [fn () => (new SamiParser())->parse("<SAMI><BODY><SYNC>text</BODY></SAMI>", new ReadOptions()),
                                                                 ...$parsing],
-            "Parsers/SamiParser.php: unknown class"         => [fn () => (new SamiParser("FRCC"))->parse(
-                "<SAMI><BODY><SYNC Start=0><P Class=ENCC>text</BODY></SAMI>"), ...$parsing],
-            "Parsers/SbvParser.php: no timestamps"          => [fn () => (new SbvParser())->parse("text\nmore"), ...$parsing],
-            "Parsers/SbvParser.php: no text lines"          => [fn () => (new SbvParser())->parse("0:00:01.000,0:00:02.000"), ...$parsing],
-            "Parsers/SbvParser.php: invalid time"           => [fn () => (new SbvParser())->parse("soon,0:00:02.000\ntext"), ...$parsing],
-            "Parsers/SccParser.php: channel 3"              => [fn () => new SccParser(3), ...$invalid],
-            "Parsers/SccParser.php: other header"           => [fn () => (new SccParser())->parse("Scenarist_SCC V2.0\n"), ...$parsing],
-            "Parsers/SccParser.php: no time code"           => [fn () => (new SccParser())->parse(SccParser::HEADER . "\n\n942c\n"), ...$parsing],
-            "Parsers/SccParser.php: invalid byte pair"      => [fn () => (new SccParser())->parse(SccParser::HEADER . "\n\n00:00:01:00\t94zz\n"),
+            "Parsers/SamiParser.php: unknown class"         => [fn () => (new SamiParser())->parse(
+                "<SAMI><BODY><SYNC Start=0><P Class=ENCC>text</BODY></SAMI>", new ReadOptions(format: new SamiReadOptions("FRCC"))), ...$parsing],
+            "Parsers/Options/SamiReadOptions.php: empty language class"   => [fn () => new SamiReadOptions(" "), ...$invalid],
+            "Parsers/SbvParser.php: no timestamps"          => [fn () => (new SbvParser())->parse("text\nmore", new ReadOptions()), ...$parsing],
+            "Parsers/SbvParser.php: no text lines"          => [fn () => (new SbvParser())->parse("0:00:01.000,0:00:02.000", new ReadOptions()), ...$parsing],
+            "Parsers/SbvParser.php: invalid time"           => [fn () => (new SbvParser())->parse("soon,0:00:02.000\ntext", new ReadOptions()), ...$parsing],
+            "Parsers/SccParser.php: other header"           => [fn () => (new SccParser())->parse("Scenarist_SCC V2.0\n", new ReadOptions()), ...$parsing],
+            "Parsers/SccParser.php: no time code"           => [fn () => (new SccParser())->parse(SccParser::HEADER . "\n\n942c\n", new ReadOptions()), ...$parsing],
+            "Parsers/SccParser.php: invalid byte pair"      => [fn () => (new SccParser())->parse(SccParser::HEADER . "\n\n00:00:01:00\t94zz\n", new ReadOptions()),
                                                                 ...$parsing],
-            "Parsers/SccParser.php: empty file"             => [fn () => (new SccParser())->parse(""), ...$parsing],
-            "Parsers/SubRipParser.php: no cue number"       => [fn () => (new SubRipParser())->parse("x\n00:00:01,000 --> 00:00:02,000\ntext"),
+            "Parsers/SccParser.php: empty file"             => [fn () => (new SccParser())->parse("", new ReadOptions()), ...$parsing],
+            "Parsers/SubRipParser.php: no cue number"       => [fn () => (new SubRipParser())->parse("x\n00:00:01,000 --> 00:00:02,000\ntext", new ReadOptions()),
                                                                 ...$parsing],
-            "Parsers/SubRipParser.php: no timestamps"       => [fn () => (new SubRipParser())->parse("1\ntext\nmore"), ...$parsing],
-            "Parsers/SubRipParser.php: no text lines"       => [fn () => (new SubRipParser())->parse("1\n00:00:01,000 --> 00:00:02,000"),
+            "Parsers/SubRipParser.php: no timestamps"       => [fn () => (new SubRipParser())->parse("1\ntext\nmore", new ReadOptions()), ...$parsing],
+            "Parsers/Options/SccReadOptions.php: channel 3"         => [fn () => new SccReadOptions(3), ...$invalid],
+            "Parsers/SubRipParser.php: no text lines"       => [fn () => (new SubRipParser())->parse("1\n00:00:01,000 --> 00:00:02,000", new ReadOptions()),
                                                                 ...$parsing],
-            "Parsers/SubRipParser.php: invalid time"        => [fn () => (new SubRipParser())->parse("1\nsoon --> 00:00:02,000\ntext"),
+            "Parsers/SubRipParser.php: invalid time"        => [fn () => (new SubRipParser())->parse("1\nsoon --> 00:00:02,000\ntext", new ReadOptions()),
                                                                 ...$parsing],
-            "Parsers/SubViewerParser.php: negative duration" => [fn () => new SubViewerParser(-1), ...$invalid],
-            "Parsers/SubViewerParser.php: version 1 header" => [fn () => (new SubViewerParser())->parse("text\n" . SubViewerParser::START_SCRIPT . "\n"), ...$parsing],
-            "Parsers/SubViewerParser.php: version 2 header" => [fn () => (new SubViewerParser())->parse("text\n"), ...$parsing],
-            "Parsers/TmPlayerParser.php: negative duration" => [fn () => new TmPlayerParser(-1), ...$invalid],
-            "Parsers/TtmlParser.php: no tt root"            => [fn () => (new TtmlParser())->parse("<html/>"), ...$parsing],
+            "Parsers/SubViewerParser.php: version 1 header" => [fn () => (new SubViewerParser())->parse("text\n" . SubViewerParser::START_SCRIPT . "\n", new ReadOptions()), ...$parsing],
+            "Parsers/SubViewerParser.php: version 2 header" => [fn () => (new SubViewerParser())->parse("text\n", new ReadOptions()), ...$parsing],
+            "Parsers/SubtitleParser.php: options of another format" => [fn () => (new SubRipParser())->parse("", new ReadOptions(format: new CsvReadOptions())),
+                                                                ...$invalid],
+            "Parsers/TtmlParser.php: no tt root"            => [fn () => (new TtmlParser())->parse("<html/>", new ReadOptions()), ...$parsing],
             "Parsers/TtmlParser.php: invalid time"          => [fn () => (new TtmlParser())->parse(sprintf(self::TTML,
-                '<p begin="soon" end="2s">text</p>')), ...$parsing],
-            "Parsers/TtmlParser.php: empty file"            => [fn () => (new TtmlParser())->parse(""), ...$parsing],
-            "Parsers/TtmlParser.php: not well-formed"       => [fn () => (new TtmlParser())->parse("<tt"), ...$parsing],
+                '<p begin="soon" end="2s">text</p>'), new ReadOptions()), ...$parsing],
+            "Parsers/TtmlParser.php: empty file"            => [fn () => (new TtmlParser())->parse("", new ReadOptions()), ...$parsing],
+            "Parsers/TtmlParser.php: not well-formed"       => [fn () => (new TtmlParser())->parse("<tt", new ReadOptions()), ...$parsing],
             "Parsers/TtmlParser.php: no end time"           => [fn () => (new TtmlParser())->parse(sprintf(self::TTML,
-                '<p begin="1s">text</p>')), ...$parsing],
-            "Parsers/VobSubParser.php: no track"            => [fn () => new VobSubParser(self::IDX), ...$parsing],
-            "Parsers/VobSubParser.php: filepos outside"     => [fn () => (new VobSubParser(self::IDX_WITH_TRACK))->parse(""), ...$parsing],
-            "Parsers/VobSubParser.php: no header line"      => [fn () => new VobSubParser("size: 720x576\n"), ...$parsing],
-            "Parsers/VobSubParser.php: invalid size"        => [fn () => new VobSubParser(self::IDX . "size: 0x0\n"), ...$parsing],
-            "Parsers/VobSubParser.php: invalid custom colors" => [fn () => new VobSubParser(self::IDX . "custom colors: yes\n"), ...$parsing],
-            "Parsers/VobSubParser.php: invalid id"          => [fn () => new VobSubParser(self::IDX . "id: en, index: 99\n"), ...$parsing],
-            "Parsers/VobSubParser.php: timestamp before id" => [fn () => new VobSubParser(self::IDX . "timestamp: 00:00:01:000, filepos: 0\n"),
+                '<p begin="1s">text</p>'), new ReadOptions()), ...$parsing],
+            "Parsers/VobSubParser.php: no VobSubReadOptions" => [fn () => (new VobSubParser())->parse("", new ReadOptions()), ...$invalid],
+            "Parsers/VobSubParser.php: no track"            => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX))), ...$parsing],
+            "Parsers/VobSubParser.php: filepos outside"     => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))), ...$parsing],
+            "Parsers/VobSubParser.php: no header line"      => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions("size: 720x576\n"))), ...$parsing],
+            "Parsers/VobSubParser.php: invalid size"        => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX . "size: 0x0\n"))), ...$parsing],
+            "Parsers/VobSubParser.php: invalid custom colors" => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX . "custom colors: yes\n"))), ...$parsing],
+            "Parsers/VobSubParser.php: invalid id"          => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX . "id: en, index: 99\n"))), ...$parsing],
+            "Parsers/VobSubParser.php: timestamp before id" => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX . "timestamp: 00:00:01:000, filepos: 0\n"))),
                                                                 ...$parsing],
-            "Parsers/VobSubParser.php: invalid timestamp"   => [fn () => new VobSubParser(self::IDX . "id: en, index: 0\ntimestamp: soon\n"),
+            "Parsers/VobSubParser.php: invalid timestamp"   => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX . "id: en, index: 0\ntimestamp: soon\n"))),
                                                                 ...$parsing],
-            "Parsers/VobSubParser.php: no size"             => [fn () => new VobSubParser("# VobSub index file\nid: en, index: 0\n"),
+            "Parsers/VobSubParser.php: no size"             => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions("# VobSub index file\nid: en, index: 0\n"))),
                                                                 ...$parsing],
-            "Parsers/VobSubParser.php: no palette"          => [fn () => new VobSubParser("# VobSub index file\nsize: 720x576\n"),
+            "Parsers/VobSubParser.php: no palette"          => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions("# VobSub index file\nsize: 720x576\n"))),
                                                                 ...$parsing],
-            "Parsers/VobSubParser.php: short palette"       => [fn () => new VobSubParser(self::IDX . "palette: 000000\n"), ...$parsing],
-            "Parsers/VobSubParser.php: invalid time"        => [fn () => new VobSubParser(self::IDX . "delay: soon\n"), ...$parsing],
-            "Parsers/VobSubParser.php: no start code"       => [fn () => (new VobSubParser(self::IDX_WITH_TRACK))->parse("text"), ...$parsing],
-            "Parsers/VobSubParser.php: cut off pack header" => [fn () => (new VobSubParser(self::IDX_WITH_TRACK))->parse("\0\0\1\xBA\x44\0"),
+            "Parsers/VobSubParser.php: short palette"       => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX . "palette: 000000\n"))), ...$parsing],
+            "Parsers/VobSubParser.php: invalid time"        => [fn () => (new VobSubParser())->parse("", new ReadOptions(format: new VobSubReadOptions(self::IDX . "delay: soon\n"))), ...$parsing],
+            "Parsers/VobSubParser.php: no start code"       => [fn () => (new VobSubParser())->parse("text", new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))), ...$parsing],
+            "Parsers/VobSubParser.php: cut off pack header" => [fn () => (new VobSubParser())->parse("\0\0\1\xBA\x44\0", new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))),
                                                                 ...$parsing],
-            "Parsers/VobSubParser.php: program end code"    => [fn () => (new VobSubParser(self::IDX_WITH_TRACK))->parse("\0\0\1\xB9\0\0"),
+            "Parsers/VobSubParser.php: program end code"    => [fn () => (new VobSubParser())->parse("\0\0\1\xB9\0\0", new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))),
                                                                 ...$parsing],
-            "Parsers/VobSubParser.php: packet too long"     => [fn () => (new VobSubParser(self::IDX_WITH_TRACK))->parse(
-                substr(self::vobSubPacket("\0\4\0\4"), 0, -1)), ...$parsing],
-            "Parsers/VobSubParser.php: no control sequence" => [fn () => (new VobSubParser(self::IDX_WITH_TRACK))->parse(
-                self::vobSubPacket("\0\2")), ...$parsing],
-            "Parsers/VobSubParser.php: cut off command"     => [fn () => (new VobSubParser(self::IDX_WITH_TRACK))->parse(
-                self::vobSubPacket("\0\x09\0\4\0\0\0\4\x05")), ...$parsing],
-            "Parsers/VobSubParser.php: cut off bitmap"      => [fn () => (new VobSubParser(self::IDX_WITH_TRACK))->parse(
-                self::vobSubPacket("\0\x15\0\4\0\0\0\4\x05\0\0\1\0\0\1\x06\0\x15\0\x15\xFF")), ...$parsing],
-            "Parsers/WebVttParser.php: no WEBVTT"           => [fn () => (new WebVttParser())->parse("text"), ...$parsing],
-            "Parsers/WebVttParser.php: unknown block"       => [fn () => (new WebVttParser())->parse("WEBVTT\n\ntext\nmore"), ...$parsing],
+            "Parsers/VobSubParser.php: packet too long"     => [fn () => (new VobSubParser())->parse(
+                substr(self::vobSubPacket("\0\4\0\4"), 0, -1), new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))), ...$parsing],
+            "Parsers/VobSubParser.php: no control sequence" => [fn () => (new VobSubParser())->parse(
+                self::vobSubPacket("\0\2"), new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))), ...$parsing],
+            "Parsers/VobSubParser.php: cut off command"     => [fn () => (new VobSubParser())->parse(
+                self::vobSubPacket("\0\x09\0\4\0\0\0\4\x05"), new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))), ...$parsing],
+            "Parsers/VobSubParser.php: image too large"     => [fn () => (new VobSubParser())->parse(
+                self::vobSubPacket("\0\x15\0\4\0\0\0\4\x05\x00\x0F\xFF\x00\x0F\xFF\x06\0\0\0\0\xFF"),
+                new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))), ...$parsing],
+            "Parsers/VobSubParser.php: cut off bitmap"      => [fn () => (new VobSubParser())->parse(
+                self::vobSubPacket("\0\x15\0\4\0\0\0\4\x05\0\0\1\0\0\1\x06\0\x15\0\x15\xFF"), new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))), ...$parsing],
+            "Parsers/Options/VobSubReadOptions.php: empty language" => [fn () => new VobSubReadOptions(language: " "), ...$invalid],
+            "Parsers/Options/VobSubReadOptions.php: negative track" => [fn () => new VobSubReadOptions(track: -1), ...$invalid],
+            "Parsers/WebVttParser.php: no WEBVTT"           => [fn () => (new WebVttParser())->parse("text", new ReadOptions()), ...$parsing],
+            "Parsers/WebVttParser.php: unknown block"       => [fn () => (new WebVttParser())->parse("WEBVTT\n\ntext\nmore", new ReadOptions()), ...$parsing],
             "Parsers/WebVttParser.php: no empty header line" => [fn () => (new WebVttParser())->parse(
-                "WEBVTT\n00:00:01.000 --> 00:00:02.000\ntext"), ...$parsing],
-            "Parsers/WebVttParser.php: no text lines"       => [fn () => (new WebVttParser())->parse("WEBVTT\n\n00:00:01.000 --> 00:00:02.000"),
+                "WEBVTT\n00:00:01.000 --> 00:00:02.000\ntext", new ReadOptions()), ...$parsing],
+            "Parsers/WebVttParser.php: no text lines"       => [fn () => (new WebVttParser())->parse("WEBVTT\n\n00:00:01.000 --> 00:00:02.000", new ReadOptions()),
                                                                 ...$parsing],
-            "Parsers/WebVttParser.php: invalid end time"    => [fn () => (new WebVttParser())->parse("WEBVTT\n\n00:00:01.000 --> soon\ntext"),
+            "Parsers/WebVttParser.php: invalid end time"    => [fn () => (new WebVttParser())->parse("WEBVTT\n\n00:00:01.000 --> soon\ntext", new ReadOptions()),
                                                                 ...$parsing],
-            "Parsers/WebVttParser.php: invalid start time"  => [fn () => (new WebVttParser())->parse("WEBVTT\n\nsoon --> 00:00:02.000\ntext"),
+            "Parsers/WebVttParser.php: invalid start time"  => [fn () => (new WebVttParser())->parse("WEBVTT\n\nsoon --> 00:00:02.000\ntext", new ReadOptions()),
                                                                 ...$parsing],
-            "Parsers/WhisperJsonParser.php: no JSON"        => [fn () => (new WhisperJsonParser())->parse("{"), ...$parsing],
-            "Parsers/WhisperJsonParser.php: root no object" => [fn () => (new WhisperJsonParser())->parse("[1]"), ...$parsing],
-            "Parsers/WhisperJsonParser.php: no segments"    => [fn () => (new WhisperJsonParser())->parse('{"text": "Hi"}'), ...$parsing],
-            "Parsers/WhisperJsonParser.php: time no number" => [fn () => (new WhisperJsonParser())->parse('{"segments": [{"start": "0"}]}'),
+            "Parsers/WhisperJsonParser.php: no JSON"        => [fn () => (new WhisperJsonParser())->parse("{", new ReadOptions()), ...$parsing],
+            "Parsers/WhisperJsonParser.php: root no object" => [fn () => (new WhisperJsonParser())->parse("[1]", new ReadOptions()), ...$parsing],
+            "Parsers/WhisperJsonParser.php: no segments"    => [fn () => (new WhisperJsonParser())->parse('{"text": "Hi"}', new ReadOptions()), ...$parsing],
+            "Parsers/WhisperJsonParser.php: time no number" => [fn () => (new WhisperJsonParser())->parse('{"segments": [{"start": "0"}]}', new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/WhisperJsonParser.php: text no string" => [fn () => (new WhisperJsonParser())->parse(
-                '{"segments": [{"start": 0, "end": 1}]}'), ...$parsing],
-            "Parsers/WordGrouping.php: no JSON"             => [fn () => (new DeepgramParser())->parse("{"), ...$parsing],
-            "Parsers/WordGrouping.php: root no object"      => [fn () => (new GoogleSpeechParser())->parse("[1]"), ...$parsing],
-            "Parsers/WordGrouping.php: bad time"            => [fn () => (new AssemblyAiParser())->parse('{"words": [{"text": "Hi", "start": "soon"}]}'),
+                '{"segments": [{"start": 0, "end": 1}]}', new ReadOptions()), ...$parsing],
+            "Parsers/WordGrouping.php: no JSON"             => [fn () => (new DeepgramParser())->parse("{", new ReadOptions()), ...$parsing],
+            "Parsers/WordGrouping.php: root no object"      => [fn () => (new GoogleSpeechParser())->parse("[1]", new ReadOptions()), ...$parsing],
+            "Parsers/WordGrouping.php: bad time"            => [fn () => (new AssemblyAiParser())->parse('{"words": [{"text": "Hi", "start": "soon"}]}', new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/WordGrouping.php: text no string"      => [fn () => (new AwsTranscribeParser())->parse(
-                '{"results": {"items": [{"alternatives": []}]}}'), ...$parsing],
-            "Parsers/YouTubeTimedTextParser.php: no JSON"   => [fn () => (new YouTubeTimedTextParser())->parse("{"), ...$parsing],
-            "Parsers/YouTubeTimedTextParser.php: no events" => [fn () => (new YouTubeTimedTextParser())->parse('{"segs": []}'), ...$parsing],
+                '{"results": {"items": [{"alternatives": []}]}}', new ReadOptions()), ...$parsing],
+            "Parsers/YouTubeTimedTextParser.php: no JSON"   => [fn () => (new YouTubeTimedTextParser())->parse("{", new ReadOptions()), ...$parsing],
+            "Parsers/YouTubeTimedTextParser.php: no events" => [fn () => (new YouTubeTimedTextParser())->parse('{"segs": []}', new ReadOptions()), ...$parsing],
             "Parsers/YouTubeTimedTextParser.php: time no number" => [fn () => (new YouTubeTimedTextParser())->parse(
-                '{"events": [{"tStartMs": "0"}]}'), ...$parsing],
-            "Parsers/YouTubeTimedTextParser.php: no XML"    => [fn () => (new YouTubeTimedTextParser())->parse("<transcript>"), ...$parsing],
-            "Parsers/YouTubeTimedTextParser.php: other root" => [fn () => (new YouTubeTimedTextParser())->parse("<tt/>"), ...$parsing],
+                '{"events": [{"tStartMs": "0"}]}', new ReadOptions()), ...$parsing],
+            "Parsers/YouTubeTimedTextParser.php: no XML"    => [fn () => (new YouTubeTimedTextParser())->parse("<transcript>", new ReadOptions()), ...$parsing],
+            "Parsers/YouTubeTimedTextParser.php: other root" => [fn () => (new YouTubeTimedTextParser())->parse("<tt/>", new ReadOptions()), ...$parsing],
             "Parsers/YouTubeTimedTextParser.php: bad time"  => [fn () => (new YouTubeTimedTextParser())->parse(
-                '<transcript><text dur="1">Hi</text></transcript>'), ...$parsing],
+                '<transcript><text dur="1">Hi</text></transcript>', new ReadOptions()), ...$parsing],
             "Profanity/ProfanityOptions.php: star in a word" => [fn () => new ProfanityOptions(["f*ck"]), ...$invalid],
-            "Profanity/ProfanityOptions.php: no words"      => [fn () => new ProfanityOptions(), ...$invalid],
-            "Profanity/ProfanityOptions.php: unknown mask"  => [fn () => new ProfanityOptions(["hell"], "blur"), ...$invalid],
+            "Profanity/ProfanityOptions.php: no words"      => [fn () => new ProfanityOptions([]), ...$invalid],
             "Profanity/ProfanityOptions.php: negative padding" => [fn () => new ProfanityOptions(["hell"], padding: -1), ...$invalid],
-            "Profanity/ProfanityOptions.php: missing word file" => [fn () => new ProfanityOptions(wordFile: __DIR__ . "/missing.txt"), ...$invalid],
-            "ResegmentOptions.php: maximum lines 0"         => [fn () => new ResegmentOptions(maxLines: 0), ...$invalid],
-            "ResegmentOptions.php: negative word gap"       => [fn () => new ResegmentOptions(maxWordGap: -1), ...$invalid],
-            "ResegmentOptions.php: maximum duration 0"      => [fn () => new ResegmentOptions(maxDuration: 0), ...$invalid],
+            "Resegmenting/ResegmentOptions.php: negative word gap"       => [fn () => new ResegmentOptions(ResegmentMode::SplitLong, maxWordGap: -1), ...$invalid],
+            "ReadOptions.php: unknown encoding"             => [fn () => new ReadOptions(encoding: "NO-SUCH-ENCODING"), ...$invalid],
+            "ReadOptions.php: negative last cue duration"   => [fn () => new ReadOptions(lastCueDuration: -1), ...$invalid],
             "Retiming.php: scale factor 0"                  => [fn () => self::subtitle()->scale(0), ...$invalid],
             "Retiming.php: same old times"                  => [fn () => self::subtitle()->syncByTwoPoints(1, 1, 1, 2), ...$invalid],
             "Retiming.php: new times in reverse"            => [fn () => self::subtitle()->syncByTwoPoints(1, 2, 2, 1), ...$invalid],
-            "Speakers/SpeakerLabels.php: invalid colour"    => [fn () => SpeakerLabels::toColours(self::subtitle(), ["yellow"]), ...$invalid],
+            "Speakers/SpeakerLabelOptions.php: invalid color" => [fn () => new SpeakerLabelOptions(colors: ["yellow"]), ...$invalid],
             "Streaming/Streams.php: no stream"              => [fn () => iterator_to_array((new SubRipStreamReader())->read(5)), ...$invalid],
             "Streaming/Streams.php: missing file"           => [fn () => iterator_to_array((new SubRipStreamReader())->read(__DIR__ . "/missing.srt")),
                                                                 ...$invalid],
@@ -568,24 +616,44 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Streaming/WebVttStreamReader.php: unknown block" => [fn () => iterator_to_array((new WebVttStreamReader())->read(
                 self::stream("WEBVTT\n\ntext\nmore"))), ...$parsing],
-            "StringHelpers.php: unknown encoding"           => [fn () => Subtitle::parse("text", SubRipParser::class, "NO-SUCH-ENCODING"),
+            "StringHelpers.php: unknown encoding"           => [fn () => StringHelpers::convertToUtf8("text", "NO-SUCH-ENCODING"),
                                                                 ...$parsing],
-            "Subtitle.php: unknown format"                  => [fn () => Subtitle::parse("text"),
+            "Subtitle.php: addCues no cue"                 => [fn () => (new Subtitle())->addCues([5]), ...$invalid],
+            "Subtitle.php: unknown format"                  => [fn () => Subtitle::fromStringAutoDetectFormat("text"),
+                                                                InvalidParserException::class, UnknownFormatException::class],
+            "Subtitle.php: unknown format of a file"        => [fn () => Subtitle::loadAutoDetectFormat(self::FILES . "chapters/ffmetadata/real/m4b_audiobook.ffmeta"),
+                                                                InvalidParserException::class, UnknownFormatException::class],
+            "Subtitle.php: load() of an MKV file"           => [fn () => Subtitle::load(self::FILES . "mkv/pgs.mkv", Format::Pgs),
                                                                 InvalidParserException::class, InvalidParserException::class],
-            "Subtitle.php: parser of the wrong type"        => [fn () => Subtitle::parse("text", \stdClass::class),
+            "Subtitle.php: fromString() of MKV content"     => [fn () => Subtitle::fromString(MatroskaReader::EBML_MAGIC, Format::SubRip),
                                                                 InvalidParserException::class, InvalidParserException::class],
-            "Subtitle.php: formatter of the wrong type"     => [fn () => self::subtitle()->format(\stdClass::class),
+            "Subtitle.php: MKV with 2 subtitle tracks"      => [fn () => Subtitle::loadAutoDetectFormat(self::FILES . "mkv/pgs.mkv"),
+                                                                InvalidParserException::class, InvalidParserException::class],
+            "Subtitle.php: VobSub without its .sub file"    => [fn () => Subtitle::load(self::FILES . "vobsub/SOURCES.md", Format::VobSub), ...$invalid],
+            "Subtitle.php: missing file"                    => [fn () => Subtitle::load(self::FILES . "missing.srt", Format::SubRip), ...$invalid],
+            "Subtitle.php: unreadable file"                 => [fn () => Subtitle::load(self::unreadableFile(), Format::SubRip), ...$invalid],
+            "Subtitle.php: save() to an unknown extension"  => [fn () => self::subtitle()->save(self::FILES . "out.unknown"),
                                                                 InvalidFormatterException::class, InvalidFormatterException::class],
-            "Subtitle.php: image cue without text"          => [fn () => (new Subtitle())->addCue($imageCue)->format(SubRipFormatter::class),
+            "Subtitle.php: save() into a missing directory" => [fn () => self::subtitle()->save(self::FILES . "missing/out.srt"), ...$invalid],
+            "Subtitle.php: MicroDVD without a frame rate"   => [fn () => self::subtitle()->toString(Format::MicroDvd), ...$invalid],
+            "Subtitle.php: iTT without a frame rate"        => [fn () => self::subtitle()->toString(Format::Itt), ...$invalid],
+            "Subtitle.php: format without a parser"         => [fn () => Subtitle::fromString("text", Format::PlainText),
+                                                                InvalidParserException::class, InvalidParserException::class],
+            "Subtitle.php: format without a formatter"      => [fn () => self::subtitle()->toString(Format::Whisper),
+                                                                InvalidFormatterException::class, InvalidFormatterException::class],
+            "Subtitle.php: image cue without text"          => [fn () => (new Subtitle())->addCue($imageCue)->toString(Format::SubRip),
                                                                 ImageCueWithoutTextException::class, ImageCueWithoutTextException::class],
             "Subtitle.php: remove a missing cue"            => [fn () => self::subtitle()->removeCue(9),
                                                                 \RuntimeException::class, CueNotFoundException::class],
             "Subtitle.php: negative comment index"          => [fn () => self::subtitle()->addComment("note", -1), ...$invalid],
-            "SubtitleCue.php: lines of the wrong type"      => [fn () => (new SubtitleCue())->setLines(5), ...$invalid],
+            "Subtitle.php: format data field type"          => [fn () => (new Subtitle())->setFormatData("scc", ["dropFrame" => "x"]), ...$invalid],
             "SubtitleCue.php: alignment 10"                 => [fn () => (new SubtitleCue())->setAlignment(10), ...$invalid],
-            "Sync/ReferenceSyncOptions.php: offsets in reverse" => [fn () => new ReferenceSyncOptions(5, 1), ...$invalid],
-            "Sync/ReferenceSyncOptions.php: negative split count" => [fn () => new ReferenceSyncOptions(maxSplits: -1), ...$invalid],
-            "Sync/ReferenceSyncOptions.php: negative split penalty" => [fn () => new ReferenceSyncOptions(splitPenalty: -1), ...$invalid],
+            "SubtitleCue.php: format data field type"       => [fn () => (new SubtitleCue())->setFormatData("srt", ["coordinates" => 5]), ...$invalid],
+            "Sync/ReferenceSyncOptions.php: offset beyond a day" => [fn () => new ReferenceSyncOptions(new Subtitle(), maxOffset: 1e20), ...$invalid],
+            "Sync/ReferenceSyncOptions.php: offset range too wide" => [fn () => new ReferenceSyncOptions(new Subtitle(), -5000, 5000), ...$invalid],
+            "Sync/ReferenceSyncOptions.php: offsets in reverse" => [fn () => new ReferenceSyncOptions(new Subtitle(), 5, 1), ...$invalid],
+            "Sync/ReferenceSyncOptions.php: negative split count" => [fn () => new ReferenceSyncOptions(new Subtitle(), maxSplits: -1), ...$invalid],
+            "Sync/ReferenceSyncOptions.php: negative split penalty" => [fn () => new ReferenceSyncOptions(new Subtitle(), splitPenalty: -1), ...$invalid],
             "Sync/SpeechReference.php: media duration 0"    => [fn () => SpeechReference::fromFfmpegSilencedetect("", 0), ...$invalid],
             "Sync/SpeechReference.php: mono log"            => [fn () => SpeechReference::fromFfmpegSilencedetect("channel: 0 | silence_start: 1", 9),
                                                                 ...$parsing],
@@ -593,12 +661,12 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Sync/SpeechReference.php: invalid interval"    => [fn () => SpeechReference::fromIntervals([[2, 1]]), ...$invalid],
             "TextTransforms.php: empty search"              => [fn () => self::subtitle()->replaceText("", "x"), ...$invalid],
-            "TextTransforms.php: invalid regex"             => [fn () => self::subtitle()->replaceText("/[/", "x", true), ...$invalid],
-            "TextTransforms.php: unknown case mode"         => [fn () => self::subtitle()->changeCase("title"), ...$invalid],
+            "TextTransforms.php: invalid regex"             => [fn () => self::subtitle()->replaceText("/[/", "x", new ReplaceTextOptions(regex: true)), ...$invalid],
+            "Timecode.php: drop frame at 25 fps"            => [fn () => Timecode::frameNumber(0, new FrameRate(25), true), ...$invalid],
             "Timing/ShotChangeOptions.php: frame rate 0"    => [fn () => new ShotChangeOptions(0), ...$invalid],
-            "Timing/ShotChangeOptions.php: negative window" => [fn () => new ShotChangeOptions(24, snapWindow: -1), ...$invalid],
+            "Timing/ShotChangeOptions.php: negative window" => [fn () => new ShotChangeOptions(24, snapWindowFrames: -1), ...$invalid],
             "Timing/ShotChangeOptions.php: negative gap"    => [fn () => new ShotChangeOptions(24, minGapFrames: -1), ...$invalid],
-            "Timing/ShotChangeOptions.php: negative minimum duration" => [fn () => new ShotChangeOptions(24, minDuration: -1),
+            "Timing/ShotChangeOptions.php: negative minimum duration" => [fn () => new ShotChangeOptions(24, minDurationFrames: -1),
                                                                 ...$invalid],
             "Timing/ShotChanges.php: line without a time"   => [fn () => ShotChanges::fromText("abc"), ...$parsing],
             "Translation/TranslationOptions.php: cue limit 0" => [fn () => new TranslationOptions(maxCuesPerSentence: 0), ...$invalid],
@@ -609,7 +677,6 @@ class ThrowSitesTest extends TestCase
                     return [];
                 }
             }))->translate(self::subtitle(), "en", "de"), ...$invalid],
-            "Validation/ValidationRules.php: dialogue dash style" => [fn () => new ValidationRules(dialogueDashStyle: "*"), ...$invalid],
             "Validation/ValidationRules.php: invalid character class" => [fn () => new ValidationRules(allowedCharacters: "[z-a]"),
                 ...$invalid],
         ];
@@ -636,7 +703,7 @@ class ThrowSitesTest extends TestCase
         $this->assertInstanceOf($oldType, $caughtByOldType);
         $this->assertInstanceOf(SubtitleToolboxException::class, $caughtByInterface);
         $this->assertSame($class, $caughtByInterface::class);
-        $this->assertSame(self::CODES[$class], $caughtByInterface->getCode());
+        $this->assertSame((self::CODES + self::CLI_CODES)[$class], $caughtByInterface->getCode());
     }
 
 

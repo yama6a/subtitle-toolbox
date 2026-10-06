@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Hls;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Timecode;
 
 /**
  * @see https://datatracker.ietf.org/doc/html/rfc8216#section-3.5
@@ -71,7 +74,7 @@ final class TimestampMap
      */
     public static function fromSubtitle(Subtitle $subtitle): ?self
     {
-        foreach ($subtitle->getFormatData(WebVttParser::FORMAT)["headerLines"] ?? [] as $line) {
+        foreach ($subtitle->findFormatData(WebVttParser::FORMAT_DATA_KEY)["headerLines"] ?? [] as $line) {
             if (self::isHeader($line)) {
                 return self::fromHeader($line);
             }
@@ -95,17 +98,9 @@ final class TimestampMap
      */
     public function toHeader(): string
     {
-        $millis = (int) round($this->local * 1000);
+        [$hours, $minutes, $seconds, $milliseconds] = Timecode::milliseconds($this->local);
 
-        return sprintf(
-            "%s=LOCAL:%02d:%02d:%02d.%03d,MPEGTS:%d",
-            self::HEADER_NAME,
-            intdiv($millis, 3600000),
-            intdiv($millis, 60000) % 60,
-            intdiv($millis, 1000) % 60,
-            $millis % 1000,
-            $this->mpegts
-        );
+        return sprintf("%s=LOCAL:%02d:%02d:%02d.%03d,MPEGTS:%d", self::HEADER_NAME, $hours, $minutes, $seconds, $milliseconds, $this->mpegts);
     }
 
 

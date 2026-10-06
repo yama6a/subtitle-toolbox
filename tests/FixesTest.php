@@ -1,10 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 use InvalidArgumentException;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Validation\ValidationRules;
 
 class FixesTest extends \PHPUnit\Framework\TestCase
 {
@@ -38,7 +39,7 @@ class FixesTest extends \PHPUnit\Framework\TestCase
     public function testRealFileWithOverlapsAndShortCues(): void
     {
         $content  = file_get_contents(__DIR__ . "/files/fixes/own_overlaps_and_short_cues.srt");
-        $subtitle = Subtitle::parse($content, SubRipParser::class);
+        $subtitle = Subtitle::fromString($content, Format::SubRip);
         $cues     = $subtitle->getCues();
 
         $this->assertCount(9, $cues);
@@ -48,8 +49,8 @@ class FixesTest extends \PHPUnit\Framework\TestCase
         $subtitle->fixOverlaps(0.083)->extendShortCues(0.833, 0.083)->wrapLines(42);
 
         $this->assertSame(file_get_contents(__DIR__ . "/files/fixes/own_overlaps_and_short_cues_fixed.srt"),
-                          $subtitle->format(SubRipFormatter::class));
-        $this->assertSame([], $subtitle->getErrors());
+                          $subtitle->toString(Format::SubRip));
+        $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
 
 
@@ -84,9 +85,9 @@ class FixesTest extends \PHPUnit\Framework\TestCase
 
     public function testFixOverlapsUsesTheNextCueInTimeOrder(): void
     {
-        $subtitle = new Subtitle();
-        $subtitle->addCue(new SubtitleCue(10, 14, "late"), false);
-        $subtitle->addCue(new SubtitleCue(1, 12, "early"), false);
+        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "late"), new SubtitleCue(3, 4, "early")]);
+        $subtitle->getCues()[0]->setStart(10)->setEnd(14);
+        $subtitle->getCues()[1]->setStart(1)->setEnd(12);
 
         $subtitle->fixOverlaps();
 

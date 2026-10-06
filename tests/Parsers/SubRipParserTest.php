@@ -1,21 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
 class SubRipParserTest extends TestCase
 {
     public function testValidSrtFileParses()
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/valid.srt"), SubRipParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/valid.srt"), Format::SubRip);
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/srt/valid.srt"),
-            $subtitle->format(SubRipFormatter::class)
+            $subtitle->toString(Format::SubRip)
         );
     }
 
@@ -24,7 +26,7 @@ class SubRipParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("timeString-string of at least one cue could not be parsed");
-        Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/exceeded_hours.srt"), SubRipParser::class);
+        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/exceeded_hours.srt"), Format::SubRip);
     }
 
 
@@ -32,7 +34,7 @@ class SubRipParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("timeString-string of at least one cue could not be parsed");
-        Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/exceeded_minutes.srt"), SubRipParser::class);
+        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/exceeded_minutes.srt"), Format::SubRip);
     }
 
 
@@ -40,7 +42,7 @@ class SubRipParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("timeString-string of at least one cue could not be parsed");
-        Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/exceeded_seconds.srt"), SubRipParser::class);
+        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/exceeded_seconds.srt"), Format::SubRip);
     }
 
 
@@ -48,7 +50,7 @@ class SubRipParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("timeString-string of at least one cue could not be parsed");
-        Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/exceeded_milli_accuracy.srt"), SubRipParser::class);
+        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/exceeded_milli_accuracy.srt"), Format::SubRip);
     }
 
 
@@ -56,7 +58,7 @@ class SubRipParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("doesn't seem to have a cue-number");
-        Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/missing_cue_number.srt"), SubRipParser::class);
+        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/missing_cue_number.srt"), Format::SubRip);
     }
 
 
@@ -64,7 +66,7 @@ class SubRipParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("doesn't have any text lines");
-        Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/missing_text.srt"), SubRipParser::class);
+        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/missing_text.srt"), Format::SubRip);
     }
 
 
@@ -72,7 +74,7 @@ class SubRipParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("doesn't seem to have its timestamps");
-        Subtitle::parse(file_get_contents(__DIR__ . "/../files/srt/missing_timestamps.srt"), SubRipParser::class);
+        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/missing_timestamps.srt"), Format::SubRip);
     }
 
 
@@ -80,7 +82,7 @@ class SubRipParserTest extends TestCase
     {
         $raw = "1\n00:00:01,000 --> 00:00:02,000\nFirst\n\n \n\n2\n00:00:03,000 --> 00:00:04,000\nSecond\n";
 
-        $subtitle = Subtitle::parse($raw, SubRipParser::class);
+        $subtitle = Subtitle::fromString($raw, Format::SubRip);
 
         $this->assertSame(2, count($subtitle->getCues()));
         $this->assertSame("Second", $subtitle->getCues()[1]->getText());
@@ -91,7 +93,7 @@ class SubRipParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("Block #1 doesn't seem to have its timestamps on its second line");
-        Subtitle::parse("1\n00:00:01,000 --> 00:00:02,000\nFirst\n\n2", SubRipParser::class);
+        Subtitle::fromString("1\n00:00:01,000 --> 00:00:02,000\nFirst\n\n2", Format::SubRip);
     }
 
 
@@ -100,7 +102,7 @@ class SubRipParserTest extends TestCase
         $raw = "1\n0:00:01.5 --> 00:00:02,25\nDot, one hour digit, short milliseconds\n\n" .
                "2\n00:00:03.000 --> 01:02:03.004\nDots\n";
 
-        $cues = Subtitle::parse($raw, SubRipParser::class)->getCues();
+        $cues = Subtitle::fromString($raw, Format::SubRip)->getCues();
 
         $this->assertSame(1.5, $cues[0]->getStart());
         $this->assertSame(2.25, $cues[0]->getEnd());
@@ -113,11 +115,11 @@ class SubRipParserTest extends TestCase
     {
         $raw = "1\n00:00:01,000 --> 00:00:04,000 X1:100 X2:600 Y1:40 Y2:80\nThe train leaves soon\n";
 
-        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+        $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
 
         $this->assertSame(4.0, $cue->getEnd());
         $this->assertSame(["The train leaves soon"], $cue->getLines());
-        $this->assertSame(["coordinates" => ["x1" => 100, "x2" => 600, "y1" => 40, "y2" => 80]], $cue->getFormatData("srt"));
+        $this->assertSame(["coordinates" => ["x1" => 100, "x2" => 600, "y1" => 40, "y2" => 80]], $cue->findFormatData("srt"));
     }
 
 
@@ -125,7 +127,7 @@ class SubRipParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("timeString-string of at least one cue could not be parsed");
-        Subtitle::parse("1\n00:00:01,000 --> 00:00:04,000 X1:100 X2:600\nText\n", SubRipParser::class);
+        Subtitle::fromString("1\n00:00:01,000 --> 00:00:04,000 X1:100 X2:600\nText\n", Format::SubRip);
     }
 
 
@@ -133,7 +135,7 @@ class SubRipParserTest extends TestCase
     {
         $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\an8}<i>The train leaves soon</i>\n";
 
-        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+        $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
 
         $this->assertSame(8, $cue->getAlignment());
         $this->assertSame(["<i>The train leaves soon</i>"], $cue->getLines());
@@ -144,7 +146,7 @@ class SubRipParserTest extends TestCase
     {
         $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\an4}Middle and horiz{\\an6}ontally left\n";
 
-        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+        $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
 
         $this->assertSame(4, $cue->getAlignment());
         $this->assertSame(["Middle and horizontally left"], $cue->getLines());
@@ -157,7 +159,7 @@ class SubRipParserTest extends TestCase
         foreach ($expected as $legacy => $alignment) {
             $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\a$legacy}Text\n";
 
-            $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+            $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
 
             $this->assertSame($alignment, $cue->getAlignment(), "Legacy code $legacy");
             $this->assertSame(["Text"], $cue->getLines());
@@ -169,7 +171,7 @@ class SubRipParserTest extends TestCase
     {
         $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\a4}Text\n";
 
-        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+        $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
 
         $this->assertNull($cue->getAlignment());
         $this->assertSame(["{\\a4}Text"], $cue->getLines());
@@ -180,7 +182,7 @@ class SubRipParserTest extends TestCase
     {
         $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\b1}bold{\\b0} {\\i1}italic{\\i0} {\\u1}under{\\u0} {\\s1}struck{\\s0}\n";
 
-        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+        $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
 
         $this->assertSame(["<b>bold</b> <i>italic</i> <u>under</u> <s>struck</s>"], $cue->getLines());
     }
@@ -190,7 +192,7 @@ class SubRipParserTest extends TestCase
     {
         $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\an8\\i1}one {\\b1}two\nthree{\\u0}\n";
 
-        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+        $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
 
         $this->assertSame(8, $cue->getAlignment());
         $this->assertSame(["<i>one <b>two", "three</b></i>"], $cue->getLines());
@@ -201,7 +203,7 @@ class SubRipParserTest extends TestCase
     {
         $raw = "1\n00:00:01,000 --> 00:00:04,000\n{\\an8\\fad(200,200)}Sign {\\pos(10,20)}here {normal text}\n";
 
-        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+        $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
 
         $this->assertSame(8, $cue->getAlignment());
         $this->assertSame(["{\\fad(200,200)}Sign {\\pos(10,20)}here {normal text}"], $cue->getLines());
@@ -212,7 +214,7 @@ class SubRipParserTest extends TestCase
     {
         $raw = "1\r\r\n00:00:01,000 --> 00:00:02,000\r\r\nFirst\r\r\nline\r\r\n\r\r\n2\r\r\n00:00:03,000 --> 00:00:04,000\r\r\nSecond\r\r\n";
 
-        $cues = Subtitle::parse($raw, SubRipParser::class)->getCues();
+        $cues = Subtitle::fromString($raw, Format::SubRip)->getCues();
 
         $this->assertSame(2, count($cues));
         $this->assertSame(["First", "line"], $cues[0]->getLines());
@@ -223,7 +225,7 @@ class SubRipParserTest extends TestCase
     {
         $raw = "1\n00:00:01,000 --> 00:00:04,000\nI <3 bread & jam\n<i>Salt & pepper</i> 2 > 1\n";
 
-        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+        $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
 
         $this->assertSame(["I &lt;3 bread &amp; jam", "<i>Salt &amp; pepper</i> 2 &gt; 1"], $cue->getLines());
     }
@@ -233,7 +235,7 @@ class SubRipParserTest extends TestCase
     {
         $raw = "1\n00:00:01,000 --> 00:00:04,000\nThe sign says &amp; and &lt;b&gt;\n";
 
-        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+        $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
 
         $this->assertSame(["The sign says &amp;amp; and &amp;lt;b&amp;gt;"], $cue->getLines());
     }
@@ -243,7 +245,7 @@ class SubRipParserTest extends TestCase
     {
         $raw = "1\n00:00:01,000 --> 00:00:04,000\n<B>bold</B> <font color=\"#00aa00\">green</font> <foo>unknown</foo>\n";
 
-        $cue = Subtitle::parse($raw, SubRipParser::class)->getCues()[0];
+        $cue = Subtitle::fromString($raw, Format::SubRip)->getCues()[0];
 
         $this->assertSame(["<B>bold</B> <font color=\"#00aa00\">green</font> <foo>unknown</foo>"], $cue->getLines());
     }
@@ -253,7 +255,7 @@ class SubRipParserTest extends TestCase
     {
         $raw = "1\n00:01:39 --> 00:01:41,000\nText\n\n2\n00:01:42,500 --> 00:01:44\nMore\n";
 
-        $cues = Subtitle::parse($raw, SubRipParser::class)->getCues();
+        $cues = Subtitle::fromString($raw, Format::SubRip)->getCues();
 
         $this->assertSame([99.0, 101.0], [$cues[0]->getStart(), $cues[0]->getEnd()]);
         $this->assertSame([102.5, 104.0], [$cues[1]->getStart(), $cues[1]->getEnd()]);
@@ -263,6 +265,6 @@ class SubRipParserTest extends TestCase
     public function testTimestampWithSeparatorButNoMillisecondsThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        Subtitle::parse("1\n00:01:39, --> 00:01:41,000\nText\n", SubRipParser::class);
+        Subtitle::fromString("1\n00:01:39, --> 00:01:41,000\nText\n", Format::SubRip);
     }
 }

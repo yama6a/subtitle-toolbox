@@ -1,12 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\PodcastTranscriptFormatter;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\PodcastTranscriptWriteOptions;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class PodcastTranscriptRealFilesTest extends TestCase
 {
@@ -32,7 +38,7 @@ class PodcastTranscriptRealFilesTest extends TestCase
                 "podcast_transcript_convert_from_html.json",
                 4,
                 [0.0, 7.0, "<v Speaker 1>The library opens a new reading room on Friday."],
-                [19.0, 29.0, "<v Speaker 2>That sounds good. Thank you."],
+                [19.0, 24.0, "<v Speaker 2>That sounds good. Thank you."],
             ],
         ];
     }
@@ -40,7 +46,7 @@ class PodcastTranscriptRealFilesTest extends TestCase
 
     private static function parse(string $fileName): Subtitle
     {
-        return (new PodcastTranscriptParser())->parse(file_get_contents(self::DIR . $fileName));
+        return (new PodcastTranscriptParser())->parse(file_get_contents(self::DIR . $fileName), new ReadOptions());
     }
 
 
@@ -65,20 +71,20 @@ class PodcastTranscriptRealFilesTest extends TestCase
     public function testRealFileRoundTripsThroughTheFormatter(string $fileName): void
     {
         $subtitle = self::parse($fileName);
-        $json     = $subtitle->format(PodcastTranscriptFormatter::class, [PodcastTranscriptFormatter::OPTION_PRETTY_PRINT => true]);
-        $again    = (new PodcastTranscriptParser())->parse($json);
+        $json     = $subtitle->toString(Format::PodcastTranscript, new WriteOptions(format: new PodcastTranscriptWriteOptions(prettyPrint: true)));
+        $again    = (new PodcastTranscriptParser())->parse($json, new ReadOptions());
 
         $this->assertSame(self::cues($subtitle), self::cues($again));
-        $this->assertSame($subtitle->getFormatData("podcast"), $again->getFormatData("podcast"));
+        $this->assertSame($subtitle->findFormatData("podcast-transcript"), $again->findFormatData("podcast-transcript"));
     }
 
 
     public function testWordSegmentsRoundTripWithTheirStartTimes(): void
     {
         $content  = file_get_contents(self::DIR . "spec_word_segments.json");
-        $parser   = new PodcastTranscriptParser([PodcastTranscriptParser::OPTION_WORD_TIMESTAMPS => true]);
         $original = json_decode($content, true)["segments"];
-        $json     = $parser->parse($content)->format(PodcastTranscriptFormatter::class, [PodcastTranscriptFormatter::OPTION_WORD_SEGMENTS => true]);
+        $json     = (new PodcastTranscriptParser())->parse($content, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)))
+            ->toString(Format::PodcastTranscript, new WriteOptions(format: new PodcastTranscriptWriteOptions(wordSegments: true)));
         $written  = json_decode($json, true)["segments"];
 
         $this->assertSame(
@@ -93,6 +99,6 @@ class PodcastTranscriptRealFilesTest extends TestCase
     {
         $subtitle = self::parse("podcast_transcript_convert_from_html.json");
 
-        $this->assertSame(["version" => "1.0.0", "metadata" => ["title" => "Library news", "episode" => 4]], $subtitle->getFormatData("podcast"));
+        $this->assertSame(["version" => "1.0.0", "metadata" => ["title" => "Library news", "episode" => 4]], $subtitle->findFormatData("podcast-transcript"));
     }
 }

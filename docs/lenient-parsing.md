@@ -3,13 +3,13 @@
 A subtitle download is often broken in one place. By default, the parsers throw `ParsingException` at the first broken block. In lenient mode, the parser skips or repairs the broken block, records a `ParseWarning` and goes on.
 
 ```php
-use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
-$parser   = (new SubRipParser())->setLenient();
-$subtitle = Subtitle::parse($download, $parser);     // a parser instance in place of the class name
-foreach ($parser->getWarnings() as $warning) {
-    $logger->warning("line $warning->lineNumber: $warning->message ($warning->action)");
+$subtitle = Subtitle::fromString($download, Format::SubRip, new ReadOptions(lenient: true));
+foreach ($subtitle->getParseWarnings() as $warning) {
+    $logger->warning("line $warning->lineNumber: $warning->message ({$warning->action->value})");   // lineNumber is null for EBU STL and JSON
 }
 // line 5: Block #1 doesn't seem to have its timestamps on its second line! (skipped)
 ```
@@ -38,20 +38,19 @@ foreach ($parser->getWarnings() as $warning) {
 | TTML, iTT | a `<p>` with a bad time or without an end time | `<p>` elements |
 | EBU STL | a subtitle with a time code out of range, a cut-off last TTI block | TTI blocks |
 | CSV, TSV | a row with a bad time | rows after the header, without empty rows |
-| JSON | a cue with a bad field | cues |
-| Whisper JSON | a segment without `start`, `end` or `text` | segments |
+| JSON | a cue with a bad field. A bad metadata field, a bad comment and the bad format data of one format of the file get dropped with `blockIndex` null | cues |
+| Whisper JSON | a segment without `start`, `end` or `text`, or with a time that is not a finite number | segments |
 | YouTube timed text | an event or element with a bad time | events or elements |
-| Amazon Transcribe, Deepgram, AssemblyAI, Google | a word, segment, utterance, sentence or result with a bad time or text | the index in its list |
+| Amazon Transcribe, Deepgram, AssemblyAI, Google | a word, segment, utterance, sentence or result with a bad time or text, a Google result whose `alternatives` is not a list of objects | the index in its list |
 | Podcasting 2.0 transcript JSON | a segment with a bad field | segments |
 | HTML transcript | a paragraph with a bad time or without a `<time>` | the paragraphs that each `<cite>` or `<time>` starts |
 
-- **Ignored**: the SCC, PGS and VobSub parsers and the chapter parsers ignore `setLenient()` and always throw.
-- **`ParseWarning`**: `message`, the 1-based `lineNumber`, the 0-based `blockIndex`, the trimmed lines of the `block`, and the `action`, `ParseWarning::SKIPPED` or `ParseWarning::REPAIRED`. A skipped block reports its first line. A repair reports the line where the parser split or read the cue.
-- **No line numbers**: binary EBU STL and the JSON formats have no line numbers, so their warnings have `lineNumber` 0. The YouTube XML formats report the line of the XML element.
-- **Warnings**: `getWarnings()` returns the warnings of the last `parse()` call. Each call starts with an empty list.
+- **Ignored**: the SCC, PGS and VobSub parsers and the chapter parsers ignore `ReadOptions::$lenient` and always throw.
+- **`ParseWarning`**: `message`, the 1-based `lineNumber`, the 0-based `blockIndex` or null for a library JSON field outside the cues, the trimmed lines of the `block`, and the `action`, `ParseWarningAction::Skipped` or `ParseWarningAction::Repaired`. A skipped block reports its first line. A repair reports the line where the parser split or read the cue.
+- **No line numbers**: binary EBU STL and the JSON formats have no line numbers, so their warnings have `lineNumber` null. The YouTube XML formats report the line of the XML element.
+- **Warnings**: `Subtitle::getParseWarnings()` returns the warnings of the read that made the subtitle.
 - **Not the format**: lenient mode still throws for a WebVTT file without `WEBVTT`. SubRip and SBV have no signature, so a file without one readable cue gives no cues and warnings.
-- **Whole-file errors**: lenient mode still throws for a problem outside one cue. Examples are invalid XML in TTML, invalid JSON, a SAMI file that is not UTF-8, an ASS file without `[Events]` and a MicroDVD file without a frame rate.
+- **Whole-file errors**: lenient mode still throws for a problem outside one cue. Examples are invalid XML in TTML, invalid JSON, and a Whisper `segments` or YouTube `events` field that is an object, not a list. Other examples are a SAMI file that is not UTF-8, an ASS file without `[Events]` and a MicroDVD file without a frame rate.
 - **Strict mode without an exception**: the LRC parser drops a line with a bad time tag. The EBU STL parser reads a time code out of range as it is. In lenient mode, both record a warning, and the EBU STL parser also skips the subtitle.
-- **`Subtitle::parse()`**: pass a parser instance to keep its mode and read its warnings after the call. The `sourceEncoding` argument works as with a class name. A class name parses in strict mode. Format detection returns a class name, so call `Subtitle::detectParser()` first to detect and parse leniently.
-- **Stream readers**: `SubRipStreamReader` and `WebVttStreamReader` have the same `setLenient()` and `getWarnings()`. They give the same cues and warnings as the batch parser.
+- **Stream readers**: `SubRipStreamReader` and `WebVttStreamReader` take `ReadOptions(lenient: true)` in the constructor and have `getWarnings()`. They give the same cues and warnings as a lenient `Subtitle::fromString()`.
 - **Command line tool**: `--lenient` turns on lenient mode and prints each warning to standard error.

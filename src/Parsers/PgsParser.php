@@ -1,8 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
@@ -15,15 +16,13 @@ use SubtitleToolbox\SubtitleCue;
  * Segment layout: http://blog.thescorpius.com/index.php/2017/07/15/presentation-graphic-stream-sup-files-bluray-subtitle-format/
  * Composition states, cropping and the forced flag: US patent application US 2009/0185789 A1,
  * https://patents.google.com/patent/US20090185789A1/en
- * Run-length decoding and the colour matrix by video height: FFmpeg libavcodec/pgssubdec.c,
+ * Run-length decoding and the color matrix by video height: FFmpeg libavcodec/pgssubdec.c,
  * https://github.com/FFmpeg/FFmpeg/blob/5d4d3bdc61412641883a45e060e810f80ea7f4b5/libavcodec/pgssubdec.c
  * Position of a cropped object: libbluray graphics_controller.c,
  * https://code.videolan.org/videolan/libbluray/-/blob/0247557842050c8dfc0ae9293d76c3fb7386429a/src/libbluray/decoders/graphics_controller.c
  */
-class PgsParser extends SubtitleParser
+final class PgsParser extends SubtitleParser
 {
-    public const DEFAULT_LAST_CUE_DURATION = 5.0;
-
     private const MAGIC          = "PG";
     private const HEADER_LENGTH  = 13;
     private const PTS_PER_SECOND = 90000;
@@ -46,8 +45,6 @@ class PgsParser extends SubtitleParser
     private const MATRIX_BT709 = [0.2126, 0.0722];
     private const MATRIX_BT601 = [0.299, 0.114];
 
-    protected float $lastCueDuration;
-
     /** @var array<int, array<int, array{int, int, int, int}>> palette id => entry id => [Y, Cr, Cb, alpha] */
     private array $palettes = [];
 
@@ -64,23 +61,14 @@ class PgsParser extends SubtitleParser
 
     private Subtitle $subtitle;
 
-
-    /**
-     * Gives the last cue, which no later display set ends, a duration of $lastCueDuration seconds.
-     */
-    public function __construct(float $lastCueDuration = self::DEFAULT_LAST_CUE_DURATION)
-    {
-        if ($lastCueDuration <= 0) {
-            throw new InvalidArgumentException("The last cue duration must be greater than 0, got $lastCueDuration.");
-        }
-
-        $this->lastCueDuration = $lastCueDuration;
-    }
+    /** @var list<SubtitleCue> */
+    private array $cues = [];
 
 
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->subtitle     = new Subtitle();
+        $this->cues         = [];
         $this->palettes     = [];
         $this->objects      = [];
         $this->windows      = [];
@@ -117,10 +105,10 @@ class PgsParser extends SubtitleParser
 
         $this->endDisplaySet();
         if ($this->shownImage !== null) {
-            $this->addCue($this->shownImage["start"] + $this->lastCueDuration);
+            $this->addCue($this->shownImage["start"] + $this->options->lastCueDuration);
         }
 
-        return $this->subtitle->reIndexCues();
+        return $this->subtitle->addCues($this->cues);
     }
 
 
@@ -202,6 +190,10 @@ class PgsParser extends SubtitleParser
                 throw new ParsingException("The first definition segment of object $id is cut off.");
             }
             ["width" => $width, "height" => $height] = unpack("nwidth/nheight", $data, 7);
+            $tooLarge = CueImage::sizeLimitError($width, $height);
+            if ($tooLarge !== null) {
+                throw new ParsingException("Object $id cannot be read: $tooLarge");
+            }
             $this->objects[$id] = ["width" => $width, "height" => $height, "rle" => substr($data, 11)];
         } elseif (isset($this->objects[$id])) {
             $this->objects[$id]["rle"] .= substr($data, 4);
@@ -238,7 +230,7 @@ class PgsParser extends SubtitleParser
             $cue->setAlignment(8);
         }
 
-        $this->subtitle->addCue($cue, false);
+        $this->cues[] = $cue;
         $this->shownImage = null;
     }
 
@@ -330,6 +322,10 @@ class PgsParser extends SubtitleParser
         $bottom = max(array_map(fn (array $part): int => $part["y"] + $part["height"], $parts));
         $width  = $right - $left;
         $height = $bottom - $top;
+        $tooLarge = CueImage::sizeLimitError($width, $height);
+        if ($tooLarge !== null) {
+            throw new ParsingException("The objects of one display set cannot be joined: $tooLarge");
+        }
 
         if (count($parts) === 1) {
             return [$left, $top, $width, $height, $parts[0]["rgba"]];
@@ -358,9 +354,11 @@ class PgsParser extends SubtitleParser
     {
         $rle    = $object["rle"];
         $length = strlen($rle);
+        $size   = $object["width"] * $object["height"];
         $pixels = "";
         $offset = 0;
-        while ($offset < $length) {
+        // A run fills up to 16,383 pixels, so the runs after the last pixel of the object could take gigabytes.
+        while ($offset < $length && strlen($pixels) < 4 * $size) {
             $byte = $rle[$offset++];
             if ($byte !== "\0") {
                 $pixels .= $colors[$byte];
@@ -376,7 +374,6 @@ class PgsParser extends SubtitleParser
             $pixels .= str_repeat($colors[$color], $run);
         }
 
-        $size = $object["width"] * $object["height"];
         if (strlen($pixels) < 4 * $size) {
             throw new ParsingException("Object $id at $time s has " . strlen($pixels) / 4 . " pixels of run-length data, " .
                                        "but its size of {$object["width"]}x{$object["height"]} needs $size.");

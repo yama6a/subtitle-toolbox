@@ -1,15 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Fixing;
 
 final class AppliedFix
 {
     /**
      * Records that $rule changed the text of the cue at $cueIndex from $before to $after, with lines joined by "\n".
+     *
+     * @internal CommonErrorFixer::apply() and preview() create the fixes.
      */
     public function __construct(
         public readonly int $cueIndex,
-        public readonly string $rule,
+        public readonly CommonErrorRule $rule,
         public readonly string $before,
         public readonly string $after,
     ) {

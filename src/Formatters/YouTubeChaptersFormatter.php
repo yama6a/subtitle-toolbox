@@ -1,29 +1,25 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
-class YouTubeChaptersFormatter extends SubtitleFormatter
+final class YouTubeChaptersFormatter extends SubtitleFormatter
 {
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
         $output = "";
         foreach ($subtitle->getCues() as $cue) {
-            $output .= rtrim($this->formatTime($cue->getStart()) . " " . implode(" ", Markup::plainLines($cue->getLines()))) . "\n";
+            [$hours, $minutes, $seconds] = Timecode::seconds(floor($cue->getStart()));
+            $start   = $hours > 0 ? sprintf("%d:%02d:%02d", $hours, $minutes, $seconds) : sprintf("%d:%02d", $minutes, $seconds);
+            $output .= rtrim($start . " " . implode(" ", Markup::plainLines($cue->getLines()))) . "\n";
         }
 
         return $this->applyOutputOptions($output, $options);
-    }
-
-
-    private function formatTime(float $seconds): string
-    {
-        $seconds = (int) floor($seconds);
-
-        return $seconds < 3600
-            ? sprintf("%d:%02d", intdiv($seconds, 60), $seconds % 60)
-            : sprintf("%d:%02d:%02d", intdiv($seconds, 3600), intdiv($seconds, 60) % 60, $seconds % 60);
     }
 }

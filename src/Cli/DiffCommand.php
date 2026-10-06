@@ -1,15 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Diff\CueDifference;
 use SubtitleToolbox\Diff\SubtitleDiff;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class DiffCommand extends ReportCommand
+/**
+ * @internal
+ */
+final class DiffCommand extends ReportCommand
 {
     private ?SubtitleDiffOptions $diffOptions = null;
 
@@ -38,7 +44,13 @@ class DiffCommand extends ReportCommand
     {
         return "The diff pairs cues by time and text, not by cue number, so one added cue does not shift the rest.\n" .
                "Cue numbers start at 1. The exit code is 1 when the files differ, as with diff. The files can have\n" .
-               "different formats. --from and --track apply to the old file.";
+               "different formats. --from and --track apply to the old file, --from2 and --track2 to the new file.";
+    }
+
+
+    protected function jsonDescription(): string
+    {
+        return "Print the differences as JSON: a list with one object for the pair of files.";
     }
 
 
@@ -53,9 +65,15 @@ class DiffCommand extends ReportCommand
     }
 
 
+    protected function readsBatch(): bool
+    {
+        return false;
+    }
+
+
     protected function inputOptions(): array
     {
-        return array_values(array_filter(parent::inputOptions(), fn (Option $option): bool => $option->name !== "keep-going"));
+        return [...parent::inputOptions(), ...$this->secondFileOptions("new")];
     }
 
 
@@ -66,6 +84,16 @@ class DiffCommand extends ReportCommand
         }
 
         return [$arguments->positionals[0]];
+    }
+
+
+    protected function checkInputs(array $inputs, Arguments $arguments): void
+    {
+        if (count($inputs) > 1) {
+            self::fail("The diff command takes one old file, got " . count($inputs) . ".");
+        }
+
+        parent::checkInputs($inputs, $arguments);
     }
 
 
@@ -91,30 +119,37 @@ class DiffCommand extends ReportCommand
     }
 
 
-    protected function process(string $input, Subtitle $subtitle, string $format, Arguments $arguments, Console $console): void
+    protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         $newPath     = $arguments->positionals[1];
-        $differences = SubtitleDiff::compare($subtitle, $this->readSecondFile($newPath, $arguments, $console), $this->diffOptions);
+        $new         = $this->loadSecondFile($newPath, $arguments, $console);
+        $differences = SubtitleDiff::compare($subtitle, $new, $this->diffOptions);
 
         $this->different = $differences !== [];
         $this->emit($console, SubtitleDiff::toText($differences), [
-            "old"         => self::label($input),
-            "new"         => self::label($newPath),
+            "oldFile"     => $input,
+            "newFile"     => $newPath,
             "equal"       => $differences === [],
             "differences" => array_map(fn (CueDifference $difference): array => [
-                "kind"     => $difference->getKind(),
-                "oldIndex" => $difference->getOldIndex(),
-                "newIndex" => $difference->getNewIndex(),
-                "old"      => self::cue($difference->getOldCue()),
-                "new"      => self::cue($difference->getNewCue()),
+                "kind"     => $difference->kind->value,
+                "oldIndex" => $difference->oldIndex,
+                "newIndex" => $difference->newIndex,
+                "old"      => self::cue($difference->oldCue),
+                "new"      => self::cue($difference->newCue),
             ], $differences),
+            "oldWarnings" => self::warningsJson($this->parseWarnings),
+            "newWarnings" => self::warningsJson($new->getParseWarnings()),
         ]);
     }
 
 
     protected function exitCode(): int
     {
-        return $this->failed > 0 || $this->different ? Application::EXIT_FAILURE : Application::EXIT_OK;
+        return match (true) {
+            $this->failed > 0 => Application::EXIT_FILE,
+            $this->different  => Application::EXIT_RESULT,
+            default           => Application::EXIT_OK,
+        };
     }
 
 

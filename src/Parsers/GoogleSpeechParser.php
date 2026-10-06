@@ -1,27 +1,25 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
-class GoogleSpeechParser extends SubtitleParser
+final class GoogleSpeechParser extends SubtitleParser
 {
     use WordGrouping;
 
-    public const FORMAT_DATA_KEY = "google-speech";
-
-    public const OPTION_WORD_TIMESTAMPS = "OPTION_WORD_TIMESTAMPS";
-
-    /** Writes the speakerLabel or speakerTag of each cue as a <v> tag at the start of its cue, for example <v 1>. */
-    public const OPTION_SPEAKER_VOICES = "OPTION_SPEAKER_VOICES";
+    public const FORMAT_DATA_KEY = Format::GoogleSpeech->value;
 
 
     /**
      * Reads the JSON response of Google Cloud Speech-to-Text V1 and V2, one cue per result. With speaker
      * diarization, it groups the words of the last result into cues.
      */
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $data           = $this->decodeObject($rawSubtitle);
@@ -52,11 +50,7 @@ class GoogleSpeechParser extends SubtitleParser
         }
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, $fileData + array_diff_key($data, ["results" => true]));
 
-        foreach ($cues as $cue) {
-            $subtitle->addCue($cue, false);
-        }
-
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($cues);
     }
 
 
@@ -66,18 +60,21 @@ class GoogleSpeechParser extends SubtitleParser
         $previousEnd = 0.0;
         foreach ($results as $index => $result) {
             $path        = "results[$index]";
-            $alternative = is_array($result) ? $result["alternatives"][0] ?? null : null;
+            $alternative = is_array($result) && is_array($result["alternatives"][0] ?? null) ? $result["alternatives"][0] : null;
             $resultEnd   = is_array($result) ? self::duration($result["resultEndTime"] ?? $result["resultEndOffset"] ?? null) : null;
             try {
+                if (is_array($result) && isset($result["alternatives"]) && $alternative === null && $result["alternatives"] !== []) {
+                    throw new ParsingException("The field $path.alternatives must be a list of objects.");
+                }
                 $words = $this->readWords(self::listOrEmpty($alternative["words"] ?? null), "$path.alternatives[0].words");
                 $end   = $words === [] ? $this->seconds($resultEnd, "$path.resultEndTime") : $words[count($words) - 1]["end"];
                 $start = $words === [] ? $previousEnd : $words[0]["start"];
                 $text  = is_array($alternative) ? $this->text($alternative, "transcript", "$path.alternatives[0]") : "";
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($result)]);
+                $this->fail($exception, null, $index, [RawJson::encode($result)]);
                 continue;
             }
-            $previousEnd = is_int($resultEnd) || is_float($resultEnd) ? round($resultEnd, 3) : $end;
+            $previousEnd = is_int($resultEnd) || (is_float($resultEnd) && is_finite($resultEnd)) ? round($resultEnd, 3) : $end;
 
             $formatData = array_diff_key($result, ["alternatives" => true]) + array_diff_key($alternative ?? [], ["transcript" => true]);
             $cue        = $this->cue($start, $end, $text, $words, null, $formatData);
@@ -99,7 +96,7 @@ class GoogleSpeechParser extends SubtitleParser
                 $start = $this->seconds(self::duration($word["startTime"] ?? $word["startOffset"] ?? null), "{$path}[$index].startTime");
                 $end   = $this->seconds(self::duration($word["endTime"] ?? $word["endOffset"] ?? null), "{$path}[$index].endTime");
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($word)]);
+                $this->fail($exception, null, $index, [RawJson::encode($word)]);
                 continue;
             }
 

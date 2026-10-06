@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Validation;
 
+use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\FrameRate;
 
@@ -22,17 +25,16 @@ final class ValidationRules
         public readonly bool $noDoubleSpaces = false,
         public readonly bool $noLeadingOrTrailingSpaces = false,
         public readonly bool $noUnbalancedTags = false,
-        public readonly ?string $dialogueDashStyle = null,
+        public readonly ?DialogueDashStyle $dialogueDashStyle = null,
         public readonly ?int $maxSpeakersPerCue = null,
         public readonly ?float $maxWordsPerMinute = null,
         public readonly ?float $minSecondsPerWord = null,
         public readonly ?string $allowedCharacters = null,
         public readonly bool $noAllCapsLines = false,
+        public readonly bool $requireCues = false,
+        public readonly bool $noUnsortedCues = false,
+        public readonly bool $noNegativeDuration = false,
     ) {
-        if ($dialogueDashStyle !== null && preg_match("/^[-\x{2010}\x{2013}\x{2014}] ?$/u", $dialogueDashStyle) !== 1) {
-            throw new InvalidArgumentException("The dialogue dash style must be a hyphen, an en dash or an em dash, " .
-                                               "with or without one space after it, got \"$dialogueDashStyle\".");
-        }
         if ($allowedCharacters !== null && TextChecks::isCharacterClass($allowedCharacters)
             && @preg_match(TextChecks::characterClassPattern($allowedCharacters) . "u", "") === false) {
             throw new InvalidArgumentException("The allowed characters \"$allowedCharacters\" are no valid regular " .
@@ -42,9 +44,24 @@ final class ValidationRules
 
 
     /**
+     * Returns the checks of a well-formed cue list: at least one cue, cues in start order, no cue that ends before it
+     * starts, and no overlap.
+     */
+    public static function structure(): self
+    {
+        return new self(
+            requireCues: true,
+            noUnsortedCues: true,
+            noNegativeDuration: true,
+            noOverlap: true,
+        );
+    }
+
+
+    /**
      * Returns the limits of the Netflix English (USA) Timed Text Style Guide for adult programs at the given frame rate.
      */
-    public static function netflixEnglish(float $fps): self
+    public static function netflixEnglish(float $frameRate): self
     {
         return new self(
             maxCharactersPerSecond: 20,
@@ -52,7 +69,7 @@ final class ValidationRules
             maxLinesPerCue: 2,
             minDuration: 5 / 6,
             maxDuration: 7,
-            minGap: (new FrameRate($fps))->framesToSeconds(2),
+            minGap: (new FrameRate($frameRate))->framesToSeconds(2),
             noOverlap: true,
         );
     }

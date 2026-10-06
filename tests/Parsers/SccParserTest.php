@@ -1,11 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\SccReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -41,7 +46,7 @@ class SccParserTest extends TestCase
      */
     private function cues(string ...$lines): array
     {
-        return array_values(Subtitle::parse("Scenarist_SCC V1.0\n\n" . implode("\n\n", $lines) . "\n", SccParser::class)->getCues());
+        return array_values(Subtitle::fromString("Scenarist_SCC V1.0\n\n" . implode("\n\n", $lines) . "\n", Format::Scc)->getCues());
     }
 
 
@@ -53,14 +58,14 @@ class SccParserTest extends TestCase
 
     public function testIssueExample(): void
     {
-        $subtitle = Subtitle::parse(self::ISSUE_EXAMPLE, SccParser::class);
+        $subtitle = Subtitle::fromString(self::ISSUE_EXAMPLE, Format::Scc);
         $cue      = $subtitle->getCues()[0];
 
         $this->assertCount(1, $subtitle->getCues());
         $this->assertSame([1.768, 4.004], [$cue->getStart(), $cue->getEnd()]);
         $this->assertSame([["Hello!"], null], [$cue->getLines(), $cue->getAlignment()]);
-        $this->assertSame(["mode" => "pop-on", "rows" => [14], "columns" => [5]], $cue->getFormatData(SccParser::FORMAT));
-        $this->assertSame(["dropFrame" => true], $subtitle->getFormatData(SccParser::FORMAT));
+        $this->assertSame(["mode" => "pop-on", "rows" => [14], "columns" => [5]], $cue->findFormatData(SccParser::FORMAT_DATA_KEY));
+        $this->assertSame(["dropFrame" => true], $subtitle->findFormatData(SccParser::FORMAT_DATA_KEY));
     }
 
 
@@ -95,11 +100,11 @@ class SccParserTest extends TestCase
     }
 
 
-    public function testLastCaptionWithoutEraseLastsFourSeconds(): void
+    public function testLastCaptionWithoutEraseLastsFiveSeconds(): void
     {
         $cue = $this->cues($this->popOn("9470 9470 " . self::text("Hi")))[0];
 
-        $this->assertSame(round($cue->getStart() + 4, 3), $cue->getEnd());
+        $this->assertSame(round($cue->getStart() + 5, 3), $cue->getEnd());
     }
 
 
@@ -208,7 +213,7 @@ class SccParserTest extends TestCase
         $cue = $this->cues($this->popOn("$pac $pac " . self::text("Hi")))[0];
 
         $this->assertSame([[$line], $alignment], [$cue->getLines(), $cue->getAlignment()]);
-        $this->assertSame(["rows" => [$row], "columns" => [$column]], array_diff_key($cue->getFormatData(SccParser::FORMAT), ["mode" => 0]));
+        $this->assertSame(["rows" => [$row], "columns" => [$column]], array_diff_key($cue->findFormatData(SccParser::FORMAT_DATA_KEY), ["mode" => 0]));
     }
 
 
@@ -217,7 +222,7 @@ class SccParserTest extends TestCase
         $cue = $this->cues($this->popOn("9470 9470 " . self::text("B") . " 9140 9140 " . self::text("A")))[0];
 
         $this->assertSame([["A", "B"], 8], [$cue->getLines(), $cue->getAlignment()]);
-        $this->assertSame([1, 15], $cue->getFormatData(SccParser::FORMAT)["rows"]);
+        $this->assertSame([1, 15], $cue->findFormatData(SccParser::FORMAT_DATA_KEY)["rows"]);
     }
 
 
@@ -225,7 +230,7 @@ class SccParserTest extends TestCase
     {
         $cue = $this->cues($this->popOn("9470 9470 9723 9723 " . self::text("Hi")))[0];
 
-        $this->assertSame(3, $cue->getFormatData(SccParser::FORMAT)["columns"][0]);
+        $this->assertSame(3, $cue->findFormatData(SccParser::FORMAT_DATA_KEY)["columns"][0]);
     }
 
 
@@ -271,7 +276,7 @@ class SccParserTest extends TestCase
 
         $this->assertSame([["ONE"], ["ONE TWO"], ["ONE TWO", "THREE"], ["THREE", "FOUR"]], array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $cues));
         $this->assertSame(round(36 * 1001 / 30000, 3), $cues[0]->getStart());
-        $this->assertSame(["roll-up", [14, 15]], [$cues[3]->getFormatData(SccParser::FORMAT)["mode"], $cues[3]->getFormatData(SccParser::FORMAT)["rows"]]);
+        $this->assertSame(["roll-up", [14, 15]], [$cues[3]->findFormatData(SccParser::FORMAT_DATA_KEY)["mode"], $cues[3]->findFormatData(SccParser::FORMAT_DATA_KEY)["rows"]]);
         $this->assertSame(round(150 * 1001 / 30000, 3), $cues[3]->getEnd());
     }
 
@@ -284,8 +289,8 @@ class SccParserTest extends TestCase
             "00:00:03:00\t9426 9426 94ad 94ad 1370 1370 " . self::text("THREE")
         );
 
-        $this->assertSame([14, 15], $cues[1]->getFormatData(SccParser::FORMAT)["rows"]);
-        $this->assertSame([11, 12, 13], $cues[2]->getFormatData(SccParser::FORMAT)["rows"]);
+        $this->assertSame([14, 15], $cues[1]->findFormatData(SccParser::FORMAT_DATA_KEY)["rows"]);
+        $this->assertSame([11, 12, 13], $cues[2]->findFormatData(SccParser::FORMAT_DATA_KEY)["rows"]);
         $this->assertSame(["ONE", "TWO", "THREE"], $cues[2]->getLines());
     }
 
@@ -311,7 +316,7 @@ class SccParserTest extends TestCase
         );
 
         $this->assertSame([["ONE"], ["ONE TWO"]], [$cues[0]->getLines(), $cues[1]->getLines()]);
-        $this->assertSame("paint-on", $cues[0]->getFormatData(SccParser::FORMAT)["mode"]);
+        $this->assertSame("paint-on", $cues[0]->findFormatData(SccParser::FORMAT_DATA_KEY)["mode"]);
         $this->assertSame([round(34 * 1001 / 30000, 3), round(60 * 1001 / 30000, 3)], [$cues[0]->getStart(), $cues[0]->getEnd()]);
     }
 
@@ -321,8 +326,8 @@ class SccParserTest extends TestCase
         $content = "Scenarist_SCC V1.0\n\n00:00:01:00\t9420 9420 9470 9470 " . self::text("ONE") . " 1c20 1c20 1c70 1c70 "
                    . self::text("TWO") . " 1c2f 1c2f 942f 942f\n";
 
-        $this->assertSame(["ONE"], Subtitle::parse($content, SccParser::class)->getCues()[0]->getLines());
-        $this->assertSame(["TWO"], (new SccParser(2))->parse($content)->getCues()[0]->getLines());
+        $this->assertSame(["ONE"], Subtitle::fromString($content, Format::Scc)->getCues()[0]->getLines());
+        $this->assertSame(["TWO"], (new SccParser())->parse($content, new ReadOptions(format: new SccReadOptions(channel: 2)))->getCues()[0]->getLines());
     }
 
 
@@ -330,7 +335,7 @@ class SccParserTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new SccParser(3);
+        new SccReadOptions(3);
     }
 
 
@@ -365,9 +370,9 @@ class SccParserTest extends TestCase
 
     public function testNonDropFrameIsKeptInTheFormatData(): void
     {
-        $subtitle = Subtitle::parse("Scenarist_SCC V1.0\r\n\r\n00:00:01:00\t942c 942c\r\n", SccParser::class);
+        $subtitle = Subtitle::fromString("Scenarist_SCC V1.0\r\n\r\n00:00:01:00\t942c 942c\r\n", Format::Scc);
 
-        $this->assertSame([[], ["dropFrame" => false]], [$subtitle->getCues(), $subtitle->getFormatData(SccParser::FORMAT)]);
+        $this->assertSame([[], ["dropFrame" => false]], [$subtitle->getCues(), $subtitle->findFormatData(SccParser::FORMAT_DATA_KEY)]);
     }
 
 
@@ -388,7 +393,7 @@ class SccParserTest extends TestCase
     public function testInvalidFileThrowsWithTheLineNumber(string $content, ?int $lineNumber): void
     {
         try {
-            (new SccParser())->parse($content);
+            (new SccParser())->parse($content, new ReadOptions());
             $this->fail("No ParsingException");
         } catch (ParsingException $exception) {
             $this->assertSame($lineNumber, $exception->getLineNumber());

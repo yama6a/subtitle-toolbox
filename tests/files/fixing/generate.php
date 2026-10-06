@@ -1,17 +1,22 @@
 <?php
 
+declare(strict_types=1);
+
 // Writes the OCR fixtures to tests/files/fixing/. Run from the repository root: php tests/files/fixing/generate.php
 
 namespace SubtitleToolbox\Fixing;
 
 use GlyphOcr\GlyphDatabase;
-use SubtitleToolbox\Formatters\SubRipFormatter;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
+use SubtitleToolbox\Ocr\GlyphOcrOptions;
 use SubtitleToolbox\Ocr\TextBitmap;
 use SubtitleToolbox\Parsers\PgsFixtures;
 use SubtitleToolbox\Parsers\PgsFixtureWriter;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\VobSubParser;
+use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 require_once __DIR__ . "/../pgs/generator/PgsFixtures.php";
@@ -76,9 +81,9 @@ function ocrFixture(string $language): string
  */
 function ocrWithErrors(Subtitle $subtitle): string
 {
-    $engine = new GlyphOcrEngine(GlyphDatabase::latin(), ["lineContext" => false]);
+    $engine = new GlyphOcrEngine(new GlyphOcrOptions(GlyphDatabase::latin(), lineContext: false));
 
-    return $subtitle->recognizeText($engine)->format(SubRipFormatter::class);
+    return $subtitle->recognizeText($engine)->toString(Format::SubRip);
 }
 
 
@@ -93,9 +98,9 @@ function imageFixtures(): array
     $files = __DIR__ . "/..";
 
     return [
-        "text_1080p.ocr.srt" => (new PgsParser())->parse(file_get_contents("$files/pgs/text_1080p.sup")),
-        "text-pal.ocr.srt"   => (new VobSubParser(file_get_contents("$files/vobsub/text-pal.idx")))
-            ->parse(file_get_contents("$files/vobsub/text-pal.sub")),
+        "text_1080p.ocr.srt" => (new PgsParser())->parse(file_get_contents("$files/pgs/text_1080p.sup"), new ReadOptions()),
+        "text-pal.ocr.srt"   => (new VobSubParser())
+            ->parse(file_get_contents("$files/vobsub/text-pal.sub"), new ReadOptions(format: new VobSubReadOptions(file_get_contents("$files/vobsub/text-pal.idx")))),
     ];
 }
 
@@ -109,7 +114,7 @@ require_once __DIR__ . "/../../../vendor/autoload.php";
 foreach (array_keys(OCR_CUES) as $language) {
     $sup = ocrFixture($language);
     file_put_contents(__DIR__ . "/ocr-$language.sup", $sup);
-    file_put_contents(__DIR__ . "/ocr-$language.ocr.srt", ocrWithErrors((new PgsParser())->parse($sup)));
+    file_put_contents(__DIR__ . "/ocr-$language.ocr.srt", ocrWithErrors((new PgsParser())->parse($sup, new ReadOptions())));
     echo "Wrote ocr-$language.sup and ocr-$language.ocr.srt\n";
 }
 foreach (imageFixtures() as $name => $subtitle) {

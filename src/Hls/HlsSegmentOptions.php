@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Hls;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
@@ -42,6 +44,15 @@ final class HlsSegmentOptions
         }
 
         $this->timestampMap = new TimestampMap($mpegts, $local);
+    }
+
+
+    /**
+     * @internal
+     */
+    public function segmentMilliseconds(): int
+    {
+        return (int) round($this->segmentDuration * 1000);
     }
 
 

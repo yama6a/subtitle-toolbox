@@ -1,13 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidFormatterException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
-use SubtitleToolbox\Formatters\SubRipFormatter;
-use SubtitleToolbox\Formatters\SubtitleFormatter;
-use SubtitleToolbox\Formatters\WebVttFormatter;
-use SubtitleToolbox\Parsers\SubtitleParser;
+use SubtitleToolbox\Validation\ValidationRule;
+use SubtitleToolbox\Validation\ValidationViolation;
+use SubtitleToolbox\Validation\ValidationRules;
 
 class SubtitleTest extends \PHPUnit\Framework\TestCase
 {
@@ -62,44 +63,99 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
-    public function testGetErrors()
+    public function testAddCuesSortsAllCuesAndKeepsCommentsWithTheirCues(): void
     {
+        $subtitle = (new Subtitle())->addCue($late = new SubtitleCue(8, 9, "late"))->addComment("before late", 0);
+
+        $subtitle->addCues((function () use (&$early, &$middle): \Generator {
+            yield $middle = new SubtitleCue(5, 6, "middle");
+            yield $early = new SubtitleCue(1, 2, "early");
+        })());
+
+        $this->assertSame([$early, $middle, $late], $subtitle->getCues());
+        $this->assertEquals([new Comment("before late", 2)], $subtitle->getComments());
+    }
+
+
+    public function testRemoveCueNumbersTheCuesFromZeroAgain(): void
+    {
+        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "one"), new SubtitleCue(3, 4, "two"), new SubtitleCue(5, 6, "three")]);
+
+        $subtitle->removeCue(1);
+
+        $this->assertSame([0, 1], array_keys($subtitle->getCues()));
+        $this->assertSame("three", $subtitle->getCues()[1]->getText());
+    }
+
+
+    public function testValidateWithTheStructureRulesFindsEachStructureProblem(): void
+    {
+        $rules    = ValidationRules::structure();
+        $problems = fn (Subtitle $subtitle): array => array_map(
+            fn (ValidationViolation $result): array => [$result->cueIndex, $result->rule, $result->value],
+            $subtitle->validate($rules)
+        );
+
         $subtitle = new Subtitle();
-        $this->assertStringContainsString("subtitle contains no cues", $subtitle->getErrors()[0]);
+        $this->assertSame([[null, ValidationRule::RequireCues, 0]], $problems($subtitle));
 
-        $subtitle->addCue($cue1 = new SubtitleCue(1, 2, "text1"), false);
-        $subtitle->addCue($cue2 = new SubtitleCue(5, 6, "text2"), false);
-        $subtitle->addCue($cue3 = new SubtitleCue(3, 4, "text3"), false);
-
-        $this->assertStringContainsString("before its predecessor's end-time", $subtitle->getErrors()[0]);
+        $subtitle->addCues([new SubtitleCue(1, 2, "text1"), new SubtitleCue(3, 4, "text2"), new SubtitleCue(5, 6, "text3")]);
+        $subtitle->getCues()[1]->setStart(5)->setEnd(6);
+        $subtitle->getCues()[2]->setStart(3)->setEnd(4);
+        $this->assertSame([
+            [2, ValidationRule::NoUnsortedCues, 2.0],
+            [2, ValidationRule::NoOverlap, 3.0],
+        ], $problems($subtitle));
 
         $subtitle->reIndexCues();
-        $this->assertEmpty($subtitle->getErrors());
+        $this->assertSame([], $problems($subtitle));
 
-        $subtitle->removeCue(1, false);
-        $this->assertStringContainsString("we expected it to be", $subtitle->getErrors()[0]);
+        $subtitle->getCues()[1]->setEnd(5.5);
+        $this->assertSame([[2, ValidationRule::NoOverlap, 0.5]], $problems($subtitle));
+        $subtitle->getCues()[1]->setEnd(4);
+
+        $subtitle->removeCue(1);
+        $this->assertSame([], $problems($subtitle));
 
         $subtitle->addCue(new SubtitleCue(9, 1, "text4"));
-        $this->assertStringContainsString("is after its own end-time", $subtitle->getErrors()[0]);
+        $this->assertSame([[2, ValidationRule::NoNegativeDuration, -8.0]], $problems($subtitle));
 
         $subtitle->removeCue(2);
-        $this->assertEmpty($subtitle->getErrors());
+        $this->assertSame([], $problems($subtitle));
     }
 
 
-    public function testParsingWithInvalidParserThrowsException()
+    public function testFromStringThrowsForAFormatWithoutParser(): void
     {
         $this->expectException(InvalidParserException::class);
-        $this->expectExceptionMessage("parser stdClass is not of type " . SubtitleParser::class);
-        Subtitle::parse("", \stdClass::class);
+        $this->expectExceptionMessage("The format txt can be written but not read.");
+        Subtitle::fromString("text", Format::PlainText);
     }
 
 
-    public function testFormattingWithInvalidFormatterThrowsException()
+    public function testToStringThrowsForAFormatWithoutFormatter(): void
     {
         $this->expectException(InvalidFormatterException::class);
-        $this->expectExceptionMessage("formatter stdClass is not of type " . SubtitleFormatter::class);
-        (new Subtitle())->format(\stdClass::class);
+        $this->expectExceptionMessage("The format whisper can be read but not written.");
+        (new Subtitle())->toString(Format::Whisper);
+    }
+
+
+    public function testFromStringAutoDetectFormatSkipsFormatsThatAreNotAutoDetected(): void
+    {
+        $this->expectException(InvalidParserException::class);
+        Subtitle::fromStringAutoDetectFormat(file_get_contents(__DIR__ . "/files/chapters/ffmetadata/real/m4b_audiobook.ffmeta"));
+    }
+
+
+    public function testFromStringAutoDetectFormatConvertsTheEncoding(): void
+    {
+        $content = file_get_contents(__DIR__ . "/files/encoding/french-windows-1252.srt");
+
+        $this->assertEquals(
+            Subtitle::fromString($content, Format::SubRip, new ReadOptions(encoding: "Windows-1252")),
+            Subtitle::fromStringAutoDetectFormat($content, new ReadOptions(encoding: "Windows-1252"))
+        );
     }
 
 
@@ -114,34 +170,20 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
-    public function testParsingWithUnknownClassThrowsException(): void
-    {
-        $this->expectException(InvalidParserException::class);
-        Subtitle::parse("", "SubtitleToolbox\\Parsers\\DoesNotExist");
-    }
-
-
-    public function testFormattingWithUnknownClassThrowsException(): void
-    {
-        $this->expectException(InvalidFormatterException::class);
-        (new Subtitle())->format("SubtitleToolbox\\Formatters\\DoesNotExist");
-    }
-
-
     public function testFormattersNumberCuesFromOneAfterRemovalWithoutReIndex(): void
     {
         $subtitle = new Subtitle();
         $subtitle->addCue(new SubtitleCue(1, 2, "first"));
         $subtitle->addCue(new SubtitleCue(3, 4, "second"));
-        $subtitle->removeCue(0, false);
+        $subtitle->removeCue(0);
 
         $this->assertSame(
             "\u{feff}1\n00:00:03,000 --> 00:00:04,000\nsecond\n",
-            $subtitle->format(SubRipFormatter::class)
+            $subtitle->toString(Format::SubRip)
         );
         $this->assertSame(
             "\u{feff}WEBVTT\n\n1\n00:00:03.000 --> 00:00:04.000\nsecond\n",
-            $subtitle->format(WebVttFormatter::class)
+            $subtitle->toString(Format::WebVtt)
         );
     }
 
@@ -151,19 +193,19 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $subtitle = new Subtitle();
 
         $this->assertSame([], $subtitle->getAllMetadata());
-        $this->assertNull($subtitle->getMetadata(Subtitle::METADATA_TITLE));
+        $this->assertNull($subtitle->findMetadata(Subtitle::METADATA_TITLE));
     }
 
 
-    public function testSetAndGetMetadata(): void
+    public function testSetAndFindMetadata(): void
     {
         $subtitle = (new Subtitle())
             ->setMetadata(Subtitle::METADATA_TITLE, "Yesterday")
             ->setMetadata(Subtitle::METADATA_ARTIST, "The Beatles")
             ->setMetadata("custom", "");
 
-        $this->assertSame("Yesterday", $subtitle->getMetadata("title"));
-        $this->assertSame("", $subtitle->getMetadata("custom"));
+        $this->assertSame("Yesterday", $subtitle->findMetadata("title"));
+        $this->assertSame("", $subtitle->findMetadata("custom"));
         $this->assertSame(
             ["title" => "Yesterday", "artist" => "The Beatles", "custom" => ""],
             $subtitle->getAllMetadata()
@@ -189,7 +231,7 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
             ->setMetadata(Subtitle::METADATA_AUTHOR, null)
             ->setMetadata("missing", null);
 
-        $this->assertNull($subtitle->getMetadata("author"));
+        $this->assertNull($subtitle->findMetadata("author"));
         $this->assertSame(["album" => "Help!"], $subtitle->getAllMetadata());
     }
 
@@ -208,12 +250,12 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
             ->addComment("second before cue 0", 0)
             ->addComment("before cue 1", 1);
 
-        $this->assertSame(
+        $this->assertEquals(
             [
-                ["text" => "first before cue 0", "beforeCueIndex" => 0],
-                ["text" => "second before cue 0", "beforeCueIndex" => 0],
-                ["text" => "before cue 1", "beforeCueIndex" => 1],
-                ["text" => "after last cue", "beforeCueIndex" => 2],
+                new Comment("first before cue 0", 0),
+                new Comment("second before cue 0", 0),
+                new Comment("before cue 1", 1),
+                new Comment("after last cue", 2),
             ],
             $subtitle->getComments()
         );
@@ -230,21 +272,21 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
 
     public function testReIndexKeepsEachCommentBeforeItsCue(): void
     {
-        $subtitle = new Subtitle();
-        $subtitle->addCue(new SubtitleCue(5, 6, "late"), false);
-        $subtitle->addCue(new SubtitleCue(1, 2, "early"), false);
+        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "late"), new SubtitleCue(3, 4, "early")]);
         $subtitle->addComment("before late", 0);
         $subtitle->addComment("before early", 1);
         $subtitle->addComment("at the end", 2);
+        $subtitle->getCues()[0]->setStart(5)->setEnd(6);
+        $subtitle->getCues()[1]->setStart(1)->setEnd(2);
 
         $subtitle->reIndexCues();
 
         $this->assertSame("early", $subtitle->getCues()[0]->getText());
-        $this->assertSame(
+        $this->assertEquals(
             [
-                ["text" => "before early", "beforeCueIndex" => 0],
-                ["text" => "before late", "beforeCueIndex" => 1],
-                ["text" => "at the end", "beforeCueIndex" => 2],
+                new Comment("before early", 0),
+                new Comment("before late", 1),
+                new Comment("at the end", 2),
             ],
             $subtitle->getComments()
         );
@@ -258,7 +300,7 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $subtitle->addComment("before first", 1);
         $subtitle->addCue(new SubtitleCue(1, 2, "first"));
 
-        $this->assertSame([["text" => "before first", "beforeCueIndex" => 0]], $subtitle->getComments());
+        $this->assertEquals([new Comment("before first", 0)], $subtitle->getComments());
     }
 
 
@@ -273,10 +315,10 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
 
         $subtitle->removeCue(1);
 
-        $this->assertSame(
+        $this->assertEquals(
             [
-                ["text" => "before second", "beforeCueIndex" => 1],
-                ["text" => "before third", "beforeCueIndex" => 1],
+                new Comment("before second", 1),
+                new Comment("before third", 1),
             ],
             $subtitle->getComments()
         );
@@ -292,42 +334,25 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
 
         $subtitle->removeCue(1);
 
-        $this->assertSame([["text" => "before second", "beforeCueIndex" => 1]], $subtitle->getComments());
-    }
-
-
-    public function testCommentKeepsIndexAfterRemovalWithoutReIndex(): void
-    {
-        $subtitle = new Subtitle();
-        $subtitle->addCue(new SubtitleCue(1, 2, "first"));
-        $subtitle->addCue(new SubtitleCue(3, 4, "second"));
-        $subtitle->addComment("before second", 1);
-
-        $subtitle->removeCue(0, false);
-
-        $this->assertSame([["text" => "before second", "beforeCueIndex" => 1]], $subtitle->getComments());
-
-        $subtitle->reIndexCues();
-
-        $this->assertSame([["text" => "before second", "beforeCueIndex" => 0]], $subtitle->getComments());
+        $this->assertEquals([new Comment("before second", 1)], $subtitle->getComments());
     }
 
 
     public function testFormatDataIsEmptyByDefault(): void
     {
-        $this->assertSame([], (new Subtitle())->getFormatData("ass"));
+        $this->assertSame([], (new Subtitle())->findFormatData("ass"));
     }
 
 
-    public function testSetAndGetFormatDataPerFormat(): void
+    public function testSetAndFindFormatDataPerFormat(): void
     {
         $object = (new Subtitle())
             ->setFormatData("ass", ["style" => "Default", "marginV" => 10])
             ->setFormatData("vtt", ["region" => "top"]);
 
-        $this->assertSame(["style" => "Default", "marginV" => 10], $object->getFormatData("ass"));
-        $this->assertSame(["region" => "top"], $object->getFormatData("vtt"));
-        $this->assertSame([], $object->getFormatData("srt"));
+        $this->assertSame(["style" => "Default", "marginV" => 10], $object->findFormatData("ass"));
+        $this->assertSame(["region" => "top"], $object->findFormatData("vtt"));
+        $this->assertSame([], $object->findFormatData("srt"));
     }
 
 
@@ -337,9 +362,21 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
             ->setFormatData("ass", ["style" => "Default", "marginV" => 10])
             ->setFormatData("ass", ["style" => "Sign"]);
 
-        $this->assertSame(["style" => "Sign"], $object->getFormatData("ass"));
+        $this->assertSame(["style" => "Sign"], $object->findFormatData("ass"));
 
         $object->setFormatData("ass", []);
-        $this->assertSame([], $object->getFormatData("ass"));
+        $this->assertSame([], $object->findFormatData("ass"));
+    }
+
+
+    public function testSetFormatDataRejectsAFieldThatAFormatterReadsWithTheWrongType(): void
+    {
+        $subtitle = (new Subtitle())->setFormatData("scc", ["dropFrame" => true, "note" => 5]);
+        $this->assertSame(["dropFrame" => true, "note" => 5], $subtitle->findFormatData("scc"));
+
+        $this->expectException(\SubtitleToolbox\Exceptions\InvalidArgumentException::class);
+        $this->expectExceptionMessage("The field formatData.scc.dropFrame must be a boolean.");
+
+        $subtitle->setFormatData("scc", ["dropFrame" => "yes"]);
     }
 }

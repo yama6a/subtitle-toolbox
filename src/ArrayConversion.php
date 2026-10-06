@@ -1,9 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\ParsingException;
 
+/**
+ * @internal
+ */
 trait ArrayConversion
 {
     public const ARRAY_VERSION = 1;
@@ -35,7 +40,8 @@ trait ArrayConversion
         $array = [
             "version"  => self::ARRAY_VERSION,
             "metadata" => $this->metadata,
-            "comments" => $this->comments,
+            "comments" => array_map(fn (Comment $comment): array => ["text" => $comment->text, "beforeCueIndex" => $comment->beforeCueIndex],
+                                    $this->comments),
         ];
         if ($withFormatData) {
             $array["formatData"] = $this->formatData;
@@ -73,7 +79,7 @@ trait ArrayConversion
             throw new ParsingException("The field cues must be a list.");
         }
         foreach ($data["cues"] as $index => $cueData) {
-            $subtitle->addCue(self::arrayConversionCue($cueData, "cues[$index]"), false);
+            $subtitle->cues[] = self::arrayConversionCue($cueData, "cues[$index]");
         }
 
         foreach (self::arrayConversionList($data, "comments") as $index => $comment) {
@@ -100,7 +106,8 @@ trait ArrayConversion
             throw new ParsingException("The field $path must be an object.");
         }
         foreach (["start", "end"] as $key) {
-            if (!is_int($cueData[$key] ?? null) && !is_float($cueData[$key] ?? null)) {
+            $time = $cueData[$key] ?? null;
+            if (!is_int($time) && (!is_float($time) || !is_finite($time))) {
                 throw new ParsingException("The field $path.$key must be a number.");
             }
         }
@@ -148,6 +155,10 @@ trait ArrayConversion
         foreach ($formatData as $format => $value) {
             if (!is_array($value)) {
                 throw new ParsingException("The field $pathPrefix$key.$format must be an object.");
+            }
+            $problem = FormatDataSchema::problem((string) $format, $value, "$pathPrefix$key.$format", $pathPrefix !== "");
+            if ($problem !== null) {
+                throw new ParsingException($problem);
             }
         }
 

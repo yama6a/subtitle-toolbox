@@ -1,19 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\Formatters\Options\PodcastTranscriptWriteOptions;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
 use SubtitleToolbox\Parsers\PodcastTranscriptParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
-class PodcastTranscriptFormatter extends SubtitleFormatter
+final class PodcastTranscriptFormatter extends SubtitleFormatter
 {
-    /** Writes one segment per word timestamp, which apps use to highlight the spoken word. */
-    public const OPTION_WORD_SEGMENTS = "wordSegments";
-    public const OPTION_PRETTY_PRINT  = "prettyPrint";
+    protected const FORMAT_OPTIONS = PodcastTranscriptWriteOptions::class;
 
     private const VERSION = "1.0.0";
 
@@ -24,10 +25,11 @@ class PodcastTranscriptFormatter extends SubtitleFormatter
     /**
      * Writes the Podcasting 2.0 JSON transcript, one segment per cue and speaker.
      */
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $wordSegments = (bool)(Options::flag($options, self::OPTION_WORD_SEGMENTS) ?? false);
-        $fileData     = $subtitle->getFormatData(PodcastTranscriptParser::FORMAT_DATA_KEY);
+        $podcast      = $this->formatOptions($options) ?? new PodcastTranscriptWriteOptions();
+        $wordSegments = $podcast->wordSegments;
+        $fileData     = $subtitle->findFormatData(PodcastTranscriptParser::FORMAT_DATA_KEY);
         $cues         = $subtitle->getCues();
         $pieces       = $this->pieces($subtitle, $wordSegments);
         $piecesPerCue = array_count_values(array_column($pieces, "cue"));
@@ -36,18 +38,16 @@ class PodcastTranscriptFormatter extends SubtitleFormatter
         foreach ($pieces as $piece) {
             $segment = $this->segment($piece);
             if (!$wordSegments && $piecesPerCue[$piece["cue"]] === 1) {
-                $segment += $cues[$piece["cue"]]->getFormatData(PodcastTranscriptParser::FORMAT_DATA_KEY);
+                $segment += $cues[$piece["cue"]]->findFormatData(PodcastTranscriptParser::FORMAT_DATA_KEY);
             }
             $segments[] = $segment;
         }
 
         $document = ["version" => $fileData["version"] ?? self::VERSION, "segments" => $segments] + $fileData;
-        $flags    = JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
-        if (Options::flag($options, self::OPTION_PRETTY_PRINT) ?? false) {
-            $json = json_encode($document, $flags | JSON_PRETTY_PRINT) . StringHelpers::UNIX_LINE_ENDING;
-        } else {
-            $json = json_encode($document, $flags);
-        }
+        $flags    = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
+        $json     = $podcast->prettyPrint
+            ? JsonOutput::encode($document, $flags | JSON_PRETTY_PRINT) . LineEnding::Lf->value
+            : JsonOutput::encode($document, $flags);
 
         return $this->applyOutputOptions($json, $options);
     }
@@ -55,6 +55,8 @@ class PodcastTranscriptFormatter extends SubtitleFormatter
 
     /**
      * Returns the segments that format() writes, each with "startTime", "endTime", "body" and, when known, "speaker".
+     *
+     * @internal HtmlTranscriptFormatter calls it.
      *
      * @return list<array{speaker?: string, startTime: float, endTime: float, body: string}>
      */
@@ -105,7 +107,7 @@ class PodcastTranscriptFormatter extends SubtitleFormatter
 
                 $cuePieces = $this->addPiece($cuePieces, $index, $speaker, $start, $text);
                 $speaker   = $name;
-                $start     = $isTimestamp ? $this->timestampInCue($token, $cue) : $start;
+                $start     = $isTimestamp ? $this->wordStartInCue($token, $cue) : $start;
                 $text      = "";
             }
             $cuePieces = $this->addPiece($cuePieces, $index, $speaker, $start, $text);
@@ -131,7 +133,7 @@ class PodcastTranscriptFormatter extends SubtitleFormatter
     }
 
 
-    private function timestampInCue(string $token, SubtitleCue $cue): float
+    private function wordStartInCue(string $token, SubtitleCue $cue): float
     {
         [$hours, $minutes, $seconds] = explode(":", trim($token, "<>"));
         $time = (int)$hours * 3600 + (int)$minutes * 60 + (float)$seconds;

@@ -1,12 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Formatters\MpSubFormatter;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Validation\ValidationRules;
+use SubtitleToolbox\WriteOptions;
 
 class MpSubParserTest extends TestCase
 {
@@ -16,7 +21,7 @@ class MpSubParserTest extends TestCase
 
     public function testTimeBasedSampleFileParses(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::TIME_FILE), MpSubParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::TIME_FILE), Format::MpSub);
         $cues     = $subtitle->getCues();
 
         $this->assertSame(8, count($cues));
@@ -28,13 +33,13 @@ class MpSubParserTest extends TestCase
         $this->assertSame(27.0, $cues[7]->getStart());
         $this->assertSame(29.0, $cues[7]->getEnd());
         $this->assertSame(["Let's go."], $cues[7]->getLines());
-        $this->assertSame([], $subtitle->getErrors());
+        $this->assertSame([], $subtitle->validate(ValidationRules::structure()));
     }
 
 
     public function testTimeBasedSampleFileHeadersGoToMetadataAndFormatData(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::TIME_FILE), MpSubParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::TIME_FILE), Format::MpSub);
 
         $this->assertSame(
             [Subtitle::METADATA_TITLE => "Harbour walk (sample)", Subtitle::METADATA_AUTHOR => "Subtitle Toolbox"],
@@ -46,26 +51,26 @@ class MpSubParserTest extends TestCase
                 "TYPE" => "VIDEO",
                 "NOTE" => "Sample file written after the MPlayer format notes",
             ],
-            $subtitle->getFormatData("mpsub")
+            $subtitle->findFormatData("mpsub")
         );
     }
 
 
     public function testTimeBasedSampleFileRoundTrips(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::TIME_FILE), MpSubParser::class);
-        $output   = $subtitle->format(MpSubFormatter::class);
-        $reparsed = Subtitle::parse($output, MpSubParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::TIME_FILE), Format::MpSub);
+        $output   = $subtitle->toString(Format::MpSub);
+        $reparsed = Subtitle::fromString($output, Format::MpSub);
 
         $this->assertStringStartsWith("\xEF\xBB\xBFTITLE=Harbour walk (sample)\nAUTHOR=Subtitle Toolbox\n", $output);
         $this->assertEquals($subtitle, $reparsed);
-        $this->assertSame($output, $reparsed->format(MpSubFormatter::class));
+        $this->assertSame($output, $reparsed->toString(Format::MpSub));
     }
 
 
     public function testFrameBasedSampleFileParses(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FRAMES_FILE), MpSubParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::FRAMES_FILE), Format::MpSub);
         $cues     = $subtitle->getCues();
 
         $this->assertSame(3, count($cues));
@@ -78,15 +83,15 @@ class MpSubParserTest extends TestCase
         $this->assertSame(11.04, $cues[2]->getEnd());
         $this->assertSame(["Half a second later,", "shown for three seconds"], $cues[2]->getLines());
         $this->assertSame([Subtitle::METADATA_TITLE => "Harbour walk, frame based (sample)"], $subtitle->getAllMetadata());
-        $this->assertSame([], $subtitle->getFormatData("mpsub"));
+        $this->assertSame([], $subtitle->findFormatData("mpsub"));
     }
 
 
     public function testFrameBasedSampleFileRoundTripsWithinOneFrame(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::FRAMES_FILE), MpSubParser::class);
-        $output   = $subtitle->format(MpSubFormatter::class, [MpSubFormatter::OPTION_FRAME_RATE => 25]);
-        $reparsed = Subtitle::parse($output, MpSubParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::FRAMES_FILE), Format::MpSub);
+        $output   = $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubWriteOptions(frameRate: 25)));
+        $reparsed = Subtitle::fromString($output, Format::MpSub);
 
         $this->assertStringContainsString("\nFORMAT=25\n", $output);
         $this->assertSame(3, count($reparsed->getCues()));
@@ -101,29 +106,29 @@ class MpSubParserTest extends TestCase
     public function testFrameBasedFileParsesAndRoundTripsByteForByte(): void
     {
         $raw      = file_get_contents(__DIR__ . "/../files/mpsub/frames.mpsub");
-        $subtitle = Subtitle::parse($raw, MpSubParser::class);
+        $subtitle = Subtitle::fromString($raw, Format::MpSub);
         $cues     = $subtitle->getCues();
 
         $this->assertSame(0.0, $cues[0]->getStart());
         $this->assertSame(2.0, $cues[0]->getEnd());
         $this->assertSame(3.0, $cues[1]->getStart());
         $this->assertSame(6.0, $cues[1]->getEnd());
-        $this->assertSame("Big Buck Bunny", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
-        $this->assertSame("Jane Doe", $subtitle->getMetadata(Subtitle::METADATA_AUTHOR));
-        $this->assertSame(["TYPE" => "VIDEO"], $subtitle->getFormatData("mpsub"));
+        $this->assertSame("Big Buck Bunny", $subtitle->findMetadata(Subtitle::METADATA_TITLE));
+        $this->assertSame("Jane Doe", $subtitle->findMetadata(Subtitle::METADATA_AUTHOR));
+        $this->assertSame(["TYPE" => "VIDEO"], $subtitle->findFormatData("mpsub"));
 
         $expected = "\xEF\xBB\xBF" . str_replace(
             "FORMAT=25\n",
             "FORMAT=25\nNOTE=Created with the PHP Subtitle Toolbox (https://github.com/yama6a/subtitle-toolbox)\n",
             $raw
         );
-        $this->assertSame($expected, $subtitle->format(MpSubFormatter::class, [MpSubFormatter::OPTION_FRAME_RATE => 25]));
+        $this->assertSame($expected, $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubWriteOptions(frameRate: 25))));
     }
 
 
     public function testFormatterOutputParsesBackToTheSameCues(): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/mpsub/valid.mpsub"), MpSubParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/mpsub/valid.mpsub"), Format::MpSub);
 
         $this->assertSame(6, count($subtitle->getCues()));
         $this->assertSame(0.0, $subtitle->getCues()[0]->getStart());
@@ -132,7 +137,7 @@ class MpSubParserTest extends TestCase
         $this->assertSame([], $subtitle->getAllMetadata());
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/mpsub/valid.mpsub"),
-            $subtitle->format(MpSubFormatter::class)
+            $subtitle->toString(Format::MpSub)
         );
     }
 
@@ -143,10 +148,10 @@ class MpSubParserTest extends TestCase
             ->addCue(new SubtitleCue(1, 4, "First"))
             ->addCue(new SubtitleCue(2.5, 5, "Second"));
 
-        $output = $subtitle->format(MpSubFormatter::class);
+        $output = $subtitle->toString(Format::MpSub);
         $this->assertStringContainsString("\n-1.5 2.5\nSecond\n", $output);
 
-        $reparsed = Subtitle::parse($output, MpSubParser::class);
+        $reparsed = Subtitle::fromString($output, Format::MpSub);
         $this->assertSame(2.5, $reparsed->getCues()[1]->getStart());
         $this->assertSame(5.0, $reparsed->getCues()[1]->getEnd());
     }
@@ -154,7 +159,7 @@ class MpSubParserTest extends TestCase
 
     public function testWindowsLineEndingsAndMissingTrailingNewlineAreAccepted(): void
     {
-        $subtitle = Subtitle::parse("FORMAT=TIME\r\n\r\n1 2\r\nHello\r\n\r\n\r\n0.5 1\r\nWorld", MpSubParser::class);
+        $subtitle = Subtitle::fromString("FORMAT=TIME\r\n\r\n1 2\r\nHello\r\n\r\n\r\n0.5 1\r\nWorld", Format::MpSub);
 
         $this->assertSame(2, count($subtitle->getCues()));
         $this->assertSame(3.5, $subtitle->getCues()[1]->getStart());
@@ -165,24 +170,24 @@ class MpSubParserTest extends TestCase
     public function testPlainTextIsEscapedAndRoundTrips(): void
     {
         $raw      = "TITLE=Tom & Jerry <draft>\nFORMAT=TIME\n\n1 1\nI <3 bread & jam\n";
-        $subtitle = Subtitle::parse($raw, MpSubParser::class);
+        $subtitle = Subtitle::fromString($raw, Format::MpSub);
 
         $this->assertSame(["I &lt;3 bread &amp; jam"], $subtitle->getCues()[0]->getLines());
-        $this->assertSame("Tom & Jerry <draft>", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
+        $this->assertSame("Tom & Jerry <draft>", $subtitle->findMetadata(Subtitle::METADATA_TITLE));
         $this->assertStringContainsString(
             "TITLE=Tom & Jerry <draft>\n",
-            $subtitle->format(MpSubFormatter::class)
+            $subtitle->toString(Format::MpSub)
         );
         $this->assertStringContainsString(
             "\n1 1\nI <3 bread & jam\n",
-            $subtitle->format(MpSubFormatter::class)
+            $subtitle->toString(Format::MpSub)
         );
     }
 
 
     public function testLatin1TextKeepsItsBytes(): void
     {
-        $subtitle = Subtitle::parse("FORMAT=TIME\n\n1 1\ncaf\xE9 & tea\n", MpSubParser::class);
+        $subtitle = Subtitle::fromString("FORMAT=TIME\n\n1 1\ncaf\xE9 & tea\n", Format::MpSub);
 
         $this->assertSame(["caf\xE9 &amp; tea"], $subtitle->getCues()[0]->getLines());
     }
@@ -190,7 +195,7 @@ class MpSubParserTest extends TestCase
 
     public function testFrameRateUsesOnlyTheLeadingInteger(): void
     {
-        $subtitle = Subtitle::parse("FORMAT=29.97\n\n29 58\nHello\n", MpSubParser::class);
+        $subtitle = Subtitle::fromString("FORMAT=29.97\n\n29 58\nHello\n", Format::MpSub);
 
         $this->assertSame(1.0, $subtitle->getCues()[0]->getStart());
         $this->assertSame(3.0, $subtitle->getCues()[0]->getEnd());
@@ -201,7 +206,7 @@ class MpSubParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("Line 3 is neither a header, a comment nor a timing line: 00:00:01,000");
-        Subtitle::parse("FORMAT=TIME\n\n00:00:01,000\nHello\n", MpSubParser::class);
+        Subtitle::fromString("FORMAT=TIME\n\n00:00:01,000\nHello\n", Format::MpSub);
     }
 
 
@@ -209,7 +214,7 @@ class MpSubParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The cue on line 3 has a negative duration: 1 -2");
-        Subtitle::parse("FORMAT=TIME\n\n1 -2\nHello\n", MpSubParser::class);
+        Subtitle::fromString("FORMAT=TIME\n\n1 -2\nHello\n", Format::MpSub);
     }
 
 
@@ -217,7 +222,7 @@ class MpSubParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The cue that ends on line 3 doesn't have any text lines!");
-        Subtitle::parse("FORMAT=TIME\n\n1 2\n\n3 4\nHello\n", MpSubParser::class);
+        Subtitle::fromString("FORMAT=TIME\n\n1 2\n\n3 4\nHello\n", Format::MpSub);
     }
 
 
@@ -225,7 +230,7 @@ class MpSubParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("Line 1 has an unknown FORMAT value: FRAMES");
-        Subtitle::parse("FORMAT=FRAMES\n\n1 2\nHello\n", MpSubParser::class);
+        Subtitle::fromString("FORMAT=FRAMES\n\n1 2\nHello\n", Format::MpSub);
     }
 
 
@@ -233,6 +238,6 @@ class MpSubParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("Line 1 has an invalid frame rate: 0");
-        Subtitle::parse("FORMAT=0\n\n1 2\nHello\n", MpSubParser::class);
+        Subtitle::fromString("FORMAT=0\n\n1 2\nHello\n", Format::MpSub);
     }
 }

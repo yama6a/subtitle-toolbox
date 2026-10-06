@@ -1,22 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Exceptions;
 
-/**
- * Class ParsingException
- * Error Code: #100
- *
- * @package SubtitleToolbox\Exceptions
- */
-class ParsingException extends GenericException
+final class ParsingException extends GenericException
 {
-    private ?int $lineNumber;
+    protected const CODE = 100;
 
 
-    public function __construct($message, ?int $lineNumber = null)
+    public function __construct(string $message, private readonly ?int $lineNumber = null, ?\Throwable $previous = null)
     {
-        $this->lineNumber = $lineNumber;
-        parent::__construct($lineNumber === null ? $message : "$message (line $lineNumber)");
+        parent::__construct($lineNumber === null ? $message : "$message (line $lineNumber)", $previous);
     }
 
 
@@ -26,11 +21,5 @@ class ParsingException extends GenericException
     public function getLineNumber(): ?int
     {
         return $this->lineNumber;
-    }
-
-
-    public function getErrorCode(): int
-    {
-        return 100;
     }
 }

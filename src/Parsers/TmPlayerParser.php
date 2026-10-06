@@ -1,37 +1,22 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class TmPlayerParser extends SubtitleParser
+final class TmPlayerParser extends SubtitleParser
 {
-    public const DEFAULT_LAST_CUE_DURATION = 4;
-
     private const LINE_REGEX = '/^(\d+):([0-5]\d):([0-5]\d)(?:,(\d+))?[:=](.*)$/';
 
-    private float $lastCueDuration;
 
-
-    /**
-     * Creates a parser that ends the last cue the given number of seconds after its start.
-     */
-    public function __construct(float $lastCueDuration = self::DEFAULT_LAST_CUE_DURATION)
-    {
-        if ($lastCueDuration < 0) {
-            throw new InvalidArgumentException("The last cue duration must not be negative!");
-        }
-
-        $this->lastCueDuration = $lastCueDuration;
-    }
-
-
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
@@ -40,7 +25,7 @@ class TmPlayerParser extends SubtitleParser
         // An entry without text ends the cue before it. TMPlayer writes one where a gap follows a cue.
         $entries    = [];
         $blockIndex = -1;
-        foreach (explode(StringHelpers::UNIX_LINE_ENDING, $rawSubtitle) as $lineIndex => $rawLine) {
+        foreach (explode(LineEnding::Lf->value, $rawSubtitle) as $lineIndex => $rawLine) {
             $rawLine = trim($rawLine);
             if ($rawLine === "") {
                 continue;
@@ -65,17 +50,18 @@ class TmPlayerParser extends SubtitleParser
             $entries[] = ["time" => $time, "lines" => $lines];
         }
 
-        $subtitle = new Subtitle();
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
         foreach ($entries as $index => $entry) {
             if ($entry["lines"] === []) {
                 continue;
             }
 
-            $end = isset($entries[$index + 1]) ? $entries[$index + 1]["time"] : $entry["time"] + $this->lastCueDuration;
-            $subtitle->addCue(new SubtitleCue($entry["time"], max($end, $entry["time"]), $entry["lines"]), false);
+            $end = isset($entries[$index + 1]) ? $entries[$index + 1]["time"] : $entry["time"] + $this->options->lastCueDuration;
+            $parsedCues[] = new SubtitleCue($entry["time"], max($end, $entry["time"]), $entry["lines"]);
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 

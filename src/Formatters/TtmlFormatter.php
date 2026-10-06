@@ -1,21 +1,25 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use DOMDocument;
 use DOMElement;
 use DOMNode;
-use SubtitleToolbox\Exceptions\InvalidFormatterException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\Options;
+use SubtitleToolbox\Parsers\TtmlNamespaces;
 use SubtitleToolbox\Parsers\TtmlParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
-class TtmlFormatter extends SubtitleFormatter
+final class TtmlFormatter extends SubtitleFormatter
 {
-    private const NL = StringHelpers::UNIX_LINE_ENDING;
+    private const NL = LineEnding::Lf->value;
 
     // The formatter writes media times, so these parameters no longer apply.
     private const SKIPPED_ROOT_PARAMETERS = ["timeBase", "clockMode", "dropMode", "markerMode"];
@@ -52,15 +56,15 @@ class TtmlFormatter extends SubtitleFormatter
     private array $forcedRegions;
 
 
-    public function format(Subtitle $subtitle, array $options = []): string
+    public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
-        $fileData        = $subtitle->getFormatData(TtmlParser::FORMAT);
-        $this->namespace = ($fileData["namespace"] ?? "") ?: TtmlParser::NAMESPACE_TTML;
+        $fileData        = $subtitle->findFormatData(TtmlParser::FORMAT_DATA_KEY);
+        $this->namespace = ($fileData["namespace"] ?? "") ?: TtmlNamespaces::TTML;
         $this->prepareNamespaces($fileData["namespaces"] ?? []);
         $this->loadHead($fileData["head"] ?? "<head/>");
         $this->regionIds = [];
 
-        $title = $subtitle->getMetadata(Subtitle::METADATA_TITLE);
+        $title = $subtitle->findMetadata(Subtitle::METADATA_TITLE);
         if ($title !== null) {
             $element = $this->headDocument->createElementNS($this->namespaces[$this->ttm], "$this->ttm:title");
             $element->appendChild($this->headDocument->createTextNode($title));
@@ -69,7 +73,7 @@ class TtmlFormatter extends SubtitleFormatter
 
         $divs = [];
         foreach ($subtitle->getCues() as $cue) {
-            $div       = $this->formatAttributes($cue->getFormatData(TtmlParser::FORMAT)["div"] ?? [], []);
+            $div       = $this->formatAttributes($cue->findFormatData(TtmlParser::FORMAT_DATA_KEY)["div"] ?? [], []);
             $paragraph = "      " . $this->formatParagraph($cue, $options, $fileData === []) . self::NL;
             if ($divs !== [] && $divs[count($divs) - 1]["attributes"] === $div) {
                 $divs[count($divs) - 1]["content"] .= $paragraph;
@@ -102,9 +106,9 @@ class TtmlFormatter extends SubtitleFormatter
             }
         }
 
-        $isDfxp    = $this->namespace === TtmlParser::NAMESPACE_DFXP;
-        $this->tts = $this->bindPrefix($namespaces, "tts", TtmlParser::STYLING_NAMESPACES, $isDfxp ? 1 : 0);
-        $this->ttm = $this->bindPrefix($namespaces, "ttm", TtmlParser::METADATA_NAMESPACES, $isDfxp ? 1 : 0);
+        $isDfxp    = $this->namespace === TtmlNamespaces::DFXP;
+        $this->tts = $this->bindPrefix($namespaces, "tts", TtmlNamespaces::STYLING, $isDfxp ? 1 : 0);
+        $this->ttm = $this->bindPrefix($namespaces, "ttm", TtmlNamespaces::METADATA, $isDfxp ? 1 : 0);
         ksort($namespaces);
         $this->namespaces = $namespaces;
     }
@@ -143,7 +147,7 @@ class TtmlFormatter extends SubtitleFormatter
 
         $head = $loaded ? $document->documentElement->firstChild : null;
         if (!$head instanceof DOMElement || $head->localName !== "head") {
-            throw new InvalidFormatterException("The stored TTML head is not a well-formed <head> element!");
+            throw new UnwritableContentException("The stored TTML head is not a well-formed <head> element!");
         }
 
         $this->headDocument  = $document;
@@ -152,15 +156,15 @@ class TtmlFormatter extends SubtitleFormatter
         $this->usedIds       = [];
         $this->forcedRegions = [];
         foreach ($head->getElementsByTagName("*") as $element) {
-            $id = $element->getAttributeNS(TtmlParser::NAMESPACE_XML, "id");
+            $id = $element->getAttributeNS(TtmlNamespaces::XML, "id");
             if ($id !== "") {
                 $this->usedIds[$id] = true;
             }
             if ($element->localName === "region" && $element->namespaceURI === $this->namespace
-                && $element->hasAttributeNS(TtmlParser::NAMESPACE_IMSC_STYLING, "forcedDisplay")) {
-                $this->forcedRegions[$id] ??= trim($element->getAttributeNS(TtmlParser::NAMESPACE_IMSC_STYLING, "forcedDisplay")) === "true";
+                && $element->hasAttributeNS(TtmlNamespaces::IMSC_STYLING, "forcedDisplay")) {
+                $this->forcedRegions[$id] ??= trim($element->getAttributeNS(TtmlNamespaces::IMSC_STYLING, "forcedDisplay")) === "true";
             }
-            if ($element->localName === "agent" && in_array($element->namespaceURI, TtmlParser::METADATA_NAMESPACES, true)) {
+            if ($element->localName === "agent" && in_array($element->namespaceURI, TtmlNamespaces::METADATA, true)) {
                 foreach ($element->getElementsByTagNameNS($element->namespaceURI, "name") as $name) {
                     $this->agentIds[trim($name->textContent)] ??= $id;
                 }
@@ -175,11 +179,11 @@ class TtmlFormatter extends SubtitleFormatter
         foreach ($this->namespaces as $prefix => $uri) {
             $output .= $this->formatAttribute($prefix === "" ? "xmlns" : "xmlns:$prefix", $uri);
         }
-        $output .= $this->formatAttribute("xml:lang", $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE) ?? "");
+        $output .= $this->formatAttribute("xml:lang", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE) ?? "");
 
         foreach ($attributes as $name => $value) {
             [$prefix, $localName] = str_contains($name, ":") ? explode(":", $name, 2) : ["", $name];
-            $isParameter = in_array($this->namespaces[$prefix] ?? null, TtmlParser::PARAMETER_NAMESPACES, true);
+            $isParameter = in_array($this->namespaces[$prefix] ?? null, TtmlNamespaces::PARAMETER, true);
             if ($this->isWritable($name) && !($isParameter && in_array($localName, self::SKIPPED_ROOT_PARAMETERS, true))) {
                 $output .= $this->formatAttribute($name, $value);
             }
@@ -189,17 +193,17 @@ class TtmlFormatter extends SubtitleFormatter
     }
 
 
-    private function formatParagraph(SubtitleCue $cue, array $options, bool $isForeignSubtitle): string
+    private function formatParagraph(SubtitleCue $cue, WriteOptions $options, bool $isForeignSubtitle): string
     {
         $attributes = "";
         $identifier = $cue->getIdentifier();
         if ($identifier !== null && preg_match("/^[A-Za-z_][\w.-]*$/", $identifier)) {
             $attributes .= $this->formatAttribute("xml:id", $identifier);
         }
-        $attributes .= $this->formatAttribute("begin", $this->formatTime($cue->getStart()));
-        $attributes .= $this->formatAttribute("end", $this->formatTime($cue->getEnd()));
+        $attributes .= $this->formatAttribute("begin", sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getStart())));
+        $attributes .= $this->formatAttribute("end", sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getEnd())));
 
-        $cueData     = $cue->getFormatData(TtmlParser::FORMAT);
+        $cueData     = $cue->findFormatData(TtmlParser::FORMAT_DATA_KEY);
         $stored      = $cueData["attributes"] ?? [];
         $forcedName  = $this->forcedDisplayName($stored);
         $forced      = $forcedName === null
@@ -217,7 +221,7 @@ class TtmlFormatter extends SubtitleFormatter
         }
 
         $text = implode(self::NL, $cue->getLines());
-        if ((bool) (Options::flag($options, parent::OPTION_STRIP_ALL_XML_TAGS) ?? false)) {
+        if ($options->stripTags) {
             return "<p$attributes>" . $this->formatText(Markup::stripAllTags($text)) . "</p>";
         }
 
@@ -238,7 +242,7 @@ class TtmlFormatter extends SubtitleFormatter
         foreach (array_keys($attributes) as $name) {
             [$prefix, $localName] = str_contains($name, ":") ? explode(":", $name, 2) : ["", $name];
             if ($localName === "forcedDisplay" && $prefix !== ""
-                && ($this->namespaces[$prefix] ?? null) === TtmlParser::NAMESPACE_IMSC_STYLING) {
+                && ($this->namespaces[$prefix] ?? null) === TtmlNamespaces::IMSC_STYLING) {
                 return $name;
             }
         }
@@ -260,7 +264,7 @@ class TtmlFormatter extends SubtitleFormatter
      */
     private function ittsPrefix(): string
     {
-        $prefix = $this->bindPrefix($this->namespaces, "itts", [TtmlParser::NAMESPACE_IMSC_STYLING], 0);
+        $prefix = $this->bindPrefix($this->namespaces, "itts", [TtmlNamespaces::IMSC_STYLING], 0);
         ksort($this->namespaces);
 
         return $prefix;
@@ -399,7 +403,7 @@ class TtmlFormatter extends SubtitleFormatter
         $id      = $this->unusedId("agent" . (count($this->agentIds) + 1));
         $uri     = $this->namespaces[$this->ttm];
         $element = $this->headDocument->createElementNS($uri, "$this->ttm:agent");
-        $element->setAttributeNS(TtmlParser::NAMESPACE_XML, "xml:id", $id);
+        $element->setAttributeNS(TtmlNamespaces::XML, "xml:id", $id);
         $element->setAttribute("type", "person");
         $nameElement = $this->headDocument->createElementNS($uri, "$this->ttm:name");
         $nameElement->setAttribute("type", "full");
@@ -441,7 +445,7 @@ class TtmlFormatter extends SubtitleFormatter
 
         $id     = $this->unusedId(self::REGION_NAMES[$alignment]);
         $region = $this->headDocument->createElementNS($this->namespace, "region");
-        $region->setAttributeNS(TtmlParser::NAMESPACE_XML, "xml:id", $id);
+        $region->setAttributeNS(TtmlNamespaces::XML, "xml:id", $id);
         $uri = $this->namespaces[$this->tts];
         $region->setAttributeNS($uri, "$this->tts:origin", "10% 10%");
         $region->setAttributeNS($uri, "$this->tts:extent", "80% 80%");
@@ -516,19 +520,5 @@ class TtmlFormatter extends SubtitleFormatter
     private function formatAttribute(string $name, string $value): string
     {
         return " $name=\"" . htmlspecialchars($value, ENT_XML1 | ENT_COMPAT, "UTF-8") . "\"";
-    }
-
-
-    private function formatTime(float $seconds): string
-    {
-        $millis = (int) round($seconds * 1000);
-
-        return sprintf(
-            "%02d:%02d:%02d.%03d",
-            intdiv($millis, 3600000),
-            intdiv($millis, 60000) % 60,
-            intdiv($millis, 1000) % 60,
-            $millis % 1000
-        );
     }
 }

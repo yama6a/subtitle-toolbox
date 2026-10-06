@@ -18,8 +18,11 @@
 | [translation.md](translation.md) | machine translation with an engine of your choice |
 | [streaming.md](streaming.md) | SRT and WebVTT files too large for memory |
 | [hls.md](hls.md) | WebVTT segments and playlists for HTTP Live Streaming |
-| [detection.md](detection.md) | how `Subtitle::parse()` finds the format |
+| [detection.md](detection.md) | how `Format::detect()` finds the format |
+| [read-options.md](read-options.md) | `ReadOptions`, the per-format read classes and the last-cue default |
 | [encodings.md](encodings.md) | input encodings |
 | [lenient-parsing.md](lenient-parsing.md) | parsing broken files with warnings |
 | [errors.md](errors.md) | exceptions, error codes and line numbers |
 | [cli.md](cli.md) | the command line tool, the PHAR file and the container image |
+| [compatibility.md](compatibility.md) | what semantic versioning covers in 2.x, and what a minor or patch release can change |
+| [upgrade-2.0.md](upgrade-2.0.md) | the 2.0 call for each 1.x call, and the changes in output and exit codes |

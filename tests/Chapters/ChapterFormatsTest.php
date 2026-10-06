@@ -1,20 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Chapters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Formatters\FfMetadataChaptersFormatter;
-use SubtitleToolbox\Formatters\OgmChaptersFormatter;
-use SubtitleToolbox\Formatters\PodcastChaptersFormatter;
-use SubtitleToolbox\Formatters\YouTubeChaptersFormatter;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\Parsers\OgmChaptersParser;
 use SubtitleToolbox\Parsers\PodcastChaptersParser;
 use SubtitleToolbox\Parsers\YouTubeChaptersParser;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Validation\ValidationRule;
+use SubtitleToolbox\Validation\ValidationViolation;
 
 class ChapterFormatsTest extends TestCase
 {
@@ -24,8 +27,8 @@ class ChapterFormatsTest extends TestCase
                 '{"startTime": 0, "title": "Intro", "endTime": 150.5}, {"startTime": 168}]}';
 
         $this->assertSame([[0.0, 150.5, "Intro"], [168.0, 260.0, ""], [260.0, 4980.0, "Progress &lt;report&gt;"]],
-                          $this->describe((new PodcastChaptersParser(mediaDuration: 4980))->parse($json)));
-        $this->assertSame([260.0, 260.0, "Progress &lt;report&gt;"], $this->describe((new PodcastChaptersParser())->parse($json))[2]);
+                          $this->describe((new PodcastChaptersParser())->parse($json, new ReadOptions(format: new ChapterReadOptions(mediaDuration: 4980)))));
+        $this->assertSame([260.0, 260.0, "Progress &lt;report&gt;"], $this->describe((new PodcastChaptersParser())->parse($json, new ReadOptions()))[2]);
     }
 
 
@@ -55,7 +58,7 @@ class ChapterFormatsTest extends TestCase
                 ]
             }
 
-            JSON, $subtitle->format(PodcastChaptersFormatter::class));
+            JSON, $subtitle->toString(Format::PodcastChapters));
     }
 
 
@@ -76,7 +79,7 @@ class ChapterFormatsTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage($message);
 
-        (new PodcastChaptersParser())->parse($json);
+        (new PodcastChaptersParser())->parse($json, new ReadOptions());
     }
 
 
@@ -86,25 +89,25 @@ class ChapterFormatsTest extends TestCase
                    "[CHAPTER]\nTIMEBASE=1/1000\n;a comment\nEND=90000\ntitle=No start\n" .
                    "[CHAPTER]\nTIMEBASE=1/10\nSTART=1200\nno tag on this line\ntitle=No end\n" .
                    "[CHAPTER]\nTIMEBASE=1/1000\nSTART=130000\nEND=125000\ntitle=Ends early\n";
-        $subtitle = (new FfMetadataChaptersParser(mediaDuration: 200))->parse($content);
+        $subtitle = (new FfMetadataChaptersParser())->parse($content, new ReadOptions(format: new ChapterReadOptions(mediaDuration: 200)));
 
         $this->assertSame([[0.0, 60.0, "Doors open"], [60.0, 90.0, "No start"], [120.0, 130.0, "No end"], [130.0, 125.0, "Ends early"]],
                           $this->describe($subtitle));
-        $this->assertSame(["timeBase" => "1/1000000000", "tags" => []], $subtitle->getCues()[0]->getFormatData("ffmetadata"));
-        $this->assertSame("Meetup", $subtitle->getMetadata(Subtitle::METADATA_TITLE));
+        $this->assertSame(["timeBase" => "1/1000000000", "tags" => []], $subtitle->getCues()[0]->findFormatData("ffmeta-chapters"));
+        $this->assertSame("Meetup", $subtitle->findMetadata(Subtitle::METADATA_TITLE));
     }
 
 
     public function testFfMetadataEscapesRoundTrip(): void
     {
         $subtitle = $this->chapters([[0, 61.5, "a=b; c#d \\ e"], [61.5, 70, "first line\nsecond line"]]);
-        $subtitle->getCues()[0]->setFormatData("ffmetadata", ["timeBase" => "1/90000", "tags" => ["lang=x" => "en"]]);
-        $output = $subtitle->format(FfMetadataChaptersFormatter::class);
+        $subtitle->getCues()[0]->setFormatData("ffmeta-chapters", ["timeBase" => "1/90000", "tags" => ["lang=x" => "en"]]);
+        $output = $subtitle->toString(Format::FfMetadataChapters);
 
         $this->assertSame(";FFMETADATA1\n" .
                           "[CHAPTER]\nTIMEBASE=1/90000\nSTART=0\nEND=5535000\ntitle=a\\=b\; c\\#d \\\\ e\nlang\\=x=en\n" .
                           "[CHAPTER]\nTIMEBASE=1/1000\nSTART=61500\nEND=70000\ntitle=first line\\\nsecond line\n", $output);
-        $parsed = (new FfMetadataChaptersParser())->parse($output);
+        $parsed = (new FfMetadataChaptersParser())->parse($output, new ReadOptions());
         $this->assertSame($this->describe($subtitle), $this->describe($parsed));
         $this->assertSame($subtitle->getCues()[0]->getAllFormatData(), $parsed->getCues()[0]->getAllFormatData());
     }
@@ -112,11 +115,11 @@ class ChapterFormatsTest extends TestCase
 
     public function testFfMetadataFormatterWritesTheCurrentMetadata(): void
     {
-        $subtitle = (new FfMetadataChaptersParser())->parse(";FFMETADATA1\nmajor_brand=isom\ntitle=Old\nartist=Jane Doe\n");
+        $subtitle = (new FfMetadataChaptersParser())->parse(";FFMETADATA1\nmajor_brand=isom\ntitle=Old\nartist=Jane Doe\n", new ReadOptions());
         $subtitle->setMetadata(Subtitle::METADATA_TITLE, "New")->setMetadata(Subtitle::METADATA_ARTIST, null)
                  ->setMetadata(Subtitle::METADATA_ALBUM, "Notes");
 
-        $this->assertSame(";FFMETADATA1\nmajor_brand=isom\ntitle=New\nalbum=Notes\n", $subtitle->format(FfMetadataChaptersFormatter::class));
+        $this->assertSame(";FFMETADATA1\nmajor_brand=isom\ntitle=New\nalbum=Notes\n", $subtitle->toString(Format::FfMetadataChapters));
     }
 
 
@@ -135,7 +138,7 @@ class ChapterFormatsTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage($message);
 
-        (new FfMetadataChaptersParser())->parse($content);
+        (new FfMetadataChaptersParser())->parse($content, new ReadOptions());
     }
 
 
@@ -143,7 +146,7 @@ class ChapterFormatsTest extends TestCase
     {
         $content = "  CHAPTER02 = 00:01:02,5\nCHAPTER02NAME= Second\n\nCHAPTER01=0:00:00.123456789\nCHAPTER01NAME=First\nCHAPTER03=01:00:00.000\n";
 
-        $this->assertSame([[0.123, 62.5, "First"], [62.5, 62.5, "Second"]], $this->describe((new OgmChaptersParser())->parse($content)));
+        $this->assertSame([[0.123, 62.5, "First"], [62.5, 62.5, "Second"]], $this->describe((new OgmChaptersParser())->parse($content, new ReadOptions())));
     }
 
 
@@ -164,14 +167,14 @@ class ChapterFormatsTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage($message);
 
-        (new OgmChaptersParser())->parse($content);
+        (new OgmChaptersParser())->parse($content, new ReadOptions());
     }
 
 
     public function testOgmFormatterNumbersWithTwoDigitsAtLeast(): void
     {
         $subtitle = $this->chapters(array_map(fn (int $i): array => [$i * 60, $i * 60 + 60, "<b>Part</b> &amp; $i"], range(0, 99)));
-        $lines    = explode("\n", $subtitle->format(OgmChaptersFormatter::class));
+        $lines    = explode("\n", $subtitle->toString(Format::OgmChapters));
 
         $this->assertSame(["CHAPTER01=00:00:00.000", "CHAPTER01NAME=Part & 0"], array_slice($lines, 0, 2));
         $this->assertSame(["CHAPTER100=01:39:00.000", "CHAPTER100NAME=Part & 99", ""], array_slice($lines, 198));
@@ -193,7 +196,7 @@ class ChapterFormatsTest extends TestCase
             [4500.0, 5510.0, "Long video"],
             [5510.0, 7200.0, "The big players"],
             [7200.0, 7200.0, ""],
-        ], $this->describe((new YouTubeChaptersParser())->parse($description)));
+        ], $this->describe((new YouTubeChaptersParser())->parse($description, new ReadOptions())));
     }
 
 
@@ -201,7 +204,7 @@ class ChapterFormatsTest extends TestCase
     {
         $subtitle = $this->chapters([[0.9, 168, "Intro"], [3599.99, 3600, "<i>Last</i> minute"], [3600, 3700, ""], [36000, 36001, "Ten hours"]]);
 
-        $this->assertSame("0:00 Intro\n59:59 Last minute\n1:00:00\n10:00:00 Ten hours\n", $subtitle->format(YouTubeChaptersFormatter::class));
+        $this->assertSame("0:00 Intro\n59:59 Last minute\n1:00:00\n10:00:00 Ten hours\n", $subtitle->toString(Format::YouTubeChapters));
     }
 
 
@@ -215,10 +218,10 @@ class ChapterFormatsTest extends TestCase
     {
         $chapters = $this->chapters([[5, 9.5, "Intro"], [9.5, 30, "Middle"]]);
 
-        $this->assertSame([
-            ["rule" => YouTubeChapters::RULE_FIRST_CHAPTER_AT_ZERO, "chapterIndex" => 0, "value" => 5.0, "limit" => 0],
-            ["rule" => YouTubeChapters::RULE_MIN_CHAPTERS, "chapterIndex" => null, "value" => 2, "limit" => 3],
-            ["rule" => YouTubeChapters::RULE_MIN_DURATION, "chapterIndex" => 0, "value" => 4.5, "limit" => 10],
+        $this->assertEquals([
+            new ValidationViolation(0, ValidationRule::FirstChapterAtZero, 5.0, 0),
+            new ValidationViolation(null, ValidationRule::MinChapters, 2, 3),
+            new ValidationViolation(0, ValidationRule::MinDuration, 4.5, 10),
         ], YouTubeChapters::check($chapters));
     }
 
@@ -227,19 +230,21 @@ class ChapterFormatsTest extends TestCase
     {
         $chapters = $this->chapters([[0.5, 10.5, "Intro"], [10.5, 20.5, "Middle"], [20.5, 25, "End"]]);
 
-        $this->assertSame([["rule" => YouTubeChapters::RULE_MIN_DURATION, "chapterIndex" => 2, "value" => 4.5, "limit" => 10]],
-                          YouTubeChapters::check($chapters));
-        $this->assertSame([["rule" => YouTubeChapters::RULE_MIN_CHAPTERS, "chapterIndex" => null, "value" => 0, "limit" => 3]],
-                          YouTubeChapters::check(new Subtitle()));
+        $this->assertEquals([new ValidationViolation(2, ValidationRule::MinDuration, 4.5, 10)],
+                            YouTubeChapters::check($chapters));
+        $this->assertEquals([new ValidationViolation(null, ValidationRule::MinChapters, 0, 3)],
+                            YouTubeChapters::check(new Subtitle()));
     }
 
 
     private function chapters(array $chapters): Subtitle
     {
         $subtitle = new Subtitle();
+        $cues     = [];
         foreach ($chapters as [$start, $end, $text]) {
-            $subtitle->addCue(new SubtitleCue($start, $end, $text), false);
+            $cues[] = new SubtitleCue($start, $end, $text);
         }
+        $subtitle->addCues($cues);
 
         return $subtitle;
     }

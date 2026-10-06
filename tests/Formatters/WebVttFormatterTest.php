@@ -1,44 +1,47 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class WebVttFormatterTest extends TestCase
 {
     public function testSubtitleIsFormattedCorrectly()
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/vtt/valid.vtt"), WebVttParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/valid.vtt"), Format::WebVtt);
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/vtt/valid.vtt"),
-            $subtitle->format(WebVttFormatter::class)
+            $subtitle->toString(Format::WebVtt)
         );
     }
 
 
     public function testUnsupportedXmlTagsAreStrippedAway()
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/vtt/strip_xml.vtt"), WebVttParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/strip_xml.vtt"), Format::WebVtt);
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/vtt/valid.vtt"),
-            $subtitle->format(WebVttFormatter::class)
+            $subtitle->toString(Format::WebVtt)
         );
     }
 
 
     public function testAllXmlTagsAreStrippedAwayIfOptionIsSet()
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/vtt/strip_xml.vtt"), WebVttParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/strip_xml.vtt"), Format::WebVtt);
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/vtt/all_xml_tags_stripped.vtt"),
-            $subtitle->format(WebVttFormatter::class, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+            $subtitle->toString(Format::WebVtt, new WriteOptions(stripTags: true))
         );
     }
 
@@ -55,11 +58,11 @@ class WebVttFormatterTest extends TestCase
 
     public function testIssueExampleRoundTripsByteForByte(): void
     {
-        $subtitle = Subtitle::parse(self::ISSUE_EXAMPLE, WebVttParser::class);
+        $subtitle = Subtitle::fromString(self::ISSUE_EXAMPLE, Format::WebVtt);
 
         $this->assertSame(
             "\xEF\xBB\xBF" . self::ISSUE_EXAMPLE,
-            $subtitle->format(WebVttFormatter::class)
+            $subtitle->toString(Format::WebVtt)
         );
     }
 
@@ -75,7 +78,7 @@ class WebVttFormatterTest extends TestCase
             "\xEF\xBB\xBFWEBVTT\n\nintro\n00:00:01.000 --> 00:00:02.000\nOne\n\n"
             . "2\n00:00:03.000 --> 00:00:04.000\nTwo\n\n"
             . "3\n00:00:05.000 --> 00:00:06.000\nThree\n",
-            $subtitle->format(WebVttFormatter::class)
+            $subtitle->toString(Format::WebVtt)
         );
     }
 
@@ -89,7 +92,7 @@ class WebVttFormatterTest extends TestCase
 
         $this->assertSame(
             "\xEF\xBB\xBFWEBVTT\n\nNOTE a -> b\n\n1\n00:00:01.000 --> 00:00:02.000\nOne\n\nNOTE\n",
-            $subtitle->format(WebVttFormatter::class)
+            $subtitle->toString(Format::WebVtt)
         );
     }
 
@@ -101,7 +104,7 @@ class WebVttFormatterTest extends TestCase
 
         $this->assertSame(
             "\xEF\xBB\xBFWEBVTT\n\n1\n$timingLine\nOne\n",
-            $subtitle->format(WebVttFormatter::class)
+            $subtitle->toString(Format::WebVtt)
         );
     }
 
@@ -128,7 +131,7 @@ class WebVttFormatterTest extends TestCase
             $subtitle->addCue((new SubtitleCue($alignment, $alignment + 1, "Cue"))->setAlignment($alignment));
         }
 
-        $parsed = Subtitle::parse($subtitle->format(WebVttFormatter::class), WebVttParser::class);
+        $parsed = Subtitle::fromString($subtitle->toString(Format::WebVtt), Format::WebVtt);
 
         $this->assertSame(
             [1, null, 3, 4, 5, 6, 7, 8, 9],
@@ -145,7 +148,7 @@ class WebVttFormatterTest extends TestCase
 
         $this->assertSame(
             "\xEF\xBB\xBFWEBVTT\n\n1\n00:00:01.000 --> 00:00:02.000 size:50% align:start\nOne\n",
-            (new Subtitle())->addCue($cue)->format(WebVttFormatter::class)
+            (new Subtitle())->addCue($cue)->toString(Format::WebVtt)
         );
     }
 
@@ -156,11 +159,11 @@ class WebVttFormatterTest extends TestCase
 
         $this->assertSame(
             "\xEF\xBB\xBFWEBVTT\n\n1\n00:00:01.000 --> 00:00:04.000\n<i>One</i> <00:00:02.500>two <00:03.000>three\n",
-            $subtitle->format(WebVttFormatter::class)
+            $subtitle->toString(Format::WebVtt)
         );
         $this->assertSame(
             "\xEF\xBB\xBFWEBVTT\n\n1\n00:00:01.000 --> 00:00:04.000\nOne two three\n",
-            $subtitle->format(WebVttFormatter::class, [SubtitleFormatter::OPTION_STRIP_ALL_XML_TAGS])
+            $subtitle->toString(Format::WebVtt, new WriteOptions(stripTags: true))
         );
     }
 
@@ -168,11 +171,11 @@ class WebVttFormatterTest extends TestCase
     #[DataProvider("classSpanProvider")]
     public function testSpansWithClassesAreKept(string $text): void
     {
-        $subtitle = Subtitle::parse("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n$text\n", WebVttParser::class);
+        $subtitle = Subtitle::fromString("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n$text\n", Format::WebVtt);
 
         $this->assertSame(
             "\xEF\xBB\xBFWEBVTT\n\n1\n00:00:01.000 --> 00:00:02.000\n$text\n",
-            $subtitle->format(WebVttFormatter::class)
+            $subtitle->toString(Format::WebVtt)
         );
     }
 
@@ -200,7 +203,7 @@ class WebVttFormatterTest extends TestCase
 
         $this->assertSame(
             "\xEF\xBB\xBFWEBVTT\n\n1\n00:00:01.000 --> 00:00:02.000\n$expected\n",
-            $subtitle->format(WebVttFormatter::class)
+            $subtitle->toString(Format::WebVtt)
         );
     }
 
@@ -217,6 +220,6 @@ class WebVttFormatterTest extends TestCase
 
     public function testEmptySubtitleWritesOnlyTheHeader(): void
     {
-        $this->assertSame("\xEF\xBB\xBFWEBVTT\n\n", (new Subtitle())->format(WebVttFormatter::class));
+        $this->assertSame("\xEF\xBB\xBFWEBVTT\n\n", (new Subtitle())->toString(Format::WebVtt));
     }
 }

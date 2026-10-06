@@ -1,13 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-class YouTubeChaptersParser extends SubtitleParser
+final class YouTubeChaptersParser extends SubtitleParser
 {
     // A space, "|", ":", "-", an en dash or an em dash. The dashes are UTF-8 bytes, so the patterns need no /u flag.
     private const SEPARATOR       = '(?:[\s|:-]|\xE2\x80[\x93\x94])';
@@ -15,18 +18,16 @@ class YouTubeChaptersParser extends SubtitleParser
     private const TIME            = '[(\[]?(?:(\d+):)?(\d+):(\d{2})[)\]]?';
 
 
-    /**
-     * Creates a parser that ends the last chapter at $mediaDuration seconds, or at its own start when it is null.
-     */
-    public function __construct(private readonly ?float $mediaDuration = null)
+    protected static function formatOptionsClass(): string
     {
+        return ChapterReadOptions::class;
     }
 
 
     /**
      * Reads the lines of $rawSubtitle that start or end with a time such as 2:48 or 1:02:48, for example a video description.
      */
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $lines          = explode("\n", StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle)));
@@ -52,10 +53,9 @@ class YouTubeChaptersParser extends SubtitleParser
         usort($chapters, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());
         $subtitle = new Subtitle();
         foreach ($chapters as $index => $cue) {
-            $cue->setEnd(isset($chapters[$index + 1]) ? $chapters[$index + 1]->getStart() : max($cue->getStart(), $this->mediaDuration ?? 0));
-            $subtitle->addCue($cue, false);
+            $cue->setEnd(isset($chapters[$index + 1]) ? $chapters[$index + 1]->getStart() : max($cue->getStart(), $this->formatOptions()->mediaDuration ?? 0));
         }
 
-        return $subtitle;
+        return $subtitle->addCues($chapters);
     }
 }

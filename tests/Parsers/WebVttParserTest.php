@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Comment;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -13,35 +16,33 @@ class WebVttParserTest extends TestCase
 {
     public function testValidVttFileParses()
     {
-        $subtitle = Subtitle::parse(file_get_contents(__DIR__ . "/../files/vtt/valid.vtt"), WebVttParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/valid.vtt"), Format::WebVtt);
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/vtt/valid.vtt"),
-            $subtitle->format(WebVttFormatter::class)
+            $subtitle->toString(Format::WebVtt)
         );
     }
 
 
     public function testKeepsNotesAndStyles()
     {
-        $subtitle = Subtitle::parse(
-            file_get_contents(__DIR__ . "/../files/vtt/with_styles_and_notes.vtt"), WebVttParser::class
-        );
+        $subtitle = Subtitle::fromString(
+            file_get_contents(__DIR__ . "/../files/vtt/with_styles_and_notes.vtt"), Format::WebVtt);
 
         $this->assertSame(
             file_get_contents(__DIR__ . "/../files/vtt/with_styles_and_notes_formatted.vtt"),
-            $subtitle->format(WebVttFormatter::class)
+            $subtitle->toString(Format::WebVtt)
         );
     }
 
 
     public function testWorksWithMissingHours()
     {
-        $subtitle = Subtitle::parse(
-            file_get_contents(__DIR__ . "/../files/vtt/missing_hours.vtt"), WebVttParser::class
-        );
+        $subtitle = Subtitle::fromString(
+            file_get_contents(__DIR__ . "/../files/vtt/missing_hours.vtt"), Format::WebVtt);
 
-        $this->assertSame($this->validWithHeaderText(), $subtitle->format(WebVttFormatter::class));
+        $this->assertSame($this->validWithHeaderText(), $subtitle->toString(Format::WebVtt));
     }
 
 
@@ -49,9 +50,8 @@ class WebVttParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("No empty line found after the first line containing WEBVTT");
-        Subtitle::parse(
-            file_get_contents(__DIR__ . "/../files/vtt/no_empty_line_after_webvtt_header.vtt"), WebVttParser::class
-        );
+        Subtitle::fromString(
+            file_get_contents(__DIR__ . "/../files/vtt/no_empty_line_after_webvtt_header.vtt"), Format::WebVtt);
     }
 
 
@@ -59,7 +59,7 @@ class WebVttParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("file doesn't start with the string WEBVTT!");
-        Subtitle::parse(file_get_contents(__DIR__ . "/../files/vtt/missing_webvtt_header.vtt"), WebVttParser::class);
+        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/missing_webvtt_header.vtt"), Format::WebVtt);
     }
 
 
@@ -67,7 +67,7 @@ class WebVttParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("time-string of at least one cue could not be parsed");
-        Subtitle::parse(file_get_contents(__DIR__ . "/../files/vtt/exceeded_hours.vtt"), WebVttParser::class);
+        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/exceeded_hours.vtt"), Format::WebVtt);
     }
 
 
@@ -75,7 +75,7 @@ class WebVttParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("time-string of at least one cue could not be parsed");
-        Subtitle::parse(file_get_contents(__DIR__ . "/../files/vtt/exceeded_minutes.vtt"), WebVttParser::class);
+        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/exceeded_minutes.vtt"), Format::WebVtt);
     }
 
 
@@ -83,7 +83,7 @@ class WebVttParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("time-string of at least one cue could not be parsed");
-        Subtitle::parse(file_get_contents(__DIR__ . "/../files/vtt/exceeded_seconds.vtt"), WebVttParser::class);
+        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/exceeded_seconds.vtt"), Format::WebVtt);
     }
 
 
@@ -91,16 +91,15 @@ class WebVttParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("time-string of at least one cue could not be parsed");
-        Subtitle::parse(file_get_contents(__DIR__ . "/../files/vtt/exceeded_milli_accuracy.vtt"), WebVttParser::class);
+        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/exceeded_milli_accuracy.vtt"), Format::WebVtt);
     }
 
 
     public function testMissingCueNumberWorksLikeWithNumbers()
     {
-        $subtitle = Subtitle::parse(
-            file_get_contents(__DIR__ . "/../files/vtt/missing_cue_number.vtt"), WebVttParser::class
-        );
-        $this->assertSame($this->validWithHeaderText(), $subtitle->format(WebVttFormatter::class));
+        $subtitle = Subtitle::fromString(
+            file_get_contents(__DIR__ . "/../files/vtt/missing_cue_number.vtt"), Format::WebVtt);
+        $this->assertSame($this->validWithHeaderText(), $subtitle->toString(Format::WebVtt));
     }
 
 
@@ -108,7 +107,7 @@ class WebVttParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("doesn't have any text lines");
-        Subtitle::parse(file_get_contents(__DIR__ . "/../files/vtt/missing_text.vtt"), WebVttParser::class);
+        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/missing_text.vtt"), Format::WebVtt);
     }
 
 
@@ -116,7 +115,7 @@ class WebVttParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("doesn't match anything that we can parse");
-        Subtitle::parse(file_get_contents(__DIR__ . "/../files/vtt/missing_timestamps.vtt"), WebVttParser::class);
+        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/missing_timestamps.vtt"), Format::WebVtt);
     }
 
 
@@ -124,7 +123,7 @@ class WebVttParserTest extends TestCase
     {
         $raw = "WEBVTT\n\n\n00:01.000 --> 00:02.000\nFirst\n\n \n\n00:03.000 --> 00:04.000\nSecond\n";
 
-        $subtitle = Subtitle::parse($raw, WebVttParser::class);
+        $subtitle = Subtitle::fromString($raw, Format::WebVtt);
 
         $this->assertSame(2, count($subtitle->getCues()));
         $this->assertSame("Second", $subtitle->getCues()[1]->getText());
@@ -135,7 +134,7 @@ class WebVttParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("Block #1 doesn't match anything");
-        Subtitle::parse("WEBVTT\n\nstray line", WebVttParser::class);
+        Subtitle::fromString("WEBVTT\n\nstray line", Format::WebVtt);
     }
 
 
@@ -143,7 +142,7 @@ class WebVttParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("Block #1 doesn't have any text lines");
-        Subtitle::parse("WEBVTT\n\n00:01.000 --> 00:02.000", WebVttParser::class);
+        Subtitle::fromString("WEBVTT\n\n00:01.000 --> 00:02.000", Format::WebVtt);
     }
 
 
@@ -151,7 +150,7 @@ class WebVttParserTest extends TestCase
     {
         $raw = "WEBVTT\n\nnote a comment\n\nstyle\n::cue {}\n\n00:01.000 --> 00:02.000\nText\n";
 
-        $subtitle = Subtitle::parse($raw, WebVttParser::class);
+        $subtitle = Subtitle::fromString($raw, Format::WebVtt);
 
         $this->assertSame(1, count($subtitle->getCues()));
         $this->assertSame("Text", $subtitle->getCues()[0]->getText());
@@ -166,7 +165,7 @@ class WebVttParserTest extends TestCase
                . "intro\n00:00:01.000 --> 00:00:04.000 region:fred align:left line:85%\n"
                . "<v Fred>Hi, I am Fred &amp; this is <c.yellow>Bob</c></v>\n";
 
-        $subtitle = Subtitle::parse($raw, WebVttParser::class);
+        $subtitle = Subtitle::fromString($raw, Format::WebVtt);
         $cue      = $subtitle->getCues()[0];
 
         $this->assertSame([
@@ -180,10 +179,10 @@ class WebVttParserTest extends TestCase
                 "viewportanchor" => "10%,90%",
                 "scroll"         => "up",
             ]],
-        ], $subtitle->getFormatData("vtt"));
-        $this->assertSame([["text" => "Translated by Jane Doe", "beforeCueIndex" => 0]], $subtitle->getComments());
+        ], $subtitle->findFormatData("vtt"));
+        $this->assertEquals([new Comment("Translated by Jane Doe", 0)], $subtitle->getComments());
         $this->assertSame("intro", $cue->getIdentifier());
-        $this->assertSame(["region" => "fred", "align" => "left", "line" => "85%"], $cue->getFormatData("vtt"));
+        $this->assertSame(["region" => "fred", "align" => "left", "line" => "85%"], $cue->findFormatData("vtt"));
         $this->assertNull($cue->getAlignment());
         $this->assertSame("<v Fred>Hi, I am Fred &amp; this is <c.yellow>Bob</c></v>", $cue->getText());
     }
@@ -194,12 +193,12 @@ class WebVttParserTest extends TestCase
         $raw = "WEBVTT\n\nNOTE\nfirst line\nsecond line\n\n00:01.000 --> 00:02.000\nOne\n\n"
                . "NOTE\tbetween\n\n00:03.000 --> 00:04.000\nTwo\n\nNOTE end of file\n";
 
-        $subtitle = Subtitle::parse($raw, WebVttParser::class);
+        $subtitle = Subtitle::fromString($raw, Format::WebVtt);
 
-        $this->assertSame([
-            ["text" => "first line\nsecond line", "beforeCueIndex" => 0],
-            ["text" => "between", "beforeCueIndex" => 1],
-            ["text" => "end of file", "beforeCueIndex" => 2],
+        $this->assertEquals([
+            new Comment("first line\nsecond line", 0),
+            new Comment("between", 1),
+            new Comment("end of file", 2),
         ], $subtitle->getComments());
     }
 
@@ -208,7 +207,7 @@ class WebVttParserTest extends TestCase
     {
         $raw = "WEBVTT\n\nNOTE-1\n00:01.000 --> 00:02.000\nOne\n\nNotes1\n00:03.000 --> 00:04.000\nTwo\n";
 
-        $subtitle = Subtitle::parse($raw, WebVttParser::class);
+        $subtitle = Subtitle::fromString($raw, Format::WebVtt);
 
         $this->assertSame([], $subtitle->getComments());
         $this->assertSame("NOTE-1", $subtitle->getCues()[0]->getIdentifier());
@@ -218,10 +217,10 @@ class WebVttParserTest extends TestCase
 
     public function testCueWithoutIdentifierHasNullIdentifier(): void
     {
-        $subtitle = Subtitle::parse("WEBVTT\n\n00:01.000 --> 00:02.000\nOne\n", WebVttParser::class);
+        $subtitle = Subtitle::fromString("WEBVTT\n\n00:01.000 --> 00:02.000\nOne\n", Format::WebVtt);
 
         $this->assertNull($subtitle->getCues()[0]->getIdentifier());
-        $this->assertSame([], $subtitle->getFormatData("vtt"));
+        $this->assertSame([], $subtitle->findFormatData("vtt"));
     }
 
 
@@ -229,9 +228,9 @@ class WebVttParserTest extends TestCase
     {
         $raw = "WEBVTT\n\nSTYLE\n::cue {\n\tcolor: lime;\n}\n\n00:01.000 --> 00:02.000\nOne\n";
 
-        $subtitle = Subtitle::parse($raw, WebVttParser::class);
+        $subtitle = Subtitle::fromString($raw, Format::WebVtt);
 
-        $this->assertSame(["styles" => ["::cue {\n\tcolor: lime;\n}"]], $subtitle->getFormatData("vtt"));
+        $this->assertSame(["styles" => ["::cue {\n\tcolor: lime;\n}"]], $subtitle->findFormatData("vtt"));
     }
 
 
@@ -239,10 +238,10 @@ class WebVttParserTest extends TestCase
     {
         $raw = "WEBVTT\n\n00:01.000 --> 00:02.000\nOne\n\nSTYLE\n::cue { color: lime }\n\nREGION\nid:late\n";
 
-        $subtitle = Subtitle::parse($raw, WebVttParser::class);
+        $subtitle = Subtitle::fromString($raw, Format::WebVtt);
 
         $this->assertSame(1, count($subtitle->getCues()));
-        $this->assertSame([], $subtitle->getFormatData("vtt"));
+        $this->assertSame([], $subtitle->findFormatData("vtt"));
     }
 
 
@@ -250,7 +249,7 @@ class WebVttParserTest extends TestCase
     {
         $raw = "WEBVTT\n\nSTYLES\n::cue {}\n\n00:01.000 --> 00:02.000\nOne\n";
 
-        $this->assertSame([], Subtitle::parse($raw, WebVttParser::class)->getFormatData("vtt"));
+        $this->assertSame([], Subtitle::fromString($raw, Format::WebVtt)->findFormatData("vtt"));
     }
 
 
@@ -258,9 +257,9 @@ class WebVttParserTest extends TestCase
     {
         $raw = "WEBVTT\n\nREGION\nid:fred width: :3 scroll:up foo:bar\n\n00:01.000 --> 00:02.000\nOne\n";
 
-        $subtitle = Subtitle::parse($raw, WebVttParser::class);
+        $subtitle = Subtitle::fromString($raw, Format::WebVtt);
 
-        $this->assertSame(["regions" => [["id" => "fred", "scroll" => "up"]]], $subtitle->getFormatData("vtt"));
+        $this->assertSame(["regions" => [["id" => "fred", "scroll" => "up"]]], $subtitle->findFormatData("vtt"));
     }
 
 
@@ -268,7 +267,7 @@ class WebVttParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("time-string of at least one cue could not be parsed: 00:00:01x000");
-        Subtitle::parse("WEBVTT\n\n00:00:01x000 --> 00:00:04.000\nText\n", WebVttParser::class);
+        Subtitle::fromString("WEBVTT\n\n00:00:01x000 --> 00:00:04.000\nText\n", Format::WebVtt);
     }
 
 
@@ -276,13 +275,13 @@ class WebVttParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("time-string of at least one cue could not be parsed");
-        Subtitle::parse("WEBVTT\n\n00:00:01.000 align:left --> 00:00:04.000\nText\n", WebVttParser::class);
+        Subtitle::fromString("WEBVTT\n\n00:00:01.000 align:left --> 00:00:04.000\nText\n", Format::WebVtt);
     }
 
 
     public function testArrowWithoutSpacesParses(): void
     {
-        $subtitle = Subtitle::parse("WEBVTT\n\n00:01.000-->00:02.500\nText\n", WebVttParser::class);
+        $subtitle = Subtitle::fromString("WEBVTT\n\n00:01.000-->00:02.500\nText\n", Format::WebVtt);
 
         $this->assertSame(2.5, $subtitle->getCues()[0]->getEnd());
     }
@@ -292,7 +291,7 @@ class WebVttParserTest extends TestCase
     {
         $raw = "WEBVTT\n\n00:01.000 --> 00:02.000\nOne\n00:03.000 --> 00:04.000\nTwo\n";
 
-        $subtitle = Subtitle::parse($raw, WebVttParser::class);
+        $subtitle = Subtitle::fromString($raw, Format::WebVtt);
 
         $this->assertSame(["One", "Two"], array_map(fn (SubtitleCue $cue): string => $cue->getText(), $subtitle->getCues()));
     }
@@ -302,9 +301,9 @@ class WebVttParserTest extends TestCase
     {
         $raw = "WEBVTT\n\n00:01.000 --> 00:02.000 \tvertical:rl  size:50.5%  foo:bar position:10%,line-left noColon\nOne\n";
 
-        $cue = Subtitle::parse($raw, WebVttParser::class)->getCues()[0];
+        $cue = Subtitle::fromString($raw, Format::WebVtt)->getCues()[0];
 
-        $this->assertSame(["vertical" => "rl", "size" => "50.5%", "position" => "10%,line-left"], $cue->getFormatData("vtt"));
+        $this->assertSame(["vertical" => "rl", "size" => "50.5%", "position" => "10%,line-left"], $cue->findFormatData("vtt"));
         $this->assertNull($cue->getAlignment());
     }
 
@@ -314,7 +313,7 @@ class WebVttParserTest extends TestCase
     {
         $raw = "WEBVTT\n\n00:01.000 --> 00:02.000 $settings\nOne\n";
 
-        $this->assertSame($alignment, Subtitle::parse($raw, WebVttParser::class)->getCues()[0]->getAlignment());
+        $this->assertSame($alignment, Subtitle::fromString($raw, Format::WebVtt)->getCues()[0]->getAlignment());
     }
 
 
@@ -345,7 +344,7 @@ class WebVttParserTest extends TestCase
 
         $this->assertSame(
             "A\u{00A0}B \u{200E}C\u{200F} &amp; &lt;D&gt;",
-            Subtitle::parse($raw, WebVttParser::class)->getCues()[0]->getText()
+            Subtitle::fromString($raw, Format::WebVtt)->getCues()[0]->getText()
         );
     }
 
@@ -356,7 +355,7 @@ class WebVttParserTest extends TestCase
 
         $this->assertSame(
             "One <00:00:02.500>two <00:03.000>three",
-            Subtitle::parse($raw, WebVttParser::class)->getCues()[0]->getText()
+            Subtitle::fromString($raw, Format::WebVtt)->getCues()[0]->getText()
         );
     }
 
@@ -365,7 +364,7 @@ class WebVttParserTest extends TestCase
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("No empty line found after the first line containing WEBVTT");
-        Subtitle::parse("WEBVTT\nKind: captions\n00:01.000 --> 00:02.000\nText\n", WebVttParser::class);
+        Subtitle::fromString("WEBVTT\nKind: captions\n00:01.000 --> 00:02.000\nText\n", Format::WebVtt);
     }
 
 
@@ -379,7 +378,7 @@ class WebVttParserTest extends TestCase
     {
         $raw = "WEBVTT\r\r\n\r\r\n00:01.000 --> 00:02.000\r\r\nFirst\r\r\n\r\r\n00:03.000 --> 00:04.000\r\r\nSecond\r\r\n";
 
-        $cues = Subtitle::parse($raw, WebVttParser::class)->getCues();
+        $cues = Subtitle::fromString($raw, Format::WebVtt)->getCues();
 
         $this->assertSame(2, count($cues));
         $this->assertSame("Second", $cues[1]->getText());

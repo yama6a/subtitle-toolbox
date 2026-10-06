@@ -1,26 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
-class AwsTranscribeParser extends SubtitleParser
+final class AwsTranscribeParser extends SubtitleParser
 {
     use WordGrouping;
 
-    public const FORMAT_DATA_KEY = "aws-transcribe";
-
-    public const OPTION_WORD_TIMESTAMPS = "OPTION_WORD_TIMESTAMPS";
-
-    /** Writes the speaker_label of each cue as a <v> tag at the start of its cue, for example <v spk_0>. */
-    public const OPTION_SPEAKER_VOICES = "OPTION_SPEAKER_VOICES";
+    public const FORMAT_DATA_KEY = Format::AwsTranscribe->value;
 
 
     /**
      * Reads the JSON transcript of an Amazon Transcribe batch job, one cue per audio segment, else cues grouped from the words.
      */
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings = [];
         $data           = $this->decodeObject($rawSubtitle);
@@ -44,11 +42,7 @@ class AwsTranscribeParser extends SubtitleParser
         }
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, $fileData);
 
-        foreach ($cues as $cue) {
-            $subtitle->addCue($cue, false);
-        }
-
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($cues);
     }
 
 
@@ -75,7 +69,7 @@ class AwsTranscribeParser extends SubtitleParser
                 $start = $this->seconds($item["start_time"] ?? null, "$path.start_time");
                 $end   = $this->seconds($item["end_time"] ?? null, "$path.end_time");
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($item)]);
+                $this->fail($exception, null, $index, [RawJson::encode($item)]);
                 continue;
             }
 
@@ -112,7 +106,7 @@ class AwsTranscribeParser extends SubtitleParser
                 $end   = $this->seconds($segment["end_time"] ?? null, "$path.end_time");
                 $text  = $this->text($segment, "transcript", $path);
             } catch (ParsingException $exception) {
-                $this->fail($exception, 0, $index, [RawJson::encode($segment)]);
+                $this->fail($exception, null, $index, [RawJson::encode($segment)]);
                 continue;
             }
 

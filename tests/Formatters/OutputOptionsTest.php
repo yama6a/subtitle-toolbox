@@ -1,87 +1,142 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\FormatRegistry;
+use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\Formatters\Options\AssWriteOptions;
+use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
+use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
+use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
+use SubtitleToolbox\Formatters\Options\HtmlTranscriptWriteOptions;
+use SubtitleToolbox\Formatters\Options\IttWriteOptions;
+use SubtitleToolbox\Formatters\Options\JsonWriteOptions;
+use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
+use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
+use SubtitleToolbox\Formatters\Options\PlainTextWriteOptions;
+use SubtitleToolbox\Formatters\Options\PodcastTranscriptWriteOptions;
+use SubtitleToolbox\Formatters\Options\SccWriteOptions;
+use SubtitleToolbox\Formatters\Options\SubViewerWriteOptions;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
+use SubtitleToolbox\WriteOptions;
 
 class OutputOptionsTest extends TestCase
 {
-    public static function formatters(): array
+    private const FILES = __DIR__ . "/../files/";
+
+    // EBU STL and PGS are binary, so they have no line ending and no BOM.
+    private const BINARY = [Format::EbuStl, Format::Pgs];
+
+    private const WRITES_BOM = [Format::Ass, Format::Csv, Format::Lyrics, Format::MpSub, Format::SubRip, Format::Tsv, Format::WebVtt];
+
+    // The options that a format needs, or that give JSON output line breaks.
+    private const FORMAT_OPTIONS = [
+        "itt"                => [IttWriteOptions::class, ["frameRate" => 25]],
+        "json"               => [JsonWriteOptions::class, ["prettyPrint" => true]],
+        "microdvd"           => [MicroDvdWriteOptions::class, ["frameRate" => 25]],
+        "podcast-transcript" => [PodcastTranscriptWriteOptions::class, ["prettyPrint" => true]],
+    ];
+
+    private const OPTIONS_CLASSES = [
+        "ass"                => AssWriteOptions::class,
+        "csv"                => CsvWriteOptions::class,
+        "html"               => HtmlTranscriptWriteOptions::class,
+        "itt"                => IttWriteOptions::class,
+        "json"               => JsonWriteOptions::class,
+        "microdvd"           => MicroDvdWriteOptions::class,
+        "mpsub"              => MpSubWriteOptions::class,
+        "podcast-transcript" => PodcastTranscriptWriteOptions::class,
+        "scc"                => SccWriteOptions::class,
+        "stl"                => EbuStlWriteOptions::class,
+        "subviewer"          => SubViewerWriteOptions::class,
+        "tsv"                => CsvWriteOptions::class,
+        "txt"                => PlainTextWriteOptions::class,
+    ];
+
+
+    public static function textFormats(): array
     {
-        return [
-            "ASS"      => [AssFormatter::class, [], true],
-            "FFmpeg metadata"  => [FfMetadataChaptersFormatter::class, [], false],
-            "LRC"      => [LyricsFormatter::class, [], true],
-            "MicroDVD" => [MicroDvdFormatter::class, [MicroDvdFormatter::OPTION_FRAME_RATE => 25], false],
-            "MPSub"    => [MpSubFormatter::class, [], true],
-            "OGM chapters"     => [OgmChaptersFormatter::class, [], false],
-            "Podcast chapters" => [PodcastChaptersFormatter::class, [], false],
-            "SAMI"     => [SamiFormatter::class, [], false],
-            "SBV"      => [SbvFormatter::class, [], false],
-            "SubRip"   => [SubRipFormatter::class, [], true],
-            "TTML"     => [TtmlFormatter::class, [], false],
-            "WebVTT"   => [WebVttFormatter::class, [], true],
-            "YouTube chapters" => [YouTubeChaptersFormatter::class, [], false],
-        ];
+        $formats = [];
+        foreach (Format::cases() as $format) {
+            if ($format->canWrite() && !in_array($format, self::BINARY, true)) {
+                $formats[$format->value] = [$format];
+            }
+        }
+
+        return $formats;
     }
 
 
-    #[DataProvider("formatters")]
-    public function testDefaultsKeepLfAndTheBomOfTheFormat(string $formatter, array $options, bool $writesBom): void
+    public static function writableFormats(): array
     {
-        $output = self::subtitle()->format($formatter, $options);
+        $formats = [];
+        foreach (Format::cases() as $format) {
+            if ($format->canWrite()) {
+                $formats[$format->value] = [$format];
+            }
+        }
 
-        $this->assertSame($writesBom, StringHelpers::hasUtf8Bom($output));
+        return $formats;
+    }
+
+
+    #[DataProvider("textFormats")]
+    public function testDefaultsKeepLfAndTheBomOfTheFormat(Format $format): void
+    {
+        $output = self::subtitle($format)->toString($format, self::options($format));
+
+        $this->assertSame(in_array($format, self::WRITES_BOM, true), StringHelpers::hasUtf8Bom($output));
         $this->assertStringNotContainsString("\r", $output);
-        $this->assertSame($output, self::subtitle()->format($formatter, $options + [SubtitleFormatter::OPTION_LINE_ENDING => "\n"]));
+        $this->assertSame($output, self::subtitle($format)->toString($format, self::options($format, LineEnding::Lf)));
     }
 
 
-    #[DataProvider("formatters")]
-    public function testCrLfReplacesEveryLineEnding(string $formatter, array $options): void
+    #[DataProvider("textFormats")]
+    public function testCrLfReplacesEveryLineEnding(Format $format): void
     {
-        $default = self::subtitle()->format($formatter, $options);
-        $output  = self::subtitle()->format($formatter, $options + [SubtitleFormatter::OPTION_LINE_ENDING => "\r\n"]);
+        $default = self::subtitle($format)->toString($format, self::options($format));
+        $output  = self::subtitle($format)->toString($format, self::options($format, LineEnding::Crlf));
 
         $this->assertSame(str_replace("\n", "\r\n", $default), $output);
-        $this->assertSame(substr_count($default, "\n"), substr_count($output, "\r\n"));
+        $this->assertGreaterThan(0, substr_count($output, "\r\n"));
     }
 
 
-    #[DataProvider("formatters")]
-    public function testBomOptionAddsOrRemovesTheUtf8Bom(string $formatter, array $options): void
+    #[DataProvider("textFormats")]
+    public function testBomOptionAddsOrRemovesTheUtf8Bom(Format $format): void
     {
-        $default = StringHelpers::removeUtf8Bom(self::subtitle()->format($formatter, $options));
+        $default = StringHelpers::removeUtf8Bom(self::subtitle($format)->toString($format, self::options($format)));
 
-        $this->assertSame("\xEF\xBB\xBF" . $default, self::subtitle()->format($formatter, $options + [SubtitleFormatter::OPTION_BOM => true]));
-        $this->assertSame($default, self::subtitle()->format($formatter, $options + [SubtitleFormatter::OPTION_BOM => false]));
+        $this->assertSame("\xEF\xBB\xBF" . $default, self::subtitle($format)->toString($format, self::options($format, bom: true)));
+        $this->assertSame($default, self::subtitle($format)->toString($format, self::options($format, bom: false)));
     }
 
 
-    #[DataProvider("formatters")]
-    public function testBothOptionsWorkTogether(string $formatter, array $options): void
+    #[DataProvider("textFormats")]
+    public function testCrLfAndBomWorkTogether(Format $format): void
     {
-        $default = StringHelpers::removeUtf8Bom(self::subtitle()->format($formatter, $options));
-        $output  = self::subtitle()->format($formatter, $options + [
-            SubtitleFormatter::OPTION_LINE_ENDING => "\r\n",
-            SubtitleFormatter::OPTION_BOM         => true,
-        ]);
+        $default = StringHelpers::removeUtf8Bom(self::subtitle($format)->toString($format, self::options($format)));
+        $output  = self::subtitle($format)->toString($format, self::options($format, LineEnding::Crlf, true));
 
         $this->assertSame("\xEF\xBB\xBF" . str_replace("\n", "\r\n", $default), $output);
     }
 
 
-    #[DataProvider("formatters")]
-    public function testFormatterCalledDirectlyAppliesTheOptions(string $formatter, array $options): void
+    #[DataProvider("textFormats")]
+    public function testFormatterCalledDirectlyAppliesTheOptions(Format $format): void
     {
-        $output = (new $formatter())->format(self::subtitle(), $options + [
-            SubtitleFormatter::OPTION_LINE_ENDING => "\r\n",
-            SubtitleFormatter::OPTION_BOM         => false,
-        ]);
+        $formatter = FormatRegistry::formatterClass($format);
+        $output    = (new $formatter())->format(self::subtitle($format), self::options($format, LineEnding::Crlf, false));
 
         $this->assertFalse(StringHelpers::hasUtf8Bom($output));
         $this->assertStringContainsString("\r\n", $output);
@@ -89,28 +144,158 @@ class OutputOptionsTest extends TestCase
     }
 
 
-    public function testUnknownLineEndingThrows(): void
+    #[DataProvider("writableFormats")]
+    public function testOptionsOfAnotherFormatThrow(Format $format): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $other = $format === Format::Ass ? new SccWriteOptions() : new AssWriteOptions();
 
-        self::subtitle()->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_LINE_ENDING => "\r"]);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage(isset(self::OPTIONS_CLASSES[$format->value]) ? ", got AssWriteOptions." : " takes no format options, got AssWriteOptions.");
+        if ($format === Format::Ass) {
+            $this->expectExceptionMessage("AssFormatter takes AssWriteOptions, got SccWriteOptions.");
+        }
+
+        self::subtitle($format)->toString($format, new WriteOptions(format: $other));
     }
 
 
-    public function testBomOptionThatIsNotABooleanThrows(): void
+    public function testCsvOptionsForSubRipThrow(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("SubRipFormatter takes no format options, got CsvWriteOptions.");
 
-        self::subtitle()->format(SubRipFormatter::class, [SubtitleFormatter::OPTION_BOM => "yes"]);
+        self::subtitle(Format::SubRip)->toString(Format::SubRip, new WriteOptions(format: new CsvWriteOptions()));
     }
 
 
-    private static function subtitle(): Subtitle
+    #[DataProvider("textFormats")]
+    public function testOwnOptionsClassIsAccepted(Format $format): void
     {
+        $class = self::OPTIONS_CLASSES[$format->value] ?? null;
+        if ($class === null) {
+            $this->assertNotSame("", self::subtitle($format)->toString($format, self::options($format)));
+
+            return;
+        }
+
+        [, $arguments] = self::FORMAT_OPTIONS[$format->value] ?? [null, []];
+        $options       = new WriteOptions(format: new $class(...$arguments));
+
+        $this->assertNotSame("", self::subtitle($format)->toString($format, $options));
+    }
+
+
+    public function testExplicitFrameRateWinsOverTheParsedIttFrameRate(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "itt/real/fcp_23976_styles.itt"), Format::Itt);
+
+        $output = $subtitle->toString(Format::Itt, new WriteOptions(format: new IttWriteOptions(frameRate: 25)));
+
+        $this->assertStringContainsString('ttp:frameRate="25"', $output);
+        $this->assertStringContainsString('ttp:frameRateMultiplier="1 1"', $output);
+    }
+
+
+    public function testExplicitFrameRateWinsOverTheParsedEbuStlDiskFormatCode(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "stl/real/harbour_open_30fps.stl"), Format::EbuStl);
+        $this->assertSame("STL30.01", substr(file_get_contents(self::FILES . "stl/real/harbour_open_30fps.stl"), 3, 8));
+
+        $output = $subtitle->toString(Format::EbuStl, new WriteOptions(format: new EbuStlWriteOptions(frameRate: 25)));
+
+        $this->assertSame("STL25.01", substr($output, 3, 8));
+    }
+
+
+    public function testExplicitCsvFrameRateAndTimeFormatWinOverTheParsedTable(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "csv/real/excel_de_semicolon.csv"), Format::Csv);
+        $first    = array_values($subtitle->getCues())[0];
+
+        $output = $subtitle->toString(Format::Csv, new WriteOptions(format: new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames, frameRate: 25)));
+        $start  = sprintf("%02d:%02d:%02d:%02d", ...Timecode::clockSecondsAndFrames($first->getStart(), new FrameRate(25)));
+
+        $this->assertStringContainsString("\n$start;", $output);
+    }
+
+
+    public function testStripTagsWritesTheStrippedSubRipFile(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "srt/strip_xml.srt"), Format::SubRip);
+
+        $this->assertSame(
+            file_get_contents(self::FILES . "srt/all_tags_stripped.srt"),
+            $subtitle->toString(Format::SubRip, new WriteOptions(stripTags: true))
+        );
+    }
+
+
+    public static function stripTagsFormats(): array
+    {
+        return [
+            "ASS"      => [Format::Ass],
+            "EBU STL"  => [Format::EbuStl],
+            "iTT"      => [Format::Itt],
+            "MicroDVD" => [Format::MicroDvd],
+            "SAMI"     => [Format::Sami],
+            "SubRip"   => [Format::SubRip],
+            "TTML"     => [Format::Ttml],
+            "WebVTT"   => [Format::WebVtt],
+        ];
+    }
+
+
+    #[DataProvider("stripTagsFormats")]
+    public function testStripTagsChangesTheOutput(Format $format): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "srt/real/own_styled.srt"), Format::SubRip);
+        $format_  = self::FORMAT_OPTIONS[$format->value] ?? null;
+        $options  = fn (bool $stripTags): WriteOptions => new WriteOptions(
+            stripTags: $stripTags,
+            format: $format_ === null ? null : new $format_[0](...$format_[1]),
+        );
+
+        $this->assertNotSame($subtitle->toString($format, $options(false)), $subtitle->toString($format, $options(true)));
+    }
+
+
+    public function testOneEbuStlFormatterKeepsNoStateBetweenCalls(): void
+    {
+        $bakery  = Subtitle::fromString(file_get_contents(self::FILES . "stl/real/bakery_teletext_25fps.stl"), Format::EbuStl);
+        $harbour = Subtitle::fromString(file_get_contents(self::FILES . "stl/real/harbour_open_30fps.stl"), Format::EbuStl);
+
+        $formatter = new EbuStlFormatter();
+        $first     = $formatter->format($bakery);
+        $second    = $formatter->format($harbour);
+
+        $this->assertSame((new EbuStlFormatter())->format($bakery), $first);
+        $this->assertSame((new EbuStlFormatter())->format($harbour), $second);
+    }
+
+
+    private static function options(Format $format, LineEnding $lineEnding = LineEnding::Lf, ?bool $bom = null): WriteOptions
+    {
+        $options = self::FORMAT_OPTIONS[$format->value] ?? null;
+
+        return new WriteOptions(
+            lineEnding: $lineEnding,
+            bom: $bom,
+            format: $options === null ? null : new $options[0](...$options[1]),
+        );
+    }
+
+
+    /**
+     * CSV keeps a line break inside a cell as LF, as Excel does, so the CSV and TSV cues hold one line each.
+     */
+    private static function subtitle(Format $format): Subtitle
+    {
+        $twoLines = in_array($format, [Format::Csv, Format::Tsv], true) ? "<i>Bonjour</i> ça va ?" : "<i>Bonjour</i>\nça va ?";
+
         return (new Subtitle())
             ->setMetadata(Subtitle::METADATA_TITLE, "Café")
             ->addComment("Note", 1)
-            ->addCue(new SubtitleCue(1.5, 4, "<i>Bonjour</i>\nça va ?"))
+            ->addCue(new SubtitleCue(1.5, 4, $twoLines))
             ->addCue(new SubtitleCue(5, 7.25, "Second cue"));
     }
 }

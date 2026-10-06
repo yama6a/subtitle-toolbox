@@ -1,10 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Formatters\WebVttFormatter;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -94,9 +98,7 @@ class CloudSpeechRealFilesTest extends TestCase
 
     private static function parse(string $parserClass, string $file, bool $wordTimestamps = false): Subtitle
     {
-        $parser = new $parserClass([$parserClass::OPTION_SPEAKER_VOICES => true, $parserClass::OPTION_WORD_TIMESTAMPS => $wordTimestamps]);
-
-        return $parser->parse(file_get_contents(self::DIR . $file));
+        return (new $parserClass())->parse(file_get_contents(self::DIR . $file), new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: $wordTimestamps, speakerVoices: true)));
     }
 
 
@@ -106,8 +108,8 @@ class CloudSpeechRealFilesTest extends TestCase
         $subtitle = self::parse($parserClass, $file);
         $cues     = $subtitle->getCues();
 
-        $this->assertSame($parserClass, Subtitle::detectParser(file_get_contents(self::DIR . $file)));
-        $this->assertSame($language, $subtitle->getMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertNull(Format::detect(file_get_contents(self::DIR . $file)));
+        $this->assertSame($language, $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertCount($cueCount, $cues);
         $this->assertSame($firstCue, [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getText()]);
         $last = $cues[count($cues) - 1];
@@ -119,7 +121,7 @@ class CloudSpeechRealFilesTest extends TestCase
     public function testRealFileKeepsItsWordTimestampsAndSpeakersThroughWebVtt(string $parserClass, string $file): void
     {
         $subtitle = self::parse($parserClass, $file, true);
-        $vtt      = (new WebVttParser())->parse($subtitle->format(WebVttFormatter::class));
+        $vtt      = (new WebVttParser())->parse($subtitle->toString(Format::WebVtt), new ReadOptions());
         $cueData  = fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()];
 
         $this->assertStringContainsString("<00:00:0", $subtitle->getCues()[0]->getText());
@@ -130,50 +132,50 @@ class CloudSpeechRealFilesTest extends TestCase
     public function testAmazonTranscribeKeepsTheItemsOfEachSegment(): void
     {
         $subtitle = self::parse(AwsTranscribeParser::class, "aws-transcribe/real/library_speakers_language_id.json");
-        $data     = $subtitle->getCues()[0]->getFormatData("aws-transcribe");
+        $data     = $subtitle->getCues()[0]->findFormatData("aws-transcribe");
 
         $this->assertSame(0, $data["id"]);
         $this->assertSame("spk_0", $data["speaker_label"]);
         $this->assertSame([0, 1, 2, 3, 4, 5], array_column($data["items"], "id"));
         $this->assertSame(["0.0", "punctuation"], [$data["items"][5]["alternatives"][0]["confidence"], $data["items"][5]["type"]]);
-        $this->assertSame("library-hours", $subtitle->getFormatData("aws-transcribe")["jobName"]);
-        $this->assertSame("en-GB", $subtitle->getFormatData("aws-transcribe")["results"]["language_identification"][0]["code"]);
+        $this->assertSame("library-hours", $subtitle->findFormatData("aws-transcribe")["jobName"]);
+        $this->assertSame("en-GB", $subtitle->findFormatData("aws-transcribe")["results"]["language_identification"][0]["code"]);
     }
 
 
     public function testDeepgramKeepsTheWordsAndTheMetadata(): void
     {
         $subtitle = self::parse(DeepgramParser::class, "deepgram/real/train_paragraphs_german.json");
-        $words    = $subtitle->getCues()[1]->getFormatData("deepgram")["words"];
+        $words    = $subtitle->getCues()[1]->findFormatData("deepgram")["words"];
 
         $this->assertSame(["Bitte", "steigen", "Sie", "vorne", "ein."], array_column($words, "punctuated_word"));
-        $this->assertSame(0, $subtitle->getCues()[1]->getFormatData("deepgram")["channel"]);
-        $this->assertSame("general-nova-3", array_values($subtitle->getFormatData("deepgram")["metadata"]["model_info"])[0]["name"]);
+        $this->assertSame(0, $subtitle->getCues()[1]->findFormatData("deepgram")["channel"]);
+        $this->assertSame("general-nova-3", array_values($subtitle->findFormatData("deepgram")["metadata"]["model_info"])[0]["name"]);
     }
 
 
     public function testAssemblyAiKeepsTheUtteranceConfidenceAndTheTranscriptFields(): void
     {
         $subtitle = self::parse(AssemblyAiParser::class, "assemblyai/real/hike_utterances_speakers.json");
-        $data     = $subtitle->getCues()[1]->getFormatData("assemblyai");
+        $data     = $subtitle->getCues()[1]->findFormatData("assemblyai");
 
         $this->assertSame("B", $data["speaker"]);
         $this->assertCount(13, $data["words"]);
         $this->assertIsFloat($data["confidence"]);
-        $this->assertSame("https://example.com/audio/hike.mp3", $subtitle->getFormatData("assemblyai")["audio_url"]);
-        $this->assertArrayNotHasKey("words", $subtitle->getFormatData("assemblyai"));
+        $this->assertSame("https://example.com/audio/hike.mp3", $subtitle->findFormatData("assemblyai")["audio_url"]);
+        $this->assertArrayNotHasKey("words", $subtitle->findFormatData("assemblyai"));
     }
 
 
     public function testGoogleKeepsTheOperationAndTheResultFields(): void
     {
         $subtitle = self::parse(GoogleSpeechParser::class, "google-speech/real/bus_v1_long_running_operation.json");
-        $data     = $subtitle->getCues()[0]->getFormatData("google-speech");
+        $data     = $subtitle->getCues()[0]->findFormatData("google-speech");
 
         $this->assertSame("4.390s", $data["resultEndTime"]);
         $this->assertSame(0.9612345, $data["confidence"]);
         $this->assertSame(["startTime" => "0.200s", "endTime" => "0.660s", "word" => "okay"], $data["words"][0]);
-        $this->assertSame("7612202767953098924", $subtitle->getFormatData("google-speech")["name"]);
-        $this->assertSame("15s", $subtitle->getFormatData("google-speech")["totalBilledTime"]);
+        $this->assertSame("7612202767953098924", $subtitle->findFormatData("google-speech")["name"]);
+        $this->assertSame("15s", $subtitle->findFormatData("google-speech")["totalBilledTime"]);
     }
 }

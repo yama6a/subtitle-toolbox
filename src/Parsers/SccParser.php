@@ -1,11 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Encoding\Cea608;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -17,18 +21,21 @@ use SubtitleToolbox\SubtitleCue;
  * @see http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
  * @see https://www.govinfo.gov/content/pkg/CFR-2010-title47-vol1/xml/CFR-2010-title47-vol1-sec15-119.xml
  */
-class SccParser extends SubtitleParser
+final class SccParser extends SubtitleParser
 {
-    public const FORMAT = "scc";
+    public const FORMAT_DATA_KEY = Format::Scc->value;
+
+    /** @internal */
     public const HEADER = "Scenarist_SCC V1.0";
 
+    // The values of the 3 caption modes appear as "mode" in the format data of a cue.
+    /** @internal */
     public const MODE_POP_ON   = "pop-on";
+    /** @internal */
     public const MODE_ROLL_UP  = "roll-up";
+    /** @internal */
     public const MODE_PAINT_ON = "paint-on";
     private const MODE_TEXT    = "text";
-
-    // pycaption ends a caption that no command erases 4 seconds after its start, in SCCReader._fix_last_captions_without_ending().
-    private const LAST_CAPTION_DURATION = 4.0;
 
     private const DEFAULT_ATTRIBUTES = ["color" => Cea608::WHITE, "italic" => false, "underline" => false];
 
@@ -61,25 +68,19 @@ class SccParser extends SubtitleParser
     private ?string $displayChange = null;
 
 
-    /**
-     * @param int $channel 1 reads CC1 and CC3, 2 reads CC2 and CC4.
-     */
-    public function __construct(int $channel = 1)
+    protected static function formatOptionsClass(): string
     {
-        if ($channel !== 1 && $channel !== 2) {
-            throw new InvalidArgumentException("The SCC data channel must be 1 or 2, got $channel.");
-        }
-
-        $this->channel = $channel;
+        return SccReadOptions::class;
     }
 
 
-    public function parse(string $rawSubtitle): Subtitle
+    protected function read(string $rawSubtitle): Subtitle
     {
         $rawSubtitle = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawLines    = explode(StringHelpers::UNIX_LINE_ENDING, StringHelpers::normalizeEOLs($rawSubtitle));
+        $rawLines    = explode(LineEnding::Lf->value, StringHelpers::normalizeEOLs($rawSubtitle));
 
-        $codeLines = $this->readCodeLines($rawLines, $dropFrame);
+        $this->channel = $this->formatOptions()->channel;
+        $codeLines     = $this->readCodeLines($rawLines, $dropFrame);
         $this->resetDecoder();
 
         $states = [];
@@ -99,9 +100,10 @@ class SccParser extends SubtitleParser
             $frame = max($frame, $startFrame + count($words));
         }
 
-        $subtitle = new Subtitle();
+        $subtitle   = new Subtitle();
+        $parsedCues = [];
         if ($dropFrame !== null) {
-            $subtitle->setFormatData(self::FORMAT, ["dropFrame" => $dropFrame]);
+            $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["dropFrame" => $dropFrame]);
         }
         foreach ($states as $idx => $state) {
             if ($state["lines"] === []) {
@@ -109,22 +111,22 @@ class SccParser extends SubtitleParser
             }
 
             $start = $this->frameToSeconds($state["frame"]);
-            $end   = isset($states[$idx + 1]) ? $this->frameToSeconds($states[$idx + 1]["frame"]) : $start + self::LAST_CAPTION_DURATION;
+            $end   = isset($states[$idx + 1]) ? $this->frameToSeconds($states[$idx + 1]["frame"]) : $start + $this->options->lastCueDuration;
             if ($end <= $start) {
                 continue;
             }
 
             $cue = new SubtitleCue($start, $end, array_column($state["lines"], "text"));
             $cue->setAlignment($state["lines"][0]["row"] <= 4 ? 8 : null);
-            $cue->setFormatData(self::FORMAT, [
+            $cue->setFormatData(self::FORMAT_DATA_KEY, [
                 "mode"    => $state["mode"],
                 "rows"    => array_column($state["lines"], "row"),
                 "columns" => array_column($state["lines"], "column"),
             ]);
-            $subtitle->addCue($cue, false);
+            $parsedCues[] = $cue;
         }
 
-        return $subtitle->reIndexCues();
+        return $subtitle->addCues($parsedCues);
     }
 
 

@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Hls;
 
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Subtitle;
 
@@ -20,8 +23,9 @@ final class HlsWebVttJoiner
         $joined   = new Subtitle();
         $fileData = null;
         $seen     = [];
+        $cues     = [];
         foreach ($segments as $content) {
-            $segment = Subtitle::parse($content, WebVttParser::class);
+            $segment = Subtitle::fromString($content, Format::WebVtt);
             // RFC 8216 section 3.5: without the header, cue time 0 maps to MPEG-2 timestamp 0.
             $map              = TimestampMap::fromSubtitle($segment) ?? new TimestampMap(0);
             $streamStartPts ??= $map->mpegts;
@@ -31,18 +35,18 @@ final class HlsWebVttJoiner
                 $key = $cue->getStart() . "|" . $cue->getEnd() . "|" . $cue->getText();
                 if (!isset($seen[$key])) {
                     $seen[$key] = true;
-                    $joined->addCue($cue, false);
+                    $cues[] = $cue;
                 }
             }
         }
 
-        return $joined->setFormatData(WebVttParser::FORMAT, $fileData ?? [])->reIndexCues()->removeDuplicateCues();
+        return $joined->setFormatData(WebVttParser::FORMAT_DATA_KEY, $fileData ?? [])->addCues($cues)->removeDuplicateCues();
     }
 
 
     private static function withoutTimestampMap(Subtitle $segment): array
     {
-        $fileData                = $segment->getFormatData(WebVttParser::FORMAT);
+        $fileData                = $segment->findFormatData(WebVttParser::FORMAT_DATA_KEY);
         $fileData["headerLines"] = array_values(array_filter(
             $fileData["headerLines"] ?? [],
             fn (string $line): bool => !TimestampMap::isHeader($line)

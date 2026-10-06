@@ -1,9 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Image;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
+/**
+ * @internal
+ */
 final class PaletteReducer
 {
     public const MAX_COLORS = 256;

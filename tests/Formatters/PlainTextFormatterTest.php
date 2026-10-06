@@ -1,14 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Formatters;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\PlainTextWriteOptions;
 use SubtitleToolbox\Image\CueImage;
-use SubtitleToolbox\Parsers\SbvParser;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class PlainTextFormatterTest extends TestCase
 {
@@ -30,24 +35,24 @@ class PlainTextFormatterTest extends TestCase
     public static function options(): array
     {
         return [
-            "defaults"           => [[], "Hello world. Where are you going?\n\nHome & bed.\n\nFish <3\n"],
-            "lines kept"         => [[PlainTextFormatter::OPTION_JOIN_LINES => false], "Hello\nworld. Where are you going?\n\nHome & bed.\n\nFish <3\n"],
-            "one cue per line"   => [[PlainTextFormatter::OPTION_JOIN_CUES => false], "Hello world.\nWhere are you going?\n\nHome & bed.\n\nFish <3\n"],
-            "gap of 2.5 s"       => [[PlainTextFormatter::OPTION_PARAGRAPH_GAP => 2.5], "Hello world. Where are you going? Home & bed.\n\nFish <3\n"],
-            "gap of 0.5 s"       => [[PlainTextFormatter::OPTION_PARAGRAPH_GAP => 0.5], "Hello world.\n\nWhere are you going?\n\nHome & bed.\n\nFish <3\n"],
-            "no paragraphs"      => [[PlainTextFormatter::OPTION_PARAGRAPH_GAP => INF], "Hello world. Where are you going? Home & bed. Fish <3\n"],
-            "with times"         => [[PlainTextFormatter::OPTION_WITH_TIMES => true],
+            "defaults"           => [new WriteOptions(), "Hello world. Where are you going?\n\nHome & bed.\n\nFish <3\n"],
+            "lines kept"         => [new WriteOptions(format: new PlainTextWriteOptions(joinLines: false)), "Hello\nworld. Where are you going?\n\nHome & bed.\n\nFish <3\n"],
+            "one cue per line"   => [new WriteOptions(format: new PlainTextWriteOptions(joinCues: false)), "Hello world.\nWhere are you going?\n\nHome & bed.\n\nFish <3\n"],
+            "gap of 2.5 s"       => [new WriteOptions(format: new PlainTextWriteOptions(paragraphGap: 2.5)), "Hello world. Where are you going? Home & bed.\n\nFish <3\n"],
+            "gap of 0.5 s"       => [new WriteOptions(format: new PlainTextWriteOptions(paragraphGap: 0.5)), "Hello world.\n\nWhere are you going?\n\nHome & bed.\n\nFish <3\n"],
+            "no paragraphs"      => [new WriteOptions(format: new PlainTextWriteOptions(paragraphGap: INF)), "Hello world. Where are you going? Home & bed. Fish <3\n"],
+            "with times"         => [new WriteOptions(format: new PlainTextWriteOptions(withTimes: true)),
                                      "[00:00:01] Hello world. Where are you going?\n\n[00:00:06] Home & bed.\n\n[01:02:05] Fish <3\n"],
-            "CR LF"              => [[PlainTextFormatter::OPTION_LINE_ENDING => "\r\n", PlainTextFormatter::OPTION_PARAGRAPH_GAP => INF],
+            "CR LF"              => [new WriteOptions(lineEnding: LineEnding::Crlf, format: new PlainTextWriteOptions(paragraphGap: INF)),
                                      "Hello world. Where are you going? Home & bed. Fish <3\r\n"],
         ];
     }
 
 
     #[DataProvider("options")]
-    public function testFormatsWithOptions(array $options, string $expected): void
+    public function testFormatsWithOptions(WriteOptions $options, string $expected): void
     {
-        $this->assertSame($expected, $this->walk()->format(PlainTextFormatter::class, $options));
+        $this->assertSame($expected, $this->walk()->toString(Format::PlainText, $options));
     }
 
 
@@ -58,7 +63,7 @@ class PlainTextFormatterTest extends TestCase
         $subtitle->addCue(new SubtitleCue(1, 2, "Short"));
         $subtitle->addCue(new SubtitleCue(11, 12, "Overlapped"));
 
-        $this->assertSame("Long Short Overlapped\n", $subtitle->format(PlainTextFormatter::class));
+        $this->assertSame("Long Short Overlapped\n", $subtitle->toString(Format::PlainText));
     }
 
 
@@ -68,34 +73,34 @@ class PlainTextFormatterTest extends TestCase
         $subtitle->addCue(new SubtitleCue(1, 2, "<i></i>"));
         $subtitle->addCue((new CueImage("png", 0, 0, 1, 1, 720, 576))->toCue(new SubtitleCue(3, 4)));
 
-        $this->assertSame("", (new Subtitle())->format(PlainTextFormatter::class));
-        $this->assertSame("", $subtitle->format(PlainTextFormatter::class, [PlainTextFormatter::OPTION_SKIP_IMAGE_CUES => true]));
+        $this->assertSame("", (new Subtitle())->toString(Format::PlainText));
+        $this->assertSame("", $subtitle->toString(Format::PlainText, new WriteOptions(skipImageCues: true)));
     }
 
 
-    public function testThrowsForAParagraphGapThatIsNoNumber(): void
+    public function testThrowsForANegativeParagraphGap(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("The option paragraphGap must be a number of seconds.");
+        $this->expectExceptionMessage("The paragraph gap must be 0 or more seconds, got -1.");
 
-        $this->walk()->format(PlainTextFormatter::class, [PlainTextFormatter::OPTION_PARAGRAPH_GAP => "2"]);
+        new PlainTextWriteOptions(paragraphGap: -1);
     }
 
 
     public static function realFiles(): array
     {
         return [
-            "defaults"   => ["youtube_studio_lf.txt", []],
-            "with times" => ["youtube_studio_lf_with_times.txt", [PlainTextFormatter::OPTION_WITH_TIMES => true, PlainTextFormatter::OPTION_JOIN_CUES => false]],
+            "defaults"   => ["youtube_studio_lf.txt", new WriteOptions()],
+            "with times" => ["youtube_studio_lf_with_times.txt", new WriteOptions(format: new PlainTextWriteOptions(withTimes: true, joinCues: false))],
         ];
     }
 
 
     #[DataProvider("realFiles")]
-    public function testRealFileGivesTheExpectedTranscript(string $fileName, array $options): void
+    public function testRealFileGivesTheExpectedTranscript(string $fileName, WriteOptions $options): void
     {
-        $subtitle = Subtitle::parse(file_get_contents(self::DIR . "sbv/real/youtube_studio_lf.sbv"), SbvParser::class);
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "sbv/real/youtube_studio_lf.sbv"), Format::Sbv);
 
-        $this->assertSame(file_get_contents(self::DIR . "plaintext/real/$fileName"), $subtitle->format(PlainTextFormatter::class, $options));
+        $this->assertSame(file_get_contents(self::DIR . "plaintext/real/$fileName"), $subtitle->toString(Format::PlainText, $options));
     }
 }

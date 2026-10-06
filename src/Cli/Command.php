@@ -1,9 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
+/**
+ * @internal
+ */
 abstract class Command
 {
     abstract public function name(): string;
@@ -28,11 +33,13 @@ abstract class Command
 
 
     /**
-     * @return list<string>
+     * Runs the command with the arguments after the command name and returns the exit code.
+     *
+     * @param list<string> $arguments
      */
-    public function aliases(): array
+    public function run(array $arguments, Console $console): int
     {
-        return [];
+        return $this->execute(Arguments::parse($arguments, $this->options()), $console);
     }
 
 
@@ -54,28 +61,49 @@ abstract class Command
     }
 
 
-    public function help(): string
+    /**
+     * Reports a file outside the inputs that the command cannot read, or an output that it cannot create. The tool then
+     * stops and exits with code 3.
+     */
+    public static function failFile(string $message): never
+    {
+        throw new FileFailure($message);
+    }
+
+
+    /**
+     * Returns the help of the command. $topic is the word after --help, or null. Only convert reads it.
+     */
+    public function help(?string $topic = null): string
+    {
+        return $this->helpHeader() . "\nOptions:\n" . self::optionList([...$this->options(), Option::flag("help", "Show this help.", "h")]);
+    }
+
+
+    protected function helpHeader(): string
     {
         $usage = [];
         foreach ($this->usageLines() as $index => $line) {
             $usage[] = ($index === 0 ? "Usage: " : "       ") . Application::NAME . " " . $this->name() . " $line";
         }
 
-        $help = implode("\n", $usage) . "\n\n" . $this->summary() . "\n";
-        if ($this->details() !== "") {
-            $help .= "\n" . $this->details() . "\n";
-        }
-        if ($this->aliases() !== []) {
-            $help .= "\nAliases: " . implode(", ", $this->aliases()) . "\n";
-        }
+        $header = implode("\n", $usage) . "\n\n" . $this->summary() . "\n";
 
-        $options = [...$this->options(), Option::flag("help", "Show this help.", "h")];
-        $width   = max(array_map(fn (Option $option): int => strlen($option->synopsis()), $options));
-        $help   .= "\nOptions:\n";
+        return $this->details() === "" ? $header : $header . "\n" . $this->details() . "\n";
+    }
+
+
+    /**
+     * @param list<Option> $options
+     */
+    protected static function optionList(array $options): string
+    {
+        $width = max(array_map(fn (Option $option): int => strlen($option->synopsis()), $options));
+        $list  = "";
         foreach ($options as $option) {
-            $help .= "  " . str_pad($option->synopsis(), $width) . "  $option->description\n";
+            $list .= "  " . str_pad($option->synopsis(), $width) . "  $option->description\n";
         }
 
-        return $help;
+        return $list;
     }
 }
