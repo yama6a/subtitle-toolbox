@@ -106,6 +106,7 @@ $subtitle->toString(Format::SubRip);
 | JSON | the cue lines | the cue lines |
 | all other formats, iTT too | no speaker | nothing. Convert with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colors` first |
 
+- **Style values**: `SpeakerStyle::from('dialogueDashes')` returns `SpeakerStyle::DialogueDashes`. The values are `prefix`, `dialogueDashes` and `colors`.
 - **Speaker**: a `<v>` tag sets the speaker until `</v>`, the next `<v>` tag or the end of the cue.
 - **New line**: where the speaker changes in the middle of a line, the converters start a new line. Style tags such as `<i>` close at the end of the first line and open again on the next.
 - **Prefix**: every cue repeats the name of its speaker. `writeUpperCase: false` keeps the name as it is.

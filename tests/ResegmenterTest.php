@@ -352,4 +352,11 @@ class ResegmenterTest extends TestCase
         $this->assertSame(["first", null], [$cues[0]->getIdentifier(), $cues[1]->getIdentifier()]);
         $this->assertEquals([new Comment("before second", 0)], $subtitle->getComments());
     }
+
+
+    public function testModeHasStringValues(): void
+    {
+        $this->assertSame(["splitLong", "byWords"], array_map(fn (ResegmentMode $mode): string => $mode->value, ResegmentMode::cases()));
+        $this->assertSame(ResegmentMode::ByWords, ResegmentMode::from("byWords"));
+    }
 }

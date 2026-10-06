@@ -122,6 +122,7 @@ Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::ByWords, maxWo
 | `limits` | `new CueLimits()` | the limits of each new cue. `SplitLong` never makes a cue shorter than `minDuration` |
 | `maxWordGap` | 0.6 | `ByWords` ends a cue at a pause of this many seconds or more |
 
+- **Mode values**: `ResegmentMode::from('byWords')` returns `ResegmentMode::ByWords`. The values are `splitLong` and `byWords`.
 - **Limits**: a cue breaks the limits when its text does not fit `maxLinesPerCue` lines of `maxCharactersPerLine` characters, as `wrapLines()` wraps it. It also breaks them above `maxDuration` or `maxCharactersPerSecond`.
 - **Break points**, best first: a sentence end, a clause end, then the space closest to the middle. Among break points of the same kind, the one closest to the middle wins. A full stop before a word in lower case, as in "e.g. this", is no sentence end.
 - **Splitting**: `SplitLong` splits a cue in two at the best break point. It splits each part again while the part breaks a limit. A cue stays unchanged when no break point keeps both parts at `minDuration` or longer.
