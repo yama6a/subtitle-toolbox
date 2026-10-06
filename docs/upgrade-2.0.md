@@ -15,7 +15,7 @@ PHP errors point out each of these changes. The tables show the main cases.
 - **Options**: a setting goes in `ReadOptions` or `WriteOptions`. A setting of one format goes in a class of that format, such as `MicroDvdReadOptions` or `CsvWriteOptions`. Parser constructors take no arguments.
 - **Wrong options**: a misspelled named argument is a PHP `Error`. An options class of another format throws `InvalidArgumentException`.
 - **Final classes**: every concrete class is `final`, except `InvalidArgumentException` and `InvalidParserException`. Wrap a class in your own class instead of extending it.
-- **Internal members**: helpers, the methods and constants of parsers and formatters, and the encoding, image and container helpers are `@internal`, private or removed.
+- **Internal members**: the methods and constants of parsers and formatters are `@internal`, private or removed. `FormatDetector`, `FormatRegistry`, `Cea608`, `CodePage`, `Iso6937`, `PaletteReducer`, `EbmlReader` and the `StringHelpers` methods other than `isValidUtf8()` and `convertToUtf8()` are `@internal`. Use the `Format` enum in place of `FormatDetector` and `FormatRegistry`.
 - **Copy or change**: a `Subtitle` method that returns a new subtitle starts with `with` or `to`. A method that changes the subtitle is a verb.
 - **get and find**: a lookup that starts with `find` returns null or an empty array when nothing matches. A lookup that starts with `get` throws.
 - **Services**: an edit with many settings is a service with a static `apply($subtitle, $options)`. It changes the subtitle that you pass and returns a report.
@@ -205,7 +205,6 @@ See [cli.md](cli.md) for every command and option.
 | `dual movie.en.srt movie.de.srt` | `dual --primary movie.en.srt --secondary movie.de.srt` |
 | `dual movie.mkv movie.de.srt --track 3` | `dual --primary movie.mkv --secondary movie.de.srt --primary-track 3` |
 | `dual movie.en.srt movie.de.srt --from srt` | `dual --primary movie.en.srt --secondary movie.de.srt --primary-from srt` |
-| `info movie.srt --fps 25` | `info movie.srt --input-fps 25` |
 
 - **Output**: an output is never positional. One input goes to standard output or to `-o FILE`. Several inputs need `--output-dir DIR`. `convert` always needs `--to`.
 - **Extension**: the extension of `-o` never picks the format. An extension of another format than `--to` fails with exit code 2.

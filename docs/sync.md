@@ -22,7 +22,7 @@ ReferenceSync::apply($german, new ReferenceSyncOptions(
 ));
 ```
 
-- **Target**: `apply()` changes the target. Pass `clone $german` to keep the original and only read the result.
+- **In place**: `apply()` changes the subtitle that you pass. Pass `clone $german` to keep the original and only read the result.
 - **Matching**: only the cue times count, not the text. The idea comes from [alass](https://github.com/kaegi/alass).
 - **Scale factors**: 1, 24/23.976, 25/24 and 25/23.976 and their inverses. Other factors are not found. One scale applies to the whole file.
 - **Offsets**: the search finds offsets between `minOffset` and `maxOffset`, to 0.01 s.
@@ -46,7 +46,7 @@ $result->getSegments();    // [['from' => 0.0, 'to' => 414.32, 'scale' => 1.0427
 $result->offset;           // -2.31, the offset of the first part. apply() shifted each part with its own offset.
 ```
 
-- **Segments**: `from` and `to` are target cue start times before the sync. A cue goes to the part that holds its start. Without a split, `getSegments()` returns one part from 0 to `INF`.
+- **Segments**: `from` and `to` are cue start times of the subtitle before the sync. A cue goes to the part that holds its start. Without a split, `getSegments()` returns one part from 0 to `INF`.
 - **Penalty**: a split stays only when it raises the score by more than `splitPenalty`. A part with 5% of the cue time raises the score by about 0.1. A split by chance in unrelated files raised the score by up to 0.04 with 300 cues and up to 0.12 with 60 cues. So a short file needs a higher penalty.
 - **Split points**: splits fall between cues.
 - **Overlaps**: `apply()` can move a part onto the next part. Then each cue of the earlier part that overlaps the later part ends 1 ms before the later part starts.

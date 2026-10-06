@@ -12,7 +12,7 @@ Every edit has one of 3 shapes:
 | service with `apply()` | `HearingImpairedRemover::apply($subtitle, new HearingImpairedOptions())` | a report. The service changes `$subtitle`. |
 
 - **Names**: a method that returns a new `Subtitle` starts with `with` or `to`. A method that changes the subtitle is a verb, such as `shift()` or `removeCuesWhere()`.
-- **Service**: a feature with many settings is a class with one static `apply(Subtitle $subtitle, XOptions $options): XReport`. `ReferenceSync` names the first parameter `$target` and returns a `ReferenceSyncReport`. The services are `Resegmenter`, `HearingImpairedRemover`, `ReferenceSync`, `ShotChangeTiming`, `CommonErrorFixer`, `WordHighlight`, `ProfanityFilter` and `SpeakerLabels`. `OcrRunner::run()` and `TranslationRunner::translate()` also change the subtitle and return a report. `DualSubtitle::fromPair()` builds a new subtitle from two.
+- **Service**: a feature with many settings is a class with one static `apply(Subtitle $subtitle, XOptions $options): XReport`. The services are `Resegmenter`, `HearingImpairedRemover`, `ReferenceSync`, `ShotChangeTiming`, `CommonErrorFixer`, `WordHighlight`, `ProfanityFilter` and `SpeakerLabels`. `OcrRunner::run()` and `TranslationRunner::translate()` also change the subtitle and return a report. `DualSubtitle::fromPair()` builds a new subtitle from two.
 - **Keep the original**: `clone` copies the cues too. Pass `clone $subtitle` to a service or to a method that changes the subtitle, and the original stays unchanged.
 
 ## Metadata, comments and cue identifiers
