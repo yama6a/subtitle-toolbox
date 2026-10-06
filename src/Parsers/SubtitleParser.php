@@ -175,6 +175,17 @@ abstract class SubtitleParser
 
 
     /**
+     * Splits $text at each "|", the line break of MPL2 and TMPlayer. Returns the trimmed lines that are not empty.
+     *
+     * @return list<string>
+     */
+    protected function pipeLines(string $text): array
+    {
+        return array_values(array_filter(array_map("trim", explode("|", $text)), fn (string $line): bool => $line !== ""));
+    }
+
+
+    /**
      * Yields the trimmed lines of each block between empty lines, keyed by the 1-based number of its first line.
      * The keys of $lines are the 0-based line numbers. An input without text yields no block.
      *

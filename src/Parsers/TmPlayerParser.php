@@ -65,9 +65,6 @@ final class TmPlayerParser extends SubtitleParser
      */
     private function parseText(string $text): array
     {
-        return array_values(array_filter(
-            array_map(fn (string $line): string => Markup::escapeText(trim($line)), explode("|", $text)),
-            fn (string $line): bool => $line !== ""
-        ));
+        return array_map(Markup::escapeText(...), $this->pipeLines($text));
     }
 }

@@ -44,15 +44,11 @@ final class Mpl2Parser extends SubtitleParser
     private function parseText(string $text): array
     {
         $lines = [];
-        foreach (explode("|", $text) as $line) {
-            $line = trim($line);
-            if (str_starts_with($line, "/")) {
-                $line = trim(substr($line, 1));
-                if ($line !== "") {
-                    $lines[] = "<i>" . Markup::escapeText($line) . "</i>";
-                }
-            } elseif ($line !== "") {
-                $lines[] = Markup::escapeText($line);
+        foreach ($this->pipeLines($text) as $line) {
+            $italic = str_starts_with($line, "/");
+            $line   = $italic ? trim(substr($line, 1)) : $line;
+            if ($line !== "") {
+                $lines[] = $italic ? "<i>" . Markup::escapeText($line) . "</i>" : Markup::escapeText($line);
             }
         }
 
