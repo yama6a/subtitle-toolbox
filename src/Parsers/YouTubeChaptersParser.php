@@ -9,6 +9,7 @@ use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 final class YouTubeChaptersParser extends SubtitleParser
 {
@@ -47,7 +48,7 @@ final class YouTubeChaptersParser extends SubtitleParser
             }
 
             $title      = preg_replace('/^' . self::SEPARATOR . '+|' . self::SEPARATOR . '+$/', "", $title);
-            $chapters[] = new SubtitleCue((int) $hours * 3600 + (int) $minutes * 60 + (int) $seconds, 0, Markup::escapeText($title));
+            $chapters[] = new SubtitleCue(Timecode::toSeconds((int) $hours, (int) $minutes, (int) $seconds), 0, Markup::escapeText($title));
         }
 
         usort($chapters, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());

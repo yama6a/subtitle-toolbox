@@ -10,6 +10,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
 final class HlsWebVttSegmenter
@@ -22,11 +23,11 @@ final class HlsWebVttSegmenter
      */
     public static function segment(Subtitle $subtitle, HlsSegmentOptions $options = new HlsSegmentOptions()): HlsWebVttRendition
     {
-        $cues        = array_values($subtitle->getCues());
-        $totalMillis = $options->mediaDuration === null
-            ? (int) max([0, ...array_map(fn (SubtitleCue $cue): float => round($cue->getEnd() * 1000), $cues)])
-            : (int) round($options->mediaDuration * 1000);
-        if ($totalMillis === 0) {
+        $cues              = array_values($subtitle->getCues());
+        $totalMilliseconds = $options->mediaDuration === null
+            ? max([0, ...array_map(fn (SubtitleCue $cue): int => Timecode::totalMilliseconds($cue->getEnd()), $cues)])
+            : Timecode::totalMilliseconds($options->mediaDuration);
+        if ($totalMilliseconds === 0) {
             throw new InvalidArgumentException("The subtitle has no cue that ends after 0 s. " .
                                                "Set the mediaDuration option to segment it.");
         }
@@ -46,24 +47,24 @@ final class HlsWebVttSegmenter
             array_keys($cues),
         ));
         $sorted  = array_values($copy->getCues());
-        $starts  = array_map(fn (SubtitleCue $cue): int => (int) round($cue->getStart() * 1000), $sorted);
-        $ends    = array_map(fn (SubtitleCue $cue): int => (int) round($cue->getEnd() * 1000), $sorted);
+        $starts  = array_map(fn (SubtitleCue $cue): int => Timecode::totalMilliseconds($cue->getStart()), $sorted);
+        $ends    = array_map(fn (SubtitleCue $cue): int => Timecode::totalMilliseconds($cue->getEnd()), $sorted);
         $shifted = array_values($copy->shift($options->local)->getCues());
 
-        $segmentMillis = $options->segmentMilliseconds();
-        $segments      = function () use ($fileData, $starts, $ends, $shifted, $options, $segmentMillis, $totalMillis): Generator {
+        $segmentMilliseconds = $options->segmentMilliseconds();
+        $segments            = function () use ($fileData, $starts, $ends, $shifted, $options, $segmentMilliseconds, $totalMilliseconds): Generator {
             $empty  = null;
             $next   = 0;
             $active = [];
-            for ($startMillis = 0, $index = 0; $startMillis < $totalMillis; $startMillis += $segmentMillis, $index++) {
-                $endMillis = min($startMillis + $segmentMillis, $totalMillis);
-                for (; $next < count($starts) && $starts[$next] < $endMillis; $next++) {
+            for ($startMilliseconds = 0, $index = 0; $startMilliseconds < $totalMilliseconds; $startMilliseconds += $segmentMilliseconds, $index++) {
+                $endMilliseconds = min($startMilliseconds + $segmentMilliseconds, $totalMilliseconds);
+                for (; $next < count($starts) && $starts[$next] < $endMilliseconds; $next++) {
                     $active[$next] = true;
                 }
                 foreach (array_keys($active) as $cueIndex) {
                     $isEmpty = $ends[$cueIndex] === $starts[$cueIndex];
                     // RFC 8216 section 3.5: a cue keeps its full time range in every segment it overlaps.
-                    if ($ends[$cueIndex] <= $startMillis && !($isEmpty && $starts[$cueIndex] >= $startMillis)) {
+                    if ($ends[$cueIndex] <= $startMilliseconds && !($isEmpty && $starts[$cueIndex] >= $startMilliseconds)) {
                         unset($active[$cueIndex]);
                     }
                 }
@@ -75,7 +76,7 @@ final class HlsWebVttSegmenter
             }
         };
 
-        return new HlsWebVttRendition($segments, $options, $totalMillis);
+        return new HlsWebVttRendition($segments, $options, $totalMilliseconds);
     }
 
 

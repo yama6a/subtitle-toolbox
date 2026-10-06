@@ -15,6 +15,7 @@ use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 final class TtmlParser extends SubtitleParser
 {
@@ -116,9 +117,9 @@ final class TtmlParser extends SubtitleParser
         $expression = trim($expression);
         // Some tools write a comma as decimal separator, for example 00:00:01,500.
         if (preg_match("/^(\d{2,}):(\d{2}):(\d{2})(?:[.,](\d+)|:(\d{2,})(?:\.(\d+))?)?$/", $expression, $matches)) {
-            $seconds = (int) $matches[1] * 3600 + (int) $matches[2] * 60 + (int) $matches[3];
+            $seconds = Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4] ?? "");
             if (($matches[4] ?? "") !== "") {
-                return $seconds + (float) ("0." . $matches[4]);
+                return $seconds;
             }
             $frames = ($matches[5] ?? "") === "" ? 0 : (int) $matches[5];
             $frames += ($matches[6] ?? "") === "" ? 0 : (int) $matches[6] / $this->subFrameRate;

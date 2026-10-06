@@ -15,8 +15,7 @@ final class YouTubeChaptersFormatter extends SubtitleFormatter
     {
         $output = "";
         foreach ($subtitle->getCues() as $cue) {
-            [$hours, $minutes, $seconds] = Timecode::seconds(floor($cue->getStart()));
-            $start   = $hours > 0 ? sprintf("%d:%02d:%02d", $hours, $minutes, $seconds) : sprintf("%d:%02d", $minutes, $seconds);
+            $start   = Timecode::shortClock($cue->getStart());
             $output .= rtrim($start . " " . implode(" ", Markup::plainLines($cue->getLines()))) . "\n";
         }
 

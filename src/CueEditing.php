@@ -20,10 +20,7 @@ trait CueEditing
         $otherCues    = [];
         $otherAnchors = [];
         foreach ($other->getCues() as $index => $cue) {
-            $otherCues[$index] = (clone $cue)
-                ->setStart(max(0, $cue->getStart() + $offset))
-                ->setEnd(max(0, $cue->getEnd() + $offset))
-                ->mapWordTimestamps(fn (float $time): float => $time + $offset);
+            $otherCues[$index] = (clone $cue)->mapTimes(fn (float $time): float => $time + $offset);
         }
         foreach ($other->comments as $comment) {
             $otherAnchors[] = CommentAnchors::anchor($otherCues, $comment->beforeCueIndex);
@@ -63,11 +60,10 @@ trait CueEditing
                 continue;
             }
 
-            $copy = (clone $cue)
-                ->setStart(max($cue->getStart(), $from) - ($moveToZero ? $from : 0))
-                ->setEnd(min($cue->getEnd(), $to) - ($moveToZero ? $from : 0));
+            $shift = $moveToZero ? $from : 0.0;
+            $copy  = (clone $cue)->setStart(max($cue->getStart(), $from) - $shift)->setEnd(min($cue->getEnd(), $to) - $shift);
             if ($moveToZero) {
-                $copy->mapWordTimestamps(fn (float $time): float => $time - $from);
+                $copy->mapWordTimestamps(fn (float $time): float => $time - $shift);
             }
 
             $copies[$cue] = $copy;

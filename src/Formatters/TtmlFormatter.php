@@ -14,7 +14,6 @@ use SubtitleToolbox\Parsers\TtmlNamespaces;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
-use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
 final class TtmlFormatter extends SubtitleFormatter
@@ -212,8 +211,8 @@ final class TtmlFormatter extends SubtitleFormatter
      */
     private function formatParagraph(SubtitleCue $cue, WriteOptions $options, bool $isForeignSubtitle): string
     {
-        $attributes  = $this->formatAttribute("begin", sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getStart())));
-        $attributes .= $this->formatAttribute("end", sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getEnd())));
+        $attributes  = $this->formatAttribute("begin", Markup::coreTimestamp($cue->getStart()));
+        $attributes .= $this->formatAttribute("end", Markup::coreTimestamp($cue->getEnd()));
 
         $cueData     = $cue->findFormatData(TtmlParser::FORMAT_DATA_KEY);
         $stored      = $cueData["attributes"] ?? [];

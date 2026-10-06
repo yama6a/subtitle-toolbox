@@ -15,6 +15,7 @@ use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 final class CsvParser extends SubtitleParser
 {
@@ -197,13 +198,13 @@ final class CsvParser extends SubtitleParser
             return (float) $time;
         }
         if (preg_match('/^(\d+):([0-5]\d):([0-5]\d)(?:([.,:])(\d+))?$/', $time, $matches)) {
-            $seconds  = $matches[1] * 3600 + $matches[2] * 60 + (int) $matches[3];
-            $fraction = $matches[5] ?? "";
+            [$hours, $minutes, $seconds] = [(int) $matches[1], (int) $matches[2], (int) $matches[3]];
+            $fraction                    = $matches[5] ?? "";
             if (($matches[4] ?? "") !== ":") {
-                return $seconds + (float) "0.$fraction";
+                return Timecode::toSeconds($hours, $minutes, $seconds, $fraction);
             }
             if ($frameRate !== null) {
-                return $seconds + $frameRate->framesToSeconds((int) $fraction);
+                return Timecode::toSecondsFromFrames($hours, $minutes, $seconds, (int) $fraction, $frameRate);
             }
         }
 

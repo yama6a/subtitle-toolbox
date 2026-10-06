@@ -10,7 +10,6 @@ use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
-use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
 final class WebVttFormatter extends SubtitleFormatter
@@ -123,7 +122,7 @@ final class WebVttFormatter extends SubtitleFormatter
 
     private function formatCue(SubtitleCue $cue, WriteOptions $options): string
     {
-        $timeStamps = sprintf("%02d:%02d:%02d.%03d --> %02d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getStart()), ...Timecode::milliseconds($cue->getEnd()));
+        $timeStamps = Markup::coreTimestamp($cue->getStart()) . " --> " . Markup::coreTimestamp($cue->getEnd());
         $settings   = $this->formatSettings($cue);
         if ($settings !== "") {
             $timeStamps .= " " . $settings;

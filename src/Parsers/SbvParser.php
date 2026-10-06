@@ -11,6 +11,7 @@ use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 final class SbvParser extends SubtitleParser
 {
@@ -56,8 +57,8 @@ final class SbvParser extends SubtitleParser
         $times = explode(",", $rawLines[0]);
 
         return new SubtitleCue(
-            $this->millisFromString($times[0]),
-            $this->millisFromString($times[1]),
+            $this->secondsFromString($times[0]),
+            $this->secondsFromString($times[1]),
             array_map(Markup::escapeText(...), array_slice($rawLines, 1))
         );
     }
@@ -69,18 +70,13 @@ final class SbvParser extends SubtitleParser
     }
 
 
-    private function millisFromString(string $timeString): float
+    private function secondsFromString(string $timeString): float
     {
         $timeString = trim($timeString);
         if (!preg_match("/^(\d+):([0-5]\d):([0-5]\d)\.(\d{3})$/", $timeString, $matches)) {
             throw new ParsingException("The timeString-string of at least one cue could not be parsed: $timeString");
         }
 
-        $hours   = (int) $matches[1];
-        $minutes = (int) $matches[2];
-        $seconds = (int) $matches[3];
-        $millis  = (int) $matches[4];
-
-        return $hours * 3600 + $minutes * 60 + $seconds + $millis / 1000;
+        return Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]);
     }
 }

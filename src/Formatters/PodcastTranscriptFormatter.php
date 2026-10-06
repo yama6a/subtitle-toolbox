@@ -94,7 +94,8 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
                 }
 
                 $isVoice     = preg_match(self::VOICE, $token, $voice) === 1;
-                $isTimestamp = $wordSegments && preg_match(Markup::WORD_TIMESTAMP_REGEX, $token) === 1;
+                $wordTime    = $wordSegments ? Markup::wordTimestampSeconds($token) : null;
+                $isTimestamp = $wordTime !== null;
                 if (!$isVoice && !$isTimestamp && preg_match(self::VOICE_END, $token) !== 1) {
                     continue;
                 }
@@ -107,7 +108,7 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
 
                 $cuePieces = $this->addPiece($cuePieces, $index, $speaker, $start, $text);
                 $speaker   = $name;
-                $start     = $isTimestamp ? $this->wordStartInCue($token, $cue) : $start;
+                $start     = $isTimestamp ? $this->wordStartInCue($wordTime, $cue) : $start;
                 $text      = "";
             }
             $cuePieces = $this->addPiece($cuePieces, $index, $speaker, $start, $text);
@@ -133,11 +134,8 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
     }
 
 
-    private function wordStartInCue(string $token, SubtitleCue $cue): float
+    private function wordStartInCue(float $time, SubtitleCue $cue): float
     {
-        [$hours, $minutes, $seconds] = explode(":", trim($token, "<>"));
-        $time = (int)$hours * 3600 + (int)$minutes * 60 + (float)$seconds;
-
         return round(min(max($time, $cue->getStart()), $cue->getEnd()), 3);
     }
 }

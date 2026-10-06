@@ -10,6 +10,7 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 final class TmPlayerParser extends SubtitleParser
 {
@@ -38,7 +39,7 @@ final class TmPlayerParser extends SubtitleParser
                 continue;
             }
 
-            $time  = (int) $matches[1] * 3600 + (int) $matches[2] * 60 + (int) $matches[3];
+            $time  = Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3]);
             $lines = $this->parseText($matches[5]);
             $last  = array_key_last($entries);
             // TMPlayer+ writes each line of a cue as its own entry, with the line number after a comma.

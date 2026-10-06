@@ -525,9 +525,9 @@ final class Markup
             return null;
         }
 
-        [$hours, $minutes, $seconds] = explode(":", substr($timestamp, 1, -1));
+        [$hours, $minutes, $seconds, $fraction] = preg_split('/[:.]/', substr($timestamp, 1, -1));
 
-        return (int) $hours * 3600 + (int) $minutes * 60 + (float) $seconds;
+        return Timecode::toSeconds((int) $hours, (int) $minutes, (int) $seconds, $fraction);
     }
 
 

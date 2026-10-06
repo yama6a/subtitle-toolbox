@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Encoding\CodePage;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\Timecode;
 
 /**
  * The block sizes, GSI fields, code tables and control codes of EBU Tech 3264, which EbuStlParser and EbuStlFormatter share.
@@ -146,7 +147,7 @@ final class EbuStl
             return 0.0;
         }
 
-        return $matches[1] * 3600 + $matches[2] * 60 + $matches[3] + $frameRate->framesToSeconds((int) $matches[4]);
+        return Timecode::toSecondsFromFrames((int) $matches[1], (int) $matches[2], (int) $matches[3], (int) $matches[4], $frameRate);
     }
 
 

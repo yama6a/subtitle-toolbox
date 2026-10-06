@@ -178,7 +178,7 @@ final class CsvFormatter extends SubtitleFormatter
 
         return match ($layout) {
             CsvTimeFormat::Seconds => rtrim(rtrim(sprintf("%d.%03d", intdiv($milliseconds, 1000), $milliseconds % 1000), "0"), "."),
-            CsvTimeFormat::Dot     => sprintf("%02d:%02d:%02d.%03d", ...Timecode::milliseconds($seconds)),
+            CsvTimeFormat::Dot     => Markup::coreTimestamp($seconds),
             CsvTimeFormat::Comma   => sprintf("%02d:%02d:%02d,%03d", ...Timecode::milliseconds($seconds)),
             CsvTimeFormat::Frames  => sprintf("%02d:%02d:%02d:%02d", ...Timecode::clockSecondsAndFrames($seconds, $frameRate)),
         };

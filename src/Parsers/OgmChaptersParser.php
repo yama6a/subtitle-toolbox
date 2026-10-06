@@ -10,6 +10,7 @@ use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 // Spec: https://mkvtoolnix.download/doc/mkvmerge.html#mkvmerge.chapters.simple. The line patterns are the ones
 // of parse_simple() in mkvtoolnix src/common/chapters/chapters.cpp.
@@ -67,6 +68,6 @@ final class OgmChaptersParser extends SubtitleParser
             throw new ParsingException("Line $lineNumber has a minute or second above 59: $line", $lineNumber);
         }
 
-        return (int) $matches[1] * 3600 + (int) $matches[2] * 60 + (int) $matches[3] + (float) ("0." . $matches[4]);
+        return Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]);
     }
 }

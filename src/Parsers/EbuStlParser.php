@@ -16,6 +16,7 @@ use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 /**
  * Reads EBU STL files as defined in EBU Tech 3264: https://tech.ebu.ch/docs/tech/tech3264.pdf
@@ -161,7 +162,7 @@ final class EbuStlParser extends SubtitleParser
     {
         [$hours, $minutes, $seconds, $frames] = array_map("ord", str_split($bytes));
 
-        return $hours * 3600 + $minutes * 60 + $seconds + $frameRate->framesToSeconds($frames);
+        return Timecode::toSecondsFromFrames($hours, $minutes, $seconds, $frames, $frameRate);
     }
 
 

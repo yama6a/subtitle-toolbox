@@ -12,6 +12,7 @@ use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 /**
  * Reads DVD VobSub subtitles: the .idx index from VobSubReadOptions and the .sub program stream from parse().
@@ -232,7 +233,7 @@ final class VobSubParser extends SubtitleParser
         if (!preg_match('/^([+-]?)(\d+):(\d{1,2}):(\d{1,2})[:.,](\d{1,3})$/', trim($value), $matches)) {
             throw new ParsingException("The .idx time is invalid: $line");
         }
-        $seconds = $matches[2] * 3600 + $matches[3] * 60 + $matches[4] + $matches[5] / 1000;
+        $seconds = Timecode::toSeconds((int) $matches[2], (int) $matches[3], (int) $matches[4], str_pad($matches[5], 3, "0", STR_PAD_LEFT));
 
         return $matches[1] === "-" ? -$seconds : $seconds;
     }

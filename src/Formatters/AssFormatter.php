@@ -32,8 +32,6 @@ final class AssFormatter extends SubtitleFormatter
 
     private const LEGACY_ALIGNMENTS = [1 => 1, 2 => 2, 3 => 3, 7 => 5, 8 => 6, 9 => 7, 4 => 9, 5 => 10, 6 => 11];
 
-    private const CORE_TIMESTAMP_REGEX = '/^<(\d{2,}):(\d{2}):(\d{2}\.\d{3})>$/';
-
 
     public function format(Subtitle $subtitle, WriteOptions $options = new WriteOptions()): string
     {
@@ -257,7 +255,7 @@ final class AssFormatter extends SubtitleFormatter
                     $outer   = array_values(array_filter($colors));
                     $parts[] = ["tag", $outer === [] ? "\\c" : $this->colorTag(end($outer))];
                 }
-            } elseif (preg_match(self::CORE_TIMESTAMP_REGEX, $token)) {
+            } elseif (Markup::wordTimestampSeconds($token) !== null) {
                 $parts[] = ["tag", "\\" . $karaokeTag->value . $karaoke["durations"][$timestampIndex++]];
             }
         }
@@ -277,8 +275,9 @@ final class AssFormatter extends SubtitleFormatter
         $times      = [];
         $textBefore = false;
         foreach ($tokens as $token) {
-            if (preg_match(self::CORE_TIMESTAMP_REGEX, $token, $matches)) {
-                $times[] = max($startCs, (int) round(($matches[1] * 3600 + $matches[2] * 60 + (float) $matches[3]) * 100));
+            $seconds = Markup::wordTimestampSeconds($token);
+            if ($seconds !== null) {
+                $times[] = max($startCs, (int) round($seconds * 100));
             } elseif ($times === [] && !str_starts_with($token, "<") && trim($token) !== "") {
                 $textBefore = true;
             }

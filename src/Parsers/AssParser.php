@@ -12,6 +12,7 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 final class AssParser extends SubtitleParser
 {
@@ -262,7 +263,7 @@ final class AssParser extends SubtitleParser
             throw new ParsingException("The time of at least one event could not be parsed: $time", $lineNumber);
         }
 
-        return $matches[1] * 3600 + $matches[2] * 60 + $matches[3] + (int) str_pad($matches[4], 3, "0") / 1000;
+        return Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]);
     }
 
 
