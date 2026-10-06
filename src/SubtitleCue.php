@@ -167,7 +167,7 @@ final class SubtitleCue
      */
     public function setAlignment(?int $alignment): self
     {
-        if ($alignment !== null && ($alignment < 1 || $alignment > 9)) {
+        if ($alignment !== null && !OptionChecks::isAlignment($alignment)) {
             throw new InvalidArgumentException("Cannot set alignment $alignment - " .
                                                "the alignment must be a number from 1 to 9!");
         }

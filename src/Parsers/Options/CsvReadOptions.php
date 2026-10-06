@@ -26,7 +26,7 @@ final class CsvReadOptions implements FormatReadOptions
             CsvParser::checkDelimiter($delimiter);
         }
         if ($frameRate !== null) {
-            new FrameRate($frameRate);
+            FrameRate::check($frameRate);
         }
     }
 }

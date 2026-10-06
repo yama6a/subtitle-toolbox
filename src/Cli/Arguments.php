@@ -112,6 +112,9 @@ final class Arguments
         if (!is_numeric($value)) {
             Command::fail("The option --$name needs a number, got \"$value\".");
         }
+        if (!is_finite((float)$value)) {
+            Command::fail("The option --$name needs a finite number, got \"$value\".");
+        }
 
         return (float)$value;
     }

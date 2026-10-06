@@ -14,7 +14,7 @@ final class MicroDvdReadOptions implements FormatReadOptions
     public function __construct(public readonly ?float $frameRate = null)
     {
         if ($frameRate !== null) {
-            new FrameRate($frameRate);
+            FrameRate::check($frameRate);
         }
     }
 }

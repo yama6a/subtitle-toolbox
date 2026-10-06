@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Ocr;
 
 use GlyphOcr\GlyphDatabase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\OptionChecks;
 
 /**
  * The settings of GlyphOcrEngine. Each field except $database is the parameter of the same name of the
@@ -54,10 +55,7 @@ final readonly class GlyphOcrOptions
             throw new InvalidArgumentException("Cannot create GlyphOcrOptions with $maxWrongPixels wrong pixels - " .
                                                "the number must be at least 0!");
         }
-        if ($italicSlant < 0 || $italicSlant > 1) {
-            throw new InvalidArgumentException("Cannot create GlyphOcrOptions with italic slant $italicSlant - " .
-                                               "it must be from 0 to 1!");
-        }
+        OptionChecks::between($italicSlant, 0, 1, "Cannot create GlyphOcrOptions with italic slant %s - it must be from 0 to 1!");
         if ($minLineHeight < 1) {
             throw new InvalidArgumentException("Cannot create GlyphOcrOptions with minimum line height " .
                                                "$minLineHeight - it must be at least 1!");

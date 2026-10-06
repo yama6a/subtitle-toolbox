@@ -125,7 +125,7 @@ trait ArrayConversion
             throw new ParsingException("The field $path.identifier must be a string or null.");
         }
         $alignment = $cueData["alignment"] ?? null;
-        if ($alignment !== null && (!is_int($alignment) || $alignment < 1 || $alignment > 9)) {
+        if ($alignment !== null && (!is_int($alignment) || !OptionChecks::isAlignment($alignment))) {
             throw new ParsingException("The field $path.alignment must be an integer from 1 to 9 or null.");
         }
 

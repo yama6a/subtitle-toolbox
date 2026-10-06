@@ -91,6 +91,9 @@ class ArgumentsTest extends TestCase
     {
         return [
             "not a number"       => ["float", "abc", "The option --by needs a number, got \"abc\"."],
+            "infinite"           => ["float", "1e999", "The option --by needs a finite number, got \"1e999\"."],
+            "negative infinite"  => ["float", "-1e999", "The option --by needs a finite number, got \"-1e999\"."],
+            "infinite positive"  => ["positiveFloat", "1e999", "The option --by needs a finite number, got \"1e999\"."],
             "zero"               => ["positiveFloat", "0", "The option --by must be greater than 0."],
             "fraction for int"   => ["positiveInt", "1.5", "The option --by needs a whole number greater than 0, got \"1.5\"."],
             "zero for int"       => ["positiveInt", "0", "The option --by needs a whole number greater than 0, got \"0\"."],

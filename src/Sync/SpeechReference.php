@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Sync;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\OptionChecks;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -16,9 +17,7 @@ final class SpeechReference
      */
     public static function fromFfmpegSilencedetect(string $log, float $mediaDuration): Subtitle
     {
-        if ($mediaDuration <= 0) {
-            throw new InvalidArgumentException("The media duration must be greater than 0, got $mediaDuration.");
-        }
+        OptionChecks::positiveFinite($mediaDuration, "The media duration must be greater than 0, got %s.");
 
         $intervals    = [];
         $speechStart  = 0.0;

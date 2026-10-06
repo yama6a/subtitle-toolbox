@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Validation\ValidationRules;
 
 /**
  * The size and time limits of one cue that Subtitle::mergeShortCues() and Resegmenter keep. The defaults are the
@@ -20,10 +21,10 @@ final class CueLimits
      * @param ?float $maxCharactersPerSecond visible characters of all lines divided by the duration, null for no limit
      */
     public function __construct(
-        public readonly int $maxCharactersPerLine = 42,
-        public readonly int $maxLinesPerCue = 2,
+        public readonly int $maxCharactersPerLine = ValidationRules::NETFLIX_MAX_CHARACTERS_PER_LINE,
+        public readonly int $maxLinesPerCue = ValidationRules::NETFLIX_MAX_LINES_PER_CUE,
         public readonly float $minDuration = 1,
-        public readonly float $maxDuration = 7,
+        public readonly float $maxDuration = ValidationRules::NETFLIX_MAX_DURATION,
         public readonly ?float $maxCharactersPerSecond = null,
     ) {
         if ($maxCharactersPerLine < 1 || $maxLinesPerCue < 1) {
@@ -31,13 +32,13 @@ final class CueLimits
                                                "least 1, got $maxCharactersPerLine and $maxLinesPerCue.");
         }
 
-        if ($minDuration < 0) {
-            throw new InvalidArgumentException("The minimum duration must not be negative, got $minDuration.");
-        }
+        OptionChecks::nonNegativeFinite($minDuration, "The minimum duration must not be negative, got %s.");
 
-        if ($maxDuration <= 0 || ($maxCharactersPerSecond !== null && $maxCharactersPerSecond <= 0)) {
+        if (!OptionChecks::isPositiveFinite($maxDuration)
+            || ($maxCharactersPerSecond !== null && !OptionChecks::isPositiveFinite($maxCharactersPerSecond))) {
             throw new InvalidArgumentException("The maximum duration and the maximum characters per second must be " .
-                                               "greater than 0, got $maxDuration and " . ($maxCharactersPerSecond ?? "null") . ".");
+                                               "greater than 0, got " . OptionChecks::text($maxDuration) . " and " .
+                                               ($maxCharactersPerSecond === null ? "null" : OptionChecks::text($maxCharactersPerSecond)) . ".");
         }
     }
 }

@@ -11,6 +11,20 @@ use SubtitleToolbox\FrameRate;
 final class ValidationRules
 {
     /**
+     * The Netflix limits that CueLimits takes as defaults.
+     *
+     * @internal
+     */
+    public const NETFLIX_MAX_CHARACTERS_PER_LINE = 42;
+
+    /** @internal */
+    public const NETFLIX_MAX_LINES_PER_CUE = 2;
+
+    /** @internal */
+    public const NETFLIX_MAX_DURATION = 7;
+
+
+    /**
      * Creates a rule set. A rule with the limit null or false is off.
      */
     public function __construct(
@@ -65,10 +79,10 @@ final class ValidationRules
     {
         return new self(
             maxCharactersPerSecond: 20,
-            maxCharactersPerLine: 42,
-            maxLinesPerCue: 2,
+            maxCharactersPerLine: self::NETFLIX_MAX_CHARACTERS_PER_LINE,
+            maxLinesPerCue: self::NETFLIX_MAX_LINES_PER_CUE,
             minDuration: 5 / 6,
-            maxDuration: 7,
+            maxDuration: self::NETFLIX_MAX_DURATION,
             minGap: (new FrameRate($frameRate))->framesToSeconds(2),
             noOverlap: true,
         );

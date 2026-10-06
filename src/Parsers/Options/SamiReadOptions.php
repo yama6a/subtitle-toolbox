@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers\Options;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\OptionChecks;
 
 final class SamiReadOptions implements FormatReadOptions
 {
@@ -13,8 +13,8 @@ final class SamiReadOptions implements FormatReadOptions
      */
     public function __construct(public readonly ?string $languageClass = null)
     {
-        if ($languageClass !== null && trim($languageClass) === "") {
-            throw new InvalidArgumentException("The language class must not be empty.");
+        if ($languageClass !== null) {
+            OptionChecks::notBlank($languageClass, "The language class must not be empty.");
         }
     }
 }

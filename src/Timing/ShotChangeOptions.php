@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Timing;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\OptionChecks;
 
 final class ShotChangeOptions
 {
@@ -36,8 +38,9 @@ final class ShotChangeOptions
         bool $chain = true,
         int $minDurationFrames = 20,
     ) {
-        if ($frameRate <= 0) {
-            throw new InvalidArgumentException("The frame rate must be greater than 0, got $frameRate.");
+        FrameRate::check($frameRate);
+        foreach ($shotChanges as $shotChange) {
+            OptionChecks::finite($shotChange, "The shot change time must be a finite number, got %s.");
         }
 
         // At 25 fps, half a second rounds down to 12 frames, the Netflix value for 24 fps.

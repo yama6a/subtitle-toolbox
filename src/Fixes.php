@@ -39,9 +39,7 @@ trait Fixes
      */
     public function extendShortCues(float $minDuration, float $minGap = 0): self
     {
-        if ($minDuration <= 0) {
-            throw new InvalidArgumentException("The minimum duration must be greater than 0, got $minDuration.");
-        }
+        OptionChecks::positiveFinite($minDuration, "The minimum duration must be greater than 0, got %s.");
         $this->fixesAssertGap($minGap);
 
         $cues = CueList::inStartOrder($this->cues);
@@ -96,8 +94,6 @@ trait Fixes
 
     private function fixesAssertGap(float $minGap): void
     {
-        if ($minGap < 0) {
-            throw new InvalidArgumentException("The minimum gap must not be negative, got $minGap.");
-        }
+        OptionChecks::nonNegativeFinite($minGap, "The minimum gap must not be negative, got %s.");
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Sync;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\OptionChecks;
 use SubtitleToolbox\Subtitle;
 
 final class ReferenceSyncOptions
@@ -31,10 +32,8 @@ final class ReferenceSyncOptions
         public readonly float $splitPenalty = 0.1,
     ) {
         foreach (["minimum" => $minOffset, "maximum" => $maxOffset] as $name => $offset) {
-            if (!is_finite($offset) || abs($offset) > self::MAX_OFFSET) {
-                throw new InvalidArgumentException("The $name offset must be from -" . self::MAX_OFFSET . " to " .
-                                                   self::MAX_OFFSET . " seconds, got " . self::text($offset) . ".");
-            }
+            OptionChecks::between($offset, -self::MAX_OFFSET, self::MAX_OFFSET, "The $name offset must be from -" .
+                                  self::MAX_OFFSET . " to " . self::MAX_OFFSET . " seconds, got %s.");
         }
 
         if ($minOffset > $maxOffset) {
@@ -51,15 +50,6 @@ final class ReferenceSyncOptions
             throw new InvalidArgumentException("The maximum number of splits must be from 0 to " . self::MAX_SPLITS . ", got $maxSplits.");
         }
 
-        if (!is_finite($splitPenalty) || $splitPenalty < 0) {
-            throw new InvalidArgumentException("The split penalty must be a finite number of 0 or more, got " . self::text($splitPenalty) . ".");
-        }
-    }
-
-
-    // PHP 8.5 warns when a string holds NAN.
-    private static function text(float $value): string
-    {
-        return is_nan($value) ? "NAN" : (string) $value;
+        OptionChecks::nonNegativeFinite($splitPenalty, "The split penalty must be a finite number of 0 or more, got %s.");
     }
 }

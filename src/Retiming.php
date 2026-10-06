@@ -26,9 +26,7 @@ trait Retiming
      */
     public function scale(float $factor): self
     {
-        if ($factor <= 0) {
-            throw new InvalidArgumentException("The scale factor must be greater than 0, got $factor.");
-        }
+        OptionChecks::positiveFinite($factor, "The scale factor must be greater than 0, got %s.");
 
         return $this->applyLinearCorrection($factor, 0);
     }
