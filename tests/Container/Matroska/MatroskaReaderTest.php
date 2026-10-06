@@ -137,6 +137,26 @@ class MatroskaReaderTest extends TestCase
     }
 
 
+    public function testTheLastBlockWithoutDurationEndsAtTheRoundedLastCueDuration(): void
+    {
+        $stream = fopen("php://memory", "w+b");
+        fwrite($stream, MkvFixtureWriter::ebmlHeader());
+        fwrite($stream, MkvFixtureWriter::unknownSizeElement(MkvFixtureWriter::SEGMENT, MkvFixtureWriter::info() . MkvFixtureWriter::element(
+            MkvFixtureWriter::TRACKS,
+            MkvFixtureWriter::trackEntry(["number" => 1, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "S_TEXT/UTF8"]),
+        ) . MkvFixtureWriter::cluster(0, [
+            MkvFixtureWriter::blockGroup(1, 1000, "Platform 4.", 1000),
+            MkvFixtureWriter::simpleBlock(1, 3000, "Mind the gap."),
+        ])));
+        rewind($stream);
+
+        $subtitle = MatroskaReader::open($stream)->extract(1, new ReadOptions(lastCueDuration: 1.005));
+        fclose($stream);
+
+        $this->assertSame([[1.0, 2.0, ["Platform 4."], false], [3.0, 4.005, ["Mind the gap."], false]], $this->cues($subtitle));
+    }
+
+
     public static function compressedTracks(): array
     {
         return [
