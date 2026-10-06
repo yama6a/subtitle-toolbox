@@ -8,23 +8,11 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class SubtitleStatisticsTest extends TestCase
 {
     private const FILES = __DIR__ . "/files";
-
-
-    private function makeSubtitle(array $cues): Subtitle
-    {
-        $subtitle = new Subtitle();
-        $added    = [];
-        foreach ($cues as [$start, $end, $lines]) {
-            $added[] = new SubtitleCue($start, $end, $lines);
-        }
-        $subtitle->addCues($added);
-
-        return $subtitle;
-    }
 
 
     /**
@@ -92,7 +80,7 @@ class SubtitleStatisticsTest extends TestCase
 
     public function testOneCueWithoutTextHasASpanButNoGapsAndNoTextNumbers(): void
     {
-        $statistics = SubtitleStatistics::of($this->makeSubtitle([[1, 3, "<i> </i>"]]));
+        $statistics = SubtitleStatistics::of(TestSubtitles::fromCues([[1, 3, "<i> </i>"]]));
 
         $this->assertSame(2.0, $statistics->span);
         $this->assertNull($statistics->gaps);
@@ -104,7 +92,7 @@ class SubtitleStatisticsTest extends TestCase
 
     public function testImageCueAndCueWithoutTextCountOnlyAsCuesAndInTimes(): void
     {
-        $subtitle = $this->makeSubtitle([[1, 3, "One two"], [9, 10, "<i> </i>"]]);
+        $subtitle = TestSubtitles::fromCues([[1, 3, "One two"], [9, 10, "<i> </i>"]]);
         $subtitle->addCue((new CueImage("png", 0, 0, 1, 1, 720, 576))->toCue(new SubtitleCue(4, 8)));
         $statistics = SubtitleStatistics::of($subtitle);
 
@@ -122,7 +110,7 @@ class SubtitleStatisticsTest extends TestCase
 
     public function testCueWithoutDurationHasNoReadingSpeed(): void
     {
-        $statistics = SubtitleStatistics::of($this->makeSubtitle([[1, 1, "Rain"], [2, 4, "Sun today"]]));
+        $statistics = SubtitleStatistics::of(TestSubtitles::fromCues([[1, 1, "Rain"], [2, 4, "Sun today"]]));
 
         $this->assertSame(13, $statistics->characterCount);
         $this->assertSame(["min" => 4.5, "average" => 4.5, "max" => 4.5], $statistics->charactersPerSecond);
@@ -132,7 +120,7 @@ class SubtitleStatisticsTest extends TestCase
 
     public function testCountsCharactersLikeValidation(): void
     {
-        $statistics = SubtitleStatistics::of($this->makeSubtitle([
+        $statistics = SubtitleStatistics::of(TestSubtitles::fromCues([
             [0, 2, ["<v Anna> Gr\u{fc}\u{df}e &amp; <00:00:01.000>Tee </v>", "\u{4f60}\u{597d}"]],
         ]));
 
@@ -144,7 +132,7 @@ class SubtitleStatisticsTest extends TestCase
 
     public function testMostUsedWordsIgnoreCaseAndOuterPunctuation(): void
     {
-        $statistics = SubtitleStatistics::of($this->makeSubtitle([
+        $statistics = SubtitleStatistics::of(TestSubtitles::fromCues([
             [0, 2, ["- \u{c4}pfel? \"Apples!\"", "\u{e4}pfel, don't... apples"]],
             [3, 4, "Don't stop -- 12:30."],
         ]));
@@ -158,7 +146,7 @@ class SubtitleStatisticsTest extends TestCase
 
     public function testAWordOfDigitsStaysAString(): void
     {
-        $statistics = SubtitleStatistics::of($this->makeSubtitle([[0, 2, "2024 2024"]]));
+        $statistics = SubtitleStatistics::of(TestSubtitles::fromCues([[0, 2, "2024 2024"]]));
 
         $this->assertSame([["word" => "2024", "count" => 2]], array_slice($statistics->mostUsedWords, 0, 1));
     }

@@ -5,28 +5,12 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use InvalidArgumentException;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 use SubtitleToolbox\Validation\ValidationRules;
 
 class TextTransformsTest extends \PHPUnit\Framework\TestCase
 {
     private const FILES = __DIR__ . "/files/transforms/";
-
-
-    private function makeSubtitle(string ...$texts): Subtitle
-    {
-        $subtitle = new Subtitle();
-        foreach ($texts as $index => $text) {
-            $subtitle->addCue(new SubtitleCue($index, $index + 1, $text));
-        }
-
-        return $subtitle;
-    }
-
-
-    private function getTexts(Subtitle $subtitle): array
-    {
-        return array_map(fn (SubtitleCue $cue): string => $cue->getText(), array_values($subtitle->getCues()));
-    }
 
 
     private function parseCaptions(): Subtitle
@@ -53,7 +37,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
                           [$cues[4]->getStart(), $cues[4]->getEnd(), $cues[4]->getText()]);
 
         $again = Subtitle::fromString($subtitle->toString(Format::WebVtt), Format::WebVtt);
-        $this->assertSame($this->getTexts($subtitle), $this->getTexts($again));
+        $this->assertSame(TestSubtitles::texts($subtitle), TestSubtitles::texts($again));
         $this->assertEquals($subtitle->getComments(), $again->getComments());
     }
 
@@ -91,7 +75,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
         $this->assertSame([8.5, 10.0, "<i>RAIN &lt;3 &amp; SNOW</i>"], [$cues[3]->getStart(), $cues[3]->getEnd(), $cues[3]->getText()]);
 
         $again = Subtitle::fromString($subtitle->toString(Format::SubRip), Format::SubRip);
-        $this->assertSame($this->getTexts($subtitle), $this->getTexts($again));
+        $this->assertSame(TestSubtitles::texts($subtitle), TestSubtitles::texts($again));
     }
 
 
@@ -102,7 +86,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
             "große bäckerei. öffnet um 6 uhr!",
             "<font color=\"#ffff00\">i\u{307}stasyon kapisi işikli.</font>",
             "<i>rain &lt;3 &amp; snow</i>",
-        ], $this->getTexts($this->parseMultilingual()->changeCase(CaseMode::Lower)));
+        ], TestSubtitles::texts($this->parseMultilingual()->changeCase(CaseMode::Lower)));
     }
 
 
@@ -113,111 +97,111 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
             "Große bäckereı. Öffnet um 6 uhr!",
             "<font color=\"#ffff00\">İstasyon kapısı ışıklı.</font>",
             "<i>Raın &lt;3 &amp; snow</i>",
-        ], $this->getTexts($this->parseMultilingual()->changeCase(CaseMode::Sentence, "tr-TR")));
+        ], TestSubtitles::texts($this->parseMultilingual()->changeCase(CaseMode::Sentence, "tr-TR")));
     }
 
 
     public function testUpperCaseKeepsTagsAndEntities(): void
     {
-        $subtitle = $this->makeSubtitle("<i>stop</i>", "tom &amp; <font color=\"#ff0000\">jerry</font> &lt;3");
+        $subtitle = TestSubtitles::fromTexts(["<i>stop</i>", "tom &amp; <font color=\"#ff0000\">jerry</font> &lt;3"]);
 
         $this->assertSame(["<i>STOP</i>", "TOM &amp; <font color=\"#ff0000\">JERRY</font> &lt;3"],
-                          $this->getTexts($subtitle->changeCase(CaseMode::Upper)));
+                          TestSubtitles::texts($subtitle->changeCase(CaseMode::Upper)));
     }
 
 
     public function testUpperCaseOfGermanAndTurkish(): void
     {
-        $this->assertSame(["STRASSE", "ISTANBUL"], $this->getTexts($this->makeSubtitle("straße", "istanbul")->changeCase(CaseMode::Upper)));
-        $this->assertSame(["İSTANBUL KAPI"], $this->getTexts($this->makeSubtitle("istanbul kapı")->changeCase(CaseMode::Upper, "tr")));
-        $this->assertSame(["istanbul kapı"], $this->getTexts($this->makeSubtitle("İSTANBUL KAPI")->changeCase(CaseMode::Lower, "az")));
+        $this->assertSame(["STRASSE", "ISTANBUL"], TestSubtitles::texts(TestSubtitles::fromTexts(["straße", "istanbul"])->changeCase(CaseMode::Upper)));
+        $this->assertSame(["İSTANBUL KAPI"], TestSubtitles::texts(TestSubtitles::fromTexts(["istanbul kapı"])->changeCase(CaseMode::Upper, "tr")));
+        $this->assertSame(["istanbul kapı"], TestSubtitles::texts(TestSubtitles::fromTexts(["İSTANBUL KAPI"])->changeCase(CaseMode::Lower, "az")));
     }
 
 
     public function testLowerCaseUsesGreekFinalSigma(): void
     {
-        $this->assertSame(["οδος σας, σ"], $this->getTexts($this->makeSubtitle("ΟΔΟΣ ΣΑΣ, Σ")->changeCase(CaseMode::Lower)));
+        $this->assertSame(["οδος σας, σ"], TestSubtitles::texts(TestSubtitles::fromTexts(["ΟΔΟΣ ΣΑΣ, Σ"])->changeCase(CaseMode::Lower)));
     }
 
 
     public function testCaseChangeKeepsBytesOfInvalidUtf8(): void
     {
-        $this->assertSame(["CAF\xe9 <i>NO\xebL</i>"], $this->getTexts($this->makeSubtitle("caf\xe9 <i>no\xebl</i>")->changeCase(CaseMode::Upper)));
+        $this->assertSame(["CAF\xe9 <i>NO\xebL</i>"], TestSubtitles::texts(TestSubtitles::fromTexts(["caf\xe9 <i>no\xebl</i>"])->changeCase(CaseMode::Upper)));
     }
 
 
     public function testSentenceCase(): void
     {
-        $subtitle = $this->makeSubtitle(
+        $subtitle = TestSubtitles::fromTexts([
             "WHERE ARE YOU GOING? HOME.",
             "<i>WAIT...</i> <b>WHAT?!</b> \"NO.\" OK",
             "- READ WWW.EXAMPLE.COM.\n- 3.5 KM, THEN STOP!",
             "STRASSE. ßAD",
-        );
+        ]);
 
         $this->assertSame([
             "Where are you going? Home.",
             "<i>Wait...</i> <b>What?!</b> \"No.\" Ok",
             "- Read www.example.com.\n- 3.5 km, then stop!",
             "Strasse. Ssad",
-        ], $this->getTexts($subtitle->changeCase(CaseMode::Sentence)));
+        ], TestSubtitles::texts($subtitle->changeCase(CaseMode::Sentence)));
     }
 
 
     public function testReplaceTextMatchesVisibleTextOnly(): void
     {
-        $subtitle = $this->makeSubtitle("<i>Colour</i> me surprised", "Tom &amp; Jerry", "<font color=\"#ff0000\">red</font> amp");
+        $subtitle = TestSubtitles::fromTexts(["<i>Colour</i> me surprised", "Tom &amp; Jerry", "<font color=\"#ff0000\">red</font> amp"]);
 
         $subtitle->replaceText("Colour", "Color")->replaceText("&", "and")->replaceText("amp", "lamp")->replaceText("ff", "XX");
 
         $this->assertSame(["<i>Color</i> me surprised", "Tom and Jerry", "<font color=\"#ff0000\">red</font> lamp"],
-                          $this->getTexts($subtitle));
+                          TestSubtitles::texts($subtitle));
     }
 
 
     public function testReplaceTextEscapesTheReplacement(): void
     {
-        $subtitle = $this->makeSubtitle("I love it", "<b>x</b>");
+        $subtitle = TestSubtitles::fromTexts(["I love it", "<b>x</b>"]);
 
         $subtitle->replaceText("love", "<3 & more")->replaceText("x", "<b>");
 
-        $this->assertSame(["I &lt;3 &amp; more it", "<b>&lt;b&gt;</b>"], $this->getTexts($subtitle));
+        $this->assertSame(["I &lt;3 &amp; more it", "<b>&lt;b&gt;</b>"], TestSubtitles::texts($subtitle));
     }
 
 
     public function testReplaceTextKeepsUnescapedWebVttCharacters(): void
     {
-        $subtitle = $this->makeSubtitle(">> TOM & JERRY", ">> A &amp; B");
+        $subtitle = TestSubtitles::fromTexts([">> TOM & JERRY", ">> A &amp; B"]);
 
         $subtitle->replaceText("TOM", "Tom &lt;")->replaceText("A", "a");
 
-        $this->assertSame([">> Tom &amp;lt; & JERRY", ">> a &amp; B"], $this->getTexts($subtitle));
+        $this->assertSame([">> Tom &amp;lt; & JERRY", ">> a &amp; B"], TestSubtitles::texts($subtitle));
     }
 
 
     public function testReplaceTextWithRegex(): void
     {
-        $subtitle = $this->makeSubtitle("Wait.....", "<i>colour</i> and COLOUR");
+        $subtitle = TestSubtitles::fromTexts(["Wait.....", "<i>colour</i> and COLOUR"]);
 
         $subtitle->replaceText('/\.{4,}/', "...", new ReplaceTextOptions(regex: true))->replaceText('/col(ou)r/', 'col$1r!', new ReplaceTextOptions(regex: true, caseSensitive: false));
 
-        $this->assertSame(["Wait...", "<i>colour!</i> and colOUr!"], $this->getTexts($subtitle));
+        $this->assertSame(["Wait...", "<i>colour!</i> and colOUr!"], TestSubtitles::texts($subtitle));
     }
 
 
     public function testReplaceTextCaseInsensitiveWithoutRegex(): void
     {
-        $subtitle = $this->makeSubtitle("Ärger and ärger", "Price: \$1");
+        $subtitle = TestSubtitles::fromTexts(["Ärger and ärger", "Price: \$1"]);
 
         $subtitle->replaceText("ÄRGER", "joy", new ReplaceTextOptions(caseSensitive: false))->replaceText("price", '$1 \1', new ReplaceTextOptions(caseSensitive: false));
 
-        $this->assertSame(["joy and joy", '$1 \1: $1'], $this->getTexts($subtitle));
+        $this->assertSame(["joy and joy", '$1 \1: $1'], TestSubtitles::texts($subtitle));
     }
 
 
     public function testReplaceTextRejectsInvalidInput(): void
     {
-        $subtitle = $this->makeSubtitle("text");
+        $subtitle = TestSubtitles::fromTexts(["text"]);
 
         try {
             $subtitle->replaceText("", "x");
@@ -234,9 +218,9 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     {
         $texts = ["<b>Run</b>, <font color=\"#ff0000\">now</font>!", "<b><i>Run</i></b> &amp; <v Fred>hide"];
 
-        $this->assertSame(["Run, now!", "Run &amp; hide"], $this->getTexts($this->makeSubtitle(...$texts)->stripFormatting()));
+        $this->assertSame(["Run, now!", "Run &amp; hide"], TestSubtitles::texts(TestSubtitles::fromTexts([...$texts])->stripFormatting()));
         $this->assertSame(["Run, now!", "<i>Run</i> &amp; hide"],
-                          $this->getTexts($this->makeSubtitle(...$texts)->stripFormatting(["i"])));
+                          TestSubtitles::texts(TestSubtitles::fromTexts([...$texts])->stripFormatting(["i"])));
     }
 
 
@@ -245,14 +229,14 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
         $line = "<b>One</b> <00:00:01.500>two <00:00:02.000><i>three</i>";
 
         $this->assertSame(["One <00:00:01.500>two <00:00:02.000>three"],
-                          $this->getTexts($this->makeSubtitle($line)->stripFormatting()));
-        $this->assertSame(["One two <i>three</i>"], $this->getTexts($this->makeSubtitle($line)->stripFormatting(["i"], false)));
+                          TestSubtitles::texts(TestSubtitles::fromTexts([$line])->stripFormatting()));
+        $this->assertSame(["One two <i>three</i>"], TestSubtitles::texts(TestSubtitles::fromTexts([$line])->stripFormatting(["i"], false)));
     }
 
 
     public function testMapTextGetsDecodedTextRunsAndTheCue(): void
     {
-        $subtitle = $this->makeSubtitle("<i>a &amp; b</i> c", "&lt;d&gt;");
+        $subtitle = TestSubtitles::fromTexts(["<i>a &amp; b</i> c", "&lt;d&gt;"]);
         $calls    = [];
 
         $subtitle->mapText(function (string $text, SubtitleCue $cue) use (&$calls): string {
@@ -262,40 +246,40 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
         });
 
         $this->assertSame([["a & b", 0.0], [" c", 0.0], ["<d>", 1.0]], $calls);
-        $this->assertSame(["<i>[a &amp; b]</i>[ c]", "[&lt;d&gt;]"], $this->getTexts($subtitle));
+        $this->assertSame(["<i>[a &amp; b]</i>[ c]", "[&lt;d&gt;]"], TestSubtitles::texts($subtitle));
     }
 
 
     public function testMapTextKeepsUnchangedRunsByteForByte(): void
     {
-        $subtitle = $this->makeSubtitle("a&nbsp;b <i>&#39;c&#39;</i>");
+        $subtitle = TestSubtitles::fromTexts(["a&nbsp;b <i>&#39;c&#39;</i>"]);
 
         $subtitle->mapText(fn (string $text): string => $text);
 
-        $this->assertSame(["a&nbsp;b <i>&#39;c&#39;</i>"], $this->getTexts($subtitle));
+        $this->assertSame(["a&nbsp;b <i>&#39;c&#39;</i>"], TestSubtitles::texts($subtitle));
     }
 
 
     public function testMapLinesGetsFullLines(): void
     {
-        $subtitle = $this->makeSubtitle("one\n<i>two</i>");
+        $subtitle = TestSubtitles::fromTexts(["one\n<i>two</i>"]);
 
         $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<font color=\"#ffff00\">$line</font>");
 
         $this->assertSame(["<font color=\"#ffff00\">one</font>\n<font color=\"#ffff00\"><i>two</i></font>"],
-                          $this->getTexts($subtitle));
+                          TestSubtitles::texts($subtitle));
     }
 
 
     public function testRemovesCuesThatBecomeEmptyAndKeepsComments(): void
     {
-        $subtitle = $this->makeSubtitle("first", "<i>[MUSIC]</i>", "[DOOR]\n[MUSIC]", "last");
+        $subtitle = TestSubtitles::fromTexts(["first", "<i>[MUSIC]</i>", "[DOOR]\n[MUSIC]", "last"]);
         $subtitle->addCue(new SubtitleCue(10, 11, ""));
         $subtitle->addComment("before music", 1)->addComment("before door", 2)->addComment("before last", 3);
 
         $subtitle->replaceText('/\[\w+\]/', "", new ReplaceTextOptions(regex: true));
 
-        $this->assertSame(["first", "last", ""], $this->getTexts($subtitle));
+        $this->assertSame(["first", "last", ""], TestSubtitles::texts($subtitle));
         $this->assertEquals([
             new Comment("before music", 1),
             new Comment("before door", 1),

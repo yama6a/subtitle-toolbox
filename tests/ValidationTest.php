@@ -6,6 +6,8 @@ namespace SubtitleToolbox;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\DialogueDashStyle;
+use SubtitleToolbox\Tests\Support\TestFiles;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 use SubtitleToolbox\Validation\ValidationRule;
 use SubtitleToolbox\Validation\ValidationViolation;
 use SubtitleToolbox\Validation\ValidationRules;
@@ -13,25 +15,6 @@ use SubtitleToolbox\Validation\ValidationRules;
 class ValidationTest extends TestCase
 {
     private const FILES = __DIR__ . "/files";
-
-
-    private function parseFile(string $path, Format $format): Subtitle
-    {
-        return Subtitle::fromString(file_get_contents(self::FILES . "/" . $path), $format);
-    }
-
-
-    private function makeSubtitle(array $cues): Subtitle
-    {
-        $subtitle = new Subtitle();
-        $added    = [];
-        foreach ($cues as [$start, $end, $lines]) {
-            $added[] = new SubtitleCue($start, $end, $lines);
-        }
-        $subtitle->addCues($added);
-
-        return $subtitle;
-    }
 
 
     /**
@@ -50,7 +33,7 @@ class ValidationTest extends TestCase
 
     public function testNoRulesGiveNoResults(): void
     {
-        $subtitle = $this->parseFile("validation/own_netflix_checks.srt", Format::SubRip);
+        $subtitle = TestFiles::parse("validation/own_netflix_checks.srt", Format::SubRip);
 
         $this->assertSame([], $subtitle->validate(new ValidationRules()));
     }
@@ -58,7 +41,7 @@ class ValidationTest extends TestCase
 
     public function testNetflixEnglishPresetOnOwnFile(): void
     {
-        $subtitle = $this->parseFile("validation/own_netflix_checks.srt", Format::SubRip);
+        $subtitle = TestFiles::parse("validation/own_netflix_checks.srt", Format::SubRip);
 
         $this->assertCount(7, $subtitle->getCues());
         $this->assertSame([
@@ -76,7 +59,7 @@ class ValidationTest extends TestCase
 
     public function testNetflixEnglishPresetOnRealSubRipFile(): void
     {
-        $subtitle = $this->parseFile("srt/real/language_subtitles_dots_tester.srt", Format::SubRip);
+        $subtitle = TestFiles::parse("srt/real/language_subtitles_dots_tester.srt", Format::SubRip);
 
         $this->assertSame([
             [0, ValidationRule::MaxCharactersPerLine, 62, 42],
@@ -89,7 +72,7 @@ class ValidationTest extends TestCase
 
     public function testNetflixEnglishPresetOnRealWebVttFile(): void
     {
-        $subtitle = $this->parseFile("vtt/real/w3c_comments.vtt", Format::WebVtt);
+        $subtitle = TestFiles::parse("vtt/real/w3c_comments.vtt", Format::WebVtt);
 
         $this->assertSame([], $subtitle->validate(ValidationRules::netflixEnglish(24)));
         $this->assertSame(
@@ -116,7 +99,7 @@ class ValidationTest extends TestCase
 
     public function testEmptyCueRule(): void
     {
-        $subtitle = $this->parseFile("validation/own_netflix_checks.srt", Format::SubRip);
+        $subtitle = TestFiles::parse("validation/own_netflix_checks.srt", Format::SubRip);
 
         $this->assertSame(
             [[6, ValidationRule::NoEmptyCues, 0, null]],
@@ -127,7 +110,7 @@ class ValidationTest extends TestCase
 
     public function testCountsCharactersWithoutMarkupAndWithMultibyteLetters(): void
     {
-        $subtitle = $this->makeSubtitle([
+        $subtitle = TestSubtitles::fromCues([
             [0, 10, ["<b>Größe: zwölf Äpfel, dreißig Birnen, sechs.</b>", "<i>Fish &amp; chips</i>"]],
         ]);
 
@@ -145,7 +128,7 @@ class ValidationTest extends TestCase
 
     public function testCountsBytesOfInvalidUtf8(): void
     {
-        $subtitle = $this->makeSubtitle([[0, 1, "a\xff\xfe"]]);
+        $subtitle = TestSubtitles::fromCues([[0, 1, "a\xff\xfe"]]);
 
         $this->assertSame(
             [[0, ValidationRule::MaxCharactersPerLine, 3, 2]],
@@ -156,7 +139,7 @@ class ValidationTest extends TestCase
 
     public function testLinesWithOnlyMarkupDoNotCount(): void
     {
-        $subtitle = $this->makeSubtitle([[0, 1, ["One", "<i> </i>", "Two"]]]);
+        $subtitle = TestSubtitles::fromCues([[0, 1, ["One", "<i> </i>", "Two"]]]);
 
         $this->assertSame([], $subtitle->validate(new ValidationRules(maxLinesPerCue: 2)));
     }
@@ -164,7 +147,7 @@ class ValidationTest extends TestCase
 
     public function testZeroDurationGivesInfiniteReadingSpeed(): void
     {
-        $subtitle = $this->makeSubtitle([[5, 5, "Hi"], [6, 6, ""]]);
+        $subtitle = TestSubtitles::fromCues([[5, 5, "Hi"], [6, 6, ""]]);
 
         $this->assertSame(
             [[0, ValidationRule::MaxCharactersPerSecond, INF, 20.0]],
@@ -175,7 +158,7 @@ class ValidationTest extends TestCase
 
     public function testLimitsMatchCueTimesInMilliseconds(): void
     {
-        $subtitle = $this->makeSubtitle([[0, 0.833, "a"], [0.916, 1.749, "b"], [1.831, 2.664, "c"]]);
+        $subtitle = TestSubtitles::fromCues([[0, 0.833, "a"], [0.916, 1.749, "b"], [1.831, 2.664, "c"]]);
 
         $this->assertSame(
             [[2, ValidationRule::MinGap, 0.082, 2 / 24]],
@@ -186,7 +169,7 @@ class ValidationTest extends TestCase
 
     public function testOverlapUsesLatestEndOfAllEarlierCues(): void
     {
-        $subtitle = $this->makeSubtitle([[0, 10, "long"], [2, 3, "short"], [5, 6, "inside"], [10, 11, "after"]]);
+        $subtitle = TestSubtitles::fromCues([[0, 10, "long"], [2, 3, "short"], [5, 6, "inside"], [10, 11, "after"]]);
 
         $this->assertSame([
             [1, ValidationRule::NoOverlap, 8.0, null],
@@ -197,7 +180,7 @@ class ValidationTest extends TestCase
 
     public function testGapRuleSkipsOverlappingCues(): void
     {
-        $subtitle = $this->makeSubtitle([[0, 2, "a"], [1, 3, "b"], [3, 4, "c"]]);
+        $subtitle = TestSubtitles::fromCues([[0, 2, "a"], [1, 3, "b"], [3, 4, "c"]]);
 
         $this->assertSame(
             [[2, ValidationRule::MinGap, 0.0, 0.5]],
@@ -208,7 +191,7 @@ class ValidationTest extends TestCase
 
     public function testTextRulesOnOwnFile(): void
     {
-        $subtitle = $this->parseFile("validation/own_text_checks.vtt", Format::WebVtt);
+        $subtitle = TestFiles::parse("validation/own_text_checks.vtt", Format::WebVtt);
         $rules    = new ValidationRules(
             noDoubleSpaces: true,
             noLeadingOrTrailingSpaces: true,
@@ -239,7 +222,7 @@ class ValidationTest extends TestCase
 
     public function testTextRulesAreOffByDefault(): void
     {
-        $subtitle = $this->parseFile("validation/own_text_checks.vtt", Format::WebVtt);
+        $subtitle = TestFiles::parse("validation/own_text_checks.vtt", Format::WebVtt);
 
         $this->assertSame([], $subtitle->validate(new ValidationRules()));
     }
@@ -247,7 +230,7 @@ class ValidationTest extends TestCase
 
     public function testIssueExampleCue(): void
     {
-        $subtitle = $this->makeSubtitle([[10, 11, ["-Where are you?\u{00A0} <i>Home", "- Wait.", "- Now!"]]]);
+        $subtitle = TestSubtitles::fromCues([[10, 11, ["-Where are you?\u{00A0} <i>Home", "- Wait.", "- Now!"]]]);
         $rules    = new ValidationRules(
             noDoubleSpaces: true,
             noUnbalancedTags: true,
@@ -270,7 +253,7 @@ class ValidationTest extends TestCase
 
     public function testWordsMatchSubtitleStatistics(): void
     {
-        $subtitle = $this->parseFile("vtt/real/webvttpy_netflix.vtt", Format::WebVtt);
+        $subtitle = TestFiles::parse("vtt/real/webvttpy_netflix.vtt", Format::WebVtt);
         $words    = 0;
         foreach ($subtitle->validate(new ValidationRules(maxWordsPerMinute: 0.001)) as $result) {
             $cue    = $subtitle->getCues()[$result->cueIndex];
@@ -296,7 +279,7 @@ class ValidationTest extends TestCase
 
     public function testBbcPresetOnRealWebVttFile(): void
     {
-        $subtitle = $this->parseFile("vtt/real/w3c_voices.vtt", Format::WebVtt);
+        $subtitle = TestFiles::parse("vtt/real/w3c_voices.vtt", Format::WebVtt);
 
         $this->assertSame([
             [1, ValidationRule::MaxCharactersPerLine, 55, 37],
@@ -323,13 +306,13 @@ class ValidationTest extends TestCase
 
     public function testSpeakersFromVoicesAndDashesOnRealWebVttFiles(): void
     {
-        $voices  = $this->parseFile("vtt/real/w3c_voices.vtt", Format::WebVtt);
-        $netflix = $this->parseFile("vtt/real/webvttpy_netflix.vtt", Format::WebVtt);
+        $voices  = TestFiles::parse("vtt/real/w3c_voices.vtt", Format::WebVtt);
+        $netflix = TestFiles::parse("vtt/real/webvttpy_netflix.vtt", Format::WebVtt);
 
         $this->assertSame([], $voices->validate(new ValidationRules(maxSpeakersPerCue: 1)));
         $this->assertSame(
             [[0, ValidationRule::MaxSpeakersPerCue, 2, 1]],
-            $this->toArrays($this->makeSubtitle([[0, 1, ["<v Anna>Hi", "<v.loud Tom>Hello", "<v Anna>Bye"]]])
+            $this->toArrays(TestSubtitles::fromCues([[0, 1, ["<v Anna>Hi", "<v.loud Tom>Hello", "<v Anna>Bye"]]])
                 ->validate(new ValidationRules(maxSpeakersPerCue: 1)))
         );
         $this->assertSame(
@@ -346,7 +329,7 @@ class ValidationTest extends TestCase
 
     public function testUnbalancedTagsOnRealSubRipFile(): void
     {
-        $subtitle = $this->parseFile("srt/real/own_styled.srt", Format::SubRip);
+        $subtitle = TestFiles::parse("srt/real/own_styled.srt", Format::SubRip);
 
         $this->assertSame(
             [[7, ValidationRule::NoUnbalancedTags, 1, null]],
@@ -357,7 +340,7 @@ class ValidationTest extends TestCase
 
     public function testUnbalancedTagsAcrossLinesAndOpenVoices(): void
     {
-        $subtitle = $this->makeSubtitle([
+        $subtitle = TestSubtitles::fromCues([
             [0, 1, ["<v Anna><i>Over two", "lines</i>"]],
             [1, 2, ["<b><i>Crossed</b></i>"]],
             [2, 3, ["Stray</u> and <font color=\"#ff0000\">open"]],
@@ -374,7 +357,7 @@ class ValidationTest extends TestCase
 
     public function testSpacesInsideTagsAndNonBreakingSpaces(): void
     {
-        $subtitle = $this->makeSubtitle([
+        $subtitle = TestSubtitles::fromCues([
             [0, 1, ["One <i> two</i>", "<b>three </b>"]],
             [1, 2, ["Four\u{00A0}\u{00A0}five", "\u{00A0}six"]],
             [2, 3, ["No <i>problem</i> here"]],
@@ -391,7 +374,7 @@ class ValidationTest extends TestCase
 
     public function testDialogueDashStyle(): void
     {
-        $subtitle = $this->makeSubtitle([
+        $subtitle = TestSubtitles::fromCues([
             [0, 1, ["- Yes.", "-No."]],
             [1, 2, ["<i>-Maybe.</i>", "\u{2014}Never."]],
             [2, 3, ["-20 degrees.", "--- a line", "- "]],
@@ -410,7 +393,7 @@ class ValidationTest extends TestCase
 
     public function testWordRulesSkipEmptyCuesAndMatchMilliseconds(): void
     {
-        $subtitle = $this->makeSubtitle([[0, 1.2, "Four words right here"], [2, 2, "Now"], [3, 4, ""], [5, 6.199, "Four words too fast"]]);
+        $subtitle = TestSubtitles::fromCues([[0, 1.2, "Four words right here"], [2, 2, "Now"], [3, 4, ""], [5, 6.199, "Four words too fast"]]);
 
         $this->assertSame([
             [1, ValidationRule::MaxWordsPerMinute, INF, 200.0],
@@ -423,7 +406,7 @@ class ValidationTest extends TestCase
 
     public function testAllowedCharactersAsStringAndCharacterClass(): void
     {
-        $subtitle = $this->parseFile("validation/own_text_checks.vtt", Format::WebVtt);
+        $subtitle = TestFiles::parse("validation/own_text_checks.vtt", Format::WebVtt);
         // BBC Subtitle Guidelines 9.3.1, characters for broadcast.
         $broadcast = "[A-Za-z0-9!)(,.?:\\-><&@#%+*=/\u{00A3}\$\u{00A2}\u{00A5}\u{00A9}\u{00AE}\u{00BC}\u{00BD}\u{00BE}\u{2122}'\"]";
 
@@ -435,16 +418,16 @@ class ValidationTest extends TestCase
         ], $this->toArrays($subtitle->validate(new ValidationRules(allowedCharacters: $broadcast))));
         $this->assertSame(
             [[0, ValidationRule::AllowedCharacters, 5, null]],
-            $this->toArrays($this->makeSubtitle([[0, 1, "Caf\u{00E9} a/b [c]"]])
+            $this->toArrays(TestSubtitles::fromCues([[0, 1, "Caf\u{00E9} a/b [c]"]])
                 ->validate(new ValidationRules(allowedCharacters: "Cafab")))
         );
-        $this->assertSame([], $this->makeSubtitle([[0, 1, "a/b"]])->validate(new ValidationRules(allowedCharacters: "[a-z/]")));
+        $this->assertSame([], TestSubtitles::fromCues([[0, 1, "a/b"]])->validate(new ValidationRules(allowedCharacters: "[a-z/]")));
     }
 
 
     public function testAllCapsLinesSkipVoiceNamesAndBrackets(): void
     {
-        $subtitle = $this->makeSubtitle([
+        $subtitle = TestSubtitles::fromCues([
             [0, 1, ["<v ANNA>Hello.", "[BELL RINGS]", "(SHOUTS) Stop!", "I"]],
             [1, 2, ["STOP THE TRAIN!", "<i>NOW</i>", "\u{00C4}RGER"]],
             [2, 3, ["(SHOUTING) STOP"]],
@@ -459,7 +442,7 @@ class ValidationTest extends TestCase
 
     public function testTextRulesOnInvalidUtf8(): void
     {
-        $subtitle = $this->makeSubtitle([[0, 1, "CAF\xC9 \xC9T\xC9"]]);
+        $subtitle = TestSubtitles::fromCues([[0, 1, "CAF\xC9 \xC9T\xC9"]]);
         $rules    = new ValidationRules(noDoubleSpaces: true, allowedCharacters: "[A-Za-z]", noAllCapsLines: true);
 
         $this->assertSame([

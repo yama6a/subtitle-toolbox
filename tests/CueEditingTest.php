@@ -6,30 +6,11 @@ namespace SubtitleToolbox;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class CueEditingTest extends TestCase
 {
     private const DIR = __DIR__ . "/files/editing/";
-
-
-    private function makeSubtitle(array $cues): Subtitle
-    {
-        $subtitle = new Subtitle();
-        foreach ($cues as [$start, $end, $text]) {
-            $subtitle->addCue(new SubtitleCue($start, $end, $text));
-        }
-
-        return $subtitle;
-    }
-
-
-    private function describeCues(Subtitle $subtitle): array
-    {
-        return array_map(
-            fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()],
-            $subtitle->getCues()
-        );
-    }
 
 
     private function parseHarbourTour(): Subtitle
@@ -57,17 +38,17 @@ class CueEditingTest extends TestCase
 
         $this->assertSame(
             [[4.2, 7.45, "The ferry leaves at seven.\nDo not be late."], [3115.5, 3119.8, "We stop here for tonight."]],
-            [$this->describeCues($part1)[0], $this->describeCues($part1)[3]]
+            [TestSubtitles::describe($part1)[0], TestSubtitles::describe($part1)[3]]
         );
         $this->assertCount(4, $part1->getCues());
         $this->assertSame(
             [[1.25, 4.0, "PART TWO"], [760.125, 763.0, "Then we row."]],
-            [$this->describeCues($part2)[0], $this->describeCues($part2)[2]]
+            [TestSubtitles::describe($part2)[0], TestSubtitles::describe($part2)[2]]
         );
         $this->assertCount(3, $part2->getCues());
         $this->assertSame(
             [[1.0, 4.0, "Welcome to the harbour tour."], [18.0, 20.0, "Next stop, the fish market."]],
-            [$this->describeCues($harbour)[0], $this->describeCues($harbour)[5]]
+            [TestSubtitles::describe($harbour)[0], TestSubtitles::describe($harbour)[5]]
         );
         $this->assertCount(6, $harbour->getCues());
         $this->assertCount(5, $harbour->getComments());
@@ -79,7 +60,7 @@ class CueEditingTest extends TestCase
         $harbour  = $this->parseHarbourTour();
         $reparsed = Subtitle::fromString($harbour->toString(Format::WebVtt), Format::WebVtt);
 
-        $this->assertSame($this->describeCues($harbour), $this->describeCues($reparsed));
+        $this->assertSame(TestSubtitles::describe($harbour), TestSubtitles::describe($reparsed));
         $this->assertEquals($harbour->getComments(), $reparsed->getComments());
         $this->assertSame($harbour->findFormatData("vtt"), $reparsed->findFormatData("vtt"));
     }
@@ -98,12 +79,12 @@ class CueEditingTest extends TestCase
 
     public function testMergeKeepsMetadataCommentsAndFormatDataOfThisOnConflict(): void
     {
-        $subtitle = $this->makeSubtitle([[1, 2, "one"], [3, 4, "two"]])
+        $subtitle = TestSubtitles::fromCues([[1, 2, "one"], [3, 4, "two"]])
             ->setMetadata(Subtitle::METADATA_TITLE, "Part one")
             ->setFormatData("vtt", ["header" => "first"])
             ->addComment("before two", 1)
             ->addComment("end of part one", 2);
-        $other = $this->makeSubtitle([[1, 2, "three"]])
+        $other = TestSubtitles::fromCues([[1, 2, "three"]])
             ->setMetadata(Subtitle::METADATA_TITLE, "Part two")
             ->setMetadata(Subtitle::METADATA_LANGUAGE, "en")
             ->setFormatData("vtt", ["header" => "second"])
@@ -113,7 +94,7 @@ class CueEditingTest extends TestCase
 
         $subtitle->merge($other, 10);
 
-        $this->assertSame([[1.0, 2.0, "one"], [3.0, 4.0, "two"], [11.0, 12.0, "three"]], $this->describeCues($subtitle));
+        $this->assertSame([[1.0, 2.0, "one"], [3.0, 4.0, "two"], [11.0, 12.0, "three"]], TestSubtitles::describe($subtitle));
         $this->assertSame(["title" => "Part one", "language" => "en"], $subtitle->getAllMetadata());
         $this->assertSame(["header" => "first"], $subtitle->findFormatData("vtt"));
         $this->assertSame(["scriptInfo" => []], $subtitle->findFormatData("ass"));
@@ -128,21 +109,21 @@ class CueEditingTest extends TestCase
 
     public function testMergeSortsOverlappingCuesAndKeepsCommentsWithTheirCues(): void
     {
-        $subtitle = $this->makeSubtitle([[1, 2, "one"], [5, 6, "three"]])->addComment("about three", 1);
-        $other    = $this->makeSubtitle([[3, 4, "two"]])->addComment("about two", 0);
+        $subtitle = TestSubtitles::fromCues([[1, 2, "one"], [5, 6, "three"]])->addComment("about three", 1);
+        $other    = TestSubtitles::fromCues([[3, 4, "two"]])->addComment("about two", 0);
 
         $subtitle->merge($other);
 
-        $this->assertSame(["one", "two", "three"], array_column($this->describeCues($subtitle), 2));
+        $this->assertSame(["one", "two", "three"], array_column(TestSubtitles::describe($subtitle), 2));
         $this->assertSame([["about two", "two"], ["about three", "three"]], $this->getCommentsByCueText($subtitle));
     }
 
 
     public function testMergeClampsNegativeTimesToZero(): void
     {
-        $subtitle = (new Subtitle())->merge($this->makeSubtitle([[1, 3, "one"]]), -2);
+        $subtitle = (new Subtitle())->merge(TestSubtitles::fromCues([[1, 3, "one"]]), -2);
 
-        $this->assertSame([[0.0, 1.0, "one"]], $this->describeCues($subtitle));
+        $this->assertSame([[0.0, 1.0, "one"]], TestSubtitles::describe($subtitle));
     }
 
 
@@ -161,34 +142,34 @@ class CueEditingTest extends TestCase
 
     public function testSliceCutsCuesAtBoundariesAndCopiesMetadataAndFormatData(): void
     {
-        $subtitle = $this->makeSubtitle([[1, 3, "one"], [4, 6, "two"], [7, 9, "three"]])
+        $subtitle = TestSubtitles::fromCues([[1, 3, "one"], [4, 6, "two"], [7, 9, "three"]])
             ->setMetadata(Subtitle::METADATA_TITLE, "Clip")
             ->setFormatData("vtt", ["header" => "clip"]);
         $subtitle->getCues()[1]->setFormatData("vtt", ["line" => "0"])->setIdentifier("middle");
 
         $slice = $subtitle->withSlice(2, 8);
 
-        $this->assertSame([[2.0, 3.0, "one"], [4.0, 6.0, "two"], [7.0, 8.0, "three"]], $this->describeCues($slice));
+        $this->assertSame([[2.0, 3.0, "one"], [4.0, 6.0, "two"], [7.0, 8.0, "three"]], TestSubtitles::describe($slice));
         $this->assertSame(["title" => "Clip"], $slice->getAllMetadata());
         $this->assertSame(["header" => "clip"], $slice->findFormatData("vtt"));
         $this->assertSame(["line" => "0"], $slice->getCues()[1]->findFormatData("vtt"));
         $this->assertSame("middle", $slice->getCues()[1]->getIdentifier());
         $this->assertNotSame($subtitle->getCues()[1], $slice->getCues()[1]);
-        $this->assertSame([1.0, 3.0, "one"], $this->describeCues($subtitle)[0]);
+        $this->assertSame([1.0, 3.0, "one"], TestSubtitles::describe($subtitle)[0]);
     }
 
 
     public function testSliceDropsCuesThatOnlyTouchTheRange(): void
     {
-        $subtitle = $this->makeSubtitle([[1, 2, "before"], [2, 3, "inside"], [3, 4, "after"]]);
+        $subtitle = TestSubtitles::fromCues([[1, 2, "before"], [2, 3, "inside"], [3, 4, "after"]]);
 
-        $this->assertSame([[2.0, 3.0, "inside"]], $this->describeCues($subtitle->withSlice(2, 3)));
+        $this->assertSame([[2.0, 3.0, "inside"]], TestSubtitles::describe($subtitle->withSlice(2, 3)));
     }
 
 
     public function testSliceKeepsCommentAfterLastCueOnlyWhenTheLastCueIsKept(): void
     {
-        $subtitle = $this->makeSubtitle([[1, 2, "one"], [3, 4, "two"]])
+        $subtitle = TestSubtitles::fromCues([[1, 2, "one"], [3, 4, "two"]])
             ->addComment("first", 0)
             ->addComment("last", 2);
 
@@ -207,7 +188,7 @@ class CueEditingTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("The slice start 5 must not be after the slice end 4.");
-        $this->makeSubtitle([[1, 2, "one"]])->withSlice(5, 4);
+        TestSubtitles::fromCues([[1, 2, "one"]])->withSlice(5, 4);
     }
 
 
@@ -222,7 +203,7 @@ class CueEditingTest extends TestCase
 
     public function testSplitCueKeepsCommentsAndCueDataAndClearsSecondIdentifier(): void
     {
-        $subtitle = $this->makeSubtitle([[0, 6, "First sentence.\nSecond sentence."], [7, 8, "next"]])
+        $subtitle = TestSubtitles::fromCues([[0, 6, "First sentence.\nSecond sentence."], [7, 8, "next"]])
             ->addComment("about the split cue", 0)
             ->addComment("about next", 1);
         $subtitle->getCues()[0]->setIdentifier("intro")->setAlignment(8);
@@ -232,7 +213,7 @@ class CueEditingTest extends TestCase
         $cues = $subtitle->getCues();
         $this->assertSame(
             [[0.0, 3.0, "First sentence."], [3.0, 6.0, "Second sentence."], [7.0, 8.0, "next"]],
-            $this->describeCues($subtitle)
+            TestSubtitles::describe($subtitle)
         );
         $this->assertSame(["intro", null], [$cues[0]->getIdentifier(), $cues[1]->getIdentifier()]);
         $this->assertSame([8, 8], [$cues[0]->getAlignment(), $cues[1]->getAlignment()]);
@@ -248,7 +229,7 @@ class CueEditingTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("Cannot split cue 0 at 6 - the time must be after the cue start 0 " .
                                       "and before the cue end 6.");
-        $this->makeSubtitle([[0, 6, "a\nb"]])->splitCue(0, 6, 1);
+        TestSubtitles::fromCues([[0, 6, "a\nb"]])->splitCue(0, 6, 1);
     }
 
 
@@ -256,7 +237,7 @@ class CueEditingTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("Cannot split cue 0 after line 2 - the cue has 2 lines.");
-        $this->makeSubtitle([[0, 6, "a\nb"]])->splitCue(0, 3, 2);
+        TestSubtitles::fromCues([[0, 6, "a\nb"]])->splitCue(0, 3, 2);
     }
 
 
@@ -264,7 +245,7 @@ class CueEditingTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("Cannot edit cue 3 - cue not found!");
-        $this->makeSubtitle([[0, 6, "a\nb"]])->splitCue(3, 3, 1);
+        TestSubtitles::fromCues([[0, 6, "a\nb"]])->splitCue(3, 3, 1);
     }
 
 
@@ -279,7 +260,7 @@ class CueEditingTest extends TestCase
 
     public function testJoinCuesKeepsCommentsAndFirstCueData(): void
     {
-        $subtitle = $this->makeSubtitle([[0, 1, "zero"], [1, 2, "one"], [2, 4, "two"], [5, 6, "three"], [7, 8, "four"]])
+        $subtitle = TestSubtitles::fromCues([[0, 1, "zero"], [1, 2, "one"], [2, 4, "two"], [5, 6, "three"], [7, 8, "four"]])
             ->addComment("about one", 1)
             ->addComment("about two", 2)
             ->addComment("about three", 3)
@@ -290,7 +271,7 @@ class CueEditingTest extends TestCase
         $subtitle->joinCues(1, 3);
 
         $cues = $subtitle->getCues();
-        $this->assertSame([[0.0, 1.0, "zero"], [1.0, 6.0, "one\ntwo\nthree"], [7.0, 8.0, "four"]], $this->describeCues($subtitle));
+        $this->assertSame([[0.0, 1.0, "zero"], [1.0, 6.0, "one\ntwo\nthree"], [7.0, 8.0, "four"]], TestSubtitles::describe($subtitle));
         $this->assertSame(["first", 7], [$cues[1]->getIdentifier(), $cues[1]->getAlignment()]);
         $this->assertSame([
             ["about one", "one\ntwo\nthree"],
@@ -306,7 +287,7 @@ class CueEditingTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("Cannot join cues 1 to 1 - the first index must be lower than the last index.");
-        $this->makeSubtitle([[0, 1, "zero"], [1, 2, "one"]])->joinCues(1, 1);
+        TestSubtitles::fromCues([[0, 1, "zero"], [1, 2, "one"]])->joinCues(1, 1);
     }
 
 
@@ -314,7 +295,7 @@ class CueEditingTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("Cannot edit cue 2 - cue not found!");
-        $this->makeSubtitle([[0, 1, "zero"], [1, 2, "one"]])->joinCues(0, 2);
+        TestSubtitles::fromCues([[0, 1, "zero"], [1, 2, "one"]])->joinCues(0, 2);
     }
 
 
@@ -332,7 +313,7 @@ class CueEditingTest extends TestCase
 
     public function testRemoveDuplicateCuesJoinsOnlyTouchingCuesWithTheSameText(): void
     {
-        $subtitle = $this->makeSubtitle([
+        $subtitle = TestSubtitles::fromCues([
             [0, 1, "same"], [1, 2, "same"], [2, 3, "same"], [3.5, 4, "same"], [4, 5, "other"], [5, 6, "Other"],
         ])
             ->addComment("second", 1)
@@ -344,7 +325,7 @@ class CueEditingTest extends TestCase
 
         $this->assertSame(
             [[0.0, 3.0, "same"], [3.5, 4.0, "same"], [4.0, 5.0, "other"], [5.0, 6.0, "Other"]],
-            $this->describeCues($subtitle)
+            TestSubtitles::describe($subtitle)
         );
         $this->assertSame(
             [["second", "same"], ["third", "same"], ["fourth", "same"], ["end", null]],

@@ -11,6 +11,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 require_once __DIR__ . "/FakeTranslationEngine.php";
 
@@ -41,20 +42,6 @@ class TranslationRunnerTest extends TestCase
                 return array_slice($this->translations, 0, count($texts));
             }
         };
-    }
-
-
-    /**
-     * @param list<string|list<string>> $cueLines
-     */
-    private static function subtitle(array $cueLines): Subtitle
-    {
-        $subtitle = new Subtitle();
-        foreach ($cueLines as $index => $lines) {
-            $subtitle->addCue(new SubtitleCue($index * 2 + 1, $index * 2 + 2, $lines));
-        }
-
-        return $subtitle;
     }
 
 
@@ -118,7 +105,7 @@ class TranslationRunnerTest extends TestCase
 
     public function testAFailingEngineLeavesTheSubtitleAsItWas(): void
     {
-        $subtitle = self::subtitle(["one.", "two."]);
+        $subtitle = TestSubtitles::fromTexts(["one.", "two."], start: 1, step: 2);
         $before   = self::lines($subtitle);
 
         $engine = new class implements TranslationEngine {
@@ -162,7 +149,7 @@ class TranslationRunnerTest extends TestCase
         foreach (["<x1>Run! </ x1>", "Run!</x1><x1>", "<x1>Run!</x1><x2/>", "<x1>Run!</x1></x1>"] as $translation) {
             $runner = new TranslationRunner(self::fixedEngine([$translation]));
 
-            $report = $runner->translate($translated = self::subtitle(["<i>Lauf!</i>"]), "de", "en");
+            $report = $runner->translate($translated = TestSubtitles::fromTexts(["<i>Lauf!</i>"], start: 1, step: 2), "de", "en");
 
             $this->assertSame([["Run!"]], self::lines($translated), $translation);
             $this->assertCount(1, $report->warnings, $translation);
@@ -222,7 +209,7 @@ class TranslationRunnerTest extends TestCase
     {
         $engine = self::fixedEngine(["<x1>Tom & Jerry</x1> &#39;say&#39; a < b &amp; c&nbsp;d"]);
 
-        (new TranslationRunner($engine))->translate($translated = self::subtitle(["<b>Tom &amp; Jerry</b> sagen a &lt; b"]), "de", "en");
+        (new TranslationRunner($engine))->translate($translated = TestSubtitles::fromTexts(["<b>Tom &amp; Jerry</b> sagen a &lt; b"], start: 1, step: 2), "de", "en");
 
         $this->assertSame(["<b>Tom &amp; Jerry</b> 'say' a &lt; b &amp; c\u{A0}d"], $translated->getCues()[0]->getLines());
     }
@@ -232,7 +219,7 @@ class TranslationRunnerTest extends TestCase
     {
         $engine = new FakeTranslationEngine();
 
-        (new TranslationRunner($engine))->translate($translated = self::subtitle(["<v Fred>Hi <00:00:01.500>there."]), "en", "de");
+        (new TranslationRunner($engine))->translate($translated = TestSubtitles::fromTexts(["<v Fred>Hi <00:00:01.500>there."], start: 1, step: 2), "en", "de");
 
         $this->assertSame("<x1/>Hi <x2/>there.", $engine->calls[0]["texts"][0]);
         $this->assertSame(["<v Fred>HI <00:00:01.500>THERE."], $translated->getCues()[0]->getLines());
@@ -241,7 +228,7 @@ class TranslationRunnerTest extends TestCase
 
     public function testCuesWithOnlyNumbersSymbolsOrNoTextAreNotSent(): void
     {
-        $subtitle = self::subtitle(["\u{266A}\u{266B}", "1984", "...", "<i>\u{266A}</i>", "Hello."]);
+        $subtitle = TestSubtitles::fromTexts(["\u{266A}\u{266B}", "1984", "...", "<i>\u{266A}</i>", "Hello."], start: 1, step: 2);
         $image    = new CueImage("png", 0, 0, 1, 1, 1, 1);
         $subtitle->addCue($image->toCue(new SubtitleCue(20, 21)));
         $engine   = new FakeTranslationEngine();
@@ -267,8 +254,8 @@ class TranslationRunnerTest extends TestCase
 
     public function testSentenceJoiningStopsAtTheSentenceEndTheLimitAndAnUntranslatedCue(): void
     {
-        $subtitle = self::subtitle(["one", "two", "three", "four", "five.", "six", "\u{266A}", "seven", "\u{201C}Eight?\u{201D}", "nine",
-                                    "\u{6B21}\u{3002}", "ten"]);
+        $subtitle = TestSubtitles::fromTexts(["one", "two", "three", "four", "five.", "six", "\u{266A}", "seven", "\u{201C}Eight?\u{201D}", "nine",
+                                    "\u{6B21}\u{3002}", "ten"], start: 1, step: 2);
         $engine   = new FakeTranslationEngine();
 
         (new TranslationRunner($engine))->translate($subtitle, "en", "de");
@@ -281,18 +268,18 @@ class TranslationRunnerTest extends TestCase
     public function testOptionsTurnOffJoiningAndSetTheCueLimit(): void
     {
         $engine = new FakeTranslationEngine();
-        (new TranslationRunner($engine))->translate(self::subtitle(["one", "two", "three."]), "en", "de", new TranslationOptions(false));
+        (new TranslationRunner($engine))->translate(TestSubtitles::fromTexts(["one", "two", "three."], start: 1, step: 2), "en", "de", new TranslationOptions(false));
         $this->assertSame(["one", "two", "three."], $engine->calls[0]["texts"]);
 
         $engine = new FakeTranslationEngine();
-        (new TranslationRunner($engine))->translate(self::subtitle(["one", "two", "three."]), "en", "de", new TranslationOptions(maxCuesPerSentence: 2));
+        (new TranslationRunner($engine))->translate(TestSubtitles::fromTexts(["one", "two", "three."], start: 1, step: 2), "en", "de", new TranslationOptions(maxCuesPerSentence: 2));
         $this->assertSame(["one two", "three."], $engine->calls[0]["texts"]);
     }
 
 
     public function testTheTranslationOfASentenceIsSplitInProportionToTheCharactersAtAWordBoundary(): void
     {
-        $subtitle = self::subtitle(["Regularly he takes part in events of", "the patient organization."]);
+        $subtitle = TestSubtitles::fromTexts(["Regularly he takes part in events of", "the patient organization."], start: 1, step: 2);
         $engine   = self::fixedEngine(["Er nimmt regelmässig an Veranstaltungen der Patientenorganisation teil."]);
 
         (new TranslationRunner($engine))->translate($translated = $subtitle, "en", "de");
@@ -303,7 +290,7 @@ class TranslationRunnerTest extends TestCase
 
     public function testATranslationWithoutSpacesIsSplitBetweenCharacters(): void
     {
-        $subtitle = self::subtitle(["<i>The train", "leaves now.</i>"]);
+        $subtitle = TestSubtitles::fromTexts(["<i>The train", "leaves now.</i>"], start: 1, step: 2);
         $engine   = self::fixedEngine(["<x1>\u{5217}\u{8F66}\u{73B0}\u{5728}\u{51FA}\u{53D1}\u{3002}</x1>"]);
 
         (new TranslationRunner($engine))->translate($translated = $subtitle, "en", "zh");
@@ -316,7 +303,7 @@ class TranslationRunnerTest extends TestCase
     {
         $runner = new TranslationRunner(self::fixedEngine(["Ja"]));
 
-        $report = $runner->translate($translated = self::subtitle(["Yes,", "of course."]), "en", "de");
+        $report = $runner->translate($translated = TestSubtitles::fromTexts(["Yes,", "of course."], start: 1, step: 2), "en", "de");
 
         $this->assertSame([["Ja"], []], self::lines($translated));
         $this->assertSame(1, $report->warnings[0]->cueIndex);
@@ -325,7 +312,7 @@ class TranslationRunnerTest extends TestCase
 
     public function testBatchesRespectTheCharacterLimit(): void
     {
-        $subtitle = self::subtitle(["First sentence.", "Second sentence.", "Third one is", "split over cues.", str_repeat("Long. ", 10)]);
+        $subtitle = TestSubtitles::fromTexts(["First sentence.", "Second sentence.", "Third one is", "split over cues.", str_repeat("Long. ", 10)], start: 1, step: 2);
         $engine   = new FakeTranslationEngine();
 
         (new TranslationRunner($engine))->translate($translated = $subtitle, "en", "de", new TranslationOptions(maxCharactersPerRequest: 32));
@@ -345,7 +332,7 @@ class TranslationRunnerTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("The translation engine must return one string per text, got 1 values for 2 texts.");
 
-        (new TranslationRunner(self::fixedEngine(["One."])))->translate(self::subtitle(["One.", "Two."]), "en", "de");
+        (new TranslationRunner(self::fixedEngine(["One."])))->translate(TestSubtitles::fromTexts(["One.", "Two."], start: 1, step: 2), "en", "de");
     }
 
 
