@@ -57,16 +57,17 @@ final class PngDecoder
         CueImage::checkSize($width, $height, "Cannot decode the PNG -");
 
         $rowLength = intdiv($width * $channels * $depth + 7, 8);
+        $dataSize  = ($rowLength + 1) * $height;
         self::requireFunction("gzuncompress");
-        $scanlines = @gzuncompress(implode("", $chunks["IDAT"] ?? []), ($rowLength + 1) * $height);
+        $scanlines = @gzuncompress(implode("", $chunks["IDAT"] ?? []), $dataSize);
         if ($scanlines === false) {
             throw new InvalidArgumentException("Cannot decode the PNG - its IDAT chunks hold no valid zlib data, " .
                                                "or more data than {$width}x{$height} pixels need!");
         }
 
-        if (strlen($scanlines) < ($rowLength + 1) * $height) {
+        if (strlen($scanlines) < $dataSize) {
             throw new InvalidArgumentException("Cannot decode a PNG of {$width}x{$height} pixels from " . strlen($scanlines) .
-                                               " bytes of image data - it needs " . ($rowLength + 1) * $height . "!");
+                                               " bytes of image data - it needs $dataSize!");
         }
 
         $rows = self::unfilter($scanlines, $rowLength, $height, max(1, intdiv($channels * $depth, 8)));
