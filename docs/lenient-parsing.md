@@ -9,7 +9,8 @@ use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString($download, Format::SubRip, new ReadOptions(lenient: true));
 foreach ($subtitle->getParseWarnings() as $warning) {
-    $logger->warning("line $warning->lineNumber: $warning->message ({$warning->action->value})");   // lineNumber is null for EBU STL and JSON
+    $line = $warning->lineNumber ?? '-';   // lineNumber is null for EBU STL and JSON
+    $logger->warning("line $line: $warning->message ({$warning->action->value})");
 }
 // line 5: Block #1 doesn't seem to have its timestamps on its second line! (skipped)
 ```

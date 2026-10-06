@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Fixing;
 
 /**
- * The fixes in the order they run. The value of a case is the name of its switch in CommonErrorOptions.
+ * The fixes in the order they run. The value of a case is the name of its field in CommonErrorOptions.
  */
 enum CommonErrorRule: string
 {

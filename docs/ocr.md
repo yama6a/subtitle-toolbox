@@ -9,7 +9,6 @@ An **image cue** is a cue with a PNG image in the format data key `image`. It ha
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Ocr\OcrLanguage;
-use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\WriteOptions;
 
@@ -163,7 +162,7 @@ file_put_contents('movie.srt', $subtitle->toString(Format::SubRip));
 
 - **Package**: without php-glyph-ocr, `new GlyphOcrEngine()` throws `InvalidArgumentException` with the `composer require` command.
 - **Version**: the library works with php-glyph-ocr 0.3. The `conflict` entry of `composer.json` stops Composer from installing an older or a 0.4 or later version next to it.
-- **Database**: `GlyphOcrOptions::$database` is a `GlyphOcr\GlyphDatabase`. The default is `GlyphDatabase::subtitleFonts()`. It holds glyphs of DejaVu Sans, Liberation Sans and Noto Sans, upright and italic, and then the Latin database of Subtitle Edit for other fonts. Liberation Sans has the metrics of Arial. The database takes about 76 MB of memory, so engines that exist at the same time share one copy.
+- **Database**: `GlyphOcrOptions::$database` is a `GlyphOcr\GlyphDatabase`. `GlyphDatabase::subtitleFonts()` holds glyphs of DejaVu Sans, Liberation Sans and Noto Sans, upright and italic, and then the Latin database of Subtitle Edit for other fonts. Liberation Sans has the metrics of Arial. The database takes about 76 MB of memory, so engines that exist at the same time share one copy.
 - **Subtitle Edit output**: `new GlyphOcrEngine(new GlyphOcrOptions(database: GlyphDatabase::latin(), lineContext: false))` reads the text as the nOCR engine of Subtitle Edit does.
 - **Options**: the constructor takes a `GlyphOcrOptions`. Each field except `database` sets the parameter of the same name of `GlyphOcr\Recognizer` in php-glyph-ocr 0.3, with the same default. An invalid value throws `InvalidArgumentException` in the `GlyphOcrOptions` constructor. A recognizer error on an image throws `OcrException`.
 
@@ -190,7 +189,7 @@ $subtitle->recognizeText(new GlyphOcrEngine(new GlyphOcrOptions(italicSlant: 0.2
 - **One engine per stream**: the engine learns the glyph heights from the cues it reads. So use a new engine for each subtitle stream.
 - **Italic**: a word becomes italic when most of its characters match italic glyphs.
 - **Language**: the engine ignores the language argument. The database sets the characters it knows.
-- **Confidence**: the `RecognizedText` confidence is the mean confidence of the glyphs of the cue. A glyph that matches nothing reads as `*` with confidence 0.
+- **Confidence**: the `RecognizedText` confidence is the mean confidence of the glyphs of the cue. A glyph that matches nothing reads as `unknownText` with confidence 0.
 - **I and l**: most sans-serif fonts draw capital I and lower case l as the same bar. The engine compares each bar with the capitals and the ascenders of its line, so it reads both letters correctly in the test files. The option `GlyphOcrOptions::$lineContext` controls this and is on by default. Fix remaining errors with [`CommonErrorFixer`](text.md#fixing-common-errors).
 - **Limits**: the text must have one color on a transparent or dark background.
 - **Accuracy**: the default database reads the 1080p Blu-ray test file in Liberation Sans with 100% correct characters, and small DVD text with 98%. Other fonts give more errors. Training a database for the font of your file fixes most of them.

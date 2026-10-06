@@ -6,15 +6,15 @@
 use SubtitleToolbox\Validation\ValidationRule;
 use SubtitleToolbox\Validation\ValidationRules;
 
-$results = $subtitle->validate(ValidationRules::netflixEnglish(23.976));
-$results = $subtitle->validate(ValidationRules::bbc());
-$results = $subtitle->validate(new ValidationRules(noUnbalancedTags: true, maxSpeakersPerCue: 2));
-$results = $subtitle->validate(new ValidationRules(maxCharactersPerLine: 37, noEmptyCues: true));
+$violations = $subtitle->validate(ValidationRules::netflixEnglish(23.976));
+$violations = $subtitle->validate(ValidationRules::bbc());
+$violations = $subtitle->validate(new ValidationRules(noUnbalancedTags: true, maxSpeakersPerCue: 2));
+$violations = $subtitle->validate(new ValidationRules(maxCharactersPerLine: 37, noEmptyCues: true));
 
-$results[0]->cueIndex;          // 1
-$results[0]->rule;              // ValidationRule::MaxCharactersPerLine, with the value 'maxCharactersPerLine'
-$results[0]->value;             // 45
-$results[0]->limit;             // 37
+$violations[0]->cueIndex;          // 1
+$violations[0]->rule;              // ValidationRule::MaxCharactersPerLine, with the value 'maxCharactersPerLine'
+$violations[0]->value;             // 45
+$violations[0]->limit;             // 37
 ```
 
 The value of a `ValidationRule` case is the name of its field in `ValidationRules`. `MinChapters` and `FirstChapterAtZero` have no field. `YouTubeChapters::check()` uses them, see [chapters.md](chapters.md).
@@ -22,24 +22,24 @@ The value of a `ValidationRule` case is the name of its field in `ValidationRule
 | Rule | Limit | Value |
 |:--- |:--- |:--- |
 | `maxCharactersPerSecond` | characters per second | characters of all lines divided by the duration. `INF` for a cue with text and no duration |
-| `maxCharactersPerLine` | characters | one result per line that is too long |
+| `maxCharactersPerLine` | characters | one violation per line that is too long |
 | `maxLinesPerCue` | lines | lines with visible text |
 | `minDuration`, `maxDuration` | seconds | end minus start |
 | `minGap` | seconds | start minus the latest end of the earlier cues. Overlaps are not gaps |
-| `noOverlap` | `true` to check, result limit `null` | seconds of overlap with the earlier cues |
-| `noEmptyCues` | `true` to check, result limit `null` | 0 |
-| `noDoubleSpaces` | `true` to check, result limit `null` | runs of two or more spaces between words. A non-breaking space counts as a space |
-| `noLeadingOrTrailingSpaces` | `true` to check, result limit `null` | lines that start or end with a space or a non-breaking space |
-| `noUnbalancedTags` | `true` to check, result limit `null` | `<b>`, `<i>`, `<u>`, `<s>` and `<font>` tags without a partner tag, across all lines of the cue. An open `<v>` needs no `</v>` |
-| `dialogueDashStyle` | a `DialogueDashStyle` case, such as `HyphenSpace` for `'- '` or `EnDash` for an en dash without a space. Result limit `null` | lines with a dialogue dash in another style |
+| `noOverlap` | `true` to check, violation limit `null` | seconds of overlap with the earlier cues |
+| `noEmptyCues` | `true` to check, violation limit `null` | 0 |
+| `noDoubleSpaces` | `true` to check, violation limit `null` | runs of two or more spaces between words. A non-breaking space counts as a space |
+| `noLeadingOrTrailingSpaces` | `true` to check, violation limit `null` | lines that start or end with a space or a non-breaking space |
+| `noUnbalancedTags` | `true` to check, violation limit `null` | `<b>`, `<i>`, `<u>`, `<s>` and `<font>` tags without a partner tag, across all lines of the cue. An open `<v>` needs no `</v>` |
+| `dialogueDashStyle` | a `DialogueDashStyle` case, such as `HyphenSpace` for `'- '` or `EnDash` for an en dash without a space. Violation limit `null` | lines with a dialogue dash in another style |
 | `maxSpeakersPerCue` | speakers | the lines with a dialogue dash or the different `<v>` names, the larger count |
 | `maxWordsPerMinute` | words per minute | words divided by the duration. `INF` for a cue with words and no duration |
 | `minSecondsPerWord` | seconds per word | duration divided by the words |
-| `allowedCharacters` | the allowed characters as a string, or a regular expression character class such as `'[A-Za-z0-9 .,!?]'`. Result limit `null` | characters that are not allowed. A space is always allowed |
-| `noAllCapsLines` | `true` to check, result limit `null` | lines with two or more upper case letters and no lower case letter. `<v>` names and text in `[]` or `()` do not count |
-| `requireCues` | `true` to check, result limit `null` | 0. The result has the cue index `null` |
-| `noUnsortedCues` | `true` to check, result limit `null` | seconds by which the cue starts before the previous cue in the list |
-| `noNegativeDuration` | `true` to check, result limit `null` | end minus start, below 0 |
+| `allowedCharacters` | the allowed characters as a string, or a regular expression character class such as `'[A-Za-z0-9 .,!?]'`. Violation limit `null` | characters that are not allowed. A space is always allowed |
+| `noAllCapsLines` | `true` to check, violation limit `null` | lines with two or more upper case letters and no lower case letter. `<v>` names and text in `[]` or `()` do not count |
+| `requireCues` | `true` to check, violation limit `null` | 0. The violation has the cue index `null` |
+| `noUnsortedCues` | `true` to check, violation limit `null` | seconds by which the cue starts before the previous cue in the list |
+| `noNegativeDuration` | `true` to check, violation limit `null` | end minus start, below 0 |
 
 - **Off by default**: a rule with the limit `null` or `false` is off.
 - **Number limits**: a limit must be 0 or more. NAN throws `InvalidArgumentException`. A maximum accepts `INF`, which checks nothing. A minimum must be finite.

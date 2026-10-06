@@ -8,8 +8,8 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Validation\ValidationRules;
 
 /**
- * The size and time limits of one cue that Subtitle::mergeShortCues() and Resegmenter keep. The defaults are the
- * Netflix limits for English.
+ * The size and time limits of one cue that Subtitle::mergeShortCues() and Resegmenter keep. The defaults of
+ * $maxCharactersPerLine, $maxLinesPerCue and $maxDuration are the Netflix limits for English: 42, 2 and 7 s.
  */
 final class CueLimits
 {

@@ -76,8 +76,8 @@ $subtitle->mergeShortCues(new MergeShortCuesOptions(
 |:--- |:--- |:--- |
 | `maxCharactersPerLine` | 42 | the line length of the joined text |
 | `maxLinesPerCue` | 2 | the line count of the joined text |
-| `maxDuration` | 7 | seconds from the start to the end of the joined cue |
 | `minDuration` | 1 | a cue shorter than this many seconds is short |
+| `maxDuration` | 7 | seconds from the start to the end of the joined cue |
 | `maxCharactersPerSecond` | null | the reading speed of the joined cue. Null turns the rule off |
 
 | Option | Default | Meaning |

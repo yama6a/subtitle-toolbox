@@ -62,7 +62,7 @@ $subtitle->save('movie.txt', Format::WebVtt);         // the format argument win
 - **CSV and TSV**: TSV output has tabs. CSV output from a TSV input has commas. A `CsvWriteOptions::$delimiter` wins.
 
 ## Write options
-`WriteOptions` holds the settings that every formatter reads. Its `format` field takes the options class of one format, such as `MicroDvdWriteOptions`.
+`WriteOptions` holds the write settings for all formats. Its `format` field takes the options class of one format, such as `MicroDvdWriteOptions`.
 
 ```php
 use SubtitleToolbox\Format;
@@ -78,6 +78,10 @@ $subtitle->toString(Format::SubRip, new WriteOptions(
 ));
 $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 23.976)));
 ```
+
+- **`lineEnding` and `bom`**: EBU STL and PGS ignore them.
+- **`stripTags`**: only ASS, EBU STL, iTT, MicroDVD, SAMI, SubRip, TTML and WebVTT output read it.
+- **`skipImageCues`**: `toString()` and `save()` read it, not a formatter. PGS and JSON output keep image cues and ignore it.
 
 | Options class | Format | Fields |
 |:--- |:--- |:--- |

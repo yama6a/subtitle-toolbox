@@ -13,7 +13,7 @@ use SubtitleToolbox\OptionChecks;
 final class VobSubReadOptions implements FormatReadOptions
 {
     /**
-     * @param ?string $idx      The content of the .idx file. Subtitle::load() reads the .idx file next to the .sub file when it is null.
+     * @param ?string $idx      The content of the .idx file. Subtitle::load() always reads the .idx file next to the .sub file and replaces this value.
      * @param ?int    $track    The track with this "index:" value. Null reads the first track that matches $language.
      * @param ?string $language The track with this "id:" value, such as "de". Null reads the first track that matches $track.
      */

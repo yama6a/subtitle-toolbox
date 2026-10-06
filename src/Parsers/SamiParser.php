@@ -187,7 +187,7 @@ final class SamiParser extends SubtitleParser
 
     /**
      * Returns the offset after the BODY start tag, or 0 without one. A pattern that starts with ^.*? would hit the
-     * PCRE backtrack limit on files over about 1 MB.
+     * PCRE backtrack limit when the BODY start tag comes after about 1 MB of head.
      */
     private static function bodyStart(string $rawSubtitle): int
     {

@@ -9,7 +9,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 final class MergeShortCuesOptions
 {
     /**
-     * Creates the settings for Subtitle::mergeShortCues(), see docs/editing.md#merging-short-cues.
+     * Creates the settings for Subtitle::mergeShortCues(), see docs/editing.md#short-cues.
      *
      * @param CueLimits $limits        a cue shorter than $limits->minDuration is short. A joined cue must keep the other limits
      * @param float     $maxGap        seconds between the 2 cues
