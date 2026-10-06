@@ -37,9 +37,8 @@ final class RetimeCommand extends WriteCommand
     {
         return "Pass one or more edits. retime applies them in this order: --shift, --scale, --from-fps and --to-fps.\n" .
                "A time that becomes negative becomes 0. --scale 1.001 fixes a subtitle that drifts 3.6 s per hour.\n" .
-               "--from-fps 25 --to-fps 23.976 fits a subtitle for a 25 fps release to a 23.976 fps video. Without\n" .
-               "--output, --output-dir or --in-place, the result of one input file goes to standard output, and the results\n" .
-               "of several go next to their input files.";
+               "--from-fps 25 --to-fps 23.976 fits a subtitle for a 25 fps release to a 23.976 fps video. One input file\n" .
+               "goes to standard output, or to the file of -o. Several input files need --output-dir.";
     }
 
 

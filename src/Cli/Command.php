@@ -62,7 +62,8 @@ abstract class Command
 
 
     /**
-     * Reports a file outside the inputs that the command cannot read or write. The tool then exits with code 3.
+     * Reports a file outside the inputs that the command cannot read, or an output that it cannot create. The tool then
+     * stops and exits with code 3.
      */
     public static function failFile(string $message): never
     {

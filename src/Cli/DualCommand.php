@@ -35,7 +35,7 @@ final class DualCommand extends WriteCommand
 
     protected function usageLines(): array
     {
-        return ["<primary> <secondary> [options]"];
+        return ["--primary FILE --secondary FILE [options]"];
     }
 
 
@@ -43,15 +43,16 @@ final class DualCommand extends WriteCommand
     {
         return "stack joins each secondary cue with the primary cue that it overlaps most, below its lines.\n" .
                "top-bottom keeps both cues and moves the secondary one to the top. SubRip, WebVTT, ASS and TTML write\n" .
-               "the position. The output takes the format of the primary file unless --to or the --output extension sets\n" .
-               "it. Without --output, --output-dir or --in-place, the result goes to standard output. --from and --track\n" .
-               "apply to the primary file, --from2 and --track2 to the secondary file. --in-place overwrites the primary file.";
+               "the position. The output takes the format of the primary file unless --to sets it. The result goes to\n" .
+               "standard output, or to the file of -o.";
     }
 
 
     protected function commandOptions(): array
     {
         return [
+            Option::value("primary", "FILE", "The subtitle whose cues set the times, or - for standard input."),
+            Option::value("secondary", "FILE", "The subtitle in the second language."),
             Option::value("mode", "MODE", "stack or top-bottom. Default: stack."),
             Option::value("secondary-style", "TAG", "Tag around each secondary line: b, i, u, s or 'font color=\"#ffff00\"'. Default: none."),
             Option::value("secondary-alignment", "1-9", "Position of the secondary cues for top-bottom, as on a numeric keypad. Default: 8."),
@@ -60,25 +61,59 @@ final class DualCommand extends WriteCommand
     }
 
 
+    protected function toDescription(): string
+    {
+        return "Output format. Default: the format of the primary file.";
+    }
+
+
+    protected function fileOptionNames(): array
+    {
+        return ["from" => "primary-from", "track" => "primary-track", "from2" => "secondary-from", "track2" => "secondary-track"];
+    }
+
+
     protected function inputOptions(): array
     {
-        return [...parent::inputOptions(), ...self::secondFileOptions("secondary")];
+        $options = [];
+        foreach (parent::inputOptions() as $option) {
+            $options[] = match ($option->name) {
+                "from"  => Option::value("primary-from", "FORMAT", "Format of the primary file. Default: detected from the content, else taken from the file extension."),
+                "track" => Option::value("primary-track", "NUMBER", "Subtitle track of an MKV or WebM primary file. Needed when the file has several."),
+                default => $option,
+            };
+        }
+
+        return [...$options, ...$this->secondFileOptions("secondary")];
     }
 
 
     protected function inputArguments(Arguments $arguments): array
     {
-        if (count($arguments->positionals) !== 2) {
-            self::fail("Pass two files, the primary one and the secondary one.");
+        if ($arguments->positionals !== []) {
+            self::fail("dual takes no file arguments. Pass --primary FILE and --secondary FILE.");
+        }
+        if (!$arguments->has("primary") || !$arguments->has("secondary")) {
+            self::fail("Pass --primary FILE and --secondary FILE.");
         }
 
-        return [$arguments->positionals[0]];
+        return [$arguments->value("primary")];
+    }
+
+
+    protected function checkInputs(array $inputs, Arguments $arguments): void
+    {
+        if (count($inputs) > 1) {
+            self::fail("--primary takes one file, got " . count($inputs) . ".");
+        }
+
+        parent::checkInputs($inputs, $arguments);
     }
 
 
     protected function readPaths(array $inputs, Arguments $arguments): array
     {
-        return [...$inputs, $arguments->positionals[1]];
+        return [...$inputs, $arguments->value("secondary")];
     }
 
 
@@ -113,7 +148,7 @@ final class DualCommand extends WriteCommand
 
     protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
-        $secondary = $this->loadSecondFile($arguments->positionals[1], $arguments, $console);
+        $secondary = $this->loadSecondFile($arguments->value("secondary"), $arguments, $console);
 
         parent::process($input, DualSubtitle::fromPair($subtitle, $secondary, $this->dualOptions), $format, $arguments, $console);
     }

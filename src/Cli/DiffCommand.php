@@ -67,7 +67,7 @@ final class DiffCommand extends ReportCommand
 
     protected function inputOptions(): array
     {
-        return [...parent::inputOptions(), ...self::secondFileOptions("new")];
+        return [...parent::inputOptions(), ...$this->secondFileOptions("new")];
     }
 
 

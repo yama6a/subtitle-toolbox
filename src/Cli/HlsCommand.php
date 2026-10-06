@@ -50,14 +50,13 @@ final class HlsCommand extends FileCommand
     protected function commandOptions(): array
     {
         return [
-            Option::value("output-dir", "DIR", "Directory for the segments and the playlist. Creates it when it is missing."),
+            Option::value("output-dir", "DIR", "Directory for the segments and the playlist. Creates it when it is missing. No playlist or segment file may exist."),
             Option::value("segment", "SECONDS", "Duration of a segment. Default: 6."),
             Option::value("playlist", "NAME", "File name of the playlist. Default: subs.m3u8."),
             Option::value("pattern", "PATTERN", "File name of a segment, with %d for its number from 0. Default: sub%d.vtt."),
             Option::value("mpegts", "TICKS", "90 kHz MPEG-2 timestamp at which subtitle time 0 plays. Default: 900000."),
             Option::value("local", "SECONDS", "WebVTT cue time that maps to --mpegts. Default: 0."),
             Option::value("media-duration", "SECONDS", "Duration of the video, so the playlist covers it all. Default: the end of the last cue."),
-            Option::flag("force", "Overwrite files that exist."),
         ];
     }
 
@@ -105,6 +104,18 @@ final class HlsCommand extends FileCommand
         if ($input !== false && ($input === $playlist || $this->isSegment($input))) {
             self::fail("The output would overwrite the input $inputs[0]. Pass another --output-dir, --playlist or --pattern.");
         }
+
+        // The segment count is known only after the read, so any file that matches the pattern counts as a segment.
+        $directory = rtrim($this->directory, "/\\");
+        $existing  = OutputFiles::exists("$directory/$this->playlist") ? [$this->playlist] : [];
+        foreach (is_dir($directory) ? scandir($directory) ?: [] : [] as $name) {
+            if ($this->isSegment(self::realTarget("$directory/$name"))) {
+                $existing[] = $name;
+            }
+        }
+        if ($existing !== []) {
+            self::fail("$directory/$existing[0] exists. The tool never overwrites a file. Remove the playlist and the segments, or pass another --output-dir.");
+        }
     }
 
 
@@ -128,36 +139,11 @@ final class HlsCommand extends FileCommand
         $result    = HlsWebVttSegmenter::segment($subtitle, $this->segmentOptions);
         $directory = rtrim($this->directory, "/\\");
 
-        if (!$arguments->has("force")) {
-            foreach ($result->getDurations() as $name => $duration) {
-                self::failIfExists("$directory/$name");
-            }
-            self::failIfExists("$directory/$this->playlist");
-        }
-        if (!is_dir($directory) && !@mkdir($directory, 0777, true)) {
-            self::fail("Cannot create the directory $directory.");
-        }
         foreach ($result->getSegments() as $name => $content) {
-            self::writeFile("$directory/$name", $content);
+            $this->outputFiles->create("$directory/$name", $content);
         }
-        self::writeFile("$directory/$this->playlist", $result->getPlaylist());
+        $this->outputFiles->create("$directory/$this->playlist", $result->getPlaylist());
 
         $console->out(self::label($input) . " -> $directory/$this->playlist, " . $result->getSegmentCount() . " segments\n");
-    }
-
-
-    private static function failIfExists(string $path): void
-    {
-        if (file_exists($path)) {
-            self::fail("$path exists. Pass --force to overwrite it.");
-        }
-    }
-
-
-    private static function writeFile(string $path, string $content): void
-    {
-        if (@file_put_contents($path, $content) === false) {
-            self::fail("Cannot write $path.");
-        }
     }
 }

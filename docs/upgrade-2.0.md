@@ -281,8 +281,16 @@ See [cli.md](cli.md) for every command and option.
 | `validate --no-leading-or-trailing-spaces`, `--no-unbalanced-tags`, `--no-all-caps-lines` | `validate --check-leading-or-trailing-spaces`, `--check-unbalanced-tags`, `--check-all-caps-lines` |
 | `--fps 25` | still works and sets each frame rate that the command has. `--input-fps`, `--output-fps` and `--video-fps` set one rate each, see [Frame rates](cli.md#frame-rates) |
 | `convert movie.srt --to vtt` to write `movie.vtt` | `convert movie.srt --to vtt -o movie.vtt` |
+| `convert movie.srt movie.vtt` | `convert movie.srt --to vtt -o movie.vtt`. An output is never positional, so `convert a.srt b.srt` reads 2 inputs |
+| `convert movie.srt -o movie.vtt`, or `convert movie.srt --timing-fix-overlaps` to keep the format | `convert movie.srt --to vtt -o movie.vtt`, `convert movie.srt --to srt --timing-fix-overlaps`. `convert` always needs `--to` |
+| `retime movie.srt --shift 1 -o movie.vtt` to write WebVTT | `retime movie.srt --shift 1 --to vtt -o movie.vtt`. The extension of `-o` never picks the format. An extension of another format than `--to` fails with exit code 2 |
+| `dual movie.en.srt movie.de.srt` | `dual --primary movie.en.srt --secondary movie.de.srt` |
+| `convert a.srt b.srt --to vtt` to write `a.vtt` and `b.vtt` | `convert a.srt b.srt --to vtt --output-dir out`. Several inputs need `--output-dir` |
+| `retime *.srt --shift 1 --in-place` | removed. Write with `--output-dir`, then move the files over the inputs |
+| `--force` of `convert`, `retime`, `sync`, `dual` and `hls` | removed. No command overwrites a file. Remove the old file first |
 | `convert call.json --to srt` for Deepgram JSON | `convert call.json --from deepgram --to srt`. Chapters and cloud speech JSON always need `--from` |
-| none | `diff` and `dual` read the second file with `--from2` and `--track2`. `convert` and `dual` take `--in-place`. `diff`, `dual` and `hls` take `--keep-going` |
+| `dual --from srt --track 3` for the primary file | `dual --primary-from srt --primary-track 3` |
+| none | `diff` reads the new file with `--from2` and `--track2`. `dual` reads the secondary file with `--secondary-from` and `--secondary-track`. `diff`, `dual` and `hls` take `--keep-going` |
 | `convert --speakers colours` | `convert --speakers colors` |
 | `info --json` or `validate --json` with one input printed one object. `diff --json` always printed one object | they always print a list, with one object for each input, or one object for the pair of files of `diff`. Read `[0]` for one input |
 | `info --json`, `validate --json` or `diff --json` printed nothing when every file failed | they print `[]` |
@@ -323,10 +331,11 @@ These changes alter the output or the exit code of a call that needs no other ch
 | Unknown format | auto-detection threw `InvalidParserException` with error code 102 | it throws `UnknownFormatException`, a subclass of `InvalidParserException`, with error code 106 | catch `InvalidParserException` |
 | Detection of JSON | a regular expression on the text | the keys of the decoded JSON. Content that starts with `{` and is not valid JSON gives null. YouTube json3 needs `tStartMs` in its first event | name the format |
 | CLI output of one input | `convert movie.srt --to vtt` wrote `movie.vtt` | every command writes one input to standard output | `-o FILE` or `--output-dir DIR` |
-| CLI output of 2 or more inputs | the commands that edit a file failed and asked for `--output-dir` or `--in-place` | every command writes each output next to its input, with the extension of the output format | `--output-dir` or `--in-place` |
+| CLI output of 2 or more inputs | the commands that edit a file failed and asked for `--output-dir` or `--in-place` | every command fails with exit code 2 without `--output-dir` | `--output-dir DIR` |
 | `convert --help` | listed every option | lists the common options and the option groups. `convert --help GROUP` lists the options of one group | `convert --help all` |
-| CLI inputs | `--force` let a command write over its input | a command never overwrites an input without `--in-place`, also not with `--force`. That file fails | `--in-place` |
-| CLI output names | with `--force`, the second of two inputs with the same output file overwrote the first output | the command fails with exit code 2 before it writes a file. So do mute files and `hls` files that would overwrite an input or each other, and standard input with `--output-dir` | pass such inputs in two runs, and give each output its own name |
+| CLI inputs | `--force` let a command write over its input | no command overwrites a file. `--in-place` and `--force` are gone | write a new file, then move it over the input |
+| CLI output names | with `--force`, the second of two inputs with the same output file overwrote the first output | the command fails with exit code 2 before it reads a file, when an output exists, is a file that the command reads, or is the output of 2 inputs. This covers mute files and `hls` files too. Standard input with `--output-dir` fails too | remove old outputs, pass such inputs in two runs, and give each output its own name |
+| CLI output that appears during a run | the tool overwrote it | the create of that file fails. The tool removes every file that it wrote in the run and exits with code 3 | nothing |
 | Unknown options | before 1.70.5, a misspelled key or a key of another format was ignored. 1.70.5 and later threw `InvalidArgumentException` | a misspelled field, such as `new WriteOptions(lineEndings: LineEnding::Crlf)`, is a PHP `Error` for an unknown named parameter. An options class of another format, such as `new CsvWriteOptions()` for SubRip output, throws `InvalidArgumentException`. Read classes follow the same rule | fix the name, or pass the class of the format |
 | Strict types | the library converted scalar values | every file declares `strict_types`. A `mapText()`, `mapLines()`, `Markup::mapTextRuns()` or `ProfanityOptions` mask callback must return a string, else it throws `TypeError`. | return the documented type |
 | CSV and TSV times in `hh:mm:ss:ff` | the CLI could not read such a file | the CLI `--input-fps` and `--fps` set `CsvReadOptions::$frameRate` | nothing |

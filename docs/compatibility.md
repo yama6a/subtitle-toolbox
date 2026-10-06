@@ -8,7 +8,7 @@ The library follows semantic versioning. A 2.x minor or patch release does not b
 | PHP API | public classes, methods, properties, constants and enums that are not `@internal` |
 | Parameter names | every parameter name. Call option constructors with named arguments, for example `new WriteOptions(bom: true)` |
 | Exceptions | the exception classes, their parents and their codes, see [errors.md](errors.md) |
-| CLI | the commands, the options, the meaning of each exit code and the `--json` shapes of the binary `subtitle-toolbox` |
+| CLI | the commands, the options, the meaning of each exit code and the `--json` shapes of the binary `subtitle-toolbox`. The CLI never overwrites a file |
 
 ## Changes a minor or patch release can make
 - **Bug fixes and new formats**: a release that fixes a bug or adds a format can change the written bytes, the parsed cues and the detection result of a file. The release notes list each change.

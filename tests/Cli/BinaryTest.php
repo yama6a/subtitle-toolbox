@@ -221,7 +221,6 @@ class BinaryTest extends TestCase
         );
         $this->assertSame(2, $this->runBinary(["convert", "trip.srt", "--to", "vobsub"])[0]);
         $this->assertSame(2, $this->runBinary(["convert", "trip.srt", "--from", "txt", "--to", "vtt"])[0]);
-        $this->assertSame(2, $this->runBinary(["convert", "trip.srt", "--in-place", "--output-dir", "out"])[0]);
         $this->assertSame(2, $this->runBinary(["convert", "--to", "vtt"])[0]);
         $this->assertSame(2, $this->runBinary(["convert", "trip.srt", "--to", "vtt", "--line-ending", "cr"])[0]);
         $this->assertSame(2, $this->runBinary(["convert", "trip.srt", "--to", "vtt", "--bom", "--no-bom"])[0]);
@@ -230,9 +229,9 @@ class BinaryTest extends TestCase
     }
 
 
-    public function testConvertWithAnOutputFileTakesTheFormatFromItsExtension(): void
+    public function testConvertWritesTheFormatOfToIntoTheOutputFile(): void
     {
-        [$code, $stdout, $stderr] = $this->runBinary(["convert", "trip.srt", "trip.vtt"]);
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "trip.srt", "--to", "vtt", "-o", "trip.vtt"]);
 
         $this->assertSame([0, "trip.srt -> trip.vtt\n", ""], [$code, $stdout, $stderr]);
         $this->assertSame($this->tripAs(Format::WebVtt), $this->file("trip.vtt"));
@@ -241,40 +240,71 @@ class BinaryTest extends TestCase
 
     public function testConvertToTsvWritesTabs(): void
     {
-        $this->assertSame([0, "trip.srt -> trip.tsv\n", ""], $this->runBinary(["convert", "trip.srt", "trip.tsv"]));
+        $this->assertSame([0, "trip.srt -> trip.tsv\n", ""], $this->runBinary(["convert", "trip.srt", "--to", "tsv", "-o", "trip.tsv"]));
         $tsv = $this->file("trip.tsv");
         $this->assertStringStartsWith(self::BOM . "start\tend\ttext\n00:00:01.000\t", $tsv);
         $this->assertSame(0, substr_count($tsv, ","));
 
-        $this->assertSame([0, "trip.tsv -> trip.csv\n", ""], $this->runBinary(["convert", "trip.tsv", "trip.csv"]));
+        $this->assertSame([0, "trip.tsv -> trip.csv\n", ""], $this->runBinary(["convert", "trip.tsv", "--to", "csv", "-o", "trip.csv"]));
         $this->assertStringStartsWith(self::BOM . "start,end,text\n00:00:01.000,", $this->file("trip.csv"));
         $this->assertSame(0, substr_count($this->file("trip.csv"), "\t"));
     }
 
 
-    public function testAnOutputExtensionOfAReadOnlyInputFormatGivesTheWritableFormatOfTheExtension(): void
+    public function testConvertNeedsToAlsoWithAnOutputFile(): void
     {
-        copy(__DIR__ . "/../files/whisper/real/openai_whisper_german.json", "$this->dir/lecture.json");
+        $usage = "\nRun \"subtitle-toolbox help convert\" for the usage.\n";
+        $toTip = "Error: Pass --to FORMAT, also when the format stays the same, for example --to srt.$usage";
 
-        $this->assertSame([0, "lecture.json -> out.json\n", ""], $this->runBinary(["convert", "lecture.json", "out.json"]));
-        $this->assertSame(Subtitle::fromStringAutoDetectFormat($this->file("lecture.json"))->toString(Format::Json), $this->file("out.json"));
+        $this->assertSame([2, "", $toTip], $this->runBinary(["convert", "trip.srt", "-o", "trip.vtt"]));
+        $this->assertSame([2, "", $toTip], $this->runBinary(["convert", "trip.srt", "trip.vtt"]));
+        $this->assertSame([2, "", $toTip], $this->runBinary(["convert", "trip.srt", "--strip-tags"]));
+        $this->assertFileDoesNotExist("$this->dir/trip.vtt");
+
+        $this->assertSame([0, $this->tripAs(Format::SubRip), ""], $this->runBinary(["convert", "trip.srt", "--to", "srt"]));
     }
 
 
-    public function testConvertNeverOverwritesWithoutForce(): void
+    public function testTheOutputExtensionNeverPicksTheFormat(): void
+    {
+        copy(__DIR__ . "/../files/whisper/real/openai_whisper_german.json", "$this->dir/lecture.json");
+
+        $this->assertSame(
+            [2, "", "Error: The extension of --output trip.vtt names the format vtt, not the --to format srt.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            $this->runBinary(["convert", "trip.srt", "--to", "srt", "-o", "trip.vtt"])
+        );
+        $this->assertSame(2, $this->runBinary(["retime", "trip.srt", "--shift", "1", "--to", "vtt", "-o", "trip.ass"])[0]);
+        $this->assertSame(2, $this->runBinary(["dual", "--primary", "trip.srt", "--secondary", "shop.vtt", "--to", "ass", "-o", "both.srt"])[0]);
+        $this->assertSame([], array_diff(scandir($this->dir), [".", "..", ...array_map("basename", glob(self::FIXTURES . "*")), "lecture.json"]));
+
+        $this->assertSame([0, "lecture.json -> out.json\n", ""], $this->runBinary(["convert", "lecture.json", "--to", "json", "-o", "out.json"]));
+        $this->assertSame(Subtitle::fromStringAutoDetectFormat($this->file("lecture.json"))->toString(Format::Json), $this->file("out.json"));
+        $this->assertSame(0, $this->runBinary(["convert", "trip.srt", "--to", "mpl2", "-o", "trip.txt"])[0]);
+        $this->assertSame($this->tripAs(Format::Mpl2), $this->file("trip.txt"));
+        $this->assertSame(0, $this->runBinary(["convert", "trip.srt", "--to", "vtt", "-o", "trip.bak"])[0]);
+        $this->assertSame($this->tripAs(Format::WebVtt), $this->file("trip.bak"));
+
+        // Without --to, retime keeps the input format, whatever the extension of -o.
+        $this->assertSame(0, $this->runBinary(["retime", "trip.srt", "--shift", "0", "-o", "kept.vtt"])[0]);
+        $this->assertSame($this->tripAs(Format::SubRip), $this->file("kept.vtt"));
+    }
+
+
+    public function testConvertNeverOverwritesAFile(): void
     {
         file_put_contents("$this->dir/trip.vtt", "old");
+        $usage = "\nRun \"subtitle-toolbox help convert\" for the usage.\n";
 
-        [$code, $stdout, $stderr] = $this->runBinary(["convert", "trip.srt", "trip.vtt"]);
-        $this->assertSame([3, "", "trip.srt: trip.vtt exists. Pass --force to overwrite it.\n"], [$code, $stdout, $stderr]);
+        $this->assertSame(
+            [2, "", "Error: The output trip.vtt exists. The tool never overwrites a file. Remove it, or pass another output file or directory.$usage"],
+            $this->runBinary(["convert", "trip.srt", "--to", "vtt", "-o", "trip.vtt"])
+        );
         $this->assertSame("old", $this->file("trip.vtt"));
-
-        $this->assertSame(0, $this->runBinary(["convert", "trip.srt", "trip.vtt", "--force"])[0]);
-        $this->assertSame($this->tripAs(Format::WebVtt), $this->file("trip.vtt"));
-
-        [$code, , $stderr] = $this->runBinary(["convert", "trip.srt", "-o", "trip.srt", "--force"]);
-        $this->assertSame([3, "trip.srt: The output trip.srt is an input file. Pass --in-place to overwrite it, or -o or --output-dir to write another file.\n"],
-                          [$code, $stderr]);
+        $this->assertSame(
+            [2, "", "Error: The output trip.srt is a file that the command reads. Pass another output file or directory.$usage"],
+            $this->runBinary(["convert", "trip.srt", "--to", "srt", "-o", "trip.srt"])
+        );
+        $this->assertSame(file_get_contents(self::FIXTURES . "trip.srt"), $this->file("trip.srt"));
     }
 
 
@@ -283,47 +313,64 @@ class BinaryTest extends TestCase
         $shop = Subtitle::fromStringAutoDetectFormat($this->file("shop.vtt"));
 
         $this->assertSame([0, $shop->toString(Format::SubRip), ""], $this->runBinary(["convert", "shop.vtt", "--to", "srt"]));
+        $this->assertSame([0, $shop->toString(Format::SubRip), ""], $this->runBinary(["convert", "shop.vtt", "--to", "srt", "-o", "-"]));
         $this->assertFileDoesNotExist("$this->dir/shop.srt");
 
-        $this->assertSame([0, "shop.vtt -> out.srt\n", ""], $this->runBinary(["convert", "shop.vtt", "out.srt"]));
+        $this->assertSame([0, "shop.vtt -> out.srt\n", ""], $this->runBinary(["convert", "shop.vtt", "--to", "srt", "-o", "out.srt"]));
         $this->assertSame($shop->toString(Format::SubRip), $this->file("out.srt"));
     }
 
 
-    public function testConvertWritesSeveralInputsNextToTheirInputs(): void
+    public function testSeveralInputsNeedAnOutputDirectory(): void
     {
         mkdir("$this->dir/season1");
         rename("$this->dir/trip.srt", "$this->dir/season1/trip.srt");
         rename("$this->dir/shop.vtt", "$this->dir/season1/shop.vtt");
-        $shop = $this->file("season1/shop.vtt");
+        $shop  = $this->file("season1/shop.vtt");
+        $usage = "\nRun \"subtitle-toolbox help convert\" for the usage.\n";
 
         $this->assertSame(
-            [0, "season1/shop.vtt -> season1/shop.ass\nseason1/trip.srt -> season1/trip.ass\n2 files: 2 succeeded, 0 failed.\n", ""],
+            [2, "", "Error: 2 input files need --output-dir DIR. One input file goes to standard output or to -o FILE.$usage"],
             $this->runBinary(["convert", "season1/shop.vtt", "season1/trip.srt", "--to", "ass"])
         );
-        $this->assertSame(Subtitle::fromStringAutoDetectFormat($shop)->toString(Format::Ass), $this->file("season1/shop.ass"));
-        $this->assertSame($this->tripAs(Format::Ass), $this->file("season1/trip.ass"));
+        $this->assertSame(
+            [2, "", "Error: --output takes one input file, got 2. Pass --output-dir DIR for several files.$usage"],
+            $this->runBinary(["convert", "season1/*", "--to", "ass", "-o", "both.ass"])
+        );
+        $this->assertSame(
+            [2, "", "Error: The output season1/shop.vtt is a file that the command reads. Pass another output file or directory.$usage"],
+            $this->runBinary(["convert", "season1/trip.srt", "season1/shop.vtt", "--to", "vtt", "--output-dir", "season1"])
+        );
+        $this->assertSame(["shop.vtt", "trip.srt"], array_values(array_diff(scandir("$this->dir/season1"), [".", ".."])));
+        $this->assertFileDoesNotExist("$this->dir/both.ass");
 
         $this->assertSame(
-            [3, "season1/trip.srt -> season1/trip.vtt\n2 files: 1 succeeded, 1 failed.\n", "season1/shop.vtt: The output season1/shop.vtt is an input file. " .
-                "Pass --in-place to overwrite it, or -o or --output-dir to write another file.\n"],
-            $this->runBinary(["convert", "season1/shop.vtt", "season1/trip.srt", "--to", "vtt", "--keep-going"])
+            [0, "season1/shop.vtt -> out/shop.ass\nseason1/trip.srt -> out/trip.ass\n2 files: 2 succeeded, 0 failed.\n", ""],
+            $this->runBinary(["convert", "season1/shop.vtt", "season1/trip.srt", "--to", "ass", "--output-dir", "out"])
         );
-        $this->assertSame($shop, $this->file("season1/shop.vtt"));
-        $this->assertSame($this->tripAs(Format::WebVtt), $this->file("season1/trip.vtt"));
+        $this->assertSame(Subtitle::fromStringAutoDetectFormat($shop)->toString(Format::Ass), $this->file("out/shop.ass"));
+        $this->assertSame($this->tripAs(Format::Ass), $this->file("out/trip.ass"));
     }
 
 
-    public function testConvertTakesInPlace(): void
+    public function testInPlaceAndForceAreRemoved(): void
     {
-        copy("$this->dir/trip.srt", "$this->dir/second.srt");
-
-        $this->assertSame(
-            [0, "trip.srt -> trip.srt\nsecond.srt -> second.srt\n2 files: 2 succeeded, 0 failed.\n", ""],
-            $this->runBinary(["convert", "trip.srt", "second.srt", "--strip-tags", "--in-place"])
-        );
-        $this->assertSame($this->file("trip.srt"), $this->file("second.srt"));
-        $this->assertStringNotContainsString("<i>", $this->file("trip.srt"));
+        copy(self::FILES . "dual/station_de.srt", "$this->dir/de.srt");
+        foreach ([
+            ["convert", "trip.srt", "--to", "srt"],
+            ["retime", "trip.srt", "--shift", "1"],
+            ["sync", "trip.srt", "--reference", "de.srt"],
+            ["dual", "--primary", "trip.srt", "--secondary", "de.srt"],
+            ["hls", "trip.srt", "--output-dir", "out"],
+        ] as $call) {
+            foreach (["in-place", "force"] as $option) {
+                $this->assertSame([2, "", "Error: Unknown option --$option.\nRun \"subtitle-toolbox help $call[0]\" for the usage.\n"],
+                                  $this->runBinary([...$call, "--$option"]));
+                $this->assertDoesNotMatchRegularExpression("/--$option\\b/", $this->runBinary([$call[0], "--help", "all"])[1]);
+            }
+        }
+        $this->assertSame(file_get_contents(self::FIXTURES . "trip.srt"), $this->file("trip.srt"));
+        $this->assertDirectoryDoesNotExist("$this->dir/out");
     }
 
 
@@ -336,16 +383,14 @@ class BinaryTest extends TestCase
         copy("$this->dir/shop.vtt", "$this->dir/b/trip.txt");
         $usage = "\nRun \"subtitle-toolbox help convert\" for the usage.\n";
 
-        foreach ([[], ["--force"]] as $force) {
-            $this->assertSame(
-                [2, "", "Error: a/trip.srt and b/trip.vtt would both write out/trip.vtt. Pass them in two runs.$usage"],
-                $this->runBinary(["convert", "a/trip.srt", "b/trip.vtt", "--to", "vtt", "--output-dir", "out", ...$force])
-            );
-        }
-        // The content of b/trip.txt is WebVTT, so --to srt renames it to trip.srt.
+        $this->assertSame(
+            [2, "", "Error: a/trip.srt and b/trip.vtt would both write out/trip.vtt. Pass them in two runs.$usage"],
+            $this->runBinary(["convert", "a/trip.srt", "b/trip.vtt", "--to", "vtt", "--output-dir", "out"])
+        );
+        // .txt is no SubRip extension, so --to srt renames b/trip.txt to trip.srt.
         $this->assertSame(
             [2, "", "Error: trip.srt and b/trip.txt would both write out/trip.srt. Pass them in two runs.$usage"],
-            $this->runBinary(["convert", "trip.srt", "b/trip.txt", "--to", "srt", "--output-dir", "out", "--force"])
+            $this->runBinary(["convert", "trip.srt", "b/trip.txt", "--to", "srt", "--output-dir", "out"])
         );
         $this->assertDirectoryDoesNotExist("$this->dir/out");
 
@@ -371,9 +416,9 @@ class BinaryTest extends TestCase
         copy(self::FILES . "vobsub/text-pal.sub", "$this->dir/text.sub");
 
         foreach ([["-o", "text.sub"], ["--output-dir", "."]] as $output) {
-            [$code, , $stderr] = $this->runBinary(["convert", "text.idx", "--to", "microdvd", "--fps", "25", "--skip-image-cues", "--force", ...$output]);
-            $this->assertSame([3, "text.idx: The output " . ($output[0] === "-o" ? "" : "./") . "text.sub is an input file. Pass --in-place to " .
-                                  "overwrite it, or -o or --output-dir to write another file.\n"], [$code, $stderr]);
+            [$code, , $stderr] = $this->runBinary(["convert", "text.idx", "--to", "microdvd", "--fps", "25", "--skip-image-cues", ...$output]);
+            $this->assertSame([2, "Error: The output " . ($output[0] === "-o" ? "" : "./") . "text.sub is a file that the command reads. Pass another " .
+                                  "output file or directory.\nRun \"subtitle-toolbox help convert\" for the usage.\n"], [$code, $stderr]);
             $this->assertFileEquals(self::FILES . "vobsub/text-pal.sub", "$this->dir/text.sub");
         }
     }
@@ -411,7 +456,7 @@ class BinaryTest extends TestCase
         $this->assertSame(1, $this->runBinary(["validate", "trip.srt", "--preset", "bbc", "--fps", "25"])[0]);
 
         $this->assertSame([3, "", "missing.srt: The file does not exist.\n"], $this->runBinary(["convert", "missing.srt", "--to", "vtt"]));
-        $this->assertSame([3, "", "trip.srt: Cannot create the directory blocker/out.\n"],
+        $this->assertSame([3, "", "Error: Cannot create the directory blocker/out.\n"],
                           $this->runBinary(["convert", "trip.srt", "--to", "vtt", "-o", "blocker/out/trip.vtt"]));
         $this->assertSame(3, $this->runBinary(["validate", "trip.srt", "missing.srt", "--max-cpl", "20", "--keep-going"])[0]);
         $this->assertSame(3, $this->runBinary(["diff", "trip.srt", "missing.srt"])[0]);
@@ -455,7 +500,7 @@ class BinaryTest extends TestCase
             copy(self::FIXTURES . $name, "$this->dir/in/$name");
         }
 
-        [$code, $stdout, $stderr] = $this->runBinary(["convert", "in", "--to", "srt", "--output-dir", "out", "--force"]);
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "in", "--to", "srt", "--output-dir", "out"]);
 
         $this->assertSame([0, "in/shop.vtt -> out/shop.srt\nin/trip.srt -> out/trip.srt\n2 files: 2 succeeded, 0 failed.\n", ""], [$code, $stdout, $stderr]);
         $this->assertSame($this->tripAs(Format::SubRip), $this->file("out/trip.srt"));
@@ -540,7 +585,7 @@ class BinaryTest extends TestCase
         copy(__DIR__ . "/../files/forced/forced_signs_2398.itt", "$this->dir/signs.itt");
         $expected = Subtitle::fromStringAutoDetectFormat($this->file("signs.itt"))->withForcedCuesOnly()->toString(Format::SubRip);
 
-        [$code, $stdout, $stderr] = $this->runBinary(["convert", "signs.itt", "signs.srt", "--forced-only"]);
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "signs.itt", "--to", "srt", "-o", "signs.srt", "--forced-only"]);
 
         $this->assertSame([0, "signs.itt -> signs.srt\n", ""], [$code, $stdout, $stderr]);
         $this->assertSame($expected, $this->file("signs.srt"));
@@ -659,7 +704,7 @@ class BinaryTest extends TestCase
         $subtitle = Subtitle::fromStringAutoDetectFormat($this->file("radio.vtt"));
         $ranges   = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn*", "hell"], ProfanityMask::None, 0.1))->muteRanges;
 
-        [$code, $stdout, $stderr] = $this->runBinary(["convert", "radio.vtt", "out.vtt", "--mask-words", "words.txt", "--mask", "none",
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "radio.vtt", "--to", "vtt", "-o", "out.vtt", "--mask-words", "words.txt", "--mask", "none",
                                                       "--mute-edl", "radio.edl", "--mute-filter", "radio.af", "--mute-padding", "0.1"]);
         $this->assertSame([0, "radio.vtt -> out.vtt\nradio.vtt -> radio.edl\nradio.vtt -> radio.af\n", ""], [$code, $stdout, $stderr]);
         $this->assertSame($subtitle->toString(Format::WebVtt), $this->file("out.vtt"));
@@ -670,8 +715,10 @@ class BinaryTest extends TestCase
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "radio.vtt", "--to", "srt", "-o", "-", "--mask-words", "words.txt",
                                                       "--mute-edl", "-"]);
         $this->assertSame([2, ""], [$code, $stdout]);
-        $this->assertSame([2, "", "Error: radio.edl exists. Pass --force to overwrite it.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
-                          $this->runBinary(["convert", "radio.vtt", "--to", "srt", "--mask-words", "words.txt", "--mute-edl", "radio.edl"]));
+        $this->assertSame([2, "", "Error: The --mute-edl file radio.edl exists. The tool never overwrites a file. Remove it, or pass another output " .
+                                  "file or directory.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+                          $this->runBinary(["convert", "radio.vtt", "--to", "srt", "-o", "new.srt", "--mask-words", "words.txt", "--mute-edl", "radio.edl"]));
+        $this->assertFileDoesNotExist("$this->dir/new.srt");
         $this->assertSame(2, $this->runBinary(["convert", "radio.vtt", "--to", "srt", "--mute-edl", "new.edl"])[0]);
         $this->assertSame(2, $this->runBinary(["convert", "radio.vtt", "trip.srt", "--to", "vtt", "--output-dir", "out",
                                                "--mask-words", "words.txt", "--mute-edl", "new.edl"])[0]);
@@ -690,10 +737,10 @@ class BinaryTest extends TestCase
                           $run("-o", "out.srt", "--mute-edl", "radio.mute", "--mute-filter", "radio.mute"));
         $this->assertSame([2, "", "Error: The --mute-edl file out.srt is also the output of radio.vtt.$usage"],
                           $run("-o", "out.srt", "--mute-edl", "out.srt"));
-        $this->assertSame([2, "", "Error: The --mute-edl file radio.vtt would overwrite a file that the command reads.$usage"],
-                          $run("-o", "out.srt", "--mute-edl", "radio.vtt", "--force"));
-        $this->assertSame([2, "", "Error: The --mute-filter file ./words.txt would overwrite a file that the command reads.$usage"],
-                          $run("-o", "out.srt", "--mute-filter", "./words.txt", "--force"));
+        $this->assertSame([2, "", "Error: The --mute-edl file radio.vtt is a file that the command reads. Pass another output file or directory.$usage"],
+                          $run("-o", "out.srt", "--mute-edl", "radio.vtt"));
+        $this->assertSame([2, "", "Error: The --mute-filter file ./words.txt is a file that the command reads. Pass another output file or directory.$usage"],
+                          $run("-o", "out.srt", "--mute-filter", "./words.txt"));
 
         $this->assertFileDoesNotExist("$this->dir/radio.mute");
         $this->assertFileDoesNotExist("$this->dir/out.srt");
@@ -710,7 +757,7 @@ class BinaryTest extends TestCase
         $subtitle->extendShortCues(3);
         $ranges   = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn*", "hell"]))->muteRanges;
 
-        [$code, , $stderr] = $this->runBinary(["convert", "keys.srt", "out.srt", "--shift", "100", "--timing-min-duration", "3",
+        [$code, , $stderr] = $this->runBinary(["convert", "keys.srt", "--to", "srt", "-o", "out.srt", "--shift", "100", "--timing-min-duration", "3",
                                                "--mask-words", "words.txt", "--mute-edl", "keys.edl", "--mute-filter", "keys.af"]);
         $this->assertSame([0, ""], [$code, $stderr]);
         $this->assertSame("103.400 105.500 1\n108.000 109.100 1\n111.500 116.200 1\n", $this->file("keys.edl"));
@@ -725,7 +772,7 @@ class BinaryTest extends TestCase
         copy(self::FILES . "whisper/real/openai_whisper_word_timestamps.json", "$this->dir/song.json");
         copy(self::FILES . "lrc/real/handwritten-enhanced.lrc", "$this->dir/song.lrc");
 
-        $this->assertSame([0, "song.json -> word.srt\n", ""], $this->runBinary(["convert", "song.json", "word.srt", "--karaoke"]));
+        $this->assertSame([0, "song.json -> word.srt\n", ""], $this->runBinary(["convert", "song.json", "--to", "srt", "-o", "word.srt", "--karaoke"]));
         $this->assertFileEquals(self::FILES . "karaoke/whisper_word.srt", "$this->dir/word.srt");
         $expected = Subtitle::loadAutoDetectFormat("$this->dir/song.lrc");
         WordHighlight::apply($expected, new WordHighlightOptions(style: 'font color="#ffff00"'));
@@ -763,7 +810,7 @@ class BinaryTest extends TestCase
 
         $this->assertSame([3, "", "trip.srt: MicroDVD output needs the frame rate of the video. Pass --fps or --output-fps.\n"],
                           $this->runBinary(["convert", "trip.srt", "--to", "microdvd", "-o", "-"]));
-        $this->assertSame(0, $this->runBinary(["convert", "trip.srt", "trip.sub", "--fps", "23.976"])[0]);
+        $this->assertSame(0, $this->runBinary(["convert", "trip.srt", "--to", "microdvd", "-o", "trip.sub", "--fps", "23.976"])[0]);
         $this->assertStringStartsWith("{24}{72}", $this->file("trip.sub"));
     }
 
@@ -791,39 +838,130 @@ class BinaryTest extends TestCase
     }
 
 
-    public function testRetimeNeverOverwritesAnInputWithoutInPlace(): void
+    /**
+     * @return array<string, array{list<string>, string}> the command with its options, and the output extension of trip.srt
+     */
+    public static function writeCommands(): array
     {
-        copy("$this->dir/trip.srt", "$this->dir/second.srt");
-        $trip = $this->file("trip.srt");
-
-        $this->assertSame(
-            [3, "2 files: 0 succeeded, 1 failed, 1 skipped.\n", "trip.srt: The output trip.srt is an input file. Pass --in-place to overwrite it, " .
-                "or -o or --output-dir to write another file.\nStopped at the first failure. Pass --keep-going to process the other files.\n"],
-            $this->runBinary(["retime", "trip.srt", "second.srt", "--shift", "1"])
-        );
-        $this->assertSame($trip, $this->file("trip.srt"));
-        $this->assertSame($trip, $this->file("second.srt"));
-
-        $this->assertSame(
-            [0, "trip.srt -> trip.vtt\nsecond.srt -> second.vtt\n2 files: 2 succeeded, 0 failed.\n", ""],
-            $this->runBinary(["retime", "trip.srt", "second.srt", "--shift", "1", "--to", "vtt"])
-        );
-        $this->assertStringContainsString("00:00:02.000 --> 00:00:04.000", $this->file("trip.vtt"));
-        $this->assertSame($this->file("trip.vtt"), $this->file("second.vtt"));
-        $this->assertSame([0, Subtitle::fromStringAutoDetectFormat($trip)->shift(1)->toString(Format::SubRip), ""],
-                          $this->runBinary(["retime", "trip.srt", "--shift", "1"]));
+        return [
+            "convert" => [["convert", "--to", "vtt"], "vtt"],
+            "retime"  => [["retime", "--shift", "1"], "srt"],
+            "sync"    => [["sync", "--reference", "ref.srt"], "srt"],
+        ];
     }
 
 
-    public function testInPlaceRetimesSeveralFiles(): void
+    /**
+     * Runs $call[0] with $inputs, then the options of $call, then $options.
+     *
+     * @param list<string> $call
+     * @param list<string> $inputs
+     *
+     * @return array{int, string, string}
+     */
+    private function runWrite(array $call, array $inputs, string ...$options): array
     {
-        $this->assertSame(2, $this->runBinary(["retime", "trip.srt", "shop.vtt", "--shift", "1", "-o", "out.srt"])[0]);
+        return $this->runBinary([$call[0], ...$inputs, ...array_slice($call, 1), ...$options]);
+    }
 
-        [$code, $stdout, $stderr] = $this->runBinary(["retime", "trip.srt", "shop.vtt", "--shift", "1", "--in-place"]);
 
-        $this->assertSame([0, "trip.srt -> trip.srt\nshop.vtt -> shop.vtt\n2 files: 2 succeeded, 0 failed.\n", ""], [$code, $stdout, $stderr]);
-        $this->assertStringContainsString("00:00:11.000 --> 00:00:13.000", $this->file("shop.vtt"));
-        $this->assertStringContainsString("00:00:02,000 --> 00:00:04,000", $this->file("trip.srt"));
+    /**
+     * Returns each file below the temporary directory with the hash of its content, or "dir" for a directory.
+     *
+     * @return array<string, string>
+     */
+    private function snapshot(): array
+    {
+        $files = [];
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->dir, \FilesystemIterator::SKIP_DOTS),
+                                                \RecursiveIteratorIterator::SELF_FIRST) as $path => $info) {
+            $files[substr($path, strlen($this->dir))] = $info->isDir() ? "dir" : md5_file($path);
+        }
+        ksort($files);
+
+        return $files;
+    }
+
+
+    /**
+     * @param list<string> $call
+     */
+    #[DataProvider("writeCommands")]
+    public function testOneInputGoesToStandardOutputOrToTheOutputFile(array $call, string $extension): void
+    {
+        copy(self::FILES . "sync/own_reference_en.srt", "$this->dir/ref.srt");
+        $before = $this->snapshot();
+
+        [$code, $expected] = $this->runWrite($call, ["trip.srt"]);
+        $this->assertSame(0, $code);
+        $this->assertStringContainsString("The train leaves at noon.", $expected);
+        $this->assertSame([0, $expected], array_slice($this->runWrite($call, ["trip.srt"], "-o", "-"), 0, 2));
+        $this->assertSame([0, $expected], array_slice($this->runBinary([$call[0], "-", ...array_slice($call, 1)], $this->file("trip.srt")), 0, 2));
+        $this->assertSame($before, $this->snapshot());
+
+        $this->assertSame([0, "trip.srt -> one.$extension\n"], array_slice($this->runWrite($call, ["trip.srt"], "-o", "one.$extension"), 0, 2));
+        $this->assertSame($expected, $this->file("one.$extension"));
+        $this->assertSame(0, $this->runBinary([$call[0], "-", ...array_slice($call, 1), "-o", "new/stdin.$extension"], $this->file("trip.srt"))[0]);
+        $this->assertSame($expected, $this->file("new/stdin.$extension"));
+    }
+
+
+    /**
+     * @param list<string> $call
+     */
+    #[DataProvider("writeCommands")]
+    public function testSeveralInputsGoIntoTheOutputDirectory(array $call, string $extension): void
+    {
+        copy(self::FILES . "sync/own_reference_en.srt", "$this->dir/ref.srt");
+        $trip = $this->runWrite($call, ["trip.srt"])[1];
+        $shop = $this->runWrite($call, ["shop.vtt"])[1];
+
+        $this->assertSame(
+            [0, "trip.srt -> out/trip.$extension\nshop.vtt -> out/shop.vtt\n2 files: 2 succeeded, 0 failed.\n"],
+            array_slice($this->runWrite($call, ["trip.srt", "shop.vtt"], "--output-dir", "out"), 0, 2)
+        );
+        $this->assertSame($trip, $this->file("out/trip.$extension"));
+        $this->assertSame($shop, $this->file("out/shop.vtt"));
+        $this->assertCount(2, glob("$this->dir/out/*"));
+    }
+
+
+    /**
+     * @param list<string> $call
+     */
+    #[DataProvider("writeCommands")]
+    public function testAnOutputThatCannotBeCreatedFailsBeforeAnyWrite(array $call, string $extension): void
+    {
+        copy(self::FILES . "sync/own_reference_en.srt", "$this->dir/ref.srt");
+        mkdir("$this->dir/a");
+        mkdir("$this->dir/b");
+        mkdir("$this->dir/taken");
+        copy("$this->dir/trip.srt", "$this->dir/a/trip.srt");
+        copy("$this->dir/trip.srt", "$this->dir/b/trip.srt");
+        file_put_contents("$this->dir/taken.$extension", "old");
+        file_put_contents("$this->dir/taken/shop.vtt", "old");
+        $before = $this->snapshot();
+        $usage  = "\nRun \"subtitle-toolbox help $call[0]\" for the usage.\n";
+        $exists = "exists. The tool never overwrites a file. Remove it, or pass another output file or directory.$usage";
+        $reads  = "is a file that the command reads. Pass another output file or directory.$usage";
+
+        $cases = [
+            "Error: 2 input files need --output-dir DIR. One input file goes to standard output or to -o FILE.$usage" => [["trip.srt", "shop.vtt"]],
+            "Error: --output takes one input file, got 2. Pass --output-dir DIR for several files.$usage" => [["trip.srt", "shop.vtt"], "-o", "x.$extension"],
+            "Error: Standard input has no file name for --output-dir. Pass -o FILE.$usage"                 => [["-"], "--output-dir", "out"],
+            "Error: The output taken.$extension $exists"                                                   => [["trip.srt"], "-o", "taken.$extension"],
+            "Error: The output taken/shop.vtt $exists"                                                     => [["trip.srt", "shop.vtt"], "--output-dir", "taken"],
+            "Error: a/trip.srt and b/trip.srt would both write out/trip.$extension. Pass them in two runs.$usage" => [["a/trip.srt", "b/trip.srt"], "--output-dir", "out"],
+            "Error: The output shop.vtt $reads"                                                            => [["shop.vtt"], "-o", "shop.vtt"],
+            "Error: The output ./shop.vtt $reads"                                                          => [["shop.vtt"], "--output-dir", "."],
+        ];
+        if ($call[0] === "sync") {
+            $cases["Error: The output ref.srt $reads"] = [["trip.srt"], "-o", "ref.srt"];
+        }
+        foreach ($cases as $error => $case) {
+            $this->assertSame([2, "", $error], $this->runWrite($call, $case[0], ...array_slice($case, 1)), $error);
+            $this->assertSame($before, $this->snapshot(), $error);
+        }
     }
 
 
@@ -998,7 +1136,7 @@ class BinaryTest extends TestCase
         copy(self::FILES . "resegmenting/own_whisper_long_segments.json", "$this->dir/lecture.json");
         $withWords = fn (): Subtitle => (new WhisperJsonParser())->parse($this->file("lecture.json"), new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true)));
 
-        [$code, $stdout, $stderr] = $this->runBinary(["convert", "lecture.json", "--structure-resegment", "-o", "lecture.srt"]);
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "lecture.json", "--structure-resegment", "--to", "srt", "-o", "lecture.srt"]);
         $this->assertSame([0, "lecture.json -> lecture.srt\n", ""], [$code, $stdout, $stderr]);
         $this->assertFileEquals(self::FILES . "resegmenting/own_whisper_long_segments_resegmented.srt", "$this->dir/lecture.srt");
 
@@ -1280,7 +1418,7 @@ class BinaryTest extends TestCase
         [$code, $stdout] = $this->runBinary(["convert", "-", "--to", "vtt", "--track", "5"], $this->file("movie.mkv"));
         $this->assertSame([0, $mkv->extract(5)->toString(Format::WebVtt)], [$code, $stdout]);
 
-        $this->assertSame([0, "one.webm -> one.vtt\n", ""], $this->runBinary(["convert", "one.webm", "one.vtt"]));
+        $this->assertSame([0, "one.webm -> one.vtt\n", ""], $this->runBinary(["convert", "one.webm", "--to", "vtt", "-o", "one.vtt"]));
         $this->assertSame(MatroskaReader::open(self::FILES . "mkv/seek_head.mkv")->extract(2)->toString(Format::WebVtt),
                           $this->file("one.vtt"));
 
@@ -1320,6 +1458,16 @@ class BinaryTest extends TestCase
             "from2"            => [["diff", "trip.srt", "call.json"], "",
                                    "trip.srt: call.json: " . sprintf($format, "Pass --from2 FORMAT. Chapters and cloud speech-to-text JSON " .
                                                                               "always need it, for example --from2 deepgram.")],
+            "primary track"    => [["dual", "--primary", "movie.mkv", "--secondary", "trip.srt"], "",
+                                   "movie.mkv: " . sprintf($tracks, "Pass --primary-track N with one of them:")],
+            "secondary track"  => [["dual", "--primary", "trip.srt", "--secondary", "movie.mkv"], "",
+                                   "trip.srt: movie.mkv: " . sprintf($tracks, "Pass --secondary-track N with one of them:")],
+            "primary from"     => [["dual", "--primary", "call.json", "--secondary", "trip.srt"], "",
+                                   "call.json: " . sprintf($format, "Pass --primary-from FORMAT. Chapters and cloud speech-to-text JSON " .
+                                                                    "always need it, for example --primary-from deepgram.")],
+            "secondary from"   => [["dual", "--primary", "trip.srt", "--secondary", "call.json"], "",
+                                   "trip.srt: call.json: " . sprintf($format, "Pass --secondary-from FORMAT. Chapters and cloud speech-to-text " .
+                                                                              "JSON always need it, for example --secondary-from deepgram.")],
             "reference format" => [["sync", "trip.srt", "--reference", "call.json"], "",
                                    "trip.srt: call.json: " . sprintf($format, "Write it to a subtitle file with convert --from FORMAT first. " .
                                                                               "Chapters and cloud speech-to-text JSON always need --from, " .
@@ -1445,7 +1593,7 @@ class BinaryTest extends TestCase
         copy(__DIR__ . "/../files/vobsub/text-pal.sub", "$this->dir/text.sub");
 
         $this->assertSame([0, "text.sup -> text.srt\n", "text.sup: OCR 12/12\n"],
-                          $this->runBinary(["convert", "text.sup", "text.srt", "--ocr", "--ocr-engine", "glyph"]));
+                          $this->runBinary(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr", "--ocr-engine", "glyph"]));
         $this->assertFileEquals(__DIR__ . "/../files/pgs/text_1080p.ocr.srt", "$this->dir/text.srt");
 
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "text.idx", "--to", "srt", "--output", "-", "--ocr", "--ocr-engine", "glyph"]);
@@ -1476,9 +1624,9 @@ class BinaryTest extends TestCase
         file_put_contents("$this->dir/broken.nocr", "no database");
 
         $this->assertSame([2, "", "Error: Pass --ocr with --ocr-database.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
-                          $this->runBinary(["convert", "text.sup", "text.srt", "--ocr-database", "broken.nocr"]));
+                          $this->runBinary(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr-database", "broken.nocr"]));
         $this->assertSame([3, "", "Error: Cannot read the glyph database - the data is not gzip-compressed!\n"],
-                          $this->runBinary(["convert", "text.sup", "text.srt", "--ocr", "--ocr-database", "broken.nocr"]));
+                          $this->runBinary(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr", "--ocr-database", "broken.nocr"]));
         $this->assertFileDoesNotExist("$this->dir/text.srt");
     }
 
@@ -1530,11 +1678,11 @@ class BinaryTest extends TestCase
         copy(self::FILES . "pgs/text_1080p.sup", "$this->dir/text.sup");
         copy(self::FILES . "pgs/text_1080p.sup", "$this->dir/again.sup");
 
-        $this->assertSame([0, "text.sup -> text.srt\nagain.sup -> again.srt\n2 files: 2 succeeded, 0 failed.\n",
+        $this->assertSame([0, "text.sup -> out/text.srt\nagain.sup -> out/again.srt\n2 files: 2 succeeded, 0 failed.\n",
                            "Warning: the glyph engine ignores --ocr-language.\ntext.sup: OCR 12/12\nagain.sup: OCR 12/12\n"],
-                          $this->runWithFakeTesseract(["convert", "text.sup", "again.sup", "--to", "srt", "--ocr",
+                          $this->runWithFakeTesseract(["convert", "text.sup", "again.sup", "--to", "srt", "--output-dir", "out", "--ocr",
                                                        "--ocr-engine", "glyph", "--ocr-language", "deu"]));
-        $this->assertFileEquals(self::FILES . "pgs/text_1080p.ocr.srt", "$this->dir/text.srt");
+        $this->assertFileEquals(self::FILES . "pgs/text_1080p.ocr.srt", "$this->dir/out/text.srt");
     }
 
 
@@ -1544,21 +1692,21 @@ class BinaryTest extends TestCase
         $usage = "Run \"subtitle-toolbox help convert\" for the usage.\n";
 
         $this->assertSame([2, "", "Error: Cannot choose the OCR engine \"easyocr\" - the engines are: tesseract, glyph!\n$usage"],
-                          $this->runBinary(["convert", "text.sup", "text.srt", "--ocr", "--ocr-engine", "easyocr"]));
+                          $this->runBinary(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr", "--ocr-engine", "easyocr"]));
         $this->assertSame([2, "", "Error: Pass --ocr-engine glyph with --ocr-database.\n$usage"],
-                          $this->runBinary(["convert", "text.sup", "text.srt", "--ocr", "--ocr-engine", "tesseract",
+                          $this->runBinary(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr", "--ocr-engine", "tesseract",
                                             "--ocr-database", "my.nocr"]));
         $this->assertSame([2, "", "Error: Pass --ocr with --ocr-engine.\n$usage"],
-                          $this->runBinary(["convert", "text.sup", "text.srt", "--ocr-engine", "glyph"]));
+                          $this->runBinary(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr-engine", "glyph"]));
         $this->assertSame([2, "", "Error: Pass --ocr with --ocr-language.\n$usage"],
-                          $this->runBinary(["convert", "text.sup", "text.srt", "--ocr-language", "deu"]));
+                          $this->runBinary(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr-language", "deu"]));
         $this->assertSame([2, "", "Error: Cannot run OCR with Tesseract - the program \"tesseract\" is missing! " .
                                   TesseractOcrEngine::INSTALL_HINT . "\n$usage"],
-                          $this->runWithPath($this->dir, ["convert", "text.sup", "text.srt", "--ocr", "--ocr-engine", "tesseract"]));
+                          $this->runWithPath($this->dir, ["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr", "--ocr-engine", "tesseract"]));
         $this->assertSame([2, "", "Error: Cannot run OCR with Tesseract in the language \"fra\" - the language data of " .
                                   "fra is missing! Install it, for example with apt install tesseract-ocr-fra. The " .
                                   "installed languages are: deu, eng, osd.\n$usage"],
-                          $this->runWithFakeTesseract(["convert", "text.sup", "text.srt", "--ocr", "--ocr-language", "fra"]));
+                          $this->runWithFakeTesseract(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr", "--ocr-language", "fra"]));
         $this->assertFileDoesNotExist("$this->dir/text.srt");
     }
 
@@ -1593,7 +1741,7 @@ class BinaryTest extends TestCase
     {
         copy(__DIR__ . "/../files/vobsub/text-pal.idx", "$this->dir/text.idx");
         copy(__DIR__ . "/../files/vobsub/text-pal.sub", "$this->dir/text.sub");
-        $this->assertSame(0, $this->runBinary(["convert", "text.idx", "text.json", "--ocr"])[0]);
+        $this->assertSame(0, $this->runBinary(["convert", "text.idx", "--to", "json", "-o", "text.json", "--ocr"])[0]);
 
         [$code, $stdout] = $this->runBinary(["info", "text.idx"]);
         $this->assertSame(0, $code);
@@ -1772,31 +1920,64 @@ class BinaryTest extends TestCase
         copy(self::FILES . "hls/node-webvtt-subs1.vtt", "$this->dir/talk.vtt");
 
         $this->assertSame([0, "", ""], $this->runBinary(["diff", "trip.srt", "trip.srt", "--keep-going"]));
-        $this->assertSame(0, $this->runBinary(["dual", "trip.srt", "shop.vtt", "--keep-going"])[0]);
+        $this->assertSame(0, $this->runBinary(["dual", "--primary", "trip.srt", "--secondary", "shop.vtt", "--keep-going"])[0]);
         $this->assertSame(0, $this->runBinary(["hls", "talk.vtt", "--output-dir", "out", "--keep-going"])[0]);
     }
 
 
-    public function testDualReadsTheSecondaryFileWithTrack2AndWritesInPlace(): void
+    public function testDualTakesTheFormatAndTrackOfEachFileByName(): void
+    {
+        copy(self::FILES . "dual/station_en.srt", "$this->dir/en.srt");
+        copy(self::FILES . "mkv/text_tracks.mkv", "$this->dir/movie.mkv");
+        $english = Subtitle::fromStringAutoDetectFormat($this->file("en.srt"));
+        $german  = MatroskaReader::open(self::FILES . "mkv/text_tracks.mkv")->extract(3);
+        $frames  = Subtitle::load(self::FIXTURES . "frames.sub", Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(25)));
+
+        $this->assertSame([0, DualSubtitle::fromPair($english, $german, new DualSubtitleOptions())->toString(Format::SubRip), ""],
+                          $this->runBinary(["dual", "--primary", "en.srt", "--secondary", "movie.mkv", "--secondary-track", "3"]));
+        $this->assertSame([0, DualSubtitle::fromPair($german, $english, new DualSubtitleOptions())->toString(Format::SubRip), ""],
+                          $this->runBinary(["dual", "--primary", "movie.mkv", "--primary-track", "3", "--secondary", "en.srt"]));
+        $this->assertSame([0, DualSubtitle::fromPair($frames, $english, new DualSubtitleOptions())->toString(Format::MicroDvd), ""],
+                          $this->runBinary(["dual", "--primary", "frames.sub", "--primary-from", "microdvd", "--secondary", "en.srt", "--input-fps", "25"]));
+        $this->assertSame([3, ""], array_slice($this->runBinary(["dual", "--primary", "en.srt", "--secondary", "frames.sub", "--secondary-from", "subviewer"]), 0, 2));
+
+        foreach (["from" => "srt", "track" => "3", "from2" => "srt", "track2" => "3"] as $option => $value) {
+            $this->assertSame([2, "", "Error: Unknown option --$option.\nRun \"subtitle-toolbox help dual\" for the usage.\n"],
+                              $this->runBinary(["dual", "--primary", "en.srt", "--secondary", "movie.mkv", "--$option", $value]));
+        }
+        preg_match_all('/^  --((?:primary|secondary)(?:-from|-track)?) /m', $this->runBinary(["dual", "--help"])[1], $matches);
+        $this->assertSame(["primary", "secondary", "primary-from", "primary-track", "secondary-from", "secondary-track"], $matches[1]);
+    }
+
+
+    public function testDualTakesThePrimaryAndTheSecondaryFileByName(): void
     {
         copy(self::FILES . "dual/station_en.srt", "$this->dir/en.srt");
         copy(self::FILES . "dual/station_de.srt", "$this->dir/de.srt");
-        copy(self::FILES . "mkv/text_tracks.mkv", "$this->dir/movie.mkv");
-        $english = Subtitle::fromStringAutoDetectFormat($this->file("en.srt"));
-        $german  = $this->file("de.srt");
+        file_put_contents("$this->dir/taken.srt", "old");
+        $usage = "\nRun \"subtitle-toolbox help dual\" for the usage.\n";
+        $pair  = ["--primary", "en.srt", "--secondary", "de.srt"];
+        $stack = file_get_contents(self::FILES . "dual/station_stack.srt");
+        $before = $this->snapshot();
 
-        $merged = DualSubtitle::fromPair($english, MatroskaReader::open(self::FILES . "mkv/text_tracks.mkv")->extract(3), new DualSubtitleOptions());
-        $this->assertSame([0, $merged->toString(Format::SubRip), ""], $this->runBinary(["dual", "en.srt", "movie.mkv", "--track2", "3"]));
+        foreach ([
+            "Error: dual takes no file arguments. Pass --primary FILE and --secondary FILE." => ["en.srt", "de.srt"],
+            "Error: dual takes no file arguments. Pass --primary FILE and --secondary FILE. " => ["en.srt", "--secondary", "de.srt"],
+            "Error: Pass --primary FILE and --secondary FILE."                                => ["--primary", "en.srt"],
+            "Error: --primary takes one file, got 2."                                         => ["--primary", "??.srt", "--secondary", "de.srt"],
+            "Error: The output de.srt is a file that the command reads. Pass another output file or directory." => [...$pair, "-o", "de.srt"],
+            "Error: The output en.srt is a file that the command reads. Pass another output file or directory." => [...$pair, "-o", "en.srt"],
+            "Error: The output ./en.srt is a file that the command reads. Pass another output file or directory." => [...$pair, "--output-dir", "."],
+            "Error: The output taken.srt exists. The tool never overwrites a file. Remove it, or pass another output file or directory." => [...$pair, "-o", "taken.srt"],
+        ] as $error => $options) {
+            $this->assertSame([2, "", rtrim($error) . $usage], $this->runBinary(["dual", ...$options, "--secondary-style", "i"]), $error);
+            $this->assertSame($before, $this->snapshot(), $error);
+        }
 
-        [, $stack] = $this->runBinary(["dual", "en.srt", "de.srt"]);
-        $this->assertSame([0, "en.srt -> en.srt\n", ""], $this->runBinary(["dual", "en.srt", "de.srt", "--in-place"]));
-        $this->assertSame($stack, $this->file("en.srt"));
-
-        $this->assertSame(
-            [3, "", "en.srt: The output de.srt is an input file. Pass --in-place to overwrite it, or -o or --output-dir to write another file.\n"],
-            $this->runBinary(["dual", "en.srt", "de.srt", "-o", "de.srt", "--force"])
-        );
-        $this->assertSame($german, $this->file("de.srt"));
+        $this->assertSame([0, $stack, ""], $this->runBinary(["dual", ...$pair, "--secondary-style", "i"]));
+        $this->assertSame([0, $stack, ""], $this->runBinary(["dual", "--primary", "-", "--secondary", "de.srt", "--secondary-style", "i"], $this->file("en.srt")));
+        $this->assertSame([0, "en.srt -> out/en.srt\n", ""], $this->runBinary(["dual", ...$pair, "--secondary-style", "i", "--output-dir", "out"]));
+        $this->assertSame($stack, $this->file("out/en.srt"));
     }
 
 
@@ -1806,23 +1987,23 @@ class BinaryTest extends TestCase
         copy(self::FILES . "dual/station_de.srt", "$this->dir/de.srt");
 
         $this->assertSame([0, file_get_contents(self::FILES . "dual/station_stack.srt"), ""],
-                          $this->runBinary(["dual", "en.srt", "de.srt", "--secondary-style", "i"]));
+                          $this->runBinary(["dual", "--primary", "en.srt", "--secondary", "de.srt", "--secondary-style", "i"]));
         $this->assertSame([0, "en.srt -> both.vtt\n", ""],
-                          $this->runBinary(["dual", "en.srt", "de.srt", "--secondary-style", "i", "-o", "both.vtt"]));
+                          $this->runBinary(["dual", "--primary", "en.srt", "--secondary", "de.srt", "--secondary-style", "i", "--to", "vtt", "-o", "both.vtt"]));
         $this->assertFileEquals(self::FILES . "dual/station_stack.vtt", "$this->dir/both.vtt");
         $this->assertSame(
             [0, file_get_contents(self::FILES . "dual/station_top_bottom.ass"), ""],
-            $this->runBinary(["dual", "en.srt", "de.srt", "--mode", "top-bottom", "--secondary-style", 'font color="#ffff00"', "--to", "ass"])
+            $this->runBinary(["dual", "--primary", "en.srt", "--secondary", "de.srt", "--mode", "top-bottom", "--secondary-style", 'font color="#ffff00"', "--to", "ass"])
         );
 
         $merged = DualSubtitle::fromPair(Subtitle::fromStringAutoDetectFormat($this->file("en.srt")), Subtitle::fromStringAutoDetectFormat($this->file("de.srt")),
                                       new DualSubtitleOptions(mode: DualSubtitleMode::TopBottom, snapTolerance: 0.5, secondaryAlignment: 7));
         $this->assertSame([0, $merged->toString(Format::SubRip), ""], $this->runBinary([
-            "dual", "en.srt", "de.srt", "--mode", "top-bottom", "--snap-tolerance", "0.5", "--secondary-alignment", "7",
+            "dual", "--primary", "en.srt", "--secondary", "de.srt", "--mode", "top-bottom", "--snap-tolerance", "0.5", "--secondary-alignment", "7",
         ]));
 
         foreach ([[], ["--mode", "side"], ["--secondary-alignment", "0"], ["--secondary-style", "em"], ["--snap-tolerance", "-1"]] as $options) {
-            $this->assertSame(2, $this->runBinary(["dual", "en.srt", ...($options === [] ? [] : ["de.srt"]), ...$options])[0], implode(" ", $options));
+            $this->assertSame(2, $this->runBinary(["dual", "--primary", "en.srt", ...($options === [] ? [] : ["--secondary", "de.srt"]), ...$options])[0], implode(" ", $options));
         }
     }
 
@@ -1845,12 +2026,34 @@ class BinaryTest extends TestCase
         }
         $this->assertCount(16, glob("$this->dir/out/*"));
 
-        $this->assertSame([3, "", "talk.vtt: out/part000.vtt exists. Pass --force to overwrite it.\n"],
-                          $this->runBinary(["hls", "talk.vtt", "--output-dir", "out", "--pattern", "part%03d.vtt"]));
-        $this->assertSame(0, $this->runBinary(["hls", "talk.vtt", "--output-dir", "out", "--pattern", "part%03d.vtt", "--force"])[0]);
-        $this->assertSame(2, $this->runBinary(["hls", "talk.vtt"])[0]);
         $this->assertSame(2, $this->runBinary(["hls", "talk.vtt", "--output-dir", "out", "--pattern", "part.vtt"])[0]);
-        $this->assertSame(2, $this->runBinary(["hls", "talk.vtt", "trip.srt", "--output-dir", "out"])[0]);
+        $this->assertCount(16, glob("$this->dir/out/*"));
+
+        $this->assertSame([0, "stdin -> stdin/subs.m3u8, 15 segments\n", ""],
+                          $this->runBinary(["hls", "-", "--output-dir", "stdin", "--segment", "10", "--media-duration", "150"], $this->file("talk.vtt")));
+        $this->assertCount(16, glob("$this->dir/stdin/*"));
+    }
+
+
+    public function testHlsFailsBeforeAnyWriteWhenAPlaylistOrSegmentExists(): void
+    {
+        copy(self::FILES . "hls/node-webvtt-subs1.vtt", "$this->dir/talk.vtt");
+        mkdir("$this->dir/out");
+        file_put_contents("$this->dir/out/sub99.vtt", "old");
+        file_put_contents("$this->dir/out/index.m3u8", "old");
+        $before = $this->snapshot();
+        $usage  = "\nRun \"subtitle-toolbox help hls\" for the usage.\n";
+        $exists = "exists. The tool never overwrites a file. Remove the playlist and the segments, or pass another --output-dir.$usage";
+
+        foreach ([
+            "Error: Pass --output-dir DIR.$usage"                       => ["talk.vtt"],
+            "Error: The hls command takes one input file, got 2.$usage" => ["talk.vtt", "trip.srt", "--output-dir", "new"],
+            "Error: out/sub99.vtt $exists"                              => ["talk.vtt", "--output-dir", "out"],
+            "Error: out/index.m3u8 $exists"                             => ["talk.vtt", "--output-dir", "out/", "--playlist", "index.m3u8", "--pattern", "p%d.vtt"],
+        ] as $error => $arguments) {
+            $this->assertSame([2, "", $error], $this->runBinary(["hls", ...$arguments]), $error);
+            $this->assertSame($before, $this->snapshot(), $error);
+        }
     }
 
 
@@ -1869,7 +2072,7 @@ class BinaryTest extends TestCase
 
         foreach (["out/sub1.vtt", "out/subs.m3u8"] as $input) {
             $this->assertSame([2, "", "Error: The output would overwrite the input $input. Pass another --output-dir, --playlist or --pattern.$usage"],
-                              $this->runBinary(["hls", $input, "--output-dir", "out/", "--force"]));
+                              $this->runBinary(["hls", $input, "--output-dir", "out/"]));
             $this->assertSame($this->file("trip.srt"), $this->file($input));
         }
         $this->assertCount(2, glob("$this->dir/out/*"));

@@ -174,7 +174,8 @@ final class Application
             Commands:
             $commands
             Run "$name help <command>" or "$name <command> --help" for the options of a command.
-            A file argument of - reads standard input. --output - writes standard output.
+            A file argument of - reads standard input. One input goes to standard output, or to -o FILE.
+            Several inputs need --output-dir DIR. The tool never overwrites a file.
 
             Exit codes: 0 success, 1 a file broke a validation rule or differs in diff, 2 invalid arguments,
             3 a file could not be read or written.

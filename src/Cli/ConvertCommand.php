@@ -36,17 +36,15 @@ final class ConvertCommand extends WriteCommand
 
     protected function usageLines(): array
     {
-        return ["<input> <output> [options]", "<input>... [--to FORMAT] [options]"];
+        return ["<input> --to FORMAT [-o FILE] [options]", "<input>... --to FORMAT --output-dir DIR [options]"];
     }
 
 
     protected function details(): string
     {
-        return "With two arguments and no --to, --output, --output-dir or --in-place, the second argument is the output\n" .
-               "file, and its extension sets the format. Without --to, the output keeps the input format. Without --output,\n" .
-               "--output-dir or --in-place, one input file goes to standard output, and several go next to their input\n" .
-               "files, with the extension of the output format. An input argument can be a file, a directory, a glob such\n" .
-               "as \"season1/*.srt\", or -.";
+        return "--to sets the output format, also when it stays the same. One input file goes to standard output, or to\n" .
+               "the file of -o. Several input files need --output-dir. An input argument can be a file, a directory, a glob\n" .
+               "such as \"season1/*.srt\", or -. The tool never overwrites a file.";
     }
 
 
@@ -131,48 +129,24 @@ final class ConvertCommand extends WriteCommand
     }
 
 
-    protected function explicitOutput(Arguments $arguments): ?string
+    protected function toDescription(): string
     {
-        if ($this->usesPositionalOutput($arguments)) {
-            return $arguments->positionals[1];
-        }
-
-        return parent::explicitOutput($arguments);
-    }
-
-
-    protected function inputArguments(Arguments $arguments): array
-    {
-        return $this->usesPositionalOutput($arguments) ? [$arguments->positionals[0]] : $arguments->positionals;
+        return "Output format. Required, also when the format stays the same.";
     }
 
 
     protected function prepare(Arguments $arguments): void
     {
         parent::prepare($arguments);
+        if ($this->toFormat === null) {
+            self::fail("Pass --to FORMAT, also when the format stays the same, for example --to srt.");
+        }
 
         $this->edits     = EditPipeline::fromArguments($arguments);
         $this->assOutput = AssOutput::fromArguments($arguments);
-        if ($this->assOutput !== null && !$this->outputCanBeAss()) {
+        if ($this->assOutput !== null && $this->toFormat !== Format::Ass) {
             self::fail("Pass --to ass with --ass-karaoke-tag.");
         }
-    }
-
-
-    /**
-     * Returns false when --to or the --output extension picks another format than ASS, whatever the input format.
-     */
-    private function outputCanBeAss(): bool
-    {
-        if ($this->toFormat !== null) {
-            return $this->toFormat === Format::Ass;
-        }
-        if ($this->output === null || $this->output === self::DASH) {
-            return true;
-        }
-
-        return in_array(strtolower(pathinfo($this->output, PATHINFO_EXTENSION)), Format::Ass->extensions(), true)
-            || !(Format::fromPath($this->output)?->canWrite() ?? false);
     }
 
 
@@ -203,7 +177,7 @@ final class ConvertCommand extends WriteCommand
     {
         parent::process($input, $subtitle, $format, $arguments, $console);
 
-        foreach ($this->edits->find(MaskingEdit::class)?->writeMuteFiles() ?? [] as $path) {
+        foreach ($this->edits->find(MaskingEdit::class)?->writeMuteFiles($this->outputFiles) ?? [] as $path) {
             $this->report($console, self::label($input) . " -> $path\n");
         }
     }
@@ -220,10 +194,4 @@ final class ConvertCommand extends WriteCommand
         return $this->assOutput?->formatOptions($outputFormat);
     }
 
-
-    private function usesPositionalOutput(Arguments $arguments): bool
-    {
-        return count($arguments->positionals) === 2 && !$arguments->has("to")
-            && !$arguments->has("output") && !$arguments->has("output-dir") && !$arguments->has("in-place");
-    }
 }

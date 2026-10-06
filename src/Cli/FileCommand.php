@@ -50,9 +50,9 @@ abstract class FileCommand extends Command
 
     protected int $failed = 0;
 
-    protected bool $fromContainer = false;
-
     protected ReadOptions $readOptions;
+
+    protected OutputFiles $outputFiles;
 
     /** @var list<ParseWarning> */
     protected array $parseWarnings = [];
@@ -86,6 +86,17 @@ abstract class FileCommand extends Command
 
 
     /**
+     * Returns the names of the format and track options of the input and of the second file.
+     *
+     * @return array{from: string, track: string, from2: string, track2: string}
+     */
+    protected function fileOptionNames(): array
+    {
+        return ["from" => "from", "track" => "track", "from2" => "from2", "track2" => "track2"];
+    }
+
+
+    /**
      * @return list<Option>
      */
     protected function inputOptions(): array
@@ -104,15 +115,17 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Returns --from2 and --track2, for a command that reads a second file.
+     * Returns the format and track options of the second file, for a command that reads one.
      *
      * @return list<Option>
      */
-    protected static function secondFileOptions(string $file): array
+    protected function secondFileOptions(string $file): array
     {
+        $names = $this->fileOptionNames();
+
         return [
-            Option::value("from2", "FORMAT", "Format of the $file file. Default: detected from the content, else taken from the file extension."),
-            Option::value("track2", "NUMBER", "Subtitle track of an MKV or WebM $file file. Needed when the file has several."),
+            Option::value($names["from2"], "FORMAT", "Format of the $file file. Default: detected from the content, else taken from the file extension."),
+            Option::value($names["track2"], "NUMBER", "Subtitle track of an MKV or WebM $file file. Needed when the file has several."),
         ];
     }
 
@@ -121,15 +134,17 @@ abstract class FileCommand extends Command
     {
         $this->succeeded      = 0;
         $this->failed         = 0;
+        $this->outputFiles    = new OutputFiles();
         $this->inputFps       = self::rate($arguments, "input-fps");
         $this->wordTimestamps = $this->needsWordTimestamps($arguments);
         $arguments->positiveFloat("fps");
-        $arguments->positiveInt("track");
-        $arguments->positiveInt("track2");
+        $names = $this->fileOptionNames();
+        $arguments->positiveInt($names["track"]);
+        $arguments->positiveInt($names["track2"]);
 
-        $from               = $arguments->value("from");
+        $from               = $arguments->value($names["from"]);
         $this->fromFormat   = $from === null ? null : self::readableFormat($from);
-        $from2              = $arguments->value("from2");
+        $from2              = $arguments->value($names["from2"]);
         $this->secondFormat = $from2 === null ? null : self::readableFormat($from2);
 
         try {
@@ -236,9 +251,12 @@ abstract class FileCommand extends Command
                     $this->process($input, $read[0], $read[1], $arguments, $console);
                 }
                 $this->succeeded++;
+            } catch (FileFailure $failure) {
+                throw $failure;
             } catch (\Throwable $exception) {
                 $this->failed++;
-                $console->err(self::label($input) . ": " . self::cliMessage(self::throwableMessage($exception), "--track", "--from") . "\n");
+                $names = $this->fileOptionNames();
+                $console->err(self::label($input) . ": " . self::cliMessage(self::throwableMessage($exception), "--$names[track]", "--$names[from]") . "\n");
                 if (!$arguments->has("keep-going")) {
                     break;
                 }
@@ -356,7 +374,7 @@ abstract class FileCommand extends Command
     protected function read(string $input, Arguments $arguments, Console $console): ?array
     {
         $this->parseWarnings = [];
-        $track               = $arguments->positiveInt("track");
+        $track               = $this->inputTrack($arguments);
         if ($input !== self::DASH) {
             if (!is_file($input)) {
                 self::fail("The file does not exist.");
@@ -368,9 +386,6 @@ abstract class FileCommand extends Command
         if ($subtitle === null) {
             return null;
         }
-        // An MKV or WebM input has an extension of no subtitle format, so the output gets the extension of its format.
-        $this->fromContainer = $track !== null || ($input !== self::DASH && Format::fromPath($input) === null);
-
         $this->parseWarnings = $subtitle->getParseWarnings();
         self::printWarnings($console, self::label($input), $this->parseWarnings);
 
@@ -453,11 +468,19 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Reads the second file of diff and dual with --from2 and --track2.
+     * Reads the second file of diff and dual with its format and track options.
      */
     protected function loadSecondFile(string $path, Arguments $arguments, Console $console): Subtitle
     {
-        return $this->loadOtherFile($path, $console, $this->secondFormat, $arguments->positiveInt("track2"), "--track2", "--from2");
+        $names = $this->fileOptionNames();
+
+        return $this->loadOtherFile($path, $console, $this->secondFormat, $arguments->positiveInt($names["track2"]), "--" . $names["track2"], "--" . $names["from2"]);
+    }
+
+
+    protected function inputTrack(Arguments $arguments): ?int
+    {
+        return $arguments->positiveInt($this->fileOptionNames()["track"]);
     }
 
 
