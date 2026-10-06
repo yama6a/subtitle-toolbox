@@ -13,6 +13,7 @@ use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Exceptions\UnknownFormatException;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
+use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
 
@@ -217,6 +218,16 @@ class LoadSaveTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("VobSub needs the .idx file next to $this->dir/other, but $this->dir/other.idx does not exist.");
         Subtitle::load("$this->dir/other", Format::VobSub);
+    }
+
+
+    public function testVobSubReportsTheOptionsOfAnotherFormatBeforeTheMissingSubFile(): void
+    {
+        file_put_contents("$this->dir/lone.idx", file_get_contents(self::FILES . "vobsub/text-pal.idx"));
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("VobSubParser does not read CsvReadOptions.");
+        Subtitle::load("$this->dir/lone.idx", Format::VobSub, new ReadOptions(format: new CsvReadOptions()));
     }
 
 

@@ -23,6 +23,7 @@ use SubtitleToolbox\Ocr\OcrRunner;
 use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
+use SubtitleToolbox\Parsers\VobSubParser;
 
 
 final class Subtitle implements \IteratorAggregate, \Countable
@@ -93,17 +94,13 @@ final class Subtitle implements \IteratorAggregate, \Countable
             return self::fromString(self::readFile($path), $format, $options);
         }
 
+        (new VobSubParser())->useOptions($options);
         $extension = pathinfo($path, PATHINFO_EXTENSION);
         $isIdx     = strtolower($extension) === "idx";
         $other     = self::pairedFile($path, $isIdx ? "sub" : "idx");
         [$idxPath, $subPath] = $isIdx ? [$path, $other] : [$other, $path];
 
         $given = $options->format;
-        // The parser throws for the options of another format.
-        if ($given !== null && !$given instanceof VobSubReadOptions) {
-            return self::parseUtf8(self::readFile($subPath), Format::VobSub, $options);
-        }
-
         $vobSubOptions = new ReadOptions(
             encoding: $options->encoding,
             lenient: $options->lenient,

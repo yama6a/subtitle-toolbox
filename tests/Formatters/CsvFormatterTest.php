@@ -84,6 +84,15 @@ class CsvFormatterTest extends TestCase
     }
 
 
+    public function testAnUnknownStoredTimeFormatWritesTheDotForm(): void
+    {
+        $subtitle = (new CsvParser())->parse("start,end,text\n1.5,2,a\n", new ReadOptions());
+        $subtitle->setFormatData("csv", ["timeFormat" => "hh:mm:ss;fff"] + $subtitle->findFormatData("csv"));
+
+        $this->assertSame("start,end,text\n00:00:01.500,00:00:02.000,a\n", $subtitle->toString(Format::Csv, new WriteOptions(bom: false)));
+    }
+
+
     public function testFrameRateOptionWinsOverTheParsedFrameRate(): void
     {
         $file     = file_get_contents(__DIR__ . "/../files/csv/real/dubbing_script.csv");

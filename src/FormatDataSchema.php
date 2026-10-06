@@ -14,6 +14,9 @@ namespace SubtitleToolbox;
  * names, ["object", [key => type]] for named fields, where "!" in front of a key marks a required field,
  * ["range", min, max] for an integer in a range, and ["keys", list of names, type] for an object with only these keys.
  *
+ * The schema checks only the types. The csv "delimiter" must be ",", ";" or a tab, else CsvFormatter throws. The csv
+ * "timeFormat" is a CsvTimeFormat value. CsvFormatter writes any other string as CsvTimeFormat::Dot.
+ *
  * @internal
  */
 final class FormatDataSchema
