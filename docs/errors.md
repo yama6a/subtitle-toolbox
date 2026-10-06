@@ -30,8 +30,10 @@ try {
 - **SPL classes**: each class extends an SPL class, so `catch (\InvalidArgumentException $e)` and `catch (\RuntimeException $e)` also work.
 - **Messages**: `InvalidArgumentException`, `UnwritableContentException` and `CueNotFoundException` keep the plain message. The other classes start it with the class name and the code, for example `ParsingException (Error #100): `. See [compatibility.md](compatibility.md) for the parts of an exception that stay stable.
 - **Previous exception**: every constructor takes the message, then an optional `$previous` exception. `ParsingException` takes the line number before it. `getPrevious()` returns it.
-- **Final classes**: every exception class is `final`, except `InvalidParserException`, which `UnknownFormatException` extends, and `InvalidArgumentException`, which `UnwritableContentException` extends. Do not extend them, see [compatibility.md](compatibility.md#not-covered).
+- **Final classes**: every exception class is `final`, except 2. `UnknownFormatException` extends `InvalidParserException`, and `UnwritableContentException` extends `InvalidArgumentException`. Do not extend them, see [compatibility.md](compatibility.md#not-covered).
 - **Line number**: `ParsingException::getLineNumber()` returns the 1-based input line when the parser knows it, and null otherwise. The message then ends with the line, for example ` (line 12)`. Read the line from `getLineNumber()`, not from the message.
+
+[Lenient mode](lenient-parsing.md) skips a broken block in place of throwing.
 
 ## Invalid arguments
 `InvalidArgumentException` covers these cases:
@@ -71,4 +73,3 @@ These readers set the line number:
 | `OcrReplaceList::fromSubtitleEditXml()` | the line of the XML error |
 | `ShotChanges::fromText()`, `SpeechReference::fromFfmpegSilencedetect()` | the line of the error |
 
-[Lenient mode](lenient-parsing.md) skips a broken block in place of throwing.
