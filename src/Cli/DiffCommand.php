@@ -65,6 +65,12 @@ final class DiffCommand extends ReportCommand
     }
 
 
+    protected function readsBatch(): bool
+    {
+        return false;
+    }
+
+
     protected function inputOptions(): array
     {
         return [...parent::inputOptions(), ...$this->secondFileOptions("new")];
@@ -78,6 +84,16 @@ final class DiffCommand extends ReportCommand
         }
 
         return [$arguments->positionals[0]];
+    }
+
+
+    protected function checkInputs(array $inputs, Arguments $arguments): void
+    {
+        if (count($inputs) > 1) {
+            self::fail("The diff command takes one old file, got " . count($inputs) . ".");
+        }
+
+        parent::checkInputs($inputs, $arguments);
     }
 
 

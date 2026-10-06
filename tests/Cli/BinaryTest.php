@@ -1915,13 +1915,28 @@ class BinaryTest extends TestCase
     }
 
 
-    public function testDiffDualAndHlsTakeKeepGoing(): void
+    public function testDiffDualAndHlsRejectKeepGoing(): void
     {
         copy(self::FILES . "hls/node-webvtt-subs1.vtt", "$this->dir/talk.vtt");
+        $error = fn (string $command): array => [2, "", "Error: Unknown option --keep-going.\nRun \"subtitle-toolbox help $command\" for the usage.\n"];
 
-        $this->assertSame([0, "", ""], $this->runBinary(["diff", "trip.srt", "trip.srt", "--keep-going"]));
-        $this->assertSame(0, $this->runBinary(["dual", "--primary", "trip.srt", "--secondary", "shop.vtt", "--keep-going"])[0]);
-        $this->assertSame(0, $this->runBinary(["hls", "talk.vtt", "--output-dir", "out", "--keep-going"])[0]);
+        $this->assertSame($error("diff"), $this->runBinary(["diff", "trip.srt", "trip.srt", "--keep-going"]));
+        $this->assertSame($error("dual"), $this->runBinary(["dual", "--primary", "trip.srt", "--secondary", "shop.vtt", "--keep-going"]));
+        $this->assertSame($error("hls"), $this->runBinary(["hls", "talk.vtt", "--output-dir", "out", "--keep-going"]));
+        $this->assertFileDoesNotExist("$this->dir/out");
+    }
+
+
+    public function testDiffTakesOneOldFile(): void
+    {
+        mkdir("$this->dir/old");
+        copy("$this->dir/trip.srt", "$this->dir/old/trip.srt");
+        copy("$this->dir/shop.vtt", "$this->dir/old/shop.vtt");
+        $usage = "\nRun \"subtitle-toolbox help diff\" for the usage.\n";
+
+        $this->assertSame([2, "", "Error: The diff command takes one old file, got 2.$usage"], $this->runBinary(["diff", "old", "trip.srt"]));
+        $this->assertSame([2, "", "Error: The diff command takes one old file, got 2.$usage"], $this->runBinary(["diff", "old/*", "trip.srt"]));
+        $this->assertSame([0, "", ""], $this->runBinary(["diff", "old/t*", "trip.srt"]));
     }
 
 

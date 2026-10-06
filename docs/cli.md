@@ -83,7 +83,7 @@ php subtitle-toolbox.phar --version
 - **Race**: the tool creates each file with exclusive create (`fopen($path, 'x')`). When another process creates the file between the check and the write, the create fails. The tool then removes every file that it wrote in the run and exits with code 3.
 - **Standard output**: the tool does not check it. A shell redirect such as `> movie.vtt` overwrites a file. `-o -` also writes standard output.
 - **Standard input**: `-` takes `-o FILE`, not `--output-dir`. With `--output-dir`, the tool fails with exit code 2.
-- **Batch**: the tool prints one line per file and a summary. It stops at the first failed file, unless you pass `--keep-going`. Every command that reads a file takes `--keep-going`, also `diff`, `dual` and `hls`, which read one input.
+- **Batch**: the tool prints one line per file and a summary. It stops at the first failed file, unless you pass `--keep-going`.
 - **Option names**: `--no-X` always turns X off, for example `--no-bom`. A time option is in seconds, unless its name ends in `-frames`.
 - **Encoding**: `--encoding` names the encoding of the input, for example `Windows-1252`. See [encodings.md](encodings.md).
 - **Output bytes**: `--line-ending lf|crlf`, `--bom` and `--no-bom`.
@@ -339,7 +339,7 @@ movie.de.srt: scale 1.04271, offset -2.3 s, score 0.89
 - **Reference**: the tool detects the format of the reference. `--from` and `--track` apply only to the input.
 
 ## Diff
-`diff` compares an old and a new file with [`SubtitleDiff`](compare.md) and prints `toText()`. The files can have different formats. The exit code is 1 when they differ, as with `diff`. Equal files give no output.
+`diff` compares an old and a new file with [`SubtitleDiff`](compare.md) and prints `toText()`. The files can have different formats. The exit code is 1 when they differ, as with `diff`. Equal files give no output. The first argument must name one file. A directory or a glob that matches more than one file fails with exit code 2.
 
 ```sh
 vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-formatting

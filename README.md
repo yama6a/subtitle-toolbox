@@ -67,7 +67,7 @@ Composer installs `vendor/bin/subtitle-toolbox`. Optional parts are in brackets.
 subtitle-toolbox convert movie.srt --to vtt [--timing-fix-overlaps] [-o movie.vtt]
 subtitle-toolbox convert movie.mkv --to srt --track 3 [-o movie.srt]
 subtitle-toolbox convert movie.sup --to srt --ocr [--ocr-language deu] [-o movie.srt]
-subtitle-toolbox retime movie.sub --from-fps 25 --to-fps 23.976 [-o movie.fixed.sub]
+subtitle-toolbox retime movie.sub --input-fps 25 --from-fps 25 --to-fps 23.976 [-o movie.fixed.sub]
 subtitle-toolbox info movie.srt [--json]
 subtitle-toolbox validate movie.srt --preset netflix-en [--video-fps 23.976]
 subtitle-toolbox sync movie.de.srt --reference movie.en.srt [-o movie.de.synced.srt]
@@ -154,7 +154,7 @@ echo "$stats->cueCount cues, $stats->wordCount words\n";
 use SubtitleToolbox\Subtitle;
 
 foreach (Subtitle::tracks('movie.mkv') as $track) {
-    echo "$track->number: ", $track->describe(), "\n";   // 3: S_TEXT/UTF8, de, "Deutsch (Forced)", forced
+    echo "$track->number: $track->codecId, $track->language, $track->name\n";   // 3: S_TEXT/UTF8, de, Deutsch (Forced)
 }
 $subtitle = Subtitle::loadTrack('movie.mkv', 3);
 ```
