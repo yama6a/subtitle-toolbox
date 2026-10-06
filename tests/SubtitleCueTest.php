@@ -239,4 +239,12 @@ class SubtitleCueTest extends TestCase
 
         $cue->setFormatData("srt", ["coordinates" => ["x1" => 1]]);
     }
+
+
+    public function testMapTimesMovesStartEndAndWordTimestampsAndStopsAtZero(): void
+    {
+        $cue = (new SubtitleCue(1, 3, "One <00:00:01.000>two <00:00:02.500>three"))->mapTimes(fn (float $time): float => $time * 2 - 3);
+
+        $this->assertSame([0.0, 3.0, ["One <00:00:00.000>two <00:00:02.000>three"]], [$cue->getStart(), $cue->getEnd(), $cue->getLines()]);
+    }
 }

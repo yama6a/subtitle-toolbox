@@ -67,9 +67,7 @@ trait Retiming
                 continue;
             }
 
-            $start = max(0, $cue->getStart() * $factor + $offset);
-            $end   = max(0, $cue->getEnd() * $factor + $offset);
-            $cue->setStart($start)->setEnd($end)->mapWordTimestamps(fn (float $time): float => $time * $factor + $offset);
+            $cue->mapTimes(fn (float $time): float => $time * $factor + $offset);
         }
 
         return $this;

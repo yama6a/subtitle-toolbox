@@ -57,9 +57,7 @@ final class ReferenceSync
 
         foreach ($parts as $index => $cues) {
             foreach ($cues as $cue) {
-                $cue->setStart(max(0, $cue->getStart() * $scale + $segments[$index]["offset"]))
-                    ->setEnd(max(0, $cue->getEnd() * $scale + $segments[$index]["offset"]))
-                    ->mapWordTimestamps(fn (float $time): float => $time * $scale + $segments[$index]["offset"]);
+                $cue->mapTimes(fn (float $time): float => $time * $scale + $segments[$index]["offset"]);
             }
         }
 
