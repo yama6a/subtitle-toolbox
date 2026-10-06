@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
-use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -33,15 +31,7 @@ final class PodcastTranscriptParser extends SubtitleParser
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        try {
-            $data = json_decode(StringHelpers::removeUtf8Bom($rawSubtitle), true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException $exception) {
-            throw new ParsingException("The content is not valid JSON: {$exception->getMessage()}.");
-        }
-
-        if (!is_array($data) || ($data !== [] && array_is_list($data))) {
-            throw new ParsingException("The JSON root must be an object.");
-        }
+        $data = $this->decodeJsonObject($rawSubtitle);
         if (!is_array($data["segments"] ?? null) || !array_is_list($data["segments"])) {
             throw new ParsingException("The JSON has no \"segments\" list.");
         }

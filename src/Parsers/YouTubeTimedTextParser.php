@@ -7,7 +7,6 @@ namespace SubtitleToolbox\Parsers;
 use DOMDocument;
 use DOMElement;
 use DOMText;
-use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
@@ -60,11 +59,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
 
     private function readJson(string $content): array
     {
-        try {
-            $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException $exception) {
-            throw new ParsingException("The content is not valid JSON: {$exception->getMessage()}.");
-        }
+        $data = $this->decodeJsonObject($content);
         if (!is_array($data["events"] ?? null) || !array_is_list($data["events"])) {
             throw new ParsingException("The JSON has no \"events\" list.");
         }

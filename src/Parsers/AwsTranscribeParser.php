@@ -20,7 +20,7 @@ final class AwsTranscribeParser extends SubtitleParser
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $data           = $this->decodeObject($rawSubtitle);
+        $data           = $this->decodeJsonObject($rawSubtitle);
         $results        = $data["results"] ?? null;
         if (!is_array($results) || !is_array($results["items"] ?? null) || !array_is_list($results["items"])) {
             throw new ParsingException("The JSON has no \"results.items\" list.");

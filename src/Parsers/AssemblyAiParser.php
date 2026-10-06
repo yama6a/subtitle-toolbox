@@ -22,7 +22,7 @@ final class AssemblyAiParser extends SubtitleParser
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $data           = $this->decodeObject($rawSubtitle);
+        $data           = $this->decodeJsonObject($rawSubtitle);
         $words          = $data["words"] ?? null;
         $utterances     = self::listOrEmpty($data["utterances"] ?? null);
         if ($utterances === [] && (!is_array($words) || !array_is_list($words))) {

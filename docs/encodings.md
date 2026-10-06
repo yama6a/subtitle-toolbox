@@ -16,7 +16,8 @@ StringHelpers::isValidUtf8(file_get_contents('movie.srt'));   // false for a Win
 ```
 
 - **BOM**: the library converts UTF-16 and UTF-32 with a BOM to UTF-8 without being asked. A BOM wins over `ReadOptions::$encoding`.
-- **No BOM, no encoding**: the parsers read the bytes as UTF-8 and keep invalid bytes. SAMI and JSON throw `ParsingException` for text that is not UTF-8.
+- **No BOM, no encoding**: the parsers read the bytes as UTF-8 and keep invalid bytes. SAMI throws `ParsingException` for text that is not UTF-8.
+- **JSON formats**: the JSON parsers read each invalid UTF-8 byte as U+FFFD, the replacement character. For example, the bytes `42 FF 64` in a text field give `B`, U+FFFD and `d`.
 - **Parsers called directly**: only the `Subtitle` functions convert. Before `(new SamiParser())->parse($content, new ReadOptions())`, call `StringHelpers::convertToUtf8($content, TextEncoding::Cp949)`.
 - **Source encodings**: `ReadOptions::$encoding` and `StringHelpers::convertToUtf8()` take a `TextEncoding` case or a string. The conversion uses the PHP extension iconv. A string can be any name that the iconv of the system knows, for example `CP1125`. `new ReadOptions()` throws `InvalidArgumentException` for an unknown name. A byte that is invalid in the encoding throws `ParsingException`.
 - **Stored value**: `ReadOptions::$encoding` holds the iconv name as a string. `new ReadOptions(encoding: TextEncoding::Windows1252)` stores `Windows-1252`.

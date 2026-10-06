@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use Generator;
+use JsonException;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\LineEnding;
@@ -129,6 +130,27 @@ abstract class SubtitleParser
     protected function warn(string $message, ?int $lineNumber, ?int $blockIndex, array $block, ParseWarningAction $action): void
     {
         $this->warnings[] = new ParseWarning($message, $lineNumber, $blockIndex, $block, $action);
+    }
+
+
+    /**
+     * Decodes $content as a JSON object. An invalid UTF-8 byte becomes U+FFFD, so one broken byte does not fail the file.
+     *
+     * @return array<string, mixed>
+     */
+    protected function decodeJsonObject(string $content): array
+    {
+        try {
+            $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
+        } catch (JsonException $exception) {
+            throw new ParsingException("The content is not valid JSON: {$exception->getMessage()}.");
+        }
+
+        if (!is_array($data) || ($data !== [] && array_is_list($data))) {
+            throw new ParsingException("The JSON root must be an object.");
+        }
+
+        return $data;
     }
 
 

@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
-use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -55,16 +53,7 @@ final class WhisperJsonParser extends SubtitleParser
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        try {
-            // Older whisper.cpp versions split multi-byte characters across tokens and write invalid UTF-8 in token texts.
-            $data = json_decode(StringHelpers::removeUtf8Bom($rawSubtitle), true, 512, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
-        } catch (JsonException $exception) {
-            throw new ParsingException("The content is not valid JSON: {$exception->getMessage()}.");
-        }
-
-        if (!is_array($data) || ($data !== [] && array_is_list($data))) {
-            throw new ParsingException("The JSON root must be an object.");
-        }
+        $data = $this->decodeJsonObject($rawSubtitle);
 
         $segments = match (true) {
             self::isList($data["segments"] ?? null)      => $this->readSegments($data["segments"], $data["words"] ?? null),

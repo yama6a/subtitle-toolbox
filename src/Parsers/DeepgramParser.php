@@ -21,7 +21,7 @@ final class DeepgramParser extends SubtitleParser
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $data           = $this->decodeObject($rawSubtitle);
+        $data           = $this->decodeJsonObject($rawSubtitle);
         $results        = $data["results"] ?? null;
         if (!is_array($results) || !is_array($results["channels"] ?? null) || !array_is_list($results["channels"])) {
             throw new ParsingException("The JSON has no \"results.channels\" list.");

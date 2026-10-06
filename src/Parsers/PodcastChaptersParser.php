@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
-use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -27,13 +25,8 @@ final class PodcastChaptersParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        try {
-            $data = json_decode(StringHelpers::removeUtf8Bom($rawSubtitle), true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException $exception) {
-            throw new ParsingException("The content is not valid JSON: {$exception->getMessage()}.");
-        }
-
-        if (!is_array($data) || !is_array($data["chapters"] ?? null) || !array_is_list($data["chapters"])) {
+        $data = $this->decodeJsonObject($rawSubtitle);
+        if (!is_array($data["chapters"] ?? null) || !array_is_list($data["chapters"])) {
             throw new ParsingException("The JSON has no \"chapters\" list.");
         }
 

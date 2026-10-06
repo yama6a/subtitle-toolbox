@@ -453,8 +453,6 @@ class ThrowSitesTest extends TestCase
             "Parsers/HtmlTranscriptParser.php: no time"     => [fn () => (new HtmlTranscriptParser())->parse("<p>Hi</p>", new ReadOptions()), ...$parsing],
             "Parsers/HtmlTranscriptParser.php: bad time"    => [fn () => (new HtmlTranscriptParser())->parse("<time>x</time><p>Hi</p>", new ReadOptions()),
                                                                 ...$parsing],
-            "Parsers/JsonParser.php: no JSON"               => [fn () => (new JsonParser())->parse("{", new ReadOptions()), ...$parsing],
-            "Parsers/JsonParser.php: root no object"        => [fn () => (new JsonParser())->parse("[1]", new ReadOptions()), ...$parsing],
             "Parsers/JsonParser.php: invalid base64"        => [fn () => (new JsonParser())->parse(
                 '{"version": 1, "cues": [], "formatData": {"stl": {"base64": "!"}}}', new ReadOptions()), ...$parsing],
             "Parsers/MicroDvdParser.php: no frame rate"     => [fn () => (new MicroDvdParser())->parse("{0}{25}text", new ReadOptions()), ...$parsing],
@@ -492,14 +490,11 @@ class ThrowSitesTest extends TestCase
                 self::pgsSegment(0x15, "\0\1\0\xC0\0\0\5\0\1\0\1\1") .
                 self::pgsSegment(0x15, "\0\2\0\xC0\0\0\5\0\1\0\1\1") .
                 self::pgsSegment(0x80, ""), new ReadOptions()), ...$parsing],
-            "Parsers/PodcastChaptersParser.php: no JSON"    => [fn () => (new PodcastChaptersParser())->parse("{", new ReadOptions()), ...$parsing],
             "Parsers/PodcastChaptersParser.php: no chapters" => [fn () => (new PodcastChaptersParser())->parse('{"version": "1.2.0"}', new ReadOptions()), ...$parsing],
             "Parsers/PodcastChaptersParser.php: start no number" => [fn () => (new PodcastChaptersParser())->parse(
                 '{"chapters": [{"title": "x"}]}', new ReadOptions()), ...$parsing],
             "Parsers/PodcastChaptersParser.php: end no number" => [fn () => (new PodcastChaptersParser())->parse(
                 '{"chapters": [{"startTime": 1, "endTime": "2"}]}', new ReadOptions()), ...$parsing],
-            "Parsers/PodcastTranscriptParser.php: no JSON"  => [fn () => (new PodcastTranscriptParser())->parse("{", new ReadOptions()), ...$parsing],
-            "Parsers/PodcastTranscriptParser.php: root no object" => [fn () => (new PodcastTranscriptParser())->parse("[1]", new ReadOptions()), ...$parsing],
             "Parsers/PodcastTranscriptParser.php: no segments" => [fn () => (new PodcastTranscriptParser())->parse('{"version": "1.0.0"}', new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/PodcastTranscriptParser.php: segment no object" => [fn () => (new PodcastTranscriptParser())->parse('{"segments": [1]}', new ReadOptions()),
@@ -529,6 +524,8 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Parsers/SubViewerParser.php: version 1 header" => [fn () => (new SubViewerParser())->parse("text\n" . SubViewerParser::START_SCRIPT . "\n", new ReadOptions()), ...$parsing],
             "Parsers/SubViewerParser.php: version 2 header" => [fn () => (new SubViewerParser())->parse("text\n", new ReadOptions()), ...$parsing],
+            "Parsers/SubtitleParser.php: no JSON"           => [fn () => (new JsonParser())->parse("{", new ReadOptions()), ...$parsing],
+            "Parsers/SubtitleParser.php: JSON root no object" => [fn () => (new PodcastTranscriptParser())->parse("[1]", new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: options of another format" => [fn () => (new SubRipParser())->parse("", new ReadOptions(format: new CsvReadOptions())),
                                                                 ...$invalid],
             "Parsers/TtmlParser.php: no tt root"            => [fn () => (new TtmlParser())->parse("<html/>", new ReadOptions()), ...$parsing],
@@ -582,20 +579,15 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Parsers/WebVttParser.php: invalid start time"  => [fn () => (new WebVttParser())->parse("WEBVTT\n\nsoon --> 00:00:02.000\ntext", new ReadOptions()),
                                                                 ...$parsing],
-            "Parsers/WhisperJsonParser.php: no JSON"        => [fn () => (new WhisperJsonParser())->parse("{", new ReadOptions()), ...$parsing],
-            "Parsers/WhisperJsonParser.php: root no object" => [fn () => (new WhisperJsonParser())->parse("[1]", new ReadOptions()), ...$parsing],
             "Parsers/WhisperJsonParser.php: no segments"    => [fn () => (new WhisperJsonParser())->parse('{"text": "Hi"}', new ReadOptions()), ...$parsing],
             "Parsers/WhisperJsonParser.php: time no number" => [fn () => (new WhisperJsonParser())->parse('{"segments": [{"start": "0"}]}', new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/WhisperJsonParser.php: text no string" => [fn () => (new WhisperJsonParser())->parse(
                 '{"segments": [{"start": 0, "end": 1}]}', new ReadOptions()), ...$parsing],
-            "Parsers/WordGrouping.php: no JSON"             => [fn () => (new DeepgramParser())->parse("{", new ReadOptions()), ...$parsing],
-            "Parsers/WordGrouping.php: root no object"      => [fn () => (new GoogleSpeechParser())->parse("[1]", new ReadOptions()), ...$parsing],
             "Parsers/WordGrouping.php: bad time"            => [fn () => (new AssemblyAiParser())->parse('{"words": [{"text": "Hi", "start": "soon"}]}', new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/WordGrouping.php: text no string"      => [fn () => (new AwsTranscribeParser())->parse(
                 '{"results": {"items": [{"alternatives": []}]}}', new ReadOptions()), ...$parsing],
-            "Parsers/YouTubeTimedTextParser.php: no JSON"   => [fn () => (new YouTubeTimedTextParser())->parse("{", new ReadOptions()), ...$parsing],
             "Parsers/YouTubeTimedTextParser.php: no events" => [fn () => (new YouTubeTimedTextParser())->parse('{"segs": []}', new ReadOptions()), ...$parsing],
             "Parsers/YouTubeTimedTextParser.php: time no number" => [fn () => (new YouTubeTimedTextParser())->parse(
                 '{"events": [{"tStartMs": "0"}]}', new ReadOptions()), ...$parsing],

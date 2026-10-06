@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
-use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\SubtitleCue;
 
 /**
@@ -29,22 +27,6 @@ trait WordGrouping
     protected static function formatOptionsClass(): string
     {
         return TranscriptReadOptions::class;
-    }
-
-
-    private function decodeObject(string $rawSubtitle): array
-    {
-        try {
-            $data = json_decode(StringHelpers::removeUtf8Bom($rawSubtitle), true, 512, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
-        } catch (JsonException $exception) {
-            throw new ParsingException("The content is not valid JSON: {$exception->getMessage()}.");
-        }
-
-        if (!is_array($data) || ($data !== [] && array_is_list($data))) {
-            throw new ParsingException("The JSON root must be an object.");
-        }
-
-        return $data;
     }
 
 
