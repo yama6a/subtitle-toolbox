@@ -86,6 +86,20 @@ class MicroDvdFormatterTest extends TestCase
     }
 
 
+    public function testColourWithOtherCaseSpacingOrAttributesBecomesColourCode(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue(new SubtitleCue(1, 2, "<FONT COLOR=\"#FF0000\">Red</FONT>"))
+            ->addCue(new SubtitleCue(3, 4, "<font color = '#00ff00' >Green</font>"))
+            ->addCue(new SubtitleCue(5, 6, "<font face=\"Arial\" color=\"#0000ff\">Blue</font>"));
+
+        $this->assertSame(
+            "{25}{50}{c:\$0000FF}Red\n{75}{100}{c:\$00FF00}Green\n{125}{150}{c:\$FF0000}Blue\n",
+            $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25)))
+        );
+    }
+
+
     public function testStripAllTagsOptionDropsStyleCodes(): void
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "<i>Hello</i>"));

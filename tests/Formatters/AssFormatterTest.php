@@ -118,6 +118,8 @@ class AssFormatterTest extends TestCase
             "single quoted colour"    => [["<font color='#FF8000'>a</font>"], "{\\c&H0080FF&}a{\\c}"],
             "inner colour restores"   => [["<font color=\"#ff0000\">a<font color=\"#00ff00\">b</font>c</font>"], "{\\c&H0000FF&}a{\\c&H00FF00&}b{\\c&H0000FF&}c{\\c}"],
             "font without colour"     => [["<font face=\"Arial\">a</font>"], "a"],
+            "upper case font tag"     => [["<FONT COLOR=\"#FF8000\">a</FONT>"], "{\\c&H0080FF&}a{\\c}"],
+            "spaces around equals"    => [["<font color = \"#ff8000\" >a</font>"], "{\\c&H0080FF&}a{\\c}"],
             "last tag of a kind wins" => [["<b>a</b><b>b</b>"], "{\\b1}a{\\b1}b{\\b0}"],
             "other tags are stripped" => [["<c.yellow>a</c> <lang en>b</lang>"], "a b"],
             "entities are decoded"    => [["1 &lt; 2 &amp;&amp; 3&nbsp;&gt; 2"], "1 < 2 && 3\\h> 2"],
