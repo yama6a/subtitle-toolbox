@@ -50,6 +50,34 @@ class MicroDvdFormatterTest extends TestCase
     }
 
 
+    public function testNullFrameRateTakesTheStoredFrameRate(): void
+    {
+        $raw      = file_get_contents(__DIR__ . "/../files/microdvd/valid.sub");
+        $subtitle = Subtitle::fromString($raw, Format::MicroDvd);
+
+        $this->assertSame($raw, $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(writeFrameRateLine: true))));
+        $this->assertSame($raw, (new MicroDvdFormatter())->format($subtitle, new WriteOptions(format: new MicroDvdWriteOptions(writeFrameRateLine: true))));
+        $this->assertSame(substr($raw, strpos($raw, "\n") + 1), (new MicroDvdFormatter())->format($subtitle));
+    }
+
+
+    public function testFrameRateOptionWinsOverTheStoredFrameRate(): void
+    {
+        $subtitle = Subtitle::fromString("{1}{1}25\n{25}{50}Hello\n", Format::MicroDvd);
+
+        $this->assertSame("{1}{1}50\n{50}{100}Hello\n",
+                          $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 50, writeFrameRateLine: true))));
+    }
+
+
+    public function testNullFrameRateWithoutAStoredFrameRateThrows(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("MicroDVD output needs the frame rate of the video. Pass MicroDvdWriteOptions::frameRate.");
+        (new Subtitle())->addCue(new SubtitleCue(1, 2, "Hello"))->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(writeFrameRateLine: true)));
+    }
+
+
     public function testFrameRateOptionIsRequired(): void
     {
         $this->expectException(InvalidArgumentException::class);

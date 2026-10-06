@@ -39,7 +39,7 @@ class OutputOptionsTest extends TestCase
 
     private const WRITES_BOM = [Format::Ass, Format::Csv, Format::Lyrics, Format::MpSub, Format::SubRip, Format::Tsv, Format::WebVtt];
 
-    // The options that a format needs, or that give JSON output line breaks.
+    // The options that a format needs for a subtitle without format data, or that give JSON output line breaks.
     private const FORMAT_OPTIONS = [
         "itt"                => [IttWriteOptions::class, ["frameRate" => 25]],
         "json"               => [JsonWriteOptions::class, ["prettyPrint" => true]],

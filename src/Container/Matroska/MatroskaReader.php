@@ -203,6 +203,7 @@ final class MatroskaReader
             default            => (new AssParser())->parse($this->assFile($track, $codecPrivate, $this->withEnds($blocks, $data, $lastDuration)), $options),
         };
 
+        $subtitle->setFormat($this->trackFormat($trackNumber));
         $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $track->language);
         if ($track->forced) {
             foreach ($subtitle->getCues() as $cue) {

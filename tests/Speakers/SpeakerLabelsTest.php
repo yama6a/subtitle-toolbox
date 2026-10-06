@@ -387,4 +387,11 @@ class SpeakerLabelsTest extends TestCase
 
         $this->assertSame([["<v O'Neil &amp; &lt;Son&gt;><00:00:00.500>Hi."], ["Bye."], ["Yes."]], self::lines($parser->parse($json, new ReadOptions(format: new TranscriptReadOptions(speakerVoices: true, wordTimestamps: true)))));
     }
+
+
+    public function testStyleHasStringValues(): void
+    {
+        $this->assertSame(["prefix", "dialogueDashes", "colors"], array_map(fn (SpeakerStyle $style): string => $style->value, SpeakerStyle::cases()));
+        $this->assertSame(SpeakerStyle::DialogueDashes, SpeakerStyle::from("dialogueDashes"));
+    }
 }
