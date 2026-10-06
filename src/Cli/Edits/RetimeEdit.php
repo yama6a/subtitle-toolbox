@@ -42,7 +42,7 @@ final class RetimeEdit extends Edit
         return [
             Option::value("shift", "SECONDS", "Seconds to add to every time, for example 2.5, or -2.5 to show the cues earlier."),
             Option::value("shift-after", "SECONDS", "Shift only the cues that start at this time or later."),
-            Option::value("scale", "FACTOR", "Factor greater than 0 for every time."),
+            Option::value("scale", "FACTOR", "Multiply every time by this factor. Must be greater than 0."),
             Option::value("from-fps", "RATE", "Frame rate of the video that the subtitle fits now. Needs --to-fps."),
             Option::value("to-fps", "RATE", "Frame rate of the video that the subtitle must fit. Needs --from-fps."),
         ];

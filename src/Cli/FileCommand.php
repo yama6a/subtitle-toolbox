@@ -114,13 +114,13 @@ abstract class FileCommand extends Command
     protected function inputOptions(): array
     {
         $options = [
-            Option::value("from", "FORMAT", "Input format. Default: detected from the content, else taken from the file extension. Chapters and cloud speech JSON need it."),
+            Option::value("from", "FORMAT", "Input format. Default: the format detected from the content. When detection finds no format, the file extension sets it. Chapters and cloud speech-to-text JSON need --from."),
             Option::value("encoding", "NAME", "Encoding of the input, for example Windows-1252. Default: UTF-8. A BOM in the input overrides it."),
             Option::flag("lenient", "Skip or repair broken cues and print a warning for each. SCC, PGS, VobSub and chapter input ignore it."),
             Option::value("input-fps", "RATE", "Frame rate of a MicroDVD input without a {1}{1}<fps> first line, and of CSV or TSV times in hh:mm:ss:ff."),
             Option::value("fps", "RATE", $this->fpsDescription()),
-            Option::flag("word-timestamps", "Keep the word times of speech-to-text JSON, YouTube timed text and podcast transcript input."),
-            Option::value("track", "NUMBER", "Subtitle track of an MKV or WebM input. Needed when the file has several. \"info\" lists them."),
+            Option::flag("word-timestamps", "Keep the word times of speech-to-text JSON, YouTube timed text and Podcasting 2.0 transcript input."),
+            Option::value("track", "NUMBER", "Subtitle track of an MKV or WebM input. Needed when the file has 2 or more subtitle tracks. \"info\" lists them."),
         ];
         if ($this->takesManyInputs()) {
             $options[] = Option::flag("keep-going", "Go on with the next file after a file fails. Default: stop at the first failure.");
@@ -141,7 +141,7 @@ abstract class FileCommand extends Command
 
         return [
             Option::value($names["from2"], "FORMAT", "Format of the $file file. Default: as for --$names[from]."),
-            Option::value($names["track2"], "NUMBER", "Subtitle track of an MKV or WebM $file file. Needed when the file has several."),
+            Option::value($names["track2"], "NUMBER", "Subtitle track of an MKV or WebM $file file. Needed when the file has 2 or more subtitle tracks."),
         ];
     }
 

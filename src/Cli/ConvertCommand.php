@@ -30,7 +30,7 @@ final class ConvertCommand extends WriteCommand
 
     public function summary(): string
     {
-        return "Converts subtitle files to another format, and runs OCR, text, structure and timing edits on the way.";
+        return "Convert subtitle files to another format, and run OCR, text, structure and timing edits on the way.";
     }
 
 
@@ -42,9 +42,8 @@ final class ConvertCommand extends WriteCommand
 
     protected function details(): string
     {
-        return "--to sets the output format, also when it stays the same. One input file goes to standard output, or to the file of -o. " .
-               "Several input files need --output-dir. An input argument can be a file, a directory, a glob such as \"season1/*.srt\", or -. " .
-               "The tool never overwrites a file.";
+        return "--to sets the output format, also when it stays the same. " . self::OUTPUT_DETAILS . " " .
+               "An input argument can be a file, a directory, a glob such as \"season1/*.srt\", or -. The tool never overwrites a file.";
     }
 
 
@@ -104,13 +103,13 @@ final class ConvertCommand extends WriteCommand
     private static function languageOption(): Option
     {
         return Option::value("language", "CODE", "Language for --case and --errors-fix, for example en, de-AT or tr. " .
-                                               "--errors-fix takes the language of the input without it.");
+                                               "Without it, --errors-fix takes the language metadata of the input.");
     }
 
 
     protected function fpsDescription(): string
     {
-        return "Sets --input-fps, --output-fps and --video-fps. Each of them overrides it.";
+        return "Sets --input-fps, --output-fps and --video-fps. A specific option wins over --fps.";
     }
 
 

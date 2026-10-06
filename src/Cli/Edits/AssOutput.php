@@ -40,7 +40,7 @@ final class AssOutput
      */
     public static function options(): array
     {
-        return [Option::value("ass-karaoke-tag", "TAG", "Write word timestamps as ASS karaoke tags \\k, \\kf or \\ko: k, kf or ko. Default: k.")];
+        return [Option::value("ass-karaoke-tag", "TAG", "ASS karaoke tag for word timestamps: k, kf or ko. Default: k.")];
     }
 
 

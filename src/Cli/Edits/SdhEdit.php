@@ -37,7 +37,7 @@ final class SdhEdit extends Edit
     public static function options(): array
     {
         return [
-            Option::flag("sdh", "Remove hearing-impaired annotations such as [DOOR SLAMS], (laughs) and JOHN:. A cue with no text left goes."),
+            Option::flag("sdh", "Remove hearing-impaired annotations such as [DOOR SLAMS], (laughs) and JOHN:. Remove a cue with no text left."),
             Option::flag("sdh-keep-square-brackets", "Keep text in square brackets, such as [DOOR SLAMS]."),
             Option::flag("sdh-keep-parentheses", "Keep text in parentheses, such as (laughs)."),
             Option::flag("sdh-keep-speaker-labels", "Keep speaker labels, such as JOHN:."),

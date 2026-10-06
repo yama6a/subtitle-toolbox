@@ -28,7 +28,7 @@ final class DualCommand extends WriteCommand
 
     public function summary(): string
     {
-        return "Merges two subtitles in two languages into one file that shows both.";
+        return "Merge two subtitles in two languages into one file that shows both.";
     }
 
 
@@ -40,10 +40,10 @@ final class DualCommand extends WriteCommand
 
     protected function details(): string
     {
-        return "stack joins each secondary cue with the primary cue that it overlaps most, below its lines. " .
+        return "stack adds the lines of each secondary cue below the primary cue that it overlaps most. " .
                "top-bottom keeps both cues and moves the secondary one to the top. SubRip, WebVTT, ASS and TTML write the position. " .
                "The output takes the format of the primary file unless --to sets it. " .
-               "The result goes to standard output, to the file of -o, or into --output-dir with the base name of the primary file.";
+               self::OUTPUT_DETAILS;
     }
 
 
@@ -94,7 +94,7 @@ final class DualCommand extends WriteCommand
         $options = [];
         foreach (parent::inputOptions() as $option) {
             $options[] = match ($option->name) {
-                "from"  => Option::value("primary-from", "FORMAT", "Format of the primary file. Default: detected from the content, else taken from the file extension."),
+                "from"  => Option::value("primary-from", "FORMAT", "Format of the primary file. Default: the format detected from the content. When detection finds no format, the file extension sets it."),
                 "track" => Option::value("primary-track", "NUMBER", "Subtitle track of an MKV or WebM primary file. Needed when the file has several."),
                 default => $option,
             };

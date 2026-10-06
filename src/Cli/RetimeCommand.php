@@ -23,7 +23,7 @@ final class RetimeCommand extends WriteCommand
 
     public function summary(): string
     {
-        return "Shifts and scales all cue times, or fits them to a video with another frame rate.";
+        return "Shift and scale all cue times, or fit them to a video with another frame rate.";
     }
 
 
@@ -38,7 +38,7 @@ final class RetimeCommand extends WriteCommand
         return "Pass one or more edits. retime applies them in this order: --shift, --scale, --from-fps and --to-fps. " .
                "A time that becomes negative becomes 0. --scale 1.001 fixes a subtitle that drifts 3.6 s per hour. " .
                "--from-fps 25 --to-fps 23.976 fits a subtitle for a 25 fps release to a 23.976 fps video. " .
-               "One input file goes to standard output, or to the file of -o. Several input files need --output-dir.";
+               self::OUTPUT_DETAILS;
     }
 
 

@@ -56,10 +56,10 @@ final class OcrEdit extends Edit
     public static function options(): array
     {
         return [
-            Option::flag("ocr", "Read the text of image cues, for example from PGS or VobSub, with Tesseract when it is installed, else with php-glyph-ocr."),
-            Option::value("ocr-engine", "ENGINE", "The OCR engine for --ocr: tesseract or glyph. Default: tesseract when it is installed."),
-            Option::value("ocr-language", "CODE", "The Tesseract language for --ocr, for example deu or deu+eng. Default: eng. The glyph engine ignores it."),
-            Option::value("ocr-database", "FILE", "The .nocr glyph database for --ocr. It selects the glyph engine. Default: the subtitle fonts database of php-glyph-ocr."),
+            Option::flag("ocr", "Read the text of image cues, for example from PGS or VobSub. Use Tesseract when it is installed, and php-glyph-ocr when it is not."),
+            Option::value("ocr-engine", "ENGINE", "OCR engine for --ocr: tesseract or glyph. Default: tesseract when it is installed."),
+            Option::value("ocr-language", "CODE", "Tesseract language for --ocr, for example deu or deu+eng. Default: eng. The glyph engine ignores it."),
+            Option::value("ocr-database", "FILE", "Glyph database in .nocr format for --ocr. It selects the glyph engine. Default: the subtitle fonts database of php-glyph-ocr."),
         ];
     }
 

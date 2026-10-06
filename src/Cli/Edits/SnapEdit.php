@@ -34,19 +34,19 @@ final class SnapEdit extends Edit
 
     public static function summary(): string
     {
-        return "Time cues to shot changes and close gaps between cues.";
+        return "Time cues to shot changes and close gaps shorter than --snap-window-frames.";
     }
 
 
     public static function options(): array
     {
         return [
-            Option::value("snap-shot-changes", "FILE", "Time cues to these shot changes: one time per line in seconds or hh:mm:ss.mmm, or the log of the FFmpeg showinfo filter."),
-            Option::value("video-fps", "RATE", "Frame rate of the video, for the shot changes and the --snap- options. Required with them."),
-            Option::value("snap-window-frames", "FRAMES", "Largest move to a shot change, and largest gap that closes. Default: half the --video-fps, rounded to the nearest frame with a half frame rounded down. 12 at 24 and 25 fps, 15 at 30 fps."),
-            Option::value("snap-min-gap-frames", "FRAMES", "Gap between a cue and the next cue or shot change. Default: 2."),
+            Option::value("snap-shot-changes", "FILE", "Time cues to the shot changes in this file. It holds one time per line in seconds or hh:mm:ss.mmm, or the log of the FFmpeg showinfo filter."),
+            Option::value("video-fps", "RATE", "Frame rate of the video, for the shot changes and the other snap options. Required with them."),
+            Option::value("snap-window-frames", "FRAMES", "Largest move to a shot change, and largest gap that closes. Default: half the --video-fps, rounded to the nearest frame. A half frame rounds down. 12 at 24 and 25 fps, 15 at 30 fps."),
+            Option::value("snap-min-gap-frames", "FRAMES", "Minimum gap between a cue and the next cue or shot change. Default: 2."),
             Option::value("snap-min-duration-frames", "FRAMES", "No move makes a cue shorter than this. Default: 20."),
-            Option::flag("no-snap-chain", "Keep the gaps between cues."),
+            Option::flag("no-snap-chain", "Do not close gaps shorter than --snap-window-frames."),
         ];
     }
 

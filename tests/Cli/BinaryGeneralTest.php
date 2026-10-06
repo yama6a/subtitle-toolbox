@@ -65,10 +65,10 @@ class BinaryGeneralTest extends BinaryTestCase
 
     /** Defaults that the help describes in words. */
     private const DESCRIBED_DEFAULTS = [
-        "detected from the content, else taken from the file extension", "as for --from", "as for --primary-from",
+        "the format detected from the content", "as for --from", "as for --primary-from",
         "UTF-8", "stop at the first failure", "the input format", "the format of the primary file",
         "the frame rate of a MicroDVD or iTT input", "the BOM rule of the output format", "the end of the last cue",
-        "half the --video-fps, rounded to the nearest frame with a half frame rounded down", "tesseract when it is installed", "the subtitle fonts database of php-glyph-ocr",
+        "half the --video-fps, rounded to the nearest frame", "tesseract when it is installed", "the subtitle fonts database of php-glyph-ocr",
         "the environment variable of the engine", "the engine detects it",
     ];
 
@@ -205,7 +205,7 @@ class BinaryGeneralTest extends BinaryTestCase
         $this->assertMatchesRegularExpression('/^  --encoding NAME +.*A BOM in the input overrides it\.$/m', $convert);
         $this->assertMatchesRegularExpression('/^  --input-fps RATE +Frame rate of a MicroDVD input without a \{1\}\{1\}<fps> first line, and of CSV or TSV times in hh:mm:ss:ff\.$/m', $convert);
         $this->assertMatchesRegularExpression('/^  --output-fps RATE +Frame rate of MicroDVD and iTT output\..*$/m', $convert);
-        $this->assertMatchesRegularExpression('/^  --fps RATE +Sets --input-fps, --output-fps and --video-fps\. Each of them overrides it\.$/m', $convert);
+        $this->assertMatchesRegularExpression('/^  --fps RATE +Sets --input-fps, --output-fps and --video-fps\. A specific option wins over --fps\.$/m', $convert);
         $this->assertMatchesRegularExpression('/^  --from FORMAT +Input format\./m', $convert);
         $this->assertMatchesRegularExpression('/^  --to FORMAT +Output format\./m', $convert);
         $this->assertStringNotContainsString("SubRip, WebVTT and SBV", $convert);
@@ -219,7 +219,7 @@ class BinaryGeneralTest extends BinaryTestCase
 
         $validate = self::unwrapHelp($this->runBinary(["validate", "--help"])[1]);
         $this->assertMatchesRegularExpression('/^  --video-fps RATE +Frame rate of the video, for the 2-frame gap of netflix-en\. Default: 23\.976\.$/m', $validate);
-        $this->assertMatchesRegularExpression('/^  --fps RATE +Sets --input-fps and --video-fps\. Each of them overrides it\.$/m', $validate);
+        $this->assertMatchesRegularExpression('/^  --fps RATE +Sets --input-fps and --video-fps\. A specific option wins over --fps\.$/m', $validate);
         $this->assertDoesNotMatchRegularExpression('/--output-fps/', $validate);
     }
 

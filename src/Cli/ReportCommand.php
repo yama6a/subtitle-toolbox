@@ -31,7 +31,7 @@ abstract class ReportCommand extends FileCommand
 
     protected function jsonDescription(): string
     {
-        return "Print JSON: a list with one object for each input file, also for one file.";
+        return "Print JSON: a list with one object for each input file.";
     }
 
 
