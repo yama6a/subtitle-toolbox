@@ -120,18 +120,18 @@ php subtitle-toolbox.phar --version
 | `--fps RATE` | each of the 3 options above that the command has | all that read a file |
 
 - **Override**: a specific option wins over `--fps`. `convert movie.sub --to microdvd -o new.sub --fps 25 --output-fps 23.976` reads at 25 fps and writes at 23.976 fps.
-- **Output default**: without `--output-fps`, MicroDVD output takes the frame rate of a MicroDVD input. iTT output takes the frame rate of an iTT input.
+- **Output default**: without `--output-fps`, the frame rate of the output comes from the input, see [Load and save](formats.md#load-and-save).
 - **Formats**: `--from` and `--to` always name formats. `retime` changes the frame rate with `--from-fps` and `--to-fps`.
 
 ## Formats and file extensions
-Run `subtitle-toolbox formats` for the list. When two formats share an extension, the first one in the list owns it.
+Run `subtitle-toolbox formats` for the list. For an extension that two formats share, see [Shared extensions](formats.md#the-format-enum).
 
 - **Output extension**: `--to` sets the output format, never the extension of `-o`. So `--to mpl2 -o film.txt` writes MPL2, and `--to txt -o film.txt` writes plain text. The tool cannot write Whisper JSON, so convert it with `--to json` to the library JSON.
 - **`.sub`**: MicroDVD. Pass `--from subviewer` for SubViewer. A directory skips a `.sub` file that has an `.idx` file next to it.
 - **VobSub**: pass the `.idx` file. The tool reads the `.sub` file next to it. Standard input does not work.
 - **`.json` and `.txt` input**: format detection finds 6 of these formats by their content. These are the library JSON, Whisper JSON, YouTube json3, Podcasting 2.0 transcripts, MPL2 and TMPlayer. Other `.json` and `.txt` input fails without `--from`.
 - **Other output formats**: pass `--to`, for example `--to mpl2`, `--to podcast-transcript` or `--to youtube-chapters`.
-- **CSV and TSV**: TSV output has tabs between the cells. CSV output from a TSV input has commas. Other CSV output keeps the delimiter of the input table.
+- **CSV and TSV**: see [Load and save](formats.md#load-and-save) for the delimiter of the output.
 
 ## MKV and WebM
 Every command reads a subtitle track of an MKV or WebM file with [`Subtitle::loadTrack()`](mkv.md). `--track` takes the track number that `info` lists.
