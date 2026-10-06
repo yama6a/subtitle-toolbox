@@ -13,12 +13,28 @@ use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\RealFiles;
 use SubtitleToolbox\Validation\ValidationRules;
 use SubtitleToolbox\WriteOptions;
 
 class SubViewerRealFilesTest extends TestCase
 {
+    use RealFiles;
+
+
     private const DIR = __DIR__ . "/../files/subviewer/real/";
+
+
+    private static function realFilesDir(): string
+    {
+        return "subviewer/real/";
+    }
+
+
+    private static function realFilesFormat(): Format
+    {
+        return Format::SubViewer;
+    }
 
 
     public static function realFiles(): array
@@ -153,12 +169,6 @@ class SubViewerRealFilesTest extends TestCase
     }
 
 
-    private function parseFile(string $fileName): Subtitle
-    {
-        return Subtitle::fromString(file_get_contents(self::DIR . $fileName), Format::SubViewer);
-    }
-
-
     private function optionsFor(string $fileName): WriteOptions
     {
         $content = file_get_contents(self::DIR . $fileName);
@@ -168,11 +178,5 @@ class SubViewerRealFilesTest extends TestCase
             bom: StringHelpers::hasUtf8Bom($content),
             format: new SubViewerWriteOptions(version: str_contains($content, SubViewerParser::START_SCRIPT) ? SubViewerVersion::V1 : SubViewerVersion::V2),
         );
-    }
-
-
-    private function describeCue(SubtitleCue $cue): array
-    {
-        return [$cue->getStart(), $cue->getEnd(), $cue->getLines()];
     }
 }

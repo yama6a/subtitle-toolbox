@@ -21,7 +21,7 @@ class ImageCueFormatTest extends TestCase
     }
 
 
-    private function makeSubtitle(): Subtitle
+    private function subtitleWithImageCue(): Subtitle
     {
         $subtitle = (new Subtitle())
             ->addCue(new SubtitleCue(1, 2, "First"))
@@ -37,13 +37,13 @@ class ImageCueFormatTest extends TestCase
         $this->expectException(ImageCueWithoutTextException::class);
         $this->expectExceptionMessage("ImageCueWithoutTextException (Error #103): Cue #1 holds an image but no text.");
 
-        $this->makeSubtitle()->toString(Format::SubRip);
+        $this->subtitleWithImageCue()->toString(Format::SubRip);
     }
 
 
     public function testSkipOptionDropsImageCuesWithoutTextAndKeepsTheSubtitle(): void
     {
-        $subtitle = $this->makeSubtitle();
+        $subtitle = $this->subtitleWithImageCue();
 
         $output = $subtitle->toString(Format::WebVtt, new WriteOptions(skipImageCues: true));
 
@@ -61,7 +61,7 @@ class ImageCueFormatTest extends TestCase
 
     public function testImageCueWithTextIsFormattedAsText(): void
     {
-        $subtitle = $this->makeSubtitle();
+        $subtitle = $this->subtitleWithImageCue();
         $subtitle->getCues()[1]->setLines("Read by OCR");
 
         $this->assertStringContainsString("Read by OCR", $subtitle->toString(Format::SubRip));
@@ -70,7 +70,7 @@ class ImageCueFormatTest extends TestCase
 
     public function testFormatAfterRecognizeTextWritesTheEngineText(): void
     {
-        $output = $this->makeSubtitle()->recognizeText(new FakeOcrEngine(["Fixed text"]))->toString(Format::SubRip);
+        $output = $this->subtitleWithImageCue()->recognizeText(new FakeOcrEngine(["Fixed text"]))->toString(Format::SubRip);
 
         $this->assertSame("\u{FEFF}1\n00:00:01,000 --> 00:00:02,000\nFirst\n\n" .
                           "2\n00:00:03,000 --> 00:00:04,000\nFixed text\n\n" .

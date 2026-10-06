@@ -14,12 +14,16 @@ use SubtitleToolbox\Ocr\FakeOcrEngine;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Tests\Support\RealFiles;
 
 require_once __DIR__ . "/../files/pgs/generator/PgsFixtures.php";
 require_once __DIR__ . "/../Ocr/FakeOcrEngine.php";
 
 class PgsParserTest extends TestCase
 {
+    use RealFiles;
+
+
     private const DIR = __DIR__ . "/../files/pgs/";
 
     private const TRANSPARENT  = 0x00000000;
@@ -30,9 +34,15 @@ class PgsParserTest extends TestCase
     private const YELLOW_BT601 = 0xFCFF0AFF;
 
 
-    private function parseFile(string $file, ReadOptions $options = new ReadOptions()): Subtitle
+    private static function realFilesDir(): string
     {
-        return (new PgsParser())->parse(file_get_contents(self::DIR . $file), $options);
+        return "pgs/";
+    }
+
+
+    private static function realFilesFormat(): Format
+    {
+        return Format::Pgs;
     }
 
 

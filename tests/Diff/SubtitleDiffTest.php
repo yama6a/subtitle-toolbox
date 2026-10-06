@@ -8,7 +8,7 @@ use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class SubtitleDiffTest extends TestCase
 {
@@ -23,19 +23,6 @@ class SubtitleDiffTest extends TestCase
     {
         return array_map(fn (CueDifference $difference): array =>
             [$difference->kind, $difference->oldIndex, $difference->newIndex], $differences);
-    }
-
-
-    private function makeSubtitle(array $cues): Subtitle
-    {
-        $subtitle = new Subtitle();
-        $added    = [];
-        foreach ($cues as [$start, $end, $text]) {
-            $added[] = new SubtitleCue($start, $end, $text);
-        }
-        $subtitle->addCues($added);
-
-        return $subtitle;
     }
 
 
@@ -168,8 +155,8 @@ class SubtitleDiffTest extends TestCase
 
     public function testAddedCueDoesNotShiftLaterPairs(): void
     {
-        $old = $this->makeSubtitle([[1, 2, "The train is late."], [3, 4, "The bakery is open."]]);
-        $new = $this->makeSubtitle([[0, 0.5, "Welcome."], [1, 2, "The train is late."], [3, 4, "The bakery is open."]]);
+        $old = TestSubtitles::fromCues([[1, 2, "The train is late."], [3, 4, "The bakery is open."]]);
+        $new = TestSubtitles::fromCues([[0, 0.5, "Welcome."], [1, 2, "The train is late."], [3, 4, "The bakery is open."]]);
 
         $this->assertSame([[CueDifferenceKind::Added, null, 0]], $this->summarize(SubtitleDiff::compare($old, $new)));
     }
@@ -177,8 +164,8 @@ class SubtitleDiffTest extends TestCase
 
     public function testSameTextPairsWithoutTimeOverlap(): void
     {
-        $old = $this->makeSubtitle([[10, 12, "The bakery opens at six."]]);
-        $new = $this->makeSubtitle([[100, 102, "The bakery opens at six."]]);
+        $old = TestSubtitles::fromCues([[10, 12, "The bakery opens at six."]]);
+        $new = TestSubtitles::fromCues([[100, 102, "The bakery opens at six."]]);
 
         $this->assertSame([[CueDifferenceKind::TimingChanged, 0, 0]], $this->summarize(SubtitleDiff::compare($old, $new)));
     }
@@ -186,8 +173,8 @@ class SubtitleDiffTest extends TestCase
 
     public function testUnrelatedCuesListRemovedBeforeAdded(): void
     {
-        $old = $this->makeSubtitle([[1, 2, "Rain at noon."], [5, 6, "The harbour is closed."], [9, 10, "Goodbye."]]);
-        $new = $this->makeSubtitle([[1, 2, "Rain at noon."], [7, 8, "Coffee is free today."], [9, 10, "Goodbye."]]);
+        $old = TestSubtitles::fromCues([[1, 2, "Rain at noon."], [5, 6, "The harbour is closed."], [9, 10, "Goodbye."]]);
+        $new = TestSubtitles::fromCues([[1, 2, "Rain at noon."], [7, 8, "Coffee is free today."], [9, 10, "Goodbye."]]);
 
         $this->assertSame([
             [CueDifferenceKind::Removed, 1, null],
@@ -198,8 +185,8 @@ class SubtitleDiffTest extends TestCase
 
     public function testShortOverlapWithNeighbourDoesNotPair(): void
     {
-        $old = $this->makeSubtitle([[1, 3, "The train leaves now."]]);
-        $new = $this->makeSubtitle([[2.9, 5, "A different line."]]);
+        $old = TestSubtitles::fromCues([[1, 3, "The train leaves now."]]);
+        $new = TestSubtitles::fromCues([[2.9, 5, "A different line."]]);
 
         $this->assertSame([
             [CueDifferenceKind::Removed, 0, null],
@@ -219,7 +206,7 @@ class SubtitleDiffTest extends TestCase
             }
         }
 
-        $summary = $this->summarize(SubtitleDiff::compare($this->makeSubtitle($oldCues), $this->makeSubtitle($newCues)));
+        $summary = $this->summarize(SubtitleDiff::compare(TestSubtitles::fromCues($oldCues), TestSubtitles::fromCues($newCues)));
 
         $this->assertCount(300, $summary);
         $this->assertSame([CueDifferenceKind::TextChanged, 149, 149], $summary[149]);

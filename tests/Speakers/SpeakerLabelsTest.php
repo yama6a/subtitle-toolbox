@@ -15,6 +15,7 @@ use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 use SubtitleToolbox\WriteOptions;
 
 class SpeakerLabelsTest extends TestCase
@@ -24,17 +25,6 @@ class SpeakerLabelsTest extends TestCase
     private static function noBom(): WriteOptions
     {
         return new WriteOptions(bom: false);
-    }
-
-
-    private static function subtitle(string ...$texts): Subtitle
-    {
-        $subtitle = new Subtitle();
-        foreach ($texts as $index => $text) {
-            $subtitle->addCue(new SubtitleCue($index, $index + 1, $text));
-        }
-
-        return $subtitle;
     }
 
 
@@ -99,21 +89,21 @@ class SpeakerLabelsTest extends TestCase
     public function testListCountsTheCuesOfEachSpeakerInOrderOfAppearance(): void
     {
         $this->assertSame(["Anna" => 3, "Ben" => 3, "Clara" => 2], SpeakerLabels::list(self::voices()));
-        $this->assertSame([], SpeakerLabels::list(self::subtitle("No speaker here.")));
-        $this->assertSame(["Ben" => 1], SpeakerLabels::list(self::subtitle("<v Ben>Hi.\n<v Ben>Again.")));
+        $this->assertSame([], SpeakerLabels::list(TestSubtitles::fromTexts(["No speaker here."])));
+        $this->assertSame(["Ben" => 1], SpeakerLabels::list(TestSubtitles::fromTexts(["<v Ben>Hi.\n<v Ben>Again."])));
     }
 
 
     public function testListKeepsTheDecodedNames(): void
     {
         $this->assertSame(["Tom & Jerry" => 1, "O'Neil" => 1],
-                          SpeakerLabels::list(self::subtitle("<v Tom &amp; Jerry>Hi. <v O&#39;Neil>Hello.")));
+                          SpeakerLabels::list(TestSubtitles::fromTexts(["<v Tom &amp; Jerry>Hi. <v O&#39;Neil>Hello."])));
     }
 
 
     public function testRenameChangesOnlyTheGivenSpeakers(): void
     {
-        $subtitle = self::subtitle("<v SPEAKER_00>Where?", "<v.loud SPEAKER_01>Home.</v>", "<v SPEAKER_02>Here.");
+        $subtitle = TestSubtitles::fromTexts(["<v SPEAKER_00>Where?", "<v.loud SPEAKER_01>Home.</v>", "<v SPEAKER_02>Here."]);
 
         $report = SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(rename: [
             "SPEAKER_00" => "Anna",
@@ -167,7 +157,7 @@ class SpeakerLabelsTest extends TestCase
     #[DataProvider("prefixCases")]
     public function testToPrefix(string $text, bool $upperCase, string $separator, array $expected): void
     {
-        $this->assertSame([$expected], self::lines(self::apply(self::subtitle($text), new SpeakerLabelOptions(
+        $this->assertSame([$expected], self::lines(self::apply(TestSubtitles::fromTexts([$text]), new SpeakerLabelOptions(
             to: SpeakerStyle::Prefix,
             writeUpperCase: $upperCase,
             separator: $separator,
@@ -207,7 +197,7 @@ class SpeakerLabelsTest extends TestCase
     #[DataProvider("dashCases")]
     public function testToDialogueDashes(string $text, DialogueDashStyle $dash, array $expected): void
     {
-        $this->assertSame([$expected], self::lines(self::apply(self::subtitle($text), new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes, dialogueDashStyle: $dash))));
+        $this->assertSame([$expected], self::lines(self::apply(TestSubtitles::fromTexts([$text]), new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes, dialogueDashStyle: $dash))));
     }
 
 
@@ -222,7 +212,7 @@ class SpeakerLabelsTest extends TestCase
 
     public function testToColoursUsesTheBbcOrderAndStartsAgainAfterTheLastColour(): void
     {
-        $subtitle = self::subtitle("<v A>1", "<v B>2", "<v C>3", "<v D>4", "<v E>5", "<v A>6 <v B>7");
+        $subtitle = TestSubtitles::fromTexts(["<v A>1", "<v B>2", "<v C>3", "<v D>4", "<v E>5", "<v A>6 <v B>7"]);
 
         $this->assertSame([
             ['<font color="#ffffff">1</font>'],
@@ -237,7 +227,7 @@ class SpeakerLabelsTest extends TestCase
 
     public function testToColoursWithOwnColours(): void
     {
-        $subtitle = self::subtitle("<v A>Hi.\nthere", "No speaker.", "<v B>Bye.");
+        $subtitle = TestSubtitles::fromTexts(["<v A>Hi.\nthere", "No speaker.", "<v B>Bye."]);
 
         $this->assertSame([['<font color="#ff0000">Hi.</font>', '<font color="#ff0000">there</font>'], ["No speaker."],
                            ['<font color="#00ff00">Bye.</font>']],
@@ -307,7 +297,7 @@ class SpeakerLabelsTest extends TestCase
     #[DataProvider("fromPrefixCases")]
     public function testFromPrefix(string $text, bool $upperCaseOnly, array $expected): void
     {
-        $this->assertSame([$expected], self::lines(self::apply(self::subtitle($text), new SpeakerLabelOptions(
+        $this->assertSame([$expected], self::lines(self::apply(TestSubtitles::fromTexts([$text]), new SpeakerLabelOptions(
             readPrefixes: true,
             readUpperCaseOnly: $upperCaseOnly,
         ))));
@@ -316,7 +306,7 @@ class SpeakerLabelsTest extends TestCase
 
     public function testFromPrefixAndToPrefixRoundTrip(): void
     {
-        $subtitle = self::subtitle("JOHN: Hi.", "DR. O'NEIL: Yes.\nMARY: No.");
+        $subtitle = TestSubtitles::fromTexts(["JOHN: Hi.", "DR. O'NEIL: Yes.\nMARY: No."]);
 
         SpeakerLabels::apply($subtitle, new SpeakerLabelOptions(readPrefixes: true, to: SpeakerStyle::Prefix));
 
@@ -326,7 +316,7 @@ class SpeakerLabelsTest extends TestCase
 
     public function testVoicesSurviveWebVttAndTtml(): void
     {
-        $subtitle = self::apply(self::subtitle("DR. O'NEIL: Yes.\nMARY: No."), new SpeakerLabelOptions(readPrefixes: true));
+        $subtitle = self::apply(TestSubtitles::fromTexts(["DR. O'NEIL: Yes.\nMARY: No."]), new SpeakerLabelOptions(readPrefixes: true));
 
         $vtt  = Subtitle::fromString($subtitle->toString(Format::WebVtt), Format::WebVtt);
         $ttml = Subtitle::fromString($subtitle->toString(Format::Ttml), Format::Ttml);
@@ -338,7 +328,7 @@ class SpeakerLabelsTest extends TestCase
 
     public function testCuesWithoutSpeakersStayUnchanged(): void
     {
-        $subtitle = self::subtitle("<i>Hi</i>  there");
+        $subtitle = TestSubtitles::fromTexts(["<i>Hi</i>  there"]);
         $before   = self::lines($subtitle);
 
         foreach (SpeakerStyle::cases() as $style) {

@@ -11,10 +11,14 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\RealFiles;
 use SubtitleToolbox\WriteOptions;
 
 class AssFormatterTest extends TestCase
 {
+    use RealFiles;
+
+
     private const DEFAULT_HEADER = "\xEF\xBB\xBF[Script Info]\n" .
                                    "ScriptType: v4.00+\n" .
                                    "PlayResX: 384\n" .
@@ -29,6 +33,18 @@ class AssFormatterTest extends TestCase
                                    "\n" .
                                    "[Events]\n" .
                                    "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n";
+
+
+    private static function realFilesDir(): string
+    {
+        return "ass/real/";
+    }
+
+
+    private static function realFilesFormat(): Format
+    {
+        return Format::Ass;
+    }
 
 
     public static function realFiles(): array
@@ -52,6 +68,10 @@ class AssFormatterTest extends TestCase
         $this->assertSame(
             array_map($this->describeCue(...), $subtitle->getCues()),
             array_map($this->describeCue(...), $reparsed->getCues())
+        );
+        $this->assertSame(
+            array_map(fn (SubtitleCue $cue): array => $cue->findFormatData("ass"), $subtitle->getCues()),
+            array_map(fn (SubtitleCue $cue): array => $cue->findFormatData("ass"), $reparsed->getCues())
         );
         $this->assertEquals($subtitle->getComments(), $reparsed->getComments());
         $this->assertSame($subtitle->getAllMetadata(), $reparsed->getAllMetadata());
@@ -240,17 +260,5 @@ class AssFormatterTest extends TestCase
             "Dialogue: 0,1:00:00.00,10:00:00.00,Default,,0,0,0,,a\n",
             $subtitle->toString(Format::Ass)
         );
-    }
-
-
-    private function parseFile(string $file): Subtitle
-    {
-        return Subtitle::fromString(file_get_contents(__DIR__ . "/../files/ass/real/$file"), Format::Ass);
-    }
-
-
-    private function describeCue(SubtitleCue $cue): array
-    {
-        return [$cue->getStart(), $cue->getEnd(), $cue->getLines(), $cue->getAlignment(), $cue->findFormatData("ass")];
     }
 }

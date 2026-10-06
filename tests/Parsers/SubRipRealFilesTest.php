@@ -10,9 +10,25 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\RealFiles;
 
 class SubRipRealFilesTest extends TestCase
 {
+    use RealFiles;
+
+
+    private static function realFilesDir(): string
+    {
+        return "srt/real/";
+    }
+
+
+    private static function realFilesFormat(): Format
+    {
+        return Format::SubRip;
+    }
+
+
     public static function realFiles(): array
     {
         return [
@@ -137,12 +153,6 @@ class SubRipRealFilesTest extends TestCase
             array_map(fn(SubtitleCue $cue) => $cue->getAlignment(), $cues)
         );
         $this->assertSame(["[Deprecated] Middle-centre: \\a10"], $cues[16]->getLines());
-    }
-
-
-    private function parseFile(string $fileName): Subtitle
-    {
-        return Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/real/$fileName"), Format::SubRip);
     }
 
 

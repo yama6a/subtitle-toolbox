@@ -11,11 +11,26 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\EbuStlReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\RealFiles;
 
 class EbuStlRealFilesTest extends TestCase
 {
+    use RealFiles;
+
+
     private const DIR = __DIR__ . "/../files/stl/real/";
+
+
+    private static function realFilesDir(): string
+    {
+        return "stl/real/";
+    }
+
+
+    private static function realFilesFormat(): Format
+    {
+        return Format::EbuStl;
+    }
 
 
     public static function realFileProvider(): array
@@ -49,7 +64,7 @@ class EbuStlRealFilesTest extends TestCase
         string $lastText,
         int $lastAlignment
     ): void {
-        $cues = array_values(Subtitle::fromString(file_get_contents(self::DIR . $file), Format::EbuStl)->getCues());
+        $cues = array_values($this->parseFile($file)->getCues());
 
         $this->assertCount($cueCount, $cues);
         $this->assertSame([$firstStart, $firstEnd, $firstText, $firstAlignment], $this->describeCue($cues[0]));
@@ -69,7 +84,7 @@ class EbuStlRealFilesTest extends TestCase
     #[DataProvider("realFileProvider")]
     public function testRealFileKeepsCuesWhenTheFormatterEncodesTheTextAgain(string $file): void
     {
-        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . $file), Format::EbuStl);
+        $subtitle = $this->parseFile($file);
         foreach ($subtitle->getCues() as $cue) {
             $cue->setFormatData("stl", ["blocks" => []] + $cue->findFormatData("stl"));
         }
@@ -83,7 +98,7 @@ class EbuStlRealFilesTest extends TestCase
 
     public function testRealFileMetadataAndGsiFields(): void
     {
-        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "harbour_open_30fps.stl"), Format::EbuStl);
+        $subtitle = $this->parseFile("harbour_open_30fps.stl");
         $gsi      = $subtitle->findFormatData("stl")["gsi"];
 
         $this->assertSame(["title" => "Météo du port", "language" => "fr"], $subtitle->getAllMetadata());
@@ -95,7 +110,7 @@ class EbuStlRealFilesTest extends TestCase
 
     public function testRealFileKeepsPositionGroupAndCumulativeStatus(): void
     {
-        $cues = array_values(Subtitle::fromString(file_get_contents(self::DIR . "harbour_open_30fps.stl"), Format::EbuStl)->getCues());
+        $cues = array_values($this->parseFile("harbour_open_30fps.stl")->getCues());
         $keys = array_flip(["subtitleGroupNumber", "cumulativeStatus", "verticalPosition", "justificationCode"]);
 
         $this->assertSame([8, 4, 3], [$cues[1]->getAlignment(), $cues[2]->getAlignment(), $cues[3]->getAlignment()]);
@@ -110,7 +125,7 @@ class EbuStlRealFilesTest extends TestCase
 
     public function testRealFileTeletextCodesExtensionBlocksCommentsAndUserData(): void
     {
-        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "bakery_teletext_25fps.stl"), Format::EbuStl);
+        $subtitle = $this->parseFile("bakery_teletext_25fps.stl");
         $cues     = array_values($subtitle->getCues());
 
         $this->assertSame("<font color=\"#ff0000\">Fresh</font> rolls are <i>warm</i> today.", $cues[1]->getText());
@@ -134,11 +149,5 @@ class EbuStlRealFilesTest extends TestCase
         $this->assertSame([1.0, 3.48], [$cues[0]->getStart(), $cues[0]->getEnd()]);
         $this->assertSame([30.96, 33.0], [$cues[5]->getStart(), $cues[5]->getEnd()]);
         $this->assertSame(bin2hex($raw), bin2hex($subtitle->toString(Format::EbuStl)));
-    }
-
-
-    private function describeCue(SubtitleCue $cue): array
-    {
-        return [$cue->getStart(), $cue->getEnd(), $cue->getText(), $cue->getAlignment()];
     }
 }

@@ -9,10 +9,26 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\RealFiles;
 
 class TtmlRealFileTest extends TestCase
 {
+    use RealFiles;
+
+
     private const DIR = __DIR__ . "/../files/ttml/real/";
+
+
+    private static function realFilesDir(): string
+    {
+        return "ttml/real/";
+    }
+
+
+    private static function realFilesFormat(): Format
+    {
+        return Format::Ttml;
+    }
 
 
     public static function realFileProvider(): array
@@ -55,7 +71,7 @@ class TtmlRealFileTest extends TestCase
         string $lastText,
         ?int $lastAlignment
     ): void {
-        $cues = array_values(Subtitle::fromString(file_get_contents(self::DIR . $file), Format::Ttml)->getCues());
+        $cues = array_values($this->parseFile($file)->getCues());
 
         $this->assertCount($cueCount, $cues);
         $this->assertSame([$firstStart, $firstEnd, $firstText, $firstAlignment], $this->describeCue($cues[0]));
@@ -66,7 +82,7 @@ class TtmlRealFileTest extends TestCase
     #[DataProvider("realFileProvider")]
     public function testRealFileRoundTripKeepsCues(string $file): void
     {
-        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . $file), Format::Ttml);
+        $subtitle = $this->parseFile($file);
         $output   = $subtitle->toString(Format::Ttml);
         $reparsed = Subtitle::fromString($output, Format::Ttml);
 
@@ -81,7 +97,7 @@ class TtmlRealFileTest extends TestCase
 
     public function testRealFileSmpteDropFrameTimes(): void
     {
-        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "smpte_drop_ntsc.ttml"), Format::Ttml);
+        $subtitle = $this->parseFile("smpte_drop_ntsc.ttml");
 
         $this->assertSame(
             [[57.391, 60.027], [60.06, 63.497], [597.997, 599.999], [599.999, 602.669], [3599.996, 3602.999]],
@@ -92,7 +108,7 @@ class TtmlRealFileTest extends TestCase
 
     public function testRealFileEbuTtDAgentsTitleAndNestedSpans(): void
     {
-        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "bbc_ebu_tt_d.ttml"), Format::Ttml);
+        $subtitle = $this->parseFile("bbc_ebu_tt_d.ttml");
         $cues     = array_values($subtitle->getCues());
 
         $this->assertSame("Harbour weather", $subtitle->findMetadata(Subtitle::METADATA_TITLE));
@@ -107,7 +123,7 @@ class TtmlRealFileTest extends TestCase
 
     public function testRealFileTicksAndPreservedSpace(): void
     {
-        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "mantas_netflix_ticks.dfxp"), Format::Ttml);
+        $subtitle = $this->parseFile("mantas_netflix_ticks.dfxp");
 
         $this->assertSame(["region" => "bottomCenter"], $subtitle->getCues()[0]->findFormatData("ttml")["attributes"]);
         $this->assertSame(["xml:space" => "preserve"], $subtitle->getCues()[0]->findFormatData("ttml")["div"]);
@@ -116,7 +132,7 @@ class TtmlRealFileTest extends TestCase
 
     public function testRealFileDfxpNamespaceIsWrittenBack(): void
     {
-        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "w3c_dfxp_timing.dfxp"), Format::Ttml);
+        $subtitle = $this->parseFile("w3c_dfxp_timing.dfxp");
         $output   = $subtitle->toString(Format::Ttml);
 
         $this->assertStringContainsString("<tt xmlns=\"http://www.w3.org/2006/10/ttaf1\"", $output);
@@ -126,16 +142,10 @@ class TtmlRealFileTest extends TestCase
 
     public function testRealFileWithoutNamespaceWritesNoInvalidIdentifier(): void
     {
-        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "astisub_breaklines.ttml"), Format::Ttml);
+        $subtitle = $this->parseFile("astisub_breaklines.ttml");
         $output   = $subtitle->toString(Format::Ttml);
 
         $this->assertSame("1", $subtitle->getCues()[0]->getIdentifier());
         $this->assertStringContainsString("<p begin=\"00:00:00.000\" end=\"00:00:01.000\">First line<br/>Second line</p>", $output);
-    }
-
-
-    private function describeCue(SubtitleCue $cue): array
-    {
-        return [$cue->getStart(), $cue->getEnd(), $cue->getText(), $cue->getAlignment()];
     }
 }

@@ -9,37 +9,12 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\ReferenceSyncFixtures;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class ReferenceSyncTest extends TestCase
 {
-    private function load(string $name): Subtitle
-    {
-        return Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sync/$name"), Format::SubRip);
-    }
-
-
-    private function getTimes(Subtitle $subtitle): array
-    {
-        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues());
-    }
-
-
-    private function makeRandomSubtitle(int $cueCount, int $seed): Subtitle
-    {
-        mt_srand($seed);
-        $subtitle = new Subtitle();
-        $time     = 1.0;
-        $cues     = [];
-        for ($index = 0; $index < $cueCount; $index++) {
-            $time     += mt_rand(500, 4000) / 1000;
-            $duration  = mt_rand(1000, 5000) / 1000;
-            $cues[] = new SubtitleCue($time, $time + $duration, "text$index");
-            $time     += $duration;
-        }
-        $subtitle->addCues($cues);
-
-        return $subtitle;
-    }
+    use ReferenceSyncFixtures;
 
 
     public function testRealFilesParse(): void
@@ -65,14 +40,14 @@ class ReferenceSyncTest extends TestCase
     {
         $reference = $this->load("own_reference_en.srt");
         $target    = $this->load("own_target_de_25fps.srt");
-        $before    = $this->getTimes($target);
+        $before    = TestSubtitles::times($target);
 
         $result = ReferenceSync::apply($target, new ReferenceSyncOptions($reference));
 
         $this->assertEqualsWithDelta(-2.3, $result->offset, 0.02);
         $this->assertEqualsWithDelta(25 / 23.976, $result->scale, 0.00001);
         $this->assertGreaterThan(0.8, $result->score);
-        $this->assertNotSame($before, $this->getTimes($target));
+        $this->assertNotSame($before, TestSubtitles::times($target));
     }
 
 
@@ -143,12 +118,12 @@ class ReferenceSyncTest extends TestCase
     public function testSyncToAnIdenticalCopyKeepsTimes(): void
     {
         $subtitle = $this->makeRandomSubtitle(20, 5);
-        $before   = $this->getTimes($subtitle);
+        $before   = TestSubtitles::times($subtitle);
 
         $result = ReferenceSync::apply($subtitle, new ReferenceSyncOptions(clone $subtitle));
 
         $this->assertSame([0.0, 1.0], [$result->offset, $result->scale]);
-        $this->assertSame($before, $this->getTimes($subtitle));
+        $this->assertSame($before, TestSubtitles::times($subtitle));
     }
 
 

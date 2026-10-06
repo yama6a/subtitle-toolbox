@@ -5,27 +5,11 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use InvalidArgumentException;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 use SubtitleToolbox\Validation\ValidationRules;
 
 class FixesTest extends \PHPUnit\Framework\TestCase
 {
-    private function makeSubtitle(array $times): Subtitle
-    {
-        $subtitle = new Subtitle();
-        foreach ($times as $index => [$start, $end]) {
-            $subtitle->addCue(new SubtitleCue($start, $end, "text$index"));
-        }
-
-        return $subtitle;
-    }
-
-
-    private function getTimes(Subtitle $subtitle): array
-    {
-        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues());
-    }
-
-
     private function wrap(string $text, int $maxCharsPerLine, int $maxLines = 2): array
     {
         $subtitle = new Subtitle();
@@ -56,30 +40,30 @@ class FixesTest extends \PHPUnit\Framework\TestCase
 
     public function testFixOverlapsKeepsTwoFramesGapAt24Fps(): void
     {
-        $subtitle = $this->makeSubtitle([[1, 5.2], [5.1, 7]]);
+        $subtitle = TestSubtitles::fromTimes([[1, 5.2], [5.1, 7]]);
 
         $this->assertSame($subtitle, $subtitle->fixOverlaps((new FrameRate(24))->framesToSeconds(2)));
-        $this->assertSame([[1.0, 5.017], [5.1, 7.0]], $this->getTimes($subtitle));
+        $this->assertSame([[1.0, 5.017], [5.1, 7.0]], TestSubtitles::times($subtitle));
     }
 
 
     public function testFixOverlapsWithoutGap(): void
     {
-        $subtitle = $this->makeSubtitle([[1, 5.2], [5.1, 7], [7, 8]]);
+        $subtitle = TestSubtitles::fromTimes([[1, 5.2], [5.1, 7], [7, 8]]);
 
         $subtitle->fixOverlaps();
 
-        $this->assertSame([[1.0, 5.1], [5.1, 7.0], [7.0, 8.0]], $this->getTimes($subtitle));
+        $this->assertSame([[1.0, 5.1], [5.1, 7.0], [7.0, 8.0]], TestSubtitles::times($subtitle));
     }
 
 
     public function testFixOverlapsWidensGapsThatAreTooSmall(): void
     {
-        $subtitle = $this->makeSubtitle([[1, 5.05], [5.1, 7]]);
+        $subtitle = TestSubtitles::fromTimes([[1, 5.05], [5.1, 7]]);
 
         $subtitle->fixOverlaps(0.1);
 
-        $this->assertSame([[1.0, 5.0], [5.1, 7.0]], $this->getTimes($subtitle));
+        $this->assertSame([[1.0, 5.0], [5.1, 7.0]], TestSubtitles::times($subtitle));
     }
 
 
@@ -91,17 +75,17 @@ class FixesTest extends \PHPUnit\Framework\TestCase
 
         $subtitle->fixOverlaps();
 
-        $this->assertSame([[10.0, 14.0], [1.0, 10.0]], $this->getTimes($subtitle));
+        $this->assertSame([[10.0, 14.0], [1.0, 10.0]], TestSubtitles::times($subtitle));
     }
 
 
     public function testFixOverlapsNeverMovesAStartTime(): void
     {
-        $subtitle = $this->makeSubtitle([[5, 6], [5, 7], [5.05, 8]]);
+        $subtitle = TestSubtitles::fromTimes([[5, 6], [5, 7], [5.05, 8]]);
 
         $subtitle->fixOverlaps(0.1);
 
-        $this->assertSame([[5.0, 5.0], [5.0, 5.0], [5.05, 8.0]], $this->getTimes($subtitle));
+        $this->assertSame([[5.0, 5.0], [5.0, 5.0], [5.05, 8.0]], TestSubtitles::times($subtitle));
     }
 
 
@@ -109,56 +93,56 @@ class FixesTest extends \PHPUnit\Framework\TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("The minimum gap must not be negative, got -1.");
-        $this->makeSubtitle([[1, 2]])->fixOverlaps(-1);
+        TestSubtitles::fromTimes([[1, 2]])->fixOverlaps(-1);
     }
 
 
     public function testExtendShortCues(): void
     {
-        $subtitle = $this->makeSubtitle([[1, 1.3], [3.3, 5]]);
+        $subtitle = TestSubtitles::fromTimes([[1, 1.3], [3.3, 5]]);
 
         $this->assertSame($subtitle, $subtitle->extendShortCues(0.833));
-        $this->assertSame([[1.0, 1.833], [3.3, 5.0]], $this->getTimes($subtitle));
+        $this->assertSame([[1.0, 1.833], [3.3, 5.0]], TestSubtitles::times($subtitle));
     }
 
 
     public function testExtendShortCuesStopsBeforeTheNextCue(): void
     {
-        $subtitle = $this->makeSubtitle([[1, 1.3], [1.5, 1.6], [1.6, 3]]);
+        $subtitle = TestSubtitles::fromTimes([[1, 1.3], [1.5, 1.6], [1.6, 3]]);
 
         $subtitle->extendShortCues(1, 0.1);
 
-        $this->assertSame([[1.0, 1.4], [1.5, 1.6], [1.6, 3.0]], $this->getTimes($subtitle));
+        $this->assertSame([[1.0, 1.4], [1.5, 1.6], [1.6, 3.0]], TestSubtitles::times($subtitle));
     }
 
 
     public function testExtendShortCuesNeverShortensACue(): void
     {
-        $subtitle = $this->makeSubtitle([[1, 1.3], [1.2, 1.4], [2, 5]]);
+        $subtitle = TestSubtitles::fromTimes([[1, 1.3], [1.2, 1.4], [2, 5]]);
 
         $subtitle->extendShortCues(1, 0.1);
 
-        $this->assertSame([[1.0, 1.3], [1.2, 1.9], [2.0, 5.0]], $this->getTimes($subtitle));
+        $this->assertSame([[1.0, 1.3], [1.2, 1.9], [2.0, 5.0]], TestSubtitles::times($subtitle));
     }
 
 
     public function testExtendShortCuesDoesNotExtendCuesWithTheSameStart(): void
     {
-        $subtitle = $this->makeSubtitle([[1, 1.2], [1, 1.3], [5, 6]]);
+        $subtitle = TestSubtitles::fromTimes([[1, 1.2], [1, 1.3], [5, 6]]);
 
         $subtitle->extendShortCues(1);
 
-        $this->assertSame([[1.0, 1.2], [1.0, 1.3], [5.0, 6.0]], $this->getTimes($subtitle));
+        $this->assertSame([[1.0, 1.2], [1.0, 1.3], [5.0, 6.0]], TestSubtitles::times($subtitle));
     }
 
 
     public function testExtendShortCuesExtendsTheLastCue(): void
     {
-        $subtitle = $this->makeSubtitle([[1, 1.2]]);
+        $subtitle = TestSubtitles::fromTimes([[1, 1.2]]);
 
         $subtitle->extendShortCues(2, 0.5);
 
-        $this->assertSame([[1.0, 3.0]], $this->getTimes($subtitle));
+        $this->assertSame([[1.0, 3.0]], TestSubtitles::times($subtitle));
     }
 
 
@@ -166,7 +150,7 @@ class FixesTest extends \PHPUnit\Framework\TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("The minimum duration must be greater than 0, got 0.");
-        $this->makeSubtitle([[1, 2]])->extendShortCues(0);
+        TestSubtitles::fromTimes([[1, 2]])->extendShortCues(0);
     }
 
 

@@ -50,7 +50,7 @@ class VobSubParserTest extends TestCase
     /**
      * @return array{float, float, int, int, int, int, int, int, bool}
      */
-    private function describeCue(SubtitleCue $cue): array
+    private function describeImageCue(SubtitleCue $cue): array
     {
         $image = CueImage::fromCue($cue);
 
@@ -145,8 +145,8 @@ class VobSubParserTest extends TestCase
 
         $this->assertSame($language, $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
         $this->assertCount($cueCount, $cues);
-        $this->assertSame($firstCue, $this->describeCue($cues[0]));
-        $this->assertSame($lastCue, $this->describeCue(end($cues)));
+        $this->assertSame($firstCue, $this->describeImageCue($cues[0]));
+        $this->assertSame($lastCue, $this->describeImageCue(end($cues)));
         foreach ($cues as $cue) {
             $this->assertSame([], $cue->getLines());
         }
@@ -155,7 +155,7 @@ class VobSubParserTest extends TestCase
 
     public function testCueTimesUseStartAndStopDelaysAndOtherwiseTheNextCue(): void
     {
-        $cues = array_map(fn (SubtitleCue $cue): array => $this->describeCue($cue), $this->parseFixture("two-tracks-pal")->getCues());
+        $cues = array_map(fn (SubtitleCue $cue): array => $this->describeImageCue($cue), $this->parseFixture("two-tracks-pal")->getCues());
 
         $this->assertSame([
             [1.5, 4.003, 210, 500, 300, 40, 720, 576, false],       // stop at 220 * 1024 / 90000 s
@@ -259,7 +259,7 @@ class VobSubParserTest extends TestCase
         $subtitle = (new VobSubParser())->parse($sub, new ReadOptions(format: new VobSubReadOptions($idx)));
 
         $this->assertCount(1, $subtitle->getCues());
-        $this->assertSame([10.0, 11.2, 100, 200, 2, 2, 720, 576, false], $this->describeCue($subtitle->getCues()[0]));
+        $this->assertSame([10.0, 11.2, 100, 200, 2, 2, 720, 576, false], $this->describeImageCue($subtitle->getCues()[0]));
         $this->assertSame("f0f0f0ff", $this->pixelAt(CueImage::fromCue($subtitle->getCues()[0]), 1, 1));
     }
 
@@ -271,7 +271,7 @@ class VobSubParserTest extends TestCase
         $idx               = self::IDX_HEADER . "id: en, index: 0\n" . sprintf("timestamp: 00:00:01:000, filepos: %09x\n", $fileposes[0]);
 
         $this->assertSame([1.0, 6.0, 100, 200, 2, 2, 720, 576, false],
-                          $this->describeCue((new VobSubParser())->parse($sub, new ReadOptions(format: new VobSubReadOptions($idx)))->getCues()[0]));
+                          $this->describeImageCue((new VobSubParser())->parse($sub, new ReadOptions(format: new VobSubReadOptions($idx)))->getCues()[0]));
     }
 
 
@@ -293,7 +293,7 @@ class VobSubParserTest extends TestCase
         $idx               = self::IDX_HEADER . "id: en, index: 0\n" . sprintf("timestamp: 00:00:01:000, filepos: %09x\n", $fileposes[0]);
 
         $this->assertSame([1.0, 6.0, 100, 200, 2, 2, 720, 576, false],
-                          $this->describeCue((new VobSubParser())->parse($sub, new ReadOptions(format: new VobSubReadOptions($idx)))->getCues()[0]));
+                          $this->describeImageCue((new VobSubParser())->parse($sub, new ReadOptions(format: new VobSubReadOptions($idx)))->getCues()[0]));
     }
 
 

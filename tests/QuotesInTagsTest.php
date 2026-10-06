@@ -11,6 +11,7 @@ use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 use SubtitleToolbox\Validation\ValidationRule;
 use SubtitleToolbox\Validation\ValidationViolation;
 use SubtitleToolbox\Validation\ValidationRules;
@@ -20,17 +21,6 @@ class QuotesInTagsTest extends TestCase
     private function loadAss(): Subtitle
     {
         return Subtitle::fromString(file_get_contents(__DIR__ . "/files/quotes-in-tags/own_names_with_quotes.ass"), Format::Ass);
-    }
-
-
-    private function makeSubtitle(string ...$texts): Subtitle
-    {
-        $subtitle = new Subtitle();
-        foreach ($texts as $index => $text) {
-            $subtitle->addCue(new SubtitleCue($index * 2 + 1, $index * 2 + 2, $text));
-        }
-
-        return $subtitle;
     }
 
 
@@ -89,7 +79,7 @@ class QuotesInTagsTest extends TestCase
     #[DataProvider("formatterProvider")]
     public function testFormatterKeepsTextAfterQuotesInTags(Format $format, ?FormatWriteOptions $options): void
     {
-        $subtitle = $this->makeSubtitle("<v O'Neil>We're out of rye.", '<v Mo "Baker>Two rolls.');
+        $subtitle = TestSubtitles::fromTexts(["<v O'Neil>We're out of rye.", '<v Mo "Baker>Two rolls.'], start: 1, step: 2);
 
         foreach ([false, true] as $stripTags) {
             $output = $subtitle->toString($format, new WriteOptions(stripTags: $stripTags, format: $options));
@@ -102,13 +92,13 @@ class QuotesInTagsTest extends TestCase
 
     public function testStatisticsCountWordsAfterQuotesInTags(): void
     {
-        $this->assertSame(5, SubtitleStatistics::of($this->makeSubtitle("<v O'Neil>We're out of rye.", '<v Mo "Baker>Hi.'))->wordCount);
+        $this->assertSame(5, SubtitleStatistics::of(TestSubtitles::fromTexts(["<v O'Neil>We're out of rye.", '<v Mo "Baker>Hi.'], start: 1, step: 2))->wordCount);
     }
 
 
     public function testStripFormattingKeepsTextAfterQuotesInTags(): void
     {
-        $subtitle = $this->makeSubtitle("<v O'Neil><i>We're</i> out.")->stripFormatting(["i"]);
+        $subtitle = TestSubtitles::fromTexts(["<v O'Neil><i>We're</i> out."], start: 1, step: 2)->stripFormatting(["i"]);
 
         $this->assertSame([["<i>We're</i> out."]], array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $subtitle->getCues()));
     }
@@ -116,7 +106,7 @@ class QuotesInTagsTest extends TestCase
 
     public function testDiffIgnoringFormattingSeesTextAfterQuotesInTags(): void
     {
-        $differences = SubtitleDiff::compare($this->makeSubtitle("<v O'Neil>We're out."), $this->makeSubtitle("<v O'Neil>We're open."),
+        $differences = SubtitleDiff::compare(TestSubtitles::fromTexts(["<v O'Neil>We're out."], start: 1, step: 2), TestSubtitles::fromTexts(["<v O'Neil>We're open."], start: 1, step: 2),
                                              new SubtitleDiffOptions(ignoreFormatting: true));
 
         $this->assertCount(1, $differences);
@@ -136,7 +126,7 @@ class QuotesInTagsTest extends TestCase
 
     public function testValidationSeesTextAfterQuotesInTags(): void
     {
-        $results = $this->makeSubtitle("<v O'Neil>WE'RE OUT.")->validate(new ValidationRules(noEmptyCues: true, noAllCapsLines: true));
+        $results = TestSubtitles::fromTexts(["<v O'Neil>WE'RE OUT."], start: 1, step: 2)->validate(new ValidationRules(noEmptyCues: true, noAllCapsLines: true));
 
         $this->assertSame([ValidationRule::NoAllCapsLines], array_map(fn (ValidationViolation $result): ValidationRule => $result->rule, $results));
     }

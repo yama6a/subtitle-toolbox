@@ -10,30 +10,11 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Dual\DualSubtitle;
 use SubtitleToolbox\Dual\DualSubtitleMode;
 use SubtitleToolbox\Dual\DualSubtitleOptions;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class DualSubtitleTest extends TestCase
 {
     private const DIR = __DIR__ . "/files/dual/";
-
-
-    private function makeSubtitle(array $cues): Subtitle
-    {
-        $subtitle = new Subtitle();
-        foreach ($cues as [$start, $end, $text]) {
-            $subtitle->addCue(new SubtitleCue($start, $end, $text));
-        }
-
-        return $subtitle;
-    }
-
-
-    private function describeCues(Subtitle $subtitle): array
-    {
-        return array_map(
-            fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText(), $cue->getAlignment()],
-            $subtitle->getCues()
-        );
-    }
 
 
     private function parseFixture(string $fileName): Subtitle
@@ -49,12 +30,12 @@ class DualSubtitleTest extends TestCase
 
         $this->assertCount(5, $english->getCues());
         $this->assertSame([1.0, 4.0, "The train to Hamburg leaves from platform 4.", null],
-                          $this->describeCues($english)[0]);
-        $this->assertSame([16.0, 19.0, "Take an umbrella with you.", null], $this->describeCues($english)[4]);
+                          TestSubtitles::describe($english, withAlignment: true)[0]);
+        $this->assertSame([16.0, 19.0, "Take an umbrella with you.", null], TestSubtitles::describe($english, withAlignment: true)[4]);
 
         $this->assertCount(6, $german->getCues());
-        $this->assertSame([1.2, 3.9, "Der Zug nach Hamburg fährt von Gleis 4.", null], $this->describeCues($german)[0]);
-        $this->assertSame([19.2, 21.0, "Gute Reise!", null], $this->describeCues($german)[5]);
+        $this->assertSame([1.2, 3.9, "Der Zug nach Hamburg fährt von Gleis 4.", null], TestSubtitles::describe($german, withAlignment: true)[0]);
+        $this->assertSame([19.2, 21.0, "Gute Reise!", null], TestSubtitles::describe($german, withAlignment: true)[5]);
     }
 
 
@@ -64,7 +45,7 @@ class DualSubtitleTest extends TestCase
             $subtitle = $this->parseFixture($fileName);
             $again    = Subtitle::fromString($subtitle->toString(Format::SubRip), Format::SubRip);
 
-            $this->assertSame($this->describeCues($subtitle), $this->describeCues($again), $fileName);
+            $this->assertSame(TestSubtitles::describe($subtitle, withAlignment: true), TestSubtitles::describe($again, withAlignment: true), $fileName);
         }
     }
 
@@ -101,70 +82,70 @@ class DualSubtitleTest extends TestCase
     {
         $english       = $this->parseFixture("station_en.srt");
         $german        = $this->parseFixture("station_de.srt");
-        $englishBefore = $this->describeCues($english);
-        $germanBefore  = $this->describeCues($german);
+        $englishBefore = TestSubtitles::describe($english, withAlignment: true);
+        $germanBefore  = TestSubtitles::describe($german, withAlignment: true);
 
         DualSubtitle::fromPair($english, $german, new DualSubtitleOptions(secondaryStyle: "i"));
         DualSubtitle::fromPair($english, $german, new DualSubtitleOptions(mode: DualSubtitleMode::TopBottom));
 
-        $this->assertSame($englishBefore, $this->describeCues($english));
-        $this->assertSame($germanBefore, $this->describeCues($german));
+        $this->assertSame($englishBefore, TestSubtitles::describe($english, withAlignment: true));
+        $this->assertSame($germanBefore, TestSubtitles::describe($german, withAlignment: true));
     }
 
 
     public function testStackJoinsTheIssueExample(): void
     {
-        $english = $this->makeSubtitle([[1, 4, "Where are you going?"]]);
-        $german  = $this->makeSubtitle([[1.2, 3.9, "Wohin gehst du?"]]);
+        $english = TestSubtitles::fromCues([[1, 4, "Where are you going?"]]);
+        $german  = TestSubtitles::fromCues([[1.2, 3.9, "Wohin gehst du?"]]);
 
         $dual = DualSubtitle::fromPair($english, $german, new DualSubtitleOptions(secondaryStyle: "i"));
 
         $this->assertSame([[1.0, 4.0, "Where are you going?\n<i>Wohin gehst du?</i>", null]],
-                          $this->describeCues($dual));
+                          TestSubtitles::describe($dual, withAlignment: true));
     }
 
 
     public function testStackPicksTheEarlierPrimaryCueOnEqualOverlap(): void
     {
-        $primary   = $this->makeSubtitle([[0, 2, "first"], [2, 4, "second"]]);
-        $secondary = $this->makeSubtitle([[1.5, 2.5, "between"]]);
+        $primary   = TestSubtitles::fromCues([[0, 2, "first"], [2, 4, "second"]]);
+        $secondary = TestSubtitles::fromCues([[1.5, 2.5, "between"]]);
 
         $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions());
 
         $this->assertSame([[0.0, 2.5, "first\nbetween", null], [2.0, 4.0, "second", null]],
-                          $this->describeCues($dual));
+                          TestSubtitles::describe($dual, withAlignment: true));
     }
 
 
     public function testStackKeepsTouchingCuesApart(): void
     {
-        $primary   = $this->makeSubtitle([[0, 2, "first"]]);
-        $secondary = $this->makeSubtitle([[2, 3, "after"]]);
+        $primary   = TestSubtitles::fromCues([[0, 2, "first"]]);
+        $secondary = TestSubtitles::fromCues([[2, 3, "after"]]);
 
         $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions());
 
-        $this->assertSame([[0.0, 2.0, "first", null], [2.0, 3.0, "after", null]], $this->describeCues($dual));
+        $this->assertSame([[0.0, 2.0, "first", null], [2.0, 3.0, "after", null]], TestSubtitles::describe($dual, withAlignment: true));
     }
 
 
     public function testTopBottomUsesTheAlignmentOfTheOptions(): void
     {
-        $primary   = $this->makeSubtitle([[0, 2, "first"]]);
-        $secondary = $this->makeSubtitle([[0, 2, "erste"]]);
+        $primary   = TestSubtitles::fromCues([[0, 2, "first"]]);
+        $secondary = TestSubtitles::fromCues([[0, 2, "erste"]]);
 
         $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions(
             mode: DualSubtitleMode::TopBottom,
             secondaryAlignment: 9,
         ));
 
-        $this->assertSame([[0.0, 2.0, "first", null], [0.0, 2.0, "erste", 9]], $this->describeCues($dual));
+        $this->assertSame([[0.0, 2.0, "first", null], [0.0, 2.0, "erste", 9]], TestSubtitles::describe($dual, withAlignment: true));
     }
 
 
     public function testTopBottomSnapsUpToTheTolerance(): void
     {
-        $primary   = $this->makeSubtitle([[1, 4, "first"]]);
-        $secondary = $this->makeSubtitle([[1.25, 3.7, "erste"]]);
+        $primary   = TestSubtitles::fromCues([[1, 4, "first"]]);
+        $secondary = TestSubtitles::fromCues([[1.25, 3.7, "erste"]]);
 
         $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions(
             mode: DualSubtitleMode::TopBottom,
@@ -181,26 +162,26 @@ class DualSubtitleTest extends TestCase
 
     public function testTopBottomKeepsTimesWhenSnappingWouldHideTheCue(): void
     {
-        $primary   = $this->makeSubtitle([[1, 4, "first"]]);
-        $secondary = $this->makeSubtitle([[3.9, 4.1, "kurz"]]);
+        $primary   = TestSubtitles::fromCues([[1, 4, "first"]]);
+        $secondary = TestSubtitles::fromCues([[3.9, 4.1, "kurz"]]);
 
         $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions(
             mode: DualSubtitleMode::TopBottom,
         ));
 
-        $this->assertSame([3.9, 4.1, "kurz", 8], $this->describeCues($dual)[1]);
+        $this->assertSame([3.9, 4.1, "kurz", 8], TestSubtitles::describe($dual, withAlignment: true)[1]);
     }
 
 
     public function testMetadataCommentsAndFormatDataComeFromThePrimary(): void
     {
-        $primary = $this->makeSubtitle([[0, 2, "first"], [3, 5, "second"]])
+        $primary = TestSubtitles::fromCues([[0, 2, "first"], [3, 5, "second"]])
             ->setMetadata(Subtitle::METADATA_LANGUAGE, "en")
             ->setMetadata(Subtitle::METADATA_TITLE, "Station")
             ->setFormatData("vtt", ["header" => "Kind: captions"])
             ->addComment("before second", 1)
             ->addComment("at the end", 2);
-        $secondary = $this->makeSubtitle([[0.5, 1, "vorher"], [2.2, 2.8, "dazwischen"]])
+        $secondary = TestSubtitles::fromCues([[0.5, 1, "vorher"], [2.2, 2.8, "dazwischen"]])
             ->setMetadata(Subtitle::METADATA_LANGUAGE, "de")
             ->setMetadata(Subtitle::METADATA_AUTHOR, "Somebody")
             ->setFormatData("ass", ["styles" => []])
@@ -214,14 +195,14 @@ class DualSubtitleTest extends TestCase
         $this->assertEquals([new Comment("before second", 2),
                            new Comment("at the end", 3)], $dual->getComments());
         $this->assertSame([[0.0, 2.0, "first\nvorher", null], [2.2, 2.8, "dazwischen", null], [3.0, 5.0, "second", null]],
-                          $this->describeCues($dual));
+                          TestSubtitles::describe($dual, withAlignment: true));
     }
 
 
     public function testLanguageStaysWhenOnlyThePrimaryHasOne(): void
     {
-        $primary   = $this->makeSubtitle([[0, 2, "first"]])->setMetadata(Subtitle::METADATA_LANGUAGE, "en");
-        $secondary = $this->makeSubtitle([[0, 2, "erste"]]);
+        $primary   = TestSubtitles::fromCues([[0, 2, "first"]])->setMetadata(Subtitle::METADATA_LANGUAGE, "en");
+        $secondary = TestSubtitles::fromCues([[0, 2, "erste"]]);
 
         $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions());
 
@@ -231,7 +212,7 @@ class DualSubtitleTest extends TestCase
 
     public function testSecondaryCuesLoseIdentifierAndFormatData(): void
     {
-        $primary = $this->makeSubtitle([[0, 2, "first"]]);
+        $primary = TestSubtitles::fromCues([[0, 2, "first"]]);
         $cue     = (new SubtitleCue(5, 6, "später"))->setIdentifier("7")->setFormatData("ass", ["style" => "Sign"]);
         $secondary = (new Subtitle())->addCue($cue);
 
@@ -245,11 +226,11 @@ class DualSubtitleTest extends TestCase
     public function testEmptyPrimaryKeepsItsCommentsAfterTheLastCue(): void
     {
         $primary   = (new Subtitle())->addComment("only a note", 0);
-        $secondary = $this->makeSubtitle([[0, 2, "erste"]]);
+        $secondary = TestSubtitles::fromCues([[0, 2, "erste"]]);
 
         $dual = DualSubtitle::fromPair($primary, $secondary, new DualSubtitleOptions());
 
-        $this->assertSame([[0.0, 2.0, "erste", null]], $this->describeCues($dual));
+        $this->assertSame([[0.0, 2.0, "erste", null]], TestSubtitles::describe($dual, withAlignment: true));
         $this->assertEquals([new Comment("only a note", 1)], $dual->getComments());
         $this->assertSame([], $primary->getCues());
     }

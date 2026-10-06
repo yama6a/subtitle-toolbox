@@ -16,6 +16,7 @@ use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 use SubtitleToolbox\WriteOptions;
 
 class WordHighlightTest extends TestCase
@@ -23,26 +24,6 @@ class WordHighlightTest extends TestCase
     private const FILES = __DIR__ . "/../files/";
 
     private const BEACH = "<00:00:00.000>The <00:00:00.240>beach <00:00:00.710>was <00:00:00.950>quiet.";
-
-
-    private static function subtitle(SubtitleCue ...$cues): Subtitle
-    {
-        $subtitle = new Subtitle();
-        foreach ($cues as $cue) {
-            $subtitle->addCue($cue);
-        }
-
-        return $subtitle;
-    }
-
-
-    private static function describe(Subtitle $subtitle): array
-    {
-        return array_map(
-            fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()],
-            array_values($subtitle->getCues())
-        );
-    }
 
 
     private static function whisper(): Subtitle
@@ -62,7 +43,7 @@ class WordHighlightTest extends TestCase
 
     public function testIssueExample(): void
     {
-        $subtitle = self::subtitle(new SubtitleCue(0, 1.6, self::BEACH));
+        $subtitle = TestSubtitles::fromCues([new SubtitleCue(0, 1.6, self::BEACH)]);
         $karaoke  = self::expand($subtitle, new WordHighlightOptions(style: "u"));
 
         $this->assertSame(
@@ -77,7 +58,7 @@ class WordHighlightTest extends TestCase
 
     public function testApplyChangesTheInputAndReportsTheCueCounts(): void
     {
-        $subtitle = self::subtitle(new SubtitleCue(0, 1.6, self::BEACH));
+        $subtitle = TestSubtitles::fromCues([new SubtitleCue(0, 1.6, self::BEACH)]);
 
         $this->assertEquals(new WordHighlightReport(1, 4), WordHighlight::apply($subtitle, new WordHighlightOptions()));
         $this->assertCount(4, $subtitle->getCues());
@@ -86,7 +67,7 @@ class WordHighlightTest extends TestCase
 
     public function testCloneKeepsTheOriginal(): void
     {
-        $subtitle = self::subtitle(new SubtitleCue(0, 1.6, self::BEACH));
+        $subtitle = TestSubtitles::fromCues([new SubtitleCue(0, 1.6, self::BEACH)]);
         $before   = $subtitle->toArray();
 
         WordHighlight::apply(clone $subtitle, new WordHighlightOptions());
@@ -97,7 +78,7 @@ class WordHighlightTest extends TestCase
 
     public function testDefaultStyleIsUnderline(): void
     {
-        $karaoke = self::expand(self::subtitle(new SubtitleCue(0, 1.6, self::BEACH)), new WordHighlightOptions());
+        $karaoke = self::expand(TestSubtitles::fromCues([new SubtitleCue(0, 1.6, self::BEACH)]), new WordHighlightOptions());
 
         $this->assertSame("<u>The</u> beach was quiet.", $karaoke->getCues()[0]->getText());
     }
@@ -106,7 +87,7 @@ class WordHighlightTest extends TestCase
     public function testCumulativeModeStylesAllWordsUpToTheActiveWord(): void
     {
         $karaoke = self::expand(
-            self::subtitle(new SubtitleCue(0, 1.6, self::BEACH)),
+            TestSubtitles::fromCues([new SubtitleCue(0, 1.6, self::BEACH)]),
             new WordHighlightOptions(style: 'font color="#ffff00"', mode: WordHighlightMode::Cumulative)
         );
 
@@ -115,7 +96,7 @@ class WordHighlightTest extends TestCase
             '<font color="#ffff00">The beach</font> was quiet.',
             '<font color="#ffff00">The beach was</font> quiet.',
             '<font color="#ffff00">The beach was quiet.</font>',
-        ], array_column(self::describe($karaoke), 2));
+        ], array_column(TestSubtitles::describe($karaoke), 2));
     }
 
 
@@ -125,15 +106,15 @@ class WordHighlightTest extends TestCase
 
         $this->assertSame(
             ["<u>One</u> two three", "One <u>two</u> three", "two <u>three</u> four", "three <u>four</u> five", "three four <u>five</u>"],
-            array_column(self::describe(self::expand(self::subtitle($cue), new WordHighlightOptions(maxWordsPerCue: 3))), 2)
+            array_column(TestSubtitles::describe(self::expand(TestSubtitles::fromCues([$cue]), new WordHighlightOptions(maxWordsPerCue: 3))), 2)
         );
         $this->assertSame(
             ["<u>One</u> two", "<u>two</u> three", "<u>three</u> four", "<u>four</u> five", "four <u>five</u>"],
-            array_column(self::describe(self::expand(self::subtitle($cue), new WordHighlightOptions(maxWordsPerCue: 2))), 2)
+            array_column(TestSubtitles::describe(self::expand(TestSubtitles::fromCues([$cue]), new WordHighlightOptions(maxWordsPerCue: 2))), 2)
         );
         $this->assertSame(
             ["<u>One</u>", "<u>two</u>", "<u>three</u>", "<u>four</u>", "<u>five</u>"],
-            array_column(self::describe(self::expand(self::subtitle($cue), new WordHighlightOptions(maxWordsPerCue: 1))), 2)
+            array_column(TestSubtitles::describe(self::expand(TestSubtitles::fromCues([$cue]), new WordHighlightOptions(maxWordsPerCue: 1))), 2)
         );
     }
 
@@ -141,27 +122,27 @@ class WordHighlightTest extends TestCase
     public function testWindowDropsLinesAndEmptyTagsOfHiddenWords(): void
     {
         $cue     = new SubtitleCue(2, 4, ["Hi, <i><00:00:02.500>the <00:00:03.000>train</i>", "<00:00:03.500>is late."]);
-        $karaoke = self::expand(self::subtitle($cue), new WordHighlightOptions(maxWordsPerCue: 1));
+        $karaoke = self::expand(TestSubtitles::fromCues([$cue]), new WordHighlightOptions(maxWordsPerCue: 1));
 
         $this->assertSame([
             [2.0, 2.5, "Hi, <i>the</i>"],
             [2.5, 3.0, "Hi, <i><u>the</u></i>"],
             [3.0, 3.5, "<i><u>train</u></i>"],
             [3.5, 4.0, "<u>is late.</u>"],
-        ], self::describe($karaoke));
+        ], TestSubtitles::describe($karaoke));
     }
 
 
     public function testStyleNeverCrossesOtherTags(): void
     {
         $cue     = new SubtitleCue(0, 3, "<v Ann><00:00:00.000>Hi <b><00:00:01.000>there</b> <00:00:02.000>you");
-        $karaoke = self::expand(self::subtitle($cue), new WordHighlightOptions(mode: WordHighlightMode::Cumulative));
+        $karaoke = self::expand(TestSubtitles::fromCues([$cue]), new WordHighlightOptions(mode: WordHighlightMode::Cumulative));
 
         $this->assertSame([
             "<v Ann><u>Hi</u> <b>there</b> you",
             "<v Ann><u>Hi</u> <b><u>there</u></b> you",
             "<v Ann><u>Hi</u> <b><u>there</u></b> <u>you</u>",
-        ], array_column(self::describe($karaoke), 2));
+        ], array_column(TestSubtitles::describe($karaoke), 2));
     }
 
 
@@ -172,7 +153,7 @@ class WordHighlightTest extends TestCase
             ->setAlignment(8)
             ->setFormatData("vtt", ["line" => "0"]);
 
-        $karaoke = self::expand(self::subtitle($cue), new WordHighlightOptions());
+        $karaoke = self::expand(TestSubtitles::fromCues([$cue]), new WordHighlightOptions());
 
         $this->assertCount(1, $karaoke->getCues());
         $this->assertEquals($cue, $karaoke->getCues()[0]);
@@ -198,7 +179,7 @@ class WordHighlightTest extends TestCase
             [1.0, 2.0, "So the end"],
             [2.0, 2.5, "So <u>the</u> end"],
             [2.5, 3.0, "So the <u>end</u>"],
-        ], self::describe(self::expand(self::subtitle($cue), new WordHighlightOptions())));
+        ], TestSubtitles::describe(self::expand(TestSubtitles::fromCues([$cue]), new WordHighlightOptions())));
     }
 
 
@@ -209,7 +190,7 @@ class WordHighlightTest extends TestCase
         $this->assertSame([
             [1.0, 2.0, "<u>Early</u> same time late"],
             [2.0, 3.0, "Early same <u>time</u> late"],
-        ], self::describe(self::expand(self::subtitle($cue), new WordHighlightOptions())));
+        ], TestSubtitles::describe(self::expand(TestSubtitles::fromCues([$cue]), new WordHighlightOptions())));
     }
 
 
@@ -218,7 +199,7 @@ class WordHighlightTest extends TestCase
         $cue = new SubtitleCue(2, 2, "<00:00:02.000>Too <00:00:02.000>short");
 
         $this->assertSame([[2.0, 2.0, "Too short"]],
-                          self::describe(self::expand(self::subtitle($cue), new WordHighlightOptions())));
+                          TestSubtitles::describe(self::expand(TestSubtitles::fromCues([$cue]), new WordHighlightOptions())));
     }
 
 
@@ -230,7 +211,7 @@ class WordHighlightTest extends TestCase
             ->setForced(true)
             ->setFormatData("ass", ["fields" => ["Style" => "Karaoke"]]);
 
-        $cues = array_values(self::expand(self::subtitle($cue), new WordHighlightOptions())->getCues());
+        $cues = array_values(self::expand(TestSubtitles::fromCues([$cue]), new WordHighlightOptions())->getCues());
 
         $this->assertSame(["intro", null, null, null], array_map(fn (SubtitleCue $cue): ?string => $cue->getIdentifier(), $cues));
         foreach ($cues as $wordCue) {
@@ -243,10 +224,10 @@ class WordHighlightTest extends TestCase
 
     public function testMetadataAndCommentsStayWithTheirCues(): void
     {
-        $subtitle = self::subtitle(
+        $subtitle = TestSubtitles::fromCues([
             new SubtitleCue(0, 1.6, self::BEACH),
             new SubtitleCue(2, 3, "<00:00:02.000>Next <00:00:02.500>line")
-        );
+        ]);
         $subtitle->setMetadata(Subtitle::METADATA_TITLE, "Beach");
         $subtitle->addComment("Before the second cue", 1);
         $subtitle->addComment("At the end", 2);
@@ -264,9 +245,9 @@ class WordHighlightTest extends TestCase
     public function testRightToLeftTextKeepsLogicalOrder(): void
     {
         $cue     = new SubtitleCue(0, 2, "<00:00:00.000>שלום <00:00:01.000>עולם");
-        $karaoke = self::expand(self::subtitle($cue), new WordHighlightOptions());
+        $karaoke = self::expand(TestSubtitles::fromCues([$cue]), new WordHighlightOptions());
 
-        $this->assertSame(["<u>שלום</u> עולם", "שלום <u>עולם</u>"], array_column(self::describe($karaoke), 2));
+        $this->assertSame(["<u>שלום</u> עולם", "שלום <u>עולם</u>"], array_column(TestSubtitles::describe($karaoke), 2));
     }
 
 
@@ -278,7 +259,7 @@ class WordHighlightTest extends TestCase
         $this->assertSame([
             [1.0, 4.0, "<00:00:01.000>הרכבת <00:00:01.600>יוצאת <00:00:02.300>בשבע."],
             [4.0, 7.0, "<00:00:04.000>הלחם <00:00:04.550>מוכן <00:00:05.100>בשמונה."],
-        ], self::describe($subtitle));
+        ], TestSubtitles::describe($subtitle));
         $this->assertSame($content, $subtitle->toString(Format::Lyrics));
     }
 
@@ -339,7 +320,7 @@ class WordHighlightTest extends TestCase
             self::whisper()->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(karaokeTag: AssKaraokeTag::Fill)))
         );
 
-        $subtitle = self::subtitle(new SubtitleCue(0, 1.6, "Oh <00:00:00.500>the <00:00:01.000>sea"));
+        $subtitle = TestSubtitles::fromCues([new SubtitleCue(0, 1.6, "Oh <00:00:00.500>the <00:00:01.000>sea")]);
         $this->assertStringContainsString("{\\ko50}Oh {\\ko50}the {\\ko60}sea",
                                           $subtitle->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(karaokeTag: AssKaraokeTag::Outline))));
         $this->assertStringContainsString("{\\k50}Oh {\\k50}the {\\k60}sea", $subtitle->toString(Format::Ass));

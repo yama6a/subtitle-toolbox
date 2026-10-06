@@ -21,7 +21,7 @@ class OcrRunnerTest extends TestCase
     }
 
 
-    private function makeSubtitle(): Subtitle
+    private function subtitleWithImageCues(): Subtitle
     {
         $subtitle = new Subtitle();
         $subtitle->addCue($this->makeImage(10)->toCue(new SubtitleCue(1, 2)));
@@ -35,7 +35,7 @@ class OcrRunnerTest extends TestCase
 
     public function testRunSetsTheLinesOfImageCuesWithoutTextAndKeepsTheImages(): void
     {
-        $subtitle = $this->makeSubtitle();
+        $subtitle = $this->subtitleWithImageCues();
         $engine   = new FakeOcrEngine(["<i>Line one</i>", "Line two"], 0.75);
 
         $results = (new OcrRunner($engine))->run($subtitle, "eng")->texts;
@@ -58,7 +58,7 @@ class OcrRunnerTest extends TestCase
 
     public function testRecognizeTextRunsTheEngineAndReturnsTheSubtitle(): void
     {
-        $subtitle = $this->makeSubtitle();
+        $subtitle = $this->subtitleWithImageCues();
         $engine   = new FakeOcrEngine();
 
         $this->assertSame($subtitle, $subtitle->recognizeText($engine));
@@ -72,11 +72,11 @@ class OcrRunnerTest extends TestCase
     {
         $engine = new FakeOcrEngine();
 
-        $this->makeSubtitle()->recognizeText($engine, OcrLanguage::German);
-        $this->makeSubtitle()->recognizeText($engine, "deu");
-        (new OcrRunner($engine))->run($this->makeSubtitle(), OcrLanguage::ChineseSimplified);
-        (new OcrRunner($engine))->run($this->makeSubtitle(), "chi_sim");
-        (new OcrRunner($engine))->run($this->makeSubtitle(), "my_custom_model");
+        $this->subtitleWithImageCues()->recognizeText($engine, OcrLanguage::German);
+        $this->subtitleWithImageCues()->recognizeText($engine, "deu");
+        (new OcrRunner($engine))->run($this->subtitleWithImageCues(), OcrLanguage::ChineseSimplified);
+        (new OcrRunner($engine))->run($this->subtitleWithImageCues(), "chi_sim");
+        (new OcrRunner($engine))->run($this->subtitleWithImageCues(), "my_custom_model");
 
         $this->assertSame(["deu", "deu", "deu", "deu", "chi_sim", "chi_sim", "chi_sim", "chi_sim", "my_custom_model",
                            "my_custom_model"], array_column($engine->calls, "language"));

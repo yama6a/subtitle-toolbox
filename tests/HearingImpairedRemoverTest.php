@@ -8,28 +8,12 @@ use InvalidArgumentException;
 use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
 use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
 use SubtitleToolbox\HearingImpaired\HearingImpairedReport;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 use SubtitleToolbox\Validation\ValidationRules;
 
 class HearingImpairedRemoverTest extends \PHPUnit\Framework\TestCase
 {
     private const FILES = __DIR__ . "/files/hearing-impaired/";
-
-
-    private function makeSubtitle(string ...$texts): Subtitle
-    {
-        $subtitle = new Subtitle();
-        foreach ($texts as $index => $text) {
-            $subtitle->addCue(new SubtitleCue($index, $index + 1, $text));
-        }
-
-        return $subtitle;
-    }
-
-
-    private function getTexts(Subtitle $subtitle): array
-    {
-        return array_map(fn (SubtitleCue $cue): string => $cue->getText(), array_values($subtitle->getCues()));
-    }
 
 
     private static function apply(Subtitle $subtitle, ?HearingImpairedOptions $options = null): Subtitle
@@ -42,7 +26,7 @@ class HearingImpairedRemoverTest extends \PHPUnit\Framework\TestCase
 
     private function remove(string $text, ?HearingImpairedOptions $options = null): array
     {
-        return $this->getTexts(self::apply($this->makeSubtitle($text), $options));
+        return TestSubtitles::texts(self::apply(TestSubtitles::fromTexts([$text]), $options));
     }
 
 
@@ -97,7 +81,7 @@ class HearingImpairedRemoverTest extends \PHPUnit\Framework\TestCase
                           [$cues[7]->getStart(), $cues[7]->getEnd(), $cues[7]->getText()]);
 
         $again = Subtitle::fromString($subtitle->toString(Format::WebVtt), Format::WebVtt);
-        $this->assertSame($this->getTexts($subtitle), $this->getTexts($again));
+        $this->assertSame(TestSubtitles::texts($subtitle), TestSubtitles::texts($again));
         $this->assertEquals($subtitle->getComments(), $again->getComments());
     }
 
@@ -172,8 +156,8 @@ class HearingImpairedRemoverTest extends \PHPUnit\Framework\TestCase
         $this->assertSame([], $this->remove("♪ ♪"));
         $this->assertSame([], $this->remove("- #"));
         $this->assertSame(["Hi."], $this->remove("♫\nHi."));
-        $this->assertSame(["♪ la la ♪", "#1 fan"], $this->getTexts(self::apply($this->makeSubtitle("♪ la la ♪", "#1 fan"))));
-        $this->assertSame(["#1 fan"], $this->getTexts(self::apply($this->makeSubtitle("♪ la la ♪", "#1 fan"),
+        $this->assertSame(["♪ la la ♪", "#1 fan"], TestSubtitles::texts(self::apply(TestSubtitles::fromTexts(["♪ la la ♪", "#1 fan"]))));
+        $this->assertSame(["#1 fan"], TestSubtitles::texts(self::apply(TestSubtitles::fromTexts(["♪ la la ♪", "#1 fan"]),
                                                                        new HearingImpairedOptions(lyrics: true))));
         $this->assertSame(["Hi."], $this->remove("♪ The rain\nkeeps falling ♪\nHi.", new HearingImpairedOptions(lyrics: true)));
         $this->assertSame(["♪ ♪"], $this->remove("♪ ♪", new HearingImpairedOptions(musicOnlyLines: false)));
@@ -208,14 +192,14 @@ class HearingImpairedRemoverTest extends \PHPUnit\Framework\TestCase
 
     public function testRemovesEmptyCuesAndKeepsComments(): void
     {
-        $subtitle = $this->makeSubtitle("first", "<i>[MUSIC]</i>", "[DOOR]\n(SIGHS)", "last");
+        $subtitle = TestSubtitles::fromTexts(["first", "<i>[MUSIC]</i>", "[DOOR]\n(SIGHS)", "last"]);
         $subtitle->addCue(new SubtitleCue(10, 11, ""));
         $subtitle->addComment("before music", 1)->addComment("before door", 2)->addComment("before last", 3);
 
         $this->assertEquals(new HearingImpairedReport(3, 2),
                             HearingImpairedRemover::apply($subtitle, new HearingImpairedOptions()));
 
-        $this->assertSame(["first", "last", ""], $this->getTexts($subtitle));
+        $this->assertSame(["first", "last", ""], TestSubtitles::texts($subtitle));
         $this->assertEquals([
             new Comment("before music", 1),
             new Comment("before door", 1),

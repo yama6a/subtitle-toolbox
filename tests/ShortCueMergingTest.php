@@ -6,35 +6,16 @@ namespace SubtitleToolbox;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class ShortCueMergingTest extends TestCase
 {
     private const FILES = __DIR__ . "/files/short-cues/";
 
 
-    private function makeSubtitle(array $cues): Subtitle
-    {
-        $subtitle = new Subtitle();
-        foreach ($cues as [$start, $end, $text]) {
-            $subtitle->addCue(new SubtitleCue($start, $end, $text));
-        }
-
-        return $subtitle;
-    }
-
-
-    private function describeCues(Subtitle $subtitle): array
-    {
-        return array_map(
-            fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()],
-            array_values($subtitle->getCues())
-        );
-    }
-
-
     private function merge(array $cues, ?MergeShortCuesOptions $options = null): array
     {
-        return $this->describeCues($this->makeSubtitle($cues)->mergeShortCues($options ?? new MergeShortCuesOptions()));
+        return TestSubtitles::describe(TestSubtitles::fromCues($cues)->mergeShortCues($options ?? new MergeShortCuesOptions()));
     }
 
 
@@ -49,7 +30,7 @@ class ShortCueMergingTest extends TestCase
             maxGap: 0.25,
         ));
 
-        $this->assertSame([[62.1, 64.1, "Wait. Where are you going?"]], $this->describeCues($subtitle));
+        $this->assertSame([[62.1, 64.1, "Wait. Where are you going?"]], TestSubtitles::describe($subtitle));
     }
 
 
@@ -60,7 +41,7 @@ class ShortCueMergingTest extends TestCase
 
         $subtitle->mergeShortCues(new MergeShortCuesOptions());
 
-        $cues = $this->describeCues($subtitle);
+        $cues = TestSubtitles::describe($subtitle);
         $this->assertCount(7, $cues);
         $this->assertSame([0.5, 1.76, "Good morning. Today we look at"], $cues[0]);
         $this->assertSame([4.0, 4.4, "Okay."], $cues[2]);
@@ -74,14 +55,14 @@ class ShortCueMergingTest extends TestCase
     {
         $content = file_get_contents(self::FILES . "own_interview.vtt");
         $this->assertSame(
-            $this->describeCues(Subtitle::fromString($content, Format::WebVtt)),
-            $this->describeCues(Subtitle::fromString($content, Format::WebVtt)->mergeShortCues(new MergeShortCuesOptions()))
+            TestSubtitles::describe(Subtitle::fromString($content, Format::WebVtt)),
+            TestSubtitles::describe(Subtitle::fromString($content, Format::WebVtt)->mergeShortCues(new MergeShortCuesOptions()))
         );
 
         $subtitle = Subtitle::fromString($content, Format::WebVtt)
             ->mergeShortCues(new MergeShortCuesOptions(mergeSameSpeakerAnyDuration: true));
 
-        $cues = $this->describeCues($subtitle);
+        $cues = TestSubtitles::describe($subtitle);
         $this->assertCount(4, $cues);
         $this->assertSame([3.5, 10.9, "<v Guest>In a small town near the coast, in the</v>\n" .
                                       "<v Guest>north. My parents ran a bakery there."], $cues[1]);
@@ -194,7 +175,7 @@ class ShortCueMergingTest extends TestCase
         $subtitle->addCue(new SubtitleCue(0.5, 1, "two"));
         $subtitle->addCue(new SubtitleCue(0, 0.5, "One"));
 
-        $this->assertSame([[0.0, 1.0, "One two"]], $this->describeCues($subtitle->mergeShortCues(new MergeShortCuesOptions())));
+        $this->assertSame([[0.0, 1.0, "One two"]], TestSubtitles::describe($subtitle->mergeShortCues(new MergeShortCuesOptions())));
     }
 
 
@@ -223,15 +204,15 @@ class ShortCueMergingTest extends TestCase
 
     public function testNeverJoinsDifferentAlignmentsForcedFlagsOrImageCues(): void
     {
-        $subtitle = $this->makeSubtitle([[0, 0.5, "One"], [0.5, 1, "two"]]);
+        $subtitle = TestSubtitles::fromCues([[0, 0.5, "One"], [0.5, 1, "two"]]);
         $subtitle->getCues()[1]->setAlignment(8);
         $this->assertCount(2, $subtitle->mergeShortCues(new MergeShortCuesOptions())->getCues());
 
-        $subtitle = $this->makeSubtitle([[0, 0.5, "One"], [0.5, 1, "two"]]);
+        $subtitle = TestSubtitles::fromCues([[0, 0.5, "One"], [0.5, 1, "two"]]);
         $subtitle->getCues()[1]->setAlignment(2);
         $this->assertCount(1, $subtitle->mergeShortCues(new MergeShortCuesOptions())->getCues());
 
-        $subtitle = $this->makeSubtitle([[0, 0.5, "One"], [0.5, 1, "two"]]);
+        $subtitle = TestSubtitles::fromCues([[0, 0.5, "One"], [0.5, 1, "two"]]);
         $subtitle->getCues()[1]->setForced(true);
         $this->assertCount(2, $subtitle->mergeShortCues(new MergeShortCuesOptions())->getCues());
 
@@ -255,14 +236,14 @@ class ShortCueMergingTest extends TestCase
 
     public function testJoinedCueKeepsIdentifierFormatDataAndComments(): void
     {
-        $subtitle = $this->makeSubtitle([[0, 0.5, "One"], [0.5, 1, "two"], [3, 5, "Three."]]);
+        $subtitle = TestSubtitles::fromCues([[0, 0.5, "One"], [0.5, 1, "two"], [3, 5, "Three."]]);
         $subtitle->getCues()[0]->setIdentifier("a")->setFormatData("vtt", ["settings" => "line:0"]);
         $subtitle->getCues()[1]->setIdentifier("b")->setFormatData("vtt", ["settings" => "line:5"]);
         $subtitle->addComment("before one", 0)->addComment("before two", 1)->addComment("before three", 2);
 
         $subtitle->mergeShortCues(new MergeShortCuesOptions());
 
-        $this->assertSame([[0.0, 1.0, "One two"], [3.0, 5.0, "Three."]], $this->describeCues($subtitle));
+        $this->assertSame([[0.0, 1.0, "One two"], [3.0, 5.0, "Three."]], TestSubtitles::describe($subtitle));
         $this->assertSame("a", $subtitle->getCues()[0]->getIdentifier());
         $this->assertSame(["settings" => "line:0"], $subtitle->getCues()[0]->findFormatData("vtt"));
         $this->assertEquals([new Comment("before one", 0),

@@ -10,6 +10,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class ShotChangeTimingTest extends TestCase
 {
@@ -17,16 +18,9 @@ class ShotChangeTimingTest extends TestCase
 
 
     /** @param list<array{int, int}> $frames */
-    private function makeSubtitle(float $fps, array $frames): Subtitle
+    private function fromFrames(float $fps, array $frames): Subtitle
     {
-        $subtitle = new Subtitle();
-        $cues     = [];
-        foreach ($frames as $index => [$start, $end]) {
-            $cues[] = new SubtitleCue($start / $fps, $end / $fps, "cue $index");
-        }
-        $subtitle->addCues($cues);
-
-        return $subtitle;
+        return TestSubtitles::fromTimes(array_map(fn (array $cue): array => [$cue[0] / $fps, $cue[1] / $fps], $frames));
     }
 
 
@@ -80,7 +74,7 @@ class ShotChangeTimingTest extends TestCase
     #[DataProvider("frameRates")]
     public function testInTimeAfterAShotChangeMovesToTheShotChange(float $fps): void
     {
-        $subtitle = $this->makeSubtitle($fps, [[1505, 1560]]);
+        $subtitle = $this->fromFrames($fps, [[1505, 1560]]);
 
         ShotChangeTiming::apply($subtitle, new ShotChangeOptions($fps, shotChanges: [1500 / $fps]));
 
@@ -91,7 +85,7 @@ class ShotChangeTimingTest extends TestCase
     #[DataProvider("frameRates")]
     public function testOutTimeBeforeAShotChangeEndsTwoFramesBeforeIt(float $fps): void
     {
-        $subtitle = $this->makeSubtitle($fps, [[1620, 1674], [1700, 1760]]);
+        $subtitle = $this->fromFrames($fps, [[1620, 1674], [1700, 1760]]);
 
         ShotChangeTiming::apply($subtitle, new ShotChangeOptions($fps, shotChanges: [1680 / $fps]));
 
@@ -102,7 +96,7 @@ class ShotChangeTimingTest extends TestCase
     #[DataProvider("frameRates")]
     public function testChainingClosesAGapOf7FramesTo2Frames(float $fps): void
     {
-        $subtitle = $this->makeSubtitle($fps, [[200, 240], [247, 300]]);
+        $subtitle = $this->fromFrames($fps, [[200, 240], [247, 300]]);
 
         ShotChangeTiming::apply($subtitle, new ShotChangeOptions($fps));
 
@@ -114,7 +108,7 @@ class ShotChangeTimingTest extends TestCase
     public function testChainGapsClosesGapsOf3ToSnapWindowMinus1Frames(float $fps): void
     {
         $window   = (new ShotChangeOptions($fps))->snapWindowFrames;
-        $subtitle = $this->makeSubtitle($fps, [[100, 140], [142, 180], [183, 220], [220 + $window - 1, 300],
+        $subtitle = $this->fromFrames($fps, [[100, 140], [142, 180], [183, 220], [220 + $window - 1, 300],
                                                [300 + $window, 400]]);
 
         ShotChangeTiming::apply($subtitle, new ShotChangeOptions($fps));
@@ -134,7 +128,7 @@ class ShotChangeTimingTest extends TestCase
 
     public function testTimesOutsideTheSnapWindowStay(): void
     {
-        $subtitle = $this->makeSubtitle(24, [[513, 560], [600, 627]]);
+        $subtitle = $this->fromFrames(24, [[513, 560], [600, 627]]);
 
         ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [500 / 24, 640 / 24]));
 
@@ -144,7 +138,7 @@ class ShotChangeTimingTest extends TestCase
 
     public function testWindowOf15FramesAt2997Fps(): void
     {
-        $subtitle = $this->makeSubtitle(29.97, [[515, 560], [1016, 1060]]);
+        $subtitle = $this->fromFrames(29.97, [[515, 560], [1016, 1060]]);
 
         ShotChangeTiming::apply($subtitle, new ShotChangeOptions(29.97, shotChanges: [500 / 29.97, 1000 / 29.97]));
 
@@ -154,7 +148,7 @@ class ShotChangeTimingTest extends TestCase
 
     public function testInTimeTakesTheLastShotChangeBeforeIt(): void
     {
-        $subtitle = $this->makeSubtitle(24, [[110, 160]]);
+        $subtitle = $this->fromFrames(24, [[110, 160]]);
 
         ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [104 / 24, 100 / 24, 112 / 24]));
 
@@ -164,7 +158,7 @@ class ShotChangeTimingTest extends TestCase
 
     public function testMoveThatMakesACueShorterThanMinDurationDoesNotHappen(): void
     {
-        $subtitle = $this->makeSubtitle(24, [[100, 119], [200, 215]]);
+        $subtitle = $this->fromFrames(24, [[100, 119], [200, 215]]);
 
         ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [120 / 24, 198 / 24]));
 
@@ -174,7 +168,7 @@ class ShotChangeTimingTest extends TestCase
 
     public function testMinDurationIsAnOption(): void
     {
-        $subtitle = $this->makeSubtitle(24, [[100, 119]]);
+        $subtitle = $this->fromFrames(24, [[100, 119]]);
 
         ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [120 / 24], minDurationFrames: 10));
 
@@ -184,7 +178,7 @@ class ShotChangeTimingTest extends TestCase
 
     public function testMoveThatMakesACueOverlapAnotherCueDoesNotHappen(): void
     {
-        $subtitle = $this->makeSubtitle(24, [[100, 150], [153, 229], [230, 260]]);
+        $subtitle = $this->fromFrames(24, [[100, 150], [153, 229], [230, 260]]);
 
         ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [158 / 24, 228 / 24], chain: false));
 
@@ -194,7 +188,7 @@ class ShotChangeTimingTest extends TestCase
 
     public function testChainDoesNotRunIntoTheNextShot(): void
     {
-        $subtitle = $this->makeSubtitle(24, [[140, 152], [158, 200]]);
+        $subtitle = $this->fromFrames(24, [[140, 152], [158, 200]]);
 
         ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [153 / 24]));
 
@@ -204,7 +198,7 @@ class ShotChangeTimingTest extends TestCase
 
     public function testChainOption(): void
     {
-        $subtitle = $this->makeSubtitle(24, [[200, 240], [247, 300]]);
+        $subtitle = $this->fromFrames(24, [[200, 240], [247, 300]]);
 
         ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, chain: false));
 
@@ -214,7 +208,7 @@ class ShotChangeTimingTest extends TestCase
 
     public function testMinGapFramesOption(): void
     {
-        $subtitle = $this->makeSubtitle(24, [[200, 240], [247, 300], [400, 450]]);
+        $subtitle = $this->fromFrames(24, [[200, 240], [247, 300], [400, 450]]);
 
         ShotChangeTiming::apply($subtitle, new ShotChangeOptions(24, shotChanges: [455 / 24], minGapFrames: 3));
 

@@ -6,6 +6,7 @@ namespace SubtitleToolbox;
 
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class CueLookupTest extends TestCase
 {
@@ -22,9 +23,9 @@ class CueLookupTest extends TestCase
 
 
     /**
-     * Keeps the cues in the order of $times when $sorted is false.
+     * Keeps the cues in the order of $times, so that the cue list is not sorted by start time.
      */
-    private function makeSubtitle(array $times, bool $sorted = true): Subtitle
+    private function makeUnsortedSubtitle(array $times): Subtitle
     {
         $subtitle = (new Subtitle())->addCues(array_map(
             fn (int $index): SubtitleCue => new SubtitleCue($index, $index, "text$index"),
@@ -34,7 +35,7 @@ class CueLookupTest extends TestCase
             $cue->setStart($times[$index][0])->setEnd($times[$index][1]);
         }
 
-        return $sorted ? $subtitle->reIndexCues() : $subtitle;
+        return $subtitle;
     }
 
 
@@ -52,12 +53,6 @@ class CueLookupTest extends TestCase
         }
 
         return (new Subtitle())->addCues($cues);
-    }
-
-
-    private function getTexts(array $cues): array
-    {
-        return array_values(array_map(fn (SubtitleCue $cue): string => $cue->getText(), $cues));
     }
 
 
@@ -117,7 +112,7 @@ class CueLookupTest extends TestCase
 
     public function testZeroLengthCueIsNeverOnScreen(): void
     {
-        $subtitle = $this->makeSubtitle([[1, 1], [1, 2]]);
+        $subtitle = TestSubtitles::fromTimes([[1, 1], [1, 2]]);
 
         $this->assertSame([1], array_keys($subtitle->findCuesAt(1)));
     }
@@ -148,7 +143,7 @@ class CueLookupTest extends TestCase
 
     public function testCuesOutOfOrderUseLinearScan(): void
     {
-        $subtitle = $this->makeSubtitle([[5, 9], [1, 4], [3, 6]], false);
+        $subtitle = $this->makeUnsortedSubtitle([[5, 9], [1, 4], [3, 6]]);
 
         $this->assertSame([0, 2], array_keys($subtitle->findCuesAt(5)));
         $this->assertSame(1, $subtitle->findCueIndexAt(3.5));
@@ -191,13 +186,13 @@ class CueLookupTest extends TestCase
     public function testLookupSeesSetStartOnLargeSubtitle(): void
     {
         $subtitle = $this->makeLargeSubtitle();
-        $this->assertSame(["background", "line 4000", "sign 4000"], $this->getTexts($subtitle->findCuesAt(10001.5)));
+        $this->assertSame(["background", "line 4000", "sign 4000"], TestSubtitles::texts($subtitle->findCuesAt(10001.5)));
 
         $sign = array_key_first($subtitle->findCues(fn (SubtitleCue $cue): bool => $cue->getText() === "sign 4000"));
         $subtitle->getCues()[$sign]->setStart(10001.6);
 
-        $this->assertSame(["background", "line 4000"], $this->getTexts($subtitle->findCuesAt(10001.5)));
-        $this->assertSame(["background", "line 4000", "sign 4000"], $this->getTexts($subtitle->findCuesAt(10001.6)));
+        $this->assertSame(["background", "line 4000"], TestSubtitles::texts($subtitle->findCuesAt(10001.5)));
+        $this->assertSame(["background", "line 4000", "sign 4000"], TestSubtitles::texts($subtitle->findCuesAt(10001.6)));
     }
 
 
@@ -229,10 +224,10 @@ class CueLookupTest extends TestCase
         $subtitle = $this->makeLargeSubtitle();
 
         $this->assertCount(10101, $subtitle);
-        $this->assertSame(["background", "line 4000", "sign 4000"], $this->getTexts($subtitle->findCuesAt(10001.5)));
-        $this->assertSame(["background", "sign 4000", "line 4011"], $this->getTexts($subtitle->findCuesAt(10027.5)));
-        $this->assertSame(["background", "line 9999"], $this->getTexts($subtitle->findCuesAt(24997.5)));
-        $this->assertSame(["background"], $this->getTexts($subtitle->findCuesAt(24999.9)));
+        $this->assertSame(["background", "line 4000", "sign 4000"], TestSubtitles::texts($subtitle->findCuesAt(10001.5)));
+        $this->assertSame(["background", "sign 4000", "line 4011"], TestSubtitles::texts($subtitle->findCuesAt(10027.5)));
+        $this->assertSame(["background", "line 9999"], TestSubtitles::texts($subtitle->findCuesAt(24997.5)));
+        $this->assertSame(["background"], TestSubtitles::texts($subtitle->findCuesAt(24999.9)));
         $this->assertSame([], $subtitle->findCuesAt(25000));
 
         mt_srand(81);
@@ -249,7 +244,7 @@ class CueLookupTest extends TestCase
 
         $this->assertSame(
             ["background", "line 3999", "line 4000", "sign 4000"],
-            $this->getTexts($subtitle->findCuesBetween(9999, 10002.5))
+            TestSubtitles::texts($subtitle->findCuesBetween(9999, 10002.5))
         );
     }
 

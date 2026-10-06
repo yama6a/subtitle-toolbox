@@ -99,6 +99,7 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
 use SubtitleToolbox\Sync\SpeechReference;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\Timing\ShotChanges;
@@ -245,7 +246,7 @@ class ThrowSitesTest extends TestCase
 
     private static function subtitle(): Subtitle
     {
-        return (new Subtitle())->addCue(new SubtitleCue(1, 2, ["first line", "second line"]));
+        return TestSubtitles::fromCues([[1, 2, ["first line", "second line"]]]);
     }
 
 

@@ -8,37 +8,12 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Tests\Support\ReferenceSyncFixtures;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class ReferenceSyncSplitTest extends TestCase
 {
-    private function load(string $name): Subtitle
-    {
-        return Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sync/$name"), Format::SubRip);
-    }
-
-
-    private function getTimes(Subtitle $subtitle): array
-    {
-        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues());
-    }
-
-
-    private function makeRandomSubtitle(int $cueCount, int $seed): Subtitle
-    {
-        mt_srand($seed);
-        $subtitle = new Subtitle();
-        $time     = 1.0;
-        $cues     = [];
-        for ($index = 0; $index < $cueCount; $index++) {
-            $time     += mt_rand(500, 4000) / 1000;
-            $duration  = mt_rand(1000, 5000) / 1000;
-            $cues[] = new SubtitleCue($time, $time + $duration, "text$index");
-            $time     += $duration;
-        }
-        $subtitle->addCues($cues);
-
-        return $subtitle;
-    }
+    use ReferenceSyncFixtures;
 
 
     public function testRealFileWithAdBreakParses(): void
@@ -59,7 +34,7 @@ class ReferenceSyncSplitTest extends TestCase
     {
         $reference = $this->load("own_reference_en_tv_break.srt");
         $target    = $this->load("own_target_de_25fps.srt");
-        $before    = $this->getTimes($target);
+        $before    = TestSubtitles::times($target);
 
         $result = ReferenceSync::apply($target, new ReferenceSyncOptions($reference, -180, 180, maxSplits: 2));
 
@@ -72,7 +47,7 @@ class ReferenceSyncSplitTest extends TestCase
         $this->assertEqualsWithDelta(25 / 23.976, $segments[1]["scale"], 0.00001);
         $this->assertSame($segments[0]["offset"], $result->offset);
         $this->assertGreaterThan(0.8, $result->score);
-        $this->assertNotSame($before, $this->getTimes($target));
+        $this->assertNotSame($before, TestSubtitles::times($target));
     }
 
 
@@ -159,7 +134,7 @@ class ReferenceSyncSplitTest extends TestCase
 
         self::retimeSegments($subtitle, $result);
 
-        $this->assertSame([[15.0, 16.999], [17.0, 19.0], [22.0, 24.0]], $this->getTimes($subtitle));
+        $this->assertSame([[15.0, 16.999], [17.0, 19.0], [22.0, 24.0]], TestSubtitles::times($subtitle));
     }
 
 
@@ -172,7 +147,7 @@ class ReferenceSyncSplitTest extends TestCase
         self::retimeSegments($subtitle, $result);
 
         $this->assertSame(["two", "one"], array_map(fn (SubtitleCue $cue): string => $cue->getText(), $subtitle->getCues()));
-        $this->assertSame([[5.0, 7.0], [25.0, 27.0]], $this->getTimes($subtitle));
+        $this->assertSame([[5.0, 7.0], [25.0, 27.0]], TestSubtitles::times($subtitle));
     }
 
 

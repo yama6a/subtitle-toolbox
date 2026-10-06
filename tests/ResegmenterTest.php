@@ -13,6 +13,7 @@ use SubtitleToolbox\Resegmenting\Resegmenter;
 use SubtitleToolbox\Resegmenting\ResegmentMode;
 use SubtitleToolbox\Resegmenting\ResegmentOptions;
 use SubtitleToolbox\Resegmenting\ResegmentReport;
+use SubtitleToolbox\Tests\Support\TestSubtitles;
 
 class ResegmenterTest extends TestCase
 {
@@ -20,26 +21,6 @@ class ResegmenterTest extends TestCase
 
     private const ISSUE_EXAMPLE = "The tensor operators are optimized heavily for Apple silicon CPUs. Depending on the computation " .
                                   "size, Arm Neon SIMD instrisics or CBLAS Accelerate framework routines are used.";
-
-
-    private function makeSubtitle(array $cues): Subtitle
-    {
-        $subtitle = new Subtitle();
-        foreach ($cues as [$start, $end, $text]) {
-            $subtitle->addCue(new SubtitleCue($start, $end, $text));
-        }
-
-        return $subtitle;
-    }
-
-
-    private function describeCues(Subtitle $subtitle): array
-    {
-        return array_map(
-            fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()],
-            array_values($subtitle->getCues())
-        );
-    }
 
 
     private static function apply(Subtitle $subtitle, ResegmentOptions $options): Subtitle
@@ -52,13 +33,13 @@ class ResegmenterTest extends TestCase
 
     private function split(array $cues, ?ResegmentOptions $options = null): array
     {
-        return $this->describeCues(self::apply($this->makeSubtitle($cues), $options ?? new ResegmentOptions(ResegmentMode::SplitLong)));
+        return TestSubtitles::describe(self::apply(TestSubtitles::fromCues($cues), $options ?? new ResegmentOptions(ResegmentMode::SplitLong)));
     }
 
 
     private function resegment(array $cues, ?ResegmentOptions $options = null): array
     {
-        return $this->describeCues(self::apply($this->makeSubtitle($cues), $options ?? new ResegmentOptions(ResegmentMode::ByWords)));
+        return TestSubtitles::describe(self::apply(TestSubtitles::fromCues($cues), $options ?? new ResegmentOptions(ResegmentMode::ByWords)));
     }
 
 
@@ -88,7 +69,7 @@ class ResegmenterTest extends TestCase
 
         $this->assertEquals(new ResegmentReport(4, 6), Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::SplitLong)));
 
-        $cues = $this->describeCues($subtitle);
+        $cues = TestSubtitles::describe($subtitle);
         $this->assertCount(6, $cues);
         $this->assertSame([0.0, 2.55, "<00:00:00.000>Welcome <00:00:00.570>to <00:00:00.830>the <00:00:01.150>city " .
                                       "<00:00:01.530>library <00:00:02.100>tour."], $cues[0]);
@@ -105,7 +86,7 @@ class ResegmenterTest extends TestCase
     {
         $subtitle = self::apply($this->parseWhisperFixture(), new ResegmentOptions(ResegmentMode::ByWords));
 
-        $cues = $this->describeCues($subtitle);
+        $cues = TestSubtitles::describe($subtitle);
         $this->assertCount(6, $cues);
         $this->assertSame([12.4, 18.2], array_slice($cues[3], 0, 2));
         $this->assertSame("The cafe on the ground floor opens at\nnine and closes at six every weekday.",
@@ -281,7 +262,7 @@ class ResegmenterTest extends TestCase
 
         foreach ([ResegmentMode::SplitLong, ResegmentMode::ByWords] as $mode) {
             $this->assertSame([[0.0, 20.0, "Supercalifragilisticexpialidocious"], [20.0, 40.0, self::ISSUE_EXAMPLE]],
-                              $this->describeCues(self::apply($subtitle, new ResegmentOptions($mode, limits: new CueLimits(maxCharactersPerLine: 10, maxLinesPerCue: 1)))),
+                              TestSubtitles::describe(self::apply($subtitle, new ResegmentOptions($mode, limits: new CueLimits(maxCharactersPerLine: 10, maxLinesPerCue: 1)))),
                               $mode->name);
         }
     }
@@ -289,7 +270,7 @@ class ResegmenterTest extends TestCase
 
     public function testSplitKeepsIdentifierOnFirstPartAndCommentsBeforeIt(): void
     {
-        $subtitle = $this->makeSubtitle([[0, 1, "Before."], [1, 11.05, self::ISSUE_EXAMPLE], [12, 13, "After."]]);
+        $subtitle = TestSubtitles::fromCues([[0, 1, "Before."], [1, 11.05, self::ISSUE_EXAMPLE], [12, 13, "After."]]);
         $subtitle->getCues()[1]->setIdentifier("long")->setAlignment(8)->setForced(true);
         $subtitle->addComment("before long", 1)->addComment("before after", 2);
 
@@ -357,7 +338,7 @@ class ResegmenterTest extends TestCase
 
     public function testResegmentKeepsIdentifierOfTheFirstWordAndMovesComments(): void
     {
-        $subtitle = $this->makeSubtitle([
+        $subtitle = TestSubtitles::fromCues([
             [0, 2, "<00:00:00.000>One <00:00:01.000>two"],
             [2, 4, "<00:00:02.000>three. <00:00:03.000>Four."],
         ]);
