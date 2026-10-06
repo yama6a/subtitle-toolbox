@@ -16,12 +16,6 @@ final class AssParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::Ass->value;
 
-    private const SSA_STYLE_FORMAT = [
-        "Name", "Fontname", "Fontsize", "PrimaryColour", "SecondaryColour", "TertiaryColour", "BackColour",
-        "Bold", "Italic", "BorderStyle", "Outline", "Shadow", "Alignment", "MarginL", "MarginR", "MarginV",
-        "AlphaLevel", "Encoding",
-    ];
-
     // A tag ends at the next backslash, except inside parentheses such as \t(\1c&HFF&).
     private const OVERRIDE_TAG_REGEX = '/\\\\[^\\\\(]*(?<args>\((?:[^()]++|(?&args))*\))?[^\\\\]*/';
 
@@ -119,7 +113,7 @@ final class AssParser extends SubtitleParser
         if (strcasecmp($type, "Format") === 0) {
             $data["styleFormat"] = array_map("trim", explode(",", $value));
         } elseif (strcasecmp($type, "Style") === 0) {
-            $data["styleFormat"] ??= strcasecmp($section, "V4 Styles") === 0 ? self::SSA_STYLE_FORMAT : AssFormatLines::ASS_STYLE_FORMAT;
+            $data["styleFormat"] ??= strcasecmp($section, "V4 Styles") === 0 ? AssFormatLines::SSA_STYLE_FORMAT : AssFormatLines::ASS_STYLE_FORMAT;
             $data["styles"][]      = $this->combine($data["styleFormat"], $value, true);
         }
     }
