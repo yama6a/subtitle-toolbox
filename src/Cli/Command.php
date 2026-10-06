@@ -72,6 +72,33 @@ abstract class Command
 
 
     /**
+     * Returns the content of a side file, a file that an option names besides the inputs. Fails with exit code 3 when
+     * the file is missing or unreadable.
+     */
+    public static function readSideFile(string $path): string
+    {
+        if (!is_file($path)) {
+            self::failSideFile($path, "The file does not exist.");
+        }
+        $content = @file_get_contents($path);
+        if ($content === false) {
+            self::failSideFile($path, "Cannot read the file.");
+        }
+
+        return $content;
+    }
+
+
+    /**
+     * Reports a side file that is missing or does not parse. The tool then stops and exits with code 3.
+     */
+    public static function failSideFile(string $path, string $message): never
+    {
+        self::failFile("$path: $message");
+    }
+
+
+    /**
      * Returns the help of the command. $topic is the word after --help, or null. Only convert reads it.
      */
     public function help(?string $topic = null): string

@@ -151,7 +151,7 @@ class BinaryEditTest extends BinaryTestCase
         $this->assertSame(2, $this->runBinary(["convert", "keys.srt", "--to", "srt", "--mask-words", "words.txt", "--mask", "beep"])[0]);
         $this->assertSame(2, $this->runBinary(["convert", "keys.srt", "--to", "srt", "--mask", "stars"])[0]);
         $this->assertSame(
-            [3, "", "Error: Cannot read the word file missing.txt.\n"],
+            [3, "", "Error: missing.txt: The file does not exist.\n"],
             $this->runBinary(["convert", "keys.srt", "--to", "srt", "--mask-words", "missing.txt"])
         );
     }
@@ -356,7 +356,7 @@ class BinaryEditTest extends BinaryTestCase
                           $this->runBinary(["convert", "web.srt", "--to", "srt", "-o", "-", "--timing-fix-overlaps", "--language", "en"]));
         $this->assertSame([2, "", "Error: Pass --errors-fix with --errors-list-fixes.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
                           $this->runBinary(["convert", "web.srt", "--to", "srt", "-o", "-", "--errors-list-fixes"]));
-        $this->assertSame([3, "", "Error: Cannot read the replace list missing.xml.\n"],
+        $this->assertSame([3, "", "Error: missing.xml: The file does not exist.\n"],
                           $this->runBinary(["convert", "web.srt", "--to", "srt", "-o", "-", "--errors-fix", "--errors-replace-list", "missing.xml"]));
     }
 

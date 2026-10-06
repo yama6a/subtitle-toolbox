@@ -21,7 +21,7 @@ final class SyncCommand extends WriteCommand
 
     private ?ReferenceSyncOptions $syncOptions = null;
 
-    private ?Subtitle $reference = null;
+    private Subtitle $reference;
 
 
     public function name(): string
@@ -72,7 +72,6 @@ final class SyncCommand extends WriteCommand
     {
         parent::prepare($arguments);
 
-        $this->reference = null;
         $this->checkReference($arguments);
 
         $maxSplits = $arguments->value("max-splits") ?? "0";
@@ -87,7 +86,7 @@ final class SyncCommand extends WriteCommand
         }
 
         try {
-            // The reference loads with the first input. Until then, an empty subtitle stands in for it.
+            // The reference loads after the checks of the inputs. Until then, an empty subtitle stands in for it.
             $this->syncOptions = new ReferenceSyncOptions(
                 reference: new Subtitle(),
                 minOffset: $arguments->float("min-offset") ?? -60,
@@ -114,30 +113,27 @@ final class SyncCommand extends WriteCommand
     }
 
 
-    protected function loadReference(Arguments $arguments, Console $console): Subtitle
+    protected function loadSideFiles(Arguments $arguments, Console $console): void
     {
         $log = $arguments->value("silence-log");
         if ($log === null) {
-            return $this->loadOtherFile($arguments->value("reference"), $console);
+            $this->reference = $this->loadSideSubtitle($arguments->value("reference"), $console);
+
+            return;
         }
 
-        $content = is_file($log) ? @file_get_contents($log) : false;
-        if ($content === false) {
-            self::fail("Cannot read the silence log $log.");
-        }
+        $content = self::readSideFile($log);
 
         try {
-            return SpeechReference::fromFfmpegSilencedetect($content, $arguments->positiveFloat("media-duration"));
+            $this->reference = SpeechReference::fromFfmpegSilencedetect($content, $arguments->positiveFloat("media-duration"));
         } catch (ParsingException $exception) {
-            return self::fail("$log: " . $exception->getMessage());
+            self::failSideFile($log, $exception->getMessage());
         }
     }
 
 
     protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
-        $this->reference ??= $this->loadReference($arguments, $console);
-
         $options = $this->syncOptions;
         $result  = ReferenceSync::apply($subtitle, new ReferenceSyncOptions(
             $this->reference,

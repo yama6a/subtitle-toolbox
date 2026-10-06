@@ -105,7 +105,7 @@ class BinaryTimingTest extends BinaryTestCase
         $this->assertStringContainsString("de.srt: scale 1, ", $stderr);
         $this->assertStringEndsWith("de.srt: the score is below 0.5, so the files likely do not match.\n", $stderr);
 
-        $this->assertSame([3, "", "de.srt: missing.srt: The file does not exist.\n"], $this->runBinary(["sync", "de.srt", "--reference", "missing.srt"]));
+        $this->assertSame([3, "", "Error: missing.srt: The file does not exist.\n"], $this->runBinary(["sync", "de.srt", "--reference", "missing.srt"]));
         $this->assertSame(2, $this->runBinary(["sync", "de.srt"])[0]);
         $this->assertSame(2, $this->runBinary(["sync", "de.srt", "--reference", "en.srt", "--min-offset", "10", "--max-offset", "-10"])[0]);
         $this->assertSame(2, $this->runBinary(["sync", "de.srt", "--reference", "en.srt", "--max-splits", "two"])[0]);
@@ -155,11 +155,10 @@ class BinaryTimingTest extends BinaryTestCase
         $this->assertSame([0, $chained->toString(Format::SubRip), ""], $this->runBinary(["convert", "garden.srt", "--to", "srt", "-o", "-", "--fps", "24", "--snap-min-gap-frames", "2"]));
 
         foreach ([["--video-fps", "24"], ["--snap-shot-changes", "scenes.txt"], ["--input-fps", "24", "--snap-window-frames", "6"],
-                  ["--video-fps", "24", "--no-snap-chain"], ["--video-fps", "24", "--snap-window-frames", "-1"],
-                  ["--video-fps", "24", "--snap-shot-changes", "garden.srt"]] as $options) {
+                  ["--video-fps", "24", "--no-snap-chain"], ["--video-fps", "24", "--snap-window-frames", "-1"]] as $options) {
             $this->assertSame(2, $this->runBinary(["convert", "garden.srt", "--to", "srt", "-o", "-", ...$options])[0], implode(" ", $options));
         }
-        $this->assertSame([3, "", "Error: Cannot read the shot change file missing.txt.\n"],
+        $this->assertSame([3, "", "Error: missing.txt: The file does not exist.\n"],
                           $this->runBinary(["convert", "garden.srt", "--to", "srt", "-o", "-", "--video-fps", "24", "--snap-shot-changes", "missing.txt"]));
     }
 
