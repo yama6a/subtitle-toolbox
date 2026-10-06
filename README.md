@@ -12,7 +12,7 @@ Upgrading from 1.x? See the [upgrade guide](docs/upgrade-2.0.md).
 composer require ymakhloufi/subtitle-toolbox
 ```
 
-The library needs PHP 8.2 or later with `ext-dom` and `ext-iconv`. Optional: `ext-mbstring` for Unicode upper and lower case, `ext-zlib` for PGS output and compressed MKV tracks, and [`yama6a/php-glyph-ocr`](https://github.com/yama6a/php-glyph-ocr) for OCR without Tesseract.
+The library needs PHP 8.2 or later with `ext-dom` and `ext-iconv`. Optional: `ext-mbstring` for Unicode upper and lower case, `ext-zlib` for PGS output and compressed MKV tracks, `ext-curl` for the DeepL and Google translation engines, and [`yama6a/php-glyph-ocr`](https://github.com/yama6a/php-glyph-ocr) for OCR without Tesseract.
 
 The command line tool also comes as a PHAR file and as two container images. The `-tesseract` image includes Tesseract for OCR.
 
@@ -72,6 +72,7 @@ subtitle-toolbox info movie.srt [--json]
 subtitle-toolbox validate movie.srt --preset netflix-en [--video-fps 23.976]
 subtitle-toolbox sync movie.de.srt --reference movie.en.srt [-o movie.de.synced.srt]
 subtitle-toolbox diff movie.v1.srt movie.v2.srt [--text-only]
+subtitle-toolbox translate movie.de.srt --engine deepl --target-language en-US [-o movie.en.srt]
 subtitle-toolbox dual --primary movie.en.srt --secondary movie.de.srt --to ass [--mode stack] [-o movie.en-de.ass]
 subtitle-toolbox hls movie.vtt --output-dir hls/ [--segment 6]
 subtitle-toolbox formats
@@ -173,6 +174,21 @@ $subtitle->save('movie.srt');
 ```
 
 `create()` takes the Tesseract language as its second argument, for example `'deu+eng'`. For engine settings, pass `TesseractOcrOptions` to `new TesseractOcrEngine()` or `GlyphOcrOptions` to `new GlyphOcrEngine()`.
+
+### Translate
+```php
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Translation\DeepLEngine;
+use SubtitleToolbox\Translation\DeepLOptions;
+use SubtitleToolbox\Translation\TranslationRunner;
+
+$subtitle = Subtitle::load('movie.de.srt', Format::SubRip);
+(new TranslationRunner(new DeepLEngine(new DeepLOptions(apiKey: $apiKey))))->translate($subtitle, 'de', 'en-US');
+$subtitle->save('movie.en.srt');
+```
+
+`GoogleTranslateEngine` works the same way. See [translation.md](docs/translation.md).
 
 ### Sync to a reference
 ```php

@@ -18,7 +18,7 @@ Every release also ships the tool as a PHAR file and as a container image.
 
 | Form | Needs | Example |
 |:--- |:--- |:--- |
-| PHAR on the [GitHub release](https://github.com/yama6a/subtitle-toolbox/releases) | PHP 8.2 or later with `ext-dom`, `ext-iconv` and `ext-zlib` | `php subtitle-toolbox.phar convert in.srt --to vtt -o out.vtt` |
+| PHAR on the [GitHub release](https://github.com/yama6a/subtitle-toolbox/releases) | PHP 8.2 or later with `ext-dom`, `ext-iconv` and `ext-zlib`, plus `ext-curl` for `translate` | `php subtitle-toolbox.phar convert in.srt --to vtt -o out.vtt` |
 | Image `ghcr.io/yama6a/subtitle-toolbox` | Docker or another container runtime | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:2.0.0 convert in.srt --to vtt -o out.vtt` |
 | Image `ghcr.io/yama6a/subtitle-toolbox:tesseract` | the same, for OCR with Tesseract in every language | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:2.0.0-tesseract convert in.sup --to srt -o out.srt --ocr --ocr-language deu` |
 
@@ -42,6 +42,7 @@ php subtitle-toolbox.phar --version
 | `validate` | prints each broken rule, as text or with `--json`, see [Validate](#validate) |
 | `sync` | retimes a subtitle to a reference subtitle or to the speech, see [Sync](#sync) |
 | `diff` | lists the added, removed and changed cues of two files, see [Diff](#diff) |
+| `translate` | translates the cue text with DeepL or Google Cloud Translation, see [Translate](#translate) |
 | `dual` | merges two languages into one file, see [Dual](#dual) |
 | `hls` | cuts a subtitle into WebVTT segments and writes an HLS playlist, see [HLS](#hls) |
 | `formats` | lists the format names and extensions for `--from` and `--to` |
@@ -54,8 +55,8 @@ php subtitle-toolbox.phar --version
 |:--- |:--- |:--- |
 | 0 | every file succeeded, and `validate` and `diff` found nothing | `validate movie.srt --preset bbc` with no broken rule |
 | 1 | a result: `validate` found a broken rule, or `diff` found a difference | `diff old.srt new.srt` for 2 files that differ |
-| 2 | a usage error, before the tool reads a file | an unknown option, a directory without subtitle files, an output that exists, `--ass-karaoke-tag` with `--to srt`, `validate --video-fps` without `--preset netflix-en`. `--ocr` without an installed OCR engine or without the data of the `--ocr-language`, see [OCR](#ocr) |
-| 3 | a file could not be read or written | a missing input, a file that does not parse, an output that cannot be created, content that the output format cannot hold such as 5 lines in SCC, a `--mask-words` file that cannot be read |
+| 2 | a usage error, before the tool reads a file | an unknown option, a directory without subtitle files, an output that exists, `--ass-karaoke-tag` with `--to srt`, `validate --video-fps` without `--preset netflix-en`. `--ocr` without an installed OCR engine or without the data of the `--ocr-language`, see [OCR](#ocr). `translate` without `ext-curl` or without an API key, see [Translate](#translate) |
+| 3 | a file could not be read or written | a missing input, a file that does not parse, an output that cannot be created, content that the output format cannot hold such as 5 lines in SCC, a `--mask-words` file that cannot be read, a translation service that answers with an error |
 
 - **Failures**: a failed file prints `FILE: MESSAGE` to standard error. The message of a library exception starts with its class, for example `ParsingException (Error #100):`. Any other PHP error prints its class and message, for example `movie.json: TypeError: ...`, and fails that file with exit code 3. An error outside a file, such as a `--mask-words` file that cannot be read or an output that cannot be created, prints `Error: MESSAGE` and exits with code 3. A PHP error outside a file also prints its class.
 - **Stable parts**: semantic versioning covers the binary, its commands, options, the meaning of each exit code and `--json` shapes. The text output and the messages can change in a minor release. The PHP classes in `src/Cli` are `@internal` and can change in any release. See [compatibility.md](compatibility.md).
@@ -65,7 +66,7 @@ php subtitle-toolbox.phar --version
 - **Inputs**: a file, a directory, a glob such as `"season1/*.srt"`, or `-` for standard input. A directory gives its files with a known extension. The tool counts the inputs after it expands directories and globs.
 - **Positional files**: only inputs with the same role, so their order does not matter. A file with another role takes an option, for example `sync --reference FILE` and `dual --primary FILE --secondary FILE`. `diff OLD NEW` keeps 2 positional files, as `diff` and `git diff` do.
 - **Input format**: `--from`, else format detection on the content, else the file extension. Chapters and cloud speech-to-text JSON need `--from`, for example `--from deepgram` or `--from ffmeta-chapters`. `--from` and `--to` also take the 1.x names `ytchapter`, `podcast`, `ogm` and `ffmeta`. The tool reads like `Subtitle::loadAutoDetectFormat()`, see [formats.md](formats.md#load-and-save).
-- **Output**: never positional. `convert`, `retime`, `sync` and `dual` write one input to standard output, or to the file of `-o FILE` (`--output FILE`). Several inputs need `--output-dir DIR`. `hls` always needs `--output-dir`.
+- **Output**: never positional. `convert`, `retime`, `sync`, `translate` and `dual` write one input to standard output, or to the file of `-o FILE` (`--output FILE`). Several inputs need `--output-dir DIR`. `hls` always needs `--output-dir`.
 
 | Call | Writes |
 |:--- |:--- |
@@ -76,7 +77,7 @@ php subtitle-toolbox.phar --version
 | `retime a.srt b.srt --shift 1 -o fixed.srt` | nothing. Exit code 2, because `-o` takes one input |
 
 - **Output names**: in `--output-dir`, each output takes the base name of its input and the extension of the output format. An input keeps its extension when the output format uses it, so `movie.ssa` with `--to ass` writes `out/movie.ssa`.
-- **Output format**: `--to FORMAT`. `convert` requires it, also when the format stays the same, for example `convert movie.srt --to srt --timing-fix-overlaps`. Without `--to`, `retime` and `sync` keep the input format, and `dual` keeps the format of the primary file.
+- **Output format**: `--to FORMAT`. `convert` requires it, also when the format stays the same, for example `convert movie.srt --to srt --timing-fix-overlaps`. Without `--to`, `retime`, `sync` and `translate` keep the input format, and `dual` keeps the format of the primary file.
 - **Output extension**: the extension of `-o` never picks the format. An extension of another format than `--to` fails with exit code 2, for example `convert movie.srt --to srt -o movie.vtt`. An extension of no format, such as `.bak`, works.
 - **Never overwrite**: no command overwrites a file. This covers subtitle outputs, the files of `--mute-edl` and `--mute-filter`, and the `hls` playlist and segments.
 - **Check before the work**: before it reads the first input, the tool collects every output path. It fails with exit code 2 and writes nothing when an output exists, when 2 inputs would write the same output, or when an output is a file that the command reads. The `.sub` file of a VobSub input and the files of options such as `--mask-words` and `--reference` count as read files. A file passed twice, such as `movie.srt ./movie.srt`, counts once.
@@ -352,6 +353,31 @@ vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-format
 | `--ignore-formatting`, `--ignore-whitespace`, `--text-only` | `ignoreFormatting`, `ignoreWhitespace`, `textOnly` |
 | `--from2 FORMAT`, `--track2 NUMBER` | the format and the MKV or WebM track of the new file. `--from` and `--track` apply to the old file |
 | `--json` | prints JSON, see [JSON output](#json-output) |
+
+## Translate
+`translate` translates the cue text with [`TranslationRunner`](translation.md) and the built-in engine `DeepLEngine` or `GoogleTranslateEngine`. It needs the PHP extension curl.
+
+```sh
+vendor/bin/subtitle-toolbox translate movie.de.srt --engine deepl --source-language de --target-language en-US -o movie.en.srt
+DEEPL_API_KEY=... vendor/bin/subtitle-toolbox translate movie.de.srt --engine deepl --target-language en-US
+vendor/bin/subtitle-toolbox translate season1/ --engine google --api-key "$KEY" --target-language fr --to vtt --output-dir fr/
+```
+
+| Option | Sets |
+|:--- |:--- |
+| `--engine deepl\|google` | the engine, `DeepLEngine` or `GoogleTranslateEngine`. Required |
+| `--api-key KEY` | `apiKey` of `DeepLOptions` or `GoogleTranslateOptions`. Default: `DEEPL_API_KEY` for `deepl`, `GOOGLE_TRANSLATE_API_KEY` for `google` |
+| `--source-language CODE` | the language of the input, for example `de`. Default: the engine detects it |
+| `--target-language CODE` | the language of the output, for example `en-US` for DeepL or `fr` for Google. Required |
+| `--fps`, `--input-fps`, `--output-fps` | `frameRate` of the MicroDVD, CSV and iTT read and write options, see [Frame rates](#frame-rates) |
+
+- **Output**: one input goes to standard output, or to the file of `-o`. Several inputs need `--output-dir`. See [Input and output](#input-and-output).
+- **Key**: the tool reads only the variable of the chosen engine. With `--engine deepl`, a set `GOOGLE_TRANSLATE_API_KEY` does not help. The key never appears in the output or in error messages.
+- **Language codes**: the tool passes the codes to the service as they are and does not check them. The service rejects an unknown code, and the file fails.
+- **Usage errors**: a missing or unknown `--engine`, a missing key or a missing `--target-language` stops the tool with exit code 2 before it reads a file.
+- **Service errors**: a wrong key (HTTP 403), too many requests (HTTP 429), a used-up DeepL quota (HTTP 456) or no response fails the file with exit code 3 and a message that names the cause. `--keep-going` goes on with the next file.
+- **Warnings**: when the service drops a placeholder tag, the tool prints `movie.srt: cue 4: ...` to standard error and writes the cue without tags.
+- **No curl**: without `ext-curl`, `translate` stops with exit code 2 and names the extension. The other commands run without it. The container images include it. For the PHAR, install it with your PHP, for example `apt install php8.2-curl`.
 
 ## Dual
 `dual` merges a primary and a secondary subtitle with [`DualSubtitle::fromPair()`](editing.md#dual-subtitles). The output has the format of the primary file, unless `--to` sets another one.
