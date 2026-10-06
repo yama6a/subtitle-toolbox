@@ -307,6 +307,22 @@ class BinaryOutputTest extends BinaryTestCase
     }
 
 
+    public function testTheSccHintNamesSplitLongWhenWrappingCannotFitTheCue(): void
+    {
+        copy(__DIR__ . "/../files/stl/real/bakery_teletext_25fps.stl", "$this->dir/bakery.stl");
+        $wrap = ["--structure-wrap", "--structure-max-cpl", "32", "--structure-max-lines", "4"];
+
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "bakery.stl", "--from", "stl", "--to", "scc", ...$wrap, "-o", "-"]);
+        $this->assertSame(3, $code);
+        $this->assertSame("", $stdout);
+        $this->assertStringEndsWith(". Pass --structure-split-long --structure-wrap --structure-max-cpl 32 --structure-max-lines 4.\n", $stderr);
+
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "bakery.stl", "--from", "stl", "--to", "scc", "--structure-split-long", ...$wrap, "-o", "-"]);
+        $this->assertSame([0, ""], [$code, $stderr]);
+        $this->assertStringStartsWith("Scenarist_SCC V1.0\n", $stdout);
+    }
+
+
     public function testBatchStopsAtTheFirstFailureWithoutKeepGoing(): void
     {
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "broken.srt", "trip.srt", "shop.vtt", "--to", "srt", "--output-dir", "out"]);

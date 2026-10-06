@@ -6,11 +6,15 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\CueLimits;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\SccParser;
+use SubtitleToolbox\Resegmenting\ResegmentMode;
+use SubtitleToolbox\Resegmenting\Resegmenter;
+use SubtitleToolbox\Resegmenting\ResegmentOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -226,6 +230,26 @@ class SccFormatterTest extends TestCase
         $this->expectExceptionMessage("Cue #0 at 1 s has a line with 33 characters, but SCC allows 32. Call wrapLines(32, 4) first.");
 
         $this->subtitle(new SubtitleCue(1.0, 2.0, "<i>" . str_repeat("a", 33) . "</i>"))->toString(Format::Scc);
+    }
+
+
+    public function testNamesTheSplitStepWhenWrappingCannotFitTheCue(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Cue #0 at 1 s has a line with 139 characters, but SCC allows 32. " .
+                                      "Call Resegmenter::apply() with ResegmentMode::SplitLong and new CueLimits(32, 4), then wrapLines(32, 4).");
+
+        $this->subtitle(new SubtitleCue(1.0, 8.0, implode(" ", array_fill(0, 20, "bakery"))))->toString(Format::Scc);
+    }
+
+
+    public function testSplitLongAndWrapLinesMakeTheCueFit(): void
+    {
+        $subtitle = $this->subtitle(new SubtitleCue(1.0, 8.0, implode(" ", array_fill(0, 20, "bakery"))));
+        Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::SplitLong, new CueLimits(32, 4)));
+        $subtitle->wrapLines(32, 4);
+
+        $this->assertStringStartsWith("Scenarist_SCC V1.0\n", $subtitle->toString(Format::Scc));
     }
 
 
