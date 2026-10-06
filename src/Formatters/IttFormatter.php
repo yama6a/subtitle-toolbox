@@ -60,8 +60,15 @@ final class IttFormatter extends SubtitleFormatter
         $ttml = $this->toTtmlSubtitle($subtitle);
         $xml  = (new TtmlFormatter())->format($ttml, new WriteOptions(stripTags: $options->stripTags));
 
-        $document = new DOMDocument();
-        $document->loadXML($xml, LIBXML_NONET);
+        // The CLI prints a libxml warning to standard output, in front of the file.
+        $previous = libxml_use_internal_errors(true);
+        try {
+            $document = new DOMDocument();
+            $document->loadXML($xml, LIBXML_NONET);
+            libxml_clear_errors();
+        } finally {
+            libxml_use_internal_errors($previous);
+        }
         $root = $document->documentElement;
         $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:timeBase", "smpte");
         $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:frameRate", $frameRate);
