@@ -19,7 +19,9 @@ class ArgumentsTest extends TestCase
             Option::flag("force", "Overwrite."),
             Option::value("by", "SECONDS", "Seconds."),
             Option::value("output", "PATH", "Output.", "o"),
-            new Option("brackets", "Pairs.", "PAIR", null, true),
+            Option::repeatable("brackets", "PAIR", "Pairs."),
+            Option::value("fps", "RATE", "Frame rate."),
+            Option::value("video-fps", "RATE", "Video frame rate."),
         ];
     }
 
@@ -56,6 +58,37 @@ class ArgumentsTest extends TestCase
         $this->assertSame(3, $arguments->positiveInt("by"));
         $this->assertNull($arguments->positiveInt("missing"));
         $this->assertNull($arguments->positiveFloat("missing"));
+        $this->assertSame(0, $arguments->int("output", 0));
+        $this->assertSame(3, $arguments->int("by", 1, 3));
+        $this->assertNull($arguments->int("missing", 0));
+        $this->assertSame(0.0, $arguments->nonNegativeFloat("output"));
+        $this->assertNull($arguments->nonNegativeFloat("missing"));
+    }
+
+
+    public function testChoiceIgnoresCaseAndReturnsTheAllowedSpelling(): void
+    {
+        $arguments = Arguments::parse(["--by", "Top-BOTTOM"], self::spec());
+
+        $this->assertSame("top-bottom", $arguments->choice("by", ["stack", "top-bottom"]));
+        $this->assertNull($arguments->choice("missing", ["stack"]));
+    }
+
+
+    public function testRateFallsBackToFps(): void
+    {
+        $this->assertSame(25.0, Arguments::parse(["--fps", "25"], self::spec())->rate("video-fps"));
+        $this->assertSame(24.0, Arguments::parse(["--fps", "25", "--video-fps", "24"], self::spec())->rate("video-fps"));
+        $this->assertNull(Arguments::parse([], self::spec())->rate("video-fps"));
+    }
+
+
+    public function testRateChecksFpsAlsoWhenTheOwnOptionIsGiven(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("The option --fps must be greater than 0.");
+
+        Arguments::parse(["--fps", "0", "--video-fps", "24"], self::spec())->rate("video-fps");
     }
 
 
@@ -97,6 +130,8 @@ class ArgumentsTest extends TestCase
             "zero"               => ["positiveFloat", "0", "The option --by must be greater than 0."],
             "fraction for int"   => ["positiveInt", "1.5", "The option --by needs a whole number greater than 0, got \"1.5\"."],
             "zero for int"       => ["positiveInt", "0", "The option --by needs a whole number greater than 0, got \"0\"."],
+            "negative"           => ["nonNegativeFloat", "-0.5", "The option --by must not be negative."],
+            "infinite non-neg"   => ["nonNegativeFloat", "1e999", "The option --by needs a finite number, got \"1e999\"."],
         ];
     }
 
@@ -108,5 +143,59 @@ class ArgumentsTest extends TestCase
         $this->expectExceptionMessage($message);
 
         Arguments::parse(["--by", $value], self::spec())->$getter("by");
+    }
+
+
+    /**
+     * @return array<string, array{string, int, ?int, string}>
+     */
+    public static function invalidWholeNumbers(): array
+    {
+        return [
+            "fraction"     => ["1.5", 0, 9, "The option --by needs a whole number from 0 to 9, got \"1.5\"."],
+            "below min"    => ["0", 1, 9, "The option --by needs a whole number from 1 to 9, got \"0\"."],
+            "above max"    => ["10", 1, 9, "The option --by needs a whole number from 1 to 9, got \"10\"."],
+            "negative"     => ["-1", 0, null, "The option --by needs a whole number of 0 or more, got \"-1\"."],
+            "too large"    => ["99999999999999999999", 0, null, "The option --by needs a whole number of 0 or more, got \"99999999999999999999\"."],
+            "plus sign"    => ["+1", 0, null, "The option --by needs a whole number of 0 or more, got \"+1\"."],
+            "empty"        => ["", 0, null, "The option --by needs a whole number of 0 or more, got \"\"."],
+            "exponent"     => ["1e3", 0, null, "The option --by needs a whole number of 0 or more, got \"1e3\"."],
+        ];
+    }
+
+
+    #[DataProvider("invalidWholeNumbers")]
+    public function testInvalidWholeNumbersFail(string $value, int $min, ?int $max, string $message): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage($message);
+
+        Arguments::parse(["--by", $value], self::spec())->int("by", $min, $max);
+    }
+
+
+    /**
+     * @return array<string, array{list<string>, string}>
+     */
+    public static function invalidChoices(): array
+    {
+        return [
+            "one choice"    => [["lf"], "The option --by must be lf, got \"cr\"."],
+            "two choices"   => [["lf", "crlf"], "The option --by must be lf or crlf, got \"cr\"."],
+            "three choices" => [["k", "kf", "ko"], "The option --by must be k, kf or ko, got \"cr\"."],
+        ];
+    }
+
+
+    /**
+     * @param non-empty-list<string> $allowed
+     */
+    #[DataProvider("invalidChoices")]
+    public function testInvalidChoicesFail(array $allowed, string $message): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage($message);
+
+        Arguments::parse(["--by", "cr"], self::spec())->choice("by", $allowed);
     }
 }

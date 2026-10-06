@@ -8,7 +8,6 @@ use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
-use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Fixing\CommonErrorFixer;
 use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Fixing\OcrReplaceList;
@@ -70,8 +69,8 @@ final class CommonErrorEdit extends Edit
         foreach (CommonErrorFixer::apply($subtitle, $this->options)->fixes as $fix) {
             if ($this->list) {
                 $console->err("$label: cue " . ($fix->cueIndex + 1) . ": {$fix->rule->value}: " .
-                              json_encode($fix->before, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) . " -> " .
-                              json_encode($fix->after, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) . "\n");
+                              json_encode($fix->before, Command::JSON_FLAGS) . " -> " .
+                              json_encode($fix->after, Command::JSON_FLAGS) . "\n");
             }
         }
 
@@ -84,10 +83,6 @@ final class CommonErrorEdit extends Edit
         if ($path === null) {
             return null;
         }
-        try {
-            return OcrReplaceList::fromSubtitleEditXml(Command::readSideFile($path));
-        } catch (ParsingException $exception) {
-            return Command::failSideFile($path, $exception->getMessage());
-        }
+        return Command::parseSideFile($path, OcrReplaceList::fromSubtitleEditXml(...));
     }
 }

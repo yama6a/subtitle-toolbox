@@ -46,7 +46,7 @@ final class AssOutput
 
     public static function fromArguments(Arguments $arguments): ?self
     {
-        $tag = $arguments->value("ass-karaoke-tag");
+        $tag = $arguments->choice("ass-karaoke-tag", array_column(AssKaraokeTag::cases(), "value"));
         if ($tag === null) {
             return null;
         }
@@ -54,7 +54,7 @@ final class AssOutput
             Command::fail("Pass only one of --karaoke and --ass-karaoke-tag.");
         }
 
-        return new self(AssKaraokeTag::tryFrom($tag) ?? Command::fail("The option --ass-karaoke-tag must be k, kf or ko, got \"$tag\"."));
+        return new self(AssKaraokeTag::from($tag));
     }
 
 

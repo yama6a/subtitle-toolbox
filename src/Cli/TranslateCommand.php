@@ -72,8 +72,8 @@ final class TranslateCommand extends WriteCommand
     {
         parent::prepare($arguments);
 
-        $engine   = strtolower($arguments->value("engine") ?? "") ?: self::fail("Pass --engine deepl or --engine google.");
-        $variable = self::KEY_VARIABLES[$engine] ?? self::fail("The option --engine must be deepl or google, got \"$engine\".");
+        $engine   = $arguments->choice("engine", array_keys(self::KEY_VARIABLES)) ?? self::fail("Pass --engine deepl or --engine google.");
+        $variable = self::KEY_VARIABLES[$engine];
         $apiKey   = $arguments->value("api-key") ?? (getenv($variable) ?: null)
             ?? self::fail("Pass --api-key or set the environment variable $variable.");
 

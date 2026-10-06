@@ -8,7 +8,6 @@ use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Karaoke\WordHighlight;
 use SubtitleToolbox\Karaoke\WordHighlightOptions;
 use SubtitleToolbox\Subtitle;
@@ -51,11 +50,7 @@ final class KaraokeEdit extends Edit
             return null;
         }
 
-        try {
-            return new self(new WordHighlightOptions(style: $arguments->value("karaoke-style") ?? "u"));
-        } catch (InvalidArgumentException $exception) {
-            return Command::fail($exception->getMessage());
-        }
+        return new self(new WordHighlightOptions(...Command::given(["style" => $arguments->value("karaoke-style")])));
     }
 
 

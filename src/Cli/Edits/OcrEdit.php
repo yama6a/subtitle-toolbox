@@ -11,7 +11,7 @@ use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\OcrProgress;
 use SubtitleToolbox\Cli\Option;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Cli\OptionsCopy;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Ocr\GlyphOcrOptions;
@@ -34,7 +34,8 @@ final class OcrEdit extends Edit
     private function __construct(
         private readonly OcrEngineName $engine,
         private readonly ?string $language,
-        private readonly ?GlyphOcrOptions $glyphOptions,
+        private readonly TesseractOcrOptions $tesseractOptions,
+        private GlyphOcrOptions $glyphOptions,
     ) {
     }
 
@@ -69,31 +70,26 @@ final class OcrEdit extends Edit
             return null;
         }
 
-        $name   = $arguments->value("ocr-engine");
-        $engine = $name === null ? null : OcrEngineName::tryFrom($name)
-            ?? Command::fail("Cannot choose the OCR engine \"$name\" - the engines are: " .
-                             implode(", ", array_column(OcrEngineName::cases(), "value")) . "!");
+        $name   = $arguments->choice("ocr-engine", array_column(OcrEngineName::cases(), "value"));
+        $engine = $name === null ? null : OcrEngineName::from($name);
         if ($arguments->has("ocr-database")) {
             if ($engine === OcrEngineName::Tesseract) {
                 Command::fail("Pass --ocr-engine glyph with --ocr-database.");
             }
             $engine = OcrEngineName::Glyph;
         }
-        try {
-            $engine = OcrEngineChooser::choose($engine);
-            if ($engine === OcrEngineName::Tesseract) {
-                $language = $arguments->value("ocr-language") ?? "eng";
-                (new TesseractOcrEngine(new TesseractOcrOptions($language)))->requireLanguages($language);
-            }
-        } catch (InvalidArgumentException $exception) {
-            Command::fail($exception->getMessage());
+        $engine           = OcrEngineChooser::choose($engine);
+        $language         = $arguments->value("ocr-language");
+        $tesseractOptions = new TesseractOcrOptions(...Command::given(["language" => $language]));
+        if ($engine === OcrEngineName::Tesseract) {
+            (new TesseractOcrEngine($tesseractOptions))->requireLanguages();
         }
+        $database     = $arguments->value("ocr-database");
+        $glyphOptions = new GlyphOcrOptions(...Command::given([
+            "database" => $database === null ? null : Command::parseSideFile($database, GlyphDatabase::fromBytes(...), GlyphOcrException::class),
+        ]));
 
-        return new self(
-            $engine,
-            $arguments->value("ocr-language"),
-            $engine === OcrEngineName::Glyph ? new GlyphOcrOptions(database: self::loadDatabase($arguments->value("ocr-database"))) : null,
-        );
+        return new self($engine, $language, $tesseractOptions, $glyphOptions);
     }
 
 
@@ -111,7 +107,7 @@ final class OcrEdit extends Edit
     private function engine(Console $console): OcrEngine
     {
         if ($this->engine === OcrEngineName::Tesseract) {
-            return new TesseractOcrEngine(new TesseractOcrOptions($this->language ?? "eng"));
+            return new TesseractOcrEngine($this->tesseractOptions);
         }
         if ($this->language !== null && !$this->warnedAboutLanguage) {
             $console->err("Warning: the glyph engine ignores --ocr-language.\n");
@@ -119,18 +115,10 @@ final class OcrEdit extends Edit
         }
 
         // A new engine for each file, because the recognizer learns the glyph heights of one stream.
-        return new GlyphOcrEngine($this->glyphOptions ?? new GlyphOcrOptions());
-    }
+        $engine = new GlyphOcrEngine($this->glyphOptions);
+        // The options keep the database of the first engine, so the run loads it once.
+        $this->glyphOptions = OptionsCopy::with($this->glyphOptions, ["database" => $engine->database()]);
 
-
-    private static function loadDatabase(?string $path): GlyphDatabase
-    {
-        $bytes = $path === null ? null : Command::readSideFile($path);
-
-        try {
-            return $bytes === null ? GlyphDatabase::subtitleFonts() : GlyphDatabase::fromBytes($bytes);
-        } catch (GlyphOcrException $exception) {
-            return $path === null ? Command::failFile($exception->getMessage()) : Command::failSideFile($path, $exception->getMessage());
-        }
+        return $engine;
     }
 }

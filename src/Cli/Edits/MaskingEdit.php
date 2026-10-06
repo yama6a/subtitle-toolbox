@@ -73,23 +73,19 @@ final class MaskingEdit extends Edit
             return null;
         }
 
-        $mask = $arguments->value("mask") ?? "stars";
-        if (!isset(self::MASKS[$mask])) {
-            Command::fail("Unknown mask \"$mask\". Known masks: " . implode(", ", array_keys(self::MASKS)) . ".");
-        }
+        $mask = $arguments->choice("mask", array_keys(self::MASKS));
         foreach (["mute-edl", "mute-filter"] as $option) {
             $path = $arguments->value($option);
             if ($path === FileCommand::DASH) {
                 Command::fail("The option --$option needs a file path.");
             }
         }
-        $padding = $arguments->float("mute-padding") ?? 0.0;
-        if ($padding < 0) {
-            Command::fail("The option --mute-padding must not be negative.");
-        }
 
         return new self(
-            new ProfanityOptions(self::readWordFile($words), self::MASKS[$mask], $padding),
+            new ProfanityOptions(self::readWordFile($words), ...Command::given([
+                "mask"    => $mask === null ? null : self::MASKS[$mask],
+                "padding" => $arguments->nonNegativeFloat("mute-padding"),
+            ])),
             $arguments->value("mute-edl"),
             $arguments->value("mute-filter"),
         );

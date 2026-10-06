@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Cli\Edits;
 
 use SubtitleToolbox\Cli\Arguments;
-use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Subtitle;
 
@@ -59,9 +58,7 @@ final class EditPipeline
 
     public static function fromArguments(Arguments $arguments): self
     {
-        if ($arguments->has("language") && !$arguments->has("case") && !$arguments->has("errors-fix")) {
-            Command::fail("Pass --case or --errors-fix with --language.");
-        }
+        Edit::needsOneOf($arguments, ["case", "errors-fix"], "language");
 
         return new self(array_values(array_filter(array_map(fn (string $edit): ?Edit => $edit::fromArguments($arguments), self::EDITS))));
     }

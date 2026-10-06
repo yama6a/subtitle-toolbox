@@ -8,8 +8,6 @@ use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\Timing\ShotChanges;
@@ -20,6 +18,8 @@ use SubtitleToolbox\Timing\ShotChangeTiming;
  */
 final class SnapEdit extends Edit
 {
+    private const EDITS = ["snap-shot-changes", "snap-window-frames", "snap-min-gap-frames", "snap-min-duration-frames", "no-snap-chain"];
+
     private function __construct(private readonly ShotChangeOptions $options)
     {
     }
@@ -52,8 +52,8 @@ final class SnapEdit extends Edit
 
     public static function fromArguments(Arguments $arguments): ?static
     {
-        $videoFps = $arguments->positiveFloat("video-fps") ?? $arguments->positiveFloat("fps");
-        $snaps    = array_filter(["snap-shot-changes", "snap-window-frames", "snap-min-gap-frames", "snap-min-duration-frames", "no-snap-chain"], $arguments->has(...));
+        $videoFps = $arguments->rate("video-fps");
+        $snaps    = array_filter(self::EDITS, $arguments->has(...));
         if ($snaps === []) {
             if ($arguments->has("video-fps")) {
                 Command::fail("Pass --snap-shot-changes FILE with --video-fps.");
@@ -62,25 +62,21 @@ final class SnapEdit extends Edit
             return null;
         }
         if ($videoFps === null) {
-            Command::fail("Pass --video-fps RATE with --" . reset($snaps) . ".");
+            Command::fail("Pass --video-fps RATE or --fps RATE with --" . reset($snaps) . ".");
         }
         $path = $arguments->value("snap-shot-changes");
         if ($path === null && $arguments->has("no-snap-chain")) {
             Command::fail("Pass --snap-shot-changes FILE. With --no-snap-chain and no shot changes, snapping changes nothing.");
         }
 
-        try {
-            return new self(new ShotChangeOptions(
-                frameRate: $videoFps,
-                shotChanges: $path === null ? [] : self::loadShotChanges($path),
-                snapWindowFrames: self::frames($arguments, "snap-window-frames"),
-                minGapFrames: self::frames($arguments, "snap-min-gap-frames") ?? 2,
-                chain: !$arguments->has("no-snap-chain"),
-                minDurationFrames: self::frames($arguments, "snap-min-duration-frames") ?? 20,
-            ));
-        } catch (InvalidArgumentException $exception) {
-            return Command::fail($exception->getMessage());
-        }
+        return new self(new ShotChangeOptions(...Command::given([
+            "frameRate"         => $videoFps,
+            "shotChanges"       => $path === null ? null : self::loadShotChanges($path),
+            "snapWindowFrames"  => $arguments->int("snap-window-frames", 0),
+            "minGapFrames"      => $arguments->int("snap-min-gap-frames", 0),
+            "chain"             => !$arguments->has("no-snap-chain"),
+            "minDurationFrames" => $arguments->int("snap-min-duration-frames", 0),
+        ])));
     }
 
 
@@ -92,28 +88,12 @@ final class SnapEdit extends Edit
     }
 
 
-    private static function frames(Arguments $arguments, string $name): ?int
-    {
-        $value = $arguments->value($name);
-        if ($value !== null && !ctype_digit($value)) {
-            Command::fail("The option --$name needs a whole number of frames, got \"$value\".");
-        }
-
-        return $value === null ? null : (int)$value;
-    }
-
-
     /**
      * @return list<float>
      */
     private static function loadShotChanges(string $path): array
     {
-        $content = Command::readSideFile($path);
-
-        try {
-            return str_contains($content, "pts_time:") ? ShotChanges::fromFfmpegLog($content) : ShotChanges::fromText($content);
-        } catch (ParsingException $exception) {
-            return Command::failSideFile($path, $exception->getMessage());
-        }
+        return Command::parseSideFile($path, fn (string $content): array =>
+            str_contains($content, "pts_time:") ? ShotChanges::fromFfmpegLog($content) : ShotChanges::fromText($content));
     }
 }

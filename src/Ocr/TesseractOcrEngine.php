@@ -88,12 +88,14 @@ final class TesseractOcrEngine implements OcrEngine
 
 
     /**
-     * Throws when the program or the language data of $language is missing. The CLI calls it before the first file.
+     * Throws when the program or the language data of $language is missing. A null $language checks the language of
+     * the options. The CLI calls it before the first file.
      *
      * @internal
      */
-    public function requireLanguages(string $language): void
+    public function requireLanguages(?string $language = null): void
     {
+        $language ??= $this->options->language;
         $program = $this->options->program;
         if (!isset(self::$languages[$program])) {
             if (!self::isInstalled($program)) {

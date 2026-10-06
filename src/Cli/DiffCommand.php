@@ -7,7 +7,6 @@ namespace SubtitleToolbox\Cli;
 use SubtitleToolbox\Diff\CueDifference;
 use SubtitleToolbox\Diff\SubtitleDiff;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -65,7 +64,7 @@ final class DiffCommand extends ReportCommand
     }
 
 
-    protected function readsBatch(): bool
+    protected function takesManyInputs(): bool
     {
         return false;
     }
@@ -101,21 +100,13 @@ final class DiffCommand extends ReportCommand
     {
         parent::prepare($arguments);
 
-        $this->different = false;
-        if (($arguments->float("time-tolerance") ?? 0) < 0) {
-            self::fail("The option --time-tolerance must not be negative.");
-        }
-
-        try {
-            $this->diffOptions = new SubtitleDiffOptions(
-                timeTolerance: $arguments->float("time-tolerance") ?? 0.001,
-                ignoreFormatting: $arguments->has("ignore-formatting"),
-                ignoreWhitespace: $arguments->has("ignore-whitespace"),
-                textOnly: $arguments->has("text-only"),
-            );
-        } catch (InvalidArgumentException $exception) {
-            self::fail($exception->getMessage());
-        }
+        $this->different   = false;
+        $this->diffOptions = new SubtitleDiffOptions(...self::given([
+            "timeTolerance"    => $arguments->nonNegativeFloat("time-tolerance"),
+            "ignoreFormatting" => $arguments->has("ignore-formatting"),
+            "ignoreWhitespace" => $arguments->has("ignore-whitespace"),
+            "textOnly"         => $arguments->has("text-only"),
+        ]));
     }
 
 

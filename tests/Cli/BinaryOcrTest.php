@@ -155,7 +155,7 @@ class BinaryOcrTest extends BinaryTestCase
         copy(self::FILES . "pgs/text_1080p.sup", "$this->dir/text.sup");
         $usage = "Run \"subtitle-toolbox help convert\" for the usage.\n";
 
-        $this->assertSame([2, "", "Error: Cannot choose the OCR engine \"easyocr\" - the engines are: tesseract, glyph!\n$usage"],
+        $this->assertSame([2, "", "Error: The option --ocr-engine must be tesseract or glyph, got \"easyocr\".\n$usage"],
                           $this->runBinary(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr", "--ocr-engine", "easyocr"]));
         $this->assertSame([2, "", "Error: Pass --ocr-engine glyph with --ocr-database.\n$usage"],
                           $this->runBinary(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr", "--ocr-engine", "tesseract",

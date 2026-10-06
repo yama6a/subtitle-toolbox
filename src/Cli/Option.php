@@ -34,6 +34,15 @@ final class Option
     }
 
 
+    /**
+     * Describes an option that the user can give more than once. It collects all its values.
+     */
+    public static function repeatable(string $name, string $valueName, string $description): self
+    {
+        return new self($name, $description, $valueName, null, true);
+    }
+
+
     public function takesValue(): bool
     {
         return $this->valueName !== null;

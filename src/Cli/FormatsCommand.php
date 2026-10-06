@@ -58,11 +58,7 @@ final class FormatsCommand extends Command
             ];
         }
 
-        $widths = array_map(fn (int $column): int => max(array_map(fn (array $row): int => strlen($row[$column]), $rows)), [0, 1, 2]);
-        foreach ($rows as $row) {
-            $console->out(rtrim(str_pad($row[0], $widths[0] + 2) . str_pad($row[1], $widths[1] + 2) .
-                                str_pad($row[2], $widths[2] + 2) . $row[3]) . "\n");
-        }
+        $console->out(self::table($rows, 0));
 
         return Application::EXIT_OK;
     }

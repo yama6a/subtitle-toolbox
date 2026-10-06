@@ -98,7 +98,7 @@ final class Application
         } catch (SubtitleToolboxException $exception) {
             return $this->usageError($exception->getMessage(), "help " . $command->name());
         } catch (\Throwable $throwable) {
-            $this->console->err("Error: " . FileCommand::throwableMessage($throwable) . "\n");
+            $this->console->err("Error: " . Command::throwableMessage($throwable) . "\n");
 
             return self::EXIT_FILE;
         }
@@ -156,12 +156,10 @@ final class Application
 
     private function help(): string
     {
-        $width    = max(array_map(fn (Command $command): int => strlen($command->name()), $this->commands));
-        $commands = "";
-        foreach ($this->commands as $command) {
-            $commands .= "  " . str_pad($command->name(), $width) . "  " . $command->summary() . "\n";
-        }
-        $commands .= "  " . str_pad("help", $width) . "  Shows the help of a command.\n";
+        $commands = Command::table([
+            ...array_map(fn (Command $command): array => [$command->name(), $command->summary()], $this->commands),
+            ["help", "Shows the help of a command."],
+        ]);
 
         $name    = self::NAME;
         $version = Version::get();

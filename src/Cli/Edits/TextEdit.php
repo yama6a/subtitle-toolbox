@@ -19,14 +19,9 @@ use SubtitleToolbox\Subtitle;
  */
 final class TextEdit extends Edit
 {
-    private const CASES = ["upper", "lower", "sentence"];
-
-    private const SPEAKER_MODES = ["prefix", "dashes", "colors", "from-prefix"];
-
-
     private function __construct(
         private readonly bool $stripTags,
-        private readonly ?string $case,
+        private readonly ?CaseMode $case,
         private readonly ?string $language,
         private readonly ?SpeakerLabelOptions $speakers,
     ) {
@@ -57,25 +52,28 @@ final class TextEdit extends Edit
 
     public static function fromArguments(Arguments $arguments): ?static
     {
-        $case = $arguments->value("case");
-        if ($case !== null && !in_array($case, self::CASES, true)) {
-            Command::fail("Unknown case \"$case\". Known cases: " . implode(", ", self::CASES) . ".");
-        }
-        $speakers = $arguments->value("speakers");
-        if ($speakers !== null && !in_array($speakers, self::SPEAKER_MODES, true)) {
-            Command::fail("Unknown speaker mode \"$speakers\". Known modes: " . implode(", ", self::SPEAKER_MODES) . ".");
-        }
+        $case     = $arguments->choice("case", array_column(CaseMode::cases(), "value"));
+        $speakers = $arguments->choice("speakers", array_keys(self::speakerModes()));
         if (!$arguments->has("strip-tags") && $case === null && $speakers === null) {
             return null;
         }
 
-        return new self($arguments->has("strip-tags"), $case, $arguments->value("language"), match ($speakers) {
+        return new self($arguments->has("strip-tags"), $case === null ? null : CaseMode::from($case), $arguments->value("language"),
+                        $speakers === null ? null : self::speakerModes()[$speakers]);
+    }
+
+
+    /**
+     * @return array<string, SpeakerLabelOptions> the values of --speakers
+     */
+    private static function speakerModes(): array
+    {
+        return [
             "prefix"      => new SpeakerLabelOptions(to: SpeakerStyle::Prefix),
             "dashes"      => new SpeakerLabelOptions(to: SpeakerStyle::DialogueDashes),
-            "colors"     => new SpeakerLabelOptions(to: SpeakerStyle::Colors),
+            "colors"      => new SpeakerLabelOptions(to: SpeakerStyle::Colors),
             "from-prefix" => new SpeakerLabelOptions(readPrefixes: true),
-            null          => null,
-        });
+        ];
     }
 
 
@@ -85,7 +83,7 @@ final class TextEdit extends Edit
             SpeakerLabels::apply($subtitle, $this->speakers);
         }
         if ($this->case !== null) {
-            $subtitle->changeCase(CaseMode::from($this->case), $this->language);
+            $subtitle->changeCase($this->case, $this->language);
         }
         if ($this->stripTags) {
             $subtitle->stripFormatting();

@@ -70,7 +70,7 @@ class RobustnessLimitsTest extends TestCase
     {
         $sync = ["sync", self::FILES . "cli/trip.srt", "--reference", self::FILES . "cli/shop.vtt", "-o", "-"];
 
-        $this->assertSame([2, "", "Error: The option --max-splits must be from 0 to 10, got 99999999999999999999.\n" .
+        $this->assertSame([2, "", "Error: The option --max-splits needs a whole number from 0 to 10, got \"99999999999999999999\".\n" .
                                   "Run \"subtitle-toolbox help sync\" for the usage.\n"],
                           self::runApplication([...$sync, "--max-splits", "99999999999999999999"]));
         [$code, , $error] = self::runApplication([...$sync, "--max-offset", "99999999999999999999"]);

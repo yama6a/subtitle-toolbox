@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Sync\ReferenceSync;
@@ -22,6 +20,8 @@ final class SyncCommand extends WriteCommand
     private ?ReferenceSyncOptions $syncOptions = null;
 
     private Subtitle $reference;
+
+    private ?float $mediaDuration = null;
 
 
     public function name(): string
@@ -74,30 +74,15 @@ final class SyncCommand extends WriteCommand
 
         $this->checkReference($arguments);
 
-        $maxSplits = $arguments->value("max-splits") ?? "0";
-        if (!ctype_digit($maxSplits)) {
-            self::fail("The option --max-splits needs a whole number, got \"$maxSplits\".");
-        }
-        if (strlen(ltrim($maxSplits, "0")) > 2 || (int)$maxSplits > ReferenceSyncOptions::MAX_SPLITS) {
-            self::fail("The option --max-splits must be from 0 to " . ReferenceSyncOptions::MAX_SPLITS . ", got $maxSplits.");
-        }
-        if (($arguments->float("split-penalty") ?? 0) < 0) {
-            self::fail("The option --split-penalty must not be negative.");
-        }
-
-        try {
-            // The reference loads after the checks of the inputs. Until then, an empty subtitle stands in for it.
-            $this->syncOptions = new ReferenceSyncOptions(
-                reference: new Subtitle(),
-                minOffset: $arguments->float("min-offset") ?? -60,
-                maxOffset: $arguments->float("max-offset") ?? 60,
-                searchScale: !$arguments->has("no-scale"),
-                maxSplits: (int)$maxSplits,
-                splitPenalty: $arguments->float("split-penalty") ?? 0.1,
-            );
-        } catch (InvalidArgumentException $exception) {
-            self::fail($exception->getMessage());
-        }
+        // The reference loads after the checks of the inputs. Until then, an empty subtitle stands in for it.
+        $this->syncOptions = new ReferenceSyncOptions(...self::given([
+            "reference"    => new Subtitle(),
+            "minOffset"    => $arguments->float("min-offset"),
+            "maxOffset"    => $arguments->float("max-offset"),
+            "searchScale"  => !$arguments->has("no-scale"),
+            "maxSplits"    => $arguments->int("max-splits", 0, ReferenceSyncOptions::MAX_SPLITS),
+            "splitPenalty" => $arguments->nonNegativeFloat("split-penalty"),
+        ]));
     }
 
 
@@ -109,7 +94,7 @@ final class SyncCommand extends WriteCommand
         if ($arguments->has("silence-log") !== $arguments->has("media-duration")) {
             self::fail("Pass --media-duration with --silence-log.");
         }
-        $arguments->positiveFloat("media-duration");
+        $this->mediaDuration = $arguments->positiveFloat("media-duration");
     }
 
 
@@ -122,27 +107,14 @@ final class SyncCommand extends WriteCommand
             return;
         }
 
-        $content = self::readSideFile($log);
-
-        try {
-            $this->reference = SpeechReference::fromFfmpegSilencedetect($content, $arguments->positiveFloat("media-duration"));
-        } catch (ParsingException $exception) {
-            self::failSideFile($log, $exception->getMessage());
-        }
+        $this->reference = self::parseSideFile($log, fn (string $content): Subtitle =>
+            SpeechReference::fromFfmpegSilencedetect($content, $this->mediaDuration));
     }
 
 
     protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
-        $options = $this->syncOptions;
-        $result  = ReferenceSync::apply($subtitle, new ReferenceSyncOptions(
-            $this->reference,
-            $options->minOffset,
-            $options->maxOffset,
-            $options->searchScale,
-            $options->maxSplits,
-            $options->splitPenalty,
-        ));
+        $result = ReferenceSync::apply($subtitle, OptionsCopy::with($this->syncOptions, ["reference" => $this->reference]));
 
         $label = self::label($input);
         $text  = "$label: scale " . self::number($result->scale, 5) . ", offset " . self::number($result->offset, 3) .
@@ -159,11 +131,5 @@ final class SyncCommand extends WriteCommand
         }
 
         parent::process($input, $subtitle, $format, $arguments, $console);
-    }
-
-
-    private static function number(float $value, int $decimals): string
-    {
-        return rtrim(rtrim(number_format($value, $decimals, ".", ""), "0"), ".");
     }
 }

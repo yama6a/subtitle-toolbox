@@ -97,7 +97,7 @@ abstract class WriteCommand extends FileCommand
         $to              = $arguments->value("to");
         $this->toFormat  = $to === null ? null : self::writableFormat($to);
         $this->output    = $arguments->value("output");
-        $this->outputFps = self::rate($arguments, "output-fps");
+        $this->outputFps = $arguments->rate("output-fps");
 
         if ($this->output !== null && $arguments->has("output-dir")) {
             self::fail("Pass only one of --output and --output-dir.");
@@ -123,13 +123,12 @@ abstract class WriteCommand extends FileCommand
             self::fail("Pass only one of --bom and --no-bom.");
         }
 
-        $lineEnding         = $arguments->value("line-ending") ?? "lf";
-        $this->writeOptions = new WriteOptions(
-            lineEnding: self::LINE_ENDINGS[strtolower($lineEnding)]
-                ?? self::fail("The option --line-ending must be lf or crlf, got \"$lineEnding\"."),
-            bom: $arguments->has("bom") || $arguments->has("no-bom") ? $arguments->has("bom") : null,
-            skipImageCues: $arguments->has("skip-image-cues"),
-        );
+        $lineEnding         = $arguments->choice("line-ending", array_keys(self::LINE_ENDINGS));
+        $this->writeOptions = new WriteOptions(...self::given([
+            "lineEnding"    => $lineEnding === null ? null : self::LINE_ENDINGS[$lineEnding],
+            "bom"           => $arguments->has("bom") || $arguments->has("no-bom") ? $arguments->has("bom") : null,
+            "skipImageCues" => $arguments->has("skip-image-cues"),
+        ]));
     }
 
 
@@ -218,7 +217,7 @@ abstract class WriteCommand extends FileCommand
         }
         $outputFormat = $this->toFormat;
         if ($outputFormat === null) {
-            $outputFormat = $this->peekFormat($input, $this->inputTrack($arguments));
+            $outputFormat = $this->peekFormat($input, $this->inputTrack);
             $outputFormat = $outputFormat?->canWrite() ? $outputFormat : null;
         }
 
