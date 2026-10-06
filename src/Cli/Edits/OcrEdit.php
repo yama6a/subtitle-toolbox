@@ -11,6 +11,7 @@ use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\OcrProgress;
 use SubtitleToolbox\Cli\Option;
+use SubtitleToolbox\Cli\OptionsCopy;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Ocr\GlyphOcrOptions;
@@ -34,7 +35,7 @@ final class OcrEdit extends Edit
         private readonly OcrEngineName $engine,
         private readonly ?string $language,
         private readonly TesseractOcrOptions $tesseractOptions,
-        private readonly GlyphOcrOptions $glyphOptions,
+        private GlyphOcrOptions $glyphOptions,
     ) {
     }
 
@@ -114,6 +115,10 @@ final class OcrEdit extends Edit
         }
 
         // A new engine for each file, because the recognizer learns the glyph heights of one stream.
-        return new GlyphOcrEngine($this->glyphOptions);
+        $engine = new GlyphOcrEngine($this->glyphOptions);
+        // The options keep the database of the first engine, so the run loads it once.
+        $this->glyphOptions = OptionsCopy::with($this->glyphOptions, ["database" => $engine->database()]);
+
+        return $engine;
     }
 }
