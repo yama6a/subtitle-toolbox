@@ -6,7 +6,6 @@ namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
@@ -37,17 +36,15 @@ final class LyricsParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
-        if ($this->lenient) {
-            $this->warnBrokenTimeTags(explode(LineEnding::Lf->value, $rawSubtitle));
+        $rawSubtitle = StringHelpers::normalizeEOLs($rawSubtitle);
+        if ($this->options->lenient) {
+            $this->warnBrokenTimeTags($this->lines($rawSubtitle));
         }
         $rawSubtitle = StringHelpers::normalizeSpaces($rawSubtitle);
         $rawSubtitle = StringHelpers::removeEmptyLines($rawSubtitle);
         $rawSubtitle = StringHelpers::trimEachLine($rawSubtitle);
 
-        $lines      = explode(LineEnding::Lf->value, $rawSubtitle);
+        $lines      = $this->lines($rawSubtitle);
         $subtitle   = new Subtitle();
         $parsedCues = [];
         $offset     = $this->findOffset($lines);

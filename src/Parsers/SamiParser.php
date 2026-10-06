@@ -15,20 +15,13 @@ use SubtitleToolbox\Parsers\Options\SamiReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\XmlLoader;
 
 final class SamiParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::Sami->value;
 
     private const STYLE_TAGS = ["b" => "b", "i" => "i", "u" => "u", "s" => "s", "strike" => "s"];
-
-    // The 16 color names of HTML 4.01, section 6.5.
-    private const COLOR_NAMES = [
-        "black"  => "#000000", "silver" => "#c0c0c0", "gray"   => "#808080", "white"   => "#ffffff",
-        "maroon" => "#800000", "red"    => "#ff0000", "purple" => "#800080", "fuchsia" => "#ff00ff",
-        "green"  => "#008000", "lime"   => "#00ff00", "olive"  => "#808000", "yellow"  => "#ffff00",
-        "navy"   => "#000080", "blue"   => "#0000ff", "teal"   => "#008080", "aqua"    => "#00ffff",
-    ];
 
     private const NBSP = "\u{00A0}";
 
@@ -41,8 +34,7 @@ final class SamiParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        $rawSubtitle    = StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle));
+        $rawSubtitle = StringHelpers::normalizeEOLs($rawSubtitle);
         if (!preg_match('//u', $rawSubtitle)) {
             throw new ParsingException("The SAMI file is not valid UTF-8. Convert it to UTF-8 before parsing.");
         }
@@ -138,7 +130,8 @@ final class SamiParser extends SubtitleParser
      */
     private function readSyncs(string $rawSubtitle): array
     {
-        $body = substr($rawSubtitle, self::bodyStart($rawSubtitle));
+        $bodyStart = self::bodyStart($rawSubtitle);
+        $body      = substr($rawSubtitle, $bodyStart);
         if (preg_match('/<\/BODY\s*>/i', $body, $end, PREG_OFFSET_CAPTURE) === 1) {
             $body = substr($body, 0, $end[0][1]);
         }
@@ -149,7 +142,7 @@ final class SamiParser extends SubtitleParser
             try {
                 [$start, $content] = $this->readSyncTag($chunk, $index);
             } catch (ParsingException $exception) {
-                $lineNumber = $this->lineNumberInBody($rawSubtitle, $body, $offset);
+                $lineNumber = $this->lineNumberInBody($rawSubtitle, $bodyStart, $body, $offset);
                 $lines      = array_map("trim", explode("\n", "<SYNC" . $chunk));
                 $block      = array_values(array_filter($lines, fn (string $line): bool => $line !== ""));
                 $this->fail($exception, $lineNumber, $index, $block);
@@ -179,9 +172,9 @@ final class SamiParser extends SubtitleParser
     }
 
 
-    private function lineNumberInBody(string $rawSubtitle, string $body, int $offset): int
+    private function lineNumberInBody(string $rawSubtitle, int $bodyStart, string $body, int $offset): int
     {
-        return 1 + substr_count($rawSubtitle, "\n", 0, self::bodyStart($rawSubtitle)) + substr_count(substr($body, 0, $offset), "\n");
+        return 1 + substr_count($rawSubtitle, "\n", 0, $bodyStart) + substr_count(substr($body, 0, $offset), "\n");
     }
 
 
@@ -202,18 +195,8 @@ final class SamiParser extends SubtitleParser
      */
     private function readParagraphs(string $html): array
     {
-        $document             = new DOMDocument();
-        $previousErrorSetting = libxml_use_internal_errors(true);
-        try {
-            // The meta tag makes libxml read the input as UTF-8 in place of ISO-8859-1.
-            $document->loadHTML(
-                '<meta http-equiv="Content-Type" content="text/html; charset=utf-8"><body>' . $html,
-                LIBXML_NONET
-            );
-        } finally {
-            libxml_clear_errors();
-            libxml_use_internal_errors($previousErrorSetting);
-        }
+        // The meta tag makes libxml read the input as UTF-8 in place of ISO-8859-1.
+        $document = XmlLoader::html('<meta http-equiv="Content-Type" content="text/html; charset=utf-8"><body>' . $html);
 
         $paragraphs = [];
         $loose      = [];
@@ -305,7 +288,7 @@ final class SamiParser extends SubtitleParser
             return "#" . $matches[1];
         }
 
-        return self::COLOR_NAMES[$value] ?? null;
+        return ColorNames::HTML[$value] ?? null;
     }
 
 

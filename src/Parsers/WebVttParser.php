@@ -31,17 +31,15 @@ final class WebVttParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
-        $leadingLines   = substr_count(substr($rawSubtitle, 0, strlen($rawSubtitle) - strlen(ltrim($rawSubtitle))), "\n");
-        $rawSubtitle    = trim($rawSubtitle);
+        $rawSubtitle  = StringHelpers::normalizeEOLs($rawSubtitle);
+        $leadingLines = substr_count(substr($rawSubtitle, 0, strlen($rawSubtitle) - strlen(ltrim($rawSubtitle))), "\n");
+        $rawSubtitle  = trim($rawSubtitle);
 
         if (!str_starts_with($rawSubtitle, "WEBVTT")) {
             throw new ParsingException("The file doesn't start with the string WEBVTT!");
         }
 
-        $lines      = array_merge(array_fill(0, $leadingLines, ""), explode(LineEnding::Lf->value, $rawSubtitle));
+        $lines      = array_merge(array_fill(0, $leadingLines, ""), $this->lines($rawSubtitle));
         $subtitle   = new Subtitle();
         $parsedCues = [];
         $comments   = [];
@@ -118,7 +116,7 @@ final class WebVttParser extends SubtitleParser
     {
         $isHeader = true;
         foreach ($this->collectBlocks($lines, false) as [$lineNumber, $block]) {
-            $timingOffset = $isHeader && $this->lenient ? $this->firstTimingLineOffset($block) : null;
+            $timingOffset = $isHeader && $this->options->lenient ? $this->firstTimingLineOffset($block) : null;
             $isHeader     = false;
             if ($timingOffset === null) {
                 yield $lineNumber => $block;

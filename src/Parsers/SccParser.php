@@ -7,9 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use SubtitleToolbox\Encoding\Cea608;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -76,8 +74,7 @@ final class SccParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $rawSubtitle = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawLines    = explode(LineEnding::Lf->value, StringHelpers::normalizeEOLs($rawSubtitle));
+        $rawLines = $this->lines($rawSubtitle);
 
         $this->channel = $this->formatOptions()->channel;
         $codeLines     = $this->readCodeLines($rawLines, $dropFrame);

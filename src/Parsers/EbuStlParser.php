@@ -25,7 +25,7 @@ final class EbuStlParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::EbuStl->value;
 
-    private const WHITE = 7;
+    protected const BINARY = true;
 
 
     protected static function formatOptionsClass(): string
@@ -36,7 +36,6 @@ final class EbuStlParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
         if (strlen($rawSubtitle) < EbuStl::GSI_BLOCK_SIZE) {
             throw new ParsingException("An EBU STL file starts with a GSI block of " . EbuStl::GSI_BLOCK_SIZE . " bytes.");
         }
@@ -88,7 +87,7 @@ final class EbuStlParser extends SubtitleParser
                 continue;
             }
 
-            if ($this->lenient && !self::hasValidTimeCodes($header, $frameRate)) {
+            if ($this->options->lenient && !self::hasValidTimeCodes($header, $frameRate)) {
                 $this->warn(
                     "Subtitle number " . unpack("v", $header, 1)[1] . " has a time code that is not valid: " .
                     EbuStl::timeCodeDigits(substr($header, 5, 4)) . " to " . EbuStl::timeCodeDigits(substr($header, 9, 4)),
@@ -229,7 +228,7 @@ final class EbuStlParser extends SubtitleParser
     {
         $lines = [];
         $runs  = [];
-        $style = ["color" => self::WHITE, "i" => false, "u" => false];
+        $style = ["color" => EbuStl::WHITE, "i" => false, "u" => false];
         $text  = "";
         foreach (str_split($bytes) as $byte) {
             $code = ord($byte);
@@ -256,7 +255,7 @@ final class EbuStlParser extends SubtitleParser
             if ($code === EbuStl::NEW_LINE) {
                 $lines[]        = StyleRuns::toMarkup($runs, true);
                 $runs           = [];
-                $style["color"] = self::WHITE;
+                $style["color"] = EbuStl::WHITE;
             }
         }
 
@@ -281,6 +280,6 @@ final class EbuStlParser extends SubtitleParser
      */
     private static function runStyle(array $style): array
     {
-        return ["color" => $style["color"] === self::WHITE ? null : EbuStl::COLORS[$style["color"]]] + $style;
+        return ["color" => $style["color"] === EbuStl::WHITE ? null : EbuStl::COLORS[$style["color"]]] + $style;
     }
 }

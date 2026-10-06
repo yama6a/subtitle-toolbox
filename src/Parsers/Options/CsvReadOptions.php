@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers\Options;
 
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\FrameRate;
-use SubtitleToolbox\Parsers\CsvParser;
 
 /**
  * The read settings of CSV and TSV tables.
  */
 final class CsvReadOptions implements FormatReadOptions
 {
+    /** @internal */
+    public const DELIMITERS = [",", ";", "\t"];
+
+
     /**
      * @param ?CsvColumns $columns   The column layout. Null reads the columns by their header names.
      * @param ?string     $delimiter ",", ";" or a tab. Null detects it from the first line.
@@ -23,10 +27,23 @@ final class CsvReadOptions implements FormatReadOptions
         public readonly ?float $frameRate = null,
     ) {
         if ($delimiter !== null) {
-            CsvParser::checkDelimiter($delimiter);
+            self::checkDelimiter($delimiter);
         }
         if ($frameRate !== null) {
             FrameRate::check($frameRate);
+        }
+    }
+
+
+    /**
+     * Throws InvalidArgumentException for a delimiter that is not in DELIMITERS. CsvWriteOptions and CsvFormatter use it too.
+     *
+     * @internal
+     */
+    public static function checkDelimiter(mixed $delimiter): void
+    {
+        if (!in_array($delimiter, self::DELIMITERS, true)) {
+            throw new InvalidArgumentException("The CSV delimiter must be \",\", \";\" or a tab.");
         }
     }
 }

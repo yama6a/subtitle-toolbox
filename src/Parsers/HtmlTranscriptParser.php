@@ -23,8 +23,7 @@ final class HtmlTranscriptParser extends SubtitleParser
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        $content        = StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle));
+        $content = StringHelpers::normalizeEOLs($rawSubtitle);
         preg_match_all(self::ELEMENT, $content, $elements, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
 
         $paragraphs = [];
@@ -47,7 +46,7 @@ final class HtmlTranscriptParser extends SubtitleParser
             } elseif ($name === "time") {
                 $paragraphs[$last]["time"] = [$this->text($inner), $line];
             } else {
-                array_push($paragraphs[$last]["lines"], ...$this->lines($inner));
+                array_push($paragraphs[$last]["lines"], ...$this->htmlLines($inner));
             }
         }
 
@@ -64,21 +63,17 @@ final class HtmlTranscriptParser extends SubtitleParser
             }
         }
 
-        $subtitle   = new Subtitle();
+        $starts     = array_column($cues, 0);
         $parsedCues = [];
         foreach ($cues as $index => [$start, $speaker, $lines]) {
-            $next = $index + 1;
-            while ($next < count($cues) && $cues[$next][0] <= $start) {
-                $next++;
-            }
             if ($speaker !== "") {
                 $lines[0] = Markup::voiceTag($speaker) . $lines[0];
             }
 
-            $parsedCues[] = new SubtitleCue($start, $cues[$next][0] ?? round($start + $this->options->lastCueDuration, 3), $lines);
+            $parsedCues[] = new SubtitleCue($start, $this->endAtNextStart($starts, $index), $lines);
         }
 
-        return $subtitle->addCues($parsedCues);
+        return (new Subtitle())->addCues($parsedCues);
     }
 
 
@@ -102,7 +97,7 @@ final class HtmlTranscriptParser extends SubtitleParser
      *
      * @return list<string>
      */
-    private function lines(string $html): array
+    private function htmlLines(string $html): array
     {
         $lines = preg_split('/<br\s*\/?>/i', $html);
 

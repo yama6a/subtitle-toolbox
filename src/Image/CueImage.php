@@ -37,9 +37,21 @@ final class CueImage
             throw new InvalidArgumentException("Cannot create a cue image of {$width}x{$height} pixels on a screen of " .
                                                "{$screenWidth}x{$screenHeight} pixels - every size must be at least 1!");
         }
+        self::checkSize($width, $height, "Cannot create a cue image -");
+    }
+
+
+    /**
+     * Throws InvalidArgumentException when an image of $width x $height pixels does not fit MAX_SIDE and MAX_PIXELS.
+     * The message starts with $what, for example "Cannot decode the PNG -", and then gives the reason.
+     *
+     * @internal
+     */
+    public static function checkSize(int $width, int $height, string $what): void
+    {
         $tooLarge = self::sizeLimitError($width, $height);
         if ($tooLarge !== null) {
-            throw new InvalidArgumentException("Cannot create a cue image - $tooLarge");
+            throw new InvalidArgumentException("$what $tooLarge");
         }
     }
 

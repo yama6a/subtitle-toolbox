@@ -40,13 +40,13 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | EBU STL | a subtitle with a time code out of range, a cut-off last TTI block | TTI blocks |
 | CSV, TSV | a row with a bad time | rows after the header, without empty rows |
 | JSON | a cue with a bad field. A bad metadata field, a bad comment and the bad format data of one format of the file get dropped with `blockIndex` null | cues |
-| Whisper JSON | a segment without `start`, `end` or `text`, or with a time that is not a finite number | segments |
-| YouTube timed text | an event or element with a bad time | events or elements |
-| Amazon Transcribe, Deepgram, AssemblyAI, Google | a word, segment, utterance, sentence or result with a bad time or text, a Google result whose `alternatives` is not a list of objects | the index in its list |
-| Podcasting 2.0 transcript JSON | a segment with a bad field | segments |
+| Whisper JSON | a segment without `start`, `end` or `text`, or with a time that is negative or not a finite number | segments |
+| YouTube timed text | an event or element with a bad or negative time, for example `"tStartMs": -5000` | events or elements |
+| Amazon Transcribe, Deepgram, AssemblyAI, Google | a word, segment, utterance, sentence or result with a bad or negative time or a bad text, a Google result whose `alternatives` is not a list of objects | the index in its list |
+| Podcasting 2.0 transcript JSON | a segment with a bad field, for example `"startTime": -5` | segments |
 | HTML transcript | a paragraph with a bad time or without a `<time>` | the paragraphs that each `<cite>` or `<time>` starts |
 
-- **Ignored**: the SCC, PGS and VobSub parsers and the chapter parsers ignore `ReadOptions::$lenient` and always throw.
+- **Ignored**: the SCC, PGS and VobSub parsers and the chapter parsers ignore `ReadOptions::$lenient` and always throw. For example, the Podcasting 2.0 chapters parser throws for `"startTime": -5`.
 - **`ParseWarning`**: `message`, the 1-based `lineNumber`, the 0-based `blockIndex` or null for a library JSON field outside the cues, the trimmed lines of the `block`, and the `action`, `ParseWarningAction::Skipped` or `ParseWarningAction::Repaired`. A skipped block reports its first line. A repair reports the line where the parser split or read the cue.
 - **No line numbers**: binary EBU STL and the JSON formats have no line numbers, so their warnings have `lineNumber` null. The YouTube XML formats report the line of the XML element.
 - **Warnings**: `Subtitle::getParseWarnings()` returns the warnings of the read that made the subtitle.

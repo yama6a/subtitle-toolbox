@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
@@ -23,6 +24,8 @@ use SubtitleToolbox\SubtitleCue;
  */
 final class PgsParser extends SubtitleParser
 {
+    protected const BINARY = true;
+
     private const MAGIC          = "PG";
     private const HEADER_LENGTH  = 13;
     private const PTS_PER_SECOND = 90000;
@@ -190,10 +193,7 @@ final class PgsParser extends SubtitleParser
                 throw new ParsingException("The first definition segment of object $id is cut off.");
             }
             ["width" => $width, "height" => $height] = unpack("nwidth/nheight", $data, 7);
-            $tooLarge = CueImage::sizeLimitError($width, $height);
-            if ($tooLarge !== null) {
-                throw new ParsingException("Object $id cannot be read: $tooLarge");
-            }
+            self::checkSize($width, $height, "Object $id cannot be read:");
             $this->objects[$id] = ["width" => $width, "height" => $height, "rle" => substr($data, 11)];
         } elseif (isset($this->objects[$id])) {
             $this->objects[$id]["rle"] .= substr($data, 4);
@@ -322,10 +322,7 @@ final class PgsParser extends SubtitleParser
         $bottom = max(array_map(fn (array $part): int => $part["y"] + $part["height"], $parts));
         $width  = $right - $left;
         $height = $bottom - $top;
-        $tooLarge = CueImage::sizeLimitError($width, $height);
-        if ($tooLarge !== null) {
-            throw new ParsingException("The objects of one display set cannot be joined: $tooLarge");
-        }
+        self::checkSize($width, $height, "The objects of one display set cannot be joined:");
 
         if (count($parts) === 1) {
             return [$left, $top, $width, $height, $parts[0]["rgba"]];
@@ -418,6 +415,16 @@ final class PgsParser extends SubtitleParser
     private function clampByte(float $value): int
     {
         return max(0, min(255, (int) round($value)));
+    }
+
+
+    private static function checkSize(int $width, int $height, string $what): void
+    {
+        try {
+            CueImage::checkSize($width, $height, $what);
+        } catch (InvalidArgumentException $exception) {
+            throw new ParsingException($exception->getMessage());
+        }
     }
 
 

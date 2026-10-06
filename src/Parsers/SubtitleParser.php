@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use Generator;
+use JsonException;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\LineEnding;
+use SubtitleToolbox\OptionChecks;
 use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 
 /**
  * The base class of the parsers of this library. Only the library extends it. Its protected members are not API and
@@ -20,9 +24,12 @@ use SubtitleToolbox\Subtitle;
  */
 abstract class SubtitleParser
 {
+    // parse() strips the UTF-8 BOM of a text format only.
+    protected const BINARY = false;
+
     protected ReadOptions $options;
 
-    protected bool $lenient = false;
+    private ?FormatReadOptions $formatOptions = null;
 
     /** @var list<ParseWarning> */
     protected array $warnings = [];
@@ -36,6 +43,8 @@ abstract class SubtitleParser
     {
         $options ??= new ReadOptions();
         $this->useOptions($options);
+
+        $content = static::BINARY ? $content : StringHelpers::removeUtf8Bom($content);
 
         return $this->read($content)->setParseWarnings($this->warnings);
     }
@@ -56,11 +65,12 @@ abstract class SubtitleParser
 
 
     /**
-     * Returns ReadOptions::$format, or the defaults of formatOptionsClass() when it is null.
+     * Returns ReadOptions::$format, or the defaults of formatOptionsClass() when it is null. useOptions() builds the
+     * defaults once per read.
      */
     protected function formatOptions(): FormatReadOptions
     {
-        return $this->options->format ?? new (static::formatOptionsClass())();
+        return $this->formatOptions;
     }
 
 
@@ -81,9 +91,9 @@ abstract class SubtitleParser
             ));
         }
 
-        $this->options  = $options;
-        $this->lenient  = $options->lenient;
-        $this->warnings = [];
+        $this->options       = $options;
+        $this->formatOptions = $options->format ?? ($class === null ? null : new $class());
+        $this->warnings      = [];
 
         return $this;
     }
@@ -109,7 +119,7 @@ abstract class SubtitleParser
      */
     protected function fail(ParsingException $exception, ?int $lineNumber, ?int $blockIndex, array $block): void
     {
-        if (!$this->lenient) {
+        if (!$this->options->lenient) {
             throw $exception;
         }
 
@@ -123,6 +133,99 @@ abstract class SubtitleParser
     protected function warn(string $message, ?int $lineNumber, ?int $blockIndex, array $block, ParseWarningAction $action): void
     {
         $this->warnings[] = new ParseWarning($message, $lineNumber, $blockIndex, $block, $action);
+    }
+
+
+    /**
+     * Decodes $content as a JSON object. An invalid UTF-8 byte becomes U+FFFD, so one broken byte does not fail the file.
+     *
+     * @return array<string, mixed>
+     */
+    protected function decodeJsonObject(string $content): array
+    {
+        try {
+            $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
+        } catch (JsonException $exception) {
+            throw new ParsingException("The content is not valid JSON: {$exception->getMessage()}.");
+        }
+
+        if (!is_array($data) || ($data !== [] && array_is_list($data))) {
+            throw new ParsingException("The JSON root must be an object.");
+        }
+
+        return $data;
+    }
+
+
+    /**
+     * Returns true for an int or float that is finite and 0 or more. A time in a JSON format must pass it.
+     */
+    protected static function isTime(mixed $value): bool
+    {
+        return (is_int($value) || is_float($value)) && OptionChecks::isNonNegativeFinite($value);
+    }
+
+
+    /**
+     * Returns the end of the cue at $index: the first later start in $starts, else its start plus
+     * ReadOptions::$lastCueDuration.
+     *
+     * @param list<float> $starts
+     */
+    protected function endAtNextStart(array $starts, int $index): float
+    {
+        for ($next = $index + 1; $next < count($starts); $next++) {
+            if ($starts[$next] > $starts[$index]) {
+                return $starts[$next];
+            }
+        }
+
+        return round($starts[$index] + $this->options->lastCueDuration, 3);
+    }
+
+
+    /**
+     * Sorts the chapters by start and sets their ends. A chapter ends at its value in $ends, else at the start of the
+     * next chapter. The last chapter ends at ChapterReadOptions::$mediaDuration, but not before it starts.
+     *
+     * @param list<SubtitleCue> $chapters
+     * @param array<int, float|null> $ends the end that the file gives, keyed like $chapters
+     *
+     * @return list<SubtitleCue>
+     */
+    protected function endChapters(array $chapters, array $ends = []): array
+    {
+        uasort($chapters, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());
+        $keys     = array_keys($chapters);
+        $chapters = array_values($chapters);
+        foreach ($chapters as $index => $cue) {
+            $next = $chapters[$index + 1] ?? null;
+            $cue->setEnd($ends[$keys[$index]] ?? $next?->getStart() ?? max($cue->getStart(), $this->formatOptions()->mediaDuration ?? 0));
+        }
+
+        return $chapters;
+    }
+
+
+    /**
+     * Returns the lines of $content without the line endings. A line ends at LF, CR LF or CR.
+     *
+     * @return list<string>
+     */
+    protected function lines(string $content): array
+    {
+        return explode(LineEnding::Lf->value, StringHelpers::normalizeEOLs($content));
+    }
+
+
+    /**
+     * Splits $text at each "|", the line break of MPL2 and TMPlayer. Returns the trimmed lines that are not empty.
+     *
+     * @return list<string>
+     */
+    protected function pipeLines(string $text): array
+    {
+        return array_values(array_filter(array_map("trim", explode("|", $text)), fn (string $line): bool => $line !== ""));
     }
 
 
@@ -166,7 +269,7 @@ abstract class SubtitleParser
      */
     protected function repairMissingEmptyLines(array $block, int $lineNumber, int $blockIndex, callable $isTimingLine, bool $withCueNumbers): array
     {
-        if (!$this->lenient) {
+        if (!$this->options->lenient) {
             return [0 => $block];
         }
 
@@ -184,6 +287,30 @@ abstract class SubtitleParser
         }
 
         return $parts;
+    }
+
+
+    /**
+     * Returns the cues of the parts that repairMissingEmptyLines() returns. $parsePart gets a part and the number of its
+     * first line, and returns its cue. In lenient mode, a part for which $parsePart throws is skipped with a warning.
+     *
+     * @param list<string> $block
+     * @param callable(list<string>, int): SubtitleCue $parsePart
+     *
+     * @return list<SubtitleCue>
+     */
+    protected function parseRepairedBlock(array $block, int $lineNumber, int $blockIndex, callable $isTimingLine, bool $withCueNumbers, callable $parsePart): array
+    {
+        $cues = [];
+        foreach ($this->repairMissingEmptyLines($block, $lineNumber, $blockIndex, $isTimingLine, $withCueNumbers) as $offset => $part) {
+            try {
+                $cues[] = $parsePart($part, $lineNumber + $offset);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, $lineNumber + $offset, $blockIndex, $part);
+            }
+        }
+
+        return $cues;
     }
 
 

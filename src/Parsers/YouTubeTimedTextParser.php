@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
-use DOMDocument;
 use DOMElement;
 use DOMText;
-use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
@@ -16,6 +14,7 @@ use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\XmlLoader;
 
 final class YouTubeTimedTextParser extends SubtitleParser
 {
@@ -36,8 +35,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        $content        = ltrim(StringHelpers::removeUtf8Bom($rawSubtitle));
+        $content = ltrim($rawSubtitle);
         [$fileData, $captions] = str_starts_with($content, "{") ? $this->readJson($content) : $this->readXml($content);
 
         $subtitle   = new Subtitle();
@@ -61,11 +59,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
 
     private function readJson(string $content): array
     {
-        try {
-            $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException $exception) {
-            throw new ParsingException("The content is not valid JSON: {$exception->getMessage()}.");
-        }
+        $data = $this->decodeJsonObject($content);
         if (!is_array($data["events"] ?? null) || !array_is_list($data["events"])) {
             throw new ParsingException("The JSON has no \"events\" list.");
         }
@@ -138,7 +132,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
     private function milliseconds(mixed $object, string $key, string $path, ?int $default = null): int|float
     {
         $value = is_array($object) ? $object[$key] ?? $default : null;
-        if (!is_int($value) && (!is_float($value) || !is_finite($value))) {
+        if (!self::isTime($value)) {
             throw new ParsingException("The field $path.$key must be a number.");
         }
 
@@ -148,17 +142,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
 
     private function readXml(string $content): array
     {
-        // LIBXML_NONET blocks network access. Without LIBXML_NOENT and LIBXML_DTDLOAD, libxml loads no external entity.
-        $previous = libxml_use_internal_errors(true);
-        $document = new DOMDocument();
-        $loaded   = $content !== "" && $document->loadXML($content, LIBXML_NONET);
-        libxml_clear_errors();
-        libxml_use_internal_errors($previous);
-        if (!$loaded || $document->documentElement === null) {
-            throw new ParsingException("The content is not well-formed XML.");
-        }
-
-        $root = $document->documentElement;
+        $root = XmlLoader::xml($content)?->documentElement ?? throw new ParsingException("The content is not well-formed XML.");
 
         return match (true) {
             $root->nodeName === "transcript"                        => [["format" => "srv1"], $this->readTexts($root, "start", "dur", 1)],
@@ -315,7 +299,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
     private function time(DOMElement $element, string $name, ?string $default = null): float
     {
         $value = $element->hasAttribute($name) ? trim($element->getAttribute($name)) : $default;
-        if ($value === null || !is_numeric($value) || (float) $value < 0 || !is_finite((float) $value)) {
+        if ($value === null || !is_numeric($value) || !self::isTime((float) $value)) {
             throw new ParsingException("The <{$element->nodeName}> element has no valid \"$name\" attribute.", $element->getLineNo());
         }
 

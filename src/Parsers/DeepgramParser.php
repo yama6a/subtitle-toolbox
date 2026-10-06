@@ -15,61 +15,31 @@ final class DeepgramParser extends SubtitleParser
     public const FORMAT_DATA_KEY = Format::Deepgram->value;
 
 
+    protected static function formatDataKey(): string
+    {
+        return self::FORMAT_DATA_KEY;
+    }
+
+
     /**
      * Reads the JSON response of the Deepgram pre-recorded audio API, one cue per utterance, else per paragraph
      * sentence, else cues grouped from the words.
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        $data           = $this->decodeObject($rawSubtitle);
-        $results        = $data["results"] ?? null;
-        if (!is_array($results) || !is_array($results["channels"] ?? null) || !array_is_list($results["channels"])) {
+        $data    = $this->decodeJsonObject($rawSubtitle);
+        $results = $data["results"] ?? null;
+        if (!is_array($results) || !self::isList($results["channels"] ?? null)) {
             throw new ParsingException("The JSON has no \"results.channels\" list.");
         }
 
         $utterances = self::listOrEmpty($results["utterances"] ?? null);
-        $cues       = $utterances === [] ? $this->readChannels($results["channels"]) : $this->readUtterances($utterances);
+        $cues       = $utterances === []
+            ? $this->readChannels($results["channels"])
+            : $this->readUtterances($utterances, "results.utterances", "transcript", $this->readWords(...));
 
-        $subtitle = new Subtitle();
-        $language = $results["channels"][0]["detected_language"] ?? null;
-        if (is_string($language) && $language !== "") {
-            $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $language);
-        }
-        $fileData = array_diff_key($data, ["results" => true]);
-        $other    = array_diff_key($results, array_flip(["channels", "utterances"]));
-        if ($other !== []) {
-            $fileData["results"] = $other;
-        }
-        $subtitle->setFormatData(self::FORMAT_DATA_KEY, $fileData);
-
-        return $subtitle->addCues($cues);
-    }
-
-
-    private function readUtterances(array $utterances): array
-    {
-        $cues = [];
-        foreach ($utterances as $index => $utterance) {
-            $path = "results.utterances[$index]";
-            try {
-                $start = $this->seconds(is_array($utterance) ? $utterance["start"] ?? null : null, "$path.start");
-                $end   = $this->seconds($utterance["end"] ?? null, "$path.end");
-                $text  = $this->text($utterance, "transcript", $path);
-                $words = $this->readWords(self::listOrEmpty($utterance["words"] ?? null), "$path.words");
-            } catch (ParsingException $exception) {
-                $this->fail($exception, null, $index, [RawJson::encode($utterance)]);
-                continue;
-            }
-
-            $formatData = array_diff_key($utterance, array_flip(["start", "end", "transcript"]));
-            $cue        = $this->cue($start, $end, $text, $words, self::speaker($utterance["speaker"] ?? null), $formatData);
-            if ($cue !== null) {
-                $cues[] = $cue;
-            }
-        }
-
-        return $cues;
+        return $this->transcript($cues, $results["channels"][0]["detected_language"] ?? null,
+                                 self::fileDataWithResults($data, $results, ["channels", "utterances"]));
     }
 
 
@@ -121,20 +91,11 @@ final class DeepgramParser extends SubtitleParser
 
     private function readWords(array $words, string $path): array
     {
-        $result = [];
-        foreach ($words as $index => $word) {
-            try {
-                $text  = $this->text($word, isset($word["punctuated_word"]) ? "punctuated_word" : "word", "{$path}[$index]");
-                $start = $this->seconds($word["start"] ?? null, "{$path}[$index].start");
-                $end   = $this->seconds($word["end"] ?? null, "{$path}[$index].end");
-            } catch (ParsingException $exception) {
-                $this->fail($exception, null, $index, [RawJson::encode($word)]);
-                continue;
-            }
-
-            $result[] = ["text" => trim($text), "start" => $start, "end" => $end, "speaker" => self::speaker($word["speaker"] ?? null), "data" => [$word]];
-        }
-
-        return $result;
+        return $this->readWordList($words, $path, fn (mixed $word, string $wordPath): array => [
+            $this->text($word, isset($word["punctuated_word"]) ? "punctuated_word" : "word", $wordPath),
+            $this->seconds($word["start"] ?? null, "$wordPath.start"),
+            $this->seconds($word["end"] ?? null, "$wordPath.end"),
+            self::speaker($word["speaker"] ?? null),
+        ]);
     }
 }

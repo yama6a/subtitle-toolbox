@@ -316,7 +316,7 @@ final class EbuStlFormatter extends SubtitleFormatter
     {
         $closed  = array_pop($colors);
         $current = end($colors);
-        $current = $current === false ? array_search("#ffffff", EbuStl::COLORS, true) : $current;
+        $current = $current === false ? EbuStl::WHITE : $current;
 
         return $closed === null || $closed === false || $closed === $current ? "" : chr($current);
     }

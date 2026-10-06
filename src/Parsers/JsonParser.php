@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
-use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\ParseWarning;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 
 final class JsonParser extends SubtitleParser
@@ -19,16 +17,7 @@ final class JsonParser extends SubtitleParser
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        try {
-            $data = json_decode(StringHelpers::removeUtf8Bom($rawSubtitle), true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException $exception) {
-            throw new ParsingException("The content is not valid JSON: {$exception->getMessage()}.");
-        }
-
-        if (!is_array($data) || ($data !== [] && array_is_list($data))) {
-            throw new ParsingException("The JSON root must be an object.");
-        }
+        $data = $this->decodeJsonObject($rawSubtitle);
 
         foreach (is_array($data["formatData"] ?? null) ? $data["formatData"] : [] as $format => $formatData) {
             if (!is_array($formatData)) {
@@ -56,7 +45,7 @@ final class JsonParser extends SubtitleParser
             }
         }
 
-        return $this->lenient ? $this->fromArraySkippingBrokenCues($data, $skipped) : Subtitle::fromArray($data);
+        return $this->options->lenient ? $this->fromArraySkippingBrokenCues($data, $skipped) : Subtitle::fromArray($data);
     }
 
 

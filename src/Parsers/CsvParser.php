@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
@@ -12,7 +11,6 @@ use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\CsvColumns;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -21,19 +19,7 @@ final class CsvParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::Csv->value;
 
-    /** @internal */
-    public const DELIMITERS = [",", ";", "\t"];
-
     private CsvColumns $columns;
-
-
-    /** @internal */
-    public static function checkDelimiter(mixed $delimiter): void
-    {
-        if (!in_array($delimiter, self::DELIMITERS, true)) {
-            throw new InvalidArgumentException("The CSV delimiter must be \",\", \";\" or a tab.");
-        }
-    }
 
 
     protected static function formatOptionsClass(): string
@@ -45,10 +31,9 @@ final class CsvParser extends SubtitleParser
     protected function read(string $rawSubtitle): Subtitle
     {
         $this->columns = $this->formatOptions()->columns ?? new CsvColumns();
-        $content       = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $delimiter     = $this->formatOptions()->delimiter ?? self::detectDelimiter($content);
+        $delimiter     = $this->formatOptions()->delimiter ?? self::detectDelimiter($rawSubtitle);
         $records       = array_filter(
-            self::records($content, $delimiter),
+            self::records($rawSubtitle, $delimiter),
             fn (array $record): bool => array_filter($record[1], fn (string $cell): bool => trim($cell) !== "") !== []
         );
 
@@ -76,7 +61,7 @@ final class CsvParser extends SubtitleParser
             }
             $timeFormat ??= self::timeFormatOf($cell("start"));
 
-            $cue = new SubtitleCue($start, $end ?? $start, $this->lines($cells[$roles["text"]] ?? "", $cell("speaker")));
+            $cue = new SubtitleCue($start, $end ?? $start, $this->textLines($cells[$roles["text"]] ?? "", $cell("speaker")));
             if ($cell("identifier") !== "") {
                 $cue->setIdentifier($cell("identifier"));
             }
@@ -114,7 +99,7 @@ final class CsvParser extends SubtitleParser
      */
     private static function detectDelimiter(string $content): string
     {
-        $counts = array_fill_keys(self::DELIMITERS, 0);
+        $counts = array_fill_keys(CsvReadOptions::DELIMITERS, 0);
         $quoted = false;
         $length = strlen($content);
         for ($i = 0; $i < $length; $i++) {
@@ -260,7 +245,7 @@ final class CsvParser extends SubtitleParser
     /**
      * @return list<string>
      */
-    private function lines(string $text, string $speaker): array
+    private function textLines(string $text, string $speaker): array
     {
         return Markup::addSpeaker(explode("\n", Markup::escapeText($text)), $speaker);
     }

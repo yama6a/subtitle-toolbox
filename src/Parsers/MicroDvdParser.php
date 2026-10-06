@@ -8,10 +8,8 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FrameRate;
-use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -33,22 +31,24 @@ final class MicroDvdParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
-        $rawLines       = array_filter(
-            array_map("trim", explode(LineEnding::Lf->value, $rawSubtitle)),
+        $rawLines = array_filter(
+            array_map("trim", $this->lines($rawSubtitle)),
             fn (string $line): bool => $line !== ""
         );
-        if ($this->lenient) {
-            $rawLines = $this->skipLinesWithoutFrames($rawLines);
-        }
+        $blockIndexes = array_flip(array_keys($rawLines));
 
+        // In lenient mode, the {1}{1}<fps> line can follow lines without frames.
+        $firstLine = null;
+        foreach ($rawLines as $lineIndex => $rawLine) {
+            if (!$this->options->lenient || preg_match(self::CUE_REGEX, $rawLine)) {
+                $firstLine = $lineIndex;
+                break;
+            }
+        }
         $frameRate = $this->formatOptions()->frameRate;
-        $firstLine = reset($rawLines);
-        if ($firstLine !== false && preg_match('/^\{1\}\{1\}(\d+(?:\.\d+)?)$/', $firstLine, $matches)) {
+        if ($firstLine !== null && preg_match('/^\{1\}\{1\}(\d+(?:\.\d+)?)$/', $rawLines[$firstLine], $matches)) {
             $frameRate ??= (float) $matches[1];
-            unset($rawLines[array_key_first($rawLines)]);
+            unset($rawLines[$firstLine]);
         }
 
         if ($frameRate === null) {
@@ -64,9 +64,11 @@ final class MicroDvdParser extends SubtitleParser
         $subtitle   = new Subtitle();
         $parsedCues = [];
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["frameRate" => $frameRate]);
-        foreach ($rawLines as $lineNumber => $rawLine) {
+        foreach ($rawLines as $lineIndex => $rawLine) {
             if (!preg_match(self::CUE_REGEX, $rawLine, $matches)) {
-                throw new ParsingException("Line " . ($lineNumber + 1) . " is not a MicroDVD cue: $rawLine", $lineNumber + 1);
+                $lineNumber = $lineIndex + 1;
+                $this->fail(new ParsingException("Line $lineNumber is not a MicroDVD cue: $rawLine", $lineNumber), $lineNumber, $blockIndexes[$lineIndex], [$rawLine]);
+                continue;
             }
 
             $parsedCues[] = $this->parseCue(
@@ -77,28 +79,6 @@ final class MicroDvdParser extends SubtitleParser
         }
 
         return $subtitle->addCues($parsedCues);
-    }
-
-
-    /**
-     * @param array<int, string> $rawLines the non-empty lines, keyed by the 0-based line number
-     *
-     * @return array<int, string>
-     */
-    private function skipLinesWithoutFrames(array $rawLines): array
-    {
-        $blockIndex = 0;
-        foreach ($rawLines as $lineIndex => $rawLine) {
-            if (!preg_match(self::CUE_REGEX, $rawLine)) {
-                $lineNumber = $lineIndex + 1;
-                $exception  = new ParsingException("Line $lineNumber is not a MicroDVD cue: $rawLine", $lineNumber);
-                $this->fail($exception, $lineNumber, $blockIndex, [$rawLine]);
-                unset($rawLines[$lineIndex]);
-            }
-            $blockIndex++;
-        }
-
-        return $rawLines;
     }
 
 

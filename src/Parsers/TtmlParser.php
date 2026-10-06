@@ -11,26 +11,17 @@ use DOMXPath;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
+use SubtitleToolbox\XmlLoader;
 
 final class TtmlParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::Ttml->value;
 
     private const TIMING_ATTRIBUTES = ["begin", "end", "dur"];
-
-    // TTML 1, section 8.3.13, named colors.
-    private const NAMED_COLORS = [
-        "black"  => "#000000", "silver" => "#c0c0c0", "gray"    => "#808080", "white"  => "#ffffff",
-        "maroon" => "#800000", "red"    => "#ff0000", "purple"  => "#800080", "fuchsia" => "#ff00ff",
-        "magenta" => "#ff00ff", "green" => "#008000", "lime"    => "#00ff00", "olive"  => "#808000",
-        "yellow" => "#ffff00", "navy"   => "#000080", "blue"    => "#0000ff", "teal"   => "#008080",
-        "aqua"   => "#00ffff", "cyan"   => "#00ffff",
-    ];
 
     private ?string $namespace;
 
@@ -63,9 +54,8 @@ final class TtmlParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings       = [];
         $this->paragraphIndex = 0;
-        $document             = $this->loadDocument(StringHelpers::removeUtf8Bom($rawSubtitle));
+        $document             = $this->loadDocument($rawSubtitle);
         $this->root      = $document->documentElement;
         $this->namespace = $this->root->namespaceURI;
         if ($this->root->localName !== "tt"
@@ -169,18 +159,7 @@ final class TtmlParser extends SubtitleParser
             throw new ParsingException("The file is empty!");
         }
 
-        // LIBXML_NONET blocks network access. Without LIBXML_NOENT and LIBXML_DTDLOAD, libxml loads no external entity.
-        $previous = libxml_use_internal_errors(true);
-        $document = new DOMDocument();
-        $loaded   = $document->loadXML($xml, LIBXML_NONET);
-        libxml_clear_errors();
-        libxml_use_internal_errors($previous);
-
-        if (!$loaded || $document->documentElement === null) {
-            throw new ParsingException("The file is not well-formed XML!");
-        }
-
-        return $document;
+        return XmlLoader::xml($xml) ?? throw new ParsingException("The file is not well-formed XML!");
     }
 
 
@@ -558,7 +537,7 @@ final class TtmlParser extends SubtitleParser
             return sprintf("#%02x%02x%02x", min(255, (int) $matches[1]), min(255, (int) $matches[2]), min(255, (int) $matches[3]));
         }
 
-        return self::NAMED_COLORS[$color] ?? null;
+        return ColorNames::TTML[$color] ?? null;
     }
 
 

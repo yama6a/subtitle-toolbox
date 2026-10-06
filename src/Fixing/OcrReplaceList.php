@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Fixing;
 
-use DOMDocument;
 use DOMElement;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\XmlLoader;
 
 /**
  * The sections and their rules follow OcrFixReplaceList2.cs of Subtitle Edit, MIT license, at commit e1b8546:
@@ -64,16 +64,11 @@ final class OcrReplaceList
      */
     public static function fromSubtitleEditXml(string $xml): self
     {
-        $document = new DOMDocument();
-        $previous = libxml_use_internal_errors(true);
-        $loaded   = $xml !== "" && $document->loadXML($xml, LIBXML_NONET);
-        $error    = libxml_get_last_error();
-        libxml_clear_errors();
-        libxml_use_internal_errors($previous);
-        if (!$loaded || $document->documentElement === null) {
+        $document = XmlLoader::xml($xml, $error);
+        if ($document === null) {
             throw new ParsingException("The OCR replace list is not valid XML" .
-                                       ($error !== false ? ": " . trim($error->message) : "."),
-                                       $error !== false && $error->line > 0 ? $error->line : null);
+                                       ($error !== null ? ": " . trim($error->message) : "."),
+                                       $error !== null && $error->line > 0 ? $error->line : null);
         }
 
         $lists = array_fill_keys(array_values(self::SECTIONS), []);

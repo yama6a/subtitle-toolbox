@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
-use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -33,16 +31,7 @@ final class PodcastTranscriptParser extends SubtitleParser
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        try {
-            $data = json_decode(StringHelpers::removeUtf8Bom($rawSubtitle), true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException $exception) {
-            throw new ParsingException("The content is not valid JSON: {$exception->getMessage()}.");
-        }
-
-        if (!is_array($data) || ($data !== [] && array_is_list($data))) {
-            throw new ParsingException("The JSON root must be an object.");
-        }
+        $data = $this->decodeJsonObject($rawSubtitle);
         if (!is_array($data["segments"] ?? null) || !array_is_list($data["segments"])) {
             throw new ParsingException("The JSON has no \"segments\" list.");
         }
@@ -88,16 +77,9 @@ final class PodcastTranscriptParser extends SubtitleParser
             }
         }
 
+        $starts = array_column($result, "start");
         foreach ($result as $index => $segment) {
-            if ($segment["end"] !== null) {
-                continue;
-            }
-
-            $next = $index + 1;
-            while ($next < count($result) && $result[$next]["start"] <= $segment["start"]) {
-                $next++;
-            }
-            $result[$index]["end"] = $result[$next]["start"] ?? round($segment["start"] + $this->options->lastCueDuration, 3);
+            $result[$index]["end"] ??= $this->endAtNextStart($starts, $index);
         }
 
         return array_values(array_filter($result, fn (array $segment): bool => $segment["body"] !== ""));
@@ -115,7 +97,7 @@ final class PodcastTranscriptParser extends SubtitleParser
 
         foreach (["startTime" => "a number", "endTime" => "a number", "speaker" => "a string", "body" => "a string"] as $key => $type) {
             $value = $segment[$key] ?? null;
-            $valid = $type === "a string" ? is_string($value) : is_int($value) || (is_float($value) && is_finite($value));
+            $valid = $type === "a string" ? is_string($value) : self::isTime($value);
             if (!$valid && ($key === "startTime" || $value !== null)) {
                 throw new ParsingException("The field $path.$key must be $type.");
             }

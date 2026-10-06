@@ -13,7 +13,7 @@ use SubtitleToolbox\ReadOptions;
 
 final class WebVttStreamReader implements CueStreamReader
 {
-    private WebVttParser $parser;
+    private readonly WebVttParser $parser;
 
     private readonly ReadOptions $options;
 
@@ -46,7 +46,7 @@ final class WebVttStreamReader implements CueStreamReader
 
     public function read($stream): Generator
     {
-        $this->parser   = (new WebVttParser())->useOptions($this->options);
+        $this->parser->useOptions($this->options);
         $this->header   = [];
         $this->warnings = [];
         $seenCue        = false;

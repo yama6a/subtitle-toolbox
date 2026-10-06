@@ -8,10 +8,8 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FrameRate;
-use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\ParseWarningAction;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -27,10 +25,7 @@ final class MpSubParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
-        $lines          = explode(LineEnding::Lf->value, $rawSubtitle);
+        $lines = $this->lines($rawSubtitle);
 
         $subtitle   = new Subtitle();
         $parsedCues = [];
@@ -85,7 +80,7 @@ final class MpSubParser extends SubtitleParser
                 continue;
             }
 
-            if ($this->lenient && !$hasFormat) {
+            if ($this->options->lenient && !$hasFormat) {
                 $this->warn(
                     "The file has no FORMAT line before line $lineNumber. The parser read the times as seconds.",
                     $lineNumber,

@@ -6,10 +6,8 @@ namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\ParseWarningAction;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -40,10 +38,7 @@ final class SubViewerParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
-        $lines          = array_map("trim", explode(LineEnding::Lf->value, $rawSubtitle));
+        $lines = array_map("trim", $this->lines($rawSubtitle));
 
         $startScript = array_search(self::START_SCRIPT, $lines, true);
 
@@ -70,7 +65,7 @@ final class SubViewerParser extends SubtitleParser
             }
 
             try {
-                $matches = $this->version1HeaderTag($line, $idx + 1);
+                $matches = $this->headerTag($line, $idx + 1, "is not a SubViewer 1 header tag");
             } catch (ParsingException $exception) {
                 $this->fail($exception, $idx + 1, 0, [$line]);
                 continue;
@@ -159,7 +154,7 @@ final class SubViewerParser extends SubtitleParser
                 continue;
             }
 
-            if ($this->lenient && $this->hasOneBadTime($line)) {
+            if ($this->options->lenient && $this->hasOneBadTime($line)) {
                 $this->addCueWithText($parsedCues, $cue);
                 $this->warnSkipped($skipped);
                 $cue     = null;
@@ -203,7 +198,7 @@ final class SubViewerParser extends SubtitleParser
             }
 
             try {
-                $matches = $this->version2HeaderTag($line, $lineNumber);
+                $matches = $this->headerTag($line, $lineNumber, "is neither a header tag nor a timing line");
             } catch (ParsingException $exception) {
                 $this->fail($exception, $lineNumber, 0, [$line]);
                 continue;
@@ -255,20 +250,13 @@ final class SubViewerParser extends SubtitleParser
     }
 
 
-    private function version1HeaderTag(string $line, int $lineNumber): array
+    /**
+     * Returns the matches of TAG_REGEX, and throws with $problem, for example "is not a header tag", in the message.
+     */
+    private function headerTag(string $line, int $lineNumber, string $problem): array
     {
         if (!preg_match(self::TAG_REGEX, $line, $matches)) {
-            throw new ParsingException("Line $lineNumber is not a SubViewer 1 header tag: $line", $lineNumber);
-        }
-
-        return $matches;
-    }
-
-
-    private function version2HeaderTag(string $line, int $lineNumber): array
-    {
-        if (!preg_match(self::TAG_REGEX, $line, $matches)) {
-            throw new ParsingException("Line $lineNumber is neither a header tag nor a timing line: $line", $lineNumber);
+            throw new ParsingException("Line $lineNumber $problem: $line", $lineNumber);
         }
 
         return $matches;

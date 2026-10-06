@@ -67,7 +67,6 @@ use SubtitleToolbox\Parsers\GoogleSpeechParser;
 use SubtitleToolbox\Parsers\HtmlTranscriptParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
-use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\OgmChaptersParser;
 use SubtitleToolbox\Parsers\PgsParser;
@@ -385,8 +384,6 @@ class ThrowSitesTest extends TestCase
             "Image/PngDecoder.php: cut off chunk"           => [fn () => PngDecoder::decode(substr(self::png(), 0, 20)), ...$invalid],
             "Image/PngDecoder.php: no IHDR"                 => [fn () => PngDecoder::decode("\x89PNG\r\n\x1a\n"), ...$invalid],
             "Image/PngDecoder.php: interlaced"              => [fn () => PngDecoder::decode(self::pngWithIhdr(1) . self::pngChunk("IDAT", "")), ...$invalid],
-            "Image/PngDecoder.php: too large"               => [fn () => PngDecoder::decode("\x89PNG\r\n\x1a\n" .
-                self::pngChunk("IHDR", pack("NNCCCCC", 8000, 1, 8, 6, 0, 0, 0)) . self::pngChunk("IDAT", "")), ...$invalid],
             "Image/PngDecoder.php: invalid zlib data"       => [fn () => PngDecoder::decode(self::pngWithIhdr(0) . self::pngChunk("IDAT", "nope")), ...$invalid],
             "Image/PngDecoder.php: too few rows"            => [fn () => PngDecoder::decode(self::pngWithIhdr(0) . self::pngChunk("IDAT", gzcompress(""))),
                                                                 ...$invalid],
@@ -435,7 +432,7 @@ class ThrowSitesTest extends TestCase
             "Parsers/AwsTranscribeParser.php: no items"     => [fn () => (new AwsTranscribeParser())->parse('{"results": {}}', new ReadOptions()), ...$parsing],
             "Parsers/Options/CsvColumns.php: negative index"        => [fn () => new CsvColumns(start: -1), ...$invalid],
             "Parsers/Options/CsvColumns.php: name without header"   => [fn () => new CsvColumns(start: 0, text: "Text", header: false), ...$invalid],
-            "Parsers/CsvParser.php: delimiter"              => [fn () => new CsvReadOptions(delimiter: "|"), ...$invalid],
+            "Parsers/Options/CsvReadOptions.php: delimiter" => [fn () => new CsvReadOptions(delimiter: "|"), ...$invalid],
             "Parsers/CsvParser.php: open quote"             => [fn () => (new CsvParser())->parse("start,text\n1,\"a", new ReadOptions()), ...$parsing],
             "Parsers/CsvParser.php: bad time"               => [fn () => (new CsvParser())->parse("start,text\nsoon,a", new ReadOptions()), ...$parsing],
             "Parsers/CsvParser.php: missing column"         => [fn () => (new CsvParser())->parse("start,end\n1,2", new ReadOptions()), ...$parsing],
@@ -453,13 +450,10 @@ class ThrowSitesTest extends TestCase
             "Parsers/HtmlTranscriptParser.php: no time"     => [fn () => (new HtmlTranscriptParser())->parse("<p>Hi</p>", new ReadOptions()), ...$parsing],
             "Parsers/HtmlTranscriptParser.php: bad time"    => [fn () => (new HtmlTranscriptParser())->parse("<time>x</time><p>Hi</p>", new ReadOptions()),
                                                                 ...$parsing],
-            "Parsers/JsonParser.php: no JSON"               => [fn () => (new JsonParser())->parse("{", new ReadOptions()), ...$parsing],
-            "Parsers/JsonParser.php: root no object"        => [fn () => (new JsonParser())->parse("[1]", new ReadOptions()), ...$parsing],
             "Parsers/JsonParser.php: invalid base64"        => [fn () => (new JsonParser())->parse(
                 '{"version": 1, "cues": [], "formatData": {"stl": {"base64": "!"}}}', new ReadOptions()), ...$parsing],
             "Parsers/MicroDvdParser.php: no frame rate"     => [fn () => (new MicroDvdParser())->parse("{0}{25}text", new ReadOptions()), ...$parsing],
             "Parsers/MicroDvdParser.php: frame rate 0"      => [fn () => (new MicroDvdParser())->parse("{1}{1}0\n{0}{25}text", new ReadOptions()), ...$parsing],
-            "Parsers/MicroDvdParser.php: no cue"            => [fn () => (new MicroDvdParser())->parse("text", new ReadOptions(format: new MicroDvdReadOptions(25))), ...$parsing],
             "Parsers/MpSubParser.php: no timing line"       => [fn () => (new MpSubParser())->parse("FORMAT=TIME\ntext\n", new ReadOptions()), ...$parsing],
             "Parsers/MpSubParser.php: negative duration"    => [fn () => (new MpSubParser())->parse("FORMAT=TIME\n0 -1\ntext\n", new ReadOptions()), ...$parsing],
             "Parsers/MpSubParser.php: no text lines"        => [fn () => (new MpSubParser())->parse("FORMAT=TIME\n0 1\n\n", new ReadOptions()), ...$parsing],
@@ -486,20 +480,11 @@ class ThrowSitesTest extends TestCase
                 self::pgsSegment(0x80, ""), new ReadOptions()), ...$parsing],
             "Parsers/PgsParser.php: object too large"       => [fn () => (new PgsParser())->parse(
                 self::pgsSegment(0x15, "\0\7\0\xC0\0\0\4" . pack("nn", 8000, 1)), new ReadOptions()), ...$parsing],
-            "Parsers/PgsParser.php: objects too far apart"  => [fn () => (new PgsParser())->parse(
-                self::pgsSegment(0x16, "\x02\xD0\x02\x40\x10\0\1\x80\0\0\2" . "\0\1\0\0\0\0\0\0" . "\0\2\0\0" . pack("nn", 8000, 0)) .
-                self::pgsSegment(0x14, "\0\0\1\x10\x80\x80\xFF") .
-                self::pgsSegment(0x15, "\0\1\0\xC0\0\0\5\0\1\0\1\1") .
-                self::pgsSegment(0x15, "\0\2\0\xC0\0\0\5\0\1\0\1\1") .
-                self::pgsSegment(0x80, ""), new ReadOptions()), ...$parsing],
-            "Parsers/PodcastChaptersParser.php: no JSON"    => [fn () => (new PodcastChaptersParser())->parse("{", new ReadOptions()), ...$parsing],
             "Parsers/PodcastChaptersParser.php: no chapters" => [fn () => (new PodcastChaptersParser())->parse('{"version": "1.2.0"}', new ReadOptions()), ...$parsing],
             "Parsers/PodcastChaptersParser.php: start no number" => [fn () => (new PodcastChaptersParser())->parse(
                 '{"chapters": [{"title": "x"}]}', new ReadOptions()), ...$parsing],
             "Parsers/PodcastChaptersParser.php: end no number" => [fn () => (new PodcastChaptersParser())->parse(
                 '{"chapters": [{"startTime": 1, "endTime": "2"}]}', new ReadOptions()), ...$parsing],
-            "Parsers/PodcastTranscriptParser.php: no JSON"  => [fn () => (new PodcastTranscriptParser())->parse("{", new ReadOptions()), ...$parsing],
-            "Parsers/PodcastTranscriptParser.php: root no object" => [fn () => (new PodcastTranscriptParser())->parse("[1]", new ReadOptions()), ...$parsing],
             "Parsers/PodcastTranscriptParser.php: no segments" => [fn () => (new PodcastTranscriptParser())->parse('{"version": "1.0.0"}', new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/PodcastTranscriptParser.php: segment no object" => [fn () => (new PodcastTranscriptParser())->parse('{"segments": [1]}', new ReadOptions()),
@@ -528,7 +513,8 @@ class ThrowSitesTest extends TestCase
             "Parsers/SubRipParser.php: invalid time"        => [fn () => (new SubRipParser())->parse("1\nsoon --> 00:00:02,000\ntext", new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/SubViewerParser.php: version 1 header" => [fn () => (new SubViewerParser())->parse("text\n" . SubViewerParser::START_SCRIPT . "\n", new ReadOptions()), ...$parsing],
-            "Parsers/SubViewerParser.php: version 2 header" => [fn () => (new SubViewerParser())->parse("text\n", new ReadOptions()), ...$parsing],
+            "Parsers/SubtitleParser.php: no JSON"           => [fn () => (new JsonParser())->parse("{", new ReadOptions()), ...$parsing],
+            "Parsers/SubtitleParser.php: JSON root no object" => [fn () => (new PodcastTranscriptParser())->parse("[1]", new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: options of another format" => [fn () => (new SubRipParser())->parse("", new ReadOptions(format: new CsvReadOptions())),
                                                                 ...$invalid],
             "Parsers/TtmlParser.php: no tt root"            => [fn () => (new TtmlParser())->parse("<html/>", new ReadOptions()), ...$parsing],
@@ -582,20 +568,13 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Parsers/WebVttParser.php: invalid start time"  => [fn () => (new WebVttParser())->parse("WEBVTT\n\nsoon --> 00:00:02.000\ntext", new ReadOptions()),
                                                                 ...$parsing],
-            "Parsers/WhisperJsonParser.php: no JSON"        => [fn () => (new WhisperJsonParser())->parse("{", new ReadOptions()), ...$parsing],
-            "Parsers/WhisperJsonParser.php: root no object" => [fn () => (new WhisperJsonParser())->parse("[1]", new ReadOptions()), ...$parsing],
             "Parsers/WhisperJsonParser.php: no segments"    => [fn () => (new WhisperJsonParser())->parse('{"text": "Hi"}', new ReadOptions()), ...$parsing],
             "Parsers/WhisperJsonParser.php: time no number" => [fn () => (new WhisperJsonParser())->parse('{"segments": [{"start": "0"}]}', new ReadOptions()),
                                                                 ...$parsing],
-            "Parsers/WhisperJsonParser.php: text no string" => [fn () => (new WhisperJsonParser())->parse(
-                '{"segments": [{"start": 0, "end": 1}]}', new ReadOptions()), ...$parsing],
-            "Parsers/WordGrouping.php: no JSON"             => [fn () => (new DeepgramParser())->parse("{", new ReadOptions()), ...$parsing],
-            "Parsers/WordGrouping.php: root no object"      => [fn () => (new GoogleSpeechParser())->parse("[1]", new ReadOptions()), ...$parsing],
             "Parsers/WordGrouping.php: bad time"            => [fn () => (new AssemblyAiParser())->parse('{"words": [{"text": "Hi", "start": "soon"}]}', new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/WordGrouping.php: text no string"      => [fn () => (new AwsTranscribeParser())->parse(
                 '{"results": {"items": [{"alternatives": []}]}}', new ReadOptions()), ...$parsing],
-            "Parsers/YouTubeTimedTextParser.php: no JSON"   => [fn () => (new YouTubeTimedTextParser())->parse("{", new ReadOptions()), ...$parsing],
             "Parsers/YouTubeTimedTextParser.php: no events" => [fn () => (new YouTubeTimedTextParser())->parse('{"segs": []}', new ReadOptions()), ...$parsing],
             "Parsers/YouTubeTimedTextParser.php: time no number" => [fn () => (new YouTubeTimedTextParser())->parse(
                 '{"events": [{"tStartMs": "0"}]}', new ReadOptions()), ...$parsing],

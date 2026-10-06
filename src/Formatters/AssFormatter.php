@@ -10,6 +10,7 @@ use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\AssFormatLines;
 use SubtitleToolbox\Parsers\AssParser;
+use SubtitleToolbox\Parsers\SsaOverrideTags;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -29,8 +30,6 @@ final class AssFormatter extends SubtitleFormatter
     ];
 
     private const TIME_PATTERN = "%d:%02d:%02d.%02d";
-
-    private const LEGACY_ALIGNMENTS = [1 => 1, 2 => 2, 3 => 3, 7 => 5, 8 => 6, 9 => 7, 4 => 9, 5 => 10, 6 => 11];
 
 
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
@@ -200,7 +199,7 @@ final class AssFormatter extends SubtitleFormatter
 
         $parts = [];
         if ($cue->getAlignment() !== null) {
-            $parts[] = ["tag", $isSsa ? "\\a" . self::LEGACY_ALIGNMENTS[$cue->getAlignment()] : "\\an" . $cue->getAlignment()];
+            $parts[] = ["tag", $isSsa ? "\\a" . array_flip(SsaOverrideTags::LEGACY_ALIGNMENTS)[$cue->getAlignment()] : "\\an" . $cue->getAlignment()];
         }
 
         $tokens = $stripAll ? [Markup::stripAllTags($text)] : Markup::splitTags($text);

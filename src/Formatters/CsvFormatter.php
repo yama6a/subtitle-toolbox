@@ -10,6 +10,7 @@ use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\CsvParser;
+use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -33,7 +34,7 @@ final class CsvFormatter extends SubtitleFormatter
         $csv       = $this->formatOptions($options) ?? new CsvWriteOptions();
         $data      = $subtitle->findFormatData(CsvParser::FORMAT_DATA_KEY);
         $delimiter = $csv->delimiter ?? $data["delimiter"] ?? ",";
-        CsvParser::checkDelimiter($delimiter);
+        CsvReadOptions::checkDelimiter($delimiter);
         $timeFormat = $csv->timeFormat ?? CsvTimeFormat::tryFrom($data["timeFormat"] ?? "") ?? CsvTimeFormat::Dot;
         $fps        = $csv->frameRate ?? $data["frameRate"] ?? null;
         $frameRate  = $fps === null ? null : new FrameRate($fps);

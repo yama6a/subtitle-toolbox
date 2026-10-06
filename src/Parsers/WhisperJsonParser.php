@@ -4,17 +4,14 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
-use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Markup;
-use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\SubtitleCue;
 
 final class WhisperJsonParser extends SubtitleParser
 {
+    use WordGrouping;
+
     public const FORMAT_DATA_KEY = Format::Whisper->value;
 
     // TO_LANGUAGE_CODE of openai/whisper, whisper/tokenizer.py. The OpenAI API returns these names in verbose_json.
@@ -44,9 +41,9 @@ final class WhisperJsonParser extends SubtitleParser
     ];
 
 
-    protected static function formatOptionsClass(): string
+    protected static function formatDataKey(): string
     {
-        return TranscriptReadOptions::class;
+        return self::FORMAT_DATA_KEY;
     }
 
 
@@ -55,17 +52,7 @@ final class WhisperJsonParser extends SubtitleParser
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        try {
-            // Older whisper.cpp versions split multi-byte characters across tokens and write invalid UTF-8 in token texts.
-            $data = json_decode(StringHelpers::removeUtf8Bom($rawSubtitle), true, 512, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
-        } catch (JsonException $exception) {
-            throw new ParsingException("The content is not valid JSON: {$exception->getMessage()}.");
-        }
-
-        if (!is_array($data) || ($data !== [] && array_is_list($data))) {
-            throw new ParsingException("The JSON root must be an object.");
-        }
+        $data = $this->decodeJsonObject($rawSubtitle);
 
         $segments = match (true) {
             self::isList($data["segments"] ?? null)      => $this->readSegments($data["segments"], $data["words"] ?? null),
@@ -73,32 +60,20 @@ final class WhisperJsonParser extends SubtitleParser
             default                                  => throw new ParsingException("The JSON has no \"segments\" or \"transcription\" list."),
         };
 
-        $subtitle   = new Subtitle();
-        $parsedCues = [];
-        $language   = $data["language"] ?? $data["result"]["language"] ?? null;
-        if (is_string($language) && $language !== "") {
-            $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, self::LANGUAGE_CODES[strtolower($language)] ?? $language);
-        }
-        $fileData = array_diff_key($data, array_flip(["segments", "transcription", "words", "word_segments", "text"]));
-        $subtitle->setFormatData(self::FORMAT_DATA_KEY, $fileData);
-
+        $cues = [];
         foreach ($segments as [$start, $end, $text, $words, $formatData]) {
-            $text = trim($text);
-            if ($text === "") {
-                continue;
+            $speaker = is_string($formatData["speaker"] ?? null) ? $formatData["speaker"] : null;
+            $cue     = $this->cue($start, $end, $text, $words, $speaker, $formatData);
+            if ($cue !== null) {
+                $cues[] = $cue;
             }
-
-            $markup  = $this->formatOptions()->wordTimestamps ? Markup::insertWordTimestamps($text, $words) : Markup::escapeText($text);
-            $speaker = is_string($formatData["speaker"] ?? null) ? trim($formatData["speaker"]) : "";
-            if ($this->formatOptions()->speakerVoices && $speaker !== "") {
-                $markup = Markup::voiceTag($speaker) . $markup;
-            }
-
-            $cue = new SubtitleCue($start, $end, $markup);
-            $parsedCues[] = $cue->setFormatData(self::FORMAT_DATA_KEY, $formatData);
         }
 
-        return $subtitle->addCues($parsedCues);
+        $language = $data["language"] ?? $data["result"]["language"] ?? null;
+        $language = is_string($language) ? self::LANGUAGE_CODES[strtolower($language)] ?? $language : $language;
+        $fileData = array_diff_key($data, array_flip(["segments", "transcription", "words", "word_segments", "text"]));
+
+        return $this->transcript($cues, $language, $fileData);
     }
 
 
@@ -112,9 +87,9 @@ final class WhisperJsonParser extends SubtitleParser
         foreach ($segments as $index => $segment) {
             $path = "segments[$index]";
             try {
-                $start = $this->seconds($segment, "start", $path);
-                $end   = $this->seconds($segment, "end", $path);
-                $text  = $this->text($segment, $path);
+                $start = $this->number($segment, "start", $path);
+                $end   = $this->number($segment, "end", $path);
+                $text  = $this->text($segment, "text", $path);
             } catch (ParsingException $exception) {
                 $this->fail($exception, null, $index, [RawJson::encode($segment)]);
                 continue;
@@ -133,8 +108,8 @@ final class WhisperJsonParser extends SubtitleParser
             $timedWords = [];
             foreach ($words as $word) {
                 $timedWords[] = [
-                    is_string($word["word"] ?? null) ? trim($word["word"]) : "",
-                    is_int($word["start"] ?? null) || is_float($word["start"] ?? null) ? round($word["start"], 3) : null,
+                    "text"  => is_string($word["word"] ?? null) ? trim($word["word"]) : "",
+                    "start" => self::isTime($word["start"] ?? null) ? round($word["start"], 3) : null,
                 ];
             }
 
@@ -152,9 +127,9 @@ final class WhisperJsonParser extends SubtitleParser
             $path    = "transcription[$index]";
             $offsets = is_array($segment) ? $segment["offsets"] ?? null : null;
             try {
-                $start = round($this->seconds($offsets, "from", "$path.offsets") / 1000, 3);
-                $end   = round($this->seconds($offsets, "to", "$path.offsets") / 1000, 3);
-                $text  = $this->text($segment, $path);
+                $start = round($this->number($offsets, "from", "$path.offsets") / 1000, 3);
+                $end   = round($this->number($offsets, "to", "$path.offsets") / 1000, 3);
+                $text  = $this->text($segment, "text", $path);
             } catch (ParsingException $exception) {
                 $this->fail($exception, null, $index, [RawJson::encode($segment)]);
                 continue;
@@ -170,16 +145,16 @@ final class WhisperJsonParser extends SubtitleParser
 
                 if ($words === [] || str_starts_with($tokenText, " ")) {
                     $from    = $token["offsets"]["from"] ?? null;
-                    $words[] = ["", is_int($from) || is_float($from) ? round($from / 1000, 3) : null];
+                    $words[] = ["text" => "", "start" => self::isTime($from) ? round($from / 1000, 3) : null];
                 }
-                $words[count($words) - 1][0] .= $tokenText;
+                $words[count($words) - 1]["text"] .= $tokenText;
             }
 
             $result[] = [
                 $start,
                 $end,
                 $text,
-                array_map(fn (array $word): array => [trim($word[0]), $word[1]], $words),
+                array_map(fn (array $word): array => ["text" => trim($word["text"]), "start" => $word["start"]], $words),
                 array_diff_key($segment, array_flip(["timestamps", "offsets", "text"])),
             ];
         }
@@ -188,30 +163,14 @@ final class WhisperJsonParser extends SubtitleParser
     }
 
 
-    private static function isList(mixed $value): bool
-    {
-        return is_array($value) && array_is_list($value);
-    }
-
-
-    private function seconds(mixed $object, string $key, string $path): float
+    private function number(mixed $object, string $key, string $path): float
     {
         $value = is_array($object) ? $object[$key] ?? null : null;
-        if (!is_int($value) && (!is_float($value) || !is_finite($value))) {
+        if (!self::isTime($value)) {
             throw new ParsingException("The field $path.$key must be a number.");
         }
 
         return round($value, 3);
-    }
-
-
-    private function text(array $segment, string $path): string
-    {
-        if (!is_string($segment["text"] ?? null)) {
-            throw new ParsingException("The field $path.text must be a string.");
-        }
-
-        return $segment["text"];
     }
 
 

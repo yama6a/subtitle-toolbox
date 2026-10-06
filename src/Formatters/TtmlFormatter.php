@@ -15,6 +15,7 @@ use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
+use SubtitleToolbox\XmlLoader;
 
 final class TtmlFormatter extends SubtitleFormatter
 {
@@ -145,13 +146,8 @@ final class TtmlFormatter extends SubtitleFormatter
             $declarations .= $this->formatAttribute($prefix === "" ? "xmlns" : "xmlns:$prefix", $uri);
         }
 
-        $previous = libxml_use_internal_errors(true);
-        $document = new DOMDocument();
-        $loaded   = $document->loadXML("<tt$declarations>$headXml</tt>", LIBXML_NONET);
-        libxml_clear_errors();
-        libxml_use_internal_errors($previous);
-
-        $head = $loaded ? $document->documentElement->firstChild : null;
+        $document = XmlLoader::xml("<tt$declarations>$headXml</tt>");
+        $head     = $document?->documentElement->firstChild;
         if (!$head instanceof DOMElement || $head->localName !== "head") {
             throw new UnwritableContentException("The stored TTML head is not a well-formed <head> element!");
         }

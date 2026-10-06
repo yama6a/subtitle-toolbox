@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
-use JsonException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
-use SubtitleToolbox\StringHelpers;
+use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
 /**
- * Builds cues from the JSON transcripts of cloud speech-to-text services, and groups their words into cues.
+ * Builds cues from the JSON transcripts of speech-to-text services, and groups their words into cues. A word is an array
+ * with the keys text, start, end, speaker and data.
  *
  * @internal
  */
@@ -26,25 +27,114 @@ trait WordGrouping
     private const SENTENCE_END = '/[.?!\x{3002}\x{FF0E}\x{FF1F}\x{FF01}]["\'\x{2019}\x{201D})\]\x{300D}\x{300F}\x{FF09}]*$/u';
 
 
+    /**
+     * Returns the FORMAT_DATA_KEY of the parser.
+     */
+    abstract protected static function formatDataKey(): string;
+
+
+    abstract protected function formatOptions(): FormatReadOptions;
+
+
+    /**
+     * @param list<string> $block
+     */
+    abstract protected function fail(ParsingException $exception, ?int $lineNumber, ?int $blockIndex, array $block): void;
+
+
     protected static function formatOptionsClass(): string
     {
         return TranscriptReadOptions::class;
     }
 
 
-    private function decodeObject(string $rawSubtitle): array
+    /**
+     * Returns the subtitle with the cues, the language metadata when $language is a string that is not empty, and the
+     * format data of the file.
+     *
+     * @param list<SubtitleCue> $cues
+     */
+    private function transcript(array $cues, mixed $language, array $fileData): Subtitle
     {
-        try {
-            $data = json_decode(StringHelpers::removeUtf8Bom($rawSubtitle), true, 512, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
-        } catch (JsonException $exception) {
-            throw new ParsingException("The content is not valid JSON: {$exception->getMessage()}.");
+        $subtitle = new Subtitle();
+        if (is_string($language) && $language !== "") {
+            $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $language);
+        }
+        $subtitle->setFormatData(static::formatDataKey(), $fileData);
+
+        return $subtitle->addCues($cues);
+    }
+
+
+    /**
+     * Returns the fields of the file without "results", and the fields of "results" without $readKeys under "results".
+     */
+    private static function fileDataWithResults(array $data, array $results, array $readKeys): array
+    {
+        $fileData = array_diff_key($data, ["results" => true]);
+        $other    = array_diff_key($results, array_flip($readKeys));
+        if ($other !== []) {
+            $fileData["results"] = $other;
         }
 
-        if (!is_array($data) || ($data !== [] && array_is_list($data))) {
-            throw new ParsingException("The JSON root must be an object.");
+        return $fileData;
+    }
+
+
+    /**
+     * Returns the words of the list. $readWord gets a word and its path, and returns its text, start, end and speaker.
+     * In lenient mode, a word for which $readWord throws is skipped with a warning.
+     *
+     * @param callable(mixed, string): array{string, float, float, ?string} $readWord
+     */
+    private function readWordList(array $words, string $path, callable $readWord): array
+    {
+        $result = [];
+        foreach ($words as $index => $word) {
+            try {
+                [$text, $start, $end, $speaker] = $readWord($word, "{$path}[$index]");
+            } catch (ParsingException $exception) {
+                $this->fail($exception, null, $index, [RawJson::encode($word)]);
+                continue;
+            }
+
+            $result[] = ["text" => trim($text), "start" => $start, "end" => $end, "speaker" => $speaker, "data" => [$word]];
         }
 
-        return $data;
+        return $result;
+    }
+
+
+    /**
+     * Returns one cue per utterance with the fields start, end, $textKey, speaker and words.
+     *
+     * @param callable(array, string): array $readWords reads the words of an utterance
+     *
+     * @return list<SubtitleCue>
+     */
+    private function readUtterances(array $utterances, string $path, string $textKey, callable $readWords, float $unit = 1.0): array
+    {
+        $cues = [];
+        foreach ($utterances as $index => $utterance) {
+            $itemPath = "{$path}[$index]";
+            try {
+                $start = $this->seconds(is_array($utterance) ? $utterance["start"] ?? null : null, "$itemPath.start", $unit);
+                $end   = $this->seconds($utterance["end"] ?? null, "$itemPath.end", $unit);
+                $text  = $this->text($utterance, $textKey, $itemPath);
+                $words = $readWords(self::listOrEmpty($utterance["words"] ?? null), "$itemPath.words");
+            } catch (ParsingException $exception) {
+                $this->fail($exception, null, $index, [RawJson::encode($utterance)]);
+                continue;
+            }
+
+            $formatData = array_diff_key($utterance, array_flip(["start", "end", $textKey]));
+            $cue        = $this->cue($start, $end, $text, $words, self::speaker($utterance["speaker"] ?? null), $formatData);
+            if ($cue !== null) {
+                $cues[] = $cue;
+            }
+        }
+
+        return $cues;
     }
 
 
@@ -53,11 +143,12 @@ trait WordGrouping
         if (is_string($value) && is_numeric($value)) {
             $value = (float) $value;
         }
-        if ((!is_int($value) && !is_float($value)) || !is_finite($value * $unit)) {
+        $seconds = is_int($value) || is_float($value) ? $value * $unit : null;
+        if (!self::isTime($seconds)) {
             throw new ParsingException("The field $path must be a time.");
         }
 
-        return round($value * $unit, 3);
+        return round($seconds, 3);
     }
 
 
@@ -78,14 +169,20 @@ trait WordGrouping
     }
 
 
+    private static function isList(mixed $value): bool
+    {
+        return is_array($value) && array_is_list($value);
+    }
+
+
     private static function listOrEmpty(mixed $value): array
     {
-        return is_array($value) && array_is_list($value) ? $value : [];
+        return self::isList($value) ? $value : [];
     }
 
 
     /**
-     * Splits the words into cues. Each word is an array with the keys text, start, end, speaker and data.
+     * Splits the words into cues.
      *
      * @return list<list<array>>
      */
@@ -159,7 +256,7 @@ trait WordGrouping
             $markup = Markup::voiceTag($speaker) . $markup;
         }
 
-        return (new SubtitleCue($start, $end, $markup))->setFormatData(self::FORMAT_DATA_KEY, $formatData);
+        return (new SubtitleCue($start, $end, $markup))->setFormatData(static::formatDataKey(), $formatData);
     }
 
 
