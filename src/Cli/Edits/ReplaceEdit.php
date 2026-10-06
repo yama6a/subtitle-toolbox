@@ -42,7 +42,7 @@ final class ReplaceEdit extends Edit
     public static function options(): array
     {
         return [
-            new Option("replace", "Replace FROM with TO in the text between tags, for example --replace colour=color. Repeatable.", "FROM=TO", null, true),
+            Option::repeatable("replace", "FROM=TO", "Replace FROM with TO in the text between tags, for example --replace colour=color. Repeatable."),
             Option::flag("replace-regex", "Read each FROM of --replace as a regular expression with delimiters, such as /\\.{4,}/. TO can use \$1."),
             Option::flag("replace-ignore-case", "Match FROM of --replace in any case."),
         ];

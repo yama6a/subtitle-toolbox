@@ -65,25 +65,13 @@ abstract class ReportCommand extends FileCommand
             return;
         }
 
-        $console->out(json_encode($this->entries, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
-                                         | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR) . "\n");
+        $console->out(json_encode($this->entries, JSON_PRETTY_PRINT | self::JSON_FLAGS | JSON_THROW_ON_ERROR) . "\n");
     }
 
 
     protected function report(Console $console, string $line): void
     {
         $this->json ? $console->err($line) : $console->out($line);
-    }
-
-
-    protected static function number(int|float|null $value): string
-    {
-        return match (true) {
-            $value === null      => "-",
-            is_int($value)       => (string)$value,
-            is_infinite($value)  => "INF",
-            default              => rtrim(rtrim(number_format($value, 3, ".", ""), "0"), "."),
-        };
     }
 
 

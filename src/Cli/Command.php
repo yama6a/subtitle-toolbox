@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\SubtitleToolboxException;
 
 /**
  * @internal
  */
 abstract class Command
 {
+    public const JSON_FLAGS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE;
+
     abstract public function name(): string;
 
 
@@ -99,11 +102,83 @@ abstract class Command
 
 
     /**
+     * Returns the message of a library exception, which names its class, or the class and message of another error.
+     */
+    public static function throwableMessage(\Throwable $throwable): string
+    {
+        return $throwable instanceof SubtitleToolboxException
+            ? $throwable->getMessage()
+            : $throwable::class . ": " . $throwable->getMessage();
+    }
+
+
+    /**
+     * Returns $arguments without the null values. A constructor that gets the result as named arguments then uses its
+     * own default for each option that the user did not give.
+     *
+     * @param array<string, mixed> $arguments
+     *
+     * @return array<string, mixed>
+     */
+    public static function given(array $arguments): array
+    {
+        return array_filter($arguments, fn (mixed $value): bool => $value !== null);
+    }
+
+
+    /**
+     * Returns $value with at most $decimals decimals and no trailing zeros, "INF" for infinity, or "-" for null.
+     */
+    public static function number(int|float|null $value, int $decimals = 3): string
+    {
+        return match (true) {
+            $value === null     => "-",
+            is_int($value)      => (string)$value,
+            is_infinite($value) => "INF",
+            default             => rtrim(rtrim(number_format($value, $decimals, ".", ""), "0"), "."),
+        };
+    }
+
+
+    /**
+     * Returns the rows as text columns, each line indented by $indent spaces. Every column but the last is padded to
+     * its widest cell, plus $gap spaces.
+     *
+     * @param list<list<string>> $rows
+     */
+    public static function table(array $rows, int $indent = 2, int $gap = 2): string
+    {
+        $widths = [];
+        foreach ($rows as $row) {
+            foreach (array_slice($row, 0, -1) as $column => $cell) {
+                $widths[$column] = max($widths[$column] ?? 0, strlen($cell));
+            }
+        }
+        $text = "";
+        foreach ($rows as $row) {
+            $line = str_repeat(" ", $indent);
+            foreach (array_slice($row, 0, -1) as $column => $cell) {
+                $line .= str_pad($cell, $widths[$column] + $gap);
+            }
+            $text .= $line . end($row) . "\n";
+        }
+
+        return $text;
+    }
+
+
+    protected static function helpOption(): Option
+    {
+        return Option::flag("help", "Show this help.", "h");
+    }
+
+
+    /**
      * Returns the help of the command. $topic is the word after --help, or null. Only convert reads it.
      */
     public function help(?string $topic = null): string
     {
-        return $this->helpHeader() . "\nOptions:\n" . self::optionList([...$this->options(), Option::flag("help", "Show this help.", "h")]);
+        return $this->helpHeader() . "\nOptions:\n" . self::optionList([...$this->options(), self::helpOption()]);
     }
 
 
@@ -125,12 +200,6 @@ abstract class Command
      */
     protected static function optionList(array $options): string
     {
-        $width = max(array_map(fn (Option $option): int => strlen($option->synopsis()), $options));
-        $list  = "";
-        foreach ($options as $option) {
-            $list .= "  " . str_pad($option->synopsis(), $width) . "  $option->description\n";
-        }
-
-        return $list;
+        return self::table(array_map(fn (Option $option): array => [$option->synopsis(), $option->description], $options));
     }
 }

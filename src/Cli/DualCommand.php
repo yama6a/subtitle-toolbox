@@ -7,7 +7,6 @@ namespace SubtitleToolbox\Cli;
 use SubtitleToolbox\Dual\DualSubtitle;
 use SubtitleToolbox\Dual\DualSubtitleMode;
 use SubtitleToolbox\Dual\DualSubtitleOptions;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
 
@@ -73,7 +72,7 @@ final class DualCommand extends WriteCommand
     }
 
 
-    protected function readsBatch(): bool
+    protected function takesManyInputs(): bool
     {
         return false;
     }
@@ -127,28 +126,13 @@ final class DualCommand extends WriteCommand
     {
         parent::prepare($arguments);
 
-        $mode = $arguments->value("mode") ?? "stack";
-        if (!isset(self::MODES[$mode])) {
-            self::fail("Unknown mode \"$mode\". Known modes: " . implode(", ", array_keys(self::MODES)) . ".");
-        }
-        $alignment = $arguments->value("secondary-alignment") ?? "8";
-        if (!in_array($alignment, ["1", "2", "3", "4", "5", "6", "7", "8", "9"], true)) {
-            self::fail("The option --secondary-alignment needs a number from 1 to 9, got \"$alignment\".");
-        }
-        if (($arguments->float("snap-tolerance") ?? 0) < 0) {
-            self::fail("The option --snap-tolerance must not be negative.");
-        }
-
-        try {
-            $this->dualOptions = new DualSubtitleOptions(
-                mode: self::MODES[$mode],
-                snapTolerance: $arguments->float("snap-tolerance") ?? 0.25,
-                secondaryStyle: $arguments->value("secondary-style"),
-                secondaryAlignment: (int)$alignment,
-            );
-        } catch (InvalidArgumentException $exception) {
-            self::fail($exception->getMessage());
-        }
+        $mode              = $arguments->choice("mode", array_keys(self::MODES));
+        $this->dualOptions = new DualSubtitleOptions(...self::given([
+            "mode"               => $mode === null ? null : self::MODES[$mode],
+            "snapTolerance"      => $arguments->nonNegativeFloat("snap-tolerance"),
+            "secondaryStyle"     => $arguments->value("secondary-style"),
+            "secondaryAlignment" => $arguments->int("secondary-alignment", 1, 9),
+        ]));
     }
 
 

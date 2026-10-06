@@ -69,7 +69,7 @@ abstract class Edit
      *
      * @param non-empty-list<string> $needed
      */
-    protected static function needsOneOf(Arguments $arguments, array $needed, string $option): void
+    public static function needsOneOf(Arguments $arguments, array $needed, string $option): void
     {
         if (!$arguments->has($option) || array_filter($needed, $arguments->has(...)) !== []) {
             return;

@@ -18,7 +18,7 @@ final class TimingFixEdit extends Edit
     private function __construct(
         private readonly bool $overlaps,
         private readonly ?float $minDuration,
-        private readonly float $minGap,
+        private readonly ?float $minGap,
     ) {
     }
 
@@ -49,10 +49,7 @@ final class TimingFixEdit extends Edit
     {
         self::needsOneOf($arguments, ["timing-fix-overlaps", "timing-min-duration"], "timing-min-gap");
         $minDuration = $arguments->positiveFloat("timing-min-duration");
-        $minGap      = $arguments->float("timing-min-gap") ?? 0.0;
-        if ($minGap < 0) {
-            Command::fail("The option --timing-min-gap must not be negative.");
-        }
+        $minGap      = $arguments->nonNegativeFloat("timing-min-gap");
         if (!$arguments->has("timing-fix-overlaps") && $minDuration === null) {
             return null;
         }
@@ -64,10 +61,10 @@ final class TimingFixEdit extends Edit
     public function apply(Subtitle $subtitle, Console $console, string $label): Subtitle
     {
         if ($this->overlaps) {
-            $subtitle->fixOverlaps($this->minGap);
+            $subtitle->fixOverlaps(...Command::given(["minGap" => $this->minGap]));
         }
         if ($this->minDuration !== null) {
-            $subtitle->extendShortCues($this->minDuration, $this->minGap);
+            $subtitle->extendShortCues($this->minDuration, ...Command::given(["minGap" => $this->minGap]));
         }
 
         return $subtitle;

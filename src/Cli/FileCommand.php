@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Cli;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Exceptions\SubtitleToolboxException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\FormatRegistry;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
@@ -25,11 +26,6 @@ abstract class FileCommand extends Command
 {
     public const DASH = "-";
 
-    private const TRANSCRIPT_FORMATS = [
-        Format::Whisper, Format::AssemblyAi, Format::AwsTranscribe, Format::Deepgram, Format::GoogleSpeech,
-        Format::YouTubeTimedText, Format::PodcastTranscript,
-    ];
-
     // The 1.x names of the chapter formats, kept so that 1.x scripts still run.
     private const FORMAT_ALIASES = [
         "ytchapter" => Format::YouTubeChapters,
@@ -43,6 +39,10 @@ abstract class FileCommand extends Command
     protected ?Format $secondFormat = null;
 
     protected ?float $inputFps = null;
+
+    protected ?int $inputTrack = null;
+
+    private ?int $secondTrack = null;
 
     protected bool $wordTimestamps = false;
 
@@ -82,7 +82,10 @@ abstract class FileCommand extends Command
     }
 
 
-    protected function readsBatch(): bool
+    /**
+     * Returns false for a command that reads exactly one input. It then has no --keep-going.
+     */
+    protected function takesManyInputs(): bool
     {
         return true;
     }
@@ -119,7 +122,7 @@ abstract class FileCommand extends Command
             Option::flag("word-timestamps", "Keep the word times of speech-to-text JSON, YouTube timed text and podcast transcript input."),
             Option::value("track", "NUMBER", "Subtitle track of an MKV or WebM input. Needed when the file has several. \"info\" lists them."),
         ];
-        if ($this->readsBatch()) {
+        if ($this->takesManyInputs()) {
             $options[] = Option::flag("keep-going", "Go on with the next file after a file fails. Default: stop at the first failure.");
         }
 
@@ -137,7 +140,7 @@ abstract class FileCommand extends Command
         $names = $this->fileOptionNames();
 
         return [
-            Option::value($names["from2"], "FORMAT", "Format of the $file file. Default: detected from the content, else taken from the file extension."),
+            Option::value($names["from2"], "FORMAT", "Format of the $file file. Default: as for --$names[from]."),
             Option::value($names["track2"], "NUMBER", "Subtitle track of an MKV or WebM $file file. Needed when the file has several."),
         ];
     }
@@ -148,35 +151,21 @@ abstract class FileCommand extends Command
         $this->succeeded      = 0;
         $this->failed         = 0;
         $this->outputFiles    = new OutputFiles();
-        $this->inputFps       = self::rate($arguments, "input-fps");
+        $this->inputFps       = $arguments->rate("input-fps");
         $this->wordTimestamps = $this->needsWordTimestamps($arguments);
-        $arguments->positiveFloat("fps");
-        $names = $this->fileOptionNames();
-        $arguments->positiveInt($names["track"]);
-        $arguments->positiveInt($names["track2"]);
+        $names                = $this->fileOptionNames();
+        $this->inputTrack     = $arguments->positiveInt($names["track"]);
+        $this->secondTrack    = $arguments->positiveInt($names["track2"]);
 
         $from               = $arguments->value($names["from"]);
         $this->fromFormat   = $from === null ? null : self::readableFormat($from);
         $from2              = $arguments->value($names["from2"]);
         $this->secondFormat = $from2 === null ? null : self::readableFormat($from2);
 
-        try {
-            $this->readOptions = new ReadOptions(
-                encoding: $arguments->value("encoding"),
-                lenient: $arguments->has("lenient"),
-            );
-        } catch (SubtitleToolboxException $exception) {
-            self::fail($exception->getMessage());
-        }
-    }
-
-
-    /**
-     * Returns the frame rate of the option $name, else of --fps, which sets all frame rates.
-     */
-    protected static function rate(Arguments $arguments, string $name): ?float
-    {
-        return $arguments->positiveFloat($name) ?? $arguments->positiveFloat("fps");
+        $this->readOptions = new ReadOptions(
+            encoding: $arguments->value("encoding"),
+            lenient: $arguments->has("lenient"),
+        );
     }
 
 
@@ -409,7 +398,7 @@ abstract class FileCommand extends Command
     protected function read(string $input, Arguments $arguments, Console $console): ?array
     {
         $this->parseWarnings = [];
-        $track               = $this->inputTrack($arguments);
+        $track               = $this->inputTrack;
         if ($input !== self::DASH) {
             if (!is_file($input)) {
                 self::fail("The file does not exist.");
@@ -437,17 +426,6 @@ abstract class FileCommand extends Command
             $line = $warning->lineNumber === null ? "" : "line $warning->lineNumber: ";
             $console->err("$label: $line$warning->message ({$warning->action->value})\n");
         }
-    }
-
-
-    /**
-     * Returns the message of a library exception, which names its class, or the class and message of another error.
-     */
-    public static function throwableMessage(\Throwable $throwable): string
-    {
-        return $throwable instanceof SubtitleToolboxException
-            ? $throwable->getMessage()
-            : $throwable::class . ": " . $throwable->getMessage();
     }
 
 
@@ -501,7 +479,7 @@ abstract class FileCommand extends Command
     {
         $names              = $this->fileOptionNames();
         $this->failureLabel = $path;
-        $subtitle           = $this->loadOtherFile($path, $console, $this->secondFormat, $arguments->positiveInt($names["track2"]),
+        $subtitle           = $this->loadOtherFile($path, $console, $this->secondFormat, $this->secondTrack,
                                                    "--" . $names["track2"], "--" . $names["from2"]);
         $this->failureLabel = null;
 
@@ -528,12 +506,6 @@ abstract class FileCommand extends Command
         self::printWarnings($console, $path, $subtitle->getParseWarnings());
 
         return $subtitle;
-    }
-
-
-    protected function inputTrack(Arguments $arguments): ?int
-    {
-        return $arguments->positiveInt($this->fileOptionNames()["track"]);
     }
 
 
@@ -628,15 +600,17 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Returns --input-fps for MicroDVD, CSV and TSV, and the word timestamps for the transcript formats.
+     * Returns --input-fps for the formats that read a frame rate, and the word timestamps for the transcript formats.
      */
     private function formatOptions(Format $format): ?FormatReadOptions
     {
+        $class = FormatRegistry::readOptionsClass($format);
+
         return match (true) {
-            $this->inputFps !== null && $format === Format::MicroDvd => new MicroDvdReadOptions($this->inputFps),
-            $this->inputFps !== null && in_array($format, [Format::Csv, Format::Tsv], true) => new CsvReadOptions(frameRate: $this->inputFps),
-            $this->wordTimestamps && in_array($format, self::TRANSCRIPT_FORMATS, true) => new TranscriptReadOptions(wordTimestamps: true),
-            default => null,
+            $this->inputFps !== null && $class === MicroDvdReadOptions::class => new MicroDvdReadOptions($this->inputFps),
+            $this->inputFps !== null && $class === CsvReadOptions::class      => new CsvReadOptions(frameRate: $this->inputFps),
+            $this->wordTimestamps && $class === TranscriptReadOptions::class  => new TranscriptReadOptions(wordTimestamps: true),
+            default                                                           => null,
         };
     }
 

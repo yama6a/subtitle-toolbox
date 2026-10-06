@@ -131,6 +131,71 @@ final class Arguments
     }
 
 
+    public function nonNegativeFloat(string $name): ?float
+    {
+        $value = $this->float($name);
+        if ($value !== null && $value < 0) {
+            Command::fail("The option --$name must not be negative.");
+        }
+
+        return $value;
+    }
+
+
+    /**
+     * Returns the frame rate of the option $name, else of --fps, which sets all frame rates.
+     */
+    public function rate(string $name): ?float
+    {
+        $fps = $this->positiveFloat("fps");
+
+        return $this->positiveFloat($name) ?? $fps;
+    }
+
+
+    /**
+     * Returns the whole number of the option $name, from $min to $max. A null $max means no upper limit.
+     */
+    public function int(string $name, int $min, ?int $max = null): ?int
+    {
+        $value = $this->value($name);
+        if ($value === null) {
+            return null;
+        }
+        // 18 digits stay below PHP_INT_MAX, so the cast cannot overflow.
+        $digits = ltrim(ltrim($value, "-"), "0");
+        $number = preg_match('/^-?[0-9]+$/', $value) === 1 && strlen($digits) <= 18 ? (int)$value : null;
+        if ($number === null || $number < $min || ($max !== null && $number > $max)) {
+            $range = $max === null ? "of $min or more" : "from $min to $max";
+            Command::fail("The option --$name needs a whole number $range, got \"$value\".");
+        }
+
+        return $number;
+    }
+
+
+    /**
+     * Returns the value of the option $name as the entry of $allowed that it matches in any case.
+     *
+     * @param non-empty-list<string> $allowed
+     */
+    public function choice(string $name, array $allowed): ?string
+    {
+        $value = $this->value($name);
+        if ($value === null) {
+            return null;
+        }
+        foreach ($allowed as $choice) {
+            if (strcasecmp($choice, $value) === 0) {
+                return $choice;
+            }
+        }
+        $last = array_pop($allowed);
+
+        return Command::fail("The option --$name must be " . ($allowed === [] ? $last : implode(", ", $allowed) . " or $last") . ", got \"$value\".");
+    }
+
+
     public function positiveInt(string $name): ?int
     {
         $value = $this->value($name);

@@ -44,7 +44,7 @@ final class SdhEdit extends Edit
             Option::flag("sdh-keep-music-lines", "Keep lines that hold only music symbols."),
             Option::flag("sdh-any-case-labels", "Also remove speaker labels that are not upper case, such as Baker:."),
             Option::flag("sdh-lyrics", "Remove text between two music symbols."),
-            new Option("sdh-brackets", "Also remove text between this pair of characters, for example \"{}\" or \"**\". Repeatable.", "PAIR", null, true),
+            Option::repeatable("sdh-brackets", "PAIR", "Also remove text between this pair of characters, for example \"{}\" or \"**\". Repeatable."),
         ];
     }
 

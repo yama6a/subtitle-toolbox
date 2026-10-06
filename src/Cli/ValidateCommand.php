@@ -15,9 +15,7 @@ use SubtitleToolbox\Validation\ValidationRules;
  */
 final class ValidateCommand extends ReportCommand
 {
-    private const PRESETS = ["netflix-en", "bbc"];
-
-    private const DEFAULT_FPS = 23.976;
+    public const DEFAULT_FPS = 23.976;
 
     private const FLAGS = [
         "check-overlaps"                   => "noOverlap",
@@ -99,17 +97,14 @@ final class ValidateCommand extends ReportCommand
         parent::prepare($arguments);
 
         $this->withProblems = 0;
-        $preset             = $arguments->value("preset");
-        if ($preset !== null && !in_array($preset, self::PRESETS, true)) {
-            self::fail("Unknown preset \"$preset\". Known presets: " . implode(", ", self::PRESETS) . ".");
-        }
+        $preset             = $arguments->choice("preset", ["netflix-en", "bbc"]);
         if ($arguments->has("video-fps") && $preset !== "netflix-en") {
             self::fail("--video-fps sets the frame rate of the netflix-en gap rule. Pass --preset netflix-en, or leave out --video-fps.");
         }
         $base = match ($preset) {
             null         => new ValidationRules(),
             "bbc"        => ValidationRules::bbc(),
-            "netflix-en" => ValidationRules::netflixEnglish(self::rate($arguments, "video-fps") ?? self::DEFAULT_FPS),
+            "netflix-en" => ValidationRules::netflixEnglish($arguments->rate("video-fps") ?? self::DEFAULT_FPS),
         };
 
         $this->rules = self::rules($arguments, $base);

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Hls\HlsSegmentOptions;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
@@ -15,6 +14,8 @@ use SubtitleToolbox\Subtitle;
  */
 final class HlsCommand extends FileCommand
 {
+    public const DEFAULT_PLAYLIST = "subs.m3u8";
+
     private ?HlsSegmentOptions $segmentOptions = null;
 
     private string $directory = "";
@@ -66,32 +67,20 @@ final class HlsCommand extends FileCommand
         parent::prepare($arguments);
 
         $this->directory = $arguments->value("output-dir") ?? self::fail("Pass --output-dir DIR.");
-        $this->playlist  = $arguments->value("playlist") ?? "subs.m3u8";
+        $this->playlist  = $arguments->value("playlist") ?? self::DEFAULT_PLAYLIST;
         self::checkOutputDirectory($this->directory);
 
-        $mpegts = $arguments->value("mpegts") ?? (string)HlsSegmentOptions::DEFAULT_MPEGTS;
-        if (!ctype_digit($mpegts)) {
-            self::fail("The option --mpegts needs a whole number, got \"$mpegts\".");
-        }
-        if (($arguments->float("local") ?? 0) < 0) {
-            self::fail("The option --local must not be negative.");
-        }
-
-        try {
-            $this->segmentOptions = new HlsSegmentOptions(
-                segmentDuration: $arguments->positiveFloat("segment") ?? 6,
-                mpegts: (int)$mpegts,
-                local: $arguments->float("local") ?? 0,
-                fileNamePattern: $arguments->value("pattern") ?? "sub%d.vtt",
-                mediaDuration: $arguments->positiveFloat("media-duration"),
-            );
-        } catch (InvalidArgumentException $exception) {
-            self::fail($exception->getMessage());
-        }
+        $this->segmentOptions = new HlsSegmentOptions(...self::given([
+            "segmentDuration" => $arguments->positiveFloat("segment"),
+            "mpegts"          => $arguments->int("mpegts", 0),
+            "local"           => $arguments->nonNegativeFloat("local"),
+            "fileNamePattern" => $arguments->value("pattern"),
+            "mediaDuration"   => $arguments->positiveFloat("media-duration"),
+        ]));
     }
 
 
-    protected function readsBatch(): bool
+    protected function takesManyInputs(): bool
     {
         return false;
     }

@@ -71,7 +71,7 @@ class BinaryEditTest extends BinaryTestCase
             $this->runBinary(["convert", "labels.srt", "--to", "vtt", "-o", "-", "--no-bom", "--speakers", "from-prefix"])
         );
         $this->assertSame(
-            [2, "", "Error: Unknown speaker mode \"names\". Known modes: prefix, dashes, colors, from-prefix.\n" .
+            [2, "", "Error: The option --speakers must be prefix, dashes, colors or from-prefix, got \"names\".\n" .
                     "Run \"subtitle-toolbox help convert\" for the usage.\n"],
             $this->runBinary(["convert", "voices.vtt", "--to", "srt", "--speakers", "names"])
         );

@@ -148,6 +148,20 @@ final class FormatRegistry
 
 
     /**
+     * Returns the FormatReadOptions class that the parser of $format reads, or null for none.
+     *
+     * @return class-string<Parsers\Options\FormatReadOptions>|null
+     */
+    public static function readOptionsClass(Format $format): ?string
+    {
+        $parser = self::parserClass($format);
+
+        // formatOptionsClass() is protected, so the closure runs in the scope of the parser class.
+        return $parser === null ? null : \Closure::bind(static fn (): ?string => static::formatOptionsClass(), null, $parser)();
+    }
+
+
+    /**
      * @return list<string>
      */
     public static function extensions(Format $format): array

@@ -121,11 +121,8 @@ final class InfoCommand extends ReportCommand
             $rows["Metadata $key"] = $value;
         }
 
-        $width = max(array_map("strlen", array_keys($rows)));
-        $text  = self::label($input) . "\n";
-        foreach ($rows as $name => $value) {
-            $text .= "  " . str_pad("$name:", $width + 1) . " $value\n";
-        }
+        $text = self::label($input) . "\n" . self::table(array_map(fn (string $name, string $value): array => ["$name:", $value],
+                                                                   array_keys($rows), $rows), 2, 1);
 
         $data = $statistics->toArray();
         $this->emit($console, ($this->succeeded > 0 ? "\n" : "") . $text, [
