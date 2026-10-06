@@ -197,10 +197,7 @@ final class AssFormatter extends SubtitleFormatter
     private function convertLines(SubtitleCue $cue, bool $isSsa, bool $stripAll, AssKaraokeTag $karaokeTag): array
     {
         $text = implode(LineEnding::Lf->value, $cue->getLines());
-        $name = "";
-        if (preg_match('/<v(?:\.[^\s>]*)?\s+([^>]*)>/', $text, $matches)) {
-            $name = str_replace(",", "", trim(Markup::decodeEntities($matches[1])));
-        }
+        $name = str_replace(",", "", Markup::speaker($text) ?? "");
 
         $parts = [];
         if ($cue->getAlignment() !== null) {

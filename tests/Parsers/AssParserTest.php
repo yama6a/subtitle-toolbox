@@ -236,6 +236,21 @@ class AssParserTest extends TestCase
     }
 
 
+    public function testWindows1252FileWithoutEncodingKeepsItsLinesAndSpeaker(): void
+    {
+        $lines = array_map(
+            fn (SubtitleCue $cue): array => array_map(fn (string $line): string => iconv("Windows-1252", "UTF-8", $line), $cue->getLines()),
+            Subtitle::fromString(file_get_contents(__DIR__ . "/../files/ass/own_windows_1252.ass"), Format::Ass)->getCues()
+        );
+
+        $this->assertSame([
+            ["<v Hélène>Le café ouvre à sept heures."],
+            ["<i>Crème brûlée</i>", "à 4 €"],
+            ["<v Hélène>See you tomorrow."],
+        ], $lines);
+    }
+
+
     public function testTimesAcceptOneToThreeFractionDigits(): void
     {
         $cue = $this->parseEvents(self::EVENTS_HEADER . "Dialogue: 0,10:00:01.5,0:00:02.125,Default,,0,0,0,,a\n")->getCues()[0];

@@ -11,9 +11,6 @@ namespace SubtitleToolbox;
  */
 final class LineWrapper
 {
-    private const ENTITY = '&(?:[a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#[xX][0-9a-fA-F]+);';
-
-
     /**
      * Wraps the lines into at most $maxLines lines of at most $maxCharsPerLine visible characters where the words allow it.
      * With $keepDialogueLines, each line that starts with a dialogue dash stays a line of its own and is not wrapped.
@@ -31,7 +28,7 @@ final class LineWrapper
                 continue;
             }
 
-            $startsWithDash = preg_match('/^(?:\s|<[^>]*>)*[-\x{2010}\x{2013}\x{2014}]/u', $line) === 1;
+            $startsWithDash = preg_match('/^(?:\s|' . Markup::TAG . ')*[-\x{2010}\x{2013}\x{2014}]/u', $line) === 1;
             if ($segments === [] || $startsWithDash) {
                 $segments[] = $words;
             } else {
@@ -100,8 +97,9 @@ final class LineWrapper
      */
     public static function measuredWords(string $text): array
     {
-        $entity = self::ENTITY;
-        $tokens = preg_split("/(<[^>]*>|$entity| )/", $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+        $tag    = Markup::TAG;
+        $entity = Markup::ENTITY;
+        $tokens = preg_split("/($tag|$entity| )/", $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
 
         $words = [];
         $word  = ["text" => "", "length" => 0];
@@ -116,7 +114,7 @@ final class LineWrapper
 
             $word["text"]   .= $token;
             $word["length"] += match (true) {
-                preg_match('/^<[^>]*>$/', $token) === 1   => 0,
+                preg_match("/^$tag\$/", $token) === 1    => 0,
                 preg_match("/^$entity\$/", $token) === 1 => 1,
                 default                                   => Markup::countCharacters($token),
             };

@@ -10,6 +10,7 @@ use DOMNode;
 use DOMXPath;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -472,7 +473,7 @@ final class TtmlParser extends SubtitleParser
                 $markup .= $this->closeTags($stack, 0);
                 $stack   = [];
                 $markup .= $openAgent === null ? "" : "</v>";
-                $markup .= $run["agent"] === null ? "" : "<v " . htmlspecialchars($run["agent"], ENT_NOQUOTES) . ">";
+                $markup .= $run["agent"] === null ? "" : Markup::voiceTag($run["agent"]);
                 $openAgent = $run["agent"];
             }
 
@@ -486,7 +487,7 @@ final class TtmlParser extends SubtitleParser
                 $markup .= $tag;
             }
             $stack   = $wanted;
-            $markup .= htmlspecialchars($run["text"], ENT_NOQUOTES);
+            $markup .= Markup::escapeText($run["text"]);
         }
 
         return $markup . $this->closeTags($stack, 0);

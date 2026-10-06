@@ -10,6 +10,7 @@ use DOMNode;
 use DOMText;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\SamiReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -51,7 +52,7 @@ final class SamiParser extends SubtitleParser
         $formatData = [];
 
         if (preg_match('/<TITLE\b[^>]*>(.*?)<\/TITLE\s*>/is', $rawSubtitle, $matches) && trim($matches[1]) !== "") {
-            $subtitle->setMetadata(Subtitle::METADATA_TITLE, html_entity_decode(trim($matches[1]), ENT_QUOTES | ENT_HTML5, "UTF-8"));
+            $subtitle->setMetadata(Subtitle::METADATA_TITLE, Markup::decodeEntities(trim($matches[1])));
         }
         if (preg_match('/<SAMIParam\b[^>]*>(.*?)<\/SAMIParam\s*>/is', $rawSubtitle, $matches)) {
             $formatData["samiParam"] = $matches[1];
@@ -272,7 +273,7 @@ final class SamiParser extends SubtitleParser
         $markup = "";
         foreach ($node->childNodes as $child) {
             if ($child instanceof DOMText) {
-                $markup .= htmlspecialchars(preg_replace('/[ \t\n\r\f]+/', " ", $child->nodeValue), ENT_NOQUOTES, "UTF-8");
+                $markup .= Markup::escapeText(preg_replace('/[ \t\n\r\f]+/', " ", $child->nodeValue));
                 continue;
             }
             if (!$child instanceof DOMElement) {

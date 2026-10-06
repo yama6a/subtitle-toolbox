@@ -109,13 +109,13 @@ trait ShortCueMerging
      */
     private static function shortCueMergingOneVoiceTag(SubtitleCue $first, SubtitleCue $second, array $speakers): ?array
     {
-        $voiceTag = '/^<v(?:\.[^\s>]*)?\s+[^>]*>/i';
+        $voiceTag = '/^' . Markup::VOICE_TAG . '/i';
         if (count($speakers) !== 1 || preg_match($voiceTag, $first->getText(), $match) !== 1
             || preg_match($voiceTag, $second->getText()) !== 1) {
             return null;
         }
 
-        $lines    = preg_replace('/<v(?:\.[^\s>]*)?\s+[^>]*>|<\/v>/i', "", [...$first->getLines(), ...$second->getLines()]);
+        $lines    = preg_replace('/' . Markup::VOICE_TAG . '|<\/v>/i', "", [...$first->getLines(), ...$second->getLines()]);
         $lines[0] = $match[0] . $lines[0];
         if (preg_match('/<\/v>$/i', $second->getText()) === 1) {
             $lines[count($lines) - 1] .= "</v>";

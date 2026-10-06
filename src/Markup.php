@@ -6,21 +6,62 @@ namespace SubtitleToolbox;
 
 final class Markup
 {
+    /**
+     * The core markup tags that style text. <v> names a speaker instead.
+     *
+     * @internal
+     */
+    public const STYLE_TAGS = ["b", "i", "u", "s", "font"];
+
     // Word timestamps such as <00:01:02.500> are core markup too, but they are no tag names that keepTags() keeps.
     /** @internal */
-    public const CORE_TAGS = ["b", "i", "u", "s", "font", "v"];
+    public const CORE_TAGS = [...self::STYLE_TAGS, "v"];
+
+    // A tag ends at the first ">", even after a lone quote as in <v O'Neil>. strip_tags() would read the quote as
+    // the start of an attribute value and remove the text up to the next quote.
+    /**
+     * Matches a tag such as <b> or </font>. A tag has no white space after its "<", so "< b>" is text.
+     *
+     * @internal
+     */
+    public const TAG = '<(?![ \t\n\r\f\v])[^<>]*>';
+
+    /**
+     * Matches a <v> tag with a name, such as <v.loud Anna>. Group 1 holds the classes and group 2 the name.
+     *
+     * @internal
+     */
+    public const VOICE_TAG = self::VOICE_TAG_START . '\s+([^>]*)>';
+
+    /**
+     * Matches the start of a <v> tag up to the name. Group 1 holds the classes, such as ".loud".
+     *
+     * @internal
+     */
+    public const VOICE_TAG_START = '<v(\.[^\s>]*)?';
+
+    /**
+     * Matches the body of a core word timestamp, such as 00:01:02.500.
+     *
+     * @internal
+     */
+    public const WORD_TIMESTAMP = '\d{2,}:[0-5]\d:[0-5]\d\.\d{3}';
 
     /**
      * Matches a core word timestamp such as <00:01:02.500> and captures it as group 1.
      *
      * @internal
      */
-    public const WORD_TIMESTAMP_REGEX = "/(<\d{2,}:[0-5]\d:[0-5]\d\.\d{3}>)/";
+    public const WORD_TIMESTAMP_REGEX = '/(<' . self::WORD_TIMESTAMP . '>)/';
 
+    /**
+     * Matches an entity such as &amp;, &#233; or &#xE9;.
+     *
+     * @internal
+     */
+    public const ENTITY = '&(?:[a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#[xX][0-9a-fA-F]+);';
 
-    // A tag ends at the first ">", even after a lone quote as in <v O'Neil>. strip_tags() would read the quote as
-    // the start of an attribute value and remove the text up to the next quote.
-    private const TAG_REGEX = '/<(?![ \t\n\r\f\v])[^<>]*>/';
+    private const TAG_REGEX = '/' . self::TAG . '/';
 
 
     public static function stripAllTags(string $text): string
@@ -119,7 +160,7 @@ final class Markup
      */
     public static function escapeTextLike(string $text, string $raw): string
     {
-        $entity = '&(?=[a-zA-Z][a-zA-Z0-9]*;|#[0-9]+;|#[xX][0-9a-fA-F]+;)';
+        $entity = '(?=' . self::ENTITY . ')&';
         $text   = preg_match("/&(?!lt;|gt;|amp;)/", $raw) === 1
             ? (preg_replace("/$entity/", "&amp;", $text) ?? str_replace("&", "&amp;", $text))
             : str_replace("&", "&amp;", $text);
@@ -138,7 +179,7 @@ final class Markup
      */
     public static function splitTags(string $line): array
     {
-        return preg_split('/(<[^<>]*>)/', $line, -1, PREG_SPLIT_DELIM_CAPTURE);
+        return preg_split('/(' . self::TAG . ')/', $line, -1, PREG_SPLIT_DELIM_CAPTURE);
     }
 
 
@@ -177,7 +218,7 @@ final class Markup
     public static function hasVisibleText(array $lines): bool
     {
         foreach ($lines as $line) {
-            if (trim(preg_replace('/<[^<>]*>/', "", $line)) !== "") {
+            if (trim(preg_replace(self::TAG_REGEX, "", $line)) !== "") {
                 return true;
             }
         }
@@ -196,6 +237,114 @@ final class Markup
 
 
     /**
+     * Removes tags, decodes entities and trims the text, for example "<i>Hi</i> &amp; bye " becomes "Hi & bye".
+     *
+     * @internal
+     */
+    public static function visibleText(string $text): string
+    {
+        return trim(self::plainText($text));
+    }
+
+
+    /**
+     * Returns the name of the first <v> tag, with entities decoded and spaces trimmed, or null when $text has no <v> tag.
+     *
+     * @internal
+     */
+    public static function speaker(string $text): ?string
+    {
+        return preg_match('/' . self::VOICE_TAG . '/', $text, $match) === 1 ? trim(self::decodeEntities($match[2])) : null;
+    }
+
+
+    /**
+     * Puts the <v> tag of $speaker before the first line that holds more than white space. An empty $speaker adds no tag.
+     *
+     * @param list<string> $lines
+     * @return list<string>
+     *
+     * @internal
+     */
+    public static function addSpeaker(array $lines, string $speaker): array
+    {
+        if ($speaker === "") {
+            return $lines;
+        }
+
+        foreach ($lines as $index => $line) {
+            if (trim($line) !== "") {
+                $lines[$index] = self::voiceTag($speaker) . ltrim($line);
+                break;
+            }
+        }
+
+        return $lines;
+    }
+
+
+    /**
+     * Removes style tag pairs without text, such as <i></i> or <b><i></i></b>, until none is left. With $withSpaces,
+     * a pair that holds only white space goes too and leaves the white space.
+     *
+     * @internal
+     */
+    public static function removeEmptyTagPairs(string $text, bool $ignoreCase = false, bool $withSpaces = false): string
+    {
+        $pattern = '/<(' . implode("|", self::STYLE_TAGS) . ')(?=[\s.>])[^<>]*>(' . ($withSpaces ? '\s*' : '') . ')<\/\1>/'
+            . ($ignoreCase ? "i" : "");
+        do {
+            $text = preg_replace($pattern, '$2', $text, -1, $count) ?? $text;
+        } while ($count > 0);
+
+        return $text;
+    }
+
+
+    /**
+     * Finds the tags of $tagNames that do not pair up, case-insensitively. A closing tag closes the last open tag of its
+     * name. With $closeInner, it also closes the tags that opened after that tag, such as <i> in "<b><i>Hi</b>".
+     *
+     * @param list<string> $lines
+     * @param list<string> $tagNames lowercase tag names, for example ["b", "i"]
+     * @return array{stray: list<array{int, int, int}>, inner: list<string>, open: list<string>} the line index, offset and
+     *         length of each closing tag without an open tag, the tag names that $closeInner closed, and the tag names
+     *         still open after the last line
+     *
+     * @internal
+     */
+    public static function unbalancedTags(array $lines, array $tagNames, bool $closeInner = false): array
+    {
+        $pattern = '/<(\/?)(' . implode("|", $tagNames) . ')(?=[\s.>])[^<>]*>/i';
+        $open    = [];
+        $stray   = [];
+        $inner   = [];
+        foreach ($lines as $lineIndex => $line) {
+            preg_match_all($pattern, $line, $tags, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+            foreach ($tags as $tag) {
+                $name = strtolower($tag[2][0]);
+                if ($tag[1][0] === "") {
+                    $open[] = $name;
+                    continue;
+                }
+
+                $match = array_search($name, array_reverse($open, true), true);
+                if ($match === false) {
+                    $stray[] = [$lineIndex, $tag[0][1], strlen($tag[0][0])];
+                } elseif ($closeInner) {
+                    $inner = [...$inner, ...array_slice($open, $match + 1)];
+                    $open  = array_slice($open, 0, $match);
+                } else {
+                    unset($open[$match]);
+                }
+            }
+        }
+
+        return ["stray" => $stray, "inner" => $inner, "open" => array_values($open)];
+    }
+
+
+    /**
      * Removes tags, decodes entities, trims each line and drops the lines that end up empty, for formats without markup.
      *
      * @param list<string> $lines
@@ -206,7 +355,7 @@ final class Markup
     public static function plainLines(array $lines): array
     {
         return array_values(array_filter(
-            array_map(fn (string $line): string => trim(self::plainText($line)), $lines),
+            array_map(self::visibleText(...), $lines),
             fn (string $line): bool => $line !== ""
         ));
     }
@@ -217,7 +366,7 @@ final class Markup
      */
     public static function visibleLength(string $text): int
     {
-        return self::countCharacters(trim(self::plainText($text)));
+        return self::countCharacters(self::visibleText($text));
     }
 
 
@@ -283,9 +432,11 @@ final class Markup
      */
     public static function openCoreTags(string $text, array $openTags = []): array
     {
-        preg_match_all('/<(\/?)([a-zA-Z]+)[^>]*>/', $text, $tags, PREG_SET_ORDER);
-        foreach ($tags as [$tag, $slash, $name]) {
-            $name = strtolower($name);
+        preg_match_all(self::TAG_REGEX, $text, $tags);
+        foreach ($tags[0] as $tag) {
+            preg_match('/^<(\/?)([a-zA-Z]*)/', $tag, $match);
+            [, $slash, $name] = $match;
+            $name             = strtolower($name);
             if (!in_array($name, self::CORE_TAGS, true)) {
                 continue;
             }
@@ -330,11 +481,13 @@ final class Markup
      */
     public static function wordTimestampSeconds(string $timestamp): ?float
     {
-        if (preg_match('/^<(\d{2,}):([0-5]\d):([0-5]\d\.\d{3})>$/', $timestamp, $match) !== 1) {
+        if (preg_match('/^<' . self::WORD_TIMESTAMP . '>$/', $timestamp) !== 1) {
             return null;
         }
 
-        return (int) $match[1] * 3600 + (int) $match[2] * 60 + (float) $match[3];
+        [$hours, $minutes, $seconds] = explode(":", substr($timestamp, 1, -1));
+
+        return (int) $hours * 3600 + (int) $minutes * 60 + (float) $seconds;
     }
 
 

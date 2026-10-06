@@ -261,17 +261,7 @@ final class CsvParser extends SubtitleParser
      */
     private function lines(string $text, string $speaker): array
     {
-        $lines = explode("\n", Markup::escapeText($text));
-        if ($speaker !== "") {
-            foreach ($lines as $index => $line) {
-                if (trim($line) !== "") {
-                    $lines[$index] = "<v " . Markup::escapeText($speaker) . ">" . ltrim($line);
-                    break;
-                }
-            }
-        }
-
-        return $lines;
+        return Markup::addSpeaker(explode("\n", Markup::escapeText($text)), $speaker);
     }
 
 

@@ -15,8 +15,6 @@ final class SamiFormatter extends SubtitleFormatter
 {
     private const DEFAULT_CLASS = "SUBTTL";
 
-    private const STYLE_TAGS = ["b", "i", "u", "s", "font"];
-
     private const NBSP = "\u{00A0}";
 
 
@@ -65,7 +63,7 @@ final class SamiFormatter extends SubtitleFormatter
         }
 
         $lines = array_map(
-            fn (string $line): string => $this->writeNbsp($stripAll ? Markup::stripAllTags($line) : Markup::keepTags($line, self::STYLE_TAGS)),
+            fn (string $line): string => $this->writeNbsp($stripAll ? Markup::stripAllTags($line) : Markup::keepTags($line, Markup::STYLE_TAGS)),
             $cue->getLines()
         );
 

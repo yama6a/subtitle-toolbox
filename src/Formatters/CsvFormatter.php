@@ -19,7 +19,7 @@ final class CsvFormatter extends SubtitleFormatter
 {
     protected const FORMAT_OPTIONS = CsvWriteOptions::class;
 
-    private const SPEAKER_REGEX = '/^<v(?:\.[^\s>]*)?\s+([^>]*)>/';
+    private const SPEAKER_REGEX = '/^' . Markup::VOICE_TAG . '/';
 
 
     /**
@@ -129,7 +129,7 @@ final class CsvFormatter extends SubtitleFormatter
         $lines   = $cue->getLines();
         $speaker = "";
         if ($lines !== [] && preg_match(self::SPEAKER_REGEX, $lines[0], $matches)) {
-            $speaker  = trim(Markup::decodeEntities($matches[1]));
+            $speaker  = Markup::speaker($matches[0]);
             $lines[0] = substr($lines[0], strlen($matches[0]));
         }
 
