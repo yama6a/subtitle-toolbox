@@ -133,6 +133,7 @@ movie.mkv
 ```
 
 - **Detection**: the tool knows an MKV or WebM file by its first 4 bytes, not by its extension. Standard input works too.
+- **Memory**: the tool reads an MKV or WebM file the same way as `MatroskaReader`, see [mkv.md](mkv.md). Standard input is different. The tool reads the whole input into memory first.
 - **Track**: a file with one subtitle track needs no `--track`. For a file with more, the tool fails and lists the tracks.
 - **Format**: an `S_TEXT/UTF8` track is SubRip, ASS and SSA tracks are ASS, `S_TEXT/WEBVTT` is WebVTT and `S_HDMV/PGS` is PGS. Without `--to`, `retime` and `sync` keep this format. `convert movie.mkv --to srt --track 3 --output-dir out` writes `out/movie.srt`.
 - **Second file**: `diff` reads the track of the new file with `--track2`, for example `diff old.mkv new.mkv --track 3 --track2 8`. `dual` takes `--primary-track` and `--secondary-track`.
