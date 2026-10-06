@@ -17,9 +17,6 @@ final class SubRipParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::SubRip->value;
 
-    // Legacy SSA codes: 1 to 3 are bottom, +4 is top, +8 is middle.
-    private const LEGACY_ALIGNMENTS = [1 => 1, 2 => 2, 3 => 3, 5 => 7, 6 => 8, 7 => 9, 9 => 4, 10 => 5, 11 => 6];
-
     protected function read(string $rawSubtitle): Subtitle
     {
         $subtitle   = new Subtitle();
@@ -188,11 +185,9 @@ final class SubRipParser extends SubtitleParser
                 $markup  = "";
                 $unknown = "";
                 foreach ($tags[0] as $tag) {
-                    if (preg_match('/^\\\\an([1-9])$/', $tag, $matches)) {
-                        $alignment ??= (int) $matches[1];
-                    } elseif (preg_match('/^\\\\a(\d{1,2})$/', $tag, $matches)
-                              && isset(self::LEGACY_ALIGNMENTS[(int) $matches[1]])) {
-                        $alignment ??= self::LEGACY_ALIGNMENTS[(int) $matches[1]];
+                    $tagAlignment = SsaOverrideTags::alignment($tag);
+                    if ($tagAlignment !== null) {
+                        $alignment ??= $tagAlignment;
                     } elseif (preg_match('/^\\\\([bius])([01])$/', $tag, $matches)) {
                         $markup .= $this->toggleTag($matches[1], $matches[2] === "1", $openTags);
                     } else {

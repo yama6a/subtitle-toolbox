@@ -22,9 +22,6 @@ final class AssParser extends SubtitleParser
         "AlphaLevel", "Encoding",
     ];
 
-    // Legacy SSA codes: 1 to 3 are bottom, +4 is top, +8 is middle.
-    private const LEGACY_ALIGNMENTS = [1 => 1, 2 => 2, 3 => 3, 5 => 7, 6 => 8, 7 => 9, 9 => 4, 10 => 5, 11 => 6];
-
     // A tag ends at the next backslash, except inside parentheses such as \t(\1c&HFF&).
     private const OVERRIDE_TAG_REGEX = '/\\\\[^\\\\(]*(?<args>\((?:[^()]++|(?&args))*\))?[^\\\\]*/';
 
@@ -289,10 +286,9 @@ final class AssParser extends SubtitleParser
             preg_match_all(self::OVERRIDE_TAG_REGEX, substr($part, 1, -1), $tags);
             foreach ($tags[0] as $tag) {
                 $tag = trim($tag);
-                if (preg_match('/^\\\\an([1-9])$/', $tag, $matches)) {
-                    $alignment ??= (int) $matches[1];
-                } elseif (preg_match('/^\\\\a(\d{1,2})$/', $tag, $matches) && isset(self::LEGACY_ALIGNMENTS[(int) $matches[1]])) {
-                    $alignment ??= self::LEGACY_ALIGNMENTS[(int) $matches[1]];
+                $tagAlignment = SsaOverrideTags::alignment($tag);
+                if ($tagAlignment !== null) {
+                    $alignment ??= $tagAlignment;
                 } elseif (preg_match('/^\\\\([bius])([01]?)$/', $tag, $matches)) {
                     $markup .= $this->setTag($matches[1], $matches[2] === "1" ? "<$matches[1]>" : null, $openTags);
                 } elseif (preg_match('/^\\\\1?c(?:&H([0-9A-Fa-f]{1,8})&?)?$/', $tag, $matches)) {
