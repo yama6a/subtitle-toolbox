@@ -64,6 +64,19 @@ class EbuStlParserTest extends TestCase
     }
 
 
+    public function testCommentBlockStaysBeforeItsSubtitleWhenTheSubtitlesAreOutOfTimeOrder(): void
+    {
+        $content  = file_get_contents(__DIR__ . "/../files/stl/real/shop_comments_out_of_order.stl");
+        $subtitle = (new EbuStlParser())->parse($content, new ReadOptions());
+
+        $this->assertSame(["The door opens.", "The shop is open.", "The shop closes."], array_map(fn ($cue) => $cue->getText(), $subtitle->getCues()));
+        $this->assertEquals([
+            new Comment("The door opens before the shop.", 0),
+            new Comment("End of the shop scene.", 3),
+        ], $subtitle->getComments());
+    }
+
+
     public static function textFields(): array
     {
         return [

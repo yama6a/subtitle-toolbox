@@ -188,6 +188,19 @@ class WebVttParserTest extends TestCase
     }
 
 
+    public function testNoteStaysBeforeItsCueWhenTheCuesAreOutOfTimeOrder(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/real/own_note_before_earlier_cue.vtt"), Format::WebVtt);
+
+        $this->assertSame(["The door opens.", "The shop is open.", "The shop closes."], array_map(fn (SubtitleCue $cue) => $cue->getText(), $subtitle->getCues()));
+        $this->assertEquals([
+            new Comment("The door opens before the shop.", 0),
+            new Comment("The shop opens at nine.", 1),
+            new Comment("End of the shop scene.", 3),
+        ], $subtitle->getComments());
+    }
+
+
     public function testCommentsKeepTheirPositionBetweenCues(): void
     {
         $raw = "WEBVTT\n\nNOTE\nfirst line\nsecond line\n\n00:01.000 --> 00:02.000\nOne\n\n"

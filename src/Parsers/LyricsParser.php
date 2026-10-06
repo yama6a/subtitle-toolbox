@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
+use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
@@ -51,6 +52,7 @@ final class LyricsParser extends SubtitleParser
         $parsedCues = [];
         $offset     = $this->findOffset($lines);
         $idTags     = [];
+        $comments   = [];
         $timeline   = [];
 
         foreach ($lines as $currentLine) {
@@ -70,7 +72,7 @@ final class LyricsParser extends SubtitleParser
                 continue;
             }
 
-            $this->addIdTag($subtitle, $idTags, $currentLine, count($parsedCues));
+            $this->addIdTag($subtitle, $idTags, $comments, $currentLine, count($parsedCues));
         }
 
         if ($idTags !== []) {
@@ -78,9 +80,8 @@ final class LyricsParser extends SubtitleParser
         }
 
         $this->assignEndTimes($timeline);
-        $subtitle->addCues($parsedCues);
 
-        return $subtitle;
+        return CommentAnchors::addParsed($subtitle, $parsedCues, $comments);
     }
 
 
@@ -124,9 +125,10 @@ final class LyricsParser extends SubtitleParser
 
 
     /**
-     * @param array<string, string> $idTags
+     * @param array<string, string>          $idTags
+     * @param list<array{0: string, 1: int}> $comments
      */
-    private function addIdTag(Subtitle $subtitle, array &$idTags, string $line, int $cueCount): void
+    private function addIdTag(Subtitle $subtitle, array &$idTags, array &$comments, string $line, int $cueCount): void
     {
         if (!preg_match(self::ID_TAG_REGEX, $line, $matches)) {
             return;
@@ -136,7 +138,7 @@ final class LyricsParser extends SubtitleParser
         $value = trim($matches[2]);
 
         if ($tag === "#") {
-            $subtitle->addComment($value, $cueCount);
+            $comments[] = [$value, $cueCount];
         } elseif (array_key_exists($tag, self::METADATA_TAGS)) {
             $subtitle->setMetadata(self::METADATA_TAGS[$tag], $value);
         } elseif ($tag !== "offset" || !preg_match(self::OFFSET_REGEX, $value)) {

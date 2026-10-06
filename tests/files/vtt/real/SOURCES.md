@@ -5,6 +5,7 @@
 | `astisub_carriage_return.vtt` | Written for this repository in the shape of https://github.com/asticode/go-astisub/blob/721d3fc8258bcc5912423c551da15ad39ebcc553/testdata/example-in-carriage-return.vtt | MIT |
 | `astisub_html_entities.vtt` | Written for this repository in the shape of https://github.com/asticode/go-astisub/blob/f285923a0c8d5b2ecce67d8eaf9ed26cce16e5b0/testdata/example-in-html-entities.vtt | MIT |
 | `mantas_styles.vtt` | https://github.com/mantas-done/subtitles/blob/e41f318224dc9c38339c2bfcb0199e5bb788abce/tests/files/vtt_with_styles.vtt | mantas-done/subtitles, MIT |
+| `own_note_before_earlier_cue.vtt` | Written for this repository. Cues out of time order, and a `NOTE` before a cue that starts earlier than the cue before it | MIT |
 | `w3c_chapters.vtt` | https://www.w3.org/TR/webvtt1/, section 1.6, chapters example | W3C Software and Document License, https://www.w3.org/copyright/software-license-2023/ |
 | `w3c_comments.vtt` | https://www.w3.org/TR/webvtt1/, section 1.5, comments in WebVTT | W3C Software and Document License, https://www.w3.org/copyright/software-license-2023/ |
 | `w3c_cue_settings.vtt` | https://www.w3.org/TR/webvtt1/, section 1.4, cue settings example | W3C Software and Document License, https://www.w3.org/copyright/software-license-2023/ |

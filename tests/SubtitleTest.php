@@ -77,6 +77,27 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testCommentAfterTheLastCueStaysLastWhenACueIsAddedFirst(): void
+    {
+        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "one"), new SubtitleCue(3, 4, "three"), new SubtitleCue(5, 6, "five")]);
+        $subtitle->addComment("x", 3);
+
+        $subtitle->addCue(new SubtitleCue(0, 0.5, "zero"));
+
+        $this->assertEquals([new Comment("x", 4)], $subtitle->getComments());
+    }
+
+
+    public function testCommentAfterTheLastCueStaysLastWhenANewCueSortsLast(): void
+    {
+        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "one"), new SubtitleCue(3, 4, "three")])->addComment("x", 2);
+
+        $subtitle->addCue(new SubtitleCue(5, 6, "five"));
+
+        $this->assertEquals([new Comment("x", 3)], $subtitle->getComments());
+    }
+
+
     public function testRemoveCueNumbersTheCuesFromZeroAgain(): void
     {
         $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "one"), new SubtitleCue(3, 4, "two"), new SubtitleCue(5, 6, "three")]);
@@ -290,17 +311,6 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
             ],
             $subtitle->getComments()
         );
-    }
-
-
-    public function testCommentBeforeAddedCueMovesWithIt(): void
-    {
-        $subtitle = new Subtitle();
-        $subtitle->addCue(new SubtitleCue(3, 4, "second"));
-        $subtitle->addComment("before first", 1);
-        $subtitle->addCue(new SubtitleCue(1, 2, "first"));
-
-        $this->assertEquals([new Comment("before first", 0)], $subtitle->getComments());
     }
 
 

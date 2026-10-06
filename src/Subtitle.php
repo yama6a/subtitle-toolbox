@@ -435,12 +435,13 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Adds the cues and sorts all cues by start time once.
+     * Adds the cues and sorts all cues by start time once. Each comment stays before the cue it came before.
      *
      * @param iterable<SubtitleCue> $cues
      */
     public function addCues(iterable $cues): self
     {
+        $anchors = CommentAnchors::of($this->cues, $this->comments);
         foreach ($cues as $cue) {
             if (!$cue instanceof SubtitleCue) {
                 throw new InvalidArgumentException("addCues() takes SubtitleCue objects only, got " . get_debug_type($cue) . ".");
@@ -448,7 +449,10 @@ final class Subtitle implements \IteratorAggregate, \Countable
             $this->cues[] = $cue;
         }
 
-        return $this->reIndexCues();
+        $this->sortCues();
+        $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
+
+        return $this;
     }
 
 
@@ -477,7 +481,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
             $this->comments
         );
 
-        usort($this->cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
+        $this->sortCues();
 
         foreach ($commentCues as $commentIndex => $cue) {
             $cueIndex = $cue === null ? false : array_search($cue, $this->cues, true);
@@ -585,6 +589,12 @@ final class Subtitle implements \IteratorAggregate, \Countable
         }
 
         return null;
+    }
+
+
+    private function sortCues(): void
+    {
+        usort($this->cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
     }
 
 

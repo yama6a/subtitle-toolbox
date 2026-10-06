@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
+use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\Encoding\CodePage;
 use SubtitleToolbox\Encoding\Iso6937;
 use SubtitleToolbox\Exceptions\ParsingException;
@@ -68,6 +69,7 @@ final class EbuStlParser extends SubtitleParser
         $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, EbuStl::LANGUAGES[strtoupper($gsi["LC"])] ?? null);
 
         $comments    = [];
+        $cueComments = [];
         $groups      = [];
         $firstTimeIn = null;
         $blockIndex  = 0;
@@ -79,7 +81,7 @@ final class EbuStlParser extends SubtitleParser
             if (ord($header[15]) === 1) {
                 $lines = array_filter(array_map("trim", $lines), fn (string $line): bool => $line !== "");
                 $text  = Markup::plainText(implode("\n", $lines));
-                $subtitle->addComment($text, count($parsedCues));
+                $cueComments[] = [$text, count($parsedCues)];
                 $comments[] = ["text" => $text, "blocks" => $hexes];
                 continue;
             }
@@ -113,7 +115,7 @@ final class EbuStlParser extends SubtitleParser
             ]);
             $parsedCues[] = $cue;
         }
-        $subtitle->addCues($parsedCues);
+        CommentAnchors::addParsed($subtitle, $parsedCues, $cueComments);
 
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, [
             "gsi"                        => $gsi,

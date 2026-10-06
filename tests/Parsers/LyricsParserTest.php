@@ -150,6 +150,19 @@ class LyricsParserTest extends TestCase
     }
 
 
+    public function testCommentTagStaysBeforeItsLineWhenTheLinesAreOutOfTimeOrder(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/lrc/real/own-comment-before-earlier-line.lrc"), Format::Lyrics);
+
+        $this->assertSame(["The door opens", "The shop is open", "The shop closes"], array_map(fn ($cue) => $cue->getText(), $subtitle->getCues()));
+        $this->assertEquals([
+            new Comment("The door opens before the shop", 0),
+            new Comment("The shop opens at nine", 1),
+            new Comment("End of the shop song", 3),
+        ], $subtitle->getComments());
+    }
+
+
     public function testOffsetMakesLyricsShowEarlier(): void
     {
         $subtitle = Subtitle::fromString(

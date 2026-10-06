@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
+use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\LineEnding;
@@ -33,12 +34,16 @@ final class AssParser extends SubtitleParser
     /** @var list<SubtitleCue> */
     private array $cues = [];
 
+    /** @var list<array{0: string, 1: int}> */
+    private array $comments = [];
+
 
     protected function read(string $rawSubtitle): Subtitle
     {
         $this->warnings   = [];
         $this->eventIndex = 0;
         $this->cues       = [];
+        $this->comments   = [];
         $rawSubtitle      = StringHelpers::removeUtf8Bom($rawSubtitle);
         $rawSubtitle      = StringHelpers::normalizeEOLs($rawSubtitle);
 
@@ -78,7 +83,7 @@ final class AssParser extends SubtitleParser
             match (true) {
                 strcasecmp($section, "Script Info") === 0 => $this->readScriptInfoLine($subtitle, $data, $line),
                 $this->isStylesSection($section)          => $this->readStyleLine($data, $section, $line),
-                strcasecmp($section, "Events") === 0      => $this->readEventLine($subtitle, $data, $line, $lineIndex + 1),
+                strcasecmp($section, "Events") === 0      => $this->readEventLine($data, $line, $lineIndex + 1),
                 default                                   => $data["sections"][$section][] = $line,
             };
         }
@@ -90,7 +95,7 @@ final class AssParser extends SubtitleParser
         $data["eventFormat"] ??= $this->isSsa($data) ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT;
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, $data);
 
-        return $subtitle->addCues($this->cues);
+        return CommentAnchors::addParsed($subtitle, $this->cues, $this->comments);
     }
 
 
@@ -127,7 +132,7 @@ final class AssParser extends SubtitleParser
     }
 
 
-    private function readEventLine(Subtitle $subtitle, array &$data, string $line, int $lineNumber): void
+    private function readEventLine(array &$data, string $line, int $lineNumber): void
     {
         [$type, $value] = $this->splitDescriptor($line);
         if (strcasecmp($type, "Format") === 0) {
@@ -142,7 +147,7 @@ final class AssParser extends SubtitleParser
         }
 
         try {
-            $this->readEvent($subtitle, $data, $line, $lineNumber, $value, $isComment);
+            $this->readEvent($data, $line, $lineNumber, $value, $isComment);
         } catch (ParsingException $exception) {
             $this->fail($exception, $lineNumber, $this->eventIndex, [$line]);
         }
@@ -150,7 +155,7 @@ final class AssParser extends SubtitleParser
     }
 
 
-    private function readEvent(Subtitle $subtitle, array &$data, string $line, int $lineNumber, string $value, bool $isComment): void
+    private function readEvent(array &$data, string $line, int $lineNumber, string $value, bool $isComment): void
     {
         $format = $data["eventFormat"] ?? ($this->isSsa($data) ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT);
         $fields = $this->combine($format, $value, false);
@@ -167,7 +172,7 @@ final class AssParser extends SubtitleParser
 
         if ($isComment) {
             $data["commentEvents"][] = $fields;
-            $subtitle->addComment($fields[$text], count($this->cues));
+            $this->comments[] = [$fields[$text], count($this->cues)];
 
             return;
         }
