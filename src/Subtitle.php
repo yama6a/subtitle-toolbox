@@ -18,6 +18,7 @@ use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\OcrEngine;
+use SubtitleToolbox\Ocr\OcrLanguage;
 use SubtitleToolbox\Ocr\OcrRunner;
 use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
@@ -606,8 +607,11 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     /**
      * Sets the lines of every image cue without text to the text that $engine reads, see OcrRunner.
+     *
+     * @param OcrLanguage|string|null $language An OcrLanguage case, or the name of any installed Tesseract model, for
+     *                                          example a custom trained model. php-glyph-ocr ignores it.
      */
-    public function recognizeText(OcrEngine $engine, ?string $language = null): self
+    public function recognizeText(OcrEngine $engine, OcrLanguage|string|null $language = null): self
     {
         (new OcrRunner($engine))->run($this, $language);
 
