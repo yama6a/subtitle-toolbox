@@ -24,9 +24,9 @@ Subtitle::loadAutoDetectFormat('/media/one-track.webm');       // reads the only
 - **Tracks**: `Subtitle::tracks()` lists only tracks of type subtitle. `MatroskaTrack`, in the same namespace, has `number`, `codecId`, `language`, `name`, `default` and `forced`.
 - **Format**: `getFormat()` of the subtitle is the format of the codec in the table.
 - **Detection**: `loadAutoDetectFormat()` and `fromStringAutoDetectFormat()` know an MKV or WebM file by its first 4 bytes, not by its extension.
-- **Language**: `LanguageBCP47`, else `Language`, else `eng`, as the spec defines. `loadTrack()` puts it into the `language` metadata.
+- **Language**: the reader takes `LanguageBCP47`. Without it, the reader takes `Language`. Without both, the language is `eng`, as the spec defines. `loadTrack()` puts it into the `language` metadata.
 - **Forced**: on a track with the forced flag, `loadTrack()` sets the forced flag of every cue. PGS cues also keep the forced flag of their objects.
-- **End times**: a text block without a duration ends at the start of the next block of the track. The last such block lasts `ReadOptions::$lastCueDuration`, 5 s by default.
+- **End times**: a text block without a duration ends at the start of the next block of the track. The last such block lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **Compression**: the reader reads zlib compression and header stripping. It throws `ParsingException` for bzlib and LZO compression and for encryption.
 - **Live recordings**: the reader accepts a file with elements of unknown size, as live recordings write them.
 - **Memory**: the reader skips video and audio data, so memory grows with the subtitle track, not with the file. A 4 GB file needs a few MB.

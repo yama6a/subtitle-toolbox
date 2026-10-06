@@ -49,10 +49,10 @@ $subtitle->getCues()[2]->findFormatData('deepgram')['confidence'];           // 
 
 | Service | Parser, format data key | Cues |
 |:--- |:--- |:--- |
-| [Amazon Transcribe](https://docs.aws.amazon.com/transcribe/latest/dg/how-input.html#how-output) | `AwsTranscribeParser`, `aws-transcribe` | one per `results.audio_segments` entry, else grouped from `results.items` |
-| [Deepgram](https://developers.deepgram.com/docs/pre-recorded-audio) | `DeepgramParser`, `deepgram` | one per `results.utterances` entry, else one per paragraph sentence, else grouped from the words |
-| [AssemblyAI](https://www.assemblyai.com/docs/api-reference/transcripts/get) | `AssemblyAiParser`, `assemblyai` | one per `utterances` entry, else grouped from `words` |
-| [Google Cloud Speech-to-Text](https://cloud.google.com/speech-to-text/docs/async-time-offsets) | `GoogleSpeechParser`, `google-speech` | one per result, else grouped from the words of the last result |
+| [Amazon Transcribe](https://docs.aws.amazon.com/transcribe/latest/dg/how-input.html#how-output) | `AwsTranscribeParser`, `aws-transcribe` | one per `results.audio_segments` entry. Without entries, grouped from `results.items` |
+| [Deepgram](https://developers.deepgram.com/docs/pre-recorded-audio) | `DeepgramParser`, `deepgram` | one per `results.utterances` entry. Without utterances, one per paragraph sentence. Without paragraphs, grouped from the words |
+| [AssemblyAI](https://www.assemblyai.com/docs/api-reference/transcripts/get) | `AssemblyAiParser`, `assemblyai` | one per `utterances` entry. Without utterances, grouped from `words` |
+| [Google Cloud Speech-to-Text](https://cloud.google.com/speech-to-text/docs/async-time-offsets) | `GoogleSpeechParser`, `google-speech` | one per result. With diarization, grouped from the words of the last result |
 
 - **Word grouping**: a cue ends after a word that ends a sentence with `.`, `?`, `!` or their CJK forms. It also ends before a pause of 1 s or more, before a word that makes it longer than 84 characters, and where the speaker changes.
 - **Long cues**: an audio segment, utterance or result stays one cue. [`Resegmenter`](editing.md#long-cues) breaks it up. With `TranscriptReadOptions::$wordTimestamps`, `ResegmentMode::ByWords` regroups the words with other limits.
@@ -135,7 +135,7 @@ $subtitle = Subtitle::fromString($json, Format::PodcastTranscript, new ReadOptio
 - **Speakers**: the `speaker` of a segment and the name in `<cite>` become `<v Name>`, and back. A cue with two `<v>` speakers gives one segment per speaker, both with the times of the cue.
 - **Joined words**: the parser joins a segment of one word with the next segment of the same speaker. It stops after a word that ends with `.`, `?`, `!` or the ellipsis U+2026. A segment with a space in its body stays one cue.
 - **Word segments**: a word ends where the next word of its cue starts. The last word ends with the cue. So a round trip keeps the start of each word, not its end.
-- **No end time**: a segment without `endTime` and an HTML paragraph end at the next later start. The last one lasts `ReadOptions::$lastCueDuration`, 5 s by default.
+- **No end time**: a segment without `endTime` and an HTML paragraph end at the next later start. The last one lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **HTML input**: each `<time>` starts a cue. The cue holds the `<p>` elements up to the next `<time>` or `<cite>`, one line per `<p>` and `<br>`. A `<cite>` names only the next cue. The parser strips other tags and reads times such as `0:09`, `12:05` and `1:02:03.5`.
 - **HTML output**: a new paragraph starts at a speaker change or a gap. The formatter writes `<cite>` only for a paragraph with a speaker, times such as `0:09` and `1:02:03`, and the text without tags.
 - **Format data**: the JSON parser keeps the top-level fields except `segments` in `findFormatData('podcast-transcript')`, for example `version`. A cue of one segment keeps the other fields of the segment. The formatter writes them back, and `"version": "1.0.0"` when there is none.

@@ -26,7 +26,7 @@ final class ShotChangeOptions
 
     /**
      * Creates the timing rules in frames of $frameRate, where a null $snapWindowFrames means half a second.
-     * $shotChanges holds the shot change times in seconds. Without them, ShotChangeTiming::apply() only closes small gaps.
+     * $shotChanges holds the shot change times in seconds. Without them, ShotChangeTiming::apply() only closes gaps.
      *
      * @param list<float> $shotChanges
      */

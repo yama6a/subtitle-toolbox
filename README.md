@@ -168,7 +168,7 @@ use SubtitleToolbox\Ocr\OcrEngineName;
 use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::load('movie.sup', Format::Pgs);
-$subtitle->recognizeText(OcrEngineChooser::create());                       // Tesseract if installed, else php-glyph-ocr
+$subtitle->recognizeText(OcrEngineChooser::create());                       // Tesseract if installed, otherwise php-glyph-ocr
 $subtitle->recognizeText(OcrEngineChooser::create(OcrEngineName::Glyph));   // always php-glyph-ocr
 $subtitle->save('movie.srt');
 ```
@@ -206,7 +206,7 @@ echo "offset $report->offset s, scale $report->scale, score $report->score\n";
 Every exception implements `SubtitleToolboxException`. See [errors.md](docs/errors.md).
 
 ## OCR
-OCR turns the bitmaps of PGS and VobSub subtitles into text. The library uses Tesseract when it is installed, else php-glyph-ocr. Tesseract reads more than 100 languages, php-glyph-ocr reads only Latin-script fonts. See [ocr.md](docs/ocr.md) for the install commands and a comparison of the engines.
+OCR turns the bitmaps of PGS and VobSub subtitles into text. The library uses Tesseract when it is installed. Otherwise it uses php-glyph-ocr. When neither engine is installed, the call throws `InvalidArgumentException` that names both engines. Tesseract reads more than 100 languages, php-glyph-ocr reads only Latin-script fonts. See [ocr.md](docs/ocr.md) for the install commands and a comparison of the engines.
 
 ## Compatibility
 Semantic versioning covers the public PHP API and the CLI commands, options, exit codes and `--json` shapes. See [compatibility.md](docs/compatibility.md) for what a minor or patch release can change.
@@ -217,7 +217,7 @@ Semantic versioning covers the public PHP API and the CLI commands, options, exi
 - [cli.md](docs/cli.md): all commands and options
 - [formats.md](docs/formats.md): what each parser reads and each formatter writes
 - [editing.md](docs/editing.md): retiming, cutting, joining and splitting cues
-- [text.md](docs/text.md): text changes, hearing-impaired removal, error fixes
+- [text.md](docs/text.md): text changes, hearing-impaired removal, common error fixes
 - [validation.md](docs/validation.md): rules and presets
 - [sync.md](docs/sync.md): sync to a reference or to the speech
 - [subtitle.md](docs/subtitle.md): metadata, comments, cue lookup, statistics

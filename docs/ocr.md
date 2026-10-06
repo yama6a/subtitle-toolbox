@@ -7,9 +7,9 @@ An **image cue** is a cue with a PNG image in the format data key `image`. It ha
 
 ```php
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Ocr\OcrLanguage;
-use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\WriteOptions;
 
 $image = CueImage::fromCue($cue);                    // $image->png, x, y, width, height, screenWidth, screenHeight, forced
@@ -27,9 +27,9 @@ $subtitle->toString(Format::SubRip, new WriteOptions(skipImageCues: true));   //
 - **Language**: pass an `OcrLanguage` case, for example `OcrLanguage::German`. The engine receives its value, the Tesseract model name `deu`. A string such as `'deu+eng'` or the name of a custom trained model reaches the engine as it is.
 - **Confidence**: `(new OcrRunner($engine))->run($subtitle, 'eng')` does the same as `recognizeText()`. It returns an `OcrReport` whose `texts` hold the `RecognizedText` of each cue by cue index.
 - **Forced flag**: `CueImage::toCue()` sets the forced flag of the cue from the `forced` field of the image. OCR keeps the flag.
-- **PNG**: `PngEncoder::encode($width, $height, $pixels)` makes a PNG from a list of `0xRRGGBBAA` integers. It needs no ext-gd. It compresses with ext-zlib when it is loaded, and else writes larger, uncompressed PNG files. `PngDecoder::decode($png)` returns the width, the height and the pixels of a PNG without interlacing. It needs ext-zlib.
+- **PNG**: `PngEncoder::encode($width, $height, $pixels)` makes a PNG from a list of `0xRRGGBBAA` integers. It needs no ext-gd. It compresses with ext-zlib when it is loaded. Otherwise it writes larger, uncompressed PNG files. `PngDecoder::decode($png)` returns the width, the height and the pixels of a PNG without interlacing. It needs ext-zlib.
 - **Size limit**: an image is at most 7,680 pixels wide or high and has at most 8,294,400 pixels, the pixels of a 3840x2160 frame. A larger PGS object or VobSub bitmap throws `ParsingException`. `new CueImage()` and `PngDecoder::decode()` throw `InvalidArgumentException`. The limits are `CueImage::MAX_SIDE` and `CueImage::MAX_PIXELS`. A full 3840x2160 image needs about 330 MB of PHP memory to encode and decode, so raise `memory_limit` for such files.
-- **Text errors**: [fix common OCR errors](text.md#fixing-common-errors) such as `lt's` for `It's`.
+- **Text errors**: [common error fixes](text.md#fixing-common-errors) correct OCR errors such as `lt's` for `It's`.
 
 ## PGS
 Blu-ray discs and many MKV files store subtitles as PGS bitmaps in `.sup` files.
@@ -40,12 +40,12 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
 $subtitle = Subtitle::fromString(file_get_contents('movie.sup'), Format::Pgs);
-$subtitle = Subtitle::fromString(file_get_contents('movie.sup'), Format::Pgs, new ReadOptions(lastCueDuration: 3));   // the last cue lasts 3 s, not 5 s
+$subtitle = Subtitle::fromString(file_get_contents('movie.sup'), Format::Pgs, new ReadOptions(lastCueDuration: 3));   // the last cue lasts 3 s
 $subtitle->shift(-1.5)->convertFrameRate(25, 23.976);
 file_put_contents('movie.synced.sup', $subtitle->toString(Format::Pgs));
 ```
 
-- **Cues**: each display set that shows objects gives one cue. It ends at the next display set. A display set that repeats the same image does not start a new cue. A last cue that no later display set ends lasts `ReadOptions::$lastCueDuration`, 5 s by default.
+- **Cues**: each display set that shows objects gives one cue. It ends at the next display set. A display set that repeats the same image does not start a new cue. A last cue that no later display set ends lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **Image**: one PNG covers all objects of the display set on a transparent background. The parser applies cropping, windows and palette updates.
 - **Forced**: `forced` in the image data is true when at least one object of the display set has the forced flag.
 - **Alignment**: an image whose center is in the top third of the screen gets alignment 8.
@@ -76,13 +76,13 @@ $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);  // "de", from the id line
 
 - **Parse**: pass the `.sub` content and a `VobSubReadOptions` with the `.idx` content. Without it, the parser throws `InvalidArgumentException`. Format detection does not know VobSub, because it sees only one file. The command line tool takes the `.idx` file as input and reads the `.sub` file next to it.
 - **Cues**: the image has the size and the position of the display area, on a screen of the `.idx` size. A subpicture with the forced start command sets `forced`.
-- **Times**: a cue starts at its `timestamp`, plus the `delay` lines of its track. It ends at the stop command of the subpicture. A subpicture without a stop command ends at the next one, at most `ReadOptions::$lastCueDuration` later, 5 s by default.
+- **Times**: a cue starts at its `timestamp`, plus the `delay` lines of its track. It ends at the stop command of the subpicture. A subpicture without a stop command ends at the next one, at most [`ReadOptions::$lastCueDuration`](read-options.md) later.
 - **Colors**: the `.idx` palette and a `custom colors: ON` line apply.
 - **Limits**: the parser reads one image per subpicture. Color and contrast changes after the start command do not apply. The parser ignores the `org`, `scale`, `align`, `fadein/out` and `time offset` player settings.
 - **No formatter**: convert VobSub to PGS with `PgsFormatter`, or to text after OCR.
 
 ## Choosing an engine
-`OcrEngineChooser` picks the engine in one place: Tesseract when the `tesseract` program runs, else php-glyph-ocr when the package is installed.
+`OcrEngineChooser` picks the engine in one place. It uses Tesseract when the `tesseract` program runs. Otherwise it uses php-glyph-ocr when the package is installed. When neither engine is installed, it throws `InvalidArgumentException` that names both engines.
 
 ```php
 use SubtitleToolbox\Ocr\OcrEngineChooser;

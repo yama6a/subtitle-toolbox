@@ -68,7 +68,7 @@ php subtitle-toolbox.phar --version
 ## Input and output
 - **Inputs**: a file, a directory, a glob such as `"season1/*.srt"`, or `-` for standard input. A directory gives its files with a known extension. The tool counts the inputs after it expands directories and globs.
 - **Positional files**: only inputs with the same role, so their order does not matter. A file with another role takes an option, for example `sync --reference FILE` and `dual --primary FILE --secondary FILE`. `diff OLD NEW` keeps 2 positional files, as `diff` and `git diff` do.
-- **Input format**: `--from`, else format detection on the content, else the file extension. Chapters and cloud speech-to-text JSON need `--from`, for example `--from deepgram` or `--from ffmeta-chapters`. `--from` and `--to` also take the 1.x names `ytchapter`, `podcast`, `ogm` and `ffmeta`. The tool reads like `Subtitle::loadAutoDetectFormat()`, see [formats.md](formats.md#load-and-save).
+- **Input format**: `--from`. Without it, the tool detects the format from the content. When that fails, it uses the file extension. Chapters and cloud speech-to-text JSON need `--from`, for example `--from deepgram` or `--from ffmeta-chapters`. `--from` and `--to` also take the 1.x names `ytchapter`, `podcast`, `ogm` and `ffmeta`. The tool reads like `Subtitle::loadAutoDetectFormat()`, see [formats.md](formats.md#load-and-save).
 - **Output**: never positional. `convert`, `retime`, `sync`, `translate` and `dual` write one input to standard output, or to the file of `-o FILE` (`--output FILE`). Several inputs need `--output-dir DIR`. `hls` always needs `--output-dir`.
 
 | Call | Writes |
@@ -177,7 +177,7 @@ vendor/bin/subtitle-toolbox retime movie.sub --from-fps 25 --to-fps 23.976 --inp
 - **Negative times**: a time that becomes negative becomes 0.
 
 ## Convert
-`convert` reads each input, runs the edits of its options, and writes the result in the format of `--to`. One call can run OCR, fix text, strip SDH, retime and convert:
+`convert` reads each input, runs the edits of its options, and writes the result in the format of `--to`. One call can run OCR, fix text, remove hearing-impaired annotations (`--sdh`), retime and convert:
 
 ```sh
 vendor/bin/subtitle-toolbox convert movie.sup --to srt -o movie.srt --ocr --errors-fix --sdh --shift -1.5
@@ -194,7 +194,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --to srt --output-dir fixed/ -
 | 1. Read | | input options | |
 | 2. Forced | `forced` | `--forced-only` | OCR then reads only the cues that stay |
 | 3. OCR | `ocr` | `--ocr` | the later steps need text |
-| 4. Text | `errors`, `sdh`, `replace`, `text` | `--errors-fix`, `--sdh`, `--replace`, `--speakers`, `--case`, `--strip-tags` | SDH changes the line lengths, so it runs before wrapping |
+| 4. Text | `errors`, `sdh`, `replace`, `text` | `--errors-fix`, `--sdh`, `--replace`, `--speakers`, `--case`, `--strip-tags` | the removal of hearing-impaired annotations changes the line lengths, so it runs before wrapping |
 | 5. Structure | `structure` | `--structure-resegment`, `--structure-unwrap`, `--structure-merge-short`, `--structure-split-long`, `--structure-wrap`, `--structure-merge-duplicates` | |
 | 6. Timing | `retime`, `snap`, `timing` | `--shift`, `--scale`, `--from-fps` and `--to-fps`, `--snap-shot-changes`, `--timing-fix-overlaps`, `--timing-min-duration` | splits in step 5 create new cues |
 | 7. Masking | `masking` | `--mask-words` | the mute ranges of `--mute-edl` and `--mute-filter` need the final times |
@@ -244,7 +244,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 ```
 
 - **Mute files**: they need `--mask-words` and one input file. They hold the times after `--shift`, `--scale`, snapping and the timing fixes.
-- **Mute file names**: `--mute-edl` and `--mute-filter` must name 2 different files that do not exist. Neither may name the subtitle output or a file that the command reads. Else the tool fails with exit code 2 before it writes a file.
+- **Mute file names**: `--mute-edl` and `--mute-filter` must name 2 different files that do not exist. Neither may name the subtitle output or a file that the command reads. Otherwise the tool fails with exit code 2 before it writes a file.
 - **No match**: the filter file is empty. Then leave out `-af`.
 
 ### Structure
@@ -273,7 +273,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 | `--snap-window-frames FRAMES` | `snapWindowFrames` |
 | `--snap-min-gap-frames FRAMES` | `minGapFrames` |
 | `--snap-min-duration-frames FRAMES` | `minDurationFrames` |
-| `--no-snap-chain` | `chain: false` |
+| `--no-snap-chain` | `chain: false`, see [Closing gaps](editing.md#closing-gaps) |
 | `--timing-fix-overlaps` | `fixOverlaps()` with `--timing-min-gap` seconds |
 | `--timing-min-duration SECONDS` | `extendShortCues()` with `--timing-min-gap` |
 | `--timing-min-gap SECONDS` | the gap of `--timing-fix-overlaps` and `--timing-min-duration` |
@@ -283,7 +283,7 @@ ffmpeg -i movie.mp4 -vf "select='gt(scene,0.3)',showinfo" -f null - 2> scenes.lo
 vendor/bin/subtitle-toolbox convert movie.srt --to srt -o movie.timed.srt --video-fps 24 --snap-shot-changes scenes.log
 ```
 
-- **Gaps only**: without `--snap-shot-changes`, a `--snap-` option such as `--snap-min-gap-frames 2` only closes small gaps.
+- **Gaps only**: without `--snap-shot-changes`, a `--snap-` option such as `--snap-min-gap-frames 2` only [closes gaps](editing.md#closing-gaps).
 - **Frame rates**: `--input-fps` sets the frame rate of a MicroDVD input on its own.
 
 ### Karaoke and ASS output
@@ -444,7 +444,7 @@ This writes `hls/sub0.vtt` to `hls/sub899.vtt` and `hls/subs.m3u8`.
 - **Names**: `hls` fails with exit code 2 before it writes a file when `--playlist` matches `--pattern`, for example `--playlist sub0.vtt`. It also fails when the playlist or a segment would overwrite the input.
 
 ## OCR
-`convert --ocr` reads the image cues of PGS and VobSub files before it writes the output. It uses [Tesseract](ocr.md#tesseract) when the `tesseract` program is on the `PATH`, and else [php-glyph-ocr](ocr.md#php-glyph-ocr).
+`convert --ocr` reads the image cues of PGS and VobSub files before it writes the output. It uses [Tesseract](ocr.md#tesseract) when the `tesseract` program is on the `PATH`. Otherwise it uses [php-glyph-ocr](ocr.md#php-glyph-ocr).
 
 ```sh
 vendor/bin/subtitle-toolbox convert movie.sup --to srt -o movie.srt --ocr
