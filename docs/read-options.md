@@ -32,13 +32,19 @@ $table = Subtitle::fromString(file_get_contents('lines.csv'), Format::Csv,
 
 `ReadOptions::$format` takes the settings that only one format has. The classes are in `SubtitleToolbox\Parsers\Options`. A parser throws `InvalidArgumentException` for the class of another format, for example `CsvReadOptions` on a SubRip read.
 
-| Class | Formats | Fields |
-|:--- |:--- |:--- |
-| `CsvReadOptions` | CSV, TSV | `columns`: a `CsvColumns` layout, null reads the header names. `delimiter`: `,`, `;` or a tab, null detects it. `frameRate`: the frames per second of times in `hh:mm:ss:ff` |
-| `SccReadOptions` | SCC | `channel`: 1 reads CC1 and CC3, 2 reads CC2 and CC4 |
-| `EbuStlReadOptions` | EBU STL | `subtractStartOfProgramme`: subtracts the TCP time code from every cue time |
-| `TranscriptReadOptions` | Whisper, cloud speech JSON, YouTube timed text, Podcasting 2.0 transcript | `wordTimestamps`: word times as core markup, see [transcripts.md](transcripts.md). `speakerVoices`: speakers as voice tags, Whisper and cloud speech JSON only, see [text.md](text.md#speakers). `keepSegments`: Podcasting 2.0 only, one cue per segment, also for a segment with one word |
-| `ChapterReadOptions` | YouTube, Podcasting 2.0, FFmpeg and OGM chapters | `mediaDuration`: seconds where a last chapter without its own end ends, 0 or more. An FFmpeg `END` or a Podcasting 2.0 `endTime` wins. A last chapter that starts after it, or null, ends at its own start |
-| `MicroDvdReadOptions` | MicroDVD | `frameRate`: frames per second. It wins over a `{1}{1}<fps>` first line |
-| `SamiReadOptions` | SAMI | `languageClass`: the SAMI class to read, such as `FRCC`. Null reads the first class of the STYLE block |
-| `VobSubReadOptions` | VobSub | `idx`: the content of the `.idx` file. The parser reads the `.sub` content. `Subtitle::load()` fills it from the `.idx` file. `track`: the track with this `index:`. `language`: the track with this `id:`. Without both, the parser reads the first track |
+| Class | Formats | Field | Meaning |
+|:--- |:--- |:--- |:--- |
+| `CsvReadOptions` | CSV, TSV | `columns` | a `CsvColumns` layout. Null reads the header names |
+| | | `delimiter` | `,`, `;` or a tab. Null detects it |
+| | | `frameRate` | the frames per second of times in `hh:mm:ss:ff` |
+| `SccReadOptions` | SCC | `channel` | 1 reads CC1 and CC3, 2 reads CC2 and CC4 |
+| `EbuStlReadOptions` | EBU STL | `subtractStartOfProgramme` | subtracts the TCP time code from every cue time |
+| `TranscriptReadOptions` | Whisper, cloud speech-to-text JSON, YouTube timed text, Podcasting 2.0 transcript | `wordTimestamps` | word times as core markup, see [transcripts.md](transcripts.md) |
+| | | `speakerVoices` | speakers as voice tags, for Whisper and cloud speech-to-text JSON only, see [text.md](text.md#speakers) |
+| | | `keepSegments` | one cue per segment, also for a segment with one word. Podcasting 2.0 only |
+| `ChapterReadOptions` | YouTube, Podcasting 2.0, FFmpeg and OGM chapters | `mediaDuration` | seconds, 0 or more, where a last chapter without its own end ends. An FFmpeg `END` or a Podcasting 2.0 `endTime` wins. A last chapter that starts after it, or null, ends at its own start |
+| `MicroDvdReadOptions` | MicroDVD | `frameRate` | frames per second. It wins over a `{1}{1}<fps>` first line |
+| `SamiReadOptions` | SAMI | `languageClass` | the SAMI class to read, such as `FRCC`. Null reads the first class of the STYLE block |
+| `VobSubReadOptions` | VobSub | `idx` | the content of the `.idx` file. The parser reads the `.sub` content. `Subtitle::load()` fills it from the `.idx` file |
+| | | `track` | the track with this `index:` |
+| | | `language` | the track with this `id:`. Without `track` and `language`, the parser reads the first track |

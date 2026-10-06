@@ -1,6 +1,6 @@
 # HLS
 
-HLS (HTTP Live Streaming) cuts a subtitle track into short WebVTT files, the segments, and lists them in an `.m3u8` playlist. Each segment has an `X-TIMESTAMP-MAP` header. The header maps a WebVTT cue time to the 90 kHz MPEG-2 timestamp of the video.
+HLS (HTTP Live Streaming) cuts a subtitle track into WebVTT files of 6 s each by default, the segments. An `.m3u8` playlist lists them. Each segment has an `X-TIMESTAMP-MAP` header. The header maps a WebVTT cue time to the 90 kHz MPEG-2 timestamp of the video.
 
 ```php
 use SubtitleToolbox\Hls\HlsSegmentOptions;
@@ -49,15 +49,15 @@ sub3.vtt
 ```
 
 ## Segmenting
-- **Cues across a boundary**: a cue goes into every segment that it overlaps, with its full start and end time, as [RFC 8216 section 3.5](https://datatracker.ietf.org/doc/html/rfc8216#section-3.5) requires. A cue without an identifier gets its number in the whole subtitle, so it has the same identifier in each segment.
+- **Cues across a boundary**: a cue goes into every segment that it overlaps, with its full start and end time. [RFC 8216 section 3.5](https://datatracker.ietf.org/doc/html/rfc8216#section-3.5) requires this. A cue without an identifier gets its number in the whole subtitle, so it has the same identifier in each segment.
 - **Empty segments**: a segment without cues still has the header. Apple's [HLS authoring specification](https://developer.apple.com/documentation/http-live-streaming/hls-authoring-specification-for-apple-devices) requires a subtitle playlist for the whole content. Set `mediaDuration` to the video duration for that.
 - **Cue times**: a cue at subtitle time `t` gets the WebVTT time `t + local`.
 - **Playlist**: a VOD media playlist. Apple recommends 6 s segments.
-- **Memory**: `getSegments()` and `getDurations()` are generators. They write each segment when the loop reads it, so 600,000 segments of a 1,000-hour subtitle need about 40 MB, most of it for the playlist. `iterator_to_array($hls->getSegments())` returns all segments as an array.
-- **Segment files**: UTF-8 without BOM, LF line endings. The header text, other header lines, `STYLE` and `REGION` blocks of the subtitle go into each segment. An old `X-TIMESTAMP-MAP` line is replaced. Comments are not copied.
+- **Memory**: `getSegments()` and `getDurations()` are generators. They write each segment when the loop reads it. So 600,000 segments of a 1,000-hour subtitle need about 40 MB, most of it for the playlist. `iterator_to_array($hls->getSegments())` returns all segments as an array.
+- **Segment files**: UTF-8 without BOM, LF line endings. The header text, other header lines, `STYLE` and `REGION` blocks of the subtitle go into each segment. The segmenter replaces an old `X-TIMESTAMP-MAP` line. It does not copy comments.
 
 ## Joining
-- **Duplicates**: `join()` parses the segments in playlist order and keeps one copy of a cue that repeats with the same times and text. Then `removeDuplicateCues()` joins a cue that a segmenter split at a boundary. That call also joins two cues with the same text in the source when one ends at the start of the next.
+- **Duplicates**: `join()` parses the segments in playlist order. It keeps one copy of a cue that repeats with the same times and text. Then `removeDuplicateCues()` joins a cue that a segmenter split at a boundary. That call also joins two cues with the same text in the source when one ends at the start of the next.
 - **Stream start**: `join()` returns cue times from `streamStartPts`. Without it, the `MPEGTS` value of the first segment is the start. A segment without the header maps cue time 0 to `MPEGTS` 0. A cue time that becomes negative becomes 0.
 - **Header order**: `TimestampMap::fromHeader()` reads `LOCAL` and `MPEGTS` in both orders.
 - **Timestamp wrap**: MPEG-2 timestamps wrap after about 26.5 hours. `offset()` handles the wrap.

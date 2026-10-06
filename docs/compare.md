@@ -39,4 +39,4 @@ text changed: old cue 12, new cue 12
 - **Moved cues**: a cue that moves past other cues is removed in one place and added in the other.
 - **Forced flag**: a cue whose [forced flag](subtitle.md#forced-cues) changed is a text change. `toText()` writes `forced` after the times of a forced cue.
 - **Speed**: 2,000 cues against 2,000 cues take well below 1 s.
-- **Limits**: when a translation is compared with its source, few cues have the same text. In a run of more than 40,000 cue pairs without the same text, for example 250 cues against 250 cues, only cues that overlap in time pair.
+- **Limits**: a translation and its source have few cues with the same text. A run without the same text can have more than 40,000 cue pairs, for example 250 cues against 250 cues. In such a run, only cues that overlap in time pair.
