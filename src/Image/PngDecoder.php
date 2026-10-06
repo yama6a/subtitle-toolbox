@@ -54,10 +54,7 @@ final class PngDecoder
                                                "$depth and interlace method $interlace - only non-interlaced PNG files are supported!");
         }
 
-        $tooLarge = CueImage::sizeLimitError($width, $height);
-        if ($tooLarge !== null) {
-            throw new InvalidArgumentException("Cannot decode the PNG - $tooLarge");
-        }
+        CueImage::checkSize($width, $height, "Cannot decode the PNG -");
 
         $rowLength = intdiv($width * $channels * $depth + 7, 8);
         self::requireFunction("gzuncompress");

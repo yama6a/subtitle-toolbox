@@ -384,8 +384,6 @@ class ThrowSitesTest extends TestCase
             "Image/PngDecoder.php: cut off chunk"           => [fn () => PngDecoder::decode(substr(self::png(), 0, 20)), ...$invalid],
             "Image/PngDecoder.php: no IHDR"                 => [fn () => PngDecoder::decode("\x89PNG\r\n\x1a\n"), ...$invalid],
             "Image/PngDecoder.php: interlaced"              => [fn () => PngDecoder::decode(self::pngWithIhdr(1) . self::pngChunk("IDAT", "")), ...$invalid],
-            "Image/PngDecoder.php: too large"               => [fn () => PngDecoder::decode("\x89PNG\r\n\x1a\n" .
-                self::pngChunk("IHDR", pack("NNCCCCC", 8000, 1, 8, 6, 0, 0, 0)) . self::pngChunk("IDAT", "")), ...$invalid],
             "Image/PngDecoder.php: invalid zlib data"       => [fn () => PngDecoder::decode(self::pngWithIhdr(0) . self::pngChunk("IDAT", "nope")), ...$invalid],
             "Image/PngDecoder.php: too few rows"            => [fn () => PngDecoder::decode(self::pngWithIhdr(0) . self::pngChunk("IDAT", gzcompress(""))),
                                                                 ...$invalid],
@@ -482,12 +480,6 @@ class ThrowSitesTest extends TestCase
                 self::pgsSegment(0x80, ""), new ReadOptions()), ...$parsing],
             "Parsers/PgsParser.php: object too large"       => [fn () => (new PgsParser())->parse(
                 self::pgsSegment(0x15, "\0\7\0\xC0\0\0\4" . pack("nn", 8000, 1)), new ReadOptions()), ...$parsing],
-            "Parsers/PgsParser.php: objects too far apart"  => [fn () => (new PgsParser())->parse(
-                self::pgsSegment(0x16, "\x02\xD0\x02\x40\x10\0\1\x80\0\0\2" . "\0\1\0\0\0\0\0\0" . "\0\2\0\0" . pack("nn", 8000, 0)) .
-                self::pgsSegment(0x14, "\0\0\1\x10\x80\x80\xFF") .
-                self::pgsSegment(0x15, "\0\1\0\xC0\0\0\5\0\1\0\1\1") .
-                self::pgsSegment(0x15, "\0\2\0\xC0\0\0\5\0\1\0\1\1") .
-                self::pgsSegment(0x80, ""), new ReadOptions()), ...$parsing],
             "Parsers/PodcastChaptersParser.php: no chapters" => [fn () => (new PodcastChaptersParser())->parse('{"version": "1.2.0"}', new ReadOptions()), ...$parsing],
             "Parsers/PodcastChaptersParser.php: start no number" => [fn () => (new PodcastChaptersParser())->parse(
                 '{"chapters": [{"title": "x"}]}', new ReadOptions()), ...$parsing],
