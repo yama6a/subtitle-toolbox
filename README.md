@@ -3,47 +3,32 @@
 [![CI](https://github.com/yama6a/subtitle-toolbox/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/yama6a/subtitle-toolbox/actions/workflows/ci.yaml)
 [![Licence](https://img.shields.io/packagist/l/ymakhloufi/subtitle-toolbox)](LICENSE)
 
-A PHP library and command line tool that reads subtitles, transcripts and chapter lists, edits their cues, and writes them out in another format. It is for PHP apps and scripts that handle subtitle files, speech-to-text output or chapter lists.
+A PHP library and command line tool that reads, edits and writes subtitles, transcripts and chapter lists in more than 30 formats.
+
+Upgrading from 1.x? See the [upgrade guide](docs/upgrade-2.0.md).
 
 ## Install
 ```sh
 composer require ymakhloufi/subtitle-toolbox
 ```
 
-| Needs | For |
-|:--- |:--- |
-| PHP 8.2 or later | everything |
-| `ext-dom`, `ext-iconv` | everything. Composer checks them |
-| `ext-mbstring`, optional | full Unicode upper and lower case. Without it, only A to Z change case |
-| `ext-zlib`, optional | writing PGS, compressed PNG images, zlib-compressed MKV tracks |
-| [`yama6a/php-glyph-ocr`](https://github.com/yama6a/php-glyph-ocr), optional | the built-in OCR of PGS and VobSub bitmaps |
+The library needs PHP 8.2 or later with `ext-dom` and `ext-iconv`. Optional: `ext-mbstring` for Unicode upper and lower case, `ext-zlib` for PGS output and compressed MKV tracks, and [`yama6a/php-glyph-ocr`](https://github.com/yama6a/php-glyph-ocr) for OCR without Tesseract.
 
-Upgrading from 1.x: [docs/upgrade-2.0.md](docs/upgrade-2.0.md) maps each 1.x call to its 2.0 call.
+The command line tool also comes as a PHAR file and as two container images. The `-tesseract` image includes Tesseract for OCR.
 
-## Quick start
-```php
-use SubtitleToolbox\Format;
-use SubtitleToolbox\Subtitle;
+```sh
+curl -fsSLO https://github.com/yama6a/subtitle-toolbox/releases/latest/download/subtitle-toolbox.phar
+php subtitle-toolbox.phar formats
 
-$subtitle = Subtitle::load('movie.srt', Format::SubRip);
-
-$subtitle->shift(-2.5);                                         // all cues 2.5 s earlier
-$subtitle->convertFrameRate(25, 23.976);                        // subtitle for a 25 fps video, video is 23.976 fps
-$subtitle->fixOverlaps(0.083);                                  // end each cue at least 0.083 s before the next one
-$subtitle->wrapLines(42);                                       // at most 42 characters per line, at most 2 lines
-
-$subtitle->save('movie.vtt');                                   // WebVTT, from the extension
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox convert movie.srt --to vtt -o movie.vtt
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:tesseract convert movie.sup --to srt -o movie.srt --ocr
 ```
-
-- **Format**: the enum `Format` names each format, for example `Format::SubRip`. `Subtitle::loadAutoDetectFormat('movie.srt')` detects the format from the content. See [load and save](docs/formats.md#load-and-save) and [detection](docs/detection.md).
-- **Read options**: `Subtitle::fromString($content, Format::SubRip, new ReadOptions(encoding: 'Windows-1252'))` converts the input to UTF-8. `ReadOptions` holds the parser settings. See [read options](docs/read-options.md) and [encodings](docs/encodings.md).
-- **Errors**: every exception implements `SubtitleToolboxException`. See [errors](docs/errors.md).
 
 ## Supported formats
 | Format | Case | Name | Extensions | Read | Write | Notes |
 |:--- |:--- |:--- |:--- |:---:|:---:|:--- |
-| ASS, SSA | `Ass` | `ass` | `.ass`, `.ssa` | yes | yes | karaoke tags `\k` by default, `\kf` or `\ko` with `AssWriteOptions::$karaokeTag` |
-| CSV, TSV | `Csv`, `Tsv` | `csv`, `tsv` | `.csv`, `.tsv` | yes | yes | for spreadsheets. Found by the extension, not by the content |
+| ASS, SSA | `Ass` | `ass` | `.ass`, `.ssa` | yes | yes | |
+| CSV, TSV | `Csv`, `Tsv` | `csv`, `tsv` | `.csv`, `.tsv` | yes | yes | not detected from the content |
 | EBU STL | `EbuStl` | `stl` | `.stl` | yes | yes | binary, 25 or 30 fps |
 | iTunes Timed Text | `Itt` | `itt` | `.itt` | yes | yes | needs a frame rate to write |
 | LRC | `Lyrics` | `lrc` | `.lrc` | yes | yes | with enhanced LRC word times |
@@ -63,84 +48,166 @@ $subtitle->save('movie.vtt');                                   // WebVTT, from 
 | JSON of this library | `Json` | `json` | `.json` | yes | yes | |
 | Plain text | `PlainText` | `txt` | `.txt` | no | yes | transcript |
 | Whisper JSON | `Whisper` | `whisper` | `.json` | yes | no | OpenAI API, openai-whisper, faster-whisper, WhisperX, whisper.cpp |
-| Cloud speech-to-text JSON | `AwsTranscribe`, `Deepgram`, `AssemblyAi`, `GoogleSpeech` | `aws-transcribe`, `deepgram`, `assemblyai`, `google-speech` | `.json` | yes | no | Amazon Transcribe, Deepgram, AssemblyAI, Google Cloud Speech-to-Text. Not detected |
+| Cloud speech-to-text JSON | `AwsTranscribe`, `Deepgram`, `AssemblyAi`, `GoogleSpeech` | `aws-transcribe`, `deepgram`, `assemblyai`, `google-speech` | `.json` | yes | no | not detected from the content |
 | YouTube timed text | `YouTubeTimedText` | `youtube` | `.json3`, `.srv3`, `.srv1` | yes | no | json3, srv1, srv2, srv3 and transcript XML |
 | Podcasting 2.0 transcript JSON | `PodcastTranscript` | `podcast-transcript` | `.json` | yes | yes | |
 | HTML transcript | `HtmlTranscript` | `html` | `.html`, `.htm` | yes | yes | the Podcasting 2.0 HTML format |
-| YouTube chapters | `YouTubeChapters` | `youtube-chapters` | `.txt` | yes | yes | chapter list in a video description. Not detected |
-| Podcasting 2.0 chapters | `PodcastChapters` | `podcast-chapters` | `.json` | yes | yes | not detected |
-| FFmpeg metadata chapters | `FfMetadataChapters` | `ffmeta-chapters` | `.ffmeta` | yes | yes | not detected |
-| OGM chapters | `OgmChapters` | `ogm-chapters` | `.txt` | yes | yes | not detected |
-| MKV and WebM tracks | | | `.mkv`, `.webm` | yes | no | `Subtitle::loadTrack()` reads `S_TEXT/UTF8`, ASS, SSA, WebVTT and PGS tracks. CLI: `--track` |
+| YouTube chapters | `YouTubeChapters` | `youtube-chapters` | `.txt` | yes | yes | not detected from the content |
+| Podcasting 2.0 chapters | `PodcastChapters` | `podcast-chapters` | `.json` | yes | yes | not detected from the content |
+| FFmpeg metadata chapters | `FfMetadataChapters` | `ffmeta-chapters` | `.ffmeta` | yes | yes | not detected from the content |
+| OGM chapters | `OgmChapters` | `ogm-chapters` | `.txt` | yes | yes | not detected from the content |
+| MKV and WebM tracks | | | `.mkv`, `.webm` | yes | no | text, ASS, SSA, WebVTT and PGS tracks |
 
-**Case** is the case of the enum `Format`, for example `Format::SubRip`. **Name** is its value, and the format name for `--from` and `--to` in the command line tool. The details of each format are in [formats](docs/formats.md), [transcripts](docs/transcripts.md), [chapters](docs/chapters.md), [OCR](docs/ocr.md), [JSON](docs/json.md) and [MKV](docs/mkv.md).
-
-## Features
-- **Cues and metadata**: comments, alignment, format data, lookup by time, forced cues, statistics. See [subtitle.md](docs/subtitle.md) and [markup.md](docs/markup.md).
-- **Editing**: shift, scale, frame rate, merge, slice, split, join, overlaps, line wrapping, short and long cues, shot changes, dual-language subtitles. See [editing.md](docs/editing.md).
-- **Text**: search and replace, case, hearing-impaired removal, speaker labels, profanity filter with mute ranges, karaoke, OCR error fixes. See [text.md](docs/text.md).
-- **Validation**: reading speed, line length and timing rules, with Netflix and BBC presets. See [validation.md](docs/validation.md).
-- **Sync**: find the offset and frame rate from a reference subtitle or from the speech in the audio. See [sync.md](docs/sync.md).
-- **OCR**: turn PGS and VobSub bitmaps into text in pure PHP, or with your own engine. See [ocr.md](docs/ocr.md).
-- **Translation**: send the cues to a machine translation engine and keep the tags. See [translation.md](docs/translation.md).
-- **Compare**: list the cues that changed between two versions. See [compare.md](docs/compare.md).
-- **Large files and streaming**: stream SRT and WebVTT cue by cue, cut WebVTT into HLS segments. See [streaming.md](docs/streaming.md) and [hls.md](docs/hls.md).
-- **Broken files**: skip broken cues with a warning in place of an exception. See [lenient-parsing.md](docs/lenient-parsing.md).
-
-[docs/README.md](docs/README.md) lists all pages.
-
-## OCR
-OCR turns the bitmaps of PGS and VobSub subtitles into text. The library uses Tesseract when it is installed, and else php-glyph-ocr.
-
-| | Tesseract | php-glyph-ocr |
-|:--- |:--- |:--- |
-| Install | system package manager | `composer require yama6a/php-glyph-ocr`, about 1 MB |
-| Languages | more than 100 | Latin-script fonts only |
-| Correct characters on the test files | 100% | 98 to 100% |
-| Time per cue | 110 to 180 ms | 110 to 140 ms |
-| Memory | about 35 MB, in its own process | about 76 MB for the glyph database |
-
-```sh
-apt install tesseract-ocr tesseract-ocr-deu                          # Debian, Ubuntu
-apk add tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-deu  # Alpine
-dnf install tesseract tesseract-langpack-deu                         # Fedora
-brew install tesseract tesseract-lang                                # macOS, all languages
-winget install UB-Mannheim.TesseractOCR                              # Windows, then add it to the PATH
-docker run --rm -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:tesseract convert movie.sup --to srt -o movie.srt --ocr --ocr-language deu
-```
-
-Each language is one package, for example `tesseract-ocr-rus`. See [ocr.md](docs/ocr.md) for the options and the measurements.
+**Case** is the case of the enum `Format`, for example `Format::SubRip`. **Name** is the format name for `--from` and `--to`.
 
 ## Command line tool
-Composer installs `vendor/bin/subtitle-toolbox`. Every [GitHub release](https://github.com/yama6a/subtitle-toolbox/releases) also ships it as a PHAR file and as the container image `ghcr.io/yama6a/subtitle-toolbox`.
+Composer installs `vendor/bin/subtitle-toolbox`. Optional parts are in brackets.
 
 ```sh
-vendor/bin/subtitle-toolbox convert movie.srt --to vtt -o movie.vtt
-vendor/bin/subtitle-toolbox retime season1/ --from-fps 25 --to-fps 23.976 --output-dir fixed/
-vendor/bin/subtitle-toolbox convert movie.mkv --to srt -o movie.srt --track 3 --ocr
-
-curl -fsSLO https://github.com/yama6a/subtitle-toolbox/releases/latest/download/subtitle-toolbox.phar
-php subtitle-toolbox.phar validate movie.srt --preset netflix-en
-
-docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox convert movie.sup --to srt -o movie.srt --ocr
+subtitle-toolbox convert movie.srt --to vtt [--timing-fix-overlaps] [-o movie.vtt]
+subtitle-toolbox convert movie.mkv --to srt --track 3 [-o movie.srt]
+subtitle-toolbox convert movie.sup --to srt --ocr [--ocr-language deu] [-o movie.srt]
+subtitle-toolbox retime movie.sub --from-fps 25 --to-fps 23.976 [-o movie.fixed.sub]
+subtitle-toolbox info movie.srt [--json]
+subtitle-toolbox validate movie.srt --preset netflix-en [--video-fps 23.976]
+subtitle-toolbox sync movie.de.srt --reference movie.en.srt [-o movie.de.synced.srt]
+subtitle-toolbox diff movie.v1.srt movie.v2.srt [--text-only]
+subtitle-toolbox dual --primary movie.en.srt --secondary movie.de.srt --to ass [--mode stack] [-o movie.en-de.ass]
+subtitle-toolbox hls movie.vtt --output-dir hls/ [--segment 6]
+subtitle-toolbox formats
 ```
 
-See [cli.md](docs/cli.md) for all commands and options. `subtitle-toolbox convert --help` lists the option groups of `convert`, and `convert --help GROUP` the options of one group.
+- Without `-o`, the output goes to standard output.
+- Several inputs need `--output-dir`, for example `retime season1/ --shift 2 --output-dir fixed/`.
+- No command overwrites a file.
+- When detection fails, pass `--from`.
 
-## Backward compatibility
-Semantic versioning covers the public PHP API and the command line tool: its commands, options, the meaning of its exit codes and `--json` shapes.
+`subtitle-toolbox convert --help` lists the option groups of `convert`. See [cli.md](docs/cli.md) for all commands and options.
 
-- Enums can get new cases in a minor release. Give a `match` on an enum a `default` arm.
-- Exception message text and CLI text output can change. Exception classes and codes stay. The class or exit code that a given cause gives can change.
-- A bug fix or a new format can change the written bytes, the parsed cues and the detected format, also in a patch release.
-- Classes and methods marked `@internal`, and the PHP classes in `SubtitleToolbox\Cli`, are not covered.
+## Library
+### Load and write
+```php
+use SubtitleToolbox\Format;
+use SubtitleToolbox\LineEnding;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\WriteOptions;
 
-See [compatibility.md](docs/compatibility.md) for the full rules.
+$subtitle = Subtitle::load('movie.srt', Format::SubRip);
+$subtitle = Subtitle::loadAutoDetectFormat('movie.srt');
+$subtitle->getFormat();                           // Format::SubRip
+$subtitle->save('movie.vtt');                     // the format comes from the extension
+$vtt = $subtitle->toString(Format::WebVtt, new WriteOptions(lineEnding: LineEnding::Crlf, stripTags: true));
+```
 
-## Contributing and releases
-Pull requests are welcome. Run the tests with `composer test`.
+### Read options
+```php
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
+use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
 
-Every merge to `master` publishes a release to Packagist, GitHub and the container registry. Each pull request carries exactly one label that sets the version bump: `major`, `minor`, `patch` or `skip-release`. CI fails a pull request without one.
+$latin1   = Subtitle::load('latin1.srt', Format::SubRip, new ReadOptions(encoding: 'Windows-1252'));
+$microDvd = Subtitle::load('movie.sub', Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(frameRate: 23.976)));
+```
+
+See [read-options.md](docs/read-options.md) for the options of each format.
+
+### Edit
+```php
+use SubtitleToolbox\CaseMode;
+use SubtitleToolbox\Format;
+use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
+use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
+use SubtitleToolbox\Subtitle;
+
+$subtitle = Subtitle::load('movie.srt', Format::SubRip);
+$subtitle->shift(-2.5)                            // all cues 2.5 s earlier
+         ->convertFrameRate(25, 23.976)
+         ->fixOverlaps(0.083)                     // a gap of at least 0.083 s between cues
+         ->wrapLines(42)                          // at most 42 characters per line, 2 lines
+         ->changeCase(CaseMode::Sentence);
+$firstMinute = $subtitle->withSlice(0, 60);       // a new Subtitle, $subtitle stays as it is
+
+$report = HearingImpairedRemover::apply($subtitle, new HearingImpairedOptions(parentheses: false));
+echo "$report->removedLines lines removed\n";
+```
+
+A service such as `HearingImpairedRemover` changes the subtitle in place and returns a report.
+
+### Validate and count
+```php
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleStatistics;
+use SubtitleToolbox\Validation\ValidationRules;
+
+$subtitle = Subtitle::load('movie.srt', Format::SubRip);
+foreach ($subtitle->validate(ValidationRules::netflixEnglish(23.976)) as $violation) {
+    echo "cue index $violation->cueIndex: {$violation->rule->value} is $violation->value\n";
+}
+$stats = SubtitleStatistics::of($subtitle);
+echo "$stats->cueCount cues, $stats->wordCount words\n";
+```
+
+### MKV and WebM tracks
+```php
+use SubtitleToolbox\Subtitle;
+
+foreach (Subtitle::tracks('movie.mkv') as $track) {
+    echo "$track->number: ", $track->describe(), "\n";   // 3: S_TEXT/UTF8, de, "Deutsch (Forced)", forced
+}
+$subtitle = Subtitle::loadTrack('movie.mkv', 3);
+```
+
+### OCR
+```php
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Ocr\OcrEngineChooser;
+use SubtitleToolbox\Ocr\OcrEngineName;
+use SubtitleToolbox\Subtitle;
+
+$subtitle = Subtitle::load('movie.sup', Format::Pgs);
+$subtitle->recognizeText(OcrEngineChooser::create());                       // Tesseract if installed, else php-glyph-ocr
+$subtitle->recognizeText(OcrEngineChooser::create(OcrEngineName::Glyph));   // always php-glyph-ocr
+$subtitle->save('movie.srt');
+```
+
+`create()` takes the Tesseract language as its second argument, for example `'deu+eng'`. For engine settings, pass `TesseractOcrOptions` to `new TesseractOcrEngine()` or `GlyphOcrOptions` to `new GlyphOcrEngine()`.
+
+### Sync to a reference
+```php
+use SubtitleToolbox\Format;
+use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Sync\ReferenceSync;
+use SubtitleToolbox\Sync\ReferenceSyncOptions;
+
+$german  = Subtitle::load('movie.de.srt', Format::SubRip);
+$english = Subtitle::load('movie.en.srt', Format::SubRip);
+$report  = ReferenceSync::apply($german, new ReferenceSyncOptions($english));
+echo "offset $report->offset s, scale $report->scale, score $report->score\n";
+```
+
+Every exception implements `SubtitleToolboxException`. See [errors.md](docs/errors.md).
+
+## OCR
+OCR turns the bitmaps of PGS and VobSub subtitles into text. The library uses Tesseract when it is installed, else php-glyph-ocr. Tesseract reads more than 100 languages, php-glyph-ocr reads only Latin-script fonts. See [ocr.md](docs/ocr.md) for the install commands and a comparison of the engines.
+
+## Compatibility
+Semantic versioning covers the public PHP API and the CLI commands, options, exit codes and `--json` shapes. See [compatibility.md](docs/compatibility.md) for what a minor or patch release can change.
+
+## Documentation
+[docs/README.md](docs/README.md) lists every page. The most used pages:
+
+- [cli.md](docs/cli.md): all commands and options
+- [formats.md](docs/formats.md): what each parser reads and each formatter writes
+- [editing.md](docs/editing.md): retiming, cutting, joining and splitting cues
+- [text.md](docs/text.md): text changes, hearing-impaired removal, error fixes
+- [validation.md](docs/validation.md): rules and presets
+- [sync.md](docs/sync.md): sync to a reference or to the speech
+- [subtitle.md](docs/subtitle.md): metadata, comments, cue lookup, statistics
+
+## Contributing
+Pull requests are welcome. Run the tests with `composer test`. Each pull request carries one label that sets the version bump: `major`, `minor`, `patch` or `skip-release`. Every merge to `master` publishes a release.
 
 ## Licence
 MIT, see [LICENSE](LICENSE).
