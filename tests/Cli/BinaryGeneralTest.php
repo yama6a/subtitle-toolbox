@@ -448,11 +448,34 @@ class BinaryGeneralTest extends BinaryTestCase
     }
 
 
-    public function testUsageErrorComesBeforeAMissingReference(): void
+    /**
+     * @return array<string, array{list<string>, string}>
+     */
+    public static function sideFileOptions(): array
+    {
+        $convert = ["convert", "trip.srt", "shop.vtt", "--to", "srt"];
+        $sync    = ["sync", "trip.srt", "shop.vtt"];
+
+        return [
+            "--reference"           => [[...$sync, "--reference", "missing.srt"], "sync"],
+            "--silence-log"         => [[...$sync, "--silence-log", "missing.log", "--media-duration", "60"], "sync"],
+            "--mask-words"          => [[...$convert, "--mask-words", "missing.txt"], "convert"],
+            "--errors-replace-list" => [[...$convert, "--errors-fix", "--errors-replace-list", "missing.xml"], "convert"],
+            "--snap-shot-changes"   => [[...$convert, "--video-fps", "24", "--snap-shot-changes", "missing.txt"], "convert"],
+            "--ocr-database"        => [[...$convert, "--ocr", "--ocr-database", "missing.nocr"], "convert"],
+        ];
+    }
+
+
+    /**
+     * @param list<string> $arguments
+     */
+    #[DataProvider("sideFileOptions")]
+    public function testUsageErrorComesBeforeAMissingSideFile(array $arguments, string $command): void
     {
         $this->assertSame([2, "", "Error: 2 input files need --output-dir DIR. One input file goes to standard output or to -o FILE.\n" .
-                                  "Run \"subtitle-toolbox help sync\" for the usage.\n"],
-                          $this->runBinary(["sync", "trip.srt", "shop.vtt", "--reference", "missing.srt"]));
+                                  "Run \"subtitle-toolbox help $command\" for the usage.\n"],
+                          $this->runBinary($arguments));
     }
 
 

@@ -64,6 +64,14 @@ final class EditPipeline
     }
 
 
+    public function loadSideFiles(): void
+    {
+        foreach ($this->edits as $edit) {
+            $edit->loadSideFiles();
+        }
+    }
+
+
     public function apply(Subtitle $subtitle, Console $console, string $label): Subtitle
     {
         foreach ($this->edits as $edit) {

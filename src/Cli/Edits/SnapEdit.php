@@ -8,6 +8,7 @@ use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
+use SubtitleToolbox\Cli\OptionsCopy;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\Timing\ShotChanges;
@@ -20,7 +21,7 @@ final class SnapEdit extends Edit
 {
     private const EDITS = ["snap-shot-changes", "snap-window-frames", "snap-min-gap-frames", "snap-min-duration-frames", "no-snap-chain"];
 
-    private function __construct(private readonly ShotChangeOptions $options)
+    private function __construct(private ShotChangeOptions $options, private readonly ?string $shotChangesPath)
     {
     }
 
@@ -71,12 +72,19 @@ final class SnapEdit extends Edit
 
         return new self(new ShotChangeOptions(...Command::given([
             "frameRate"         => $videoFps,
-            "shotChanges"       => $path === null ? null : self::loadShotChanges($path),
             "snapWindowFrames"  => $arguments->int("snap-window-frames", 0),
             "minGapFrames"      => $arguments->int("snap-min-gap-frames", 0),
             "chain"             => !$arguments->has("no-snap-chain"),
             "minDurationFrames" => $arguments->int("snap-min-duration-frames", 0),
-        ])));
+        ])), $path);
+    }
+
+
+    public function loadSideFiles(): void
+    {
+        if ($this->shotChangesPath !== null) {
+            $this->options = OptionsCopy::with($this->options, ["shotChanges" => self::loadShotChanges($this->shotChangesPath)]);
+        }
     }
 
 

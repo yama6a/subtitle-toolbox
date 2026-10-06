@@ -36,6 +36,7 @@ final class OcrEdit extends Edit
         private readonly ?string $language,
         private readonly TesseractOcrOptions $tesseractOptions,
         private GlyphOcrOptions $glyphOptions,
+        private readonly ?string $databasePath,
     ) {
     }
 
@@ -84,12 +85,18 @@ final class OcrEdit extends Edit
         if ($engine === OcrEngineName::Tesseract) {
             (new TesseractOcrEngine($tesseractOptions))->requireLanguages();
         }
-        $database     = $arguments->value("ocr-database");
-        $glyphOptions = new GlyphOcrOptions(...Command::given([
-            "database" => $database === null ? null : Command::parseSideFile($database, GlyphDatabase::fromBytes(...), GlyphOcrException::class),
-        ]));
 
-        return new self($engine, $language, $tesseractOptions, $glyphOptions);
+        return new self($engine, $language, $tesseractOptions, new GlyphOcrOptions(), $arguments->value("ocr-database"));
+    }
+
+
+    public function loadSideFiles(): void
+    {
+        if ($this->databasePath !== null) {
+            $this->glyphOptions = OptionsCopy::with($this->glyphOptions, [
+                "database" => Command::parseSideFile($this->databasePath, GlyphDatabase::fromBytes(...), GlyphOcrException::class),
+            ]);
+        }
     }
 
 

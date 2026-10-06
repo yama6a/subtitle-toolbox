@@ -9,10 +9,13 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use ReflectionParameter;
 use ReflectionProperty;
+use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\LineEnding;
+use SubtitleToolbox\Ocr\GlyphOcrOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\Validation\ValidationRules;
 use SubtitleToolbox\WriteOptions;
 
@@ -24,9 +27,12 @@ class OptionsCopyTest extends TestCase
     public static function copiedClasses(): array
     {
         return [
-            "ValidationRules" => [ValidationRules::class],
-            "WriteOptions"    => [WriteOptions::class],
-            "ReadOptions"     => [ReadOptions::class],
+            "ValidationRules"    => [ValidationRules::class],
+            "WriteOptions"       => [WriteOptions::class],
+            "ReadOptions"        => [ReadOptions::class],
+            "CommonErrorOptions" => [CommonErrorOptions::class],
+            "ShotChangeOptions"  => [ShotChangeOptions::class],
+            "GlyphOcrOptions"    => [GlyphOcrOptions::class],
         ];
     }
 

@@ -33,8 +33,13 @@ final class MaskingEdit extends Edit
     private array $muteRanges = [];
 
 
+    private ProfanityOptions $options;
+
+
     private function __construct(
-        private readonly ProfanityOptions $options,
+        private readonly string $wordsPath,
+        private readonly ?ProfanityMask $mask,
+        private readonly ?float $padding,
         private readonly ?string $edlPath,
         private readonly ?string $filterPath,
     ) {
@@ -82,13 +87,21 @@ final class MaskingEdit extends Edit
         }
 
         return new self(
-            new ProfanityOptions(self::readWordFile($words), ...Command::given([
-                "mask"    => $mask === null ? null : self::MASKS[$mask],
-                "padding" => $arguments->nonNegativeFloat("mute-padding"),
-            ])),
+            $words,
+            $mask === null ? null : self::MASKS[$mask],
+            $arguments->nonNegativeFloat("mute-padding"),
             $arguments->value("mute-edl"),
             $arguments->value("mute-filter"),
         );
+    }
+
+
+    public function loadSideFiles(): void
+    {
+        $this->options = new ProfanityOptions(self::readWordFile($this->wordsPath), ...Command::given([
+            "mask"    => $this->mask,
+            "padding" => $this->padding,
+        ]));
     }
 
 

@@ -163,6 +163,13 @@ final class ConvertCommand extends WriteCommand
     }
 
 
+    protected function loadSideFiles(Arguments $arguments, Console $console): void
+    {
+        parent::loadSideFiles($arguments, $console);
+        $this->edits->loadSideFiles();
+    }
+
+
     protected function sideOutputs(): array
     {
         return $this->edits->find(MaskingEdit::class)?->outputPaths() ?? [];
