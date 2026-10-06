@@ -63,17 +63,14 @@ final class GoogleSpeechParser extends SubtitleParser
         $cues        = [];
         $previousEnd = 0.0;
         foreach ($results as $index => $result) {
-            $path        = "results[$index]";
-            $alternative = is_array($result) && is_array($result["alternatives"][0] ?? null) ? $result["alternatives"][0] : null;
-            $resultEnd   = is_array($result) ? self::duration($result["resultEndTime"] ?? $result["resultEndOffset"] ?? null) : null;
+            $path      = "results[$index]";
+            $resultEnd = is_array($result) ? self::duration($result["resultEndTime"] ?? $result["resultEndOffset"] ?? null) : null;
             try {
-                if (is_array($result) && isset($result["alternatives"]) && $alternative === null && $result["alternatives"] !== []) {
-                    throw new ParsingException("The field $path.alternatives must be a list of objects.");
-                }
-                $words = $this->readWords(self::listOrEmpty($alternative["words"] ?? null), "$path.alternatives[0].words");
-                $end   = $words === [] ? $this->seconds($resultEnd, "$path.resultEndTime") : $words[count($words) - 1]["end"];
-                $start = $words === [] ? $previousEnd : $words[0]["start"];
-                $text  = is_array($alternative) ? $this->text($alternative, "transcript", "$path.alternatives[0]") : "";
+                $alternative = $this->firstAlternative($result, $path);
+                $words       = $this->readWords(self::listOrEmpty($alternative["words"] ?? null), "$path.alternatives[0].words");
+                $end         = $words === [] ? $this->seconds($resultEnd, "$path.resultEndTime") : $words[count($words) - 1]["end"];
+                $start       = $words === [] ? $previousEnd : $words[0]["start"];
+                $text        = is_array($alternative) ? $this->text($alternative, "transcript", "$path.alternatives[0]") : "";
             } catch (ParsingException $exception) {
                 $this->fail($exception, null, $index, [RawJson::encode($result)]);
                 continue;
@@ -99,6 +96,23 @@ final class GoogleSpeechParser extends SubtitleParser
             $this->seconds(self::duration($word["endTime"] ?? $word["endOffset"] ?? null), "$wordPath.endTime"),
             self::speaker($word["speakerLabel"] ?? (($word["speakerTag"] ?? 0) === 0 ? null : $word["speakerTag"])),
         ]);
+    }
+
+
+    /**
+     * Returns the first alternative of a result, or null for a result without alternatives.
+     */
+    private function firstAlternative(mixed $result, string $path): ?array
+    {
+        $alternatives = is_array($result) ? $result["alternatives"] ?? null : null;
+        if ($alternatives === null || $alternatives === []) {
+            return null;
+        }
+        if (!is_array($alternatives[0] ?? null)) {
+            throw new ParsingException("The field $path.alternatives must be a list of objects.");
+        }
+
+        return $alternatives[0];
     }
 
 
