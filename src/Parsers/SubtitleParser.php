@@ -165,6 +165,24 @@ abstract class SubtitleParser
 
 
     /**
+     * Returns the end of the cue at $index: the first later start in $starts, else its start plus
+     * ReadOptions::$lastCueDuration.
+     *
+     * @param list<float> $starts
+     */
+    protected function endAtNextStart(array $starts, int $index): float
+    {
+        for ($next = $index + 1; $next < count($starts); $next++) {
+            if ($starts[$next] > $starts[$index]) {
+                return $starts[$next];
+            }
+        }
+
+        return round($starts[$index] + $this->options->lastCueDuration, 3);
+    }
+
+
+    /**
      * Sorts the chapters by start and sets their ends. A chapter ends at its value in $ends, else at the start of the
      * next chapter. The last chapter ends at ChapterReadOptions::$mediaDuration, but not before it starts.
      *

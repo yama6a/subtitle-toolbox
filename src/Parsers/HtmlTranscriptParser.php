@@ -63,21 +63,17 @@ final class HtmlTranscriptParser extends SubtitleParser
             }
         }
 
-        $subtitle   = new Subtitle();
+        $starts     = array_column($cues, 0);
         $parsedCues = [];
         foreach ($cues as $index => [$start, $speaker, $lines]) {
-            $next = $index + 1;
-            while ($next < count($cues) && $cues[$next][0] <= $start) {
-                $next++;
-            }
             if ($speaker !== "") {
                 $lines[0] = Markup::voiceTag($speaker) . $lines[0];
             }
 
-            $parsedCues[] = new SubtitleCue($start, $cues[$next][0] ?? round($start + $this->options->lastCueDuration, 3), $lines);
+            $parsedCues[] = new SubtitleCue($start, $this->endAtNextStart($starts, $index), $lines);
         }
 
-        return $subtitle->addCues($parsedCues);
+        return (new Subtitle())->addCues($parsedCues);
     }
 
 

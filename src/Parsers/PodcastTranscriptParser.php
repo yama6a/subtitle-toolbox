@@ -77,16 +77,9 @@ final class PodcastTranscriptParser extends SubtitleParser
             }
         }
 
+        $starts = array_column($result, "start");
         foreach ($result as $index => $segment) {
-            if ($segment["end"] !== null) {
-                continue;
-            }
-
-            $next = $index + 1;
-            while ($next < count($result) && $result[$next]["start"] <= $segment["start"]) {
-                $next++;
-            }
-            $result[$index]["end"] = $result[$next]["start"] ?? round($segment["start"] + $this->options->lastCueDuration, 3);
+            $result[$index]["end"] ??= $this->endAtNextStart($starts, $index);
         }
 
         return array_values(array_filter($result, fn (array $segment): bool => $segment["body"] !== ""));
