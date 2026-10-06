@@ -15,6 +15,7 @@ use SubtitleToolbox\Parsers\Options\SamiReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\XmlLoader;
 
 final class SamiParser extends SubtitleParser
 {
@@ -201,18 +202,8 @@ final class SamiParser extends SubtitleParser
      */
     private function readParagraphs(string $html): array
     {
-        $document             = new DOMDocument();
-        $previousErrorSetting = libxml_use_internal_errors(true);
-        try {
-            // The meta tag makes libxml read the input as UTF-8 in place of ISO-8859-1.
-            $document->loadHTML(
-                '<meta http-equiv="Content-Type" content="text/html; charset=utf-8"><body>' . $html,
-                LIBXML_NONET
-            );
-        } finally {
-            libxml_clear_errors();
-            libxml_use_internal_errors($previousErrorSetting);
-        }
+        // The meta tag makes libxml read the input as UTF-8 in place of ISO-8859-1.
+        $document = XmlLoader::html('<meta http-equiv="Content-Type" content="text/html; charset=utf-8"><body>' . $html);
 
         $paragraphs = [];
         $loose      = [];

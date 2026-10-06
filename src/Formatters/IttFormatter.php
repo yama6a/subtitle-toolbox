@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
-use DOMDocument;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\FrameRate;
@@ -16,6 +15,7 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
+use SubtitleToolbox\XmlLoader;
 
 /**
  * @see https://help.apple.com/itc/videoaudioassetguide/en.lproj/static.html
@@ -62,15 +62,8 @@ final class IttFormatter extends SubtitleFormatter
         $xml  = (new TtmlFormatter())->format($ttml, new WriteOptions(stripTags: $options->stripTags));
 
         // The CLI prints a libxml warning to standard output, in front of the file.
-        $previous = libxml_use_internal_errors(true);
-        try {
-            $document = new DOMDocument();
-            $document->loadXML($xml, LIBXML_NONET);
-            libxml_clear_errors();
-        } finally {
-            libxml_use_internal_errors($previous);
-        }
-        $root = $document->documentElement;
+        $document = XmlLoader::xml($xml);
+        $root     = $document->documentElement;
         $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:timeBase", "smpte");
         $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:frameRate", $frameRate);
         $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:frameRateMultiplier", $multiplier);

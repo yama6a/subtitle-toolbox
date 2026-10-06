@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
-use DOMDocument;
 use DOMElement;
 use DOMText;
 use SubtitleToolbox\Exceptions\ParsingException;
@@ -15,6 +14,7 @@ use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\XmlLoader;
 
 final class YouTubeTimedTextParser extends SubtitleParser
 {
@@ -142,17 +142,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
 
     private function readXml(string $content): array
     {
-        // LIBXML_NONET blocks network access. Without LIBXML_NOENT and LIBXML_DTDLOAD, libxml loads no external entity.
-        $previous = libxml_use_internal_errors(true);
-        $document = new DOMDocument();
-        $loaded   = $content !== "" && $document->loadXML($content, LIBXML_NONET);
-        libxml_clear_errors();
-        libxml_use_internal_errors($previous);
-        if (!$loaded || $document->documentElement === null) {
-            throw new ParsingException("The content is not well-formed XML.");
-        }
-
-        $root = $document->documentElement;
+        $root = XmlLoader::xml($content)?->documentElement ?? throw new ParsingException("The content is not well-formed XML.");
 
         return match (true) {
             $root->nodeName === "transcript"                        => [["format" => "srv1"], $this->readTexts($root, "start", "dur", 1)],

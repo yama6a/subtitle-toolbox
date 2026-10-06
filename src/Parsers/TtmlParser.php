@@ -15,6 +15,7 @@ use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
+use SubtitleToolbox\XmlLoader;
 
 final class TtmlParser extends SubtitleParser
 {
@@ -167,18 +168,7 @@ final class TtmlParser extends SubtitleParser
             throw new ParsingException("The file is empty!");
         }
 
-        // LIBXML_NONET blocks network access. Without LIBXML_NOENT and LIBXML_DTDLOAD, libxml loads no external entity.
-        $previous = libxml_use_internal_errors(true);
-        $document = new DOMDocument();
-        $loaded   = $document->loadXML($xml, LIBXML_NONET);
-        libxml_clear_errors();
-        libxml_use_internal_errors($previous);
-
-        if (!$loaded || $document->documentElement === null) {
-            throw new ParsingException("The file is not well-formed XML!");
-        }
-
-        return $document;
+        return XmlLoader::xml($xml) ?? throw new ParsingException("The file is not well-formed XML!");
     }
 
 
