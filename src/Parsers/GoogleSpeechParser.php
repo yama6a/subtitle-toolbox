@@ -15,19 +15,25 @@ final class GoogleSpeechParser extends SubtitleParser
     public const FORMAT_DATA_KEY = Format::GoogleSpeech->value;
 
 
+    protected static function formatDataKey(): string
+    {
+        return self::FORMAT_DATA_KEY;
+    }
+
+
     /**
      * Reads the JSON response of Google Cloud Speech-to-Text V1 and V2, one cue per result. With speaker
      * diarization, it groups the words of the last result into cues.
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $data           = $this->decodeJsonObject($rawSubtitle);
-        $fileData       = [];
+        $data     = $this->decodeJsonObject($rawSubtitle);
+        $fileData = [];
         if (is_array($data["response"] ?? null)) {
             $fileData = array_diff_key($data, ["response" => true]);
             $data     = $data["response"];
         }
-        if (!is_array($data["results"] ?? null) || !array_is_list($data["results"])) {
+        if (!self::isList($data["results"] ?? null)) {
             throw new ParsingException("The JSON has no \"results\" list.");
         }
 
@@ -40,16 +46,15 @@ final class GoogleSpeechParser extends SubtitleParser
             ? $this->cuesFromWords($this->readWords($lastWords, "results[$lastIndex].alternatives[0].words"), "words")
             : $this->readResults($results);
 
-        $subtitle = new Subtitle();
+        $language = null;
         foreach ($results as $result) {
             if (is_string($result["languageCode"] ?? null) && $result["languageCode"] !== "") {
-                $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $result["languageCode"]);
+                $language = $result["languageCode"];
                 break;
             }
         }
-        $subtitle->setFormatData(self::FORMAT_DATA_KEY, $fileData + array_diff_key($data, ["results" => true]));
 
-        return $subtitle->addCues($cues);
+        return $this->transcript($cues, $language, $fileData + array_diff_key($data, ["results" => true]));
     }
 
 
@@ -88,22 +93,12 @@ final class GoogleSpeechParser extends SubtitleParser
 
     private function readWords(array $words, string $path): array
     {
-        $result = [];
-        foreach ($words as $index => $word) {
-            try {
-                $text  = $this->text($word, "word", "{$path}[$index]");
-                $start = $this->seconds(self::duration($word["startTime"] ?? $word["startOffset"] ?? null), "{$path}[$index].startTime");
-                $end   = $this->seconds(self::duration($word["endTime"] ?? $word["endOffset"] ?? null), "{$path}[$index].endTime");
-            } catch (ParsingException $exception) {
-                $this->fail($exception, null, $index, [RawJson::encode($word)]);
-                continue;
-            }
-
-            $speaker  = $word["speakerLabel"] ?? (($word["speakerTag"] ?? 0) === 0 ? null : $word["speakerTag"]);
-            $result[] = ["text" => trim($text), "start" => $start, "end" => $end, "speaker" => self::speaker($speaker), "data" => [$word]];
-        }
-
-        return $result;
+        return $this->readWordList($words, $path, fn (mixed $word, string $wordPath): array => [
+            $this->text($word, "word", $wordPath),
+            $this->seconds(self::duration($word["startTime"] ?? $word["startOffset"] ?? null), "$wordPath.startTime"),
+            $this->seconds(self::duration($word["endTime"] ?? $word["endOffset"] ?? null), "$wordPath.endTime"),
+            self::speaker($word["speakerLabel"] ?? (($word["speakerTag"] ?? 0) === 0 ? null : $word["speakerTag"])),
+        ]);
     }
 
 

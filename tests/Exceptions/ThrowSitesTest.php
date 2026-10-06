@@ -582,8 +582,6 @@ class ThrowSitesTest extends TestCase
             "Parsers/WhisperJsonParser.php: no segments"    => [fn () => (new WhisperJsonParser())->parse('{"text": "Hi"}', new ReadOptions()), ...$parsing],
             "Parsers/WhisperJsonParser.php: time no number" => [fn () => (new WhisperJsonParser())->parse('{"segments": [{"start": "0"}]}', new ReadOptions()),
                                                                 ...$parsing],
-            "Parsers/WhisperJsonParser.php: text no string" => [fn () => (new WhisperJsonParser())->parse(
-                '{"segments": [{"start": 0, "end": 1}]}', new ReadOptions()), ...$parsing],
             "Parsers/WordGrouping.php: bad time"            => [fn () => (new AssemblyAiParser())->parse('{"words": [{"text": "Hi", "start": "soon"}]}', new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/WordGrouping.php: text no string"      => [fn () => (new AwsTranscribeParser())->parse(

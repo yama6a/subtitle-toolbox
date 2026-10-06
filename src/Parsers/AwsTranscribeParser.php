@@ -15,14 +15,20 @@ final class AwsTranscribeParser extends SubtitleParser
     public const FORMAT_DATA_KEY = Format::AwsTranscribe->value;
 
 
+    protected static function formatDataKey(): string
+    {
+        return self::FORMAT_DATA_KEY;
+    }
+
+
     /**
      * Reads the JSON transcript of an Amazon Transcribe batch job, one cue per audio segment, else cues grouped from the words.
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $data           = $this->decodeJsonObject($rawSubtitle);
-        $results        = $data["results"] ?? null;
-        if (!is_array($results) || !is_array($results["items"] ?? null) || !array_is_list($results["items"])) {
+        $data    = $this->decodeJsonObject($rawSubtitle);
+        $results = $data["results"] ?? null;
+        if (!is_array($results) || !self::isList($results["items"] ?? null)) {
             throw new ParsingException("The JSON has no \"results.items\" list.");
         }
 
@@ -30,18 +36,11 @@ final class AwsTranscribeParser extends SubtitleParser
         $segments = self::listOrEmpty($results["audio_segments"] ?? null);
         $cues     = $segments === [] ? $this->cuesFromWords($words, "items") : $this->readSegments($segments, $words);
 
-        $subtitle = new Subtitle();
-        if (is_string($results["language_code"] ?? null) && $results["language_code"] !== "") {
-            $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $results["language_code"]);
-        }
-        $fileData = array_diff_key($data, ["results" => true]);
-        $other    = array_diff_key($results, array_flip(["transcripts", "items", "audio_segments", "speaker_labels", "channel_labels"]));
-        if ($other !== []) {
-            $fileData["results"] = $other;
-        }
-        $subtitle->setFormatData(self::FORMAT_DATA_KEY, $fileData);
-
-        return $subtitle->addCues($cues);
+        return $this->transcript($cues, $results["language_code"] ?? null, self::fileDataWithResults(
+            $data,
+            $results,
+            ["transcripts", "items", "audio_segments", "speaker_labels", "channel_labels"]
+        ));
     }
 
 
