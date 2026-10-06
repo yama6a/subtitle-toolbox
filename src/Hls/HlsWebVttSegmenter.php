@@ -40,27 +40,25 @@ final class HlsWebVttSegmenter
             ),
         ];
 
-        $starts = array_map(fn (SubtitleCue $cue): int => (int) round($cue->getStart() * 1000), $cues);
-        $ends   = array_map(fn (SubtitleCue $cue): int => (int) round($cue->getEnd() * 1000), $cues);
-        $copy   = (new Subtitle())->addCues(array_map(
+        $copy = (new Subtitle())->addCues(array_map(
             fn (SubtitleCue $cue, int $cueIndex): SubtitleCue => (clone $cue)->setIdentifier($cue->getIdentifier() ?? (string) ($cueIndex + 1)),
             $cues,
             array_keys($cues),
         ));
+        $sorted  = array_values($copy->getCues());
+        $starts  = array_map(fn (SubtitleCue $cue): int => (int) round($cue->getStart() * 1000), $sorted);
+        $ends    = array_map(fn (SubtitleCue $cue): int => (int) round($cue->getEnd() * 1000), $sorted);
         $shifted = array_values($copy->shift($options->local)->getCues());
 
-        $order = array_keys($starts);
-        usort($order, fn (int $first, int $second): int => [$starts[$first], $first] <=> [$starts[$second], $second]);
-
         $segmentMillis = $options->segmentMilliseconds();
-        $segments      = function () use ($fileData, $starts, $ends, $shifted, $order, $options, $segmentMillis, $totalMillis): Generator {
+        $segments      = function () use ($fileData, $starts, $ends, $shifted, $options, $segmentMillis, $totalMillis): Generator {
             $empty  = null;
             $next   = 0;
             $active = [];
             for ($startMillis = 0, $index = 0; $startMillis < $totalMillis; $startMillis += $segmentMillis, $index++) {
                 $endMillis = min($startMillis + $segmentMillis, $totalMillis);
-                for (; $next < count($order) && $starts[$order[$next]] < $endMillis; $next++) {
-                    $active[$order[$next]] = true;
+                for (; $next < count($starts) && $starts[$next] < $endMillis; $next++) {
+                    $active[$next] = true;
                 }
                 foreach (array_keys($active) as $cueIndex) {
                     $isEmpty = $ends[$cueIndex] === $starts[$cueIndex];

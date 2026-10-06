@@ -36,8 +36,8 @@ final class TimestampMap
                                                (self::MPEGTS_WRAP - 1) . ", got $mpegts.");
         }
 
-        if ($local < 0) {
-            throw new InvalidArgumentException("The LOCAL time must not be negative, got $local.");
+        if (!is_finite($local) || $local < 0) {
+            throw new InvalidArgumentException("The LOCAL time must be a finite number that is not negative, got $local.");
         }
     }
 

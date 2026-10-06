@@ -52,9 +52,14 @@ class TimestampMapTest extends TestCase
 
     public function testConstructorRejectsValuesOutsideTheRange(): void
     {
-        $this->expectException(InvalidArgumentException::class);
-
-        new TimestampMap(TimestampMap::MPEGTS_WRAP);
+        foreach ([[TimestampMap::MPEGTS_WRAP, 0], [-1, 0], [0, -1], [0, NAN], [0, INF]] as [$mpegts, $local]) {
+            try {
+                new TimestampMap($mpegts, $local);
+                $this->fail("No exception for MPEGTS $mpegts and LOCAL $local");
+            } catch (InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
     }
 
 

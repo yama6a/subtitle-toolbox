@@ -29,8 +29,8 @@ final class HlsSegmentOptions
         public readonly string $fileNamePattern = "sub%d.vtt",
         public readonly ?float $mediaDuration = null,
     ) {
-        if (round($segmentDuration, 3) <= 0) {
-            throw new InvalidArgumentException("The segment duration must be at least 0.001 s, got $segmentDuration.");
+        if (!is_finite($segmentDuration) || round($segmentDuration, 3) <= 0) {
+            throw new InvalidArgumentException("The segment duration must be a finite number of at least 0.001 s, got $segmentDuration.");
         }
 
         $placeholders = str_replace("%%", "", $fileNamePattern);
@@ -39,8 +39,8 @@ final class HlsSegmentOptions
                                                "placeholder, got $fileNamePattern.");
         }
 
-        if ($mediaDuration !== null && round($mediaDuration, 3) <= 0) {
-            throw new InvalidArgumentException("The media duration must be at least 0.001 s, got $mediaDuration.");
+        if ($mediaDuration !== null && (!is_finite($mediaDuration) || round($mediaDuration, 3) <= 0)) {
+            throw new InvalidArgumentException("The media duration must be a finite number of at least 0.001 s, got $mediaDuration.");
         }
 
         $this->timestampMap = new TimestampMap($mpegts, $local);
