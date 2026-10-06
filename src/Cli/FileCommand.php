@@ -592,12 +592,7 @@ abstract class FileCommand extends Command
             return $this->readOptions;
         }
 
-        return new ReadOptions(
-            encoding: $this->readOptions->encoding,
-            lenient: $this->readOptions->lenient,
-            lastCueDuration: $this->readOptions->lastCueDuration,
-            format: $formatOptions,
-        );
+        return OptionsCopy::with($this->readOptions, ["format" => $formatOptions]);
     }
 
 
