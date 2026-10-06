@@ -351,10 +351,7 @@ final class TtmlFormatter extends SubtitleFormatter
         }
 
         if ($tag === "font") {
-            if (!preg_match("/\bcolor\s*=\s*(?:\"([^\"]*)\"|'([^']*)'|([^\s\"']+))/i", $rest, $matches)) {
-                return "";
-            }
-            $color = Markup::decodeEntities(trim(($matches[1] ?? "") . ($matches[2] ?? "") . ($matches[3] ?? "")));
+            $color = Markup::decodeEntities(trim(Markup::fontColor($rest) ?? ""));
 
             return $color === "" ? "" : "<span" . $this->formatAttribute("$this->tts:color", $color) . ">";
         }

@@ -159,10 +159,11 @@ final class IttFormatter extends SubtitleFormatter
         return preg_replace_callback(
             "/<font\b([^>]*)>/i",
             function (array $matches): string {
-                if (!preg_match("/\bcolor\s*=\s*(?:\"([^\"]*)\"|'([^']*)'|([^\s\"']+))/i", $matches[1], $color)) {
+                $color = Markup::fontColor($matches[1]);
+                if ($color === null) {
                     return "<font>";
                 }
-                $color = strtolower(trim(Markup::decodeEntities(($color[1] ?? "") . ($color[2] ?? "") . ($color[3] ?? ""))));
+                $color = strtolower(trim(Markup::decodeEntities($color)));
                 if (preg_match("/^#[0-9a-f]{6}([0-9a-f]{2})?$/", $color)) {
                     return "<font color=\"" . substr($color, 0, 7) . "\">";
                 }
