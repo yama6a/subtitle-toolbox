@@ -10,6 +10,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\EbuStl;
 use SubtitleToolbox\Parsers\EbuStlParser;
@@ -114,8 +115,8 @@ final class EbuStlFormatter extends SubtitleFormatter
             }
         }
 
-        $bytes = implode(chr(EbuStl::NEW_LINE), array_map(fn (string $line): string => $this->encodeCharacters($context, $line), explode("\n", $text)));
-        [$verticalPosition, $justificationCode] = $this->position($context, 2, count(explode("\n", $text)));
+        $bytes = implode(chr(EbuStl::NEW_LINE), array_map(fn (string $line): string => $this->encodeCharacters($context, $line), explode(LineEnding::Lf->value, $text)));
+        [$verticalPosition, $justificationCode] = $this->position($context, 2, count(explode(LineEnding::Lf->value, $text)));
 
         return $this->textBlocks($context, $bytes, $this->header(0, 0, $smpteBytes, $smpteBytes, $verticalPosition, $justificationCode, 1));
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
 use SubtitleToolbox\StringHelpers;
@@ -19,20 +20,20 @@ final class FfMetadataChaptersFormatter extends SubtitleFormatter
     {
         $options ??= new WriteOptions();
         $stored = $subtitle->findFormatData(FfMetadataChaptersParser::FORMAT_DATA_KEY);
-        $output = ";FFMETADATA1\n" . $this->tags($this->globalTags($subtitle, $stored["tags"] ?? []));
+        $output = ";FFMETADATA1" . LineEnding::Lf->value . $this->tags($this->globalTags($subtitle, $stored["tags"] ?? []));
         foreach ($stored["streams"] ?? [] as $streamTags) {
-            $output .= "[STREAM]\n" . $this->tags($streamTags);
+            $output .= "[STREAM]" . LineEnding::Lf->value . $this->tags($streamTags);
         }
 
         foreach ($subtitle->getCues() as $cue) {
             $data     = $cue->findFormatData(FfMetadataChaptersParser::FORMAT_DATA_KEY);
             $timeBase = $data["timeBase"] ?? self::DEFAULT_TIME_BASE;
             [$numerator, $denominator] = array_map("intval", explode("/", $timeBase));
-            $title    = implode("\n", Markup::plainLines($cue->getLines()));
+            $title    = implode(LineEnding::Lf->value, Markup::plainLines($cue->getLines()));
 
-            $output .= "[CHAPTER]\nTIMEBASE=$timeBase\n" .
-                       "START=" . $this->ticks($cue->getStart(), $numerator, $denominator) . "\n" .
-                       "END=" . $this->ticks($cue->getEnd(), $numerator, $denominator) . "\n" .
+            $output .= "[CHAPTER]" . LineEnding::Lf->value . "TIMEBASE=$timeBase" . LineEnding::Lf->value .
+                       "START=" . $this->ticks($cue->getStart(), $numerator, $denominator) . LineEnding::Lf->value .
+                       "END=" . $this->ticks($cue->getEnd(), $numerator, $denominator) . LineEnding::Lf->value .
                        $this->tags(($title === "" ? [] : ["title" => $title]) + ($data["tags"] ?? []));
         }
 
@@ -56,7 +57,7 @@ final class FfMetadataChaptersFormatter extends SubtitleFormatter
     {
         $output = "";
         foreach ($tags as $key => $value) {
-            $output .= $this->escape((string) $key) . "=" . $this->escape($value) . "\n";
+            $output .= $this->escape((string) $key) . "=" . $this->escape($value) . LineEnding::Lf->value;
         }
 
         return $output;

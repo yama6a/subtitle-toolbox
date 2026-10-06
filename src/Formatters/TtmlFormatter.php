@@ -19,8 +19,6 @@ use SubtitleToolbox\XmlLoader;
 
 final class TtmlFormatter extends SubtitleFormatter
 {
-    private const NL = LineEnding::Lf->value;
-
     // The formatter writes media times, so these parameters no longer apply.
     private const SKIPPED_ROOT_PARAMETERS = ["timeBase", "clockMode", "dropMode", "markerMode"];
 
@@ -84,23 +82,23 @@ final class TtmlFormatter extends SubtitleFormatter
             }
         }
 
-        $output = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" . self::NL
-                  . "<tt" . $this->formatRootAttributes($subtitle, $fileData["attributes"] ?? []) . ">" . self::NL
-                  . "  " . $this->headDocument->saveXML($this->head) . self::NL
-                  . "  <body" . $this->formatAttributes($fileData["body"] ?? [], []) . ">" . self::NL;
+        $output = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" . LineEnding::Lf->value
+                  . "<tt" . $this->formatRootAttributes($subtitle, $fileData["attributes"] ?? []) . ">" . LineEnding::Lf->value
+                  . "  " . $this->headDocument->saveXML($this->head) . LineEnding::Lf->value
+                  . "  <body" . $this->formatAttributes($fileData["body"] ?? [], []) . ">" . LineEnding::Lf->value;
         if ($divs === []) {
-            $output .= "    <div/>" . self::NL;
+            $output .= "    <div/>" . LineEnding::Lf->value;
         }
         foreach ($divs as $div) {
-            $output .= "    <div" . $this->formatWritableAttributes($div["attributes"]) . ">" . self::NL;
+            $output .= "    <div" . $this->formatWritableAttributes($div["attributes"]) . ">" . LineEnding::Lf->value;
             foreach ($div["paragraphs"] as [$id, $paragraph]) {
                 $idAttribute = $id === null ? "" : $this->formatAttribute("xml:id", $this->unusedId($id));
-                $output     .= "      <p$idAttribute$paragraph" . self::NL;
+                $output     .= "      <p$idAttribute$paragraph" . LineEnding::Lf->value;
             }
-            $output .= "    </div>" . self::NL;
+            $output .= "    </div>" . LineEnding::Lf->value;
         }
 
-        return $this->applyOutputOptions($output . "  </body>" . self::NL . "</tt>" . self::NL, $options);
+        return $this->applyOutputOptions($output . "  </body>" . LineEnding::Lf->value . "</tt>" . LineEnding::Lf->value, $options);
     }
 
 
@@ -228,7 +226,7 @@ final class TtmlFormatter extends SubtitleFormatter
             $attributes .= $this->formatAttribute($this->ittsPrefix() . ":forcedDisplay", $cue->isForced() ? "true" : "false");
         }
 
-        $text = implode(self::NL, $cue->getLines());
+        $text = implode(LineEnding::Lf->value, $cue->getLines());
         if ($options->stripTags) {
             return "$attributes>" . $this->formatText(Markup::stripAllTags($text)) . "</p>";
         }
@@ -395,7 +393,7 @@ final class TtmlFormatter extends SubtitleFormatter
     {
         $text = htmlspecialchars(Markup::decodeEntities($text), ENT_XML1 | ENT_NOQUOTES, "UTF-8");
 
-        return str_replace(self::NL, "<br/>", $text);
+        return str_replace(LineEnding::Lf->value, "<br/>", $text);
     }
 
 
@@ -478,19 +476,19 @@ final class TtmlFormatter extends SubtitleFormatter
     {
         $document = $parent->ownerDocument;
         if (!$parent->hasChildNodes()) {
-            $parent->appendChild($document->createTextNode(self::NL . str_repeat("  ", $depth - 1)));
+            $parent->appendChild($document->createTextNode(LineEnding::Lf->value . str_repeat("  ", $depth - 1)));
         }
         if ($before === null) {
             $last   = $parent->lastChild;
             $before = $last->nodeType === XML_TEXT_NODE && trim($last->nodeValue) === ""
                 ? $last
-                : $parent->appendChild($document->createTextNode(self::NL . str_repeat("  ", $depth - 1)));
+                : $parent->appendChild($document->createTextNode(LineEnding::Lf->value . str_repeat("  ", $depth - 1)));
         } elseif ($before->previousSibling !== null && $before->previousSibling->nodeType === XML_TEXT_NODE
                   && trim($before->previousSibling->nodeValue) === "" && $before !== $parent->firstChild) {
             $before = $before->previousSibling;
         }
 
-        $parent->insertBefore($document->createTextNode(self::NL . str_repeat("  ", $depth)), $before);
+        $parent->insertBefore($document->createTextNode(LineEnding::Lf->value . str_repeat("  ", $depth)), $before);
         $parent->insertBefore($element, $before);
     }
 

@@ -127,14 +127,14 @@ final class StringHelpers
     /** @internal */
     public static function removeEmptyLines(string $str): string
     {
-        return preg_replace('/\n+/', "\n", $str);
+        return preg_replace('/\n+/', LineEnding::Lf->value, $str);
     }
 
 
     /** @internal */
     public static function removeDoubleEmptyLines(string $str): string
     {
-        return preg_replace('/\n{3,}/', "\n\n", $str);
+        return preg_replace('/\n{3,}/', str_repeat(LineEnding::Lf->value, 2), $str);
     }
 
 

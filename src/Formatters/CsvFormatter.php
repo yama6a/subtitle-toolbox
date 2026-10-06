@@ -8,6 +8,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
@@ -137,7 +138,7 @@ final class CsvFormatter extends SubtitleFormatter
             $lines[0] = substr($lines[0], strlen($matches[0]));
         }
 
-        return [$speaker, implode("\n", Markup::plainLines($lines))];
+        return [$speaker, implode(LineEnding::Lf->value, Markup::plainLines($lines))];
     }
 
 
@@ -168,7 +169,7 @@ final class CsvFormatter extends SubtitleFormatter
                 continue;
             }
             $used[$best] = true;
-            $texts[]     = implode("\n", Markup::plainLines($secondCues[$best]->getLines()));
+            $texts[]     = implode(LineEnding::Lf->value, Markup::plainLines($secondCues[$best]->getLines()));
         }
 
         return $texts;

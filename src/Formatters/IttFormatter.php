@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\TtmlNamespaces;
@@ -24,18 +25,17 @@ final class IttFormatter extends SubtitleFormatter
 {
     protected const FORMAT_OPTIONS = IttWriteOptions::class;
 
-    private const HEAD = "<head>\n"
-                         . "    <styling>\n"
-                         . "      <style xml:id=\"normal\" tts:fontFamily=\"sansSerif\" tts:fontWeight=\"normal\" tts:fontStyle=\"normal\""
-                         . " tts:color=\"white\" tts:fontSize=\"100%\"/>\n"
-                         . "    </styling>\n"
-                         . "    <layout>\n"
-                         . "      <region xml:id=\"top\" tts:origin=\"0% 0%\" tts:extent=\"100% 15%\" tts:textAlign=\"center\""
-                         . " tts:displayAlign=\"before\"/>\n"
-                         . "      <region xml:id=\"bottom\" tts:origin=\"0% 85%\" tts:extent=\"100% 15%\" tts:textAlign=\"center\""
-                         . " tts:displayAlign=\"after\"/>\n"
-                         . "    </layout>\n"
-                         . "  </head>";
+    private const HEAD_LINES = [
+        "<head>",
+        "    <styling>",
+        "      <style xml:id=\"normal\" tts:fontFamily=\"sansSerif\" tts:fontWeight=\"normal\" tts:fontStyle=\"normal\" tts:color=\"white\" tts:fontSize=\"100%\"/>",
+        "    </styling>",
+        "    <layout>",
+        "      <region xml:id=\"top\" tts:origin=\"0% 0%\" tts:extent=\"100% 15%\" tts:textAlign=\"center\" tts:displayAlign=\"before\"/>",
+        "      <region xml:id=\"bottom\" tts:origin=\"0% 85%\" tts:extent=\"100% 15%\" tts:textAlign=\"center\" tts:displayAlign=\"after\"/>",
+        "    </layout>",
+        "  </head>",
+    ];
 
     // TTML 1, section 8.3.13, named colors.
     private const NAMED_COLORS = [
@@ -125,7 +125,7 @@ final class IttFormatter extends SubtitleFormatter
         $ttml->setFormatData(TtmlParser::FORMAT_DATA_KEY, [
             "namespace"  => TtmlNamespaces::TTML,
             "namespaces" => ["ttp" => TtmlNamespaces::PARAMETER[0]],
-            "head"       => self::HEAD,
+            "head"       => implode(LineEnding::Lf->value, self::HEAD_LINES),
             "body"       => ["style" => "normal"],
         ]);
 
