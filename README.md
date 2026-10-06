@@ -10,9 +10,14 @@ Upgrading from 1.x? See the [upgrade guide](docs/upgrade-2.0.md).
 ## Install
 ```sh
 composer require ymakhloufi/subtitle-toolbox
+# Optional, for OCR of PGS and VobSub image subtitles:
+composer require yama6a/php-glyph-ocr:^0.3   # php-glyph-ocr, the pure PHP OCR engine
+apt install tesseract-ocr                    # or Tesseract, for more than 100 languages, on Debian and Ubuntu
 ```
 
-The library needs PHP 8.2 or later with `ext-dom` and `ext-iconv`. Optional: `ext-mbstring` for Unicode upper and lower case, `ext-zlib` for PGS output and compressed MKV tracks, `ext-curl` for the DeepL and Google translation engines, and [`yama6a/php-glyph-ocr`](https://github.com/yama6a/php-glyph-ocr) for OCR without Tesseract.
+The core package needs neither OCR engine. See [ocr.md](docs/ocr.md) for the install commands of other systems and languages.
+
+The library needs PHP 8.2 or later with `ext-dom` and `ext-iconv`. Optional: `ext-mbstring` for Unicode upper and lower case, `ext-zlib` for PGS output and compressed MKV tracks and `ext-curl` for the DeepL and Google translation engines.
 
 The command line tool also comes as a PHAR file and as two container images. The `-tesseract` image includes Tesseract for OCR.
 
