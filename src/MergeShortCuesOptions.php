@@ -22,9 +22,7 @@ final class MergeShortCuesOptions
         public readonly bool $keepSentenceEnds = false,
         public readonly bool $mergeSameSpeakerAnyDuration = false,
     ) {
-        if ($maxGap < 0) {
-            throw new InvalidArgumentException("The maximum gap must not be negative, got $maxGap.");
-        }
+        OptionChecks::nonNegativeFinite($maxGap, "The maximum gap must not be negative, got %s.");
 
         if ($minCharacters !== null && $minCharacters < 1) {
             throw new InvalidArgumentException("The minimum characters must be at least 1 or null, got $minCharacters.");

@@ -2105,9 +2105,9 @@ class BinaryTest extends TestCase
             "Error: The hls command takes one input file, got 2.$usage" => ["talk.vtt", "trip.srt", "--output-dir", "new"],
             "Error: out/sub99.vtt $exists"                              => ["talk.vtt", "--output-dir", "out"],
             "Error: out/index.m3u8 $exists"                             => ["talk.vtt", "--output-dir", "out/", "--playlist", "index.m3u8", "--pattern", "p%d.vtt"],
-            "Error: The segment duration must be a finite number of at least 0.001 s, got INF.$usage"
+            "Error: The option --segment needs a finite number, got \"1e999\".$usage"
                                                                         => ["talk.vtt", "--output-dir", "new", "--segment", "1e999"],
-            "Error: The LOCAL time must be a finite number that is not negative, got INF.$usage"
+            "Error: The option --local needs a finite number, got \"1e999\".$usage"
                                                                         => ["talk.vtt", "--output-dir", "new", "--local", "1e999"],
         ] as $error => $arguments) {
             $this->assertSame([2, "", $error], $this->runBinary(["hls", ...$arguments]), $error);

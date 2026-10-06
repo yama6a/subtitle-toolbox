@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Diff;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\OptionChecks;
 
 final class SubtitleDiffOptions
 {
@@ -17,8 +17,6 @@ final class SubtitleDiffOptions
         public readonly bool $ignoreWhitespace = false,
         public readonly bool $textOnly = false,
     ) {
-        if ($timeTolerance < 0) {
-            throw new InvalidArgumentException("The time tolerance must not be negative, got $timeTolerance.");
-        }
+        OptionChecks::nonNegativeFinite($timeTolerance, "The time tolerance must not be negative, got %s.");
     }
 }

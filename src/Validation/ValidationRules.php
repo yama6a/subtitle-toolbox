@@ -7,9 +7,24 @@ namespace SubtitleToolbox\Validation;
 use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\OptionChecks;
 
 final class ValidationRules
 {
+    /**
+     * The Netflix limits that CueLimits takes as defaults.
+     *
+     * @internal
+     */
+    public const NETFLIX_MAX_CHARACTERS_PER_LINE = 42;
+
+    /** @internal */
+    public const NETFLIX_MAX_LINES_PER_CUE = 2;
+
+    /** @internal */
+    public const NETFLIX_MAX_DURATION = 7;
+
+
     /**
      * Creates a rule set. A rule with the limit null or false is off.
      */
@@ -35,6 +50,20 @@ final class ValidationRules
         public readonly bool $noUnsortedCues = false,
         public readonly bool $noNegativeDuration = false,
     ) {
+        $maximums = ["maxCharactersPerSecond" => $maxCharactersPerSecond, "maxCharactersPerLine" => $maxCharactersPerLine,
+                     "maxLinesPerCue" => $maxLinesPerCue, "maxDuration" => $maxDuration,
+                     "maxSpeakersPerCue" => $maxSpeakersPerCue, "maxWordsPerMinute" => $maxWordsPerMinute];
+        foreach ($maximums as $name => $limit) {
+            if ($limit !== null) {
+                OptionChecks::notNegative($limit, "The limit $name must be 0 or more, got %s.");
+            }
+        }
+        foreach (["minDuration" => $minDuration, "minGap" => $minGap, "minSecondsPerWord" => $minSecondsPerWord] as $name => $limit) {
+            if ($limit !== null) {
+                OptionChecks::nonNegativeFinite($limit, "The limit $name must be a finite number of 0 or more, got %s.");
+            }
+        }
+
         if ($allowedCharacters !== null && TextChecks::isCharacterClass($allowedCharacters)
             && @preg_match(TextChecks::characterClassPattern($allowedCharacters) . "u", "") === false) {
             throw new InvalidArgumentException("The allowed characters \"$allowedCharacters\" are no valid regular " .
@@ -65,10 +94,10 @@ final class ValidationRules
     {
         return new self(
             maxCharactersPerSecond: 20,
-            maxCharactersPerLine: 42,
-            maxLinesPerCue: 2,
+            maxCharactersPerLine: self::NETFLIX_MAX_CHARACTERS_PER_LINE,
+            maxLinesPerCue: self::NETFLIX_MAX_LINES_PER_CUE,
             minDuration: 5 / 6,
-            maxDuration: 7,
+            maxDuration: self::NETFLIX_MAX_DURATION,
             minGap: (new FrameRate($frameRate))->framesToSeconds(2),
             noOverlap: true,
         );

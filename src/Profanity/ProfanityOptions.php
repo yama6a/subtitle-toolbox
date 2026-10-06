@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Profanity;
 
 use Closure;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\OptionChecks;
 
 final class ProfanityOptions
 {
@@ -33,9 +34,7 @@ final class ProfanityOptions
         if ($words === []) {
             throw new InvalidArgumentException("The profanity word list is empty.");
         }
-        if ($padding < 0) {
-            throw new InvalidArgumentException("The padding must not be negative, got $padding.");
-        }
+        OptionChecks::nonNegativeFinite($padding, "The padding must not be negative, got %s.");
 
         $this->words = array_values(array_unique($words));
     }

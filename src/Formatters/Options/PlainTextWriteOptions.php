@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters\Options;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\OptionChecks;
 
 final class PlainTextWriteOptions implements FormatWriteOptions
 {
@@ -14,8 +14,6 @@ final class PlainTextWriteOptions implements FormatWriteOptions
         public readonly float $paragraphGap = 2.0,           // seconds of silence that start a new paragraph
         public readonly bool $withTimes = false,             // starts each paragraph with its start time, [00:01:02]
     ) {
-        if ($paragraphGap < 0) {
-            throw new InvalidArgumentException("The paragraph gap must be 0 or more seconds, got $paragraphGap.");
-        }
+        OptionChecks::notNegative($paragraphGap, "The paragraph gap must be 0 or more seconds, got %s.");
     }
 }

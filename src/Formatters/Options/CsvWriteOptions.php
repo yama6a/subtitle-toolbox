@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters\Options;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Subtitle;
 
@@ -24,8 +24,8 @@ final class CsvWriteOptions implements FormatWriteOptions
         if ($delimiter !== null) {
             CsvParser::checkDelimiter($delimiter);
         }
-        if ($frameRate !== null && $frameRate <= 0) {
-            throw new InvalidArgumentException("The CSV frame rate must be greater than 0, got $frameRate.");
+        if ($frameRate !== null) {
+            FrameRate::check($frameRate, "The CSV frame rate must be greater than 0, got %s.");
         }
     }
 }

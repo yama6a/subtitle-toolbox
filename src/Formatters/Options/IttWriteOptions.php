@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters\Options;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Formatters\IttFrameRates;
+use SubtitleToolbox\OptionChecks;
 
 final class IttWriteOptions implements FormatWriteOptions
 {
@@ -13,7 +14,7 @@ final class IttWriteOptions implements FormatWriteOptions
         public readonly ?float $frameRate = null,            // 23.976, 24, 25, 29.97 or 30, null takes the frame rate that IttParser stored
     ) {
         if ($frameRate !== null && IttFrameRates::supported($frameRate) === null) {
-            throw new InvalidArgumentException("The ITT formatter accepts the frame rates 23.976, 24, 25, 29.97 and 30, got $frameRate.");
+            throw new InvalidArgumentException("The ITT formatter accepts the frame rates 23.976, 24, 25, 29.97 and 30, got " . OptionChecks::text($frameRate) . ".");
         }
     }
 }

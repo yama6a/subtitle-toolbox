@@ -34,8 +34,6 @@ final class ReadOptions
         if ($encoding !== null && @iconv($encoding, "UTF-8", "") === false) {
             throw new InvalidArgumentException("The encoding \"$encoding\" is unknown.");
         }
-        if (!($lastCueDuration >= 0) || is_infinite($lastCueDuration)) {
-            throw new InvalidArgumentException("The last cue duration must be 0 or more seconds, got $lastCueDuration.");
-        }
+        OptionChecks::nonNegativeFinite($lastCueDuration, "The last cue duration must be 0 or more seconds, got %s.");
     }
 }

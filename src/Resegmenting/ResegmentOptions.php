@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Resegmenting;
 
 use SubtitleToolbox\CueLimits;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\OptionChecks;
 
 final class ResegmentOptions
 {
@@ -20,8 +20,6 @@ final class ResegmentOptions
         public readonly CueLimits $limits = new CueLimits(),
         public readonly float $maxWordGap = 0.6,
     ) {
-        if ($maxWordGap < 0) {
-            throw new InvalidArgumentException("The maximum word gap must not be negative, got $maxWordGap.");
-        }
+        OptionChecks::nonNegativeFinite($maxWordGap, "The maximum word gap must not be negative, got %s.");
     }
 }

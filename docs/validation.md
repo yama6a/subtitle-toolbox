@@ -42,6 +42,7 @@ The value of a `ValidationRule` case is the name of its field in `ValidationRule
 | `noNegativeDuration` | `true` to check, result limit `null` | end minus start, below 0 |
 
 - **Off by default**: a rule with the limit `null` or `false` is off.
+- **Number limits**: a limit must be 0 or more. NAN throws `InvalidArgumentException`. A maximum accepts `INF`, which checks nothing. A minimum must be finite.
 - **Characters**: the count leaves out tags and leading and trailing spaces. It counts an entity such as `&amp;` as one character and a UTF-8 letter of several bytes as one character.
 - **Spaces**: the text rules check the text without tags, with entities decoded. A cue stores runs of spaces as one space. So two spaces come from tags, as in `you? <i> Home</i>`, or from non-breaking spaces.
 - **Dialogue dash**: a hyphen, an en dash or an em dash at the start of a line, not followed by a digit or another dash. So `-20 degrees` has no dialogue dash.

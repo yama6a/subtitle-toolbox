@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
-
 final class FrameRate
 {
     private float $framesPerSecond;
@@ -13,11 +11,21 @@ final class FrameRate
 
     public function __construct(float $framesPerSecond)
     {
-        if ($framesPerSecond <= 0) {
-            throw new InvalidArgumentException("The frame rate must be greater than 0, got $framesPerSecond.");
-        }
+        self::check($framesPerSecond);
 
         $this->framesPerSecond = $framesPerSecond;
+    }
+
+
+    /**
+     * Throws InvalidArgumentException with $message unless $framesPerSecond is finite and greater than 0. %s in
+     * $message becomes the value.
+     *
+     * @internal
+     */
+    public static function check(float $framesPerSecond, string $message = "The frame rate must be greater than 0, got %s."): void
+    {
+        OptionChecks::positiveFinite($framesPerSecond, $message);
     }
 
 

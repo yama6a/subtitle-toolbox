@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers\Options;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\OptionChecks;
 
 /**
  * The read settings of VobSub. The parser reads the .sub content and takes the .idx content from here.
@@ -24,8 +25,8 @@ final class VobSubReadOptions implements FormatReadOptions
         if ($track !== null && $track < 0) {
             throw new InvalidArgumentException("The track index must be 0 or more, got $track.");
         }
-        if ($language !== null && trim($language) === "") {
-            throw new InvalidArgumentException("The language must not be empty.");
+        if ($language !== null) {
+            OptionChecks::notBlank($language, "The language must not be empty.");
         }
     }
 }

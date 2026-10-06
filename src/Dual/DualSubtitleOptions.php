@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Dual;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\OptionChecks;
 
 final class DualSubtitleOptions
 {
@@ -18,16 +19,14 @@ final class DualSubtitleOptions
         public readonly ?string $secondaryStyle = null,
         public readonly int $secondaryAlignment = 8,
     ) {
-        if ($snapTolerance < 0) {
-            throw new InvalidArgumentException("The snap tolerance $snapTolerance must not be negative.");
-        }
+        OptionChecks::nonNegativeFinite($snapTolerance, "The snap tolerance %s must not be negative.");
 
         if ($secondaryStyle !== null && !in_array($this->getSecondaryTagName(), Markup::CORE_TAGS, true)) {
             throw new InvalidArgumentException("The secondary style $secondaryStyle must be a core markup tag " .
                                                "such as i or font color=\"#ffff00\".");
         }
 
-        if ($secondaryAlignment < 1 || $secondaryAlignment > 9) {
+        if (!OptionChecks::isAlignment($secondaryAlignment)) {
             throw new InvalidArgumentException("Cannot set alignment $secondaryAlignment - " .
                                                "the alignment must be a number from 1 to 9!");
         }
