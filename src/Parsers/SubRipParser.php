@@ -65,31 +65,28 @@ final class SubRipParser extends SubtitleParser
             return [$this->parseCueBlock($rawLines, $index)];
         }
 
-        $cues  = [];
-        $parts = $this->repairMissingEmptyLines($rawLines, $lineNumber, $index, $this->isTimingLine(...), true);
-        foreach ($parts as $offset => $part) {
-            $partLine  = $lineNumber + $offset;
-            $hasNumber = !$this->isTimingLine($part[0]);
-            try {
-                $cue = $this->parseCueBlock($hasNumber ? $part : array_merge(["0"], $part), $index);
-            } catch (ParsingException $exception) {
-                $this->fail($exception, $partLine, $index, $part);
-                continue;
-            }
+        return $this->parseRepairedBlock(
+            $rawLines,
+            $lineNumber,
+            $index,
+            $this->isTimingLine(...),
+            true,
+            function (array $part, int $partLine) use ($index): SubtitleCue {
+                $hasNumber = !$this->isTimingLine($part[0]);
+                $cue       = $this->parseCueBlock($hasNumber ? $part : array_merge(["0"], $part), $index);
+                if (!$hasNumber) {
+                    $this->warn(
+                        "Block #$index has no cue number on line $partLine. The parser read the cue without it.",
+                        $partLine,
+                        $index,
+                        $part,
+                        ParseWarningAction::Repaired
+                    );
+                }
 
-            if (!$hasNumber) {
-                $this->warn(
-                    "Block #$index has no cue number on line $partLine. The parser read the cue without it.",
-                    $partLine,
-                    $index,
-                    $part,
-                    ParseWarningAction::Repaired
-                );
+                return $cue;
             }
-            $cues[] = $cue;
-        }
-
-        return $cues;
+        );
     }
 
 

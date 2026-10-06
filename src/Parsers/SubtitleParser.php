@@ -15,6 +15,7 @@ use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 
 /**
  * The base class of the parsers of this library. Only the library extends it. Its protected members are not API and
@@ -243,6 +244,30 @@ abstract class SubtitleParser
         }
 
         return $parts;
+    }
+
+
+    /**
+     * Returns the cues of the parts that repairMissingEmptyLines() returns. $parsePart gets a part and the number of its
+     * first line, and returns its cue. In lenient mode, a part for which $parsePart throws is skipped with a warning.
+     *
+     * @param list<string> $block
+     * @param callable(list<string>, int): SubtitleCue $parsePart
+     *
+     * @return list<SubtitleCue>
+     */
+    protected function parseRepairedBlock(array $block, int $lineNumber, int $blockIndex, callable $isTimingLine, bool $withCueNumbers, callable $parsePart): array
+    {
+        $cues = [];
+        foreach ($this->repairMissingEmptyLines($block, $lineNumber, $blockIndex, $isTimingLine, $withCueNumbers) as $offset => $part) {
+            try {
+                $cues[] = $parsePart($part, $lineNumber + $offset);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, $lineNumber + $offset, $blockIndex, $part);
+            }
+        }
+
+        return $cues;
     }
 
 
