@@ -7,10 +7,8 @@ namespace SubtitleToolbox\Parsers;
 use Generator;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\ParseWarningAction;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -24,13 +22,10 @@ final class SubRipParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        $rawSubtitle    = StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle));
-
         $subtitle   = new Subtitle();
         $parsedCues = [];
         $index      = 0;
-        foreach ($this->splitIntoBlocks(explode(LineEnding::Lf->value, $rawSubtitle)) as $lineNumber => $rawLines) {
+        foreach ($this->splitIntoBlocks($this->lines($rawSubtitle)) as $lineNumber => $rawLines) {
             foreach ($this->parseBlock($rawLines, $index++, $lineNumber) as $cue) {
                 $parsedCues[] = $cue;
             }

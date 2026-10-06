@@ -11,7 +11,6 @@ use DOMXPath;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -63,9 +62,8 @@ final class TtmlParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings       = [];
         $this->paragraphIndex = 0;
-        $document             = $this->loadDocument(StringHelpers::removeUtf8Bom($rawSubtitle));
+        $document             = $this->loadDocument($rawSubtitle);
         $this->root      = $document->documentElement;
         $this->namespace = $this->root->namespaceURI;
         if ($this->root->localName !== "tt"

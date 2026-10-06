@@ -8,10 +8,8 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FrameRate;
-use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -33,11 +31,8 @@ final class MicroDvdParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        $rawSubtitle    = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawSubtitle    = StringHelpers::normalizeEOLs($rawSubtitle);
-        $rawLines       = array_filter(
-            array_map("trim", explode(LineEnding::Lf->value, $rawSubtitle)),
+        $rawLines = array_filter(
+            array_map("trim", $this->lines($rawSubtitle)),
             fn (string $line): bool => $line !== ""
         );
         if ($this->lenient) {

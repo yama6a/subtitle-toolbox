@@ -41,8 +41,7 @@ final class SamiParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        $rawSubtitle    = StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle));
+        $rawSubtitle = StringHelpers::normalizeEOLs($rawSubtitle);
         if (!preg_match('//u', $rawSubtitle)) {
             throw new ParsingException("The SAMI file is not valid UTF-8. Convert it to UTF-8 before parsing.");
         }

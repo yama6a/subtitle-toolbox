@@ -23,6 +23,8 @@ use SubtitleToolbox\SubtitleCue;
  */
 final class PgsParser extends SubtitleParser
 {
+    protected const BINARY = true;
+
     private const MAGIC          = "PG";
     private const HEADER_LENGTH  = 13;
     private const PTS_PER_SECOND = 90000;

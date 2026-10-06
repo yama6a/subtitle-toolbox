@@ -21,7 +21,6 @@ final class DeepgramParser extends SubtitleParser
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
         $data           = $this->decodeObject($rawSubtitle);
         $results        = $data["results"] ?? null;
         if (!is_array($results) || !is_array($results["channels"] ?? null) || !array_is_list($results["channels"])) {

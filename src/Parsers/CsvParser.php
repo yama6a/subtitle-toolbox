@@ -12,7 +12,6 @@ use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\CsvColumns;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -45,10 +44,9 @@ final class CsvParser extends SubtitleParser
     protected function read(string $rawSubtitle): Subtitle
     {
         $this->columns = $this->formatOptions()->columns ?? new CsvColumns();
-        $content       = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $delimiter     = $this->formatOptions()->delimiter ?? self::detectDelimiter($content);
+        $delimiter     = $this->formatOptions()->delimiter ?? self::detectDelimiter($rawSubtitle);
         $records       = array_filter(
-            self::records($content, $delimiter),
+            self::records($rawSubtitle, $delimiter),
             fn (array $record): bool => array_filter($record[1], fn (string $cell): bool => trim($cell) !== "") !== []
         );
 
@@ -76,7 +74,7 @@ final class CsvParser extends SubtitleParser
             }
             $timeFormat ??= self::timeFormatOf($cell("start"));
 
-            $cue = new SubtitleCue($start, $end ?? $start, $this->lines($cells[$roles["text"]] ?? "", $cell("speaker")));
+            $cue = new SubtitleCue($start, $end ?? $start, $this->textLines($cells[$roles["text"]] ?? "", $cell("speaker")));
             if ($cell("identifier") !== "") {
                 $cue->setIdentifier($cell("identifier"));
             }
@@ -260,7 +258,7 @@ final class CsvParser extends SubtitleParser
     /**
      * @return list<string>
      */
-    private function lines(string $text, string $speaker): array
+    private function textLines(string $text, string $speaker): array
     {
         return Markup::addSpeaker(explode("\n", Markup::escapeText($text)), $speaker);
     }

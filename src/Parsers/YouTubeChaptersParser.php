@@ -6,7 +6,6 @@ namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -30,8 +29,7 @@ final class YouTubeChaptersParser extends SubtitleParser
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        $lines          = explode("\n", StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle)));
+        $lines = $this->lines($rawSubtitle);
 
         $chapters = [];
         foreach ($lines as $line) {

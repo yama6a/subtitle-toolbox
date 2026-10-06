@@ -36,8 +36,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        $content        = ltrim(StringHelpers::removeUtf8Bom($rawSubtitle));
+        $content = ltrim($rawSubtitle);
         [$fileData, $captions] = str_starts_with($content, "{") ? $this->readJson($content) : $this->readXml($content);
 
         $subtitle   = new Subtitle();

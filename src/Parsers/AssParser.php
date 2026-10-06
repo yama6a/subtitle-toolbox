@@ -7,9 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -41,12 +39,9 @@ final class AssParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings   = [];
         $this->eventIndex = 0;
         $this->cues       = [];
         $this->comments   = [];
-        $rawSubtitle      = StringHelpers::removeUtf8Bom($rawSubtitle);
-        $rawSubtitle      = StringHelpers::normalizeEOLs($rawSubtitle);
 
         $subtitle = new Subtitle();
         $data     = [
@@ -62,7 +57,7 @@ final class AssParser extends SubtitleParser
         ];
 
         $section = null;
-        foreach (explode(LineEnding::Lf->value, $rawSubtitle) as $lineIndex => $line) {
+        foreach ($this->lines($rawSubtitle) as $lineIndex => $line) {
             $line = trim($line);
             if ($line === "") {
                 continue;

@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use Generator;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ParseWarningAction;
@@ -20,6 +21,9 @@ use SubtitleToolbox\Subtitle;
  */
 abstract class SubtitleParser
 {
+    // parse() strips the UTF-8 BOM of a text format only.
+    protected const BINARY = false;
+
     protected ReadOptions $options;
 
     protected bool $lenient = false;
@@ -36,6 +40,8 @@ abstract class SubtitleParser
     {
         $options ??= new ReadOptions();
         $this->useOptions($options);
+
+        $content = static::BINARY ? $content : StringHelpers::removeUtf8Bom($content);
 
         return $this->read($content)->setParseWarnings($this->warnings);
     }
@@ -123,6 +129,17 @@ abstract class SubtitleParser
     protected function warn(string $message, ?int $lineNumber, ?int $blockIndex, array $block, ParseWarningAction $action): void
     {
         $this->warnings[] = new ParseWarning($message, $lineNumber, $blockIndex, $block, $action);
+    }
+
+
+    /**
+     * Returns the lines of $content without the line endings. A line ends at LF, CR LF or CR.
+     *
+     * @return list<string>
+     */
+    protected function lines(string $content): array
+    {
+        return explode(LineEnding::Lf->value, StringHelpers::normalizeEOLs($content));
     }
 
 

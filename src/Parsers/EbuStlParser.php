@@ -23,6 +23,8 @@ use SubtitleToolbox\Timecode;
  */
 final class EbuStlParser extends SubtitleParser
 {
+    protected const BINARY = true;
+
     public const FORMAT_DATA_KEY = Format::EbuStl->value;
 
     private const WHITE = 7;
@@ -36,7 +38,6 @@ final class EbuStlParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
         if (strlen($rawSubtitle) < EbuStl::GSI_BLOCK_SIZE) {
             throw new ParsingException("An EBU STL file starts with a GSI block of " . EbuStl::GSI_BLOCK_SIZE . " bytes.");
         }

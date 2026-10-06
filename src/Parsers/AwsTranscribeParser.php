@@ -20,7 +20,6 @@ final class AwsTranscribeParser extends SubtitleParser
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
         $data           = $this->decodeObject($rawSubtitle);
         $results        = $data["results"] ?? null;
         if (!is_array($results) || !is_array($results["items"] ?? null) || !array_is_list($results["items"])) {

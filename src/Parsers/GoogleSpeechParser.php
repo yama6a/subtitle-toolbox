@@ -21,7 +21,6 @@ final class GoogleSpeechParser extends SubtitleParser
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
         $data           = $this->decodeObject($rawSubtitle);
         $fileData       = [];
         if (is_array($data["response"] ?? null)) {

@@ -55,7 +55,6 @@ final class WhisperJsonParser extends SubtitleParser
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
         try {
             // Older whisper.cpp versions split multi-byte characters across tokens and write invalid UTF-8 in token texts.
             $data = json_decode(StringHelpers::removeUtf8Bom($rawSubtitle), true, 512, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);

@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -16,13 +14,10 @@ final class SbvParser extends SubtitleParser
 {
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
-        $rawSubtitle    = StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($rawSubtitle));
-
         $subtitle   = new Subtitle();
         $parsedCues = [];
         $idx        = 0;
-        foreach ($this->splitAtEmptyLines(explode(LineEnding::Lf->value, $rawSubtitle)) as $lineNumber => $rawLines) {
+        foreach ($this->splitAtEmptyLines($this->lines($rawSubtitle)) as $lineNumber => $rawLines) {
             $parts = $this->repairMissingEmptyLines($rawLines, $lineNumber, $idx, $this->isTimingLine(...), false);
             foreach ($parts as $offset => $part) {
                 try {

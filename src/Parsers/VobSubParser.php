@@ -23,6 +23,8 @@ use SubtitleToolbox\Timecode;
  */
 final class VobSubParser extends SubtitleParser
 {
+    protected const BINARY = true;
+
     // SP_DCSQ_STM delays count in units of 1024 ticks of the 90 kHz clock.
     private const SECONDS_PER_DELAY_UNIT = 1024 / 90000;
 
@@ -133,7 +135,7 @@ final class VobSubParser extends SubtitleParser
      */
     private function readIndex(string $idx): array
     {
-        $lines = explode("\n", StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($idx)));
+        $lines = $this->lines(StringHelpers::removeUtf8Bom($idx));
         if (!str_contains($lines[0], "VobSub index file")) {
             throw new ParsingException("The .idx content does not start with the \"VobSub index file\" line.");
         }

@@ -27,7 +27,6 @@ final class PodcastChaptersParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->warnings = [];
         try {
             $data = json_decode(StringHelpers::removeUtf8Bom($rawSubtitle), true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $exception) {
