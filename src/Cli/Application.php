@@ -45,6 +45,7 @@ final class Application
             new ValidateCommand(),
             new SyncCommand(),
             new DiffCommand(),
+            new TranslateCommand(),
             new DualCommand(),
             new HlsCommand(),
             new FormatsCommand(),
