@@ -596,7 +596,7 @@ final class MatroskaReader
                 $block["duration"] !== null            => $this->milliseconds($startTime + $block["duration"] * $this->timestampScale),
                 $trackData["defaultDuration"] !== null => $this->milliseconds($startTime + $trackData["defaultDuration"]),
                 isset($blocks[$index + 1])             => $this->milliseconds($blocks[$index + 1]["start"] * $this->timestampScale),
-                default                                => $start + (int) ($lastDuration * 1000),
+                default                                => $start + Timecode::totalMilliseconds($lastDuration),
             };
 
             $cues[] = ["start" => $start, "end" => $end, "data" => $block["data"], "additional" => $block["additional"]];
