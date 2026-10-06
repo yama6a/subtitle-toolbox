@@ -73,6 +73,8 @@ final class EbuStl
     // The teletext alpha color codes 00h to 07h, EBU Tech 3264 appendix 2. White is the default of each row.
     public const COLORS = ["#000000", "#ff0000", "#00ff00", "#ffff00", "#0000ff", "#ff00ff", "#00ffff", "#ffffff"];
 
+    public const WHITE = 7;
+
     public const ITALICS_ON      = 0x80;
     public const ITALICS_OFF     = 0x81;
     public const UNDERLINE_ON    = 0x82;

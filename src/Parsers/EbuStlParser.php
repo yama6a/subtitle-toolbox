@@ -23,11 +23,9 @@ use SubtitleToolbox\Timecode;
  */
 final class EbuStlParser extends SubtitleParser
 {
-    protected const BINARY = true;
-
     public const FORMAT_DATA_KEY = Format::EbuStl->value;
 
-    private const WHITE = 7;
+    protected const BINARY = true;
 
 
     protected static function formatOptionsClass(): string
@@ -230,7 +228,7 @@ final class EbuStlParser extends SubtitleParser
     {
         $lines = [];
         $runs  = [];
-        $style = ["color" => self::WHITE, "i" => false, "u" => false];
+        $style = ["color" => EbuStl::WHITE, "i" => false, "u" => false];
         $text  = "";
         foreach (str_split($bytes) as $byte) {
             $code = ord($byte);
@@ -257,7 +255,7 @@ final class EbuStlParser extends SubtitleParser
             if ($code === EbuStl::NEW_LINE) {
                 $lines[]        = StyleRuns::toMarkup($runs, true);
                 $runs           = [];
-                $style["color"] = self::WHITE;
+                $style["color"] = EbuStl::WHITE;
             }
         }
 
@@ -282,6 +280,6 @@ final class EbuStlParser extends SubtitleParser
      */
     private static function runStyle(array $style): array
     {
-        return ["color" => $style["color"] === self::WHITE ? null : EbuStl::COLORS[$style["color"]]] + $style;
+        return ["color" => $style["color"] === EbuStl::WHITE ? null : EbuStl::COLORS[$style["color"]]] + $style;
     }
 }
