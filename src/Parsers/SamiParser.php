@@ -130,7 +130,8 @@ final class SamiParser extends SubtitleParser
      */
     private function readSyncs(string $rawSubtitle): array
     {
-        $body = substr($rawSubtitle, self::bodyStart($rawSubtitle));
+        $bodyStart = self::bodyStart($rawSubtitle);
+        $body      = substr($rawSubtitle, $bodyStart);
         if (preg_match('/<\/BODY\s*>/i', $body, $end, PREG_OFFSET_CAPTURE) === 1) {
             $body = substr($body, 0, $end[0][1]);
         }
@@ -141,7 +142,7 @@ final class SamiParser extends SubtitleParser
             try {
                 [$start, $content] = $this->readSyncTag($chunk, $index);
             } catch (ParsingException $exception) {
-                $lineNumber = $this->lineNumberInBody($rawSubtitle, $body, $offset);
+                $lineNumber = $this->lineNumberInBody($rawSubtitle, $bodyStart, $body, $offset);
                 $lines      = array_map("trim", explode("\n", "<SYNC" . $chunk));
                 $block      = array_values(array_filter($lines, fn (string $line): bool => $line !== ""));
                 $this->fail($exception, $lineNumber, $index, $block);
@@ -171,9 +172,9 @@ final class SamiParser extends SubtitleParser
     }
 
 
-    private function lineNumberInBody(string $rawSubtitle, string $body, int $offset): int
+    private function lineNumberInBody(string $rawSubtitle, int $bodyStart, string $body, int $offset): int
     {
-        return 1 + substr_count($rawSubtitle, "\n", 0, self::bodyStart($rawSubtitle)) + substr_count(substr($body, 0, $offset), "\n");
+        return 1 + substr_count($rawSubtitle, "\n", 0, $bodyStart) + substr_count(substr($body, 0, $offset), "\n");
     }
 
 
