@@ -212,7 +212,7 @@ See [cli.md](cli.md) for every command and option.
 - **Never overwrite**: no command overwrites a file. `--force` and `--in-place` are gone. The tool fails with exit code 2 before it reads a file when an output exists, when 2 inputs write the same output, or when an output is an input.
 - **Format names**: `--from` and `--to` still take the 1.x names `ytchapter`, `podcast`, `ogm` and `ffmeta`. The output prints the new names.
 - **Detection**: chapters and cloud speech-to-text JSON always need `--from`.
-- **Second file**: `diff` reads the new file with `--from2` and `--track2`. `dual` reads its files with `--primary-from`, `--primary-track`, `--secondary-from` and `--secondary-track`. `diff`, `dual` and `hls` take `--keep-going`.
+- **Second file**: `diff` reads the new file with `--from2` and `--track2`. `dual` reads its files with `--primary-from`, `--primary-track`, `--secondary-from` and `--secondary-track`. `diff` takes one old file. A directory or a glob that matches more than one file fails with exit code 2.
 - **Frame rate**: `--fps` still works and sets each frame rate that the command has. `--input-fps`, `--output-fps` and `--video-fps` set one each, see [Frame rates](cli.md#frame-rates).
 
 ### Renamed options

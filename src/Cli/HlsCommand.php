@@ -90,6 +90,12 @@ final class HlsCommand extends FileCommand
     }
 
 
+    protected function readsBatch(): bool
+    {
+        return false;
+    }
+
+
     protected function checkInputs(array $inputs, Arguments $arguments): void
     {
         if (count($inputs) > 1) {

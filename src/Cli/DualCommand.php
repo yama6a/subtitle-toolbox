@@ -73,6 +73,12 @@ final class DualCommand extends WriteCommand
     }
 
 
+    protected function readsBatch(): bool
+    {
+        return false;
+    }
+
+
     protected function inputOptions(): array
     {
         $options = [];
