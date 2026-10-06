@@ -41,6 +41,9 @@ use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
 use SubtitleToolbox\Hls\HlsSegmentOptions;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
 use SubtitleToolbox\Hls\TimestampMap;
+use SubtitleToolbox\Http\CurlHttpClient;
+use SubtitleToolbox\Http\FakeHttpClient;
+use SubtitleToolbox\Http\WithoutCurl;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PaletteReducer;
 use SubtitleToolbox\Image\PngDecoder;
@@ -104,6 +107,10 @@ use SubtitleToolbox\Sync\SpeechReference;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\Timing\ShotChanges;
+use SubtitleToolbox\Translation\DeepLEngine;
+use SubtitleToolbox\Translation\DeepLOptions;
+use SubtitleToolbox\Translation\GoogleTranslateEngine;
+use SubtitleToolbox\Translation\GoogleTranslateOptions;
 use SubtitleToolbox\Translation\TranslationEngine;
 use SubtitleToolbox\Translation\TranslationOptions;
 use SubtitleToolbox\Translation\TranslationRunner;
@@ -111,6 +118,8 @@ use SubtitleToolbox\Validation\ValidationRules;
 use SubtitleToolbox\WriteOptions;
 
 require_once __DIR__ . "/../files/mkv/generator/MkvFixtureWriter.php";
+require_once __DIR__ . "/../Http/FakeHttpClient.php";
+require_once __DIR__ . "/../Http/WithoutCurl.php";
 
 class ThrowSitesTest extends TestCase
 {
@@ -126,6 +135,7 @@ class ThrowSitesTest extends TestCase
         UnknownFormatException::class       => 106,
         OcrException::class                 => 107,
         UnwritableContentException::class   => 108,
+        TranslationException::class         => 109,
     ];
 
     // The CLI catches its own exceptions, so they need no error code.
@@ -222,6 +232,16 @@ class ThrowSitesTest extends TestCase
     }
 
 
+    private static function closedPortUrl(): string
+    {
+        $socket = stream_socket_server("tcp://127.0.0.1:0");
+        $name   = stream_socket_get_name($socket, false);
+        fclose($socket);
+
+        return "http://$name/";
+    }
+
+
     private static function fromArray(array $data): Subtitle
     {
         return Subtitle::fromArray($data + ["version" => Subtitle::ARRAY_VERSION, "cues" => []]);
@@ -241,9 +261,10 @@ class ThrowSitesTest extends TestCase
      */
     public static function throwSites(): array
     {
-        $invalid    = [\InvalidArgumentException::class, InvalidArgumentException::class];
-        $parsing    = [ParsingException::class, ParsingException::class];
-        $ocr        = [\RuntimeException::class, OcrException::class];
+        $invalid     = [\InvalidArgumentException::class, InvalidArgumentException::class];
+        $parsing     = [ParsingException::class, ParsingException::class];
+        $ocr         = [\RuntimeException::class, OcrException::class];
+        $translation = [\RuntimeException::class, TranslationException::class];
         $unwritable = [\InvalidArgumentException::class, UnwritableContentException::class];
         $imageCue   = (new CueImage("png", 0, 0, 1, 1, 1, 1))->toCue(new SubtitleCue(1, 2));
 
@@ -669,6 +690,26 @@ class ThrowSitesTest extends TestCase
             "Timing/ShotChangeOptions.php: negative minimum duration" => [fn () => new ShotChangeOptions(24, minDurationFrames: -1),
                                                                 ...$invalid],
             "Timing/ShotChanges.php: line without a time"   => [fn () => ShotChanges::fromText("abc"), ...$parsing],
+            "Http/CurlHttpClient.php: no curl extension"    => [fn () => throw WithoutCurl::exception("new " . CurlHttpClient::class . "();"),
+                                                                ...$invalid],
+            "Http/CurlHttpClient.php: no connection"        => [fn () => (new CurlHttpClient())->post(self::closedPortUrl(), [], ""), ...$translation],
+            "Translation/DeepLEngine.php: HTTP 403"         => [fn () => (new DeepLEngine(new DeepLOptions("key", httpClient: new FakeHttpClient([[403, ""]]))))
+                                                                ->translate(["a"], "en", "de"), ...$translation],
+            "Translation/DeepLEngine.php: no translations"  => [fn () => (new DeepLEngine(new DeepLOptions("key", httpClient: new FakeHttpClient([[200, "{}"]]))))
+                                                                ->translate(["a"], "en", "de"), ...$translation],
+            "Translation/DeepLOptions.php: empty key"       => [fn () => new DeepLOptions(" "), ...$invalid],
+            "Translation/DeepLOptions.php: key with a line break" => [fn () => new DeepLOptions("abc:fx\r\n"), ...$invalid],
+            "Translation/DeepLOptions.php: base URL without scheme" => [fn () => new DeepLOptions("key", "api.deepl.com"), ...$invalid],
+            "Translation/GoogleTranslateEngine.php: HTTP 403" => [fn () => (new GoogleTranslateEngine(new GoogleTranslateOptions("key",
+                                                                httpClient: new FakeHttpClient([[403, ""]]))))->translate(["a"], "en", "fr"),
+                                                                ...$translation],
+            "Translation/GoogleTranslateEngine.php: no translations" => [fn () => (new GoogleTranslateEngine(new GoogleTranslateOptions("key",
+                                                                httpClient: new FakeHttpClient([[200, "{}"]]))))->translate(["a"], "en", "fr"),
+                                                                ...$translation],
+            "Translation/GoogleTranslateOptions.php: empty key" => [fn () => new GoogleTranslateOptions(""), ...$invalid],
+            "Translation/GoogleTranslateOptions.php: key with a space" => [fn () => new GoogleTranslateOptions(" key"), ...$invalid],
+            "Translation/GoogleTranslateOptions.php: base URL without scheme" => [fn () => new GoogleTranslateOptions("key", "ftp://example.com"),
+                                                                ...$invalid],
             "Translation/TranslationOptions.php: cue limit 0" => [fn () => new TranslationOptions(maxCuesPerSentence: 0), ...$invalid],
             "Translation/TranslationOptions.php: character limit 0" => [fn () => new TranslationOptions(maxCharactersPerRequest: 0), ...$invalid],
             "Translation/TranslationRunner.php: no translations" => [fn () => (new TranslationRunner(new class implements TranslationEngine {
