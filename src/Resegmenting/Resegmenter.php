@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Resegmenting;
 
 use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\CueList;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\LineWrapper;
 use SubtitleToolbox\Markup;
@@ -41,9 +42,16 @@ final class Resegmenter
     private static function splitLong(Subtitle $subtitle, ResegmentOptions $options): void
     {
         $anchors = CommentAnchors::of($subtitle->getCues(), $subtitle->getComments());
-        $cues    = [];
-        foreach ($subtitle->getCues() as $cue) {
-            $cues = [...$cues, ...self::splitCue($cue, $options)];
+        $splits  = array_map(fn (SubtitleCue $cue): ?array => self::findSplit($cue, $options), $subtitle->getCues());
+        $limits  = $options->limits;
+        if ($limits->minDuration > $limits->maxDuration && array_filter($splits) !== []) {
+            throw new InvalidArgumentException("Resegmenter cannot split a cue when the minimum duration is greater " .
+                                               "than the maximum duration, got $limits->minDuration and $limits->maxDuration.");
+        }
+
+        $cues = [];
+        foreach ($subtitle->getCues() as $index => $cue) {
+            $cues = [...$cues, ...self::splitCue($cue, $splits[$index], $options)];
         }
 
         $subtitle->replaceCues($cues, $anchors);
@@ -95,22 +103,35 @@ final class Resegmenter
 
 
     /**
-     * @return list<SubtitleCue> $cue itself first, then the new cues
+     * @return ?array{list<array>, list<float>, list<int>} the pieces, their times and the break indexes, or null for no split
      */
-    private static function splitCue(SubtitleCue $cue, ResegmentOptions $options): array
+    private static function findSplit(SubtitleCue $cue, ResegmentOptions $options): ?array
     {
         $pieces = CueImage::isImageCue($cue) ? [] : self::pieces($cue);
         if ($pieces === []) {
-            return [$cue];
+            return null;
         }
 
         $positions = self::positions($pieces);
         $times     = self::times($pieces, $positions, $cue->getStart(), $cue->getEnd());
         $breaks    = self::findBreaks($pieces, $positions, $times, 0, count($pieces), $options);
-        if ($breaks === []) {
+
+        return $breaks === [] ? null : [$pieces, $times, $breaks];
+    }
+
+
+    /**
+     * @param ?array{list<array>, list<float>, list<int>} $split
+     *
+     * @return list<SubtitleCue> $cue itself first, then the new cues
+     */
+    private static function splitCue(SubtitleCue $cue, ?array $split, ResegmentOptions $options): array
+    {
+        if ($split === null) {
             return [$cue];
         }
 
+        [$pieces, $times, $breaks] = $split;
         $parts = [];
         foreach ([0, ...$breaks] as $partIndex => $first) {
             $parts[] = [$partIndex === 0 ? $cue : (clone $cue)->setIdentifier(null), $first, $breaks[$partIndex] ?? count($pieces)];
