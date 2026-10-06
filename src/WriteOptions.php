@@ -7,7 +7,9 @@ namespace SubtitleToolbox;
 use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
 
 /**
- * The settings that every formatter reads. $format holds the settings of one format, such as CsvWriteOptions.
+ * The write settings for all formats. $format holds the settings of one format, such as CsvWriteOptions.
+ * EBU STL and PGS ignore $lineEnding and $bom. Only the formatters of ASS, EBU STL, iTT, MicroDVD, SAMI, SubRip,
+ * TTML and WebVTT read $stripTags. Subtitle::toString() reads $skipImageCues.
  */
 final class WriteOptions
 {

@@ -8,10 +8,10 @@ Every edit has one of 3 shapes:
 | Shape | Example | Returns |
 |:--- |:--- |:--- |
 | method on `Subtitle` | `$subtitle->shift(2)->wrapLines(42)` | `$this`, so calls chain |
-| method that starts with `with` or `to` | `$subtitle->withForcedCuesOnly()`, `$subtitle->withSlice(10, 20)`, `$subtitle->toArray()` | a new value. The original stays unchanged. |
+| method that starts with `with` or `to` | `$subtitle->withForcedCuesOnly()`, `$subtitle->withSlice(10, 20)`, `$subtitle->toArray()` | a new value. `with` gives a new `Subtitle`. `to` gives a conversion, such as an array. The original stays unchanged. |
 | service with `apply()` | `HearingImpairedRemover::apply($subtitle, new HearingImpairedOptions())` | a report. The service changes `$subtitle`. |
 
-- **Names**: a method that returns a new `Subtitle` starts with `with` or `to`. A method that changes the subtitle is a verb, such as `shift()` or `removeCuesWhere()`.
+- **Names**: a method that returns a new `Subtitle` starts with `with`. A method that converts the subtitle to another type starts with `to`, such as `toArray()` or `toString()`. A method that changes the subtitle is a verb, such as `shift()` or `removeCuesWhere()`.
 - **Service**: a feature with many settings is a class with one static `apply(Subtitle $subtitle, XOptions $options): XReport`. The services are `Resegmenter`, `HearingImpairedRemover`, `ReferenceSync`, `ShotChangeTiming`, `CommonErrorFixer`, `WordHighlight`, `ProfanityFilter` and `SpeakerLabels`. `OcrRunner::run()` and `TranslationRunner::translate()` also change the subtitle and return a report. `DualSubtitle::fromPair()` builds a new subtitle from two.
 - **Keep the original**: `clone` copies the cues too. Pass `clone $subtitle` to a service or to a method that changes the subtitle, and the original stays unchanged.
 
@@ -40,12 +40,12 @@ $cue->setIdentifier('intro');
 ## Alignment and format data
 ```php
 $cue->setAlignment(8);                                  // top center
-$cue->setFormatData('ass', ['style' => 'Sign']);
+$cue->setFormatData('ass', ['fields' => ['Style' => 'Sign']]);
 $subtitle->findFormatData('ass');                       // [] when not set
 ```
 
 - **Alignment**: a number from 1 to 9 in numeric keypad layout. 1 is bottom left, 2 is bottom center, 8 is top center. `null` means the format default, bottom center.
-- **Format data**: the data of a format that has no shared field, for example ASS styles. Only the formatter of the same format reads it. The key is the value of the `Format` case, for example `ass` for `Format::Ass` and `microdvd` for `Format::MicroDvd`. Each parser holds its key in `FORMAT_DATA_KEY`. CSV and TSV share the key `csv`. [formats.md](formats.md) lists the fields of each format.
+- **Format data**: the data of a format that has no shared field, for example ASS styles. Only the formatter of the same format reads it. The key is the value of the `Format` case, for example `ass` for `Format::Ass` and `microdvd` for `Format::MicroDvd`. CSV and TSV share the key `csv`. Image cues use the key `image`. [formats.md](formats.md) lists the fields of each format.
 - **Checks**: `setFormatData()` checks the fields that a formatter reads, as `fromArray()` does. A field of the wrong type throws `InvalidArgumentException` with its path, for example `The field formatData.scc.dropFrame must be a boolean.` Other fields pass as they are.
 
 ## Finding cues
@@ -68,7 +68,7 @@ $subtitle->removeCuesWhere(fn (SubtitleCue $cue) => $cue->getEnd() - $cue->getSt
 - **Remove**: `removeCuesWhere()` moves a comment before a removed cue to the next kept cue, and then calls `reIndexCues()`.
 - **Add and remove**: `addCue()` sorts the cues by start time after each call. `addCues()` adds a list and sorts once, so use it for many cues. A comment after the last cue stays after the last cue, also when the added cue sorts last. `removeCue()` numbers the remaining cues from 0 again.
 - **No array access**: `$subtitle[3]` does not work. Use `getCues()`, `addCue()` and `removeCue()`, so the cue indexes and comments stay correct.
-- **Structure check**: `validate(ValidationRules::structure())` returns one result per problem. It reports a subtitle without cues. It also reports a cue that starts before the previous cue starts or ends, and a cue that ends before it starts. See [validation](validation.md).
+- **Structure check**: `validate(ValidationRules::structure())` returns one violation per problem. It reports a subtitle without cues. It also reports a cue that starts before the previous cue starts or ends, and a cue that ends before it starts. See [validation](validation.md).
 
 ## Forced cues
 A **forced cue** shows also when the viewer has turned subtitles off, for example the translation of a sign. Apple and Netflix take a full subtitle file and a separate file with only the forced cues.

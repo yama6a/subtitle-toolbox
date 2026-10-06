@@ -111,7 +111,6 @@ $subtitle->toString(Format::SubRip);
 - **Prefix**: every cue repeats the name of its speaker. `writeUpperCase: false` keeps the name as it is.
 - **Dashes**: only cues with two or more speakers get dashes. Text without a speaker counts as one speaker. A line that already starts with `-` gets no second dash.
 - **Colors**: the BBC order is white, yellow, cyan and green, from the [BBC Subtitle Guidelines](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/). Each speaker gets the next color in the order of its first cue. The fifth speaker gets the first color again. A color that is not `#rrggbb` throws `InvalidArgumentException`.
-- **From**: `from` takes only `SpeakerStyle::Prefix`. Another style throws `InvalidArgumentException`.
 - **Labels**: `readPrefixes: true` uses the `speakerLabels` rule of `HearingImpairedOptions`. With `readUpperCaseOnly: false`, it also reads `Baker:` and `Note:`.
 - **Label names**: an upper case label becomes title case, so `DR. O'NEIL:` becomes `<v Dr. O'Neil>`. The dash before a label goes. A label on a line of its own names the speaker of the next line.
 - **Whisper**: the `speaker` field also stays in the cue format data. whisper.cpp `-di` writes the speakers `0` and `1`, and `?` when it cannot tell. The parser ignores the speaker of each WhisperX word.

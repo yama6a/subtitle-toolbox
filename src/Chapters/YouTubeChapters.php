@@ -16,8 +16,8 @@ final class YouTubeChapters
 
 
     /**
-     * Lists the YouTube chapter rules that $chapters breaks, one violation per rule and chapter, in rule order. The cue
-     * index is the chapter index, or null for MinChapters.
+     * Lists the YouTube chapter rules that $chapters breaks, one violation per rule and chapter. The order is
+     * FirstChapterAtZero, then MinChapters, then MinDuration by chapter. The cue index is the chapter index, or null for MinChapters.
      *
      * @return list<ValidationViolation>
      */

@@ -46,7 +46,8 @@ enum Format: string
 
     /**
      * Returns the format of the file extension of $path, or null for an unknown or missing extension.
-     * When two formats share an extension, the earlier case owns it, so `.sub` is MicroDVD and `.txt` is plain text.
+     * When two formats share an extension, the first matching row of FormatRegistry::FORMATS owns it.
+     * The rows follow the order of the cases, so `.sub` is MicroDVD and `.txt` is plain text.
      */
     public static function fromPath(string $path): ?self
     {
@@ -88,7 +89,8 @@ enum Format: string
 
     /**
      * Returns false for chapters and cloud speech JSON. Their content looks like other formats, so they load only
-     * when the caller names them.
+     * when the caller names them. True means only that the format is not excluded from auto-detection.
+     * It does not mean that the format can be read or that detection finds it by content.
      */
     public function isAutoDetected(): bool
     {

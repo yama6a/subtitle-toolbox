@@ -15,7 +15,7 @@ trait ArrayConversion
 
 
     /**
-     * Returns the subtitle as an array of scalars in the shape that the README section "JSON and arrays" documents.
+     * Returns the subtitle as an array of scalars in the shape that docs/json.md documents.
      */
     public function toArray(bool $withFormatData = true): array
     {

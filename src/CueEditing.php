@@ -12,7 +12,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 trait CueEditing
 {
     /**
-     * Appends copies of the cues of $other, with their word timestamps moved by $offset seconds. Metadata and format data of $this win.
+     * Appends copies of the cues of $other, with their times and word timestamps moved by $offset seconds. Metadata and format data of $this win.
      */
     public function merge(Subtitle $other, float $offset = 0): self
     {

@@ -10,7 +10,7 @@ namespace SubtitleToolbox\Container\Matroska;
 final class MatroskaTrack
 {
     /**
-     * @internal Subtitle::tracks() creates the tracks.
+     * @internal MatroskaReader creates the tracks. Subtitle::tracks() returns them.
      *
      * @param string $language the LanguageBCP47 element, else the Language element, else "eng"
      */

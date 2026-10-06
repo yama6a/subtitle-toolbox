@@ -16,7 +16,7 @@ PHP errors point out each of these changes. The tables show the main cases.
 - **Wrong options**: a misspelled named argument is a PHP `Error`. An options class of another format throws `InvalidArgumentException`.
 - **Final classes**: every concrete class is `final`, except `InvalidArgumentException` and `InvalidParserException`. Wrap a class in your own class instead of extending it.
 - **Internal members**: the methods and constants of parsers and formatters are `@internal`, private or removed. `FormatDetector`, `FormatRegistry`, `Cea608`, `CodePage`, `Iso6937`, `PaletteReducer`, `EbmlReader` and the `StringHelpers` methods other than `isValidUtf8()` and `convertToUtf8()` are `@internal`. Use the `Format` enum in place of `FormatDetector` and `FormatRegistry`.
-- **Copy or change**: a `Subtitle` method that returns a new subtitle starts with `with` or `to`. A method that changes the subtitle is a verb.
+- **Copy or change**: a `Subtitle` method that returns a new subtitle starts with `with`. A method that converts the subtitle to another type starts with `to`. A method that changes the subtitle is a verb.
 - **get and find**: a lookup that starts with `find` returns null or an empty array when nothing matches. A lookup that starts with `get` throws.
 - **Services**: an edit with many settings is a service with a static `apply($subtitle, $options)`. It changes the subtitle that you pass and returns a report.
 - **Results**: reports and other results have `public readonly` fields instead of getters. Only the library creates them.

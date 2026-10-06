@@ -13,7 +13,8 @@ final class LineWrapper
 {
     /**
      * Wraps the lines into at most $maxLines lines of at most $maxCharsPerLine visible characters where the words allow it.
-     * With $keepDialogueLines, each line that starts with a dialogue dash stays a line of its own and is not wrapped.
+     * With $keepDialogueLines, each line that starts with a dialogue dash stays a line of its own.
+     * With 2 or more dialogue lines, no line wraps. A single dialogue line wraps like other text.
      *
      * @param list<string> $lines
      *

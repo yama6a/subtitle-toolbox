@@ -62,7 +62,7 @@ final class JsonParser extends SubtitleParser
 
     /**
      * Puts a placeholder in place of each cue that fromArray() rejects, so the error paths keep the cue numbers of the file.
-     * Drops a bad metadata field, a bad comment and the bad format data of one format with a warning of block index -1.
+     * Drops a bad metadata field, a bad comment and the bad format data of one format with a warning whose block index is null.
      *
      * @param array<int, true> $skipped
      */

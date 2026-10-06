@@ -14,7 +14,8 @@ final class SubRipStreamReader implements CueStreamReader
 
 
     /**
-     * The reader uses ReadOptions::$lenient and ignores the other fields.
+     * The reader uses ReadOptions::$lenient and ignores $encoding and $lastCueDuration.
+     * A ReadOptions::$format throws InvalidArgumentException.
      */
     public function __construct(private readonly ReadOptions $options = new ReadOptions())
     {
