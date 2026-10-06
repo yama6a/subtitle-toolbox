@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Ocr;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\OptionChecks;
 
 /**
  * The settings of TesseractOcrEngine.
@@ -40,9 +41,8 @@ final readonly class TesseractOcrOptions
             throw new InvalidArgumentException("Cannot create TesseractOcrOptions with page segmentation mode " .
                                                "$pageSegmentationMode - the mode must be from 0 to 13!");
         }
-        if ($scale !== null && ($scale < 1 || $scale > 8)) {
-            throw new InvalidArgumentException("Cannot create TesseractOcrOptions with scale $scale - the scale " .
-                                               "must be from 1 to 8!");
+        if ($scale !== null) {
+            OptionChecks::between($scale, 1, 8, "Cannot create TesseractOcrOptions with scale %s - the scale must be from 1 to 8!");
         }
         if ($threshold !== null && ($threshold < 1 || $threshold > 255)) {
             throw new InvalidArgumentException("Cannot create TesseractOcrOptions with threshold $threshold - the " .

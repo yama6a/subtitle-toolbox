@@ -405,7 +405,6 @@ class ThrowSitesTest extends TestCase
             "Ocr/RecognizedText.php: line is no string"          => [fn () => new RecognizedText([5]), ...$invalid],
             "Ocr/RecognizedText.php: confidence above 1"         => [fn () => new RecognizedText(["text"], 2), ...$invalid],
             "Ocr/TesseractOcrOptions.php: mode 14"          => [fn () => new TesseractOcrOptions(pageSegmentationMode: 14), ...$invalid],
-            "Ocr/TesseractOcrOptions.php: scale 0.5"        => [fn () => new TesseractOcrOptions(scale: 0.5), ...$invalid],
             "Ocr/TesseractOcrOptions.php: threshold 0"      => [fn () => new TesseractOcrOptions(threshold: 0), ...$invalid],
             "Ocr/TesseractOcrEngine.php: program missing"   => [fn () => (new TesseractOcrEngine(new TesseractOcrOptions(program: __DIR__ . "/none")))
                 ->recognize(new CueImage(self::png(), 0, 0, 1, 1, 1, 1), null), ...$invalid],

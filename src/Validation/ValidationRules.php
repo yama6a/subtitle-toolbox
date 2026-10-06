@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Validation;
 use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\OptionChecks;
 
 final class ValidationRules
 {
@@ -49,6 +50,20 @@ final class ValidationRules
         public readonly bool $noUnsortedCues = false,
         public readonly bool $noNegativeDuration = false,
     ) {
+        $maximums = ["maxCharactersPerSecond" => $maxCharactersPerSecond, "maxCharactersPerLine" => $maxCharactersPerLine,
+                     "maxLinesPerCue" => $maxLinesPerCue, "maxDuration" => $maxDuration,
+                     "maxSpeakersPerCue" => $maxSpeakersPerCue, "maxWordsPerMinute" => $maxWordsPerMinute];
+        foreach ($maximums as $name => $limit) {
+            if ($limit !== null) {
+                OptionChecks::notNegative($limit, "The limit $name must be 0 or more, got %s.");
+            }
+        }
+        foreach (["minDuration" => $minDuration, "minGap" => $minGap, "minSecondsPerWord" => $minSecondsPerWord] as $name => $limit) {
+            if ($limit !== null) {
+                OptionChecks::nonNegativeFinite($limit, "The limit $name must be a finite number of 0 or more, got %s.");
+            }
+        }
+
         if ($allowedCharacters !== null && TextChecks::isCharacterClass($allowedCharacters)
             && @preg_match(TextChecks::characterClassPattern($allowedCharacters) . "u", "") === false) {
             throw new InvalidArgumentException("The allowed characters \"$allowedCharacters\" are no valid regular " .

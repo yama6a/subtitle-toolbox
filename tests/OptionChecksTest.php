@@ -20,6 +20,7 @@ use SubtitleToolbox\Formatters\Options\PlainTextWriteOptions;
 use SubtitleToolbox\Hls\HlsSegmentOptions;
 use SubtitleToolbox\Hls\TimestampMap;
 use SubtitleToolbox\Ocr\GlyphOcrOptions;
+use SubtitleToolbox\Ocr\TesseractOcrOptions;
 use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
@@ -31,6 +32,7 @@ use SubtitleToolbox\Resegmenting\ResegmentOptions;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
 use SubtitleToolbox\Sync\SpeechReference;
 use SubtitleToolbox\Timing\ShotChangeOptions;
+use SubtitleToolbox\Validation\ValidationRules;
 
 class OptionChecksTest extends TestCase
 {
@@ -70,6 +72,10 @@ class OptionChecksTest extends TestCase
             "DualSubtitleOptions snapTolerance"        => fn (float $value) => new DualSubtitleOptions(snapTolerance: $value),
             "ProfanityOptions padding"                 => fn (float $value) => new ProfanityOptions(["hell"], padding: $value),
             "GlyphOcrOptions italicSlant"              => fn (float $value) => new GlyphOcrOptions(italicSlant: $value),
+            "TesseractOcrOptions scale"                => fn (float $value) => new TesseractOcrOptions(scale: $value),
+            "ValidationRules minDuration"              => fn (float $value) => new ValidationRules(minDuration: $value),
+            "ValidationRules minGap"                   => fn (float $value) => new ValidationRules(minGap: $value),
+            "ValidationRules minSecondsPerWord"        => fn (float $value) => new ValidationRules(minSecondsPerWord: $value),
             "Subtitle::scale() factor"                 => fn (float $value) => (new Subtitle())->scale($value),
             "Subtitle::extendShortCues() minDuration"  => fn (float $value) => (new Subtitle())->extendShortCues($value),
             "Subtitle::fixOverlaps() minGap"           => fn (float $value) => (new Subtitle())->fixOverlaps($value),
@@ -83,12 +89,15 @@ class OptionChecksTest extends TestCase
             }
         }
 
-        // INF turns paragraphs off, see docs/transcripts.md.
-        $paragraphGaps = [
+        // INF turns a paragraph gap or a maximum validation limit off.
+        $acceptInfinity = [
+            "ValidationRules maxCharactersPerSecond"  => fn (float $value) => new ValidationRules(maxCharactersPerSecond: $value),
+            "ValidationRules maxDuration"             => fn (float $value) => new ValidationRules(maxDuration: $value),
+            "ValidationRules maxWordsPerMinute"       => fn (float $value) => new ValidationRules(maxWordsPerMinute: $value),
             "HtmlTranscriptWriteOptions paragraphGap" => fn (float $value) => new HtmlTranscriptWriteOptions($value),
             "PlainTextWriteOptions paragraphGap"      => fn (float $value) => new PlainTextWriteOptions(paragraphGap: $value),
         ];
-        foreach ($paragraphGaps as $name => $create) {
+        foreach ($acceptInfinity as $name => $create) {
             foreach (["NAN" => NAN, "-INF" => -INF] as $label => $value) {
                 $cases["$name: $label"] = [$create, $value];
             }
@@ -130,6 +139,10 @@ class OptionChecksTest extends TestCase
             "negative snap"              => [fn () => new DualSubtitleOptions(snapTolerance: -1), "The snap tolerance -1 must not be negative."],
             "italic slant 2"             => [fn () => new GlyphOcrOptions(italicSlant: 2.0), "Cannot create GlyphOcrOptions with italic slant 2 - it must be from 0 to 1!"],
             "offset beyond a day"        => [fn () => new ReferenceSyncOptions(new Subtitle(), maxOffset: 1e20), "The maximum offset must be from -86400 to 86400 seconds, got 1.0E+20."],
+            "negative maximum lines"     => [fn () => new ValidationRules(maxLinesPerCue: -1), "The limit maxLinesPerCue must be 0 or more, got -1."],
+            "NAN maximum duration"       => [fn () => new ValidationRules(maxDuration: NAN), "The limit maxDuration must be 0 or more, got NAN."],
+            "INF minimum gap"            => [fn () => new ValidationRules(minGap: INF), "The limit minGap must be a finite number of 0 or more, got INF."],
+            "Tesseract scale NAN"        => [fn () => new TesseractOcrOptions(scale: NAN), "Cannot create TesseractOcrOptions with scale NAN - the scale must be from 1 to 8!"],
             "empty language class"       => [fn () => new SamiReadOptions(" "), "The language class must not be empty."],
             "empty language"             => [fn () => new VobSubReadOptions(language: " "), "The language must not be empty."],
         ];
@@ -153,6 +166,14 @@ class OptionChecksTest extends TestCase
     {
         $this->assertSame(INF, (new HtmlTranscriptWriteOptions(INF))->paragraphGap);
         $this->assertSame(INF, (new PlainTextWriteOptions(paragraphGap: INF))->paragraphGap);
+    }
+
+
+    public function testMaximumValidationLimitAcceptsInfinity(): void
+    {
+        $rules = new ValidationRules(maxCharactersPerSecond: INF, maxDuration: INF, maxWordsPerMinute: INF);
+
+        $this->assertSame([INF, INF, INF], [$rules->maxCharactersPerSecond, $rules->maxDuration, $rules->maxWordsPerMinute]);
     }
 
 
