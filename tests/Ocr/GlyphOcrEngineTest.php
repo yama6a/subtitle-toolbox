@@ -154,16 +154,62 @@ class GlyphOcrEngineTest extends TestCase
     }
 
 
-    public function testOptionsMatchTheRecognizerDefaults(): void
+    public function testOptionsMatchTheRecognizerDefaultsAndTypes(): void
     {
-        $options = new GlyphOcrOptions();
-        foreach ((new \ReflectionMethod(Recognizer::class, "__construct"))->getParameters() as $parameter) {
+        $options    = new GlyphOcrOptions();
+        $recognizer = (new \ReflectionMethod(Recognizer::class, "__construct"))->getParameters();
+        $ours       = (new \ReflectionMethod(GlyphOcrOptions::class, "__construct"))->getParameters();
+        foreach ($recognizer as $index => $parameter) {
             if ($parameter->getName() !== "database") {
                 $this->assertSame($parameter->getDefaultValue(), $options->{$parameter->getName()}, $parameter->getName());
+                $this->assertSame((string) $parameter->getType(), (string) $ours[$index]->getType(), $parameter->getName());
             }
         }
-        $this->assertSame(array_column((new \ReflectionMethod(Recognizer::class, "__construct"))->getParameters(), "name"),
-                          array_column((new \ReflectionMethod(GlyphOcrOptions::class, "__construct"))->getParameters(), "name"));
+        $this->assertSame(array_column($recognizer, "name"), array_column($ours, "name"));
+    }
+
+
+    /**
+     * @return array<string, array{string, int|float}>
+     */
+    public static function rangeEnds(): array
+    {
+        return [
+            "ink threshold 0"     => ["inkThreshold", 0],
+            "ink threshold 1"     => ["inkThreshold", 1],
+            "ink threshold 765"   => ["inkThreshold", 765],
+            "ink threshold 766"   => ["inkThreshold", 766],
+            "space width 0"       => ["spaceWidth", 0],
+            "space width 1"       => ["spaceWidth", 1],
+            "wrong pixels -1"     => ["maxWrongPixels", -1],
+            "wrong pixels 0"      => ["maxWrongPixels", 0],
+            "italic slant -0.1"   => ["italicSlant", -0.1],
+            "italic slant 0"      => ["italicSlant", 0.0],
+            "italic slant 1"      => ["italicSlant", 1.0],
+            "italic slant 1.1"    => ["italicSlant", 1.1],
+            "line height 0"       => ["minLineHeight", 0],
+            "line height 1"       => ["minLineHeight", 1],
+        ];
+    }
+
+
+    #[DataProvider("rangeEnds")]
+    public function testOptionsAcceptTheValuesThatTheRecognizerAccepts(string $name, int|float $value): void
+    {
+        $accepts = function (Closure $create): bool {
+            try {
+                $create();
+
+                return true;
+            } catch (\Exception) {
+                return false;
+            }
+        };
+
+        $this->assertSame(
+            $accepts(fn () => new Recognizer(new GlyphDatabase(), ...[$name => $value])),
+            $accepts(fn () => new GlyphOcrOptions(...[$name => $value]))
+        );
     }
 
 
