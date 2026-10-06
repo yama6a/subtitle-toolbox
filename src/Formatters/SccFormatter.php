@@ -163,8 +163,9 @@ final class SccFormatter extends SubtitleFormatter
         $underline  = 0;
         $colors     = [];
         $characters = [];
-        foreach (preg_split("/(<[^>]*>)/", $line, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY) as $part) {
-            if (preg_match("/^<\s*(\/?)\s*([a-z]+)\b([^>]*)>$/i", $part, $tag)) {
+        foreach (Markup::splitTags($line) as $index => $part) {
+            $isTag = $index % 2 === 1;
+            if ($isTag && preg_match("/^<\s*(\/?)\s*([a-z]+)\b([^>]*)>$/i", $part, $tag)) {
                 $closing = $tag[1] === "/";
                 switch (strtolower($tag[2])) {
                     case "i":
@@ -183,7 +184,7 @@ final class SccFormatter extends SubtitleFormatter
                 }
                 continue;
             }
-            if ($part[0] === "<") {
+            if ($isTag || $part === "") {
                 continue;
             }
 

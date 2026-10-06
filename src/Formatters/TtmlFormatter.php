@@ -289,7 +289,7 @@ final class TtmlFormatter extends SubtitleFormatter
      */
     private function markupToTtml(string $text): array
     {
-        $tokens = preg_split("/(<[^>]*>)/", $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+        $tokens = Markup::splitTags($text);
         $agent  = null;
         if (preg_match("/^" . Markup::VOICE_TAG . "$/", $tokens[1] ?? "", $matches) && trim($tokens[0]) === ""
             && preg_match_all("/<\/?v[\s.>]/", $text) === 1) {

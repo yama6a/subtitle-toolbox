@@ -36,7 +36,7 @@ Markup::mapTextRuns(['<i>Hi</i> you'], fn (string $text): string => strtoupper($
 Markup::hasVisibleText(['<i></i>', ' ']);                     // false
 ```
 
-- **Tags**: a tag has no white space after its `<`. The helpers read `< b>` as text, so `hasVisibleText(['< b>'])` returns true and `stripAllTags('a < b > c')` returns `'a < b > c'`.
+- **Tags**: a tag has no white space after its `<`. The helpers, the formatters and word highlighting read `< b>` as text, so `hasVisibleText(['< b>'])` returns true and `stripAllTags('a < b > c')` returns `'a < b > c'`.
 - **Text runs**: `mapTextRuns()` calls the function for each [text run](text.md#text-runs) and escapes the result again.
 - **Speaker tags**: `voiceTag()` escapes `&`, `<` and `>` in the name and keeps quotes.
 - **Word timestamps**: `insertWordTimestamps()` escapes the text. It skips a word without a start time or a word that it does not find in the text. `mapWordTimestamps()` and `SubtitleCue::mapWordTimestamps()` change each time and make a negative time 0.
