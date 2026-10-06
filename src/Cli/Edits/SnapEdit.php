@@ -34,7 +34,7 @@ final class SnapEdit extends Edit
 
     public static function summary(): string
     {
-        return "Time cues to shot changes and close small gaps.";
+        return "Time cues to shot changes and close gaps between cues.";
     }
 
 
@@ -46,7 +46,7 @@ final class SnapEdit extends Edit
             Option::value("snap-window-frames", "FRAMES", "Largest move to a shot change, and largest gap that closes. Default: half the --video-fps, rounded to the nearest frame with a half frame rounded down. 12 at 24 and 25 fps, 15 at 30 fps."),
             Option::value("snap-min-gap-frames", "FRAMES", "Gap between a cue and the next cue or shot change. Default: 2."),
             Option::value("snap-min-duration-frames", "FRAMES", "No move makes a cue shorter than this. Default: 20."),
-            Option::flag("no-snap-chain", "Keep small gaps between cues."),
+            Option::flag("no-snap-chain", "Keep the gaps between cues."),
         ];
     }
 

@@ -10,7 +10,9 @@ use SubtitleToolbox\SubtitleCue;
 final class ShotChangeTiming
 {
     /**
-     * Moves cue times to the shot changes of $options, closes small gaps and puts all times on frames.
+     * Moves cue times to the shot changes of $options, closes gaps and puts all times on frames.
+     * A gap closes to minGapFrames when it is longer than minGapFrames, shorter than snapWindowFrames and holds no
+     * shot change.
      */
     public static function apply(Subtitle $subtitle, ShotChangeOptions $options): ShotChangeReport
     {

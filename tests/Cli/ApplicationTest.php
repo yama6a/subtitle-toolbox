@@ -153,7 +153,7 @@ class ApplicationTest extends TestCase
     private const OFF_SWITCHES = [
         "no-bom"        => "the UTF-8 BOM of the output format",
         "no-scale"      => "the scale search of sync",
-        "no-snap-chain" => "the closing of small gaps between cues",
+        "no-snap-chain" => "the closing of gaps between cues",
     ];
 
 
