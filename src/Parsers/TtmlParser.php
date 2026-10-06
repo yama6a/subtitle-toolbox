@@ -23,15 +23,6 @@ final class TtmlParser extends SubtitleParser
 
     private const TIMING_ATTRIBUTES = ["begin", "end", "dur"];
 
-    // TTML 1, section 8.3.13, named colors.
-    private const NAMED_COLORS = [
-        "black"  => "#000000", "silver" => "#c0c0c0", "gray"    => "#808080", "white"  => "#ffffff",
-        "maroon" => "#800000", "red"    => "#ff0000", "purple"  => "#800080", "fuchsia" => "#ff00ff",
-        "magenta" => "#ff00ff", "green" => "#008000", "lime"    => "#00ff00", "olive"  => "#808000",
-        "yellow" => "#ffff00", "navy"   => "#000080", "blue"    => "#0000ff", "teal"   => "#008080",
-        "aqua"   => "#00ffff", "cyan"   => "#00ffff",
-    ];
-
     private ?string $namespace;
 
     private DOMElement $root;
@@ -546,7 +537,7 @@ final class TtmlParser extends SubtitleParser
             return sprintf("#%02x%02x%02x", min(255, (int) $matches[1]), min(255, (int) $matches[2]), min(255, (int) $matches[3]));
         }
 
-        return self::NAMED_COLORS[$color] ?? null;
+        return ColorNames::TTML[$color] ?? null;
     }
 
 
