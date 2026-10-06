@@ -32,6 +32,11 @@
       "SubtitleToolbox\\": "src/"
     }
   },
+  "autoload-dev": {
+    "psr-4": {
+      "SubtitleToolbox\\Tests\\": "tests/"
+    }
+  },
   "bin": [
     "bin/subtitle-toolbox"
   ],
