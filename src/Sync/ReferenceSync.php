@@ -26,8 +26,8 @@ final class ReferenceSync
 
 
     /**
-     * Finds the scale and offset that make the cue times of $subtitle match those of the reference in $options, and
-     * retimes $subtitle with them.
+     * Finds the scale and offset that make the cue times of $subtitle match those of the reference in $options.
+     * Then it retimes $subtitle with them.
      */
     public static function apply(Subtitle $subtitle, ReferenceSyncOptions $options): ReferenceSyncReport
     {

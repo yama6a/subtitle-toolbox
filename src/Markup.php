@@ -325,9 +325,9 @@ final class Markup
      *
      * @param list<string> $lines
      * @param list<string> $tagNames lowercase tag names, for example ["b", "i"]
-     * @return array{stray: list<array{int, int, int}>, inner: list<string>, open: list<string>} the line index, offset and
-     *         length of each closing tag without an open tag, the tag names that $closeInner closed, and the tag names
-     *         still open after the last line
+     * @return array{stray: list<array{int, int, int}>, inner: list<string>, open: list<string>} "stray" holds the line
+     *         index, offset and length of each closing tag without an open tag. "inner" holds the tag names that
+     *         $closeInner closed. "open" holds the tag names that are still open after the last line.
      *
      * @internal
      */

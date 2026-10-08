@@ -343,8 +343,8 @@ final class EbuStlFormatter extends SubtitleFormatter
 
 
     /**
-     * Writes the GSI block. The title and language metadata and the counts of the written blocks replace
-     * the stored values when they differ from what the parser read.
+     * Writes the GSI block. The title and language metadata and the counts of the written blocks can change.
+     * Such a value replaces the stored value when it differs from what the parser read.
      *
      * @param list<array{blocks: list<string>, comment: bool}> $sets
      */

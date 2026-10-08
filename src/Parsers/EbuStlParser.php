@@ -217,8 +217,8 @@ final class EbuStlParser extends SubtitleParser
 
 
     /**
-     * Groups the TTI blocks into the sets of one subtitle: consecutive blocks with the same subtitle number,
-     * up to the block with extension block number FFh. EBU Tech 3264 section 4.3.2.
+     * Groups the TTI blocks into the sets of one subtitle, EBU Tech 3264 section 4.3.2.
+     * A set holds consecutive blocks with the same subtitle number, up to the block with extension block number FFh.
      *
      * @return list<list<string>>
      */

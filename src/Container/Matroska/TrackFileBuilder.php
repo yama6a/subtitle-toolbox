@@ -44,8 +44,9 @@ final class TrackFileBuilder
 
 
     /**
-     * Rebuilds the Dialogue lines from the ReadOrder, Layer, Style, Name, MarginL, MarginR, MarginV, Effect and Text
-     * fields of each block, in the order of the Format line of the header, as mkvextract does.
+     * Rebuilds the Dialogue lines from the fields of each block, as mkvextract does.
+     * The fields are ReadOrder, Layer, Style, Name, MarginL, MarginR, MarginV, Effect and Text.
+     * Each Dialogue line takes its fields in the order of the Format line of the header.
      */
     public static function assFile(MatroskaTrack $track, string $codecPrivate, array $cues): string
     {
@@ -80,8 +81,8 @@ final class TrackFileBuilder
 
 
     /**
-     * Rebuilds the cue blocks from the block text and the BlockAdditional, which holds the cue settings,
-     * the cue identifier and the comments before the cue.
+     * Rebuilds the cue blocks from the block text and the BlockAdditional.
+     * The BlockAdditional holds the cue settings, the cue identifier and the comments before the cue.
      */
     public static function webVttFile(string $codecPrivate, array $cues): string
     {

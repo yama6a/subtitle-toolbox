@@ -64,8 +64,9 @@ final class FfMetadataChaptersParser extends SubtitleParser
 
 
     /**
-     * @return list<array{int, string}> the 1-based number of the first physical line, and the line joined with the
-     *                                  lines that an escaped line break continues it with
+     * Joins each line that ends in an escaped line break with the next line.
+     *
+     * @return list<array{int, string}> the 1-based number of the first physical line, and the joined line
      */
     private function logicalLines(string $content): array
     {

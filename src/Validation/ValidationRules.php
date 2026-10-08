@@ -94,8 +94,8 @@ final class ValidationRules
 
 
     /**
-     * Returns the checks of a well-formed cue list: at least one cue, cues in start order, no cue that ends before it
-     * starts, and no overlap.
+     * Returns the checks of a well-formed cue list.
+     * It needs at least one cue, cues in start order, no cue that ends before it starts, and no overlap.
      */
     public static function structure(): self
     {
@@ -127,9 +127,10 @@ final class ValidationRules
 
     /**
      * Returns the line length and reading speed limits of the BBC Subtitle Guidelines.
-     * The values come from https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/:
      * 37 characters per line is the broadcast limit of section 3.1.
      * 180 words per minute is the upper end of 160 to 180 in section 4. 0.3 s per word is from section 4.1.
+     *
+     * @see https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/
      */
     public static function bbc(): self
     {
