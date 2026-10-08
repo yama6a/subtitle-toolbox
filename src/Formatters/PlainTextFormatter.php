@@ -28,7 +28,7 @@ final class PlainTextFormatter extends SubtitleFormatter
         $items = [];
         foreach ($subtitle->getCues() as $cue) {
             $lines = array_values(array_filter(
-                array_map($this->plainLine(...), $cue->getLines()),
+                array_map($this->plainLine(...), array_map(Markup::rubyAsText(...), $cue->getLines())),
                 fn (string $line): bool => $line !== ""
             ));
             if ($lines !== []) {

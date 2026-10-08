@@ -194,7 +194,7 @@ final class AssFormatter extends SubtitleFormatter
      */
     private function convertLines(SubtitleCue $cue, AssContext $context): array
     {
-        $text = implode(LineEnding::Lf->value, $cue->getLines());
+        $text = Markup::rubyAsText(implode(LineEnding::Lf->value, $cue->getLines()));
         $name = str_replace(",", "", Markup::speaker($text) ?? "");
 
         $parts = [];
