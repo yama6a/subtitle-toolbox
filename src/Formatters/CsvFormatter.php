@@ -21,6 +21,8 @@ final class CsvFormatter extends SubtitleFormatter
 {
     protected const FORMAT_OPTIONS = CsvWriteOptions::class;
 
+    protected const DEFAULT_BOM = true;
+
     private const SPEAKER_REGEX = '/^' . Markup::VOICE_TAG . '/';
 
 
@@ -75,7 +77,7 @@ final class CsvFormatter extends SubtitleFormatter
             $record
         )), $records);
 
-        return $this->applyOutputOptions(implode($lineEnding, $lines) . $lineEnding, new WriteOptions(bom: $options->bom ?? true, format: $csv));
+        return $this->applyBom(implode($lineEnding, $lines) . $lineEnding, $options);
     }
 
 

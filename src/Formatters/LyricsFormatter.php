@@ -7,7 +7,6 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\LyricsParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -15,6 +14,9 @@ use SubtitleToolbox\WriteOptions;
 
 final class LyricsFormatter extends SubtitleFormatter
 {
+    protected const DEFAULT_BOM = true;
+
+
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
@@ -33,7 +35,7 @@ final class LyricsFormatter extends SubtitleFormatter
         }
         $output .= $this->formatComments($comments, count($cues), PHP_INT_MAX);
 
-        return $this->applyOutputOptions(StringHelpers::addUtf8Bom($output), $options);
+        return $this->applyOutputOptions($output, $options);
     }
 
 

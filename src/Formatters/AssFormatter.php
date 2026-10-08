@@ -11,7 +11,6 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\AssFormatLines;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\SsaOverrideTags;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -20,6 +19,8 @@ use SubtitleToolbox\WriteOptions;
 final class AssFormatter extends SubtitleFormatter
 {
     protected const FORMAT_OPTIONS = AssWriteOptions::class;
+
+    protected const DEFAULT_BOM = true;
 
     // The same header that FFmpeg writes when it converts a text subtitle to ASS.
     private const DEFAULT_SCRIPT_INFO = ["ScriptType" => "v4.00+", "PlayResX" => "384", "PlayResY" => "288", "ScaledBorderAndShadow" => "yes"];
@@ -57,9 +58,10 @@ final class AssFormatter extends SubtitleFormatter
             $blocks[] = implode(LineEnding::Lf->value, ["[$section]", ...$lines]);
         }
 
-        return $this->applyOutputOptions(StringHelpers::addUtf8Bom(
-            implode(LineEnding::Lf->value . LineEnding::Lf->value, $blocks) . LineEnding::Lf->value
-        ), $options);
+        return $this->applyOutputOptions(
+            implode(LineEnding::Lf->value . LineEnding::Lf->value, $blocks) . LineEnding::Lf->value,
+            $options
+        );
     }
 
 

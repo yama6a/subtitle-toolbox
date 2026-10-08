@@ -7,7 +7,6 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\SubRipParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -15,6 +14,9 @@ use SubtitleToolbox\WriteOptions;
 
 final class SubRipFormatter extends SubtitleFormatter
 {
+    protected const DEFAULT_BOM = true;
+
+
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
@@ -23,7 +25,7 @@ final class SubRipFormatter extends SubtitleFormatter
             $output .= $this->formatNumberedCue($cue, $cueIndex, $options);
         }
 
-        return $this->applyOutputOptions(StringHelpers::addUtf8Bom($output), $options);
+        return $this->applyOutputOptions($output, $options);
     }
 
 
@@ -36,7 +38,9 @@ final class SubRipFormatter extends SubtitleFormatter
     {
         $block = $this->formatNumberedCue($cue, $cueIndex, $options);
 
-        return $this->applyOutputOptions($block, new WriteOptions($options->lineEnding, format: $options->format));
+        $this->formatOptions($options);
+
+        return $this->applyLineEnding($block, $options);
     }
 
 

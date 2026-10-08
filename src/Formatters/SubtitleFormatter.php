@@ -20,6 +20,9 @@ abstract class SubtitleFormatter
     /** @var class-string<FormatWriteOptions>|null the class that WriteOptions::$format must have, or null for none */
     protected const FORMAT_OPTIONS = null;
 
+    /** WriteOptions::$bom when it is null. Null leaves the output as the formatter wrote it. */
+    protected const DEFAULT_BOM = null;
+
 
     abstract public function format(Subtitle $subtitle, ?WriteOptions $options = null): string;
 
@@ -30,11 +33,26 @@ abstract class SubtitleFormatter
     protected function applyOutputOptions(string $output, WriteOptions $options): string
     {
         $this->formatOptions($options);
-        if ($options->lineEnding === LineEnding::Crlf) {
-            $output = preg_replace('/\r?\n/', LineEnding::Crlf->value, $output);
-        }
 
-        return match ($options->bom) {
+        return $this->applyBom($this->applyLineEnding($output, $options), $options);
+    }
+
+
+    /**
+     * Converts the LF output of a formatter to the line ending of $options.
+     */
+    protected function applyLineEnding(string $output, WriteOptions $options): string
+    {
+        return $options->lineEnding === LineEnding::Crlf ? preg_replace('/\r?\n/', LineEnding::Crlf->value, $output) : $output;
+    }
+
+
+    /**
+     * Adds or removes the BOM as WriteOptions::$bom says, or as DEFAULT_BOM says when it is null.
+     */
+    protected function applyBom(string $output, WriteOptions $options): string
+    {
+        return match ($options->bom ?? static::DEFAULT_BOM) {
             true    => StringHelpers::addUtf8Bom($output),
             false   => StringHelpers::removeUtf8Bom($output),
             default => $output,
