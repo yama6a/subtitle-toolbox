@@ -95,7 +95,7 @@ final class TtmlParser extends SubtitleParser
 
         $cues = [];
         if ($body !== null) {
-            $this->readContainer($cues, $body, 0.0, null, null, null, false, [], null);
+            $this->readContainer($cues, $body, new TtmlScope(), []);
         }
 
         return $subtitle->addCues($cues);
@@ -194,22 +194,17 @@ final class TtmlParser extends SubtitleParser
      *
      * @see https://www.w3.org/TR/ttml2/#timing-time-intervals
      */
-    private function readContainer(
-        array &$cues,
-        DOMElement $container,
-        float $parentBegin,
-        ?float $parentEnd,
-        ?string $region,
-        ?string $textAlign,
-        bool $preserveSpace,
-        array $divAttributes,
-        ?bool $forced
-    ): void {
-        [$begin, $end]  = $this->interval($container, $parentBegin, $parentEnd);
-        $forced         = $this->forcedDisplay($container) ?? $forced;
-        $region         = $container->hasAttribute("region") ? $container->getAttribute("region") : $region;
-        $textAlign      = $this->ownStyleProperties($container)["textAlign"] ?? $textAlign;
-        $preserveSpace  = $this->preservesSpace($container, $preserveSpace);
+    private function readContainer(array &$cues, DOMElement $container, TtmlScope $parent, array $divAttributes): void
+    {
+        [$begin, $end] = $this->interval($container, $parent->begin, $parent->end);
+        $scope         = new TtmlScope(
+            $begin,
+            $end,
+            $container->hasAttribute("region") ? $container->getAttribute("region") : $parent->region,
+            $this->ownStyleProperties($container)["textAlign"] ?? $parent->textAlign,
+            $this->preservesSpace($container, $parent->preserveSpace),
+            $this->forcedDisplay($container) ?? $parent->forced,
+        );
         if ($this->isTtElement($container, "div")) {
             $divAttributes = [
                 ...$divAttributes,
@@ -219,10 +214,10 @@ final class TtmlParser extends SubtitleParser
 
         foreach ($container->childNodes as $child) {
             if ($this->isTtElement($child, "div")) {
-                $this->readContainer($cues, $child, $begin, $end, $region, $textAlign, $preserveSpace, $divAttributes, $forced);
+                $this->readContainer($cues, $child, $scope, $divAttributes);
             } elseif ($this->isTtElement($child, "p")) {
                 try {
-                    $cue = $this->readParagraph($child, $begin, $end, $region, $textAlign, $preserveSpace, $forced);
+                    $cue = $this->readParagraph($child, $scope);
                 } catch (ParsingException $exception) {
                     $this->fail($exception, $child->getLineNo(), $this->paragraphIndex++, $this->xmlLines($child));
                     continue;
@@ -248,16 +243,9 @@ final class TtmlParser extends SubtitleParser
     }
 
 
-    private function readParagraph(
-        DOMElement $paragraph,
-        float $parentBegin,
-        ?float $parentEnd,
-        ?string $region,
-        ?string $textAlign,
-        bool $preserveSpace,
-        ?bool $forced
-    ): SubtitleCue {
-        [$begin, $end] = $this->interval($paragraph, $parentBegin, $parentEnd);
+    private function readParagraph(DOMElement $paragraph, TtmlScope $scope): SubtitleCue
+    {
+        [$begin, $end] = $this->interval($paragraph, $scope->begin, $scope->end);
         if ($end === null) {
             throw new ParsingException("The paragraph that begins at {$begin}s has no end time.");
         }
@@ -265,23 +253,23 @@ final class TtmlParser extends SubtitleParser
         $style = $this->resolveStyle($paragraph, ["b" => false, "i" => false, "u" => false, "s" => false, "color" => null]);
         $agent = $this->agentName($paragraph);
         $runs  = [];
-        $this->collectRuns($paragraph, $style, $agent, $this->preservesSpace($paragraph, $preserveSpace), $runs);
+        $this->collectRuns($paragraph, $style, $agent, $this->preservesSpace($paragraph, $scope->preserveSpace), $runs);
 
         $cue = new SubtitleCue($begin, $end, $this->runsToLines($runs));
         $id  = $paragraph->getAttributeNS(TtmlNamespaces::XML, "id");
         $cue->setIdentifier($id === "" ? null : $id);
 
         $attributes = $this->readAttributes($paragraph, [...self::TIMING_ATTRIBUTES, "xml:id"]);
-        if (!$paragraph->hasAttribute("region") && $region !== null) {
-            $attributes["region"] = $region;
+        if (!$paragraph->hasAttribute("region") && $scope->region !== null) {
+            $attributes["region"] = $scope->region;
         }
         $cue->setFormatData(self::FORMAT_DATA_KEY, $attributes === [] ? [] : ["attributes" => $attributes]);
 
-        $textAlign = $this->ownStyleProperties($paragraph)["textAlign"] ?? $textAlign;
-        $region    = $paragraph->hasAttribute("region") ? $paragraph->getAttribute("region") : $region;
+        $textAlign = $this->ownStyleProperties($paragraph)["textAlign"] ?? $scope->textAlign;
+        $region    = $paragraph->hasAttribute("region") ? $paragraph->getAttribute("region") : $scope->region;
         $cue->setAlignment($this->alignment($region, $textAlign));
 
-        $forced = $this->forcedDisplay($paragraph) ?? $forced ?? $this->regionForcedDisplay($region) ?? false;
+        $forced = $this->forcedDisplay($paragraph) ?? $scope->forced ?? $this->regionForcedDisplay($region) ?? false;
         $cue->setForced($forced || $this->hasForcedSpan($paragraph, $forced));
 
         return $cue;
