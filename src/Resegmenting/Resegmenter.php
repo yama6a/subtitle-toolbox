@@ -269,22 +269,7 @@ final class Resegmenter
         foreach ($cue->getLines() as $line) {
             foreach (LineWrapper::measuredWords($line) as $wordIndex => $word) {
                 $separator = $wordIndex > 0 ? " " : ($pieces === [] ? "" : "\n");
-                foreach (self::splitWord($word["text"]) as $partIndex => $text) {
-                    $piece = ["text"      => $text,
-                              "length"    => LineWrapper::length(LineWrapper::measuredWords($text)),
-                              "separator" => $partIndex === 0 ? $separator : ""];
-
-                    // A word of tags only, such as "</i>" after a space, joins its neighbour, so that no cue holds only tags.
-                    if ($piece["length"] === 0 && $pieces !== []) {
-                        $pieces[count($pieces) - 1]["text"] .= $piece["separator"] . $text;
-                    } elseif ($piece["length"] === 0) {
-                        $prefix .= "$text ";
-                    } else {
-                        $piece["text"] = $prefix . $piece["text"];
-                        $prefix        = "";
-                        $pieces[]      = $piece;
-                    }
-                }
+                self::addWordPieces($pieces, $prefix, $word["text"], $separator);
             }
         }
 
@@ -300,6 +285,32 @@ final class Resegmenter
         }
 
         return $pieces;
+    }
+
+
+    /**
+     * Adds the pieces of one word. $prefix holds the tags of a word without text before the first piece.
+     *
+     * @param list<array{text: string, length: int, separator: string}> $pieces
+     */
+    private static function addWordPieces(array &$pieces, string &$prefix, string $word, string $separator): void
+    {
+        foreach (self::splitWord($word) as $partIndex => $text) {
+            $piece = ["text"      => $text,
+                      "length"    => LineWrapper::length(LineWrapper::measuredWords($text)),
+                      "separator" => $partIndex === 0 ? $separator : ""];
+
+            // A word of tags only, such as "</i>" after a space, joins its neighbour, so that no cue holds only tags.
+            if ($piece["length"] === 0 && $pieces !== []) {
+                $pieces[count($pieces) - 1]["text"] .= $piece["separator"] . $text;
+            } elseif ($piece["length"] === 0) {
+                $prefix .= "$text ";
+            } else {
+                $piece["text"] = $prefix . $piece["text"];
+                $prefix        = "";
+                $pieces[]      = $piece;
+            }
+        }
     }
 
 
