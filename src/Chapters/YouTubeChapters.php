@@ -13,6 +13,7 @@ use SubtitleToolbox\Validation\ValidationViolation;
 final class YouTubeChapters
 {
     public const MIN_CHAPTERS = 3;
+    // In seconds.
     public const MIN_DURATION = 10;
 
 
@@ -27,7 +28,7 @@ final class YouTubeChapters
         $cues   = array_values($chapters->getCues());
         $broken = [];
         if ($cues !== [] && floor($cues[0]->getStart()) > 0) {
-            $broken[] = new ValidationViolation(0, ValidationRule::FirstChapterAtZero, $cues[0]->getStart(), 0);
+            $broken[] = new ValidationViolation(cueIndex: 0, rule: ValidationRule::FirstChapterAtZero, value: $cues[0]->getStart(), limit: 0);
         }
         if (count($cues) < self::MIN_CHAPTERS) {
             $broken[] = new ValidationViolation(null, ValidationRule::MinChapters, count($cues), self::MIN_CHAPTERS);

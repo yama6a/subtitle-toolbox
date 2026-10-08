@@ -29,7 +29,7 @@ final class StringHelpers
     /** @internal */
     public static function removeUtf8Bom(string $str): string
     {
-        return self::hasUtf8Bom($str) ? substr($str, 3) : $str;
+        return self::hasUtf8Bom($str) ? substr($str, strlen(self::UTF8_BOM)) : $str;
     }
 
 

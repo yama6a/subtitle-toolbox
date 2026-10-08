@@ -6,6 +6,9 @@ namespace SubtitleToolbox;
 
 final class SubtitleStatistics
 {
+    /** @internal The number of most used words that toArray() and the info command show. */
+    public const MOST_USED_WORDS = 10;
+
     /**
      * @param int                                            $cueCount            The number of cues, also image cues.
      * @param int                                            $wordCount           The number of words of the text without tags.
@@ -125,7 +128,7 @@ final class SubtitleStatistics
             "wordsPerMinute"      => $this->wordsPerMinute,
             "charactersPerLine"   => $this->charactersPerLine,
             "gaps"                => $this->gaps,
-            "mostUsedWords"       => array_slice($this->mostUsedWords, 0, 10),
+            "mostUsedWords"       => array_slice($this->mostUsedWords, 0, self::MOST_USED_WORDS),
         ];
     }
 

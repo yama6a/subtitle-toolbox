@@ -89,7 +89,7 @@ final class InfoCommand extends ReportCommand
             "min " . self::number($values["min"]) . ", average " . self::number($values["average"]) . ", max " .
             self::number($values["max"]) . $unit;
         $words = [];
-        foreach (array_slice($statistics->mostUsedWords, 0, 10) as ["word" => $word, "count" => $count]) {
+        foreach (array_slice($statistics->mostUsedWords, 0, SubtitleStatistics::MOST_USED_WORDS) as ["word" => $word, "count" => $count]) {
             $words[] = "$word ($count)";
         }
 
