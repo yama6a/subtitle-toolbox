@@ -20,7 +20,7 @@ final class JsonFormatter extends SubtitleFormatter implements ImageFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $json  = $this->formatOptions($options) ?? new JsonWriteOptions();
+        $json  = $this->formatOptions($options);
         $array = $subtitle->toArray($json->withFormatData);
 
         $array["metadata"] = (object)$array["metadata"];

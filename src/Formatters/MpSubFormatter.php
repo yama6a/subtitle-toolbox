@@ -26,7 +26,7 @@ final class MpSubFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $fps         = $this->formatOptions($options)?->frameRate;
+        $fps         = $this->formatOptions($options)->frameRate;
         $frameRate   = $fps === null ? null : new FrameRate($fps);
         $output      = $this->getHeader($subtitle, $frameRate);
         $previousEnd = 0;

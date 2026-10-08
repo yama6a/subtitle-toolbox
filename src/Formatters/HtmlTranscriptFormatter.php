@@ -23,7 +23,7 @@ final class HtmlTranscriptFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $paragraphGap = ($this->formatOptions($options) ?? new HtmlTranscriptWriteOptions())->paragraphGap;
+        $paragraphGap = $this->formatOptions($options)->paragraphGap;
 
         $paragraphs = [];
         $latestEnd  = null;

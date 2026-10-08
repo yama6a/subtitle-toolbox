@@ -28,7 +28,7 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $podcast      = $this->formatOptions($options) ?? new PodcastTranscriptWriteOptions();
+        $podcast      = $this->formatOptions($options);
         $wordSegments = $podcast->wordSegments;
         $fileData     = $subtitle->findFormatData(PodcastTranscriptParser::FORMAT_DATA_KEY);
         $cues         = $subtitle->getCues();

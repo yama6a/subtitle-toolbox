@@ -22,7 +22,7 @@ final class PlainTextFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $plainText = $this->formatOptions($options) ?? new PlainTextWriteOptions();
+        $plainText = $this->formatOptions($options);
 
         $paragraphs = [];
         $latestEnd  = null;

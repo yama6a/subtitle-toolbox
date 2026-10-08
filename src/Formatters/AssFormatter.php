@@ -37,7 +37,7 @@ final class AssFormatter extends SubtitleFormatter
     {
         $options ??= new WriteOptions();
         $data       = $subtitle->findFormatData(AssParser::FORMAT_DATA_KEY) + $this->defaultData();
-        $karaokeTag = ($this->formatOptions($options) ?? new AssWriteOptions())->karaokeTag;
+        $karaokeTag = $this->formatOptions($options)->karaokeTag;
 
         $order = $data["sectionOrder"];
         if (!in_array("script info", array_map("strtolower", $order), true)) {

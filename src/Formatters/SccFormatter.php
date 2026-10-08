@@ -41,7 +41,7 @@ final class SccFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $dropFrame = $this->formatOptions($options)?->dropFrame ?? $subtitle->findFormatData(SccParser::FORMAT_DATA_KEY)["dropFrame"] ?? true;
+        $dropFrame = $this->formatOptions($options)->dropFrame ?? $subtitle->findFormatData(SccParser::FORMAT_DATA_KEY)["dropFrame"] ?? true;
 
         $cues = $subtitle->getCues();
         uasort($cues, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());

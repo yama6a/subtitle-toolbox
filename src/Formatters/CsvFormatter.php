@@ -34,7 +34,7 @@ final class CsvFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $csv       = $this->formatOptions($options) ?? new CsvWriteOptions();
+        $csv       = $this->formatOptions($options);
         $data      = $subtitle->findFormatData(CsvParser::FORMAT_DATA_KEY);
         $delimiter = $csv->delimiter ?? $data["delimiter"] ?? ",";
         CsvReadOptions::checkDelimiter($delimiter);

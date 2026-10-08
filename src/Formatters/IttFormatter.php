@@ -54,7 +54,7 @@ final class IttFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $fps                      = $this->formatOptions($options)?->frameRate;
+        $fps                      = $this->formatOptions($options)->frameRate;
         [$frameRate, $multiplier] = $this->frameRateParameters($subtitle->findFormatData(IttParser::FORMAT_DATA_KEY), $fps);
         $rate                     = new FrameRate((float) $frameRate * $this->multiplierFactor($multiplier));
 

@@ -32,7 +32,7 @@ abstract class SubtitleFormatter
      */
     protected function applyOutputOptions(string $output, WriteOptions $options): string
     {
-        $this->formatOptions($options);
+        $this->rejectForeignOptions($options);
 
         return $this->applyBom($this->applyLineEnding($output, $options), $options);
     }
@@ -61,11 +61,24 @@ abstract class SubtitleFormatter
 
 
     /**
-     * Returns WriteOptions::$format, or null when $options holds none.
+     * Returns WriteOptions::$format, or the default options of the format when $options holds none. Returns null for a
+     * formatter without format options.
      *
      * @throws InvalidArgumentException when WriteOptions::$format holds the settings of another format.
      */
     protected function formatOptions(WriteOptions $options): ?FormatWriteOptions
+    {
+        $this->rejectForeignOptions($options);
+        $class = static::FORMAT_OPTIONS;
+
+        return $options->format ?? ($class === null ? null : new $class());
+    }
+
+
+    /**
+     * @throws InvalidArgumentException when WriteOptions::$format holds the settings of another format.
+     */
+    protected function rejectForeignOptions(WriteOptions $options): void
     {
         $class = static::FORMAT_OPTIONS;
         if ($options->format !== null && ($class === null || !$options->format instanceof $class)) {
@@ -75,8 +88,6 @@ abstract class SubtitleFormatter
                 ? "$formatter takes no format options, got $given."
                 : "$formatter takes " . $this->shortName($class) . ", got $given.");
         }
-
-        return $options->format;
     }
 
 

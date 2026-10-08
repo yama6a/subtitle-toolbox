@@ -41,7 +41,7 @@ final class EbuStlFormatter extends SubtitleFormatter
         $options ??= new WriteOptions();
         $data = $subtitle->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
         $gsi  = ($data["gsi"] ?? []) + self::DEFAULT_GSI;
-        $fps  = $this->formatOptions($options)?->frameRate ?? EbuStl::FRAME_RATES[$gsi["DFC"] ?? ""] ?? 25;
+        $fps  = $this->formatOptions($options)->frameRate ?? EbuStl::FRAME_RATES[$gsi["DFC"] ?? ""] ?? 25;
 
         if (!array_key_exists($gsi["CCT"], EbuStl::CHARACTER_CODE_TABLES)) {
             throw new InvalidArgumentException("The character code table \"{$gsi["CCT"]}\" is not 00, 01, 02, 03 or 04.");
