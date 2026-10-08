@@ -139,21 +139,13 @@ final class MpSubParser extends SubtitleParser
      */
     private function addCue(array &$cues, SubtitleCue $cue, int $lineNumber, int $cueLine, int $cueIndex, array $lines): void
     {
-        try {
-            $cues[] = $this->withText($cue, $lineNumber);
-        } catch (ParsingException $exception) {
-            $this->fail($exception, $cueLine, $cueIndex, [trim($lines[$cueLine - 1])]);
-        }
-    }
-
-
-    private function withText(SubtitleCue $cue, int $lineNumber): SubtitleCue
-    {
         if ($cue->getLines() === []) {
-            throw new ParsingException("The cue has no text lines.", $lineNumber);
+            $this->fail(new ParsingException("The cue has no text lines.", $lineNumber), $cueLine, $cueIndex, [trim($lines[$cueLine - 1])]);
+
+            return;
         }
 
-        return $cue;
+        $cues[] = $cue;
     }
 
 
