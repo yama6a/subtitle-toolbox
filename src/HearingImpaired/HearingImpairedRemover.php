@@ -291,14 +291,24 @@ final class HearingImpairedRemover
             $result[count($result) - 1] .= $pending;
         }
 
-        $remainingDashLines = array_keys(array_filter($result, fn (string $line): bool =>
-            preg_match('/^\h*-/', self::plainText($line)) === 1));
-        if ($anyRemoved && $dashLines >= 2 && count($remainingDashLines) === 1) {
-            $index          = $remainingDashLines[0];
-            $result[$index] = self::removeMatches([$result[$index]], ['/^\h*-\h*/'], false)[0];
+        return $anyRemoved && $dashLines >= 2 ? self::removeLastDash($result) : $result;
+    }
+
+
+    /**
+     * Removes the dash of the only dialogue line left, as one speaker needs no dash.
+     *
+     * @param list<string> $lines
+     * @return list<string>
+     */
+    private static function removeLastDash(array $lines): array
+    {
+        $dashLines = array_keys(array_filter($lines, fn (string $line): bool => preg_match('/^\h*-/', self::plainText($line)) === 1));
+        if (count($dashLines) === 1) {
+            $lines[$dashLines[0]] = self::removeMatches([$lines[$dashLines[0]]], ['/^\h*-\h*/'], false)[0];
         }
 
-        return $result;
+        return $lines;
     }
 
 
