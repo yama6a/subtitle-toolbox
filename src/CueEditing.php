@@ -38,7 +38,7 @@ trait CueEditing
         $this->cues       = $cues;
         $this->metadata   = $this->metadata + $other->getAllMetadata();
         $this->formatData = $this->formatData + $other->formatData;
-        $this->comments = CommentAnchors::comments($this->cues, $comments, array_merge($ownAnchors, $otherAnchors));
+        $this->comments   = CommentAnchors::comments($this->cues, $comments, array_merge($ownAnchors, $otherAnchors));
 
         return $this;
     }
