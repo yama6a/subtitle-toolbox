@@ -188,7 +188,8 @@ final class WebVttParser extends SubtitleParser
         $current   = [];
         $startLine = 1;
         foreach ($lines as $index => $line) {
-            if (trim($line) === "") {
+            // The spec ends a cue only at an empty line. YouTube auto captions put a line with one space into each cue.
+            if ($line === "" || trim($line) === "" && !$this->hasTimingLine($current)) {
                 if ($current !== []) {
                     yield [$startLine, $current];
                     $hasBlocks = true;
@@ -212,6 +213,18 @@ final class WebVttParser extends SubtitleParser
         if ($current !== []) {
             yield [$startLine, $current];
         }
+    }
+
+
+    private function hasTimingLine(array $block): bool
+    {
+        foreach ($block as $line) {
+            if (str_contains($line, "-->")) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
 
