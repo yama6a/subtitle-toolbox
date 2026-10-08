@@ -163,7 +163,7 @@ final class ConvertCommand extends WriteCommand
 
     protected function checkInputs(array $inputs, Arguments $arguments): void
     {
-        if (count($inputs) > 1 && ($arguments->has("mute-edl") || $arguments->has("mute-filter"))) {
+        if (count($inputs) > 1 && !$this->edits->takesManyInputs()) {
             self::fail("--mute-edl and --mute-filter take one input file, got " . count($inputs) . ".");
         }
 

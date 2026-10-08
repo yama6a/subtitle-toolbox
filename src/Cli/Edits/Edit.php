@@ -37,6 +37,15 @@ abstract class Edit implements OptionGroup
 
 
     /**
+     * Returns false when the options of the edit allow only one input file.
+     */
+    public function takesManyInputs(): bool
+    {
+        return true;
+    }
+
+
+    /**
      * Loads the files that the options of the edit name. The command calls it once, after all checks of its arguments.
      */
     public function loadSideFiles(): void

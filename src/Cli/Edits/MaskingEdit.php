@@ -96,6 +96,12 @@ final class MaskingEdit extends Edit
     }
 
 
+    public function takesManyInputs(): bool
+    {
+        return $this->edlPath === null && $this->filterPath === null;
+    }
+
+
     public function loadSideFiles(): void
     {
         $this->options = new ProfanityOptions(self::readWordFile($this->wordsPath), ...Command::given([
