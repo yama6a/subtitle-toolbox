@@ -91,4 +91,28 @@ class LineWrapperTest extends TestCase
         $this->assertSame([], LineWrapper::wrap(["", " "], 20, 2));
         $this->assertSame([], LineWrapper::wrapToFit([""], 20, 2));
     }
+
+
+    public function testCharactersPerSecondIsInfiniteWithoutDuration(): void
+    {
+        $this->assertSame(10.0, LineWrapper::charactersPerSecond(20, 2.0));
+        $this->assertSame(INF, LineWrapper::charactersPerSecond(20, 0.0));
+        $this->assertSame(INF, LineWrapper::charactersPerSecond(20, -1.0));
+    }
+
+
+    public function testVisibleLineLengthsSkipLinesWithoutVisibleText(): void
+    {
+        $this->assertSame([5, 3], LineWrapper::visibleLineLengths(["<i>Hello</i>", "<b></b>", "", "a b"]));
+    }
+
+
+    public function testFitsCharactersPerSecond(): void
+    {
+        $this->assertTrue(LineWrapper::fitsCharactersPerSecond(["<i>Hello</i>"], 1.0, null));
+        $this->assertTrue(LineWrapper::fitsCharactersPerSecond(["<i>Hello</i>"], 1.0, 5.0));
+        $this->assertFalse(LineWrapper::fitsCharactersPerSecond(["<i>Hello</i>"], 1.0, 4.9));
+        $this->assertTrue(LineWrapper::fitsCharactersPerSecond(["<i></i>"], 0.0, 1.0));
+        $this->assertFalse(LineWrapper::fitsCharactersPerSecond(["Hi"], 0.0, 1000.0));
+    }
 }

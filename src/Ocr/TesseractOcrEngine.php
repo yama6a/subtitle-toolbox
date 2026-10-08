@@ -92,6 +92,15 @@ final class TesseractOcrEngine implements OcrEngine
 
 
     /**
+     * @internal
+     */
+    public static function missingProgramMessage(string $program): string
+    {
+        return "Cannot run OCR with Tesseract - the program \"$program\" is missing! " . self::INSTALL_HINT;
+    }
+
+
+    /**
      * Throws when the program or the language data of $language is missing. A null $language checks the language of
      * the options. The CLI calls it before the first file.
      *
@@ -103,8 +112,7 @@ final class TesseractOcrEngine implements OcrEngine
         $program = $this->options->program;
         if (!isset(self::$languages[$program])) {
             if (!self::isInstalled($program)) {
-                throw new InvalidArgumentException("Cannot run OCR with Tesseract - the program \"$program\" " .
-                                                   "is missing! " . self::INSTALL_HINT);
+                throw new InvalidArgumentException(self::missingProgramMessage($program));
             }
             [, $output, $error]        = self::run([$program, "--list-langs"]);
             $lines                     = array_map(trim(...), explode("\n", trim($output . $error)));

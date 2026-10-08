@@ -228,6 +228,16 @@ class HearingImpairedRemoverTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testRemoveFromTextReturnsTheRemainingText(): void
+    {
+        $options = new HearingImpairedOptions();
+
+        $this->assertSame("Hi.", HearingImpairedRemover::removeFromText("JOHN: Hi.", $options));
+        $this->assertSame("", HearingImpairedRemover::removeFromText("[DOOR SLAMS]", $options));
+        $this->assertSame("Note: this stays.", HearingImpairedRemover::removeFromText("Note: this stays.", $options));
+    }
+
+
     public function testHearingImpairedOptionsBuildsNoSubtitle(): void
     {
         $this->assertSame(["__construct"], array_map(

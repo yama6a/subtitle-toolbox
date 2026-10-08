@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Sync;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\OptionChecks;
+use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -22,7 +23,7 @@ final class SpeechReference
         $intervals    = [];
         $speechStart  = 0.0;
         $silenceStart = null;
-        foreach (preg_split('/\r\n|\r|\n/', $log) as $index => $line) {
+        foreach (explode("\n", StringHelpers::normalizeEOLs($log)) as $index => $line) {
             if (!preg_match('/\bsilence_(start|end):\s*(-?\d+(?:\.\d+)?)/', $line, $match)) {
                 continue;
             }

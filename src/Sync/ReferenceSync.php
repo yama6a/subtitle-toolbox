@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Sync;
 
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\TimeRanges;
 
 final class ReferenceSync
 {
@@ -23,7 +24,7 @@ final class ReferenceSync
         $result   = self::find($subtitle, $options);
         $segments = $result->getSegments();
         if (count($segments) > 1) {
-            self::retimeSegments($subtitle, $result->scale, $segments);
+            self::retimeSegments($subtitle, $segments);
 
             return $result;
         }
@@ -44,7 +45,7 @@ final class ReferenceSync
      *
      * @param list<array{from: float, to: float, scale: float, offset: float}> $segments
      */
-    private static function retimeSegments(Subtitle $target, float $scale, array $segments): void
+    private static function retimeSegments(Subtitle $target, array $segments): void
     {
         $parts = array_fill(0, count($segments), []);
         foreach ($target->getCues() as $cue) {
@@ -57,7 +58,7 @@ final class ReferenceSync
 
         foreach ($parts as $index => $cues) {
             foreach ($cues as $cue) {
-                $cue->mapTimes(fn (float $time): float => $time * $scale + $segments[$index]["offset"]);
+                $cue->mapTimes(fn (float $time): float => $time * $segments[$index]["scale"] + $segments[$index]["offset"]);
             }
         }
 
@@ -308,19 +309,7 @@ final class ReferenceSync
             }
         }
 
-        sort($spans);
-
-        $merged = [];
-        foreach ($spans as [$start, $end]) {
-            $last = count($merged) - 1;
-            if ($last >= 0 && $start <= $merged[$last][1]) {
-                $merged[$last][1] = max($merged[$last][1], $end);
-            } else {
-                $merged[] = [$start, $end];
-            }
-        }
-
-        return $merged;
+        return TimeRanges::merged($spans);
     }
 
 

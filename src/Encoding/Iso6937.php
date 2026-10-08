@@ -111,10 +111,8 @@ final class Iso6937
         "\u{0165}" => [0xCF, "t"], "\u{01D4}" => [0xCF, "u"], "\u{017E}" => [0xCF, "z"],
     ];
 
-    private const REPLACEMENT = "?";
-
-    /** @var array<int, array<string, string>> diacritic byte => base letter => precomposed letter */
-    private static array $compositions = [];
+    /** @var ?array<int, array<string, string>> diacritic byte => base letter => precomposed letter */
+    private static ?array $compositions = null;
 
 
     /**
@@ -133,7 +131,8 @@ final class Iso6937
 
             $character = self::CHARACTERS[$code] ?? ($code >= 0x20 && $code < 0x7F ? $byte : null);
             if ($character !== null && $diacritic !== null) {
-                $character = self::compositions()[$diacritic][$character] ?? $character . self::DIACRITICS[$diacritic];
+                self::$compositions ??= self::buildCompositions();
+                $character = self::$compositions[$diacritic][$character] ?? $character . self::DIACRITICS[$diacritic];
             }
 
             $text      .= $character ?? "";
@@ -166,7 +165,7 @@ final class Iso6937
                 $encoded       = substr($encoded, 0, -1);
                 $lastCharacter = chr($diacritics[$character]) . $lastCharacter;
             } else {
-                $lastCharacter = self::REPLACEMENT;
+                $lastCharacter = CodePage::REPLACEMENT;
             }
 
             $encoded .= $lastCharacter;
@@ -179,14 +178,13 @@ final class Iso6937
     /**
      * @return array<int, array<string, string>>
      */
-    private static function compositions(): array
+    private static function buildCompositions(): array
     {
-        if (self::$compositions === []) {
-            foreach (self::COMPOSED as $composed => [$diacritic, $letter]) {
-                self::$compositions[$diacritic][$letter] = $composed;
-            }
+        $compositions = [];
+        foreach (self::COMPOSED as $composed => [$diacritic, $letter]) {
+            $compositions[$diacritic][$letter] = $composed;
         }
 
-        return self::$compositions;
+        return $compositions;
     }
 }

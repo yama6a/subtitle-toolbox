@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SubtitleToolbox\Cli;
+namespace SubtitleToolbox;
 
 /**
  * @internal

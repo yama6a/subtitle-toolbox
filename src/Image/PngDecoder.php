@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Image;
 
+use SubtitleToolbox\Dependency;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 /**
@@ -11,13 +12,15 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
  */
 final class PngDecoder
 {
-    private const SIGNATURE = "\x89PNG\r\n\x1a\n";
+    /** @internal */
+    public const SIGNATURE = "\x89PNG\r\n\x1a\n";
 
     private const COLOR_GRAY       = 0;
     private const COLOR_RGB        = 2;
     private const COLOR_PALETTE    = 3;
     private const COLOR_GRAY_ALPHA = 4;
-    private const COLOR_RGBA       = 6;
+    /** @internal */
+    public const COLOR_RGBA = 6;
 
     /** Color type => channels and the allowed bit depths. */
     private const COLOR_TYPES = [
@@ -58,7 +61,8 @@ final class PngDecoder
 
         $rowLength = intdiv($width * $channels * $depth + 7, 8);
         $dataSize  = ($rowLength + 1) * $height;
-        self::requireFunction("gzuncompress");
+        Dependency::check("gzuncompress", "Cannot decode a PNG - PHP has no ext-zlib. Use a PHP build with zlib, " .
+                                          "for example one compiled with --with-zlib!");
         $scanlines = @gzuncompress(implode("", $chunks["IDAT"] ?? []), $dataSize);
         if ($scanlines === false) {
             throw new InvalidArgumentException("Cannot decode the PNG - its IDAT chunks hold no valid zlib data, " .
@@ -235,14 +239,5 @@ final class PngDecoder
         };
 
         return $red << 24 | $green << 16 | $blue << 8 | ($transparent ? 0 : $alpha);
-    }
-
-
-    private static function requireFunction(string $function): void
-    {
-        if (!function_exists($function)) {
-            throw new InvalidArgumentException("Cannot decode a PNG - PHP has no ext-zlib. Use a PHP build with zlib, " .
-                                               "for example one compiled with --with-zlib!");
-        }
     }
 }

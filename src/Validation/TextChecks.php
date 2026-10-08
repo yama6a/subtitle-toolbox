@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Validation;
 
+use SubtitleToolbox\DialogueDash;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\SubtitleCue;
 
@@ -12,12 +13,6 @@ use SubtitleToolbox\SubtitleCue;
  */
 final class TextChecks
 {
-    private const DASHES = '\-\x{2010}\x{2013}\x{2014}';
-
-    // A dash before a digit, such as "-20 degrees", is a minus sign and starts no dialogue.
-    private const DIALOGUE_DASH = '/^[' . self::DASHES . '](?![' . self::DASHES . '])[ \t\x{00A0}]*(?=[^\s\p{N}])/u';
-
-
     /**
      * Returns one result per text rule that the cue breaks.
      *
@@ -127,7 +122,7 @@ final class TextChecks
 
     private static function startsWithDialogueDash(string $line): bool
     {
-        return preg_match(self::DIALOGUE_DASH, ltrim($line)) === 1;
+        return preg_match(DialogueDash::REGEX, ltrim($line)) === 1;
     }
 
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Container\Matroska;
 
 use Generator;
+use SubtitleToolbox\Dependency;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
@@ -572,7 +573,7 @@ final class MatroskaReader
             }
 
             // gzuncompress() warns before it returns false. The exception reports the failure.
-            $inflated = function_exists("gzuncompress") ? @gzuncompress($data) : false;
+            $inflated = Dependency::isAvailable("gzuncompress") ? @gzuncompress($data) : false;
             if ($inflated === false) {
                 throw new ParsingException("The zlib data of track $trackNumber cannot be decompressed.");
             }

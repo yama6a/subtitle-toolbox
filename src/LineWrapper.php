@@ -29,7 +29,7 @@ final class LineWrapper
                 continue;
             }
 
-            $startsWithDash = preg_match('/^(?:\s|' . Markup::TAG . ')*[-\x{2010}\x{2013}\x{2014}]/u', $line) === 1;
+            $startsWithDash = preg_match('/^(?:\s|' . Markup::TAG . ')*[' . DialogueDash::CHARACTERS . ']/u', $line) === 1;
             if ($segments === [] || $startsWithDash) {
                 $segments[] = $words;
             } else {
@@ -63,6 +63,23 @@ final class LineWrapper
 
 
     /**
+     * Returns true when $maxCharactersPerSecond is null, when the lines have no visible character, or when their
+     * visible characters per second over $duration stay at or below $maxCharactersPerSecond.
+     *
+     * @param array<string> $lines
+     */
+    public static function fitsCharactersPerSecond(array $lines, float $duration, ?float $maxCharactersPerSecond): bool
+    {
+        if ($maxCharactersPerSecond === null) {
+            return true;
+        }
+        $characters = self::visibleCharacters($lines);
+
+        return $characters === 0 || self::charactersPerSecond($characters, $duration) <= $maxCharactersPerSecond;
+    }
+
+
+    /**
      * @param array<string> $lines
      */
     public static function fits(array $lines, int $maxCharsPerLine, int $maxLines): bool
@@ -88,6 +105,28 @@ final class LineWrapper
     public static function visibleCharacters(array $lines): int
     {
         return array_sum(array_map(fn (string $line): int => Markup::visibleLength($line), $lines));
+    }
+
+
+    /**
+     * Returns the visible characters of each line that has at least 1 visible character. Tags count 0 characters.
+     *
+     * @param array<string> $lines
+     *
+     * @return list<int>
+     */
+    public static function visibleLineLengths(array $lines): array
+    {
+        return array_values(array_filter(array_map(fn (string $line): int => Markup::visibleLength($line), $lines)));
+    }
+
+
+    /**
+     * Returns $characters divided by $duration, or INF when $duration is 0 or less.
+     */
+    public static function charactersPerSecond(int $characters, float $duration): float
+    {
+        return $duration > 0 ? $characters / $duration : INF;
     }
 
 

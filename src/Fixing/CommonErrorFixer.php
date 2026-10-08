@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Fixing;
 
+use SubtitleToolbox\DialogueDash;
+use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -16,7 +18,6 @@ use SubtitleToolbox\SubtitleCue;
  */
 final class CommonErrorFixer
 {
-    private const DASHES       = '\-\x{2010}\x{2013}\x{2014}';
     private const NOT_IN_WORD  = '(?<![\p{L}\p{N}\'\x{2019}])';
     private const WORD_ENDS    = '(?![\p{L}\p{N}\'\x{2019}])';
     private const SPACES       = '[ \t\x{00A0}]';
@@ -51,20 +52,19 @@ final class CommonErrorFixer
 
     private static function run(Subtitle $subtitle, CommonErrorOptions $options, bool $change): CommonErrorReport
     {
-        $language    = self::language($options->language ?? $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
-        $cues        = $subtitle->getCues();
-        $indexes     = array_keys($cues);
-        $fixes       = [];
-        $removedCues = new \SplObjectStorage();
+        $language  = self::language($options->language ?? $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
+        $cues      = $subtitle->getCues();
+        $indexes   = array_keys($cues);
+        $positions = array_flip($indexes);
+        $fixes     = [];
 
-        foreach ($indexes as $position => $index) {
-            $cue   = $cues[$index];
+        $fixCue = function (SubtitleCue $cue, int $index) use ($cues, $indexes, $positions, $options, $language, $change, &$fixes): ?array {
             $lines = array_values($cue->getLines());
             if ($lines === []) {
-                continue;
+                return null;
             }
 
-            $next      = $cues[$indexes[$position + 1] ?? -1] ?? null;
+            $next      = $cues[$indexes[$positions[$index] + 1] ?? -1] ?? null;
             $continues = $next !== null && $next->getStart() - $cue->getEnd() <= 0.6
                          && preg_match('/^\p{Ll}/u', implode("\n", Markup::plainLines($next->getLines()))) === 1;
             $original  = $lines;
@@ -76,18 +76,9 @@ final class CommonErrorFixer
                 }
             }
 
-            if (!$change || $lines === $original) {
-                continue;
-            }
-            $cue->setLines($lines);
-            if (Markup::plainLines($cue->getLines()) === [] && Markup::plainLines($original) !== []) {
-                $removedCues[$cue] = true;
-            }
-        }
-
-        if ($removedCues->count() > 0) {
-            $subtitle->removeCuesWhere(fn (SubtitleCue $cue): bool => isset($removedCues[$cue]));
-        }
+            return $change && $lines !== $original ? $lines : null;
+        };
+        $subtitle->setLinesAndRemoveEmptied($fixCue, fn (array $lines): bool => Markup::plainLines($lines) !== []);
 
         return new CommonErrorReport($fixes);
     }
@@ -113,22 +104,27 @@ final class CommonErrorFixer
             CommonErrorRule::OcrPipe         => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrPipe($text, $language)),
             CommonErrorRule::OcrZeroInWords  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => self::ocrZero($text, $first)),
             CommonErrorRule::OcrLowercaseL   => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrLowercaseL($text, $language)),
-            CommonErrorRule::Ellipsis        => Markup::mapTextRuns($lines, fn (string $text): string => self::replace(
-                '/\.(?: ?\.){2,}' . ($options->unicodeEllipsis ? '|\x{2026}' : '') . '/u',
-                $options->unicodeEllipsis ? "\u{2026}" : "...",
-                $text
-            )),
+            CommonErrorRule::Ellipsis        => Markup::mapTextRuns($lines, fn (string $text): string => self::ellipsis($text, $options->unicodeEllipsis)),
             CommonErrorRule::DoubleSpaces    => self::doubleSpaces($lines),
             CommonErrorRule::SpaceBeforePunctuation       => Markup::mapTextRuns($lines, fn (string $text): string =>
                 self::spaceBeforePunctuation($text, $language)),
             CommonErrorRule::MissingSpaceAfterPunctuation => Markup::mapTextRuns($lines, fn (string $text): string =>
                 self::missingSpaceAfterPunctuation($text)),
-            CommonErrorRule::DialogueDashes  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => !$first ? $text : self::replace(
-                '/^[' . self::DASHES . '](?![' . self::DASHES . '])' . self::SPACES . '*(?=[^\s\p{N}])/u',
-                $options->dialogueDashStyle->value,
-                $text
-            )),
+            CommonErrorRule::DialogueDashes  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string =>
+                $first ? self::dialogueDash($text, $options->dialogueDashStyle) : $text),
         };
+    }
+
+
+    private static function ellipsis(string $text, bool $unicode): string
+    {
+        return self::replace('/\.(?: ?\.){2,}' . ($unicode ? '|\x{2026}' : '') . '/u', $unicode ? "\u{2026}" : "...", $text);
+    }
+
+
+    private static function dialogueDash(string $text, DialogueDashStyle $style): string
+    {
+        return self::replace(DialogueDash::REGEX, $style->value, $text);
     }
 
 
@@ -177,7 +173,7 @@ final class CommonErrorFixer
                 preg_match('/\p{L}$/u', $before) === 1,
                 preg_match('/^\p{L}/u', $after) === 1                     => "I",
                 preg_match('/^[\'\x{2019}]\p{L}/u', $after) === 1         => ["en" => "I", "fr" => "l"][$language ?? ""] ?? "|",
-                $language === "en" && preg_match('/(?:^|[\s"\'(' . self::DASHES . '])$/u', $before) === 1
+                $language === "en" && preg_match('/(?:^|[\s"\'(' . DialogueDash::CHARACTERS . '])$/u', $before) === 1
                     && preg_match('/^(?:$|[\s.,!?;:"])/u', $after) === 1  => "I",
                 default                                                    => "|",
             };
@@ -200,7 +196,7 @@ final class CommonErrorFixer
             }
 
             $before        = substr($text, 0, $offset);
-            $opening       = '[\s"\'\x{00BF}\x{00A1}' . self::DASHES . ']*$';
+            $opening       = '[\s"\'\x{00BF}\x{00A1}' . DialogueDash::CHARACTERS . ']*$';
             $sentenceStart = ($startsLine && preg_match("/^$opening/u", $before) === 1)
                              || preg_match("/[.!?]\\s+$opening/u", $before) === 1;
             $result        = str_replace("0", preg_match('/\p{Ll}/u', $word) === 1 ? "o" : "O", $word);
@@ -356,7 +352,7 @@ final class CommonErrorFixer
      */
     private static function replaceBeginLines(string $text, array $beginLines): string
     {
-        preg_match('/^[ "\'\[(\x{00B6}' . self::DASHES . ']*/u', $text, $prefix);
+        preg_match('/^[ "\'\[(\x{00B6}' . DialogueDash::CHARACTERS . ']*/u', $text, $prefix);
         $prefix = $prefix[0] ?? "";
         $rest   = substr($text, strlen($prefix));
         foreach ($beginLines as $from => $to) {

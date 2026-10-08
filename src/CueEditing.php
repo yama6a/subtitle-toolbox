@@ -32,8 +32,7 @@ trait CueEditing
         }
 
         $comments = array_merge($this->comments, $other->comments);
-        $cues     = array_merge(array_values($this->cues), array_values($otherCues));
-        usort($cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
+        $cues     = CueList::inStartOrder(array_merge(array_values($this->cues), array_values($otherCues)));
 
         $this->cues       = $cues;
         $this->metadata   = $this->metadata + $other->getAllMetadata();
@@ -105,20 +104,20 @@ trait CueEditing
             }
         }
 
-        $lastCue    = end($this->cues) ?: null;
-        $keepsEnd   = $lastCue !== null && isset($copies[$lastCue]);
-        $comments   = [];
-        $newAnchors = [];
+        $lastCue     = end($this->cues) ?: null;
+        $keepsEnd    = $lastCue !== null && isset($copies[$lastCue]);
+        $comments    = [];
+        $keptAnchors = [];
         foreach ($this->comments as $commentIndex => $comment) {
             $anchor = $anchors[$commentIndex];
             if ($anchor === null ? $keepsEnd : isset($copies[$anchor])) {
-                $comments[]   = $comment;
-                $newAnchors[] = $anchor === null ? null : $copies[$anchor];
+                $comments[]    = $comment;
+                $keptAnchors[] = $anchor;
             }
         }
 
-        $copy->cues = $cues;
-        $copy->comments = CommentAnchors::comments($copy->cues, $comments, $newAnchors);
+        $copy->cues     = $cues;
+        $copy->comments = CommentAnchors::comments($copy->cues, $comments, CommentAnchors::remap($keptAnchors, $copies));
 
         return $copy;
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Timing;
 
+use SubtitleToolbox\CueList;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -133,8 +134,7 @@ final class ShotChangeTiming
     /** @return array{list<SubtitleCue>, list<int>, list<int>} */
     private static function toFrames(Subtitle $subtitle, ShotChangeOptions $options): array
     {
-        $cues = array_values($subtitle->getCues());
-        usort($cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
+        $cues = CueList::inStartOrder($subtitle->getCues());
 
         $starts = array_map(fn (SubtitleCue $cue): int => self::toFrame($cue->getStart(), $options), $cues);
         $ends   = array_map(fn (SubtitleCue $cue): int => self::toFrame($cue->getEnd(), $options), $cues);

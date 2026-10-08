@@ -64,6 +64,17 @@ final class Markup
     private const TAG_REGEX = '/' . self::TAG . '/';
 
 
+    /**
+     * Returns the tag name of a tag body such as "font color=\"yellow\"", in lower case: "font".
+     *
+     * @internal
+     */
+    public static function tagName(string $style): string
+    {
+        return strtolower(preg_split("/\s+/", trim($style))[0]);
+    }
+
+
     public static function stripAllTags(string $text): string
     {
         return self::keepTags($text, []);

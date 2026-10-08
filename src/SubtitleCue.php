@@ -236,15 +236,7 @@ final class SubtitleCue
      */
     public function setFormatData(string $key, array $data): self
     {
-        $problem = FormatDataSchema::problem($key, $data, "formatData.$key", true);
-        if ($problem !== null) {
-            throw new InvalidArgumentException($problem);
-        }
-        if ($data === []) {
-            unset($this->formatData[$key]);
-        } else {
-            $this->formatData[$key] = $data;
-        }
+        $this->formatData = FormatDataSchema::withData($this->formatData, $key, $data, true);
 
         return $this;
     }

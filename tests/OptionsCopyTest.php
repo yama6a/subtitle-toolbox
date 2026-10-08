@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SubtitleToolbox\Cli;
+namespace SubtitleToolbox;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -10,14 +10,14 @@ use ReflectionClass;
 use ReflectionParameter;
 use ReflectionProperty;
 use SubtitleToolbox\Fixing\CommonErrorOptions;
+use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
-use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Ocr\GlyphOcrOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
-use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
+use SubtitleToolbox\Sync\ReferenceSyncOptions;
 use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\Validation\ValidationRules;
-use SubtitleToolbox\WriteOptions;
 
 class OptionsCopyTest extends TestCase
 {
@@ -27,12 +27,16 @@ class OptionsCopyTest extends TestCase
     public static function copiedClasses(): array
     {
         return [
-            "ValidationRules"    => [ValidationRules::class],
-            "WriteOptions"       => [WriteOptions::class],
-            "ReadOptions"        => [ReadOptions::class],
-            "CommonErrorOptions" => [CommonErrorOptions::class],
-            "ShotChangeOptions"  => [ShotChangeOptions::class],
-            "GlyphOcrOptions"    => [GlyphOcrOptions::class],
+            "ValidationRules"      => [ValidationRules::class],
+            "WriteOptions"         => [WriteOptions::class],
+            "ReadOptions"          => [ReadOptions::class],
+            "CommonErrorOptions"   => [CommonErrorOptions::class],
+            "ShotChangeOptions"    => [ShotChangeOptions::class],
+            "GlyphOcrOptions"      => [GlyphOcrOptions::class],
+            "ReferenceSyncOptions" => [ReferenceSyncOptions::class],
+            "CsvWriteOptions"      => [CsvWriteOptions::class],
+            "MicroDvdWriteOptions" => [MicroDvdWriteOptions::class],
+            "VobSubReadOptions"    => [VobSubReadOptions::class],
         ];
     }
 

@@ -71,6 +71,20 @@ final class CommentAnchors
 
 
     /**
+     * Replaces each anchor with the cue that $map holds for it. A null anchor stays null.
+     *
+     * @param array<int, ?SubtitleCue>                    $anchors
+     * @param \SplObjectStorage<SubtitleCue, SubtitleCue> $map
+     *
+     * @return array<int, ?SubtitleCue>
+     */
+    public static function remap(array $anchors, \SplObjectStorage $map): array
+    {
+        return array_map(fn (?SubtitleCue $anchor): ?SubtitleCue => $anchor === null ? null : $map[$anchor], $anchors);
+    }
+
+
+    /**
      * Returns the comments sorted by their new cue index. A comment whose anchor is not in $cues goes after the last cue.
      *
      * @param SubtitleCue[]            $cues
@@ -89,6 +103,17 @@ final class CommentAnchors
             $comments[$commentIndex] = $comment->withBeforeCueIndex($cueIndex === false ? count($cues) : $cueIndex);
         }
 
+        return self::sorted($comments);
+    }
+
+
+    /**
+     * @param list<Comment> $comments
+     *
+     * @return list<Comment> the comments in the order of their cue index, ties in the given order
+     */
+    public static function sorted(array $comments): array
+    {
         usort($comments, fn (Comment $comment1, Comment $comment2): int => $comment1->beforeCueIndex <=> $comment2->beforeCueIndex);
 
         return $comments;

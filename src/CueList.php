@@ -60,6 +60,17 @@ final class CueList
 
 
     /**
+     * Returns true when $first and $second have the same alignment, the same forced flag and the same <v> speakers.
+     */
+    public static function canJoin(SubtitleCue $first, SubtitleCue $second): bool
+    {
+        return ($first->getAlignment() ?? 2) === ($second->getAlignment() ?? 2)
+            && $first->isForced() === $second->isForced()
+            && self::speakers($first) === self::speakers($second);
+    }
+
+
+    /**
      * @return list<string> the sorted names of the <v> speakers in the cue
      */
     public static function speakers(SubtitleCue $cue): array

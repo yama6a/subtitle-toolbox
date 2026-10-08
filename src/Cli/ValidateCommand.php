@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\OptionsCopy;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Validation\ValidationViolation;
 use SubtitleToolbox\Validation\ValidationRules;

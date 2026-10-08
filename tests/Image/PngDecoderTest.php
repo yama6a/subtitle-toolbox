@@ -227,12 +227,4 @@ class PngDecoderTest extends TestCase
         PngDecoder::decode($png);
     }
 
-
-    public function testNamesExtZlibWhenItIsMissing(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("ext-zlib");
-
-        (new \ReflectionMethod(PngDecoder::class, "requireFunction"))->invoke(null, "gzuncompress_missing");
-    }
 }

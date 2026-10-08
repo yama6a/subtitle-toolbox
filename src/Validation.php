@@ -30,13 +30,7 @@ trait Validation
         }
 
         foreach ($this->getCues() as $cueIndex => $cue) {
-            $lineLengths = [];
-            foreach ($cue->getLines() as $line) {
-                $length = Markup::visibleLength($line);
-                if ($length > 0) {
-                    $lineLengths[] = $length;
-                }
-            }
+            $lineLengths = LineWrapper::visibleLineLengths($cue->getLines());
             $characters = array_sum($lineLengths);
             $duration   = round($cue->getEnd() - $cue->getStart(), 3);
 
@@ -69,7 +63,7 @@ trait Validation
             }
 
             if ($rules->maxCharactersPerSecond !== null && $characters > 0) {
-                $charactersPerSecond = $duration > 0 ? $characters / $duration : INF;
+                $charactersPerSecond = LineWrapper::charactersPerSecond($characters, $duration);
                 if ($charactersPerSecond > $rules->maxCharactersPerSecond) {
                     $results[] = new ValidationViolation($cueIndex, ValidationRule::MaxCharactersPerSecond,
                                                       $charactersPerSecond, $rules->maxCharactersPerSecond);

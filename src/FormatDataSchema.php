@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
+
 /**
  * FormatDataSchema checks the types of the format data fields that the formatters read, so that setFormatData(),
  * fromArray() and JsonParser reject a bad field with its path before a formatter fails on it. Other fields pass as they are.
@@ -165,6 +167,28 @@ final class FormatDataSchema
         }
 
         return $fields !== null && $data !== [] ? self::checkType(["object", $fields], $data, $path) : null;
+    }
+
+
+    /**
+     * Returns $formatData with $data under $key, as setFormatData() of Subtitle and SubtitleCue store it. An empty
+     * $data removes the key.
+     *
+     * @throws InvalidArgumentException when a field of $data has the wrong type.
+     */
+    public static function withData(array $formatData, string $key, array $data, bool $isCue): array
+    {
+        $problem = self::problem($key, $data, "formatData.$key", $isCue);
+        if ($problem !== null) {
+            throw new InvalidArgumentException($problem);
+        }
+        if ($data === []) {
+            unset($formatData[$key]);
+        } else {
+            $formatData[$key] = $data;
+        }
+
+        return $formatData;
     }
 
 

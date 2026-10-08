@@ -66,10 +66,7 @@ trait ShortCueMerging
     private static function shortCueMergingJoinLines(SubtitleCue $first, SubtitleCue $second, MergeShortCuesOptions $options): ?array
     {
         $speakers = CueList::speakers($first);
-        if (CueImage::isImageCue($first) || CueImage::isImageCue($second)
-            || ($first->getAlignment() ?? 2) !== ($second->getAlignment() ?? 2)
-            || $first->isForced() !== $second->isForced()
-            || $speakers !== CueList::speakers($second)
+        if (CueImage::isImageCue($first) || CueImage::isImageCue($second) || !CueList::canJoin($first, $second)
             || ($options->mergeSameSpeakerAnyDuration && $speakers === [])) {
             return null;
         }
@@ -88,16 +85,10 @@ trait ShortCueMerging
         $lines = LineWrapper::wrapToFit(self::shortCueMergingOneVoiceTag($first, $second, $speakers)
                                         ?? [...$first->getLines(), ...$second->getLines()],
                                         $options->limits->maxCharactersPerLine, $options->limits->maxLinesPerCue);
-        if ($lines === null || $options->limits->maxCharactersPerSecond === null) {
-            return $lines;
-        }
 
-        $characters = LineWrapper::visibleCharacters($lines);
-        if ($characters > 0 && ($duration > 0 ? $characters / $duration : INF) > $options->limits->maxCharactersPerSecond) {
-            return null;
-        }
-
-        return $lines;
+        return $lines !== null && LineWrapper::fitsCharactersPerSecond($lines, $duration, $options->limits->maxCharactersPerSecond)
+            ? $lines
+            : null;
     }
 
 

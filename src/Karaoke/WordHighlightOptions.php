@@ -35,6 +35,6 @@ final class WordHighlightOptions
      */
     public function getTagName(): string
     {
-        return strtolower(preg_split("/\s+/", trim($this->style))[0]);
+        return Markup::tagName($this->style);
     }
 }

@@ -10,7 +10,7 @@ use GlyphOcr\Image;
 use GlyphOcr\RecognitionResult;
 use GlyphOcr\RecognizedChar;
 use GlyphOcr\Recognizer;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Dependency;
 use SubtitleToolbox\Exceptions\OcrException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Markup;
@@ -18,6 +18,12 @@ use WeakReference;
 
 final class GlyphOcrEngine implements OcrEngine
 {
+    /** @internal */
+    public const PACKAGE = "yama6a/php-glyph-ocr";
+
+    /** @internal */
+    public const INSTALL_COMMAND = "composer require " . self::PACKAGE;
+
     // The subtitle fonts database takes about 76 MB, so engines that are alive at the same time share one copy.
     private static ?WeakReference $subtitleFonts = null;
 
@@ -32,7 +38,8 @@ final class GlyphOcrEngine implements OcrEngine
     public function __construct(?GlyphOcrOptions $options = null)
     {
         $options ??= new GlyphOcrOptions();
-        self::requireClass(Recognizer::class);
+        Dependency::check(Recognizer::class, "Cannot create a GlyphOcrEngine - the package " . self::PACKAGE .
+                                             " is missing! Install it with: " . self::INSTALL_COMMAND);
 
         $this->database   = $options->database ?? self::subtitleFontsDatabase();
         $this->recognizer = new Recognizer(
@@ -128,14 +135,5 @@ final class GlyphOcrEngine implements OcrEngine
         }
 
         return $database;
-    }
-
-
-    private static function requireClass(string $class): void
-    {
-        if (!class_exists($class)) {
-            throw new InvalidArgumentException("Cannot create a GlyphOcrEngine - the package yama6a/php-glyph-ocr " .
-                                               "is missing! Install it with: composer require yama6a/php-glyph-ocr");
-        }
     }
 }

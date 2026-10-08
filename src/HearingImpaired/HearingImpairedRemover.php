@@ -25,26 +25,34 @@ final class HearingImpairedRemover
     public static function apply(Subtitle $subtitle, ?HearingImpairedOptions $options = null): HearingImpairedReport
     {
         $options ??= new HearingImpairedOptions();
+        $lineCounts  = new \SplObjectStorage();
+        $removedCues = $subtitle->setLinesAndRemoveEmptied(function (SubtitleCue $cue) use ($options, $lineCounts): array {
+            $before = array_values($cue->getLines());
+            $lines  = self::removeFromLines($before, $options);
+            $lineCounts[$cue] = count($before);
+
+            return $lines;
+        });
+
         $removedLines = 0;
-        $removedCues  = new \SplObjectStorage();
-        foreach ($subtitle->getCues() as $index => $cue) {
-            $before  = array_values($cue->getLines());
-            $hadText = Markup::hasVisibleText($before);
-            $cue->setLines(self::removeFromLines($before, $options));
-
-            if ($hadText && !Markup::hasVisibleText($cue->getLines())) {
-                $removedCues[$cue] = true;
-                $removedLines += count($before);
-            } else {
-                $removedLines += max(0, count($before) - count($cue->getLines()));
-            }
-        }
-
-        if ($removedCues->count() > 0) {
-            $subtitle->removeCuesWhere(fn (SubtitleCue $cue): bool => isset($removedCues[$cue]));
+        foreach ($lineCounts as $cue) {
+            $removedLines += isset($removedCues[$cue]) ? $lineCounts[$cue] : max(0, $lineCounts[$cue] - count($cue->getLines()));
         }
 
         return new HearingImpairedReport($removedLines, $removedCues->count());
+    }
+
+
+    /**
+     * Returns the text of a cue with $text after apply() with $options. An emptied cue gives its remaining lines.
+     *
+     * @internal
+     */
+    public static function removeFromText(string $text, HearingImpairedOptions $options): string
+    {
+        $cue = new SubtitleCue(0, 1, $text);
+
+        return $cue->setLines(self::removeFromLines(array_values($cue->getLines()), $options))->getText();
     }
 
 

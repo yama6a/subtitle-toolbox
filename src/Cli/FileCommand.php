@@ -8,6 +8,7 @@ use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Exceptions\SubtitleToolboxException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatRegistry;
+use SubtitleToolbox\OptionsCopy;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
@@ -580,8 +581,7 @@ abstract class FileCommand extends Command
         }
 
         try {
-            $format = Format::detect(StringHelpers::convertToUtf8($content, $this->readOptions->encoding))
-                ?? ($path === null ? null : Format::fromPath($path));
+            $format = Subtitle::detectFormat(StringHelpers::convertToUtf8($content, $this->readOptions->encoding), $path);
         } catch (SubtitleToolboxException) {
             return null;
         }

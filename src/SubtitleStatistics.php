@@ -38,8 +38,7 @@ final class SubtitleStatistics
      */
     public static function of(Subtitle $subtitle): self
     {
-        $cues = array_values($subtitle->getCues());
-        usort($cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
+        $cues = CueList::inStartOrder($subtitle->getCues());
 
         $span = null;
         if ($cues !== []) {
@@ -66,14 +65,9 @@ final class SubtitleStatistics
             }
             $previousEnd = max($previousEnd ?? $cue->getEnd(), $cue->getEnd());
 
-            $characters = 0;
-            foreach ($cue->getLines() as $line) {
-                $length = Markup::visibleLength($line);
-                if ($length > 0) {
-                    $charactersPerLine[] = $length;
-                    $characters         += $length;
-                }
-            }
+            $lineLengths       = LineWrapper::visibleLineLengths($cue->getLines());
+            $charactersPerLine = [...$charactersPerLine, ...$lineLengths];
+            $characters        = array_sum($lineLengths);
             if ($characters === 0) {
                 continue;
             }
@@ -141,8 +135,7 @@ final class SubtitleStatistics
         $word = preg_replace('/^[\p{P}\p{S}]+|[\p{P}\p{S}]+$/u', "", $word)
             ?? preg_replace('/^[[:punct:]]+|[[:punct:]]+$/', "", $word);
 
-        // mbstring is not part of a default PHP build. Without it, only ASCII letters change case.
-        return function_exists("mb_strtolower") && preg_match('//u', $word) === 1
+        return StringHelpers::canUseMultibyte($word)
             ? mb_strtolower($word, "UTF-8")
             : strtolower($word);
     }

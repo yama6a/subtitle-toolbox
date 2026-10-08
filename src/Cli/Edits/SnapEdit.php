@@ -8,7 +8,7 @@ use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
-use SubtitleToolbox\Cli\OptionsCopy;
+use SubtitleToolbox\OptionsCopy;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\Timing\ShotChanges;

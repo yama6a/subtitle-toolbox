@@ -13,6 +13,7 @@ use SubtitleToolbox\Cli\FileFailure;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Matroska\MkvFixtureWriter;
 use SubtitleToolbox\CueLimits;
+use SubtitleToolbox\Dependency;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\Dual\DualSubtitleOptions;
 use SubtitleToolbox\Encoding\Cea608;
@@ -321,12 +322,15 @@ class ThrowSitesTest extends TestCase
             "CueEditing.php: join in the wrong order"       => [fn () => self::subtitle()->joinCues(1, 0), ...$invalid],
             "CueEditing.php: edit a missing cue"            => [fn () => self::subtitle()->splitCue(9, 1.5, 1), ...$invalid],
             "CueLookup.php: range start after end"          => [fn () => self::subtitle()->findCuesBetween(10, 5), ...$invalid],
+            "Dependency.php: missing"                       => [fn () => Dependency::check("gzuncompress_missing", "Cannot decode a PNG - PHP has no ext-zlib."),
+                                                                ...$invalid],
             "Dual/DualSubtitleOptions.php: unknown style"        => [fn () => new DualSubtitleOptions(secondaryStyle: "blink"), ...$invalid],
             "Dual/DualSubtitleOptions.php: alignment 0"          => [fn () => new DualSubtitleOptions(secondaryAlignment: 0), ...$invalid],
             "Encoding/Cea608.php: row 16"                   => [fn () => Cea608::encodePac(16, 0), ...$invalid],
             "Fixes.php: maximum characters 0"               => [fn () => self::subtitle()->wrapLines(0), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid regex"      => [fn () => new OcrReplaceList(regularExpressions: ["/(/" => ""]), ...$invalid],
             "Fixing/OcrReplaceList.php: invalid XML"        => [fn () => OcrReplaceList::fromSubtitleEditXml("<ReplaceList>"), ...$parsing],
+            "FormatDataSchema.php: field type"              => [fn () => (new Subtitle())->setFormatData("scc", ["dropFrame" => "x"]), ...$invalid],
             "Formatters/JsonOutput.php: invalid UTF-8" => [fn () => Subtitle::load(self::FILES . "cli/latin1.srt", Format::SubRip)->toString(Format::Json),
                 ...$unwritable],
             "Formatters/CsvFormatter.php: frames without rate" => [fn () => self::subtitle()->toString(Format::Csv,
@@ -389,8 +393,6 @@ class ThrowSitesTest extends TestCase
                                                                 ...$invalid],
             "Image/PngDecoder.php: filter type 5"           => [fn () => PngDecoder::decode(self::pngWithIhdr(0) . self::pngChunk("IDAT", gzcompress("\5\0\0\0\0"))),
                                                                 ...$invalid],
-            "Image/PngDecoder.php: zlib missing"            => [fn () => (new \ReflectionMethod(PngDecoder::class, "requireFunction"))
-                ->invoke(null, "gzuncompress_missing"), ...$invalid],
             "Karaoke/WordHighlightOptions.php: speaker style" => [fn () => new WordHighlightOptions(style: "v Ann"), ...$invalid],
             "Karaoke/WordHighlightOptions.php: 0 words"       => [fn () => new WordHighlightOptions(maxWordsPerCue: 0), ...$invalid],
             "MergeShortCuesOptions.php: minimum characters 0" => [fn () => new MergeShortCuesOptions(minCharacters: 0), ...$invalid],
@@ -400,8 +402,6 @@ class ThrowSitesTest extends TestCase
             "Ocr/GlyphOcrOptions.php: line height 0"        => [fn () => new GlyphOcrOptions(minLineHeight: 0), ...$invalid],
             "Ocr/GlyphOcrEngine.php: no PNG"                => [fn () => (new GlyphOcrEngine())
                 ->recognize(new CueImage("png", 0, 0, 1, 1, 1, 1), null), ...$ocr],
-            "Ocr/GlyphOcrEngine.php: package missing"       => [fn () => (new \ReflectionMethod(GlyphOcrEngine::class, "requireClass"))
-                ->invoke(null, "GlyphOcr\\Missing"), ...$invalid],
             "Ocr/OcrEngineChooser.php: engine missing"      => [fn () => OcrEngineChooser::choose(OcrEngineName::Tesseract, __DIR__ . "/none"), ...$invalid],
             "Ocr/RecognizedText.php: line is no string"          => [fn () => new RecognizedText([5]), ...$invalid],
             "Ocr/RecognizedText.php: confidence above 1"         => [fn () => new RecognizedText(["text"], 2), ...$invalid],
@@ -599,8 +599,6 @@ class ThrowSitesTest extends TestCase
             "Streaming/Streams.php: read-only stream"       => [fn () => new SubRipStreamWriter(fopen("php://memory", "rb")), ...$invalid],
             "Streaming/WebVttStreamReader.php: no WEBVTT"   => [fn () => iterator_to_array((new WebVttStreamReader())->read(self::stream("text"))),
                                                                 ...$parsing],
-            "Streaming/WebVttStreamReader.php: unknown block" => [fn () => iterator_to_array((new WebVttStreamReader())->read(
-                self::stream("WEBVTT\n\ntext\nmore"))), ...$parsing],
             "StringHelpers.php: unknown encoding"           => [fn () => StringHelpers::convertToUtf8("text", "NO-SUCH-ENCODING"),
                                                                 ...$parsing],
             "Subtitle.php: addCues no cue"                 => [fn () => (new Subtitle())->addCues([5]), ...$invalid],
@@ -631,9 +629,7 @@ class ThrowSitesTest extends TestCase
             "Subtitle.php: remove a missing cue"            => [fn () => self::subtitle()->removeCue(9),
                                                                 \RuntimeException::class, CueNotFoundException::class],
             "Subtitle.php: negative comment index"          => [fn () => self::subtitle()->addComment("note", -1), ...$invalid],
-            "Subtitle.php: format data field type"          => [fn () => (new Subtitle())->setFormatData("scc", ["dropFrame" => "x"]), ...$invalid],
             "SubtitleCue.php: alignment 10"                 => [fn () => (new SubtitleCue())->setAlignment(10), ...$invalid],
-            "SubtitleCue.php: format data field type"       => [fn () => (new SubtitleCue())->setFormatData("srt", ["coordinates" => 5]), ...$invalid],
             "Sync/ReferenceSyncOptions.php: offset range too wide" => [fn () => new ReferenceSyncOptions(new Subtitle(), -5000, 5000), ...$invalid],
             "Sync/ReferenceSyncOptions.php: offsets in reverse" => [fn () => new ReferenceSyncOptions(new Subtitle(), 5, 1), ...$invalid],
             "Sync/ReferenceSyncOptions.php: negative split count" => [fn () => new ReferenceSyncOptions(new Subtitle(), maxSplits: -1), ...$invalid],

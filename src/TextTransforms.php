@@ -105,6 +105,17 @@ trait TextTransforms
     }
 
 
+    /**
+     * Returns plain $text in upper or lower case as changeCase() with CaseMode::Upper or CaseMode::Lower writes it.
+     *
+     * @internal
+     */
+    public static function toUpperOrLower(string $text, bool $upper): string
+    {
+        return $upper ? self::textTransformsUpper($text, false) : self::textTransformsLower($text, false);
+    }
+
+
     private function textTransformsSentenceCase(bool $turkic): self
     {
         $currentCue       = null;
@@ -164,29 +175,15 @@ trait TextTransforms
      */
     private function textTransformsMapCues(callable $fn): self
     {
-        $emptied = new \SplObjectStorage();
-        foreach ($this->cues as $cue) {
-            $hadText = Markup::hasVisibleText($cue->getLines());
-            $cue->setLines($fn($cue));
+        $this->setLinesAndRemoveEmptied(fn (SubtitleCue $cue): array => $fn($cue));
 
-            if ($hadText && !Markup::hasVisibleText($cue->getLines())) {
-                $emptied[$cue] = true;
-            }
-        }
-
-        return $emptied->count() === 0 ? $this : $this->removeCuesWhere(fn (SubtitleCue $cue): bool => isset($emptied[$cue]));
-    }
-
-
-    private static function textTransformsUsesMultibyte(string $text): bool
-    {
-        return extension_loaded("mbstring") && mb_check_encoding($text, "UTF-8");
+        return $this;
     }
 
 
     private static function textTransformsUpper(string $text, bool $turkic): string
     {
-        if (!self::textTransformsUsesMultibyte($text)) {
+        if (!StringHelpers::canUseMultibyte($text)) {
             return strtoupper($text);
         }
 
@@ -196,7 +193,7 @@ trait TextTransforms
 
     private static function textTransformsLower(string $text, bool $turkic): string
     {
-        if (!self::textTransformsUsesMultibyte($text)) {
+        if (!StringHelpers::canUseMultibyte($text)) {
             return strtolower($text);
         }
 
@@ -209,7 +206,7 @@ trait TextTransforms
 
     private static function textTransformsTitle(string $char, bool $turkic): string
     {
-        if (!self::textTransformsUsesMultibyte($char)) {
+        if (!StringHelpers::canUseMultibyte($char)) {
             return strtoupper($char);
         }
 

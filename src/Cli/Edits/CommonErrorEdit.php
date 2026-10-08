@@ -8,10 +8,10 @@ use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
-use SubtitleToolbox\Cli\OptionsCopy;
 use SubtitleToolbox\Fixing\CommonErrorFixer;
 use SubtitleToolbox\Fixing\CommonErrorOptions;
 use SubtitleToolbox\Fixing\OcrReplaceList;
+use SubtitleToolbox\OptionsCopy;
 use SubtitleToolbox\Subtitle;
 
 /**

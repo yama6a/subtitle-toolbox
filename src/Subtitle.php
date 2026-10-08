@@ -100,17 +100,9 @@ final class Subtitle implements \IteratorAggregate, \Countable
         $other     = self::pairedFile($path, $isIdx ? "sub" : "idx");
         [$idxPath, $subPath] = $isIdx ? [$path, $other] : [$other, $path];
 
-        $given = $options->format;
-        $vobSubOptions = new ReadOptions(
-            encoding: $options->encoding,
-            lenient: $options->lenient,
-            lastCueDuration: $options->lastCueDuration,
-            format: new VobSubReadOptions(
-                StringHelpers::convertToUtf8(self::readFile($idxPath), $options->encoding),
-                $given?->track,
-                $given?->language,
-            ),
-        );
+        $vobSubOptions = OptionsCopy::with($options, ["format" => OptionsCopy::with($options->format ?? new VobSubReadOptions(), [
+            "idx" => StringHelpers::convertToUtf8(self::readFile($idxPath), $options->encoding),
+        ])]);
 
         return self::parseUtf8(self::readFile($subPath), Format::VobSub, $vobSubOptions);
     }
@@ -129,17 +121,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
             return self::readOnlyTrack(MatroskaReader::open($path), $options);
         }
 
-        $content     = StringHelpers::convertToUtf8(self::readFile($path), $options->encoding);
-        $byExtension = Format::fromPath($path);
-        $format      = Format::detect($content);
-        // Detection returns TTML for an iTT file. IttParser reads the same cues and keeps the iTT timing.
-        if ($format === Format::Ttml && $byExtension === Format::Itt) {
-            $format = Format::Itt;
-        }
-        // An extension that a format without detection also uses, such as .json for Deepgram, says nothing.
-        $format ??= $byExtension !== null && self::extensionOnlyOfAutoDetectedFormats($path) && $byExtension->canRead()
-            ? $byExtension
-            : throw new UnknownFormatException(self::unknownFormatMessage("load()"));
+        $content = StringHelpers::convertToUtf8(self::readFile($path), $options->encoding);
+        $format  = self::detectFormat($content, $path) ?? throw new UnknownFormatException(self::unknownFormatMessage("load()"));
 
         return $format === Format::VobSub ? self::load($path, $format, $options) : self::parseUtf8($content, $format, $options);
     }
@@ -199,7 +182,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
         }
 
         $content = StringHelpers::convertToUtf8($content, $options->encoding);
-        $format  = Format::detect($content) ?? throw new UnknownFormatException(self::unknownFormatMessage("fromString()"));
+        $format  = self::detectFormat($content) ?? throw new UnknownFormatException(self::unknownFormatMessage("fromString()"));
 
         return self::parseUtf8($content, $format, $options);
     }
@@ -256,6 +239,28 @@ final class Subtitle implements \IteratorAggregate, \Countable
         }
 
         return self::readTrack($reader, $tracks[0]->number, $options);
+    }
+
+
+    /**
+     * Returns the format of the UTF-8 $content as loadAutoDetectFormat() and fromStringAutoDetectFormat() pick it, or
+     * null. Without detection, it falls back to the extension of $path.
+     *
+     * @internal
+     */
+    public static function detectFormat(string $content, ?string $path = null): ?Format
+    {
+        $format      = Format::detect($content);
+        $byExtension = $path === null ? null : Format::fromPath($path);
+        // Detection returns TTML for an iTT file. IttParser reads the same cues and keeps the iTT timing.
+        if ($format === Format::Ttml && $byExtension === Format::Itt) {
+            return Format::Itt;
+        }
+
+        // An extension that a format without detection also uses, such as .json for Deepgram, says nothing.
+        return $format ?? ($byExtension !== null && self::extensionOnlyOfAutoDetectedFormats($path) && $byExtension->canRead()
+            ? $byExtension
+            : null);
     }
 
 
@@ -403,28 +408,20 @@ final class Subtitle implements \IteratorAggregate, \Countable
         };
         $csv = $formatOptions ?? new CsvWriteOptions();
         if ($delimiter !== null && $csv instanceof CsvWriteOptions && $csv->delimiter === null) {
-            $formatOptions = new CsvWriteOptions($delimiter, $csv->timeFormat, $csv->frameRate, $csv->secondText,
-                                            $csv->secondTextHeader, $csv->escapeFormulas);
+            $formatOptions = OptionsCopy::with($csv, ["delimiter" => $delimiter]);
         }
         if ($format === Format::MicroDvd && ($formatOptions === null || ($formatOptions instanceof MicroDvdWriteOptions && $formatOptions->frameRate === null))) {
-            $formatOptions = new MicroDvdWriteOptions(
-                $this->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
+            $formatOptions = OptionsCopy::with($formatOptions ?? new MicroDvdWriteOptions(), [
+                "frameRate" => $this->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
                     ?? throw new InvalidArgumentException("MicroDVD output needs the frame rate of the video. Pass MicroDvdWriteOptions::frameRate."),
-                $formatOptions instanceof MicroDvdWriteOptions && $formatOptions->writeFrameRateLine,
-            );
+            ]);
         }
         if ($format === Format::Itt && ($formatOptions === null || ($formatOptions instanceof IttWriteOptions && $formatOptions->frameRate === null))
             && !isset($this->findFormatData(IttParser::FORMAT_DATA_KEY)["frameRate"])) {
             throw new InvalidArgumentException("iTT output needs the frame rate of the video. Pass IttWriteOptions::frameRate.");
         }
 
-        return $formatOptions === $options->format ? $options : new WriteOptions(
-            $options->lineEnding,
-            $options->bom,
-            $options->stripTags,
-            $options->skipImageCues,
-            $formatOptions,
-        );
+        return $formatOptions === $options->format ? $options : OptionsCopy::with($options, ["format" => $formatOptions]);
     }
 
 
@@ -488,21 +485,61 @@ final class Subtitle implements \IteratorAggregate, \Countable
      */
     public function reIndexCues(): self
     {
-        $commentCues = array_map(
-            fn (Comment $comment): ?SubtitleCue => $this->findCueAtOrAfter($comment->beforeCueIndex),
-            $this->comments
-        );
-
+        $anchors = CommentAnchors::of($this->cues, $this->comments);
         $this->sortCues();
-
-        foreach ($commentCues as $commentIndex => $cue) {
-            $cueIndex = $cue === null ? false : array_search($cue, $this->cues, true);
-
-            $this->comments[$commentIndex] = $this->comments[$commentIndex]->withBeforeCueIndex($cueIndex === false ? count($this->cues) : $cueIndex);
-        }
-        $this->sortComments();
+        $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
         return $this;
+    }
+
+
+    /**
+     * Returns a copy with the metadata, the format data and the format of this subtitle, but without cues and comments.
+     *
+     * @internal
+     */
+    public function emptyCopy(): self
+    {
+        $copy           = clone $this;
+        $copy->cues     = [];
+        $copy->comments = [];
+
+        return $copy;
+    }
+
+
+    /**
+     * Sets the lines that $linesOf returns for each cue, or keeps the cue as is when it returns null. Then it removes,
+     * in one pass, each cue that had text before and has none after. $hasText decides, Markup::hasVisibleText() by default.
+     *
+     * @param callable(SubtitleCue, int): ?list<string> $linesOf
+     * @param ?callable(array<string>): bool            $hasText
+     *
+     * @return \SplObjectStorage<SubtitleCue, true> the removed cues
+     *
+     * @internal
+     */
+    public function setLinesAndRemoveEmptied(callable $linesOf, ?callable $hasText = null): \SplObjectStorage
+    {
+        $hasText ??= Markup::hasVisibleText(...);
+        $emptied   = new \SplObjectStorage();
+        foreach ($this->cues as $index => $cue) {
+            $before = $cue->getLines();
+            $lines  = $linesOf($cue, $index);
+            if ($lines === null) {
+                continue;
+            }
+
+            $cue->setLines($lines);
+            if ($hasText($before) && !$hasText($cue->getLines())) {
+                $emptied[$cue] = true;
+            }
+        }
+        if ($emptied->count() > 0) {
+            $this->removeCuesWhere(fn (SubtitleCue $cue): bool => isset($emptied[$cue]));
+        }
+
+        return $emptied;
     }
 
 
@@ -555,8 +592,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
                                                 "the cue index must not be negative!");
         }
 
-        $this->comments[] = new Comment($text, $beforeCueIndex);
-        $this->sortComments();
+        $this->comments = CommentAnchors::sorted([...$this->comments, new Comment($text, $beforeCueIndex)]);
 
         return $this;
     }
@@ -578,41 +614,15 @@ final class Subtitle implements \IteratorAggregate, \Countable
      */
     public function setFormatData(string $key, array $data): self
     {
-        $problem = FormatDataSchema::problem($key, $data, "formatData.$key", false);
-        if ($problem !== null) {
-            throw new InvalidArgumentException($problem);
-        }
-        if ($data === []) {
-            unset($this->formatData[$key]);
-        } else {
-            $this->formatData[$key] = $data;
-        }
+        $this->formatData = FormatDataSchema::withData($this->formatData, $key, $data, false);
 
         return $this;
     }
 
 
-    private function findCueAtOrAfter(int $cueIndex): ?SubtitleCue
-    {
-        foreach ($this->cues as $index => $cue) {
-            if ($index >= $cueIndex) {
-                return $cue;
-            }
-        }
-
-        return null;
-    }
-
-
     private function sortCues(): void
     {
-        usort($this->cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
-    }
-
-
-    private function sortComments(): void
-    {
-        usort($this->comments, fn (Comment $comment1, Comment $comment2): int => $comment1->beforeCueIndex <=> $comment2->beforeCueIndex);
+        $this->cues = CueList::inStartOrder($this->cues);
     }
 
 
@@ -638,13 +648,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
         $copy = clone $this;
         $kept = array_diff_key($this->cues, array_flip($cueIndexes));
 
-        $copy->cues = array_values($kept);
-        foreach ($copy->comments as $commentIndex => $comment) {
-            $copy->comments[$commentIndex] = $comment->withBeforeCueIndex(count(array_filter(
-                array_keys($kept),
-                fn (int $cueIndex): bool => $cueIndex < $comment->beforeCueIndex
-            )));
-        }
+        $copy->cues     = array_values($kept);
+        $copy->comments = CommentAnchors::comments($copy->cues, $this->comments, CommentAnchors::of($kept, $this->comments));
 
         return $copy;
     }

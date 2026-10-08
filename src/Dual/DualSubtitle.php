@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Dual;
 
+use SubtitleToolbox\CommentAnchors;
+use SubtitleToolbox\CueList;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -25,14 +27,13 @@ final class DualSubtitle
             ? self::stack($primaryCues, $secondaryCues)
             : self::placeAtTop($primaryCues, $secondaryCues, $options);
 
-        $cues = array_merge(array_values($primaryCues), $ownCues);
-        usort($cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
+        $cues = CueList::inStartOrder(array_merge(array_values($primaryCues), $ownCues));
 
-        // A slice that keeps no cue is a copy of the metadata and format data without cues and comments.
-        $result = $primary->withSlice(INF, INF);
+        $result = $primary->emptyCopy();
         $result->addCues($cues);
-        foreach ($primary->getComments() as $comment) {
-            $result->addComment($comment->text, self::findNewIndex($primaryCues, $cues, $comment->beforeCueIndex));
+        $anchors = CommentAnchors::of($primaryCues, $primary->getComments());
+        foreach (CommentAnchors::comments($cues, $primary->getComments(), $anchors) as $comment) {
+            $result->addComment($comment->text, $comment->beforeCueIndex);
         }
 
         $primaryLanguage   = $primary->findMetadata(Subtitle::METADATA_LANGUAGE);
@@ -140,24 +141,6 @@ final class DualSubtitle
         }
 
         return $snapped;
-    }
-
-
-    /**
-     * Returns the new index of the first primary cue at or after $beforeCueIndex, or the cue count when there is none.
-     *
-     * @param array<int, SubtitleCue> $primaryCues
-     * @param list<SubtitleCue> $cues
-     */
-    private static function findNewIndex(array $primaryCues, array $cues, int $beforeCueIndex): int
-    {
-        foreach ($primaryCues as $index => $cue) {
-            if ($index >= $beforeCueIndex) {
-                return array_search($cue, $cues, true);
-            }
-        }
-
-        return count($cues);
     }
 
 
