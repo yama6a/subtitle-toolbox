@@ -65,6 +65,16 @@ class StreamWriterTest extends TestCase
     }
 
 
+    public function testEscapesTheTimingArrowInCueText(): void
+    {
+        $writer = new WebVttStreamWriter($this->path, new WriteOptions(bom: false));
+        $writer->write(new SubtitleCue(1, 2, ["a --> b", "", "c"]));
+        $writer->close();
+
+        $this->assertSame(file_get_contents(__DIR__ . "/../files/vtt/real/own_arrow_in_text.vtt"), file_get_contents($this->path));
+    }
+
+
     public function testWritesCrlfWithoutBom(): void
     {
         $writer = new SubRipStreamWriter($this->path, new WriteOptions(lineEnding: LineEnding::Crlf, bom: false));
