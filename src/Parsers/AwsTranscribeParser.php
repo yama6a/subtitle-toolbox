@@ -58,12 +58,7 @@ final class AwsTranscribeParser extends SubtitleParser
             try {
                 $content = $this->text(is_array($item) ? $item["alternatives"][0] ?? null : null, "content", "$path.alternatives[0]");
                 if (($item["type"] ?? null) === "punctuation") {
-                    if ($words === []) {
-                        $punctuation[] = $item;
-                    } else {
-                        $words[array_key_last($words)]["text"]  .= $content;
-                        $words[array_key_last($words)]["data"][] = $item;
-                    }
+                    self::addPunctuation($words, $punctuation, $item, $content);
                     continue;
                 }
                 $start = $this->seconds($item["start_time"] ?? null, "$path.start_time");
@@ -84,6 +79,21 @@ final class AwsTranscribeParser extends SubtitleParser
         }
 
         return $words;
+    }
+
+
+    /**
+     * Joins a punctuation item to the last word, or keeps it for the first word when no word came before.
+     */
+    private static function addPunctuation(array &$words, array &$punctuation, array $item, string $content): void
+    {
+        if ($words === []) {
+            $punctuation[] = $item;
+
+            return;
+        }
+        $words[array_key_last($words)]["text"]  .= $content;
+        $words[array_key_last($words)]["data"][] = $item;
     }
 
 
