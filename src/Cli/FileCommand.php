@@ -191,8 +191,8 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Returns the real path of a file that may not exist yet: the real path of its nearest existing directory plus
-     * the rest of the path.
+     * Returns the real path of a file that may not exist yet.
+     * That is the real path of its nearest existing directory, plus the rest of the path.
      */
     public static function realTarget(string $path): string
     {
@@ -328,8 +328,8 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Reads the subtitle of a side file, such as the reference of sync, and detects its format. A file that is missing
-     * or does not parse stops the run.
+     * Reads the subtitle of a side file, such as the reference of sync, and detects its format.
+     * A file that is missing or does not parse stops the run.
      */
     protected function loadSideSubtitle(string $path, Console $console): Subtitle
     {
@@ -357,8 +357,9 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Reads a file other than the input without --from and --track. Detects the format unless $format or $track is
-     * given. $trackOption and $fromOption name the options that set $track and $format.
+     * Reads a file other than the input without --from and --track.
+     * Detects the format unless $format or $track is given.
+     * $trackOption and $fromOption name the options that set $track and $format.
      */
     private function loadOtherFile(string $path, Console $console, ?Format $format = null, ?int $track = null,
                                    ?string $trackOption = null, ?string $fromOption = null): Subtitle
@@ -379,8 +380,8 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Handles the MKV or WebM file at $path without --track. $input is the argument that named it. Returns false to
-     * read its only subtitle track.
+     * Handles the MKV or WebM file at $path without --track. $input is the argument that named it.
+     * Returns false to read its only subtitle track.
      */
     protected function listTracks(string $path, string $input, Console $console): bool
     {
@@ -431,8 +432,8 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Returns the format of an input without --from when --input-fps or word timestamps apply to it, else null for
-     * format detection. The read then passes them in the read options of that format.
+     * Returns the format of an input without --from when --input-fps or word timestamps apply to it.
+     * Returns null for format detection otherwise. The read then passes them in the read options of that format.
      *
      * @param callable(): string $content
      */

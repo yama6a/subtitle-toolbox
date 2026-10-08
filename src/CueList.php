@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 /**
- * CueList holds the cue list helpers that more than one trait of Subtitle or one service needs.
- *
  * @internal
  */
 final class CueList
@@ -26,8 +24,8 @@ final class CueList
 
 
     /**
-     * Joins the cues of $group into the first cue of $group and removes the others from $cues. The first cue ends at
-     * the latest end of the group. With $joinLines, it also gets the lines of the others.
+     * Joins the cues of $group into the first cue of $group and removes the others from $cues.
+     * The first cue ends at the latest end of the group. With $joinLines, it also gets the lines of the others.
      *
      * @param SubtitleCue[]            $cues
      * @param SubtitleCue[]            $group

@@ -9,7 +9,9 @@ use SubtitleToolbox\Timecode;
 use SubtitleToolbox\Validation\ValidationRule;
 use SubtitleToolbox\Validation\ValidationViolation;
 
-// The rules come from https://support.google.com/youtube/answer/9884579.
+/**
+ * The rules come from https://support.google.com/youtube/answer/9884579.
+ */
 final class YouTubeChapters
 {
     public const MIN_CHAPTERS = 3;
@@ -18,8 +20,9 @@ final class YouTubeChapters
 
 
     /**
-     * Lists the YouTube chapter rules that $chapters breaks, one violation per rule and chapter. The order is
-     * FirstChapterAtZero, then MinChapters, then MinDuration by chapter. The cue index is the chapter index, or null for MinChapters.
+     * Lists the YouTube chapter rules that $chapters breaks, one violation per rule and chapter.
+     * The order is FirstChapterAtZero, then MinChapters, then MinDuration by chapter.
+     * The cue index is the chapter index, or null for MinChapters.
      *
      * @return list<ValidationViolation>
      */
@@ -36,7 +39,7 @@ final class YouTubeChapters
 
         foreach ($cues as $index => $cue) {
             $duration = Timecode::roundToMilliseconds($cue->getEnd() - $cue->getStart());
-            // A last chapter that ends at its own start has an unknown length, because the parser did not know the video length.
+            // A last chapter that ends at its own start has an unknown length. The parser did not know the video length.
             $unknown = $index === count($cues) - 1 && $duration <= 0;
             if (!$unknown && $duration < self::MIN_DURATION) {
                 $broken[] = new ValidationViolation($index, ValidationRule::MinDuration, $duration, self::MIN_DURATION);

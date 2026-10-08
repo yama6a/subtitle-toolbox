@@ -70,8 +70,10 @@ final class WebVttParser extends SubtitleParser
 
 
     /**
-     * Parses one block after the header. A STYLE or REGION block before the first cue goes into $fileData and gives
-     * null, as other blocks that start with NOTE, STYLE or REGION do. In lenient mode, it skips a broken block and warns.
+     * Parses one block after the header.
+     * A STYLE or REGION block before the first cue goes into $fileData and gives null.
+     * Other blocks that start with NOTE, STYLE or REGION give null too.
+     * In lenient mode, it skips a broken block and warns.
      *
      * @param list<string>         $rawLines
      * @param array<string, mixed> $fileData

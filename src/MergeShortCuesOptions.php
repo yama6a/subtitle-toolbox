@@ -9,11 +9,11 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 final class MergeShortCuesOptions
 {
     /**
-     * Creates the settings for Subtitle::mergeShortCues(), see docs/editing.md#short-cues.
-     *
-     * @param CueLimits $limits        a cue shorter than $limits->minDuration is short. A joined cue must keep the other limits
-     * @param float     $maxGap        seconds between the 2 cues
-     * @param ?int      $minCharacters a cue with fewer visible characters is short too
+     * @param CueLimits $limits                      a cue shorter than $limits->minDuration is short. A joined cue must keep the other limits
+     * @param float     $maxGap                      the most seconds from the end of one cue to the start of the next
+     * @param ?int      $minCharacters               a cue with fewer visible characters is short too. Null turns the rule off
+     * @param bool      $keepSentenceEnds            join only when the first cue does not end with ".", "?" or "!"
+     * @param bool      $mergeSameSpeakerAnyDuration join each cue with the next cue of the same <v> speaker, short or not, with no maxDuration limit
      */
     public function __construct(
         public readonly CueLimits $limits = new CueLimits(),

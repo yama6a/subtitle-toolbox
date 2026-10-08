@@ -7,7 +7,9 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Formatters\Options\AssKaraokeTag;
 
 /**
- * @internal The values that AssFormatter reads during one format() call.
+ * The values that AssFormatter reads during one format() call.
+ *
+ * @internal
  */
 final readonly class AssContext
 {

@@ -12,7 +12,8 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 trait CueEditing
 {
     /**
-     * Appends copies of the cues of $other, with their times and word timestamps moved by $offset seconds. Metadata and format data of $this win.
+     * Appends copies of the cues of $other, with their times and word timestamps moved by $offset seconds.
+     * Metadata and format data of $this win.
      */
     public function merge(Subtitle $other, float $offset = 0): self
     {
@@ -218,10 +219,10 @@ trait CueEditing
 
 
     /**
-     * Sets the cue list to $cues. Each comment moves to the cue that $anchors holds at its position, or after the last
-     * cue for null. CommentAnchors::of() returns the anchors.
+     * Sets the cue list to $cues. Each comment moves to the cue that $anchors holds at its position.
+     * A null anchor puts the comment after the last cue. CommentAnchors::of() returns the anchors.
      *
-     * @internal For the services that change the cue list, such as Resegmenter.
+     * @internal
      *
      * @param SubtitleCue[]            $cues
      * @param array<int, ?SubtitleCue> $anchors

@@ -12,7 +12,8 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 trait Fixes
 {
     /**
-     * Moves the end of each cue to at least $minGap seconds before the start of the next cue, but not before its own start.
+     * Moves the end of each cue to at least $minGap seconds before the start of the next cue.
+     * The end never moves before the start of its own cue.
      */
     public function fixOverlaps(float $minGap = 0): self
     {

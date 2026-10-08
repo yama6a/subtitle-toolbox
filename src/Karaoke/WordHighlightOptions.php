@@ -10,7 +10,9 @@ use SubtitleToolbox\Markup;
 final class WordHighlightOptions
 {
     /**
-     * Creates the options for WordHighlight::apply(), for example new WordHighlightOptions(style: "b").
+     * @param string            $style          The markup tag that marks the active word, for example "b" or "font color=\"#ffff00\"".
+     * @param WordHighlightMode $mode           Which words the style marks.
+     * @param ?int              $maxWordsPerCue The number of words that one cue shows around the active word. Null shows all words.
      */
     public function __construct(
         public readonly string $style = "u",

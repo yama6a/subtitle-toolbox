@@ -26,8 +26,8 @@ final class ReferenceSync
 
 
     /**
-     * Finds the scale and offset that make the cue times of $subtitle match those of the reference in $options, and
-     * retimes $subtitle with them.
+     * Finds the scale and offset that make the cue times of $subtitle match those of the reference in $options.
+     * Then it retimes $subtitle with them.
      */
     public static function apply(Subtitle $subtitle, ReferenceSyncOptions $options): ReferenceSyncReport
     {
@@ -148,8 +148,8 @@ final class ReferenceSync
 
     /**
      * Returns the best parts for each number of splits from 1 to maxSplits, with the overlap of all parts together.
-     * A search over single spans takes too long in PHP. So the splits first fall on block boundaries, and then each
-     * split moves to the best span near its boundary.
+     * A search over single spans takes too long in PHP. So the splits first fall on block boundaries.
+     * Then each split moves to the best span near its boundary.
      *
      * @param list<array{float, float}> $original
      * @param list<array{float, float}> $target
@@ -174,7 +174,8 @@ final class ReferenceSync
 
 
     /**
-     * Finds for each layer, the number of splits so far, and each coarse offset the highest overlap up to each block.
+     * Finds the highest overlap up to each block, for each layer and each coarse offset.
+     * A layer is the number of splits so far.
      * A part that starts at a block takes the best value of the layer below as its floor.
      *
      * @param list<list<array{float, float}>> $blocks
@@ -470,8 +471,9 @@ final class ReferenceSync
 
     /**
      * Returns the overlap for each offset from $minOffset to $maxOffset in steps of COARSE_STEP.
-     * One sweep per offset is too slow in PHP. So the overlap of each span pair that can meet becomes four ramps
-     * max(0, o - k) at the corners k = c - b, c - a, d - b and d - a, which add up in second differences on the grid.
+     * One sweep per offset is too slow in PHP.
+     * So the overlap of target span [a, b] and reference span [c, d] becomes four ramps max(0, o - k).
+     * The corners k are c - b, c - a, d - b and d - a. The ramps add up in second differences on the grid.
      *
      * @param list<array{float, float}> $target
      * @param list<array{float, float}> $reference

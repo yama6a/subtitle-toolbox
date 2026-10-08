@@ -13,7 +13,7 @@ use Generator;
 final class HlsWebVttRendition
 {
     /**
-     * @internal HlsWebVttSegmenter::segment() creates the rendition.
+     * @internal
      *
      * @param Closure(): Generator<string, string> $segments          yields file name => WebVTT content
      * @param int                                  $totalMilliseconds the milliseconds that the playlist covers

@@ -9,8 +9,11 @@ use SubtitleToolbox\FrameRate;
 
 final class MpSubWriteOptions implements FormatWriteOptions
 {
+    /**
+     * @param ?float $frameRate Write frames at this rate. Null writes seconds.
+     */
     public function __construct(
-        public readonly ?float $frameRate = null,            // writes frames at this rate, null writes seconds
+        public readonly ?float $frameRate = null,
     ) {
         // MPlayer and FFmpeg read FORMAT=<fps> as an integer.
         if ($frameRate !== null) {

@@ -136,8 +136,8 @@ abstract class WriteCommand extends FileCommand
 
 
     /**
-     * Plans every output file before the first read. It fails when a file exists, is a file that the command reads,
-     * or is the output of two inputs.
+     * Plans every output file before the first read.
+     * It fails when a file exists, is a file that the command reads, or is the output of two inputs.
      */
     protected function checkInputs(array $inputs, Arguments $arguments): void
     {
@@ -372,8 +372,9 @@ abstract class WriteCommand extends FileCommand
 
 
     /**
-     * Returns the output of $input: standard output, the --output file, or the base name of the input in --output-dir
-     * with the extension of $outputFormat. $outputFormat is null only for standard output and --output.
+     * Returns the output of $input: standard output, the --output file, or a file in --output-dir.
+     * The file in --output-dir has the base name of the input and the extension of $outputFormat.
+     * $outputFormat is null only for standard output and --output.
      */
     private function target(string $input, ?Format $outputFormat, Arguments $arguments): string
     {

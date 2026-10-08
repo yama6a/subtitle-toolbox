@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 /**
- * @internal The frame rates that IttFormatter writes and IttWriteOptions accepts.
+ * The frame rates that IttFormatter writes and IttWriteOptions accepts.
+ *
+ * @internal
  */
 final class IttFrameRates
 {

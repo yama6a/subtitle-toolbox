@@ -53,7 +53,7 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
     /**
      * Returns the segments that format() writes, each with "startTime", "endTime", "body" and, when known, "speaker".
      *
-     * @internal HtmlTranscriptFormatter calls it.
+     * @internal
      *
      * @return list<array{speaker?: string, startTime: float, endTime: float, body: string}>
      */

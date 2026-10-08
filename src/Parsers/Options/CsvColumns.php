@@ -16,6 +16,15 @@ final class CsvColumns
     public const ROLES = ["identifier", "start", "end", "duration", "speaker", "text"];
 
 
+    /**
+     * @param string|int|null $start      The column of the start time.
+     * @param string|int|null $end        The column of the end time.
+     * @param string|int|null $text       The column of the cue text.
+     * @param string|int|null $speaker    The column of the speaker name.
+     * @param string|int|null $identifier The column of the cue identifier.
+     * @param string|int|null $duration   The column of the duration. An end time in the record wins.
+     * @param bool            $header     The first row holds the header names. Without it, start and text need a column index.
+     */
     public function __construct(
         public readonly string|int|null $start = null,
         public readonly string|int|null $end = null,

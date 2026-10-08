@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers\Options;
 
-/**
- * The read settings of EBU STL files.
- */
 final class EbuStlReadOptions implements FormatReadOptions
 {
     /**

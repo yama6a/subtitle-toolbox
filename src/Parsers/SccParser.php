@@ -73,8 +73,9 @@ final class SccParser extends SubtitleParser
 
 
     /**
-     * Converts an SMPTE time code at 29.97 fps to a frame count. A semicolon before the frames marks drop-frame time code,
-     * which skips the frame numbers 00 and 01 at the start of each minute except every tenth minute.
+     * Converts an SMPTE time code at 29.97 fps to a frame count.
+     * A semicolon before the frames marks drop-frame time code.
+     * It skips the frame numbers 00 and 01 at the start of each minute, except every tenth minute.
      */
     private static function timecodeToFrames(int $hours, int $minutes, int $seconds, int $frames, bool $dropFrame): int
     {
@@ -131,7 +132,8 @@ final class SccParser extends SubtitleParser
             throw new ParsingException("An SCC file must start with the line \"" . self::HEADER . "\".");
         }
 
-        // Some writers emit lines out of time order, see https://github.com/pbs/pycaption/issues/352. A decoder plays them in time order.
+        // Some writers emit lines out of time order, see https://github.com/pbs/pycaption/issues/352.
+        // A decoder plays them in time order.
         usort($codeLines, fn (array $a, array $b): int => $a[0] <=> $b[0]);
 
         return $codeLines;

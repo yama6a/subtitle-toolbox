@@ -12,8 +12,6 @@ use SubtitleToolbox\Formatters\Options\AssKaraokeTag;
 use SubtitleToolbox\Formatters\Options\AssWriteOptions;
 
 /**
- * The ASS writer settings of convert.
- *
  * @internal
  */
 final class AssOutput implements OptionGroup

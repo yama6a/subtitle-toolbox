@@ -13,14 +13,17 @@ final class Markup
      */
     public const STYLE_TAGS = ["b", "i", "u", "s", "font"];
 
-    // Word timestamps such as <00:01:02.500> are core markup too, but they are no tag names that keepTags() keeps.
-    /** @internal */
+    /**
+     * Word timestamps such as <00:01:02.500> are core markup too, but no tag names. keepTags() removes them.
+     *
+     * @internal
+     */
     public const CORE_TAGS = [...self::STYLE_TAGS, "v"];
 
-    // A tag ends at the first ">", even after a lone quote as in <v O'Neil>. strip_tags() would read the quote as
-    // the start of an attribute value and remove the text up to the next quote.
     /**
      * Matches a tag such as <b> or </font>. A tag has no white space after its "<", so "< b>" is text.
+     * A tag ends at the first ">", even after a lone quote as in <v O'Neil>.
+     * strip_tags() would read that quote as the start of an attribute value.
      *
      * @internal
      */
@@ -118,7 +121,8 @@ final class Markup
 
 
     /**
-     * Returns a <v> tag for the speaker name with &, < and > escaped and quotes kept. $class holds voice classes such as ".loud".
+     * Returns a <v> tag for the speaker name with &, < and > escaped and quotes kept.
+     * $class holds voice classes such as ".loud".
      */
     public static function voiceTag(string $name, string $class = ""): string
     {
@@ -164,8 +168,9 @@ final class Markup
 
 
     /**
-     * Escapes a changed text run as escapeText() does, but keeps & and > unescaped where its raw form $raw has them
-     * unescaped, as WebVTT text does. An & before an entity name gets escaped.
+     * Escapes a changed text run as escapeText() does.
+     * It keeps & and > unescaped where the raw form $raw has them unescaped, as WebVTT text does.
+     * An & before an entity name gets escaped.
      *
      * @internal
      */
@@ -195,10 +200,11 @@ final class Markup
 
 
     /**
-     * Calls fn (string $text, bool $first, bool $last): string for each text run between tags, with &lt;, &gt; and &amp;
-     * decoded. $first and $last mark the first and the last run of the line that holds text.
+     * Calls $fn for each text run between tags, with &lt;, &gt; and &amp; decoded.
+     * $first and $last mark the first and the last run of the line that holds text.
      *
-     * @param list<string> $lines
+     * @param list<string>                                            $lines
+     * @param callable(string $text, bool $first, bool $last): string $fn
      * @return list<string>
      */
     public static function mapTextRuns(array $lines, callable $fn): array
@@ -295,8 +301,8 @@ final class Markup
 
 
     /**
-     * Removes style tag pairs without text, such as <i></i> or <b><i></i></b>, until none is left. With $withSpaces,
-     * a pair that holds only white space goes too and leaves the white space.
+     * Removes style tag pairs without text, such as <i></i> or <b><i></i></b>, until none is left.
+     * With $withSpaces, a pair that holds only white space goes too and leaves the white space.
      *
      * @internal
      */
@@ -313,14 +319,15 @@ final class Markup
 
 
     /**
-     * Finds the tags of $tagNames that do not pair up, case-insensitively. A closing tag closes the last open tag of its
-     * name. With $closeInner, it also closes the tags that opened after that tag, such as <i> in "<b><i>Hi</b>".
+     * Finds the tags of $tagNames that do not pair up, case-insensitively.
+     * A closing tag closes the last open tag of its name.
+     * With $closeInner, it also closes the tags that opened after that tag, such as <i> in "<b><i>Hi</b>".
      *
      * @param list<string> $lines
      * @param list<string> $tagNames lowercase tag names, for example ["b", "i"]
-     * @return array{stray: list<array{int, int, int}>, inner: list<string>, open: list<string>} the line index, offset and
-     *         length of each closing tag without an open tag, the tag names that $closeInner closed, and the tag names
-     *         still open after the last line
+     * @return array{stray: list<array{int, int, int}>, inner: list<string>, open: list<string>} "stray" holds the line
+     *         index, offset and length of each closing tag without an open tag. "inner" holds the tag names that
+     *         $closeInner closed. "open" holds the tag names that are still open after the last line.
      *
      * @internal
      */
@@ -488,9 +495,9 @@ final class Markup
 
 
     /**
-     * Returns the color attribute of a <font> tag as written, such as "#FF0000" for <FONT COLOR='#FF0000'>, or null
-     * when the tag has no color. $attributes holds the attributes or the whole tag. The value can have double quotes,
-     * single quotes or no quotes, and the name can have any case.
+     * Returns the color attribute of a <font> tag as written, such as "#FF0000" for <FONT COLOR='#FF0000'>, or null.
+     * $attributes holds the attributes or the whole tag.
+     * The value can have double quotes, single quotes or no quotes, and the name can have any case.
      *
      * @internal
      */
@@ -505,8 +512,8 @@ final class Markup
 
 
     /**
-     * Swaps the first and the last byte of a 6-digit hex color, for example "0000FF" in BGR order becomes "FF0000" in RGB.
-     * ASS and MicroDVD write colors in BGR order.
+     * Swaps the first and the last byte of a 6-digit hex color. ASS and MicroDVD write colors in BGR order.
+     * For example, "0000FF" in BGR order becomes "FF0000" in RGB.
      *
      * @internal
      */
@@ -517,7 +524,8 @@ final class Markup
 
 
     /**
-     * Swaps the first and the last byte of a 6-digit hex color, for example "FF0000" in RGB order becomes "0000FF" in BGR.
+     * Swaps the first and the last byte of a 6-digit hex color.
+     * For example, "FF0000" in RGB order becomes "0000FF" in BGR.
      *
      * @internal
      */

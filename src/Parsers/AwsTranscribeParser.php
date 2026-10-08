@@ -24,7 +24,8 @@ final class AwsTranscribeParser extends SubtitleParser
 
 
     /**
-     * Reads the JSON transcript of an Amazon Transcribe batch job, one cue per audio segment, else cues grouped from the words.
+     * Reads the JSON transcript of an Amazon Transcribe batch job.
+     * It makes one cue per audio segment, else cues grouped from the words.
      */
     protected function read(string $rawSubtitle): Subtitle
     {

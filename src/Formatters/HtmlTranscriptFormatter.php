@@ -17,8 +17,8 @@ final class HtmlTranscriptFormatter extends SubtitleFormatter
 
 
     /**
-     * Writes the Podcasting 2.0 HTML transcript, a <cite>, <time> and <p> per paragraph. A speaker change or a gap of
-     * HtmlTranscriptWriteOptions::$paragraphGap seconds starts a new paragraph.
+     * Writes the Podcasting 2.0 HTML transcript, a <cite>, <time> and <p> per paragraph.
+     * A speaker change or a gap of HtmlTranscriptWriteOptions::$paragraphGap seconds starts a new paragraph.
      */
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {

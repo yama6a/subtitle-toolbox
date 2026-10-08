@@ -12,8 +12,9 @@ use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
 
 /**
- * Builds cues from the JSON transcripts of speech-to-text services, and groups their words into cues. A word is an array
- * with the keys text, start, end, speaker and data.
+ * Builds cues from the JSON transcripts of speech-to-text services, and groups their words into cues.
+ *
+ * @phpstan-type Word array{text: string, start: float, end: float, speaker: ?string, data: list<mixed>}
  *
  * @internal
  */
@@ -27,9 +28,6 @@ trait WordGrouping
     private const SENTENCE_END = '/[.?!\x{3002}\x{FF0E}\x{FF1F}\x{FF01}]["\'\x{2019}\x{201D})\]\x{300D}\x{300F}\x{FF09}]*$/u';
 
 
-    /**
-     * Returns the FORMAT_DATA_KEY of the parser.
-     */
     abstract protected static function formatDataKey(): string;
 
 
@@ -43,8 +41,8 @@ trait WordGrouping
 
 
     /**
-     * Returns the subtitle with the cues, the language metadata when $language is a string that is not empty, and the
-     * format data of the file.
+     * Returns the subtitle with the cues, the format data of the file and the language metadata.
+     * The language metadata needs a $language that is a string and not empty.
      *
      * @param list<SubtitleCue> $cues
      */
@@ -80,6 +78,8 @@ trait WordGrouping
      * In lenient mode, a word for which $readWord throws is skipped with a warning.
      *
      * @param callable(mixed, string): array{string, float, float, ?string} $readWord
+     *
+     * @return list<Word>
      */
     private function readWordList(array $words, string $path, callable $readWord): array
     {
@@ -176,9 +176,9 @@ trait WordGrouping
 
 
     /**
-     * Splits the words into cues.
+     * @param list<Word> $words
      *
-     * @return list<list<array>>
+     * @return list<list<Word>>
      */
     private function groupWords(array $words): array
     {
@@ -212,6 +212,8 @@ trait WordGrouping
 
 
     /**
+     * @param list<Word> $words
+     *
      * @return list<SubtitleCue>
      */
     private function cuesFromWords(array $words, string $wordsKey, array $formatData = []): array
@@ -255,7 +257,12 @@ trait WordGrouping
 
 
     /**
-     * Returns the words whose middle lies between $start and $end, from the word at $index on, and moves $index past them.
+     * Returns the words whose middle lies between $start and $end, from the word at $index on.
+     * It moves $index past them.
+     *
+     * @param list<Word> $words
+     *
+     * @return list<Word>
      */
     private static function wordsBetween(array $words, int &$index, float $start, float $end): array
     {

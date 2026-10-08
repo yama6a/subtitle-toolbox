@@ -94,8 +94,8 @@ final class CsvParser extends SubtitleParser
 
 
     /**
-     * Sets the identifier of $cue, and keeps the cells without a role as format data. The format data keys them by
-     * their header name or else by their column index.
+     * Sets the identifier of $cue, and keeps the cells without a role as format data.
+     * The format data keys them by their header name, else by their column index.
      *
      * @param \Closure(string): string $cell
      * @param list<string>             $cells

@@ -11,7 +11,9 @@ use SubtitleToolbox\Parsers\Options\ChapterReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-// Spec: https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/examples/chapters/jsonChapters.md
+/**
+ * @see https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/examples/chapters/jsonChapters.md
+ */
 final class PodcastChaptersParser extends SubtitleParser
 {
     protected const FORMAT_OPTIONS = ChapterReadOptions::class;

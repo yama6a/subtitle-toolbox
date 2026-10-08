@@ -19,6 +19,7 @@ use SubtitleToolbox\WriteOptions;
 
 /**
  * Writes pop-on captions for CEA-608 data channel 1, one byte pair per frame at 29.97 fps.
+ * The EOC (End Of Caption) code shows the loaded caption. The EDM (Erase Displayed Memory) code erases it.
  *
  * @see http://www.theneitherworld.com/mcpoodle/SCC_TOOLS/DOCS/SCC_FORMAT.HTML
  */
@@ -75,8 +76,8 @@ final class SccFormatter extends SubtitleFormatter
 
 
     /**
-     * Finds the frame of the EOC that shows the caption, and the frame of the EDM that erases the caption before it, if any.
-     * The load goes into the free frames before the EOC. When they are too few, the EOC comes later than the cue start.
+     * Finds the frame of the EOC for the caption, and the frame of the EDM for the caption before it, if any.
+     * The load goes into the free frames before the EOC. When they are too few, the EOC comes after the cue start.
      *
      * @return array{int, ?int}
      */
@@ -145,7 +146,8 @@ final class SccFormatter extends SubtitleFormatter
 
 
     /**
-     * Names wrapLines() when the cue text wraps into 4 lines or fewer at 32 characters, and also the split step when it does not.
+     * Names wrapLines() when the cue text wraps into 4 lines or fewer at 32 characters.
+     * Otherwise it also names the split step.
      */
     private function fitHint(SubtitleCue $cue): string
     {
@@ -159,8 +161,9 @@ final class SccFormatter extends SubtitleFormatter
 
 
     /**
-     * Returns the row and the text column of each line. Rows and columns from the scc format data win when they
-     * still fit the lines and the alignment. Otherwise the alignment sets them, with centred lines at the bottom by default.
+     * Returns the row and the text column of each line.
+     * Rows and columns from the scc format data win when they still fit the lines and the alignment.
+     * Otherwise the alignment sets them. The default is centred lines at the bottom.
      *
      * @param list<list<array>> $cells
      * @return list<array{int, int}>

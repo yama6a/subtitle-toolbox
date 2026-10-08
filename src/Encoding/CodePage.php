@@ -9,7 +9,7 @@ use SubtitleToolbox\Markup;
 /**
  * Single-byte code pages for EBU STL without ext-mbstring or ext-iconv. Bytes below 0x80 are ASCII.
  * The ISO 8859 tables are the 1987 and 1988 editions in EBU Tech 3264, appendix 2.
- * The DOS code pages are the GSI block code pages in EBU Tech 3264, appendix 1.
+ * The DOS code pages are the code pages of the GSI (General Subtitle Information) block in EBU Tech 3264, appendix 1.
  *
  * @internal
  */

@@ -26,8 +26,8 @@ final class JsonOutput
 
 
     /**
-     * Encodes $data with $flags and JSON_THROW_ON_ERROR. Data that JSON cannot hold, such as text that is not valid
-     * UTF-8 or a value of INF, throws UnwritableContentException.
+     * Encodes $data with $flags and JSON_THROW_ON_ERROR.
+     * Data that JSON cannot hold, such as invalid UTF-8 or INF, throws UnwritableContentException.
      */
     private static function encode(mixed $data, int $flags): string
     {

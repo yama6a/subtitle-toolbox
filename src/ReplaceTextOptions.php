@@ -7,8 +7,6 @@ namespace SubtitleToolbox;
 final class ReplaceTextOptions
 {
     /**
-     * Creates the settings for Subtitle::replaceText().
-     *
      * @param bool $regex         read the search text as a PCRE pattern with delimiters, such as '/\.{4,}/'
      * @param bool $caseSensitive match the case of the search text
      */

@@ -34,7 +34,7 @@ final class SubRipFormatter extends SubtitleFormatter
     /**
      * Returns what format() writes for the cue at $cueIndex, in the line ending of $options, without a BOM.
      *
-     * @internal SubRipStreamWriter calls it.
+     * @internal
      */
     public function formatCueBlock(SubtitleCue $cue, int $cueIndex, WriteOptions $options = new WriteOptions()): string
     {

@@ -11,11 +11,11 @@ use SubtitleToolbox\Timecode;
 
 final class SubtitleDiff
 {
-    private const MIN_TEXT_SIMILARITY = 0.7;
-    private const MIN_OVERLAP_SHARE   = 0.5;
-    private const DENSE_LIMIT         = 40000;
+    private const MIN_TEXT_SIMILARITY  = 0.7;
+    private const MIN_OVERLAP_SHARE    = 0.5;
+    private const FULL_ALIGN_MAX_CELLS = 40000;
 
-    // The step of each cell in the dense alignment table: from the cell above, from the left, or diagonal for a pair.
+    // The step of each cell in the fullAlign() table: from the cell above, from the left, or diagonal for a pair.
     private const UP       = "u";
     private const LEFT     = "l";
     private const DIAGONAL = "d";
@@ -173,14 +173,15 @@ final class SubtitleDiff
 
     /**
      * Returns the pairs of a weighted longest common subsequence in order, with null for the side without a partner.
-     * Pairs with the same text split the lists into stretches. A stretch up to DENSE_LIMIT cells gets the full
-     * dynamic program. A larger stretch keeps the pairs that overlap in time from the sparse pass.
+     * Pairs with the same text split the lists into stretches.
+     * A stretch up to 40,000 cells gets the full dynamic program.
+     * A larger stretch keeps the pairs of heaviestChain() inside it.
      *
      * @return list<array{?int, ?int}>
      */
     private function align(): array
     {
-        $chain   = $this->heaviestChain($this->sparseCandidates());
+        $chain   = $this->heaviestChain($this->candidatePairs());
         $anchors = array_values(array_filter($chain, fn (array $pair): bool =>
             $this->oldTexts[$pair[0]] === $this->newTexts[$pair[1]]));
         $anchors[] = [count($this->oldTexts), count($this->newTexts)];
@@ -190,8 +191,8 @@ final class SubtitleDiff
         $newFrom = 0;
         $next    = 0;
         foreach ($anchors as [$oldTo, $newTo]) {
-            if (($oldTo - $oldFrom) * ($newTo - $newFrom) <= self::DENSE_LIMIT) {
-                array_push($pairs, ...$this->denseAlign($oldFrom, $oldTo, $newFrom, $newTo));
+            if (($oldTo - $oldFrom) * ($newTo - $newFrom) <= self::FULL_ALIGN_MAX_CELLS) {
+                array_push($pairs, ...$this->fullAlign($oldFrom, $oldTo, $newFrom, $newTo));
             } else {
                 $inside = [];
                 while (isset($chain[$next]) && $chain[$next][0] < $oldTo) {
@@ -219,7 +220,7 @@ final class SubtitleDiff
      *
      * @return list<array{int, int, float}>
      */
-    private function sparseCandidates(): array
+    private function candidatePairs(): array
     {
         $newByText = [];
         foreach ($this->newTexts as $j => $text) {
@@ -346,7 +347,7 @@ final class SubtitleDiff
 
 
     /** @return list<array{?int, ?int}> */
-    private function denseAlign(int $oldFrom, int $oldTo, int $newFrom, int $newTo): array
+    private function fullAlign(int $oldFrom, int $oldTo, int $newFrom, int $newTo): array
     {
         $n = $oldTo - $oldFrom;
         $m = $newTo - $newFrom;

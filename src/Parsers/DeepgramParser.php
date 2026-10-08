@@ -24,8 +24,8 @@ final class DeepgramParser extends SubtitleParser
 
 
     /**
-     * Reads the JSON response of the Deepgram pre-recorded audio API, one cue per utterance, else per paragraph
-     * sentence, else cues grouped from the words.
+     * Reads the JSON response of the Deepgram pre-recorded audio API.
+     * It makes one cue per utterance, else one per paragraph sentence, else cues grouped from the words.
      */
     protected function read(string $rawSubtitle): Subtitle
     {

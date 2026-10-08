@@ -9,33 +9,26 @@ use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Subtitle;
 
 /**
- * Runs the edits of convert in one fixed order: forced cues, OCR, text, structure, timing, masking, karaoke.
+ * Runs the edits of convert in the order of EDITS.
  *
  * @internal
  */
 final class EditPipeline
 {
-    /**
-     * Forced cues come first, so OCR reads only the cues that stay. Each parser sets the forced flag, and OCR never
-     * changes it. Text edits come before structure edits, because they change the line lengths. Timing edits come after structure
-     * edits, because splits create new cues. Masking comes after timing edits, so the mute ranges have the final times.
-     * Karaoke multiplies the cues, so it runs last.
-     *
-     * @var list<class-string<Edit>>
-     */
+    /** @var list<class-string<Edit>> */
     private const EDITS = [
-        ForcedEdit::class,
+        ForcedEdit::class,       // The parser sets the forced flag, so OCR then reads only the cues that stay.
         OcrEdit::class,
         CommonErrorEdit::class,
         SdhEdit::class,
         ReplaceEdit::class,
-        TextEdit::class,
-        StructureEdit::class,
+        TextEdit::class,         // Text edits change the line lengths, so they run before StructureEdit.
+        StructureEdit::class,    // Splits create new cues, so the timing edits run after it.
         RetimeEdit::class,
         SnapEdit::class,
         TimingFixEdit::class,
-        MaskingEdit::class,
-        KaraokeEdit::class,
+        MaskingEdit::class,      // The mute ranges need the final times.
+        KaraokeEdit::class,      // It multiplies the cues, so it runs last.
     ];
 
 

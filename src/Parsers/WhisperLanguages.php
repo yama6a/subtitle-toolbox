@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 /**
- * The language names of Whisper JSON with their language codes, for WhisperJsonParser.
+ * The language names of Whisper JSON with their language codes.
  *
  * @internal
  */

@@ -93,7 +93,8 @@ trait ShortCueMerging
 
 
     /**
-     * Returns the lines of both cues under the <v> tag of $first when both cues start with a <v> tag of the one speaker, or null.
+     * Returns the lines of both cues under the <v> tag of $first, or null.
+     * Both cues must start with a <v> tag of the one speaker.
      *
      * @param list<string> $speakers
      *

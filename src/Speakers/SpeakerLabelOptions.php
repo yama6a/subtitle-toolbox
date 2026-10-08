@@ -14,8 +14,6 @@ final class SpeakerLabelOptions
 
 
     /**
-     * Creates the settings for SpeakerLabels::apply().
-     *
      * @param bool                  $readPrefixes      turn a label such as "JOHN: " at the start of a line, or after its dialogue dash, into <v John>
      * @param ?SpeakerStyle         $to                write the <v> tags in this style
      * @param array<string, string> $rename            new names for the speakers of the <v> tags, for example ["SPEAKER_00" => "Anna"]

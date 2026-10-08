@@ -188,7 +188,8 @@ final class HearingImpairedRemover
 
 
     /**
-     * Returns the text between tags with &lt;, &gt; and &amp; decoded, and for each byte its line, offset and length in the raw line.
+     * Returns the text between tags with &lt;, &gt; and &amp; decoded.
+     * It also returns for each byte its line, offset and length in the raw line.
      *
      * @param list<string> $lines
      * @return array{string, list<array{int, int, int}|null>}
@@ -248,7 +249,8 @@ final class HearingImpairedRemover
 
 
     /**
-     * Removes lines that had text before and hold no text or only a dash now, and the dash of the last dialogue line left.
+     * Removes lines that had text before and hold no text or only a dash now.
+     * It also removes the dash of the last dialogue line left.
      *
      * @param list<string> $original
      * @param list<string> $lines

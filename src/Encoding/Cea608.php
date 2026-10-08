@@ -192,7 +192,8 @@ final class Cea608
 
 
     /**
-     * Returns the 7-bit bytes of the preamble address code for a row from 1 to 15 and a column from 0 to 28 in steps of 4.
+     * Returns the 7-bit bytes of the preamble address code for a row and a column.
+     * The row is from 1 to 15. The column is from 0 to 28 in steps of 4.
      * Only column 0 can set a color other than white or italics.
      *
      * @return array{int, int}

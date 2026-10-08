@@ -25,8 +25,8 @@ final class GoogleSpeechParser extends SubtitleParser
 
 
     /**
-     * Reads the JSON response of Google Cloud Speech-to-Text V1 and V2, one cue per result. With speaker
-     * diarization, it groups the words of the last result into cues.
+     * Reads the JSON response of Google Cloud Speech-to-Text V1 and V2, one cue per result.
+     * With speaker diarization, it groups the words of the last result into cues.
      */
     protected function read(string $rawSubtitle): Subtitle
     {

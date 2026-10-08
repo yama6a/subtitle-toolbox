@@ -25,10 +25,12 @@ final class ShotChangeOptions
 
 
     /**
-     * Creates the timing rules in frames of $frameRate, where a null $snapWindowFrames means half a second.
-     * $shotChanges holds the shot change times in seconds. Without them, ShotChangeTiming::apply() only closes gaps.
-     *
-     * @param list<float> $shotChanges
+     * @param float       $frameRate         the frame rate of the video. The other rules count frames of it
+     * @param list<float> $shotChanges       the shot change times in seconds. Without them, apply() only closes gaps shorter than snapWindowFrames frames
+     * @param ?int        $snapWindowFrames  the frames within which a cue time moves to a shot change, or null for half a second
+     * @param int         $minGapFrames      the frames between a cue and the next cue or shot change
+     * @param bool        $chain             close the gaps between cues
+     * @param int         $minDurationFrames the least frames of a cue after a move
      */
     public function __construct(
         float $frameRate,

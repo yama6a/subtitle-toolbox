@@ -6,9 +6,6 @@ namespace SubtitleToolbox\Parsers\Options;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
-/**
- * The read settings of SCC files.
- */
 final class SccReadOptions implements FormatReadOptions
 {
     /**

@@ -10,9 +10,9 @@ use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Subtitle;
 
 /**
- * One option group of convert, with the checks of its options. Where a group has a prefix, it is the group name, such
- * as --structure- or --sdh-. The retime, snap, text and masking groups also hold options without it: --shift and
- * --video-fps keep the names of the retime and validate commands, and --case and --mute-edl read better alone.
+ * One option group of convert, with the checks of its options.
+ * Most options start with the group name, such as --structure- or --sdh-.
+ * --shift and --video-fps keep the names of the retime and validate commands. --case and --mute-edl read better alone.
  *
  * @internal
  */

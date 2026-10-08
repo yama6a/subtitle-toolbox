@@ -19,8 +19,8 @@ final class OcrProgress implements OcrEngine
 
 
     /**
-     * Passes each image to $engine and prints "<label>: OCR <done>/<total>" to standard error every INTERVAL images
-     * and after the last one.
+     * Passes each image to $engine.
+     * Prints "<label>: OCR <done>/<total>" to standard error every INTERVAL images and after the last one.
      */
     public function __construct(
         private readonly OcrEngine $engine,

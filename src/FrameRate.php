@@ -18,8 +18,8 @@ final class FrameRate
 
 
     /**
-     * Throws InvalidArgumentException with $message unless $framesPerSecond is finite and greater than 0. %s in
-     * $message becomes the value.
+     * Throws InvalidArgumentException with $message unless $framesPerSecond is finite and greater than 0.
+     * %s in $message becomes the value.
      *
      * @internal
      */

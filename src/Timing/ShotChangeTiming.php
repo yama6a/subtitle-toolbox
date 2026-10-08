@@ -12,8 +12,8 @@ final class ShotChangeTiming
 {
     /**
      * Moves cue times to the shot changes of $options, closes gaps and puts all times on frames.
-     * A gap closes to minGapFrames when it is longer than minGapFrames, shorter than snapWindowFrames and holds no
-     * shot change.
+     * A gap closes to minGapFrames when it is longer than minGapFrames and shorter than snapWindowFrames frames.
+     * A gap with a shot change inside stays.
      */
     public static function apply(Subtitle $subtitle, ShotChangeOptions $options): ShotChangeReport
     {
@@ -82,7 +82,8 @@ final class ShotChangeTiming
 
 
     /**
-     * Rejects a move that makes a cue shorter than minDurationFrames, or that brings it closer than minGapFrames to the cue before or after it.
+     * Rejects a move that makes a cue shorter than minDurationFrames.
+     * It also rejects a move that brings the cue closer than minGapFrames to the cue before or after it.
      *
      * @param list<int> $starts
      * @param list<int> $ends

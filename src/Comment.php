@@ -7,7 +7,8 @@ namespace SubtitleToolbox;
 final class Comment
 {
     /**
-     * Holds a comment that a formatter writes before the cue at $beforeCueIndex, or after the last cue when it equals the cue count.
+     * Holds a comment that a formatter writes before the cue at $beforeCueIndex.
+     * A $beforeCueIndex equal to the cue count puts the comment after the last cue.
      */
     public function __construct(
         public readonly string $text,

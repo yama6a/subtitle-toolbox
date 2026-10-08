@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 /**
- * The XML namespaces of TTML, DFXP and iTT that TtmlParser, TtmlFormatter and IttFormatter share.
+ * The XML namespaces of TTML, DFXP and iTT.
  *
  * @internal
  */

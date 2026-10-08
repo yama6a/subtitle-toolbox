@@ -59,8 +59,8 @@ final class OcrReplaceList
 
 
     /**
-     * Reads a Subtitle Edit OCR replace list such as eng_OCRFixReplaceList_User.xml. It skips the sections that need a
-     * spell checker and the regular expressions that PCRE cannot run.
+     * Reads a Subtitle Edit OCR replace list such as eng_OCRFixReplaceList_User.xml.
+     * It skips the sections that need a spell checker and the regular expressions that PCRE cannot run.
      */
     public static function fromSubtitleEditXml(string $xml): self
     {
@@ -90,8 +90,8 @@ final class OcrReplaceList
 
 
     /**
-     * Adds one entry of a section to $lists, or to $regex for the RegularExpressions section. The first entry for a
-     * search text wins.
+     * Adds one entry of a section to $lists, or to $regex for the RegularExpressions section.
+     * The first entry for a search text wins.
      *
      * @param array<string, array<string, string>> $lists
      * @param array<string, string>                $regex

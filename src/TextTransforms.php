@@ -12,7 +12,9 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 trait TextTransforms
 {
     /**
-     * Calls fn (string $text, SubtitleCue $cue): string for each text run between tags, with &lt;, &gt; and &amp; decoded.
+     * Calls $fn for each text run between tags, with entities decoded as Markup::mapTextRuns() does.
+     *
+     * @param callable(string $text, SubtitleCue $cue): string $fn
      */
     public function mapText(callable $fn): self
     {
@@ -21,7 +23,9 @@ trait TextTransforms
 
 
     /**
-     * Calls fn (string $line, SubtitleCue $cue): string for each line, with its tags and entities.
+     * Calls $fn for each line, with its tags and entities.
+     *
+     * @param callable(string $line, SubtitleCue $cue): string $fn
      */
     public function mapLines(callable $fn): self
     {
@@ -166,7 +170,9 @@ trait TextTransforms
 
 
     /**
-     * Calls $fn (string $text, SubtitleCue $cue, bool $startsLine) for each text run between tags, in order.
+     * Calls $fn for each text run between tags, in order.
+     *
+     * @param callable(string $text, SubtitleCue $cue, bool $startsLine): string $fn
      */
     private function textTransformsMapRuns(callable $fn): self
     {

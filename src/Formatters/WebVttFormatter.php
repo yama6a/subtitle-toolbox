@@ -68,7 +68,7 @@ final class WebVttFormatter extends SubtitleFormatter
     /**
      * Returns the cue block format() writes for the cue at $cueIndex, in the line ending of $options, without a BOM.
      *
-     * @internal WebVttStreamWriter calls it.
+     * @internal
      */
     public function formatCueBlock(SubtitleCue $cue, int $cueIndex, WriteOptions $options = new WriteOptions()): string
     {

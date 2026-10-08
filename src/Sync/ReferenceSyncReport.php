@@ -7,11 +7,11 @@ namespace SubtitleToolbox\Sync;
 final class ReferenceSyncReport
 {
     /**
-     * @internal ReferenceSync::apply() creates the report.
+     * @internal
      *
-     * @param float                                   $offset     the seconds to add to each time after the scale, in the first part when the sync split the subtitle
+     * @param float                                   $offset     the seconds to add to each time after the scale. After a split, the offset of the first part
      * @param float                                   $scale      the factor to multiply each time with before the offset
-     * @param float                                   $score      the cue time that both files share after the sync, divided by the cue time of either file, from 0 to 1
+     * @param float                                   $score      the shared cue time after the sync divided by the cue time of either file, from 0 to 1
      * @param list<array{from: float, offset: float}> $splitParts
      */
     public function __construct(

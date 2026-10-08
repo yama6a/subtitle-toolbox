@@ -15,8 +15,9 @@ final class StyleRuns
 
 
     /**
-     * Writes the runs as core markup and escapes their text. The tags nest in the order font, b, i, u, s. Between two
-     * runs, the tags close from the first style that changes and open again. A run of only white space keeps the tags.
+     * Writes the runs as core markup and escapes their text. The tags nest in the order font, b, i, u, s.
+     * Between two runs, the tags close from the first style that changes and open again.
+     * A run of only white space keeps the tags.
      * With $spacesOutside, the white space at both ends of a run goes outside its tags.
      *
      * @param list<array{string, array{color?: ?string, b?: bool, i?: bool, u?: bool, s?: bool}}> $runs the text and

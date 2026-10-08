@@ -41,9 +41,6 @@ final class Resegmenter
     }
 
 
-    /**
-     * Splits each cue that breaks a limit of $options at sentence ends, then at clause ends, then at the space closest to the middle.
-     */
     private static function splitLong(Subtitle $subtitle, ResegmentOptions $options): void
     {
         $anchors = CommentAnchors::of($subtitle->getCues(), $subtitle->getComments());
@@ -63,9 +60,6 @@ final class Resegmenter
     }
 
 
-    /**
-     * Drops the cue boundaries and builds new cues from the word timestamps, one sentence per cue within the limits of $options.
-     */
     private static function byWords(Subtitle $subtitle, ResegmentOptions $options): void
     {
         $anchors = CommentAnchors::of($subtitle->getCues(), $subtitle->getComments());
@@ -262,7 +256,8 @@ final class Resegmenter
 
 
     /**
-     * Splits the cue text into pieces at spaces, at line breaks, after CJK punctuation and before word timestamps inside a word.
+     * Splits the cue text into pieces at spaces and line breaks.
+     * It also splits after CJK punctuation and before a word timestamp inside a word.
      *
      * @return list<Piece>
      */
@@ -356,7 +351,8 @@ final class Resegmenter
 
 
     /**
-     * Joins the pieces from $first to $end - 1, opens the core markup tags that are open before them and closes the tags open after them.
+     * Joins the pieces from $first to $end - 1.
+     * It opens the core markup tags that are open before them, and closes the tags that are open after them.
      *
      * @param list<Piece> $pieces
      */

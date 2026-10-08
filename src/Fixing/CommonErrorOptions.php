@@ -9,7 +9,22 @@ use SubtitleToolbox\DialogueDashStyle;
 final class CommonErrorOptions
 {
     /**
-     * Creates the fix settings, see docs/text.md#fixing-common-errors.
+     * docs/text.md#fixing-common-errors shows an example of each fix.
+     *
+     * @param ?string           $language                     a code such as "en", "de-AT" or "fra", or null for the language metadata
+     * @param bool              $doubleSpaces                 join runs of spaces into one, as in "Hi  there"
+     * @param bool              $spaceBeforePunctuation       remove the space before punctuation, as in "Really ?"
+     * @param bool              $missingSpaceAfterPunctuation add the space after punctuation, as in "Stop.Now"
+     * @param bool              $unbalancedTags               close an open tag at the cue end, and remove a closing tag without an opening tag
+     * @param bool              $emptyTags                    remove tag pairs without text, as in "<i></i>"
+     * @param bool              $dialogueDashes               write the dialogue dashes in $dialogueDashStyle
+     * @param DialogueDashStyle $dialogueDashStyle            the dash that $dialogueDashes writes
+     * @param bool              $ellipsis                     write ". . ." and "...." as "...", or as U+2026 with $unicodeEllipsis
+     * @param bool              $unicodeEllipsis              make $ellipsis write U+2026 for every ellipsis
+     * @param bool              $ocrLowercaseL                read an OCR "l" as "I" where the language needs it, as in "lt's"
+     * @param bool              $ocrPipe                      read an OCR "|" as "I" or "l", as in "|t was"
+     * @param bool              $ocrZeroInWords               read an OCR "0" in a word as "O" or "o", as in "D0N'T"
+     * @param ?OcrReplaceList   $replaceList                  the words to replace, or null for no replace list
      */
     public function __construct(
         public readonly ?string $language = null,

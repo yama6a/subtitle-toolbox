@@ -28,8 +28,8 @@ final class CsvFormatter extends SubtitleFormatter
 
     /**
      * Writes one row per cue. A subtitle from CsvParser keeps its columns, header names, delimiter and time format.
-     * The stored delimiter must be ",", ";" or a tab, else this method throws. A stored time format that is not a
-     * CsvTimeFormat value, such as "hh:mm:ss;fff", writes the CsvTimeFormat::Dot form.
+     * The stored delimiter must be ",", ";" or a tab, else this method throws.
+     * A stored time format that is not a CsvTimeFormat value, such as "hh:mm:ss;fff", writes the CsvTimeFormat::Dot form.
      */
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {

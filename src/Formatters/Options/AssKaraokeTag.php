@@ -9,7 +9,12 @@ namespace SubtitleToolbox\Formatters\Options;
  */
 enum AssKaraokeTag: string
 {
-    case Instant = "k";      // highlights the whole syllable when its time starts
-    case Fill    = "kf";     // fills the syllable from left to right
-    case Outline = "ko";     // hides the outline of the syllable until its time starts
+    /** Highlights the whole syllable when its time starts. */
+    case Instant = "k";
+
+    /** Fills the syllable from left to right. */
+    case Fill = "kf";
+
+    /** Hides the outline of the syllable until its time starts. */
+    case Outline = "ko";
 }
