@@ -525,6 +525,18 @@ final class ReferenceSync
             }
         }
 
+        return self::integrate($firstValue, $firstSlope, $secondDiffs, $last);
+    }
+
+
+    /**
+     * Returns the values on the grid from the first value, the first slope and the second differences.
+     *
+     * @param list<float> $secondDiffs
+     * @return list<float>
+     */
+    private static function integrate(float $firstValue, float $firstSlope, array $secondDiffs, int $last): array
+    {
         $values = [$firstValue];
         if ($last >= 1) {
             $values[] = $firstValue + $firstSlope;
