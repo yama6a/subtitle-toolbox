@@ -280,7 +280,8 @@ final class WebVttParser extends SubtitleParser
         }
         $times = explode("-->", $rawLines[0], 2);
         $end   = trim($times[1]);
-        if (!preg_match("/^(" . self::TIMESTAMP_PATTERN . ")([ \t]+(.*))?$/", $end, $matches)) {
+        // Settings may follow the end time without white space, as in "00:01.000line:40%". A fourth fraction digit is no setting.
+        if (!preg_match("/^(" . self::TIMESTAMP_PATTERN . ")((?!\d)[ \t]*(.*))?$/", $end, $matches)) {
             throw new ParsingException("The time \"$end\" is not valid.", $lineNumber);
         }
 
