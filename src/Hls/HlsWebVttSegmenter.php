@@ -52,13 +52,11 @@ final class HlsWebVttSegmenter
         $ends    = array_map(fn (SubtitleCue $cue): int => Timecode::totalMilliseconds($cue->getEnd()), $sorted);
         $shifted = array_values($copy->shift($options->local)->getCues());
 
-        $segmentMilliseconds = $options->segmentMilliseconds();
-        $segments            = function () use ($fileData, $starts, $ends, $shifted, $options, $segmentMilliseconds, $totalMilliseconds): Generator {
+        $segments = function () use ($fileData, $starts, $ends, $shifted, $options, $totalMilliseconds): Generator {
             $empty  = null;
             $next   = 0;
             $active = [];
-            for ($startMilliseconds = 0, $index = 0; $startMilliseconds < $totalMilliseconds; $startMilliseconds += $segmentMilliseconds, $index++) {
-                $endMilliseconds = min($startMilliseconds + $segmentMilliseconds, $totalMilliseconds);
+            foreach ($options->segmentBounds($totalMilliseconds) as $fileName => [$startMilliseconds, $endMilliseconds]) {
                 for (; $next < count($starts) && $starts[$next] < $endMilliseconds; $next++) {
                     $active[$next] = true;
                 }
@@ -71,7 +69,7 @@ final class HlsWebVttSegmenter
                 }
                 ksort($active);
 
-                yield $options->fileName($index) => $active === []
+                yield $fileName => $active === []
                     ? $empty ??= self::write($fileData, [])
                     : self::write($fileData, array_intersect_key($shifted, $active));
             }
