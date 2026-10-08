@@ -132,13 +132,6 @@ final class StringHelpers
 
 
     /** @internal */
-    public static function removeDoubleEmptyLines(string $str): string
-    {
-        return preg_replace('/\n{3,}/', str_repeat(LineEnding::Lf->value, 2), $str);
-    }
-
-
-    /** @internal */
     public static function normalizeSpaces(string $str): string
     {
         $str = preg_replace('/\t+/', ' ', $str); // replace tabs with spaces
