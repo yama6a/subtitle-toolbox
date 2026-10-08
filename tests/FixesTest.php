@@ -10,11 +10,11 @@ use SubtitleToolbox\Validation\ValidationRules;
 
 class FixesTest extends \PHPUnit\Framework\TestCase
 {
-    private function wrap(string $text, int $maxCharsPerLine, int $maxLines = 2): array
+    private function wrap(string $text, int $maxCharactersPerLine, int $maxLines = 2): array
     {
         $subtitle = new Subtitle();
         $subtitle->addCue(new SubtitleCue(1, 2, $text));
-        $subtitle->wrapLines($maxCharsPerLine, $maxLines);
+        $subtitle->wrapLines($maxCharactersPerLine, $maxLines);
 
         return $subtitle->getCues()[0]->getLines();
     }

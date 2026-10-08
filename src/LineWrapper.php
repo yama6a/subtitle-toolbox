@@ -10,7 +10,7 @@ namespace SubtitleToolbox;
 final class LineWrapper
 {
     /**
-     * Wraps the lines into at most $maxLines lines of at most $maxCharsPerLine visible characters where the words allow it.
+     * Wraps the lines into at most $maxLinesPerCue lines of at most $maxCharactersPerLine visible characters where the words allow it.
      * With $keepDialogueLines, each line that starts with a dialogue dash stays a line of its own.
      * With 2 or more dialogue lines, no line wraps. A single dialogue line wraps like other text.
      *
@@ -18,7 +18,7 @@ final class LineWrapper
      *
      * @return list<string>
      */
-    public static function wrap(array $lines, int $maxCharsPerLine, int $maxLines, bool $keepDialogueLines = false): array
+    public static function wrap(array $lines, int $maxCharactersPerLine, int $maxLinesPerCue, bool $keepDialogueLines = false): array
     {
         $segments = [];
         foreach ($keepDialogueLines ? $lines : [implode(" ", $lines)] as $line) {
@@ -41,7 +41,7 @@ final class LineWrapper
 
         $words = $segments[0] ?? [];
 
-        return self::joinLines($words, self::findBreaks($words, $maxCharsPerLine, $maxLines));
+        return self::joinLines($words, self::findBreaks($words, $maxCharactersPerLine, $maxLinesPerCue));
     }
 
 
@@ -52,11 +52,11 @@ final class LineWrapper
      *
      * @return ?list<string>
      */
-    public static function wrapToFit(array $lines, int $maxCharsPerLine, int $maxLines): ?array
+    public static function wrapToFit(array $lines, int $maxCharactersPerLine, int $maxLinesPerCue): ?array
     {
-        $wrapped = self::wrap($lines, $maxCharsPerLine, $maxLines, true);
+        $wrapped = self::wrap($lines, $maxCharactersPerLine, $maxLinesPerCue, true);
 
-        return self::fits($wrapped, $maxCharsPerLine, $maxLines) ? $wrapped : null;
+        return self::fits($wrapped, $maxCharactersPerLine, $maxLinesPerCue) ? $wrapped : null;
     }
 
 
@@ -80,13 +80,13 @@ final class LineWrapper
     /**
      * @param array<string> $lines
      */
-    public static function fits(array $lines, int $maxCharsPerLine, int $maxLines): bool
+    public static function fits(array $lines, int $maxCharactersPerLine, int $maxLinesPerCue): bool
     {
-        if (count($lines) > $maxLines) {
+        if (count($lines) > $maxLinesPerCue) {
             return false;
         }
         foreach ($lines as $line) {
-            if (self::length(self::measuredWords($line)) > $maxCharsPerLine) {
+            if (self::length(self::measuredWords($line)) > $maxCharactersPerLine) {
                 return false;
             }
         }
@@ -177,13 +177,13 @@ final class LineWrapper
 
 
     /**
-     * Uses the fewest lines up to $maxLines that fit, and among those the breaks with the most equal line lengths.
+     * Uses the fewest lines up to $maxLinesPerCue that fit, and among those the breaks with the most equal line lengths.
      *
      * @param list<array{text: string, length: int}> $words
      *
      * @return list<int> the index of the first word of each line
      */
-    private static function findBreaks(array $words, int $maxCharsPerLine, int $maxLines): array
+    private static function findBreaks(array $words, int $maxCharactersPerLine, int $maxLinesPerCue): array
     {
         $wordCount = count($words);
         if ($wordCount === 0) {
@@ -192,9 +192,9 @@ final class LineWrapper
 
         // $best[$lineCount][$end] holds [overflow, sum of squared lengths, line starts] for words 0 to $end - 1.
         $best = [0 => [0 => [0, 0, []]]];
-        for ($lineCount = 1; $lineCount <= min($maxLines, $wordCount); $lineCount++) {
+        for ($lineCount = 1; $lineCount <= min($maxLinesPerCue, $wordCount); $lineCount++) {
             for ($end = $lineCount; $end <= $wordCount; $end++) {
-                $ending = self::bestLastLine($best[$lineCount - 1], $words, $lineCount - 1, $end, $maxCharsPerLine);
+                $ending = self::bestLastLine($best[$lineCount - 1], $words, $lineCount - 1, $end, $maxCharactersPerLine);
                 if ($ending !== null) {
                     $best[$lineCount][$end] = $ending;
                 }
@@ -205,7 +205,7 @@ final class LineWrapper
             }
         }
 
-        return $best[min($maxLines, $wordCount)][$wordCount][2];
+        return $best[min($maxLinesPerCue, $wordCount)][$wordCount][2];
     }
 
 
@@ -217,7 +217,7 @@ final class LineWrapper
      * @param list<array{text: string, length: int}> $words
      * @return array{int, int, list<int>}|null
      */
-    private static function bestLastLine(array $previous, array $words, int $firstStart, int $end, int $maxCharsPerLine): ?array
+    private static function bestLastLine(array $previous, array $words, int $firstStart, int $end, int $maxCharactersPerLine): ?array
     {
         $best = null;
         for ($start = $firstStart; $start < $end; $start++) {
@@ -227,7 +227,7 @@ final class LineWrapper
 
             [$overflow, $squares, $starts] = $previous[$start];
             $length    = self::length(array_slice($words, $start, $end - $start));
-            $candidate = [$overflow + max(0, $length - $maxCharsPerLine),
+            $candidate = [$overflow + max(0, $length - $maxCharactersPerLine),
                           $squares + $length ** 2,
                           [...$starts, $start]];
             if ($best === null || array_slice($candidate, 0, 2) < array_slice($best, 0, 2)) {
