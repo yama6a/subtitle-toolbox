@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Ocr;
 
 use GlyphOcr\Recognizer;
+use SubtitleToolbox\Dependency;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 final class OcrEngineChooser
@@ -19,7 +20,7 @@ final class OcrEngineChooser
     public static function choose(?OcrEngineName $engine = null, string $tesseractProgram = "tesseract"): OcrEngineName
     {
         $tesseract = $engine !== OcrEngineName::Glyph && TesseractOcrEngine::isInstalled($tesseractProgram);
-        $glyph     = class_exists(Recognizer::class);
+        $glyph     = Dependency::isAvailable(Recognizer::class);
         $problem   = match (true) {
             $engine === OcrEngineName::Tesseract && !$tesseract
                 => TesseractOcrEngine::missingProgramMessage($tesseractProgram),
