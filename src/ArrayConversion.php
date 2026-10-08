@@ -81,6 +81,20 @@ trait ArrayConversion
         }
 
         $subtitle = new self();
+        self::arrayConversionReadMetadata($subtitle, $data, $reject);
+        self::arrayConversionReadFormatData($subtitle, $data, $reject);
+        $skippedCues = self::arrayConversionReadCues($subtitle, $data, $skippedCues, $reject);
+        self::arrayConversionReadComments($subtitle, $data, $skippedCues, $reject);
+
+        return $subtitle;
+    }
+
+
+    /**
+     * @param \Closure(ParsingException, string, int|string): void $reject
+     */
+    private static function arrayConversionReadMetadata(self $subtitle, array $data, \Closure $reject): void
+    {
         foreach (self::arrayConversionMap($data, "metadata") as $key => $value) {
             try {
                 if (!is_string($value)) {
@@ -92,6 +106,14 @@ trait ArrayConversion
             }
             $subtitle->setMetadata((string)$key, $value);
         }
+    }
+
+
+    /**
+     * @param \Closure(ParsingException, string, int|string): void $reject
+     */
+    private static function arrayConversionReadFormatData(self $subtitle, array $data, \Closure $reject): void
+    {
         foreach (self::arrayConversionMap($data, "formatData") as $format => $formatData) {
             try {
                 self::arrayConversionCheckFormatData($format, $formatData, "formatData.$format", false);
@@ -101,7 +123,18 @@ trait ArrayConversion
             }
             $subtitle->setFormatData($format, $formatData);
         }
+    }
 
+
+    /**
+     * Returns $skippedCues with the bad cues added.
+     *
+     * @param array<int, true>                                     $skippedCues
+     * @param \Closure(ParsingException, string, int|string): void $reject
+     * @return array<int, true>
+     */
+    private static function arrayConversionReadCues(self $subtitle, array $data, array $skippedCues, \Closure $reject): array
+    {
         if (!is_array($data["cues"] ?? null) || !array_is_list($data["cues"])) {
             throw new ParsingException("The field cues must be a list.");
         }
@@ -117,18 +150,19 @@ trait ArrayConversion
             }
         }
 
+        return $skippedCues;
+    }
+
+
+    /**
+     * @param array<int, true>                                     $skippedCues
+     * @param \Closure(ParsingException, string, int|string): void $reject
+     */
+    private static function arrayConversionReadComments(self $subtitle, array $data, array $skippedCues, \Closure $reject): void
+    {
         foreach (self::arrayConversionList($data, "comments") as $index => $comment) {
-            $path = "comments[$index]";
             try {
-                if (!is_array($comment)) {
-                    throw new ParsingException("The field $path must be an object.");
-                }
-                if (!is_string($comment["text"] ?? null)) {
-                    throw new ParsingException("The field $path.text must be a string.");
-                }
-                if (!is_int($comment["beforeCueIndex"] ?? null) || $comment["beforeCueIndex"] < 0) {
-                    throw new ParsingException("The field $path.beforeCueIndex must be an integer of 0 or more.");
-                }
+                self::arrayConversionCheckComment($comment, "comments[$index]");
             } catch (ParsingException $exception) {
                 $reject($exception, "comments", $index);
                 continue;
@@ -136,8 +170,20 @@ trait ArrayConversion
             $before = $comment["beforeCueIndex"];
             $subtitle->addComment($comment["text"], $before - count(array_filter(array_keys($skippedCues), fn (int $cue): bool => $cue < $before)));
         }
+    }
 
-        return $subtitle;
+
+    private static function arrayConversionCheckComment(mixed $comment, string $path): void
+    {
+        if (!is_array($comment)) {
+            throw new ParsingException("The field $path must be an object.");
+        }
+        if (!is_string($comment["text"] ?? null)) {
+            throw new ParsingException("The field $path.text must be a string.");
+        }
+        if (!is_int($comment["beforeCueIndex"] ?? null) || $comment["beforeCueIndex"] < 0) {
+            throw new ParsingException("The field $path.beforeCueIndex must be an integer of 0 or more.");
+        }
     }
 
 
