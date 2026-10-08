@@ -33,10 +33,10 @@ final class FormatDataSchema
         "ass"        => [
             "sectionOrder"       => self::STRINGS,
             "scriptInfoComments" => self::STRINGS,
-            "scriptInfo"         => ["list", "string"],
+            "scriptInfo"         => self::STRINGS,
             "stylesSection"      => "?string",
             "styleFormat"        => ["?list", "string"],
-            "styles"             => ["list", ["list", "string"]],
+            "styles"             => ["list", self::STRINGS],
             "eventFormat"        => self::STRINGS,
             "commentEvents"      => ["list", self::ATTRIBUTES],
             "sections"           => ["list", self::STRINGS],
@@ -51,14 +51,14 @@ final class FormatDataSchema
         ],
         "ffmeta-chapters" => [
             "tags"    => ["list", "?string"],
-            "streams" => ["list", ["list", "string"]],
+            "streams" => ["list", self::STRINGS],
         ],
         "itt"        => [
             "frameRate"           => "string",
             "frameRateMultiplier" => "string",
         ],
         "lrc"        => [
-            "idTags" => ["list", "string"],
+            "idTags" => self::STRINGS,
         ],
         "microdvd"   => [
             "frameRate" => "number",
@@ -73,13 +73,13 @@ final class FormatDataSchema
             "dropFrame" => "bool",
         ],
         "stl"        => [
-            "gsi"                        => ["list", "string"],
+            "gsi"                        => self::STRINGS,
             "startOfProgrammeSubtracted" => "bool",
             "firstSubtitleNumber"        => "?int",
             "comments"                   => ["list", ["object", ["!text" => "string", "!blocks" => self::TTI_BLOCKS]]],
         ],
         "subviewer"  => [
-            "header" => ["list", "string"],
+            "header" => self::STRINGS,
             "style"  => "?string",
         ],
         "ttml"       => [
@@ -92,7 +92,7 @@ final class FormatDataSchema
         "vtt"        => [
             "header"      => "string",
             "headerLines" => self::STRINGS,
-            "regions"     => ["list", ["list", "string"]],
+            "regions"     => ["list", self::STRINGS],
             "styles"      => self::STRINGS,
         ],
     ];
@@ -107,7 +107,7 @@ final class FormatDataSchema
         ],
         "ffmeta-chapters" => [
             "timeBase" => "timeBase",
-            "tags"     => ["list", "string"],
+            "tags"     => self::STRINGS,
         ],
         "image"      => [
             "png"          => "string",
@@ -163,7 +163,7 @@ final class FormatDataSchema
     {
         $fields = ($isCue ? self::CUE : self::FILE)[$key] ?? null;
         if ($fields === "strings") {
-            return self::checkType(["list", "string"], $data, $path);
+            return self::checkType(self::STRINGS, $data, $path);
         }
 
         return $fields !== null && $data !== [] ? self::checkType(["object", $fields], $data, $path) : null;
