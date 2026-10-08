@@ -46,6 +46,16 @@ class PodcastTranscriptParserTest extends TestCase
     }
 
 
+    public function testEndsAGroupAtAPauseOfOneSecondOrMore(): void
+    {
+        $json = '{"version":"1.0.0","segments":[{"startTime":1,"endTime":1.5,"body":"Hello"},{"startTime":60,"endTime":60.5,"body":"again"},' .
+                '{"startTime":61.4,"endTime":61.8,"body":"and"},{"startTime":62.8,"endTime":63,"body":"bye"}]}';
+
+        $this->assertSame([[1.0, 1.5, "Hello"], [60.0, 61.8, "again and"], [62.8, 63.0, "bye"]],
+                          self::cues((new PodcastTranscriptParser())->parse($json, new ReadOptions())));
+    }
+
+
     public function testKeepsSegmentsWithTheOption(): void
     {
         $json   = self::words([["Anna", 0, 0.4, "Hello"], ["Anna", 0.5, 0.9, "there."]]);
