@@ -160,58 +160,42 @@ final class VobSubParser extends SubtitleParser
             [$key, $value] = array_map("trim", explode(":", $line, 2));
             switch (strtolower($key)) {
                 case "size":
-                    if (!preg_match('/^(\d+)\s*x\s*(\d+)$/i', $value, $matches) || $matches[1] < 1 || $matches[2] < 1) {
-                        throw new ParsingException("The .idx size line \"$line\" is not valid.");
-                    }
-                    $size = [(int) $matches[1], (int) $matches[2]];
+                    $size = self::readSize($value, $line);
                     break;
-
                 case "palette":
                     $this->palette = $this->readColors($value, 16, $line);
                     break;
-
                 case "custom colors":
-                    if (!preg_match('/^(on|off|1|0)\s*,\s*tridx\s*:\s*([01]{4})\s*,\s*colors\s*:\s*(.*)$/i', $value, $matches)) {
-                        throw new ParsingException("The .idx custom colors line \"$line\" is not valid.");
-                    }
-                    $this->customColors = null;
-                    if (in_array(strtolower($matches[1]), ["on", "1"], true)) {
-                        $this->customColors = array_map(
-                            fn (int $rgb, int $pixelValue): int => $rgb << 8 | ($matches[2][$pixelValue] === "1" ? 0x00 : 0xFF),
-                            $this->readColors($matches[3], 4, $line),
-                            [0, 1, 2, 3]
-                        );
-                    }
+                    $this->customColors = $this->readCustomColors($value, $line);
                     break;
-
                 case "id":
-                    if (!preg_match('/^([^,]*),\s*index:\s*(\d+)$/i', $value, $matches) || $matches[2] > 31) {
-                        throw new ParsingException("The .idx id line \"$line\" is not valid.");
-                    }
-                    $tracks[] = ["id" => trim($matches[1]), "index" => (int) $matches[2], "entries" => []];
+                    $tracks[] = self::readTrackId($value, $line);
                     $delay    = 0.0;
                     break;
-
                 case "delay":
                     // VSFilter adds up the delay lines of a track and resets the sum at each id line.
                     $delay += $this->readTime($value, $line);
                     break;
-
                 case "timestamp":
                     if ($tracks === []) {
                         throw new ParsingException("The .idx timestamp line \"$line\" comes before any id line.");
                     }
-                    if (!preg_match('/^(.+?),\s*filepos:\s*([0-9a-f]+)$/i', $value, $matches)) {
-                        throw new ParsingException("The .idx timestamp line \"$line\" is not valid.");
-                    }
-                    $tracks[array_key_last($tracks)]["entries"][] = [
-                        "time"    => $this->readTime($matches[1], $line) + $delay,
-                        "filepos" => (int) hexdec($matches[2]),
-                    ];
+                    $tracks[array_key_last($tracks)]["entries"][] = $this->readEntry($value, $line, $delay);
                     break;
             }
         }
 
+        $this->setScreen($size);
+
+        return $tracks;
+    }
+
+
+    /**
+     * @param array{int, int}|null $size
+     */
+    private function setScreen(?array $size): void
+    {
         if ($size === null) {
             throw new ParsingException("The .idx content has no size line.");
         }
@@ -219,8 +203,70 @@ final class VobSubParser extends SubtitleParser
             throw new ParsingException("The .idx content has no palette line.");
         }
         [$this->screenWidth, $this->screenHeight] = $size;
+    }
 
-        return $tracks;
+
+    /**
+     * @return array{int, int}
+     */
+    private static function readSize(string $value, string $line): array
+    {
+        if (!preg_match('/^(\d+)\s*x\s*(\d+)$/i', $value, $matches) || $matches[1] < 1 || $matches[2] < 1) {
+            throw new ParsingException("The .idx size line \"$line\" is not valid.");
+        }
+
+        return [(int) $matches[1], (int) $matches[2]];
+    }
+
+
+    /**
+     * Returns the colors of an enabled "custom colors" line, or null for a disabled one.
+     *
+     * @return list<int>|null
+     */
+    private function readCustomColors(string $value, string $line): ?array
+    {
+        if (!preg_match('/^(on|off|1|0)\s*,\s*tridx\s*:\s*([01]{4})\s*,\s*colors\s*:\s*(.*)$/i', $value, $matches)) {
+            throw new ParsingException("The .idx custom colors line \"$line\" is not valid.");
+        }
+        if (!in_array(strtolower($matches[1]), ["on", "1"], true)) {
+            return null;
+        }
+
+        return array_map(
+            fn (int $rgb, int $pixelValue): int => $rgb << 8 | ($matches[2][$pixelValue] === "1" ? 0x00 : 0xFF),
+            $this->readColors($matches[3], 4, $line),
+            [0, 1, 2, 3]
+        );
+    }
+
+
+    /**
+     * @return array{id: string, index: int, entries: list<array{time: float, filepos: int}>}
+     */
+    private static function readTrackId(string $value, string $line): array
+    {
+        if (!preg_match('/^([^,]*),\s*index:\s*(\d+)$/i', $value, $matches) || $matches[2] > 31) {
+            throw new ParsingException("The .idx id line \"$line\" is not valid.");
+        }
+
+        return ["id" => trim($matches[1]), "index" => (int) $matches[2], "entries" => []];
+    }
+
+
+    /**
+     * @return array{time: float, filepos: int}
+     */
+    private function readEntry(string $value, string $line, float $delay): array
+    {
+        if (!preg_match('/^(.+?),\s*filepos:\s*([0-9a-f]+)$/i', $value, $matches)) {
+            throw new ParsingException("The .idx timestamp line \"$line\" is not valid.");
+        }
+
+        return [
+            "time"    => $this->readTime($matches[1], $line) + $delay,
+            "filepos" => (int) hexdec($matches[2]),
+        ];
     }
 
 
@@ -313,52 +359,12 @@ final class VobSubParser extends SubtitleParser
             throw new ParsingException("The subtitle packet of $size bytes has no valid control sequence offset.");
         }
 
-        $startDelay = null;
-        $stopDelay  = null;
-        $forced     = false;
-        $colors     = [0, 0, 0, 0];
-        $alphas     = [0, 0, 0, 0];
-        $area       = null;
-        $offsets    = null;
+        $spu = ["startDelay" => null, "stopDelay" => null, "forced" => false, "colors" => [0, 0, 0, 0], "alphas" => [0, 0, 0, 0],
+                "area" => null, "offsets" => null];
         while (true) {
-            $delay    = unpack("n", $unit, $sequence)[1] * self::SECONDS_PER_DELAY_UNIT;
-            $next     = unpack("n", $unit, $sequence + 2)[1];
-            $position = $sequence + 4;
-            // Sequences after the start sequence animate the colors or the area, which one cue image cannot hold.
-            $shown    = $startDelay !== null;
-
-            while ($position < $size && ($command = ord($unit[$position++])) !== self::CMD_END) {
-                $argumentSize = self::ARGUMENT_SIZES[$command] ?? 0;
-                if ($position + $argumentSize > $size) {
-                    throw new ParsingException("The subtitle packet ends inside command " . sprintf("%02x", $command) . ".");
-                }
-                $arguments = array_values(unpack("C*", substr($unit, $position, $argumentSize)) ?: []);
-
-                if ($command === self::FSTA_DSP || $command === self::STA_DSP) {
-                    $startDelay ??= $delay;
-                    $forced       = $forced || $command === self::FSTA_DSP;
-                } elseif ($command === self::STP_DSP) {
-                    $stopDelay ??= $delay;
-                } elseif ($command === self::CHG_COLCON) {
-                    $argumentSize = $position + 2 <= $size ? unpack("n", $unit, $position)[1] : $size;
-                } elseif ($command > self::CHG_COLCON) {
-                    break;
-                } elseif (!$shown && $command === self::SET_COLOR) {
-                    $colors = $this->readNibbles($arguments);
-                } elseif (!$shown && $command === self::SET_CONTR) {
-                    $alphas = $this->readNibbles($arguments);
-                } elseif (!$shown && $command === self::SET_DAREA) {
-                    $area = [
-                        $arguments[0] << 4 | $arguments[1] >> 4,
-                        ($arguments[1] & 0x0F) << 8 | $arguments[2],
-                        $arguments[3] << 4 | $arguments[4] >> 4,
-                        ($arguments[4] & 0x0F) << 8 | $arguments[5],
-                    ];
-                } elseif (!$shown && $command === self::SET_DSPXA) {
-                    $offsets = [$arguments[0] << 8 | $arguments[1], $arguments[2] << 8 | $arguments[3]];
-                }
-                $position += $argumentSize;
-            }
+            $delay = unpack("n", $unit, $sequence)[1] * self::SECONDS_PER_DELAY_UNIT;
+            $next  = unpack("n", $unit, $sequence + 2)[1];
+            $this->runSequence($unit, $sequence + 4, $delay, $spu);
 
             if ($next <= $sequence || $next + 4 > $size) {
                 break;
@@ -367,13 +373,72 @@ final class VobSubParser extends SubtitleParser
         }
 
         $image = null;
-        if ($area !== null && $offsets !== null && $area[1] >= $area[0] && $area[3] >= $area[2]) {
-            [$x1, $x2, $y1, $y2] = $area;
-            $image = $this->decodeImage($unit, $offsets, $x1, $y1, $x2 - $x1 + 1, $y2 - $y1 + 1,
-                                        $this->pixelColors($colors, $alphas), $forced);
+        $area  = $spu["area"];
+        if ($area !== null && $spu["offsets"] !== null && $area[1] >= $area[0] && $area[3] >= $area[2]) {
+            $image = $this->decodeImage($unit, $spu["offsets"], $area, $this->pixelColors($spu["colors"], $spu["alphas"]), $spu["forced"]);
         }
 
-        return ["startDelay" => $startDelay ?? 0.0, "stopDelay" => $stopDelay, "image" => $image];
+        return ["startDelay" => $spu["startDelay"] ?? 0.0, "stopDelay" => $spu["stopDelay"], "image" => $image];
+    }
+
+
+    /**
+     * Runs the commands of one control sequence from $position on.
+     *
+     * @param array{startDelay: ?float, stopDelay: ?float, forced: bool, colors: list<int>, alphas: list<int>, area: ?array{int, int, int, int}, offsets: ?array{int, int}} $spu
+     */
+    private function runSequence(string $unit, int $position, float $delay, array &$spu): void
+    {
+        $size = strlen($unit);
+        // Sequences after the start sequence animate the colors or the area, which one cue image cannot hold.
+        $shown = $spu["startDelay"] !== null;
+
+        while ($position < $size && ($command = ord($unit[$position++])) !== self::CMD_END) {
+            $argumentSize = self::ARGUMENT_SIZES[$command] ?? 0;
+            if ($position + $argumentSize > $size) {
+                throw new ParsingException("The subtitle packet ends inside command " . sprintf("%02x", $command) . ".");
+            }
+            $arguments = array_values(unpack("C*", substr($unit, $position, $argumentSize)) ?: []);
+
+            if ($command === self::FSTA_DSP || $command === self::STA_DSP) {
+                $spu["startDelay"] ??= $delay;
+                $spu["forced"]       = $spu["forced"] || $command === self::FSTA_DSP;
+            } elseif ($command === self::STP_DSP) {
+                $spu["stopDelay"] ??= $delay;
+            } elseif ($command === self::CHG_COLCON) {
+                $argumentSize = $position + 2 <= $size ? unpack("n", $unit, $position)[1] : $size;
+            } elseif ($command > self::CHG_COLCON) {
+                break;
+            } elseif (!$shown) {
+                $this->setDisplay($command, $arguments, $spu);
+            }
+            $position += $argumentSize;
+        }
+    }
+
+
+    /**
+     * Runs a SET_COLOR, SET_CONTR, SET_DAREA or SET_DSPXA command.
+     *
+     * @param list<int> $arguments
+     * @param array{startDelay: ?float, stopDelay: ?float, forced: bool, colors: list<int>, alphas: list<int>, area: ?array{int, int, int, int}, offsets: ?array{int, int}} $spu
+     */
+    private function setDisplay(int $command, array $arguments, array &$spu): void
+    {
+        if ($command === self::SET_COLOR) {
+            $spu["colors"] = $this->readNibbles($arguments);
+        } elseif ($command === self::SET_CONTR) {
+            $spu["alphas"] = $this->readNibbles($arguments);
+        } elseif ($command === self::SET_DAREA) {
+            $spu["area"] = [
+                $arguments[0] << 4 | $arguments[1] >> 4,
+                ($arguments[1] & 0x0F) << 8 | $arguments[2],
+                $arguments[3] << 4 | $arguments[4] >> 4,
+                ($arguments[4] & 0x0F) << 8 | $arguments[5],
+            ];
+        } elseif ($command === self::SET_DSPXA) {
+            $spu["offsets"] = [$arguments[0] << 8 | $arguments[1], $arguments[2] << 8 | $arguments[3]];
+        }
     }
 
 
@@ -408,49 +473,72 @@ final class VobSubParser extends SubtitleParser
     /**
      * Decodes the 2-bit run-length bitmap. The top field holds the even lines and the bottom field the odd lines.
      *
-     * @param array{int, int} $offsets
-     * @param list<int> $pixelColors
+     * @param array{int, int}           $offsets
+     * @param array{int, int, int, int} $area x1, x2, y1, y2
+     * @param list<int>                 $pixelColors
      */
-    private function decodeImage(string $unit, array $offsets, int $x, int $y, int $width, int $height,
-                                 array $pixelColors, bool $forced): CueImage
+    private function decodeImage(string $unit, array $offsets, array $area, array $pixelColors, bool $forced): CueImage
     {
+        [$x, $x2, $y, $y2] = $area;
+        $width             = $x2 - $x + 1;
+        $height            = $y2 - $y + 1;
         try {
             CueImage::checkSize($width, $height, "read the subtitle packet");
         } catch (InvalidArgumentException $exception) {
             throw new ParsingException($exception->getMessage());
         }
-        $pixels    = array_fill(0, $width * $height, $pixelColors[0]);
-        $nibbleEnd = strlen($unit) * 2;
+        $pixels = array_fill(0, $width * $height, $pixelColors[0]);
         foreach ($offsets as $field => $offset) {
             $nibble = $offset * 2;
             for ($row = $field; $row < $height; $row += 2) {
-                $column = 0;
-                while ($column < $width) {
-                    $code = 0;
-                    foreach ([0x4, 0x10, 0x40, 0x100] as $limit) {
-                        if ($nibble >= $nibbleEnd) {
-                            throw new ParsingException("The bitmap of the subtitle packet ends before line $row is complete.");
-                        }
-                        $code = $code << 4 | (ord($unit[$nibble >> 1]) >> ($nibble & 1 ? 0 : 4) & 0x0F);
-                        $nibble++;
-                        if ($code >= $limit) {
-                            break;
-                        }
-                    }
-
-                    $run   = $code >> 2 === 0 ? $width - $column : min($code >> 2, $width - $column);
-                    $color = $pixelColors[$code & 0x03];
-                    $first = $row * $width + $column;
-                    for ($pixel = $first; $pixel < $first + $run; $pixel++) {
-                        $pixels[$pixel] = $color;
-                    }
-                    $column += $run;
-                }
+                self::decodeRow($unit, $nibble, $row, $width, $pixelColors, $pixels);
                 $nibble += $nibble & 1;
             }
         }
 
         return new CueImage(PngEncoder::encode($width, $height, $pixels), $x, $y, $width, $height,
                             $this->screenWidth, $this->screenHeight, $forced);
+    }
+
+
+    /**
+     * @param list<int> $pixelColors
+     * @param list<int> $pixels
+     */
+    private static function decodeRow(string $unit, int &$nibble, int $row, int $width, array $pixelColors, array &$pixels): void
+    {
+        $column = 0;
+        while ($column < $width) {
+            $code  = self::readCode($unit, $nibble, $row);
+            $run   = $code >> 2 === 0 ? $width - $column : min($code >> 2, $width - $column);
+            $color = $pixelColors[$code & 0x03];
+            $first = $row * $width + $column;
+            for ($pixel = $first; $pixel < $first + $run; $pixel++) {
+                $pixels[$pixel] = $color;
+            }
+            $column += $run;
+        }
+    }
+
+
+    /**
+     * Reads one run-length code of 1 to 4 nibbles.
+     */
+    private static function readCode(string $unit, int &$nibble, int $row): int
+    {
+        $nibbleEnd = strlen($unit) * 2;
+        $code      = 0;
+        foreach ([0x4, 0x10, 0x40, 0x100] as $limit) {
+            if ($nibble >= $nibbleEnd) {
+                throw new ParsingException("The bitmap of the subtitle packet ends before line $row is complete.");
+            }
+            $code = $code << 4 | (ord($unit[$nibble >> 1]) >> ($nibble & 1 ? 0 : 4) & 0x0F);
+            $nibble++;
+            if ($code >= $limit) {
+                break;
+            }
+        }
+
+        return $code;
     }
 }

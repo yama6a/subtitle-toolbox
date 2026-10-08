@@ -27,14 +27,6 @@ abstract class FileCommand extends Command
 {
     public const DASH = "-";
 
-    // The 1.x names of the chapter formats, kept so that 1.x scripts still run.
-    private const FORMAT_ALIASES = [
-        "ytchapter" => Format::YouTubeChapters,
-        "podcast"   => Format::PodcastChapters,
-        "ogm"       => Format::OgmChapters,
-        "ffmeta"    => Format::FfMetadataChapters,
-    ];
-
     protected ?Format $fromFormat = null;
 
     protected ?Format $secondFormat = null;
@@ -159,9 +151,9 @@ abstract class FileCommand extends Command
         $this->secondTrack    = $arguments->positiveInt($names["track2"]);
 
         $from               = $arguments->value($names["from"]);
-        $this->fromFormat   = $from === null ? null : self::readableFormat($from);
+        $this->fromFormat   = $from === null ? null : FormatArgument::readable($from);
         $from2              = $arguments->value($names["from2"]);
-        $this->secondFormat = $from2 === null ? null : self::readableFormat($from2);
+        $this->secondFormat = $from2 === null ? null : FormatArgument::readable($from2);
 
         $this->readOptions = new ReadOptions(
             encoding: $arguments->value("encoding"),
@@ -261,7 +253,7 @@ abstract class FileCommand extends Command
     {
         $this->prepare($arguments);
 
-        $inputs = $this->expandInputs($this->inputArguments($arguments));
+        $inputs = InputFiles::expand($this->inputArguments($arguments));
         if ($inputs === []) {
             self::fail("Pass at least one input file, or - for standard input.");
         }
@@ -281,7 +273,7 @@ abstract class FileCommand extends Command
             } catch (\Throwable $exception) {
                 $this->failed++;
                 $names = $this->fileOptionNames();
-                $console->err(($this->failureLabel ?? self::label($input)) . ": " . self::cliMessage(self::throwableMessage($exception), "--$names[track]", "--$names[from]") . "\n");
+                $console->err(($this->failureLabel ?? self::label($input)) . ": " . CliMessages::reword(self::throwableMessage($exception), "--$names[track]", "--$names[from]") . "\n");
                 if (!$arguments->has("keep-going")) {
                     break;
                 }
@@ -309,89 +301,6 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Returns the format for a format name or a file extension such as "SRT" or ".ssa".
-     */
-    protected static function findFormat(string $nameOrExtension): Format
-    {
-        $key = strtolower(ltrim($nameOrExtension, "."));
-
-        return Format::tryFrom($key) ?? self::FORMAT_ALIASES[$key] ?? Format::fromPath("file.$key")
-            ?? self::fail("Unknown format \"$nameOrExtension\". Run \"" . Application::NAME . " formats\" for the list.");
-    }
-
-
-    private static function readableFormat(string $nameOrExtension): Format
-    {
-        $format = self::findFormat($nameOrExtension);
-        if (!$format->canRead()) {
-            self::fail("The format $format->value can be written but not read.");
-        }
-
-        return $format;
-    }
-
-
-    /**
-     * Returns the files for each argument: "-", a file, the subtitle files of a directory, or the matches of a glob.
-     * A glob helps on shells that do not expand it, such as cmd.exe.
-     *
-     * @param list<string> $arguments
-     *
-     * @return list<string>
-     */
-    protected function expandInputs(array $arguments): array
-    {
-        $inputs = [];
-        foreach ($arguments as $argument) {
-            if ($argument !== self::DASH && is_dir($argument)) {
-                $files = $this->directoryFiles($argument);
-                if ($files === []) {
-                    self::fail("The directory $argument holds no file with a known subtitle extension.");
-                }
-                array_push($inputs, ...$files);
-            } elseif ($argument === self::DASH || file_exists($argument) || strpbrk($argument, "*?[") === false) {
-                $inputs[] = $argument;
-            } else {
-                $matches = array_values(array_filter(glob($argument) ?: [], "is_file"));
-                array_push($inputs, ...($matches === [] ? [$argument] : $matches));
-            }
-        }
-
-        $unique = [];
-        foreach ($inputs as $input) {
-            $unique[$input === self::DASH ? self::DASH : (realpath($input) ?: $input)] ??= $input;
-        }
-
-        return array_values($unique);
-    }
-
-
-    /**
-     * @return list<string>
-     */
-    private function directoryFiles(string $directory): array
-    {
-        $directory = rtrim($directory, "/\\");
-        $files     = [];
-        foreach (scandir($directory) ?: [] as $name) {
-            $path   = "$directory/$name";
-            $format = Format::fromPath($name);
-            if (!is_file($path) || $format === null || !$format->canRead()) {
-                continue;
-            }
-            // The .sub file of a VobSub pair is not MicroDVD. The parser reads it through its .idx file.
-            if (strtolower(pathinfo($name, PATHINFO_EXTENSION)) === "sub"
-                && glob($directory . "/" . pathinfo($name, PATHINFO_FILENAME) . ".[iI][dD][xX]") !== []) {
-                continue;
-            }
-            $files[] = $path;
-        }
-
-        return $files;
-    }
-
-
-    /**
      * Returns the subtitle and its format, or null when listTracks() handled an MKV or WebM input.
      *
      * @return array{Subtitle, Format}|null
@@ -412,52 +321,9 @@ abstract class FileCommand extends Command
             return null;
         }
         $this->parseWarnings = $subtitle->getParseWarnings();
-        self::printWarnings($console, self::label($input), $this->parseWarnings);
+        CliMessages::printWarnings($console, self::label($input), $this->parseWarnings);
 
         return [$subtitle, $subtitle->getFormat()];
-    }
-
-
-    /**
-     * @param list<ParseWarning> $warnings
-     */
-    private static function printWarnings(Console $console, string $label, array $warnings): void
-    {
-        foreach ($warnings as $warning) {
-            $line = $warning->lineNumber === null ? "" : "line $warning->lineNumber: ";
-            $console->err("$label: $line$warning->message ({$warning->action->value})\n");
-        }
-    }
-
-
-    /**
-     * Rewords a library message that names a PHP method, class or option property, so that it names CLI options.
-     * $track and $from are the options that pick the track and the format of the file, or null when it has none.
-     */
-    private static function cliMessage(string $message, ?string $track, ?string $from): string
-    {
-        $pickTrack  = $track === null ? "Write one of them to a subtitle file with convert --track N first:" : "Pass $track N with one of them:";
-        $pickFormat = $from === null
-            ? "Write it to a subtitle file with convert --from FORMAT first. Chapters and cloud speech-to-text JSON always need --from, for example --from deepgram."
-            : "Pass $from FORMAT. Chapters and cloud speech-to-text JSON always need it, for example $from deepgram.";
-        $message    = preg_replace(
-            '/^(\w+ \(Error #\d+\): )?.+ is an MKV or WebM file\. Call loadTrack\(\) with a track number\.$/s',
-            '$1The input is an MKV or WebM file. ' . ($track === null ? "Write one track to a subtitle file with convert --track N first." : "Pass $track N."),
-            $message
-        ) ?? $message;
-
-        return strtr($message, [
-            "Call loadTrack() with one of them:"                                => $pickTrack,
-            "Call load() with a format. Chapters and cloud speech-to-text JSON always need one, for example Format::Deepgram."       => $pickFormat,
-            "Call fromString() with a format. Chapters and cloud speech-to-text JSON always need one, for example Format::Deepgram." => $pickFormat,
-            "Set MicroDvdWriteOptions::\$frameRate."                                   => "Pass --fps or --output-fps.",
-            "Set IttWriteOptions::\$frameRate."                                        => "Pass --fps or --output-fps.",
-            "Set MicroDvdReadOptions::\$frameRate or start the file with {1}{1}<fps>." => "Pass --fps or --input-fps, or start the file with {1}{1}<fps>.",
-            "Set CsvReadOptions::\$frameRate."                                         => "Pass --fps or --input-fps.",
-            "Call wrapLines(32, 4) first."                                      => "Pass --structure-wrap --structure-max-cpl 32 --structure-max-lines 4.",
-            "Call Resegmenter::apply() with ResegmentMode::SplitLong and new CueLimits(32, 4), then wrapLines(32, 4)." =>
-                "Pass --structure-split-long --structure-wrap --structure-max-cpl 32 --structure-max-lines 4.",
-        ]);
     }
 
 
@@ -504,9 +370,9 @@ abstract class FileCommand extends Command
         try {
             $subtitle = $this->loadFile($path, $format, $track);
         } catch (SubtitleToolboxException $exception) {
-            return self::fail(self::cliMessage($exception->getMessage(), $trackOption, $fromOption));
+            return self::fail(CliMessages::reword($exception->getMessage(), $trackOption, $fromOption));
         }
-        self::printWarnings($console, $path, $subtitle->getParseWarnings());
+        CliMessages::printWarnings($console, $path, $subtitle->getParseWarnings());
 
         return $subtitle;
     }

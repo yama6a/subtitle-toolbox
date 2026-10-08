@@ -196,19 +196,9 @@ final class LineWrapper
         $best = [0 => [0 => [0, 0, []]]];
         for ($lineCount = 1; $lineCount <= min($maxLines, $wordCount); $lineCount++) {
             for ($end = $lineCount; $end <= $wordCount; $end++) {
-                for ($start = $lineCount - 1; $start < $end; $start++) {
-                    if (!isset($best[$lineCount - 1][$start])) {
-                        continue;
-                    }
-
-                    [$overflow, $squares, $starts] = $best[$lineCount - 1][$start];
-                    $length    = self::length(array_slice($words, $start, $end - $start));
-                    $candidate = [$overflow + max(0, $length - $maxCharsPerLine),
-                                  $squares + $length ** 2,
-                                  [...$starts, $start]];
-                    if (!isset($best[$lineCount][$end]) || array_slice($candidate, 0, 2) < array_slice($best[$lineCount][$end], 0, 2)) {
-                        $best[$lineCount][$end] = $candidate;
-                    }
+                $ending = self::bestLastLine($best[$lineCount - 1], $words, $lineCount - 1, $end, $maxCharsPerLine);
+                if ($ending !== null) {
+                    $best[$lineCount][$end] = $ending;
                 }
             }
 
@@ -218,6 +208,36 @@ final class LineWrapper
         }
 
         return $best[min($maxLines, $wordCount)][$wordCount][2];
+    }
+
+
+    /**
+     * Returns the best breaks for the words before $end when the last line starts at $firstStart or later, or null when
+     * no earlier breaks reach such a start.
+     *
+     * @param array<int, array{int, int, list<int>}> $previous the best breaks with one line fewer, by their end
+     * @param list<array{text: string, length: int}> $words
+     * @return array{int, int, list<int>}|null
+     */
+    private static function bestLastLine(array $previous, array $words, int $firstStart, int $end, int $maxCharsPerLine): ?array
+    {
+        $best = null;
+        for ($start = $firstStart; $start < $end; $start++) {
+            if (!isset($previous[$start])) {
+                continue;
+            }
+
+            [$overflow, $squares, $starts] = $previous[$start];
+            $length    = self::length(array_slice($words, $start, $end - $start));
+            $candidate = [$overflow + max(0, $length - $maxCharsPerLine),
+                          $squares + $length ** 2,
+                          [...$starts, $start]];
+            if ($best === null || array_slice($candidate, 0, 2) < array_slice($best, 0, 2)) {
+                $best = $candidate;
+            }
+        }
+
+        return $best;
     }
 
 

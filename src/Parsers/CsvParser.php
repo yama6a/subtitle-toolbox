@@ -44,12 +44,7 @@ final class CsvParser extends SubtitleParser
         foreach (array_values($records) as $rowIndex => [$lineNumber, $cells]) {
             $cell = fn (string $role): string => isset($roles[$role]) ? trim($cells[$roles[$role]] ?? "") : "";
             try {
-                $start = self::parseTime($cell("start"), $frameRate, $lineNumber);
-                $end   = match (true) {
-                    $cell("end") !== ""      => self::parseTime($cell("end"), $frameRate, $lineNumber),
-                    $cell("duration") !== "" => $start + self::parseTime($cell("duration"), $frameRate, $lineNumber),
-                    default                  => null,
-                };
+                [$start, $end] = self::readTimes($cell, $frameRate, $lineNumber);
             } catch (ParsingException $exception) {
                 $this->fail($exception, $lineNumber, $rowIndex, [implode($delimiter, $cells)]);
                 continue;
@@ -57,17 +52,7 @@ final class CsvParser extends SubtitleParser
             $timeFormat ??= self::timeFormatOf($cell("start"));
 
             $cue = new SubtitleCue($start, $end ?? $start, $this->textLines($cells[$roles["text"]] ?? "", $cell("speaker")));
-            if ($cell("identifier") !== "") {
-                $cue->setIdentifier($cell("identifier"));
-            }
-            $others = array_diff_key($cells + array_fill(0, count($header ?? $cells), ""), array_flip($roles));
-            if ($others !== []) {
-                $named = [];
-                foreach ($others as $index => $value) {
-                    $named[$header[$index] ?? $index] = $value;
-                }
-                $cue->setFormatData(self::FORMAT_DATA_KEY, ["columns" => $named]);
-            }
+            self::addCellData($cue, $cell, $cells, $roles, $header);
             if ($end === null) {
                 $openEnds[] = $cue;
             }
@@ -86,6 +71,49 @@ final class CsvParser extends SubtitleParser
         ]);
 
         return $subtitle;
+    }
+
+
+    /**
+     * Returns the start and the end of a record. The end is null when the record has neither an end nor a duration.
+     *
+     * @param \Closure(string): string $cell the trimmed cell of a role
+     * @return array{float, ?float}
+     */
+    private static function readTimes(\Closure $cell, ?FrameRate $frameRate, int $lineNumber): array
+    {
+        $start = self::parseTime($cell("start"), $frameRate, $lineNumber);
+        $end   = match (true) {
+            $cell("end") !== ""      => self::parseTime($cell("end"), $frameRate, $lineNumber),
+            $cell("duration") !== "" => $start + self::parseTime($cell("duration"), $frameRate, $lineNumber),
+            default                  => null,
+        };
+
+        return [$start, $end];
+    }
+
+
+    /**
+     * Sets the identifier of $cue, and keeps the cells without a role as format data. The format data keys them by
+     * their header name or else by their column index.
+     *
+     * @param \Closure(string): string $cell
+     * @param list<string>             $cells
+     * @param array<string, int>       $roles
+     * @param list<string>|null        $header
+     */
+    private static function addCellData(SubtitleCue $cue, \Closure $cell, array $cells, array $roles, ?array $header): void
+    {
+        if ($cell("identifier") !== "") {
+            $cue->setIdentifier($cell("identifier"));
+        }
+        $named = [];
+        foreach (array_diff_key($cells + array_fill(0, count($header ?? $cells), ""), array_flip($roles)) as $index => $value) {
+            $named[$header[$index] ?? $index] = $value;
+        }
+        if ($named !== []) {
+            $cue->setFormatData(self::FORMAT_DATA_KEY, ["columns" => $named]);
+        }
     }
 
 

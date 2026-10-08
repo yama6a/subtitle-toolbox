@@ -34,10 +34,32 @@ final class SamiParser extends SubtitleParser
             throw new ParsingException("The SAMI file is not valid UTF-8. Convert it to UTF-8 before parsing.");
         }
 
-        $subtitle   = new Subtitle();
-        $parsedCues = [];
-        $formatData = [];
+        $subtitle               = new Subtitle();
+        [$formatData, $classes] = $this->readHead($rawSubtitle, $subtitle);
 
+        $syncs = $this->readSyncs($rawSubtitle);
+        $class = $this->chooseClass($classes, $syncs);
+        if ($class !== null) {
+            $formatData["class"] = $class;
+            $language            = $classes[strtolower($class)]["lang"] ?? null;
+            if ($language !== null && $language !== "") {
+                $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $language);
+            }
+        }
+        $subtitle->setFormatData(self::FORMAT_DATA_KEY, $formatData);
+
+        return $subtitle->addCues($this->cues($syncs, $class));
+    }
+
+
+    /**
+     * Reads the title into $subtitle. Returns the SAMIParam and STYLE blocks as format data, and the classes.
+     *
+     * @return array{array<string, string>, array<string, array{name: string, lang: ?string}>}
+     */
+    private function readHead(string $rawSubtitle, Subtitle $subtitle): array
+    {
+        $formatData = [];
         if (preg_match('/<TITLE\b[^>]*>(.*?)<\/TITLE\s*>/is', $rawSubtitle, $matches) && trim($matches[1]) !== "") {
             $subtitle->setMetadata(Subtitle::METADATA_TITLE, Markup::decodeEntities(trim($matches[1])));
         }
@@ -51,18 +73,20 @@ final class SamiParser extends SubtitleParser
             $classes             = $this->readClasses($matches[1]);
         }
 
-        $syncs = $this->readSyncs($rawSubtitle);
-        $class = $this->chooseClass($classes, $syncs);
-        if ($class !== null) {
-            $formatData["class"] = $class;
-            $language            = $classes[strtolower($class)]["lang"] ?? null;
-            if ($language !== null && $language !== "") {
-                $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $language);
-            }
-        }
-        $subtitle->setFormatData(self::FORMAT_DATA_KEY, $formatData);
+        return [$formatData, $classes];
+    }
 
-        $openCue = null;
+
+    /**
+     * Returns a cue for each SYNC with text of the class. Each cue ends at the next SYNC of the class.
+     *
+     * @param list<array{start: float, paragraphs: list<array{class: ?string, attributes: array<string, string>, html: string, lines: list<string>}>}> $syncs
+     * @return list<SubtitleCue>
+     */
+    private function cues(array $syncs, ?string $class): array
+    {
+        $parsedCues = [];
+        $openCue    = null;
         foreach ($syncs as $sync) {
             $paragraphs = $this->paragraphsFor($sync, $class);
             if ($paragraphs === null) {
@@ -90,7 +114,7 @@ final class SamiParser extends SubtitleParser
             $parsedCues[] = $openCue->setEnd($openCue->getStart() + $this->options->lastCueDuration);
         }
 
-        return $subtitle->addCues($parsedCues);
+        return $parsedCues;
     }
 
 

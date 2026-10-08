@@ -118,9 +118,9 @@ final class EbuStlFormatter extends SubtitleFormatter
         }
 
         $bytes = implode(chr(EbuStl::NEW_LINE), array_map(fn (string $line): string => $this->encodeCharacters($context, $line), explode(LineEnding::Lf->value, $text)));
-        [$verticalPosition, $justificationCode] = $this->position($context, 2, count(explode(LineEnding::Lf->value, $text)));
+        $position = $this->position($context, 2, count(explode(LineEnding::Lf->value, $text)));
 
-        return $this->textBlocks($context, $bytes, $this->header(0, 0, $smpteBytes, $smpteBytes, $verticalPosition, $justificationCode, 1));
+        return $this->textBlocks($context, $bytes, $this->header(0, 0, $smpteBytes, $smpteBytes, $position, 1));
     }
 
 
@@ -142,7 +142,7 @@ final class EbuStlFormatter extends SubtitleFormatter
             $position = $this->position($context, $alignment, max(1, count($cue->getLines())));
         }
 
-        $header = $this->header($stored["subtitleGroupNumber"] ?? 0, $stored["cumulativeStatus"] ?? 0, $timeIn, $timeOut, ...$position);
+        $header = $this->header($stored["subtitleGroupNumber"] ?? 0, $stored["cumulativeStatus"] ?? 0, $timeIn, $timeOut, $position);
         $blocks = array_map("hex2bin", $stored["blocks"] ?? []);
         if ($blocks !== [] && !$context->stripAll && ($stored["text"] ?? null) === $cue->getText()) {
             return $this->patchHeaders($blocks, $header);
@@ -227,9 +227,13 @@ final class EbuStlFormatter extends SubtitleFormatter
 
     /**
      * Returns the 16 header bytes of a TTI block, EBU Tech 3264 table 2. The formatter writes the subtitle number later.
+     *
+     * @param array{int, int} $position the vertical position and the justification code
      */
-    private function header(int $group, int $cumulativeStatus, string $tci, string $tco, int $verticalPosition, int $justificationCode, int $commentFlag = 0): string
+    private function header(int $group, int $cumulativeStatus, string $tci, string $tco, array $position, int $commentFlag = 0): string
     {
+        [$verticalPosition, $justificationCode] = $position;
+
         return chr($group) . "\0\0" . chr(EbuStl::LAST_BLOCK) . chr($cumulativeStatus) . $tci . $tco .
                chr($verticalPosition) . chr($justificationCode) . chr($commentFlag);
     }

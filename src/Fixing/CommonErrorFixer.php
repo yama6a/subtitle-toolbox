@@ -303,28 +303,51 @@ final class CommonErrorFixer
                     $text = self::replaceBeginLines($text, $list->beginLines);
                 }
                 if ($last && $lineIndex === $lastLine) {
-                    foreach ($list->endLines as $from => $to) {
-                        $from = (string)$from;
-                        if (str_ends_with($text, $from) && !($continues && str_ends_with($to, ".") && !str_ends_with($from, "."))) {
-                            $text = substr($text, 0, -strlen($from)) . $to;
-                        }
-                    }
-                }
-                foreach ($list->partialLines as $from => $to) {
-                    $text = self::replaceBetweenBoundaries($text, (string)$from, $to);
-                }
-                foreach ($list->partialLinesAlways as $from => $to) {
-                    $text = str_replace((string)$from, $to, $text);
-                }
-                foreach ($list->regularExpressions as $pattern => $replacement) {
-                    $text = self::replace((string)$pattern, $replacement, $text);
+                    $text = self::replaceEndLines($text, $list->endLines, $continues);
                 }
 
-                return $text;
+                return self::replacePartial($text, $list);
             })[0];
         }
 
         return $lines;
+    }
+
+
+    /**
+     * Replaces the end of the last line. When the cue continues, a replacement does not add a full stop.
+     *
+     * @param array<string, string> $endLines
+     */
+    private static function replaceEndLines(string $text, array $endLines, bool $continues): string
+    {
+        foreach ($endLines as $from => $to) {
+            $from = (string)$from;
+            if (str_ends_with($text, $from) && !($continues && str_ends_with($to, ".") && !str_ends_with($from, "."))) {
+                $text = substr($text, 0, -strlen($from)) . $to;
+            }
+        }
+
+        return $text;
+    }
+
+
+    /**
+     * Runs the partial line and the regular expression replacements of $list.
+     */
+    private static function replacePartial(string $text, OcrReplaceList $list): string
+    {
+        foreach ($list->partialLines as $from => $to) {
+            $text = self::replaceBetweenBoundaries($text, (string)$from, $to);
+        }
+        foreach ($list->partialLinesAlways as $from => $to) {
+            $text = str_replace((string)$from, $to, $text);
+        }
+        foreach ($list->regularExpressions as $pattern => $replacement) {
+            $text = self::replace((string)$pattern, $replacement, $text);
+        }
+
+        return $text;
     }
 
 

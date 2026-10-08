@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Cli\Edits\AssOutput;
-use SubtitleToolbox\Cli\Edits\Edit;
+use SubtitleToolbox\Cli\Edits\OptionGroup;
 use SubtitleToolbox\Cli\Edits\EditPipeline;
 use SubtitleToolbox\Cli\Edits\MaskingEdit;
 use SubtitleToolbox\Format;
@@ -54,7 +54,7 @@ final class ConvertCommand extends WriteCommand
     public function help(?string $topic = null): string
     {
         $groups = [];
-        foreach ([...EditPipeline::edits(), AssOutput::class] as $class) {
+        foreach (self::optionGroups() as $class) {
             $groups[$class::group()] = $class;
         }
 
@@ -83,7 +83,16 @@ final class ConvertCommand extends WriteCommand
 
 
     /**
-     * @param class-string<Edit>|class-string<AssOutput> $class
+     * @return list<class-string<OptionGroup>> the edits in the order that convert runs them, then the ASS writer settings
+     */
+    private static function optionGroups(): array
+    {
+        return [...EditPipeline::edits(), AssOutput::class];
+    }
+
+
+    /**
+     * @param class-string<OptionGroup> $class
      */
     private static function groupHelp(string $class): string
     {
@@ -116,7 +125,7 @@ final class ConvertCommand extends WriteCommand
     protected function commandOptions(): array
     {
         $options = [self::languageOption()];
-        foreach ([...EditPipeline::edits(), AssOutput::class] as $class) {
+        foreach (self::optionGroups() as $class) {
             array_push($options, ...$class::options());
         }
 
@@ -147,14 +156,14 @@ final class ConvertCommand extends WriteCommand
 
     protected function needsWordTimestamps(Arguments $arguments): bool
     {
-        return parent::needsWordTimestamps($arguments) || $arguments->has("structure-resegment") || $arguments->has("karaoke")
-            || $arguments->has("ass-karaoke-tag");
+        return parent::needsWordTimestamps($arguments)
+            || array_filter(self::optionGroups(), fn (string $class): bool => $class::needsWordTimestamps($arguments)) !== [];
     }
 
 
     protected function checkInputs(array $inputs, Arguments $arguments): void
     {
-        if (count($inputs) > 1 && ($arguments->has("mute-edl") || $arguments->has("mute-filter"))) {
+        if (count($inputs) > 1 && !$this->edits->takesManyInputs()) {
             self::fail("--mute-edl and --mute-filter take one input file, got " . count($inputs) . ".");
         }
 

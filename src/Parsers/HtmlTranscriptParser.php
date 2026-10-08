@@ -23,7 +23,42 @@ final class HtmlTranscriptParser extends SubtitleParser
      */
     protected function read(string $rawSubtitle): Subtitle
     {
-        $content = StringHelpers::normalizeEOLs($rawSubtitle);
+        $paragraphs = $this->paragraphs(StringHelpers::normalizeEOLs($rawSubtitle));
+
+        $cues = [];
+        foreach ($paragraphs as $index => $paragraph) {
+            if ($paragraph["lines"] === []) {
+                continue;
+            }
+
+            try {
+                $cues[] = [$this->seconds($paragraph), $paragraph["speaker"] ?? "", $paragraph["lines"]];
+            } catch (ParsingException $exception) {
+                $this->fail($exception, $exception->getLineNumber(), $index, [$paragraph["time"][0] ?? $paragraph["lines"][0]]);
+            }
+        }
+
+        $starts     = array_column($cues, 0);
+        $parsedCues = [];
+        foreach ($cues as $index => [$start, $speaker, $lines]) {
+            if ($speaker !== "") {
+                $lines[0] = Markup::voiceTag($speaker) . $lines[0];
+            }
+
+            $parsedCues[] = new SubtitleCue($start, $this->endAtNextStart($starts, $index), $lines);
+        }
+
+        return (new Subtitle())->addCues($parsedCues);
+    }
+
+
+    /**
+     * Groups the <cite>, <time> and <p> elements into paragraphs. A <cite> or <time> after text starts a new paragraph.
+     *
+     * @return list<array{line: int, speaker: ?string, time: ?array{string, int}, lines: list<string>}>
+     */
+    private function paragraphs(string $content): array
+    {
         preg_match_all(self::ELEMENT, $content, $elements, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
 
         $paragraphs = [];
@@ -50,30 +85,7 @@ final class HtmlTranscriptParser extends SubtitleParser
             }
         }
 
-        $cues = [];
-        foreach ($paragraphs as $index => $paragraph) {
-            if ($paragraph["lines"] === []) {
-                continue;
-            }
-
-            try {
-                $cues[] = [$this->seconds($paragraph), $paragraph["speaker"] ?? "", $paragraph["lines"]];
-            } catch (ParsingException $exception) {
-                $this->fail($exception, $exception->getLineNumber(), $index, [$paragraph["time"][0] ?? $paragraph["lines"][0]]);
-            }
-        }
-
-        $starts     = array_column($cues, 0);
-        $parsedCues = [];
-        foreach ($cues as $index => [$start, $speaker, $lines]) {
-            if ($speaker !== "") {
-                $lines[0] = Markup::voiceTag($speaker) . $lines[0];
-            }
-
-            $parsedCues[] = new SubtitleCue($start, $this->endAtNextStart($starts, $index), $lines);
-        }
-
-        return (new Subtitle())->addCues($parsedCues);
+        return $paragraphs;
     }
 
 

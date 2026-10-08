@@ -43,6 +43,12 @@ final class KaraokeEdit extends Edit
     }
 
 
+    public static function needsWordTimestamps(Arguments $arguments): bool
+    {
+        return $arguments->has("karaoke");
+    }
+
+
     public static function fromArguments(Arguments $arguments): ?static
     {
         self::needs($arguments, "karaoke", ["karaoke-style"]);

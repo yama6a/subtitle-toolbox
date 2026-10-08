@@ -55,18 +55,7 @@ final class LyricsParser extends SubtitleParser
 
         foreach ($lines as $currentLine) {
             if (preg_match(self::TIMESTAMP_LINE_REGEX, $currentLine, $matches)) {
-                $text = StringHelpers::cleanString($matches[2]);
-                $text = $this->convertWordTimestamps($text, $offset);
-
-                preg_match_all("/\[" . self::TIMESTAMP_PATTERN . "\]/", $matches[1], $timestamps, PREG_SET_ORDER);
-                foreach ($timestamps as $timestamp) {
-                    $start = $this->toSeconds($timestamp, $offset);
-                    $cue   = $text === "" ? null : new SubtitleCue($start, $start, $text);
-                    if ($cue !== null) {
-                        $parsedCues[] = $cue;
-                    }
-                    $timeline[] = ["time" => $start, "cue" => $cue];
-                }
+                $this->readTimedLine($matches[1], $matches[2], $offset, $parsedCues, $timeline);
                 continue;
             }
 
@@ -80,6 +69,29 @@ final class LyricsParser extends SubtitleParser
         $this->assignEndTimes($timeline);
 
         return CommentAnchors::addParsed($subtitle, $parsedCues, $comments);
+    }
+
+
+    /**
+     * Adds a cue for each time tag of a line with text, and an entry for each time tag to $timeline.
+     *
+     * @param list<SubtitleCue>                           $parsedCues
+     * @param list<array{time: float, cue: ?SubtitleCue}> $timeline
+     */
+    private function readTimedLine(string $timeTags, string $text, float $offset, array &$parsedCues, array &$timeline): void
+    {
+        $text = StringHelpers::cleanString($text);
+        $text = $this->convertWordTimestamps($text, $offset);
+
+        preg_match_all("/\[" . self::TIMESTAMP_PATTERN . "\]/", $timeTags, $timestamps, PREG_SET_ORDER);
+        foreach ($timestamps as $timestamp) {
+            $start = $this->toSeconds($timestamp, $offset);
+            $cue   = $text === "" ? null : new SubtitleCue($start, $start, $text);
+            if ($cue !== null) {
+                $parsedCues[] = $cue;
+            }
+            $timeline[] = ["time" => $start, "cue" => $cue];
+        }
     }
 
 

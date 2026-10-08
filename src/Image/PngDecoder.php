@@ -56,20 +56,7 @@ final class PngDecoder
         }
 
         $chunks = self::readChunks($png);
-        $header = $chunks["IHDR"][0] ?? "";
-        if (strlen($header) !== self::IHDR_LENGTH) {
-            throw new InvalidArgumentException("Cannot decode the PNG: it has no valid IHDR chunk.");
-        }
-
-        ["width" => $width, "height" => $height, "depth" => $depth, "color" => $color, "compression" => $compression,
-         "filter" => $filter, "interlace" => $interlace] = unpack("Nwidth/Nheight/Cdepth/Ccolor/Ccompression/Cfilter/Cinterlace", $header);
-        [$channels, $depths] = self::COLOR_TYPES[$color] ?? [0, []];
-        if ($width < 1 || $height < 1 || !in_array($depth, $depths, true) || $compression !== 0 || $filter !== 0 || $interlace !== 0) {
-            throw new InvalidArgumentException("Cannot decode a PNG of {$width}x{$height} pixels with color type $color, bit depth " .
-                                               "$depth and interlace method $interlace: only non-interlaced PNG files are supported.");
-        }
-
-        CueImage::checkSize($width, $height, "decode the PNG");
+        ["width" => $width, "height" => $height, "depth" => $depth, "color" => $color, "channels" => $channels] = self::readHeader($chunks);
 
         $rowLength = intdiv($width * $channels * $depth + 7, 8);
         $dataSize  = ($rowLength + 1) * $height;
@@ -105,6 +92,33 @@ final class PngDecoder
         }
 
         return ["width" => $width, "height" => $height, "pixels" => $pixels];
+    }
+
+
+    /**
+     * Reads and checks the IHDR chunk.
+     *
+     * @param array<string, list<string>> $chunks
+     * @return array{width: int, height: int, depth: int, color: int, channels: int}
+     */
+    private static function readHeader(array $chunks): array
+    {
+        $header = $chunks["IHDR"][0] ?? "";
+        if (strlen($header) !== self::IHDR_LENGTH) {
+            throw new InvalidArgumentException("Cannot decode the PNG: it has no valid IHDR chunk.");
+        }
+
+        ["width" => $width, "height" => $height, "depth" => $depth, "color" => $color, "compression" => $compression,
+         "filter" => $filter, "interlace" => $interlace] = unpack("Nwidth/Nheight/Cdepth/Ccolor/Ccompression/Cfilter/Cinterlace", $header);
+        [$channels, $depths] = self::COLOR_TYPES[$color] ?? [0, []];
+        if ($width < 1 || $height < 1 || !in_array($depth, $depths, true) || $compression !== 0 || $filter !== 0 || $interlace !== 0) {
+            throw new InvalidArgumentException("Cannot decode a PNG of {$width}x{$height} pixels with color type $color, bit depth " .
+                                               "$depth and interlace method $interlace: only non-interlaced PNG files are supported.");
+        }
+
+        CueImage::checkSize($width, $height, "decode the PNG");
+
+        return ["width" => $width, "height" => $height, "depth" => $depth, "color" => $color, "channels" => $channels];
     }
 
 

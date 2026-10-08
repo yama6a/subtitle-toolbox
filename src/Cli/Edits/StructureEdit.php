@@ -26,13 +26,12 @@ final class StructureEdit extends Edit
     private const LIMITED_EDITS = ["structure-wrap", "structure-resegment", "structure-merge-short", "structure-split-long"];
 
 
+    /**
+     * @param array<string, true> $edits the names of the edit options that $arguments hold
+     */
     private function __construct(
         private readonly ?ResegmentOptions $resegment,
-        private readonly bool $unwrap,
-        private readonly bool $mergeShort,
-        private readonly bool $splitLong,
-        private readonly bool $wrap,
-        private readonly bool $mergeDuplicates,
+        private readonly array $edits,
         private readonly CueLimits $limits,
     ) {
     }
@@ -69,6 +68,12 @@ final class StructureEdit extends Edit
     }
 
 
+    public static function needsWordTimestamps(Arguments $arguments): bool
+    {
+        return $arguments->has("structure-resegment");
+    }
+
+
     public static function fromArguments(Arguments $arguments): ?static
     {
         self::needs($arguments, "structure-resegment", ["structure-max-word-gap"]);
@@ -79,7 +84,8 @@ final class StructureEdit extends Edit
             "maxCharactersPerLine" => $arguments->positiveInt("structure-max-cpl"),
             "maxLinesPerCue"       => $arguments->positiveInt("structure-max-lines"),
         ]));
-        if (array_filter(self::EDITS, $arguments->has(...)) === []) {
+        $edits = array_filter(self::EDITS, $arguments->has(...));
+        if ($edits === []) {
             return null;
         }
 
@@ -87,11 +93,7 @@ final class StructureEdit extends Edit
             $arguments->has("structure-resegment")
                 ? new ResegmentOptions(ResegmentMode::ByWords, $limits, ...Command::given(["maxWordGap" => $wordGap]))
                 : null,
-            $arguments->has("structure-unwrap"),
-            $arguments->has("structure-merge-short"),
-            $arguments->has("structure-split-long"),
-            $arguments->has("structure-wrap"),
-            $arguments->has("structure-merge-duplicates"),
+            array_fill_keys($edits, true),
             $limits,
         );
     }
@@ -103,19 +105,19 @@ final class StructureEdit extends Edit
         if ($this->resegment !== null) {
             Resegmenter::apply($subtitle, $this->resegment);
         }
-        if ($this->unwrap) {
+        if (isset($this->edits["structure-unwrap"])) {
             $subtitle->unwrapLines();
         }
-        if ($this->mergeShort) {
+        if (isset($this->edits["structure-merge-short"])) {
             $subtitle->mergeShortCues(new MergeShortCuesOptions($limits));
         }
-        if ($this->splitLong) {
+        if (isset($this->edits["structure-split-long"])) {
             Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::SplitLong, $limits));
         }
-        if ($this->wrap) {
+        if (isset($this->edits["structure-wrap"])) {
             $subtitle->wrapLines($limits->maxCharactersPerLine, $limits->maxLinesPerCue);
         }
-        if ($this->mergeDuplicates) {
+        if (isset($this->edits["structure-merge-duplicates"])) {
             $subtitle->removeDuplicateCues();
         }
 

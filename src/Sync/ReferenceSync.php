@@ -9,6 +9,9 @@ use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\TimeRanges;
 use SubtitleToolbox\Timecode;
 
+/**
+ * @phpstan-type SplitSearch array{values: list<list<float>>, starts: list<list<int>>, parents: list<list<int>>, floors: list<array{float, int}>, nodes: list<array{n: int, start: int, parent: int}>}
+ */
 final class ReferenceSync
 {
     private const COARSE_STEP  = 0.1;
@@ -76,15 +79,26 @@ final class ReferenceSync
 
             $laterStart = min(array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $parts[$index]));
             for ($earlier = 0; $earlier < $index; $earlier++) {
-                foreach ($parts[$earlier] as $cue) {
-                    if ($cue->getStart() < $laterStart && $cue->getEnd() > $laterStart - self::PART_GAP) {
-                        $cue->setEnd(max($cue->getStart(), $laterStart - self::PART_GAP));
-                    }
-                }
+                self::endBefore($parts[$earlier], $laterStart);
             }
         }
 
         $target->reIndexCues();
+    }
+
+
+    /**
+     * Ends each cue that starts before $laterStart at least PART_GAP before it.
+     *
+     * @param list<SubtitleCue> $cues
+     */
+    private static function endBefore(array $cues, float $laterStart): void
+    {
+        foreach ($cues as $cue) {
+            if ($cue->getStart() < $laterStart && $cue->getEnd() > $laterStart - self::PART_GAP) {
+                $cue->setEnd(max($cue->getStart(), $laterStart - self::PART_GAP));
+            }
+        }
     }
 
 
@@ -114,13 +128,12 @@ final class ReferenceSync
                 $best = new ReferenceSyncReport(Timecode::roundToMilliseconds($offset), $scale, min(1, max(0, $score)));
             }
 
-            if ($options->maxSplits > 0) {
-                foreach (self::splitCandidates($targetSpans, $scaled, $referenceSpans, $options) as [$parts, $partsOverlap]) {
-                    $partsScore = $partsOverlap / ($targetTime * $scale + $referenceTime - $partsOverlap);
-                    $value      = $partsScore - (count($parts) - 1) * $options->splitPenalty;
-                    if ($bestSplit === null || $value > $bestSplit[0] + Timecode::EPSILON) {
-                        $bestSplit = [$value, new ReferenceSyncReport($parts[0]["offset"], $scale, min(1, max(0, $partsScore)), $parts)];
-                    }
+            $candidates = $options->maxSplits > 0 ? self::splitCandidates($targetSpans, $scaled, $referenceSpans, $options) : [];
+            foreach ($candidates as [$parts, $partsOverlap]) {
+                $partsScore = $partsOverlap / ($targetTime * $scale + $referenceTime - $partsOverlap);
+                $value      = $partsScore - (count($parts) - 1) * $options->splitPenalty;
+                if ($bestSplit === null || $value > $bestSplit[0] + Timecode::EPSILON) {
+                    $bestSplit = [$value, new ReferenceSyncReport($parts[0]["offset"], $scale, min(1, max(0, $partsScore)), $parts)];
                 }
             }
         }
@@ -146,85 +159,150 @@ final class ReferenceSync
     private static function splitCandidates(array $original, array $target, array $reference, ReferenceSyncOptions $options): array
     {
         $blockSize = (int)ceil(count($target) / self::SPLIT_BLOCKS);
-        $blocks    = array_chunk($target, $blockSize);
-        $layers    = $options->maxSplits + 1;
-        $offsets   = (int)floor(($options->maxOffset - $options->minOffset) / self::COARSE_STEP + Timecode::EPSILON) + 1;
-        $values    = array_fill(0, $layers, array_fill(0, $offsets, 0.0));
-        $starts    = array_fill(0, $layers, array_fill(0, $offsets, 0));
-        $parents   = array_fill(0, $layers, array_fill(0, $offsets, -1));
-        $floors    = array_fill(0, $layers, [-INF, -1]);
-        $nodes     = [];
+        $search    = self::forwardPass(array_chunk($target, $blockSize), $reference, $options);
 
-        $best = function (int $layer) use (&$values, &$starts, &$parents, &$floors, &$nodes): array {
-            $value = max($values[$layer]);
-            if ($value < $floors[$layer][0]) {
-                return $floors[$layer];
+        $candidates = [];
+        for ($layer = 1; $layer <= $options->maxSplits; $layer++) {
+            $chain = self::backtrack($search, $layer, $blockSize);
+            if (count($chain) >= 2) {
+                $candidates[] = self::refineChain($chain, $original, $target, $reference, $blockSize, $options);
             }
+        }
 
-            $n       = array_search($value, $values[$layer], true);
-            $nodes[] = [$n, $starts[$layer][$n], $parents[$layer][$n]];
+        return $candidates;
+    }
 
-            return [$value, count($nodes) - 1];
-        };
+
+    /**
+     * Finds for each layer, the number of splits so far, and each coarse offset the highest overlap up to each block.
+     * A part that starts at a block takes the best value of the layer below as its floor.
+     *
+     * @param list<list<array{float, float}>> $blocks
+     * @param list<array{float, float}>       $reference
+     * @return SplitSearch
+     */
+    private static function forwardPass(array $blocks, array $reference, ReferenceSyncOptions $options): array
+    {
+        $layers  = $options->maxSplits + 1;
+        $offsets = (int)floor(($options->maxOffset - $options->minOffset) / self::COARSE_STEP + Timecode::EPSILON) + 1;
+        $search  = [
+            "values"  => array_fill(0, $layers, array_fill(0, $offsets, 0.0)),
+            "starts"  => array_fill(0, $layers, array_fill(0, $offsets, 0)),
+            "parents" => array_fill(0, $layers, array_fill(0, $offsets, -1)),
+            "floors"  => array_fill(0, $layers, [-INF, -1]),
+            "nodes"   => [],
+        ];
 
         foreach ($blocks as $blockIndex => $block) {
             for ($layer = $layers - 1; $layer >= 1 && $blockIndex > 0; $layer--) {
-                $floors[$layer] = $best($layer - 1);
+                $search["floors"][$layer] = self::bestNode($search, $layer - 1);
             }
 
             $overlaps = self::overlapPerOffset($block, $reference, $options->minOffset, $options->maxOffset);
             for ($layer = 0; $layer < $layers; $layer++) {
-                [$floor, $floorNode] = $floors[$layer];
-                $row                 = &$values[$layer];
-                foreach ($overlaps as $n => $overlap) {
-                    if ($floor > $row[$n] + Timecode::EPSILON) {
-                        $row[$n]             = $floor;
-                        $starts[$layer][$n]  = $blockIndex;
-                        $parents[$layer][$n] = $floorNode;
-                    }
-                    $row[$n] += $overlap;
-                }
-                unset($row);
+                self::addBlock($search, $layer, $blockIndex, $overlaps);
             }
         }
 
-        $candidates = [];
-        for ($layer = 1; $layer < $layers; $layer++) {
-            $chain = [];
-            for ($node = $best($layer)[1]; $node >= 0; $node = $nodes[$node][2]) {
-                [$n, $startBlock] = $nodes[$node];
-                if ($chain !== [] && $chain[0]["n"] === $n) {
-                    $chain[0]["start"] = $startBlock * $blockSize;
-                } else {
-                    array_unshift($chain, ["n" => $n, "start" => $startBlock * $blockSize]);
-                }
-            }
-            if (count($chain) < 2) {
-                continue;
-            }
+        return $search;
+    }
 
-            foreach ($chain as $index => &$part) {
-                $part["offset"] = $options->minOffset + $part["n"] * self::COARSE_STEP;
-                if ($index > 0) {
-                    $limit         = ($chain[$index + 1]["start"] ?? count($target)) - 1;
-                    $part["start"] = self::bestSplit($target, $reference, $chain[$index - 1], $part, $blockSize, $limit);
-                }
-            }
-            unset($part);
 
-            $parts   = [];
-            $overlap = 0.0;
-            foreach ($chain as $index => $part) {
-                $end                    = $chain[$index + 1]["start"] ?? count($target);
-                [$offset, $partOverlap] = self::refine(array_slice($target, $part["start"], $end - $part["start"]),
-                                                       $reference, $part["offset"], $options);
-                $parts[]                = ["from" => $index === 0 ? 0.0 : $original[$part["start"]][0], "offset" => Timecode::roundToMilliseconds($offset)];
-                $overlap               += $partOverlap;
+    /**
+     * Adds the overlaps of one block to a layer. An offset whose value is below the floor starts a new part here.
+     *
+     * @param SplitSearch $search
+     * @param list<float> $overlaps
+     */
+    private static function addBlock(array &$search, int $layer, int $blockIndex, array $overlaps): void
+    {
+        [$floor, $floorNode] = $search["floors"][$layer];
+        $row                 = &$search["values"][$layer];
+        foreach ($overlaps as $n => $overlap) {
+            if ($floor > $row[$n] + Timecode::EPSILON) {
+                $row[$n]                       = $floor;
+                $search["starts"][$layer][$n]  = $blockIndex;
+                $search["parents"][$layer][$n] = $floorNode;
             }
-            $candidates[] = [$parts, $overlap];
+            $row[$n] += $overlap;
+        }
+        unset($row);
+    }
+
+
+    /**
+     * Returns the best value of a layer and the node that records it, or the floor of the layer when that is higher.
+     *
+     * @param SplitSearch $search
+     * @return array{float, int}
+     */
+    private static function bestNode(array &$search, int $layer): array
+    {
+        $value = max($search["values"][$layer]);
+        if ($value < $search["floors"][$layer][0]) {
+            return $search["floors"][$layer];
         }
 
-        return $candidates;
+        $n                 = array_search($value, $search["values"][$layer], true);
+        $search["nodes"][] = ["n" => $n, "start" => $search["starts"][$layer][$n], "parent" => $search["parents"][$layer][$n]];
+
+        return [$value, count($search["nodes"]) - 1];
+    }
+
+
+    /**
+     * Returns the parts of the best path of a layer, each with its coarse offset index and its first span.
+     *
+     * @param SplitSearch $search
+     * @return list<array{n: int, start: int}>
+     */
+    private static function backtrack(array &$search, int $layer, int $blockSize): array
+    {
+        $chain = [];
+        for ($node = self::bestNode($search, $layer)[1]; $node >= 0; $node = $search["nodes"][$node]["parent"]) {
+            ["n" => $n, "start" => $startBlock] = $search["nodes"][$node];
+            if ($chain !== [] && $chain[0]["n"] === $n) {
+                $chain[0]["start"] = $startBlock * $blockSize;
+            } else {
+                array_unshift($chain, ["n" => $n, "start" => $startBlock * $blockSize]);
+            }
+        }
+
+        return $chain;
+    }
+
+
+    /**
+     * Moves each split to its best span and refines the offset of each part.
+     *
+     * @param list<array{n: int, start: int}> $chain
+     * @param list<array{float, float}>       $original
+     * @param list<array{float, float}>       $target
+     * @param list<array{float, float}>       $reference
+     * @return array{list<array{from: float, offset: float}>, float}
+     */
+    private static function refineChain(array $chain, array $original, array $target, array $reference, int $blockSize, ReferenceSyncOptions $options): array
+    {
+        foreach ($chain as $index => &$part) {
+            $part["offset"] = $options->minOffset + $part["n"] * self::COARSE_STEP;
+            if ($index > 0) {
+                $limit         = ($chain[$index + 1]["start"] ?? count($target)) - 1;
+                $part["start"] = self::bestSplit($target, $reference, $chain[$index - 1], $part, $blockSize, $limit);
+            }
+        }
+        unset($part);
+
+        $parts   = [];
+        $overlap = 0.0;
+        foreach ($chain as $index => $part) {
+            $end                    = $chain[$index + 1]["start"] ?? count($target);
+            [$offset, $partOverlap] = self::refine(array_slice($target, $part["start"], $end - $part["start"]),
+                                                   $reference, $part["offset"], $options);
+            $parts[]                = ["from" => $index === 0 ? 0.0 : $original[$part["start"]][0], "offset" => Timecode::roundToMilliseconds($offset)];
+            $overlap               += $partOverlap;
+        }
+
+        return [$parts, $overlap];
     }
 
 
@@ -447,6 +525,18 @@ final class ReferenceSync
             }
         }
 
+        return self::integrate($firstValue, $firstSlope, $secondDiffs, $last);
+    }
+
+
+    /**
+     * Returns the values on the grid from the first value, the first slope and the second differences.
+     *
+     * @param list<float> $secondDiffs
+     * @return list<float>
+     */
+    private static function integrate(float $firstValue, float $firstSlope, array $secondDiffs, int $last): array
+    {
         $values = [$firstValue];
         if ($last >= 1) {
             $values[] = $firstValue + $firstSlope;

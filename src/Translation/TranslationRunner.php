@@ -301,8 +301,22 @@ final class TranslationRunner
             }
         }
 
-        $cuts   = self::cutPositions($characters, $weights);
-        $pieces = array_fill(0, count($weights), []);
+        $pieces = self::distribute($tokens, self::cutPositions($characters, $weights), count($weights));
+
+        return self::balanceTags($pieces);
+    }
+
+
+    /**
+     * Puts each token into the piece that holds its position. A text token splits at the cuts. A space at a cut drops.
+     *
+     * @param list<array{0: string, 1: int|string}> $tokens
+     * @param list<int>                             $cuts
+     * @return list<list<array{0: string, 1: int|string}>>
+     */
+    private static function distribute(array $tokens, array $cuts, int $count): array
+    {
+        $pieces = array_fill(0, $count, []);
         $piece  = 0;
         $offset = 0;
         foreach ($tokens as [$type, $value]) {
@@ -320,21 +334,39 @@ final class TranslationRunner
                     $pieces[$piece][] = [$type, $value];
                     continue;
                 }
-                if ($piece > 0 && $offset === $cuts[$piece - 1] && trim($character) === "") {
-                    $offset++;
-                    continue;
-                }
-
-                $last = array_key_last($pieces[$piece]);
-                if ($last !== null && $pieces[$piece][$last][0] === "text") {
-                    $pieces[$piece][$last][1] .= $character;
-                } else {
-                    $pieces[$piece][] = ["text", $character];
+                if ($piece === 0 || $offset !== $cuts[$piece - 1] || trim($character) !== "") {
+                    self::appendText($pieces[$piece], $character);
                 }
                 $offset++;
             }
         }
 
+        return $pieces;
+    }
+
+
+    /**
+     * @param list<array{0: string, 1: int|string}> $piece
+     */
+    private static function appendText(array &$piece, string $character): void
+    {
+        $last = array_key_last($piece);
+        if ($last !== null && $piece[$last][0] === "text") {
+            $piece[$last][1] .= $character;
+        } else {
+            $piece[] = ["text", $character];
+        }
+    }
+
+
+    /**
+     * Closes in each piece the tags that are open at its end, and opens them again at the start of the next piece.
+     *
+     * @param list<list<array{0: string, 1: int|string}>> $pieces
+     * @return list<list<array{0: string, 1: int|string}>>
+     */
+    private static function balanceTags(array $pieces): array
+    {
         $open = [];
         foreach ($pieces as $pieceIndex => $pieceTokens) {
             $balanced = array_map(fn (int $number): array => ["open", $number], $open);

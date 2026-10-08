@@ -64,6 +64,15 @@ final class EditPipeline
     }
 
 
+    /**
+     * Returns false when an edit allows only one input file.
+     */
+    public function takesManyInputs(): bool
+    {
+        return array_filter($this->edits, fn (Edit $edit): bool => !$edit->takesManyInputs()) === [];
+    }
+
+
     public function loadSideFiles(): void
     {
         foreach ($this->edits as $edit) {

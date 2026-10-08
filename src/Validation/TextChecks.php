@@ -23,77 +23,97 @@ final class TextChecks
     {
         $lines   = array_map(fn (string $line): string => Markup::plainText($line), $cue->getLines());
         $visible = array_values(array_filter($lines, fn (string $line): bool => trim($line) !== ""));
-        $counts  = [];
-
-        if ($rules->noDoubleSpaces) {
-            $counts[] = [ValidationRule::NoDoubleSpaces, array_sum(array_map(
-                fn (string $line): int => self::count('/(?<=\S)\h{2,}(?=\S)/u', '/(?<=\S)[ \t]{2,}(?=\S)/', $line),
-                $visible
-            )), null];
-        }
-
-        if ($rules->noLeadingOrTrailingSpaces) {
-            $counts[] = [ValidationRule::NoLeadingOrTrailingSpaces, count(array_filter(
-                $visible,
-                fn (string $line): bool => self::count('/^\h|\h$/u', '/^[ \t]|[ \t]$/', $line) > 0
-            )), null];
-        }
-
-        if ($rules->noUnbalancedTags) {
-            $counts[] = [ValidationRule::NoUnbalancedTags, self::unbalancedTags(implode("\n", $cue->getLines())), null];
-        }
-
-        if ($rules->dialogueDashStyle !== null) {
-            $style = '/^' . preg_quote($rules->dialogueDashStyle->value, "/") . '(?=\S)/u';
-            $counts[] = [ValidationRule::DialogueDashStyle, count(array_filter(
-                $visible,
-                fn (string $line): bool => self::startsWithDialogueDash($line) && preg_match($style, ltrim($line)) !== 1
-            )), null];
-        }
-
-        if ($rules->maxSpeakersPerCue !== null) {
-            $speakers = self::speakers($cue->getLines(), $visible);
-            if ($speakers > $rules->maxSpeakersPerCue) {
-                $counts[] = [ValidationRule::MaxSpeakersPerCue, $speakers, $rules->maxSpeakersPerCue];
-            }
-        }
-
-        $words = count(Markup::words(implode("\n", $lines)));
-        if ($rules->maxWordsPerMinute !== null && $words > 0) {
-            $wordsPerMinute = $duration > 0 ? $words / $duration * 60 : INF;
-            if ($wordsPerMinute > $rules->maxWordsPerMinute) {
-                $counts[] = [ValidationRule::MaxWordsPerMinute, $wordsPerMinute, $rules->maxWordsPerMinute];
-            }
-        }
-
-        // Cue times have millisecond precision, so compare the duration with the needed time in milliseconds.
-        if ($rules->minSecondsPerWord !== null && $words > 0 && $duration < Timecode::roundToMilliseconds($rules->minSecondsPerWord * $words)) {
-            $counts[] = [ValidationRule::MinSecondsPerWord, $duration / $words, $rules->minSecondsPerWord];
-        }
-
-        if ($rules->allowedCharacters !== null) {
-            $counts[] = [ValidationRule::AllowedCharacters, array_sum(array_map(
-                fn (string $line): int => self::disallowedCharacters($line, $rules->allowedCharacters),
-                $visible
-            )), null];
-        }
-
-        if ($rules->noAllCapsLines) {
-            $counts[] = [ValidationRule::NoAllCapsLines, count(array_filter(
-                $visible,
-                fn (string $line): bool => self::isAllCaps($line)
-            )), null];
-        }
+        $words   = count(Markup::words(implode("\n", $lines)));
 
         $results = [];
-        foreach ($counts as [$rule, $value, $limit]) {
-            // A count rule gives the int 0 for a cue without problems. A limit rule is only set when the cue breaks it.
+        foreach (self::rules($cue, $visible, $words, $duration, $rules) as [$rule, $enabled, $check]) {
+            [$value, $limit] = $enabled ? $check() : [0, null];
+            // A count rule gives the int 0 for a cue without problems. A limit rule gives it for a cue within its limit.
             if ($value !== 0) {
                 $results[] = new ValidationViolation($cueIndex, $rule, $value, $limit);
             }
         }
 
         return $results;
+    }
+
+
+    /**
+     * Returns each text rule in the order of the results, with a flag that tells if it is on and a check that returns
+     * the value and the limit of the rule.
+     *
+     * @param list<string> $visible
+     * @return list<array{ValidationRule, bool, callable(): array{int|float, int|float|null}}>
+     */
+    private static function rules(SubtitleCue $cue, array $visible, int $words, float $duration, ValidationRules $rules): array
+    {
+        return [
+            [ValidationRule::NoDoubleSpaces, $rules->noDoubleSpaces, fn (): array => [self::sumPerLine(
+                $visible, fn (string $line): int => self::count('/(?<=\S)\h{2,}(?=\S)/u', '/(?<=\S)[ \t]{2,}(?=\S)/', $line)
+            ), null]],
+            [ValidationRule::NoLeadingOrTrailingSpaces, $rules->noLeadingOrTrailingSpaces, fn (): array => [self::countLines(
+                $visible, fn (string $line): bool => self::count('/^\h|\h$/u', '/^[ \t]|[ \t]$/', $line) > 0
+            ), null]],
+            [ValidationRule::NoUnbalancedTags, $rules->noUnbalancedTags,
+             fn (): array => [self::unbalancedTags(implode("\n", $cue->getLines())), null]],
+            [ValidationRule::DialogueDashStyle, $rules->dialogueDashStyle !== null,
+             fn (): array => [self::wrongDialogueDashes($visible, (string)$rules->dialogueDashStyle?->value), null]],
+            [ValidationRule::MaxSpeakersPerCue, $rules->maxSpeakersPerCue !== null,
+             fn (): array => self::overLimit(self::speakers($cue->getLines(), $visible), (int)$rules->maxSpeakersPerCue)],
+            [ValidationRule::MaxWordsPerMinute, $rules->maxWordsPerMinute !== null && $words > 0,
+             fn (): array => self::overLimit($duration > 0 ? $words / $duration * 60 : INF, (float)$rules->maxWordsPerMinute)],
+            // Cue times have millisecond precision, so compare the duration with the needed time in milliseconds.
+            [ValidationRule::MinSecondsPerWord,
+             $rules->minSecondsPerWord !== null && $words > 0 && $duration < Timecode::roundToMilliseconds($rules->minSecondsPerWord * $words),
+             fn (): array => [$duration / $words, $rules->minSecondsPerWord]],
+            [ValidationRule::AllowedCharacters, $rules->allowedCharacters !== null, fn (): array => [self::sumPerLine(
+                $visible, fn (string $line): int => self::disallowedCharacters($line, (string)$rules->allowedCharacters)
+            ), null]],
+            [ValidationRule::NoAllCapsLines, $rules->noAllCapsLines, fn (): array => [self::countLines($visible, self::isAllCaps(...)), null]],
+        ];
+    }
+
+
+    /**
+     * @return array{int|float, int|float|null}
+     */
+    private static function overLimit(int|float $value, int|float $limit): array
+    {
+        return $value > $limit ? [$value, $limit] : [0, null];
+    }
+
+
+    /**
+     * @param list<string>          $lines
+     * @param callable(string): int $count
+     */
+    private static function sumPerLine(array $lines, callable $count): int
+    {
+        return array_sum(array_map($count, $lines));
+    }
+
+
+    /**
+     * @param list<string>           $lines
+     * @param callable(string): bool $matches
+     */
+    private static function countLines(array $lines, callable $matches): int
+    {
+        return count(array_filter($lines, $matches));
+    }
+
+
+    /**
+     * @param list<string> $visible
+     */
+    private static function wrongDialogueDashes(array $visible, string $dash): int
+    {
+        $style = '/^' . preg_quote($dash, "/") . '(?=\S)/u';
+
+        return self::countLines(
+            $visible,
+            fn (string $line): bool => self::startsWithDialogueDash($line) && preg_match($style, ltrim($line)) !== 1
+        );
     }
 
 

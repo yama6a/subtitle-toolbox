@@ -17,32 +17,6 @@ final class WhisperJsonParser extends SubtitleParser
     protected const FORMAT_OPTIONS = TranscriptReadOptions::class;
     public const FORMAT_DATA_KEY = Format::Whisper->value;
 
-    // TO_LANGUAGE_CODE of openai/whisper, whisper/tokenizer.py. The OpenAI API returns these names in verbose_json.
-    private const LANGUAGE_CODES = [
-        "english" => "en", "chinese" => "zh", "german" => "de", "spanish" => "es", "russian" => "ru",
-        "korean" => "ko", "french" => "fr", "japanese" => "ja", "portuguese" => "pt", "turkish" => "tr",
-        "polish" => "pl", "catalan" => "ca", "dutch" => "nl", "arabic" => "ar", "swedish" => "sv", "italian" => "it",
-        "indonesian" => "id", "hindi" => "hi", "finnish" => "fi", "vietnamese" => "vi", "hebrew" => "he",
-        "ukrainian" => "uk", "greek" => "el", "malay" => "ms", "czech" => "cs", "romanian" => "ro", "danish" => "da",
-        "hungarian" => "hu", "tamil" => "ta", "norwegian" => "no", "thai" => "th", "urdu" => "ur", "croatian" => "hr",
-        "bulgarian" => "bg", "lithuanian" => "lt", "latin" => "la", "maori" => "mi", "malayalam" => "ml",
-        "welsh" => "cy", "slovak" => "sk", "telugu" => "te", "persian" => "fa", "latvian" => "lv", "bengali" => "bn",
-        "serbian" => "sr", "azerbaijani" => "az", "slovenian" => "sl", "kannada" => "kn", "estonian" => "et",
-        "macedonian" => "mk", "breton" => "br", "basque" => "eu", "icelandic" => "is", "armenian" => "hy",
-        "nepali" => "ne", "mongolian" => "mn", "bosnian" => "bs", "kazakh" => "kk", "albanian" => "sq",
-        "swahili" => "sw", "galician" => "gl", "marathi" => "mr", "punjabi" => "pa", "sinhala" => "si",
-        "khmer" => "km", "shona" => "sn", "yoruba" => "yo", "somali" => "so", "afrikaans" => "af", "occitan" => "oc",
-        "georgian" => "ka", "belarusian" => "be", "tajik" => "tg", "sindhi" => "sd", "gujarati" => "gu",
-        "amharic" => "am", "yiddish" => "yi", "lao" => "lo", "uzbek" => "uz", "faroese" => "fo",
-        "haitian creole" => "ht", "pashto" => "ps", "turkmen" => "tk", "nynorsk" => "nn", "maltese" => "mt",
-        "sanskrit" => "sa", "luxembourgish" => "lb", "myanmar" => "my", "tibetan" => "bo", "tagalog" => "tl",
-        "malagasy" => "mg", "assamese" => "as", "tatar" => "tt", "hawaiian" => "haw", "lingala" => "ln",
-        "hausa" => "ha", "bashkir" => "ba", "javanese" => "jw", "sundanese" => "su", "cantonese" => "yue",
-        "burmese" => "my", "valencian" => "ca", "flemish" => "nl", "haitian" => "ht", "letzeburgesch" => "lb",
-        "pushto" => "ps", "panjabi" => "pa", "moldavian" => "ro", "moldovan" => "ro", "sinhalese" => "si",
-        "castilian" => "es", "mandarin" => "zh",
-    ];
-
 
     protected static function formatDataKey(): string
     {
@@ -73,7 +47,7 @@ final class WhisperJsonParser extends SubtitleParser
         }
 
         $language = $data["language"] ?? $data["result"]["language"] ?? null;
-        $language = is_string($language) ? self::LANGUAGE_CODES[strtolower($language)] ?? $language : $language;
+        $language = is_string($language) ? WhisperLanguages::CODES[strtolower($language)] ?? $language : $language;
         $fileData = array_diff_key($data, array_flip(["segments", "transcription", "words", "word_segments", "text"]));
 
         return $this->transcript($cues, $language, $fileData);

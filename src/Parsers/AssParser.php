@@ -19,6 +19,18 @@ final class AssParser extends SubtitleParser
     // A tag ends at the next backslash, except inside parentheses such as \t(\1c&HFF&).
     private const OVERRIDE_TAG_REGEX = '/\\\\[^\\\\(]*(?<args>\((?:[^()]++|(?&args))*\))?[^\\\\]*/';
 
+    private const EMPTY_FORMAT_DATA = [
+        "sectionOrder"       => [],
+        "scriptInfoComments" => [],
+        "scriptInfo"         => [],
+        "stylesSection"      => null,
+        "styleFormat"        => null,
+        "styles"             => [],
+        "eventFormat"        => null,
+        "commentEvents"      => [],
+        "sections"           => [],
+    ];
+
     /** @var list<SubtitleCue> */
     private array $cues = [];
 
@@ -32,17 +44,7 @@ final class AssParser extends SubtitleParser
         $this->comments = [];
 
         $subtitle = new Subtitle();
-        $data     = [
-            "sectionOrder"       => [],
-            "scriptInfoComments" => [],
-            "scriptInfo"         => [],
-            "stylesSection"      => null,
-            "styleFormat"        => null,
-            "styles"             => [],
-            "eventFormat"        => null,
-            "commentEvents"      => [],
-            "sections"           => [],
-        ];
+        $data     = self::EMPTY_FORMAT_DATA;
 
         $section    = null;
         $eventIndex = 0;
@@ -53,14 +55,8 @@ final class AssParser extends SubtitleParser
             }
 
             if (preg_match('/^\[([A-Za-z][A-Za-z0-9+ ]*)\]$/', $line, $matches)) {
-                $section                = $matches[1];
-                $data["sectionOrder"][] = $section;
-                if ($this->isStylesSection($section)) {
-                    $data["stylesSection"] = $section;
-                }
-                if (strcasecmp($section, "Events") === 0) {
-                    $data["eventFormat"] ??= $this->isSsa($data) ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT;
-                }
+                $section = $matches[1];
+                $this->startSection($data, $section);
                 continue;
             }
 
@@ -83,6 +79,18 @@ final class AssParser extends SubtitleParser
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, $data);
 
         return CommentAnchors::addParsed($subtitle, $this->cues, $this->comments);
+    }
+
+
+    private function startSection(array &$data, string $section): void
+    {
+        $data["sectionOrder"][] = $section;
+        if ($this->isStylesSection($section)) {
+            $data["stylesSection"] = $section;
+        }
+        if (strcasecmp($section, "Events") === 0) {
+            $data["eventFormat"] ??= $this->isSsa($data) ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT;
+        }
     }
 
 

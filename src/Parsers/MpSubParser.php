@@ -23,92 +23,106 @@ final class MpSubParser extends SubtitleParser
     ];
 
 
+    private ?FrameRate $frameRate = null;
+
+    private bool $hasFormat = false;
+
+    /** @var array<string, string> */
+    private array $formatData = [];
+
+
     protected function read(string $rawSubtitle): Subtitle
     {
-        $lines = $this->lines($rawSubtitle);
-
-        $subtitle   = new Subtitle();
-        $parsedCues = [];
-        $formatData = [];
-        $frameRate  = null;
-        $hasFormat  = false;
-        $position   = 0.0;
-        $cue        = null;
-        $cueLine    = 0;
-        $cueIndex   = 0;
-        $skipping   = false;
+        $lines            = $this->lines($rawSubtitle);
+        $this->frameRate  = null;
+        $this->hasFormat  = false;
+        $this->formatData = [];
+        $subtitle         = new Subtitle();
+        $parsedCues       = [];
+        $position         = 0.0;
+        $cue              = null;
+        $cueLine          = 0;
+        $cueIndex         = 0;
+        $skipping         = false;
         foreach ($lines as $lineIdx => $line) {
             $line       = trim($line);
             $lineNumber = $lineIdx + 1;
-
+            if ($cue !== null && $line !== "") {
+                $cue->addLine(Markup::escapeText($line));
+                continue;
+            }
             if ($cue !== null) {
-                if ($line !== "") {
-                    $cue->addLine(Markup::escapeText($line));
-                    continue;
-                }
-
                 $this->addCue($parsedCues, $cue, $lineNumber - 1, $cueLine, $cueIndex - 1, $lines);
                 $cue = null;
                 continue;
             }
-
             if ($skipping) {
                 $skipping = $line !== "";
                 continue;
             }
-
             if ($line === "" || str_starts_with($line, "#")) {
                 continue;
             }
-
             if (preg_match("/^([A-Z]+)=(.*?)(\s+#.*)?$/", $line, $matches)) {
-                $key   = $matches[1];
-                $value = trim($matches[2]);
-
-                if ($key === "FORMAT") {
-                    $hasFormat = true;
-                    try {
-                        $frameRate = $this->frameRateFromFormat($value, $lineNumber);
-                    } catch (ParsingException $exception) {
-                        $this->fail($exception, $lineNumber, $cueIndex, [$line]);
-                    }
-                } elseif (array_key_exists($key, self::METADATA_HEADERS)) {
-                    $subtitle->setMetadata(self::METADATA_HEADERS[$key], $value === "" ? null : $value);
-                } elseif ($value !== "") {
-                    $formatData[$key] = $value;
-                }
+                $this->readHeader($matches[1], trim($matches[2]), $line, $lineNumber, $cueIndex, $subtitle);
                 continue;
             }
 
-            if ($this->options->lenient && !$hasFormat) {
-                $this->warn(
-                    "The file has no FORMAT line before line $lineNumber. The parser read the times as seconds.",
-                    $lineNumber,
-                    $cueIndex,
-                    [$line],
-                    ParseWarningAction::Repaired
-                );
-                $hasFormat = true;
-            }
-
-            try {
-                $cue = $this->readTimingLine($line, $lineNumber, $frameRate, $position);
-            } catch (ParsingException $exception) {
-                $this->fail($exception, $lineNumber, $cueIndex++, [$line]);
-                $skipping = true;
-                continue;
-            }
-            $cueLine = $lineNumber;
-            $cueIndex++;
+            $cue      = $this->startCue($line, $lineNumber, $cueIndex++, $position);
+            $skipping = $cue === null;
+            $cueLine  = $lineNumber;
         }
 
         if ($cue !== null) {
             $this->addCue($parsedCues, $cue, count($lines), $cueLine, $cueIndex - 1, $lines);
         }
 
-        $subtitle->setFormatData(self::FORMAT_DATA_KEY, $formatData);
+        $subtitle->setFormatData(self::FORMAT_DATA_KEY, $this->formatData);
 
         return $subtitle->addCues($parsedCues);
+    }
+
+
+    private function readHeader(string $key, string $value, string $line, int $lineNumber, int $cueIndex, Subtitle $subtitle): void
+    {
+        if ($key === "FORMAT") {
+            $this->hasFormat = true;
+            try {
+                $this->frameRate = $this->frameRateFromFormat($value, $lineNumber);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, $lineNumber, $cueIndex, [$line]);
+            }
+        } elseif (array_key_exists($key, self::METADATA_HEADERS)) {
+            $subtitle->setMetadata(self::METADATA_HEADERS[$key], $value === "" ? null : $value);
+        } elseif ($value !== "") {
+            $this->formatData[$key] = $value;
+        }
+    }
+
+
+    /**
+     * Returns the cue of a timing line without text, or null when the line fails in lenient mode.
+     */
+    private function startCue(string $line, int $lineNumber, int $cueIndex, float &$position): ?SubtitleCue
+    {
+        if ($this->options->lenient && !$this->hasFormat) {
+            $this->warn(
+                "The file has no FORMAT line before line $lineNumber. The parser read the times as seconds.",
+                $lineNumber,
+                $cueIndex,
+                [$line],
+                ParseWarningAction::Repaired
+            );
+            $this->hasFormat = true;
+        }
+
+        try {
+            return $this->readTimingLine($line, $lineNumber, $this->frameRate, $position);
+        } catch (ParsingException $exception) {
+            $this->fail($exception, $lineNumber, $cueIndex, [$line]);
+
+            return null;
+        }
     }
 
 

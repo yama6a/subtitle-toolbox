@@ -56,7 +56,24 @@ final class SubViewerParser extends SubtitleParser
     {
         $subtitle = new Subtitle();
         $header   = [];
-        $delay    = 0;
+        $delay    = $this->readVersion1Header($headerLines, $subtitle, $header);
+        $cues     = $this->readVersion1Script($scriptLines, $delay);
+
+        $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["version" => 1, "header" => $header]);
+
+        return $subtitle->addCues($cues);
+    }
+
+
+    /**
+     * Reads the header tags into $subtitle and $header, and returns the delay in seconds.
+     *
+     * @param list<string>          $headerLines
+     * @param array<string, string> $header
+     */
+    private function readVersion1Header(array $headerLines, Subtitle $subtitle, array &$header): int
+    {
+        $delay = 0;
         for ($idx = 0; $idx < count($headerLines); $idx++) {
             $line = $headerLines[$idx];
             if ($line === "") {
@@ -87,11 +104,21 @@ final class SubViewerParser extends SubtitleParser
             $this->addHeaderTag($subtitle, $header, $tag, $value);
         }
 
+        return $delay;
+    }
+
+
+    /**
+     * @param array<int, string> $scriptLines
+     * @return list<SubtitleCue>
+     */
+    private function readVersion1Script(array $scriptLines, int $delay): array
+    {
         /** @var list<SubtitleCue> $cues */
         $cues       = [];
         $hasEndLine = [];
         $afterTime  = null;
-        foreach ($scriptLines as $idx => $line) {
+        foreach ($scriptLines as $line) {
             if ($afterTime !== null) {
                 $time      = $afterTime;
                 $afterTime = null;
@@ -101,11 +128,7 @@ final class SubViewerParser extends SubtitleParser
                     continue;
                 }
 
-                $last = count($cues) - 1;
-                if ($last >= 0 && !$hasEndLine[$last]) {
-                    $cues[$last]->setEnd($time);
-                    $hasEndLine[$last] = true;
-                }
+                self::endLastCue($cues, $hasEndLine, $time);
             }
 
             if (preg_match(self::VERSION_1_TIME_REGEX, $line, $matches)) {
@@ -114,11 +137,7 @@ final class SubViewerParser extends SubtitleParser
         }
 
         if ($afterTime !== null) {
-            $last = count($cues) - 1;
-            if ($last >= 0 && !$hasEndLine[$last]) {
-                $cues[$last]->setEnd($afterTime);
-                $hasEndLine[$last] = true;
-            }
+            self::endLastCue($cues, $hasEndLine, $afterTime);
         }
 
         foreach ($cues as $idx => $cue) {
@@ -127,9 +146,23 @@ final class SubViewerParser extends SubtitleParser
             }
         }
 
-        $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["version" => 1, "header" => $header]);
+        return $cues;
+    }
 
-        return $subtitle->addCues($cues);
+
+    /**
+     * Ends the last cue at $time, unless an end line already ended it.
+     *
+     * @param list<SubtitleCue> $cues
+     * @param list<bool>        $hasEndLine
+     */
+    private static function endLastCue(array $cues, array &$hasEndLine, float $time): void
+    {
+        $last = count($cues) - 1;
+        if ($last >= 0 && !$hasEndLine[$last]) {
+            $cues[$last]->setEnd($time);
+            $hasEndLine[$last] = true;
+        }
     }
 
 
@@ -151,24 +184,13 @@ final class SubViewerParser extends SubtitleParser
                 continue;
             }
 
-            if ($this->options->lenient && $this->hasOneBadTime($line)) {
+            $badTime = $this->options->lenient && $this->hasOneBadTime($line);
+            if ($badTime || preg_match(self::VERSION_2_TIME_REGEX, $line, $matches)) {
                 $this->addCueWithText($parsedCues, $cue);
                 $this->warnSkipped($skipped);
-                $cue     = null;
-                $skipped = [$lineNumber, $cueIndex++, [$line]];
-                continue;
-            }
-
-            if (preg_match(self::VERSION_2_TIME_REGEX, $line, $matches)) {
-                $this->addCueWithText($parsedCues, $cue);
-                $this->warnSkipped($skipped);
-                $skipped = null;
+                $cue     = $badTime ? null : self::version2Cue($matches);
+                $skipped = $badTime ? [$lineNumber, $cueIndex, [$line]] : null;
                 $cueIndex++;
-                $cue = new SubtitleCue(
-                    Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]),
-                    Timecode::toSeconds((int) $matches[5], (int) $matches[6], (int) $matches[7], $matches[8]),
-                    []
-                );
                 continue;
             }
 
@@ -179,31 +201,12 @@ final class SubViewerParser extends SubtitleParser
                 }
                 continue;
             }
-
             if ($skipped !== null) {
                 $skipped[2][] = $line;
-                continue;
-            }
-
-            if ($cue !== null) {
-                foreach (explode("[br]", $line) as $textLine) {
-                    if (trim($textLine) !== "") {
-                        $cue->addLine(Markup::escapeText(trim($textLine)));
-                    }
-                }
-                continue;
-            }
-
-            try {
-                $matches = $this->headerTag($line, $lineNumber, "is neither a header tag nor a timing line");
-            } catch (ParsingException $exception) {
-                $this->fail($exception, $lineNumber, 0, [$line]);
-                continue;
-            }
-
-            $tag = strtoupper(trim($matches[1]));
-            if (!in_array($tag, self::VERSION_2_BLOCK_TAGS, true)) {
-                $this->addHeaderTag($subtitle, $header, $tag, trim($matches[2]));
+            } elseif ($cue !== null) {
+                self::addTextLines($cue, $line);
+            } else {
+                $this->readVersion2Header($line, $lineNumber, $subtitle, $header);
             }
         }
         $this->addCueWithText($parsedCues, $cue);
@@ -215,6 +218,49 @@ final class SubViewerParser extends SubtitleParser
         ));
 
         return $subtitle->addCues($parsedCues);
+    }
+
+
+    /**
+     * @param array<int, string> $matches the matches of VERSION_2_TIME_REGEX
+     */
+    private static function version2Cue(array $matches): SubtitleCue
+    {
+        return new SubtitleCue(
+            Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]),
+            Timecode::toSeconds((int) $matches[5], (int) $matches[6], (int) $matches[7], $matches[8]),
+            []
+        );
+    }
+
+
+    private static function addTextLines(SubtitleCue $cue, string $line): void
+    {
+        foreach (explode("[br]", $line) as $textLine) {
+            if (trim($textLine) !== "") {
+                $cue->addLine(Markup::escapeText(trim($textLine)));
+            }
+        }
+    }
+
+
+    /**
+     * @param array<string, string> $header
+     */
+    private function readVersion2Header(string $line, int $lineNumber, Subtitle $subtitle, array &$header): void
+    {
+        try {
+            $matches = $this->headerTag($line, $lineNumber, "is neither a header tag nor a timing line");
+        } catch (ParsingException $exception) {
+            $this->fail($exception, $lineNumber, 0, [$line]);
+
+            return;
+        }
+
+        $tag = strtoupper(trim($matches[1]));
+        if (!in_array($tag, self::VERSION_2_BLOCK_TAGS, true)) {
+            $this->addHeaderTag($subtitle, $header, $tag, trim($matches[2]));
+        }
     }
 
 
