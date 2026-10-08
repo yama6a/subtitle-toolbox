@@ -92,6 +92,15 @@ final class LineWrapper
 
 
     /**
+     * Returns $characters divided by $duration, or INF when $duration is 0 or less.
+     */
+    public static function charactersPerSecond(int $characters, float $duration): float
+    {
+        return $duration > 0 ? $characters / $duration : INF;
+    }
+
+
+    /**
      * Splits at spaces outside tags. Tags count 0 characters, and an entity such as &amp; counts 1.
      *
      * @return list<array{text: string, length: int}>

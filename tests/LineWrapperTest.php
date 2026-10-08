@@ -91,4 +91,12 @@ class LineWrapperTest extends TestCase
         $this->assertSame([], LineWrapper::wrap(["", " "], 20, 2));
         $this->assertSame([], LineWrapper::wrapToFit([""], 20, 2));
     }
+
+
+    public function testCharactersPerSecondIsInfiniteWithoutDuration(): void
+    {
+        $this->assertSame(10.0, LineWrapper::charactersPerSecond(20, 2.0));
+        $this->assertSame(INF, LineWrapper::charactersPerSecond(20, 0.0));
+        $this->assertSame(INF, LineWrapper::charactersPerSecond(20, -1.0));
+    }
 }

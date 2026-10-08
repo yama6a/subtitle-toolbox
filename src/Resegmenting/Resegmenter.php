@@ -248,7 +248,7 @@ final class Resegmenter
 
         $characters = LineWrapper::visibleCharacters($lines);
 
-        return $characters === 0 || ($duration > 0 ? $characters / $duration : INF) <= $options->limits->maxCharactersPerSecond;
+        return $characters === 0 || LineWrapper::charactersPerSecond($characters, $duration) <= $options->limits->maxCharactersPerSecond;
     }
 
 

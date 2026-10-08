@@ -90,7 +90,7 @@ trait ShortCueMerging
         }
 
         $characters = LineWrapper::visibleCharacters($lines);
-        if ($characters > 0 && ($duration > 0 ? $characters / $duration : INF) > $options->limits->maxCharactersPerSecond) {
+        if ($characters > 0 && LineWrapper::charactersPerSecond($characters, $duration) > $options->limits->maxCharactersPerSecond) {
             return null;
         }
 

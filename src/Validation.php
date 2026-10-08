@@ -69,7 +69,7 @@ trait Validation
             }
 
             if ($rules->maxCharactersPerSecond !== null && $characters > 0) {
-                $charactersPerSecond = $duration > 0 ? $characters / $duration : INF;
+                $charactersPerSecond = LineWrapper::charactersPerSecond($characters, $duration);
                 if ($charactersPerSecond > $rules->maxCharactersPerSecond) {
                     $results[] = new ValidationViolation($cueIndex, ValidationRule::MaxCharactersPerSecond,
                                                       $charactersPerSecond, $rules->maxCharactersPerSecond);
