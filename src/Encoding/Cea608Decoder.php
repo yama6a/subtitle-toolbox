@@ -204,21 +204,10 @@ final class Cea608Decoder
                 $this->startRollUp($command - Cea608::ROLL_UP_2 + 2);
                 break;
             case Cea608::BACKSPACE:
-                if ($this->mode !== self::MODE_TEXT && $this->column > 0) {
-                    $this->column--;
-                    $this->setCell(null);
-                }
+                $this->backspace();
                 break;
             case Cea608::DELETE_TO_END_OF_ROW:
-                if ($this->mode !== self::MODE_TEXT) {
-                    $memory = &$this->targetMemory();
-                    foreach (array_keys($memory[$this->row] ?? []) as $column) {
-                        if ($column >= $this->column) {
-                            unset($memory[$this->row][$column]);
-                        }
-                    }
-                    $this->markDirectChange();
-                }
+                $this->deleteToEndOfRow();
                 break;
             case Cea608::CARRIAGE_RETURN:
                 if ($this->mode === self::MODE_ROLL_UP) {
@@ -238,6 +227,31 @@ final class Cea608Decoder
                 $this->displayChange = self::DISPLAY_REPLACE;
                 break;
         }
+    }
+
+
+    private function backspace(): void
+    {
+        if ($this->mode !== self::MODE_TEXT && $this->column > 0) {
+            $this->column--;
+            $this->setCell(null);
+        }
+    }
+
+
+    private function deleteToEndOfRow(): void
+    {
+        if ($this->mode === self::MODE_TEXT) {
+            return;
+        }
+
+        $memory = &$this->targetMemory();
+        foreach (array_keys($memory[$this->row] ?? []) as $column) {
+            if ($column >= $this->column) {
+                unset($memory[$this->row][$column]);
+            }
+        }
+        $this->markDirectChange();
     }
 
 
