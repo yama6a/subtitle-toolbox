@@ -65,6 +65,7 @@
     "sort-packages": true
   },
   "scripts": {
-    "test": "phpunit"
+    "test": "phpunit",
+    "build-phar": ".build/build-phar.sh"
   }
 }
