@@ -39,10 +39,9 @@ final class PgsParser extends SubtitleParser
     private const PALETTE_HEADER      = 2;
     private const PALETTE_ENTRY       = 5;
     private const OBJECT_HEADER       = 4;
-    private const FIRST_OBJECT_HEADER = 11;
-
-    // The object width and height follow the object header and the 3-byte object data length.
-    private const OBJECT_SIZE_OFFSET = 7;
+    private const OBJECT_DATA_LENGTH  = 3;
+    private const FIRST_OBJECT_HEADER = self::OBJECT_HEADER + self::OBJECT_DATA_LENGTH;
+    private const OBJECT_SIZE         = 4;
 
     private const SEGMENT_PALETTE      = 0x14;
     private const SEGMENT_OBJECT       = 0x15;
@@ -61,6 +60,12 @@ final class PgsParser extends SubtitleParser
     // Kr and Kb of the YCbCr matrices in ITU-R BT.709 and BT.601.
     private const MATRIX_BT709 = [0.2126, 0.0722];
     private const MATRIX_BT601 = [0.299, 0.114];
+
+    // The limited range of 8-bit video: luma from 16 to 235, chroma from 16 to 240 around 128.
+    private const LUMA_MIN      = 16;
+    private const LUMA_RANGE    = 219;
+    private const CHROMA_CENTER = 128;
+    private const CHROMA_RANGE  = 224;
 
     /** @var array<int, array<int, array{int, int, int, int}>> palette id => entry id => [Y, Cr, Cb, alpha] */
     private array $palettes = [];
@@ -200,12 +205,12 @@ final class PgsParser extends SubtitleParser
 
         ["id" => $id, "sequence" => $sequence] = unpack("nid/Cversion/Csequence", $data);
         if ($sequence & self::SEQUENCE_FIRST) {
-            if (strlen($data) < self::FIRST_OBJECT_HEADER) {
+            if (strlen($data) < self::FIRST_OBJECT_HEADER + self::OBJECT_SIZE) {
                 throw new ParsingException("The first definition segment of object $id is cut off.");
             }
-            ["width" => $width, "height" => $height] = unpack("nwidth/nheight", $data, self::OBJECT_SIZE_OFFSET);
+            ["width" => $width, "height" => $height] = unpack("nwidth/nheight", $data, self::FIRST_OBJECT_HEADER);
             self::checkSize($width, $height, "read object $id");
-            $this->objects[$id] = ["width" => $width, "height" => $height, "rle" => substr($data, self::FIRST_OBJECT_HEADER)];
+            $this->objects[$id] = ["width" => $width, "height" => $height, "rle" => substr($data, self::FIRST_OBJECT_HEADER + self::OBJECT_SIZE)];
         } elseif (isset($this->objects[$id])) {
             $this->objects[$id]["rle"] .= substr($data, self::OBJECT_HEADER);
         }
@@ -403,9 +408,9 @@ final class PgsParser extends SubtitleParser
 
         $map = array_fill(0, 256, "\0\0\0\0");
         foreach ($palette as $entryId => [$luma, $chromaRed, $chromaBlue, $alpha]) {
-            $y  = ($luma - 16) * 255 / 219;
-            $cr = ($chromaRed - 128) * 255 / 224;
-            $cb = ($chromaBlue - 128) * 255 / 224;
+            $y  = ($luma - self::LUMA_MIN) * 255 / self::LUMA_RANGE;
+            $cr = ($chromaRed - self::CHROMA_CENTER) * 255 / self::CHROMA_RANGE;
+            $cb = ($chromaBlue - self::CHROMA_CENTER) * 255 / self::CHROMA_RANGE;
 
             $map[$entryId] = pack("C4",
                                   $this->clampByte($y + 2 * (1 - $kr) * $cr),
