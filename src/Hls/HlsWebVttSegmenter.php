@@ -34,13 +34,7 @@ final class HlsWebVttSegmenter
         }
 
         $fileData                = $subtitle->findFormatData(WebVttParser::FORMAT_DATA_KEY);
-        $fileData["headerLines"] = [
-            $options->timestampMap->toHeader(),
-            ...array_filter(
-                $fileData["headerLines"] ?? [],
-                fn (string $line): bool => !TimestampMap::isHeader($line)
-            ),
-        ];
+        $fileData["headerLines"] = [$options->timestampMap->toHeader(), ...TimestampMap::withoutHeader($fileData["headerLines"] ?? [])];
 
         $copy = (new Subtitle())->addCues(array_map(
             fn (SubtitleCue $cue, int $cueIndex): SubtitleCue => (clone $cue)->setIdentifier($cue->getIdentifier() ?? (string) ($cueIndex + 1)),

@@ -47,10 +47,7 @@ final class HlsWebVttJoiner
     private static function withoutTimestampMap(Subtitle $segment): array
     {
         $fileData                = $segment->findFormatData(WebVttParser::FORMAT_DATA_KEY);
-        $fileData["headerLines"] = array_values(array_filter(
-            $fileData["headerLines"] ?? [],
-            fn (string $line): bool => !TimestampMap::isHeader($line)
-        ));
+        $fileData["headerLines"] = TimestampMap::withoutHeader($fileData["headerLines"] ?? []);
         if ($fileData["headerLines"] === []) {
             unset($fileData["headerLines"]);
         }

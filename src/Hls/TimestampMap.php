@@ -96,6 +96,20 @@ final class TimestampMap
 
 
     /**
+     * Returns the WebVTT header lines without the X-TIMESTAMP-MAP lines.
+     *
+     * @internal
+     *
+     * @param list<string> $headerLines
+     * @return list<string>
+     */
+    public static function withoutHeader(array $headerLines): array
+    {
+        return array_values(array_filter($headerLines, fn (string $line): bool => !self::isHeader($line)));
+    }
+
+
+    /**
      * Returns the header line, for example X-TIMESTAMP-MAP=LOCAL:00:00:00.000,MPEGTS:900000.
      */
     public function toHeader(): string
