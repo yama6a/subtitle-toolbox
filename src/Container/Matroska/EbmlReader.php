@@ -100,16 +100,6 @@ final class EbmlReader
     }
 
 
-    public function readFloat(int $length): float
-    {
-        return match ($length) {
-            0       => 0.0,
-            4       => unpack("G", $this->readBytes(4))[1],
-            default => unpack("E", $this->readBytes($length))[1],
-        };
-    }
-
-
     /**
      * Reads a string element and removes the NUL bytes that may pad it.
      */

@@ -45,7 +45,7 @@ class EbmlReaderTest extends TestCase
         $this->assertSame(0x4282, $reader->readElementHeader()["id"]);
         $this->assertSame("webm", $reader->readString(6));
         $this->assertSame(8, $reader->readElementHeader()["size"]);
-        $this->assertSame(7200000.5, $reader->readFloat(8));
+        $this->assertSame(pack("E", 7200000.5), $reader->readBytes(8));
         $this->assertSame(EbmlReader::UNKNOWN_SIZE, $reader->readElementHeader()["size"]);
         $this->assertNull($reader->readElementHeader());
     }
