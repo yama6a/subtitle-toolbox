@@ -169,19 +169,26 @@ final class FormatDataSchema
 
 
     /**
-     * Returns the error message for the first field of $data, the format data under format data key $key, that has the
-     * wrong type, or null when every field has the right type.
+     * Returns the error message for the first field of $data, the file format data under format data key $key, that
+     * has the wrong type, or null when every field has the right type.
+     *
+     * @param string $path the path of $data, for example "formatData.ass"
+     */
+    public static function checkFile(string $key, array $data, string $path): ?string
+    {
+        return self::check(self::FILE[$key] ?? null, $data, $path);
+    }
+
+
+    /**
+     * Returns the error message for the first field of $data, the cue format data under format data key $key, that has
+     * the wrong type, or null when every field has the right type.
      *
      * @param string $path the path of $data, for example "cues[3].formatData.ass"
      */
-    public static function problem(string $key, array $data, string $path, bool $isCue): ?string
+    public static function checkCue(string $key, array $data, string $path): ?string
     {
-        $fields = ($isCue ? self::CUE : self::FILE)[$key] ?? null;
-        if ($fields === "strings") {
-            return self::checkType(self::STRINGS, $data, $path);
-        }
-
-        return $fields !== null && $data !== [] ? self::checkType(["object", $fields], $data, $path) : null;
+        return self::check(self::CUE[$key] ?? null, $data, $path);
     }
 
 
@@ -193,7 +200,7 @@ final class FormatDataSchema
      */
     public static function withData(array $formatData, string $key, array $data, bool $isCue): array
     {
-        $problem = self::problem($key, $data, "formatData.$key", $isCue);
+        $problem = $isCue ? self::checkCue($key, $data, "formatData.$key") : self::checkFile($key, $data, "formatData.$key");
         if ($problem !== null) {
             throw new InvalidArgumentException($problem);
         }
@@ -204,6 +211,19 @@ final class FormatDataSchema
         }
 
         return $formatData;
+    }
+
+
+    /**
+     * @param array<string, string|array>|"strings"|null $fields
+     */
+    private static function check(array|string|null $fields, array $data, string $path): ?string
+    {
+        if ($fields === "strings") {
+            return self::checkType(self::STRINGS, $data, $path);
+        }
+
+        return $fields !== null && $data !== [] ? self::checkType(["object", $fields], $data, $path) : null;
     }
 
 

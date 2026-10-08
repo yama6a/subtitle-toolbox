@@ -193,7 +193,7 @@ trait ArrayConversion
         if (!is_array($value)) {
             throw new ParsingException("The field $path must be an object.");
         }
-        $problem = FormatDataSchema::problem((string) $format, $value, $path, $isCue);
+        $problem = $isCue ? FormatDataSchema::checkCue((string) $format, $value, $path) : FormatDataSchema::checkFile((string) $format, $value, $path);
         if ($problem !== null) {
             throw new ParsingException($problem);
         }
