@@ -26,7 +26,7 @@ $subtitle->getCues()[0]->findFormatData('whisper')['avg_logprob'];           // 
 | whisper.cpp | `-oj`: `transcription` with `offsets` in milliseconds. `-ojf` adds `tokens` | [`cli.cpp`](https://github.com/ggml-org/whisper.cpp/blob/60c0be6ac8fa71b1a2ae2dd938a31a34a508e774/examples/cli/cli.cpp) |
 
 - **Cues**: one cue per segment. The parser trims the text and skips segments without text. A long segment stays one cue. [`Resegmenter`](editing.md#long-cues) breaks it up.
-- **Word timestamps**: off by default. With `TranscriptReadOptions::$wordTimestamps`, each word that has a start time and occurs in the segment text gets a core word timestamp before it. The parser skips the other words. The OpenAI API lists the words at the top level. A word then goes to the segment that holds the middle of the word.
+- **Word timestamps**: off by default. With `TranscriptReadOptions::$wordTimestamps`, each word that has a start time and occurs in the segment text gets a word timestamp before it. The parser skips the other words. The OpenAI API lists the words at the top level. A word then goes to the segment that holds the middle of the word.
 - **Speakers**: off by default. `TranscriptReadOptions::$speakerVoices` writes the segment `speaker` as a `<v>` tag. See [text.md](text.md#speakers).
 - **Language**: the `language` metadata. A name such as `english` becomes `en`. A code such as `en` stays.
 - **Format data**: the subtitle keeps the top-level fields except the segments, words and text, for example `duration`. Each cue keeps the fields of its segment except the times and the text, for example `avg_logprob`, `no_speech_prob`, `words` and `speaker`.
@@ -41,7 +41,7 @@ use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 
-$subtitle = Subtitle::fromString($transcribeJson, Format::AwsTranscribe);    // format detection does not find cloud speech JSON
+$subtitle = Subtitle::fromString($transcribeJson, Format::AwsTranscribe);    // format detection does not find cloud speech-to-text JSON
 $subtitle = Subtitle::fromString($deepgramResponseBody, Format::Deepgram, new ReadOptions(format: new TranscriptReadOptions(wordTimestamps: true, speakerVoices: true)));
 $subtitle->getCues()[2]->getText();                                          // '<v 0><00:00:06.500>Thank <00:00:06.800>you.'
 $subtitle->getCues()[2]->findFormatData('deepgram')['confidence'];           // 0.9637655
@@ -54,9 +54,9 @@ $subtitle->getCues()[2]->findFormatData('deepgram')['confidence'];           // 
 | [AssemblyAI](https://www.assemblyai.com/docs/api-reference/transcripts/get) | `AssemblyAiParser`, `assemblyai` | one per `utterances` entry. Without utterances, grouped from `words` |
 | [Google Cloud Speech-to-Text](https://cloud.google.com/speech-to-text/docs/async-time-offsets) | `GoogleSpeechParser`, `google-speech` | one per result. With diarization, grouped from the words of the last result |
 
-- **Word grouping**: a cue ends after a word that ends a sentence with `.`, `?`, `!` or their CJK forms. It also ends before a pause of 1 s or more, before a word that makes it longer than 84 characters, and where the speaker changes.
+- **Word grouping**: a cue ends after a word that ends a sentence with `.`, `?`, `!` or their CJK forms. It also ends before a pause of 1 s or more and where the speaker changes. A cue also ends before a word that makes it longer than 84 characters.
 - **Long cues**: an audio segment, utterance or result stays one cue. [`Resegmenter`](editing.md#long-cues) breaks it up. With `TranscriptReadOptions::$wordTimestamps`, `ResegmentMode::ByWords` regroups the words with other limits.
-- **Word timestamps**: off by default. With `TranscriptReadOptions::$wordTimestamps`, each word gets a core word timestamp before it.
+- **Word timestamps**: off by default. With `TranscriptReadOptions::$wordTimestamps`, each word gets a word timestamp before it.
 - **Speakers**: off by default. `TranscriptReadOptions::$speakerVoices` writes the speaker label of the service as a `<v>` tag, for example `<v spk_0>`, `<v 0>`, `<v A>` or `<v 1>`. The `rename` option of [`SpeakerLabels::apply()`](text.md#speakers) gives them names.
 - **Amazon Transcribe**: the language comes from `results.language_code`.
 - **Deepgram**: the parser reads every channel and sorts the cues by time. The language comes from `detected_language` of the first channel.
@@ -66,7 +66,7 @@ $subtitle->getCues()[2]->findFormatData('deepgram')['confidence'];           // 
 - **Errors**: each parser throws `ParsingException` for JSON without the list it needs. Amazon Transcribe needs `results.items`, Deepgram `results.channels`, AssemblyAI `words` or `utterances`, and Google `results`.
 
 ## YouTube timed text
-yt-dlp and youtube-transcript-api download YouTube captions as json3, srv3 or the older transcript XML. json3 and srv3 keep the time of each word of automatic captions. WebVTT downloads lose it.
+yt-dlp and youtube-transcript-api download YouTube captions. The formats are json3, srv3 or the older transcript XML. json3 and srv3 keep the time of each word of automatic captions. WebVTT downloads lose it.
 
 ```php
 use SubtitleToolbox\Format;
@@ -88,7 +88,7 @@ $subtitle->findFormatData('youtube')['format'];                              // 
 | srv1 and transcript XML | `<transcript><text start="1.2" dur="2.3">Hello world</text></transcript>` |
 
 - **Automatic captions**: the parser skips the events that only add a line break. A cue in a window ends where the next cue of the same window starts, so the rolling cues do not stack.
-- **Word timestamps**: off by default. With `TranscriptReadOptions::$wordTimestamps`, each segment of a cue gets a core word timestamp. This needs at least one segment of the cue with a time. srv1 and srv2 have no word times.
+- **Word timestamps**: off by default. With `TranscriptReadOptions::$wordTimestamps`, each segment of a cue gets a word timestamp. This needs at least one segment of the cue with a time. srv1 and srv2 have no word times.
 - **Alignment**: from the anchor point of the window position of a cue. Anchor point 0 is top left and becomes alignment 7. A cue without its own window position, such as an automatic caption, has no alignment.
 - **Pens**: the pen color becomes `<font color>`. Bold, italic and underline become `<b>`, `<i>` and `<u>`.
 - **Format data**: the subtitle keeps the `format` name, and the head elements and windows of the file. Each cue keeps the other fields of its event or `<p>`, and the other fields of its segments in `segments`.
@@ -127,8 +127,8 @@ $subtitle = Subtitle::fromString($json, Format::PodcastTranscript, new ReadOptio
 | Class | Option | Effect |
 |:--- |:--- |:--- |
 | `TranscriptReadOptions` | `keepSegments` | one cue per segment. By default, segments of one word join into a cue |
-| `TranscriptReadOptions` | `wordTimestamps` | a core word timestamp before each word of a joined cue |
-| `PodcastTranscriptWriteOptions` | `wordSegments` | one segment per core word timestamp, for the word highlight of the apps. By default, one segment per cue |
+| `TranscriptReadOptions` | `wordTimestamps` | a word timestamp before each word of a joined cue |
+| `PodcastTranscriptWriteOptions` | `wordSegments` | one segment per word timestamp, for the word highlight of the apps. By default, one segment per cue |
 | `PodcastTranscriptWriteOptions` | `prettyPrint` | indents with 4 spaces and ends with a newline |
 | `HtmlTranscriptWriteOptions` | `paragraphGap` | the gap in seconds that starts a new paragraph, 2.0 by default |
 
@@ -166,6 +166,6 @@ $text = $subtitle->toString(Format::PlainText, new WriteOptions(format: new Plai
 | `paragraphGap` | `2.0` | the gap in seconds that starts a new paragraph. `INF` writes one paragraph |
 | `withTimes` | `false` | writes the start of the paragraph as `[00:01:23] ` before it |
 
-- **Gap**: the start of a cue minus the latest end of the earlier cues.
+- **Gap**: see [Statistics](subtitle.md#statistics).
 - **Cues without text**: the formatter skips them. Image cues without text need `WriteOptions(skipImageCues: true)`, as in all text formatters.
 - **No parser**: the library cannot read plain text.

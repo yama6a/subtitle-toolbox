@@ -39,7 +39,7 @@ final class TranslateCommand extends WriteCommand
 
     public function summary(): string
     {
-        return "Translates the cue text with DeepL or Google Cloud Translation.";
+        return "Translate the cue text with DeepL or Google Cloud Translation.";
     }
 
 
@@ -53,7 +53,7 @@ final class TranslateCommand extends WriteCommand
     {
         return "The API key comes from --api-key, else from DEEPL_API_KEY for deepl or GOOGLE_TRANSLATE_API_KEY for google. " .
                "The engines need the PHP extension curl. " .
-               "One input file goes to standard output, or to the file of -o. Several input files need --output-dir.";
+               self::OUTPUT_DETAILS;
     }
 
 

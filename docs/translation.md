@@ -12,20 +12,20 @@ use SubtitleToolbox\Translation\TranslationRunner;
 
 $german  = Subtitle::load('movie.de.srt', Format::SubRip);
 $runner  = new TranslationRunner(new DeepLEngine(new DeepLOptions(apiKey: $apiKey)));
-$report  = $runner->translate($english = clone $german, 'de', 'en-US');
-$report  = $runner->translate($english = clone $german, 'de', 'en-US', new TranslationOptions(
+$english = clone $german;
+$report  = $runner->translate($english, 'de', 'en-US', new TranslationOptions(   // TranslationOptions is optional
     joinSentences: true,              // send cues of one sentence as one text
-    maxCuesPerSentence: 3,            // most cues in one text
-    maxCharactersPerRequest: 5000,    // most characters in one engine call
+    maxCuesPerSentence: 3,            // at most 3 cues in one text
+    maxCharactersPerRequest: 5000,    // at most 5,000 characters in one engine call
 ));
 $report->warnings;                    // list of TranslationWarning with cueIndex and message
 $english->save('movie.en.srt');
 ```
 
-- **Sentences**: a cue that does not end with `.`, `?`, `!`, the ellipsis U+2026 or a CJK end mark such as U+3002 joins the next cue. Cue 1 `The train to Basel leaves` and cue 2 `from platform 4.` go out as one text. The runner splits the translation back in proportion to the characters of the cues, at a space. In Chinese, Japanese and Thai text it splits between two characters.
+- **Sentences**: a cue joins the next cue when it does not end a sentence. A sentence ends with `.`, `?`, `!`, the ellipsis U+2026 or a CJK end mark such as U+3002. Cue 1 `The train to Basel leaves` and cue 2 `from platform 4.` go out as one text. The runner splits the translation back in proportion to the characters of the cues, at a space. In Chinese, Japanese and Thai text it splits between two characters.
 - **Lines**: a cue that goes out alone keeps its line breaks when the engine keeps them. `DeepLEngine` sends `split_sentences: "nonewlines"`, so DeepL translates the 2 lines of a cue as one sentence. Cues that go out as one text come back with one line each. Call `wrapLines()` to break long lines again.
-- **Tags**: the runner replaces tags with numbered placeholders, for example `<i>Run!</i>` becomes `<x1>Run!</x1>`, and a word timestamp becomes `<x2/>`. It restores the tags after the translation. A tag that spans two cues of one sentence closes at the end of the first cue and opens again in the next.
-- **Dropped placeholder**: when the engine drops, adds or breaks a placeholder, the runner removes all tags of the text and adds a `TranslationWarning` for each cue.
+- **Tags**: the runner replaces tags with numbered placeholders, for example `<i>Run!</i>` becomes `<x1>Run!</x1>`, and a word timestamp becomes `<x2/>`. It restores the tags after the translation. A tag can span two cues of one sentence. It then closes at the end of the first cue and opens again in the next.
+- **Dropped placeholder**: the engine can drop, add or break a placeholder. The runner then removes all tags of the text and adds a `TranslationWarning` for each cue.
 - **Not sent**: cues with only numbers, punctuation, symbols such as the music note U+266A, or no text keep their text.
 - **Requests**: each engine call gets whole texts up to `maxCharactersPerRequest` characters. A longer text goes out alone.
 - **Engine errors**: `translate()` throws `InvalidArgumentException` when the engine does not return one string per text. Exceptions of the engine pass through. The subtitle changes only after the last engine call succeeds.
@@ -61,16 +61,19 @@ $french->save('movie.fr.srt');
 
 | Option | Default | Sets |
 |:--- |:--- |:--- |
-| `apiKey` | required | the API key of the service. An empty key, a key with a control character such as a line break, and a key with a space at the start or end throw `InvalidArgumentException` |
+| `apiKey` | required | the API key of the service. These keys throw `InvalidArgumentException`: an empty key, a key with a control character such as a line break, and a key with a space at the start or end |
 | `baseUrl` | null, the host of the service | the scheme and host for the requests, for example a proxy. It must start with `http://` or `https://` |
 | `httpClient` | null, a client that uses `ext-curl` | the `HttpClient` that sends the requests |
 
 - **Language codes**: the engines pass the codes to the service as they are. DeepL gets them in upper case, for example `EN-US`, because its API expects that. DeepL takes a region only in the target language, so `DeepLEngine` sends the source language `en-US` as `EN`. The engines do not check the codes. The service rejects an unknown code.
 - **Source language**: an empty string lets the service detect the language.
 - **Request size**: DeepL takes at most 50 texts per request. `GoogleTranslateEngine` sends at most 128 texts per request. The engines split a longer list and join the results in order. `maxCharactersPerRequest`, default 5,000, keeps each request below the size limits of both services.
-- **Errors**: the engines throw `TranslationException` for HTTP errors such as 403 (wrong key), 429 (too many requests) and 456 (DeepL quota used up), for a request that gets no response, and for an answer they cannot read. The message names the cause and never holds the key.
+- **Errors**: the engines throw `TranslationException` in these cases. The message names the cause and never holds the key.
+  - An HTTP error, such as 403 for a wrong key, 429 for too many requests or 456 for a used-up DeepL quota.
+  - A request that gets no response.
+  - An answer that the engine cannot read.
 - **No curl**: without `ext-curl` and without an `httpClient`, the engine constructor throws `InvalidArgumentException` with a message that names the extension. Check `extension_loaded('curl')` before you create an engine. Composer lists `ext-curl` under `suggest` only, because the rest of the library runs without it.
-- **Google v3**: the engine uses v2, because v3 needs an OAuth access token and a project ID in place of an API key.
+- **Google v3**: the engine uses v2. v3 needs an OAuth access token and a project ID in place of an API key.
 
 ## Your own HTTP client
 Implement `HttpClient` to send the requests with another HTTP library, or to log them. Its method `post()` returns the status code and the body of the response:

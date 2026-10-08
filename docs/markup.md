@@ -17,7 +17,7 @@ Cue lines hold HTML-like inline tags, the **core markup**. Parsers convert the s
 - **Font colors**: `<font color='#FF0000'>`, `<font color=#ff0000>` and `<FONT COLOR="#FF0000">` give the same color. The formatters read the `color` attribute with double quotes, single quotes or no quotes, in any case and next to other attributes.
 
 ## Helpers
-The `Markup` class has the helpers that the parsers and formatters use. They help when you write your own OCR engine, text change, or code that reads or writes a format that the library does not have.
+The `Markup` class has the helpers that the parsers and formatters use. They help when you write your own OCR engine or text change. They also help in code that reads or writes a format that the library does not have.
 
 ```php
 use SubtitleToolbox\Markup;

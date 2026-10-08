@@ -61,9 +61,9 @@ final class MaskingEdit extends Edit
     public static function options(): array
     {
         return [
-            Option::value("mask-words", "FILE", "Mask the words of this file, one per line, as ProfanityFilter does. A * at the end matches any ending."),
+            Option::value("mask-words", "FILE", "Mask the words of this file, one per line. A * at the end matches any ending."),
             Option::value("mask", "STYLE", "How --mask-words masks a word: stars, first-letter, remove, or none to keep the text. Default: stars."),
-            Option::value("mute-edl", "FILE", "Write the times of the --mask-words matches to this EDL file, for Kodi and MPlayer to mute the audio."),
+            Option::value("mute-edl", "FILE", "Write the times of the --mask-words matches to this EDL (edit decision list) file. Kodi and MPlayer read it to mute the audio."),
             Option::value("mute-filter", "FILE", "Write an FFmpeg volume filter that mutes the --mask-words matches to this file."),
             Option::value("mute-padding", "SECONDS", "Widen each mute range by this time on both sides. Default: 0."),
         ];

@@ -39,7 +39,7 @@ final class ValidateCommand extends ReportCommand
 
     public function summary(): string
     {
-        return "Checks the cues against reading speed, line length, timing and text rules.";
+        return "Check the cues against reading speed, line length, timing and text rules.";
     }
 
 
@@ -52,16 +52,18 @@ final class ValidateCommand extends ReportCommand
     protected function details(): string
     {
         return "Prints one line per broken rule. Cue numbers start at 1. The exit code is 1 when a file breaks a rule.\n" .
-               "The netflix-en preset has the limits of the Netflix English (USA) Timed Text Style Guide: 20 characters per second, " .
-               "42 characters per line, 2 lines, 5/6 s to 7 s, a gap of 2 frames and no overlaps.\n" .
-               "The bbc preset has the limits of the BBC Subtitle Guidelines: 37 characters per line, 180 words per minute and 0.3 s per word.\n" .
+               "The netflix-en preset has the limits of the Netflix English (USA) Timed Text Style Guide. " .
+               "These are 20 characters per second, 42 characters per line and 2 lines. " .
+               "A cue lasts 0.833 s to 7 s and keeps a gap of 2 frames, with no overlaps.\n" .
+               "The bbc preset has the limits of the BBC Subtitle Guidelines. " .
+               "These are 37 characters per line, 180 words per minute and 0.3 s per word.\n" .
                "A rule option overrides the value of the preset.";
     }
 
 
     protected function fpsDescription(): string
     {
-        return "Sets --input-fps and --video-fps. Each of them overrides it.";
+        return "Sets --input-fps and --video-fps. A specific option wins over --fps.";
     }
 
 
@@ -82,7 +84,7 @@ final class ValidateCommand extends ReportCommand
             Option::value("min-seconds-per-word", "SECONDS", "Minimum duration of a cue per word."),
             Option::value("max-speakers", "SPEAKERS", "Maximum speakers per cue, from dialogue dashes or <v> names."),
             Option::value("dialogue-dash", "STYLE", "Report dialogue dashes in another style than STYLE, for example \"- \" or \"-\"."),
-            Option::value("allowed-characters", "CHARS", "Report other characters. CHARS is a list or a class such as \"[A-Za-z0-9 .,!?]\"."),
+            Option::value("allowed-characters", "LIST", "Report other characters. LIST is a list or a class such as \"[A-Za-z0-9 .,!?]\"."),
             Option::flag("check-double-spaces", "Report two or more spaces between words."),
             Option::flag("check-leading-or-trailing-spaces", "Report lines that start or end with a space."),
             Option::flag("check-unbalanced-tags", "Report formatting tags without a partner tag."),

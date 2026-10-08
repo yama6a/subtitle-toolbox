@@ -25,7 +25,7 @@ final class InfoCommand extends ReportCommand
 
     public function summary(): string
     {
-        return "Prints the format, the cue count and statistics of subtitle files.";
+        return "Print the format, the cue count and statistics of subtitle files.";
     }
 
 
@@ -37,8 +37,8 @@ final class InfoCommand extends ReportCommand
 
     protected function details(): string
     {
-        return "Times are in seconds. Characters leave out tags. " .
-               "The gap is the start of a cue minus the latest end of the earlier cues, so an overlap gives a negative gap. " .
+        return "Times are in seconds. Character counts leave out tags. " .
+               "The gap is the start of a cue minus the latest end of the earlier cues. An overlap gives a negative gap. " .
                "For an MKV or WebM file, info lists the subtitle tracks. Pass --track for the statistics of one track.";
     }
 

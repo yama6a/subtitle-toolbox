@@ -23,6 +23,8 @@ use SubtitleToolbox\WriteOptions;
  */
 abstract class WriteCommand extends FileCommand
 {
+    protected const OUTPUT_DETAILS = "Without -o or --output-dir, the output goes to standard output.";
+
     private const LINE_ENDINGS = ["lf" => LineEnding::Lf, "crlf" => LineEnding::Crlf];
 
     // The options that name a file the command reads besides its inputs. No output may overwrite one.
@@ -62,7 +64,7 @@ abstract class WriteCommand extends FileCommand
 
     protected function fpsDescription(): string
     {
-        return "Sets --input-fps and --output-fps. Each of them overrides it.";
+        return "Sets --input-fps and --output-fps. A specific option wins over --fps.";
     }
 
 

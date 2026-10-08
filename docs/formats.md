@@ -28,7 +28,7 @@ Format::FfMetadataChapters->isAutoDetected(); // false
 ```
 
 - **Shared extensions**: when two formats share an extension, the earlier case owns it. So `fromPath()` returns `Format::MicroDvd` for `.sub`, `Format::Json` for `.json` and `Format::PlainText` for `.txt`.
-- **Parser and formatter classes**: the classes in `Parsers` and `Formatters` are public. `ReadOptions` holds the parser settings, for example `new ReadOptions(lenient: true)`. A class in `Parsers\Options` holds the settings of one format, for example `new MicroDvdReadOptions(frameRate: 23.976)`. See [read-options.md](read-options.md).
+- **Parser and formatter classes**: the classes in `Parsers` and `Formatters` are public. `ReadOptions` holds the format-neutral read settings, for example `new ReadOptions(lenient: true)`. A class in `Parsers\Options` holds the settings of one format, for example `new MicroDvdReadOptions(frameRate: 23.976)`. See [read-options.md](read-options.md).
 
 ## Load and save
 ```php
@@ -58,7 +58,7 @@ $subtitle->save('movie.txt', Format::WebVtt);         // the format argument win
 - **MKV and WebM**: `load()` throws for them. `loadAutoDetectFormat()` reads a file with exactly 1 subtitle track and throws with the track list for other files.
 - **`getFormat()`**: null for a subtitle from `new Subtitle()` or `fromArray()`. For an MKV track, it is the format of the codec, for example `Format::SubRip`.
 - **`save()`**: writes the format argument. Without it, `save()` writes the format of the extension. It throws `InvalidFormatterException` for an unknown extension.
-- **Frame rate**: MicroDVD output takes the frame rate from `MicroDvdWriteOptions::$frameRate`. Without it, the frame rate comes from a MicroDVD input. iTT output takes it from `IttWriteOptions::$frameRate`. Without it, the frame rate comes from an iTT input. Without both, `toString()` and `save()` throw `InvalidArgumentException`.
+- **Frame rate**: MicroDVD output takes the frame rate from `MicroDvdWriteOptions::$frameRate`. Without it, the frame rate comes from a MicroDVD input. iTT output takes it from `IttWriteOptions::$frameRate`. Without it, the frame rate comes from an iTT input. Without either, `toString()` and `save()` throw `InvalidArgumentException`.
 - **CSV and TSV**: TSV output has tabs. CSV output from a TSV input has commas. A `CsvWriteOptions::$delimiter` wins.
 
 ## Write options
@@ -135,8 +135,8 @@ $subtitle->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(ka
 | `Comment:` event, `Title:` | `getComments()`, the `title` metadata | the stored `Comment:` event with the same text, `Title:` |
 
 - **Format data**: ASS and SSA both use the key `ass`. The subtitle keeps `[Script Info]`, the styles, the `Format:` lines, the section order, `Comment:` events and other sections such as `[Fonts]` and `[Graphics]`. Each cue keeps its event fields and its original `Text` field.
-- **Unchanged cues**: when the lines and the alignment of a cue are the same as after parsing, the formatter writes the original `Text` field. So tags such as `\pos`, `\fad` and `\t` survive an ASS round trip and a retiming.
-- **Changed cues**: the formatter writes the text from the core markup. Other override tags are lost.
+- **Unchanged cues**: a cue can keep the lines and the alignment that the parser gave it. The formatter then writes the original `Text` field. So tags such as `\pos`, `\fad` and `\t` survive an ASS round trip and a retiming.
+- **Changed cues**: the formatter writes the text from the [core markup](markup.md). Other override tags are lost.
 - **Karaoke tags**: `AssKaraokeTag::Instant` writes `\k`, the default. `AssKaraokeTag::Fill` writes `\kf`, `AssKaraokeTag::Outline` writes `\ko`. `\kf` fills each syllable from left to right in Aegisub and libass. `\ko` hides the outline of a syllable until its time starts. The option applies only to cues that the formatter writes from the core markup.
 - **Limits**: other override tags, `{...}` notes and `\p1` drawings are not cue text. An event that holds only a drawing becomes a cue without lines. Style definitions do not change the core markup. Events come out in time order.
 - **Output**: times in centiseconds. A cue from another format gets style `Default`. A subtitle from another format gets the minimal header that FFmpeg writes.
@@ -195,7 +195,7 @@ $csv = $english->toString(Format::Csv, new WriteOptions(format: new CsvWriteOpti
 - **Detection**: a CSV file has no signature, so pass `Format::Csv` or `Format::Tsv`. The command line tool reads `.csv` and `.tsv` files by their extension.
 
 ## EBU STL
-EBU STL is the binary exchange format of European broadcasters, from [EBU Tech 3264](https://tech.ebu.ch/docs/tech/tech3264.pdf). Pass the bytes of the file unchanged.
+EBU STL is the binary exchange format of European broadcasters, from [EBU Tech 3264](https://tech.ebu.ch/docs/tech/tech3264.pdf). Pass the bytes of the file unchanged. A file starts with one GSI (General Subtitle Information) block of 1,024 bytes. Then each subtitle has one or more TTI (Text and Timing Information) blocks of 128 bytes.
 
 ```php
 use SubtitleToolbox\Format;
@@ -216,12 +216,15 @@ $subtitle->toString(Format::EbuStl, new WriteOptions(format: new EbuStlWriteOpti
 - **Start of programme**: `EbuStlReadOptions(subtractStartOfProgramme: true)` subtracts the TCP time code, for example `10:00:00:00`. A time before it becomes 0. The formatter adds TCP again.
 - **Characters**: the parser reads the character code tables 00 (ISO 6937) and 01 to 04 (ISO 8859-5, -6, -7 and -8). It needs no `mbstring` or `iconv`. The formatter writes `?` for a character outside the table.
 - **Styles**: italics, underline and the 8 teletext colors become `<i>`, `<u>` and `<font color>`, and back. White gives no tag. The formatter drops other colors.
-- **Blocks**: the parser joins the TTI blocks of one subtitle and skips user data blocks. A subtitle with the comment flag becomes a comment. The formatter splits long text into extension blocks.
+- **Blocks**: the parser joins the TTI blocks of one subtitle and skips user data blocks. A subtitle with the comment flag becomes a comment. The formatter splits text over the 112 bytes of one TTI text field into extension blocks.
 - **Alignment**: the justification code gives the column. The vertical position gives the row: the top, middle or bottom third of the rows.
 - **Metadata**: the title is the OPT field. The language is the LC field, for example `09` is `en`.
 - **Format data**: the subtitle keeps the GSI fields by name in `gsi`, for example `DSC` and `TCP`. Each cue keeps its subtitle group, cumulative status, vertical position, justification code and original blocks.
 - **Round trip**: an unchanged file comes out byte for byte. A cue with unchanged text keeps its text field bytes, also after retiming.
-- **New files**: a subtitle from another format gets code page 850, 25 fps, level-1 teletext, character table 00, 40 characters, 23 rows and subtitle numbers from 1. The creation date is today.
+- **New files**: a subtitle from another format gets these GSI values. The creation date is today.
+  - Code page 850, 25 fps and level-1 teletext.
+  - Character table 00, 40 characters per row and 23 rows.
+  - Subtitle numbers from 1.
 
 ## iTunes Timed Text
 Apple TV and the iTunes Store take subtitles as iTunes Timed Text (iTT). iTT is a TTML profile with SMPTE frame times.
@@ -349,7 +352,7 @@ $subtitle->findFormatData('sami');                                              
 ```
 
 - **Language class**: a SAMI file holds one CSS class per language, for example `.FRCC { Name: French; lang: fr-FR; }`. The parser reads the class in `SamiReadOptions::$languageClass`. Without it, the parser reads the first class of the STYLE block. Without a STYLE block, it reads the first class that a `<P>` uses. A `<P>` without a class belongs to every class.
-- **End times**: a cue ends at the next `SYNC` that has a `<P>` of the same class, or no `<P>` at all. A `SYNC` with only `&nbsp;` ends a cue and starts none. The last cue lasts [`ReadOptions::$lastCueDuration`](read-options.md).
+- **End times**: a cue ends at the next `SYNC` with a `<P>` of the same class. A `SYNC` with no `<P>` also ends it. A `SYNC` with only `&nbsp;` ends a cue and starts none. The last cue lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **Text**: a line break in the file is a space, as in HTML. Only `<br>` starts a new cue line. `<b>`, `<i>`, `<u>`, `<s>`, `<strike>` and `<font color>` become core markup. `<font color>` accepts `#rrggbb`, `rrggbb` and the 16 color names of HTML 4. The parser drops other tags from the cue text.
 - **Formatter**: it keeps `<b>`, `<i>`, `<u>`, `<s>` and `<font>` and strips all other tags. It writes the stored `<TITLE>`, STYLE block and `<SAMIParam>`, without the rules of the other language classes. Without a stored block, it names the class after the language metadata, for example `KOKRCC` for `ko-KR`, or `SUBTTL` without a language.
 - **Timing**: the formatter writes a `&nbsp;` SYNC after each cue that has a gap before the next cue. A cue that overlaps the next cue ends where the next cue starts. An unchanged cue keeps the HTML of its `<P>`.
@@ -361,8 +364,8 @@ SBV is the YouTube caption format `0:00:01.500,0:00:04.000`.
 - **Parser**: accepts any number of hour digits. A file that holds only whitespace or a BOM gives 0 cues.
 - **Formatter**: writes one hour digit below 10 hours, and no UTF-8 BOM. It strips all tags and decodes HTML entities. Text with `<`, `>` and `&` round-trips.
 
-## Scenarist Closed Captions
-US broadcast and many streaming services take closed captions as SCC. Each line of an SCC file is a time code and CEA-608 byte pairs, one pair per frame at 29.97 fps.
+## SCC
+SCC (Scenarist Closed Captions) is the closed caption format of US broadcast. Many streaming services also take it. Each line of an SCC file is a time code and CEA-608 byte pairs, one pair per frame at 29.97 fps.
 
 ```php
 use SubtitleToolbox\Format;
@@ -385,10 +388,10 @@ $subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dr
 - **Writes**: pop-on captions on data channel 1, with drop-frame time codes by default.
 - **Times**: a semicolon before the frames marks drop-frame time code, a colon marks non-drop time code. A caption that no command erases lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **Damaged data**: the parser ignores the second copy of a doubled control code and drops a byte with a parity error. It skips data channel 2, XDS packets and text mode.
-- **Position**: rows 1 to 4 give alignment 8, and all other rows give `null`. The `scc` format data keeps the row and column of each line. The formatter writes them back when they still fit the cue. Otherwise it places the lines by the alignment, at the bottom and centred by default.
-- **Timing of the formatter**: it loads each caption before the cue start, so the caption shows on the first frame of the cue. When the frames after the previous caption are too few for the load, the caption shows late. Of two overlapping cues, the later one replaces the earlier one.
+- **Position**: rows 1 to 4 give alignment 8, and all other rows give `null`. The `scc` format data keeps the row and column of each line. The formatter writes them back when they still fit the cue. Otherwise it places the lines by the alignment, at the bottom and centered by default.
+- **Timing of the formatter**: it loads each caption before the cue start. So the caption shows on the first frame of the cue. When the frames after the previous caption are too few for the load, the caption shows late. Of two overlapping cues, the later one replaces the earlier one.
 - **Markup**: styles become `<i>`, `<u>` and `<font color>` with `#ffffff`, `#00ff00`, `#0000ff`, `#00ffff`, `#ff0000`, `#ffff00` and `#ff00ff`, and back. The formatter writes other colors as white and strips all other tags. A style change inside a word adds a space.
-- **Limits**: the formatter throws `UnwritableContentException` for more than 4 lines, more than 32 characters per line, or a character outside the CEA-608 character sets. The message names 1 of 2 fixes for too many or too long lines.
+- **Limits**: the formatter throws `UnwritableContentException` for content that SCC cannot hold. This is more than 4 lines, more than 32 characters per line, or a character outside the CEA-608 character sets. The message names 1 of 2 fixes for too many or too long lines.
   - Wrapping the cue text at 32 characters gives 4 lines or fewer. Call `wrapLines(32, 4)` first.
   - Wrapping the cue text at 32 characters gives more than 4 lines. Call `Resegmenter::apply()` with `ResegmentMode::SplitLong` and `new CueLimits(32, 4)`, then `wrapLines(32, 4)`.
 
@@ -447,7 +450,7 @@ $subtitle->toString(Format::Ttml);
 - **Alignment**: the parser maps the region to an alignment only for `tts:textAlign` `left`, `center` or `right`. A text anchor in the top third of the screen gives the top row, in the bottom third the bottom row.
 - **Regions from alignment**: a cue without a stored `region` gets a region such as `topCenter` that matches its alignment. A subtitle from another format gets `bottomCenter` for cues without alignment. The stored `region` wins over the alignment.
 - **Metadata**: `xml:lang` of `<tt>` is the `language` and the first `ttm:title` is the `title`. The formatter writes the title as the first child of `<head>`.
-- **Kept as is**: the `<head>`, the attributes of `<tt>`, `<body>`, `<div>` and `<p>`, and the namespace, so a DFXP file stays DFXP. The formatter drops `ttp:timeBase`, `ttp:clockMode`, `ttp:dropMode` and `ttp:markerMode`, because it writes media times.
+- **Kept as is**: the `<head>`, the namespace and the attributes of `<tt>`, `<body>`, `<div>` and `<p>`. So a DFXP file stays DFXP. The formatter drops `ttp:timeBase`, `ttp:clockMode`, `ttp:dropMode` and `ttp:markerMode`, because it writes media times.
 - **Limits**: the parser reads `seq` time containers as `par` and ignores the timing of `<span>` elements. The formatter strips word timestamps. A cue identifier that is not a valid `xml:id` is not written.
 - **Unique IDs**: two cues with the ID `c1` come out as `c1` and `c1_2`. Each `xml:id` value occurs once in the output. A cue ID that a region or a style already uses also gets the next free suffix. The IDs in `<head>` keep their value. The IDs of `<tt>`, `<body>`, `<div>` and `<p>` follow in output order.
 - **Security**: the parser loads no external entity or DTD and makes no network access.
@@ -464,7 +467,7 @@ $subtitle->toString(Format::Ttml);
 | Cue settings `vertical`, `line`, `position`, `size`, `align`, `region` | `$cue->findFormatData('vtt')`, exact values |
 | `&nbsp;`, `&lrm;`, `&rlm;` | the characters U+00A0, U+200E, U+200F |
 
-- **Alignment from cue settings**: `line:0` is the top row, `line:50%,center` the middle row, and no `line`, `line:-1` or `line:100%,end` the bottom row. `align:left`, `center` and `right` set the column. Other values, `align:start`, `align:end` and `vertical` give no alignment.
+- **Alignment from cue settings**: `line:0` is the top row, and `line:50%,center` is the middle row. No `line`, `line:-1` and `line:100%,end` are the bottom row. `align:left`, `center` and `right` set the column. Other values, `align:start`, `align:end` and `vertical` give no alignment.
 - **Cue settings from alignment**: a cue without `vtt` format data gets settings from its alignment. Alignment 8 becomes `line:0`, 7 becomes `line:0 align:left`. The `vtt` format data wins over the alignment.
 - **Output**: the formatter writes the header, comments, styles, regions and cue settings back. It numbers cues without an identifier and always writes hours. It writes `REGION` blocks before `STYLE` blocks, and both before the comments that come before the first cue.
 - **Markup**: the formatter keeps `<b>`, `<i>`, `<u>`, `<v>`, `<lang>`, `<c>`, `<ruby>`, `<rt>` and word timestamps. It keeps classes such as `<c.yellow>` and strips all other tags.

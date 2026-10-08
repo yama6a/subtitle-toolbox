@@ -1,7 +1,7 @@
 # Cue text
 
 ## Text runs
-Most methods on this page see only the **text runs** of a cue: the text between tags, with `&lt;`, `&gt;` and `&amp;` decoded. So a search for `&` finds `&amp;`, and a search for `font` finds no markup. The result gets escaped again, so a replacement cannot add tags. A match cannot cross a tag: `Colour` does not match `<i>Col</i>our`.
+Most methods on this page see only the **text runs** of a cue. A text run is the text between tags, with `&lt;`, `&gt;` and `&amp;` decoded. So a search for `&` finds `&amp;`, and a search for `font` finds no markup. The method escapes the result again, so a replacement cannot add tags. A match cannot cross a tag: `Colour` does not match `<i>Col</i>our`.
 
 ## Transforms
 ```php
@@ -26,7 +26,7 @@ $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>
 - **Case modes**: `CaseMode::Upper`, `CaseMode::Lower` and `CaseMode::Sentence`.
 - **Unicode**: with `ext-mbstring`, the full Unicode case mapping applies. `ß` becomes `SS`, and Greek `Σ` at the end of a word becomes `ς` in lower case. Without `ext-mbstring`, or for text that is not valid UTF-8, only the letters A to Z change.
 - **Turkish and Azerbaijani**: pass `'tr'` or `'az'` as the second argument of `changeCase()`. Then `i` and `İ` pair, and `ı` and `I` pair. Without it, `İ` becomes `i` with a combining dot, U+0307.
-- **Sentence case**: a sentence starts at the start of a cue, and at the first letter or digit after `.`, `!` or `?` and a space or line break. `www.example.com` stays lower case. Names and the English word `I` become lower case. Fix them after with `replaceText()`.
+- **Sentence case**: a sentence starts at the start of a cue. It also starts at the first letter or digit after `.`, `!` or `?` and a space or line break. `www.example.com` stays lower case. Names and the English word `I` become lower case. Fix them after with `replaceText()`.
 
 ## Hearing-impaired annotations
 ```php
@@ -34,7 +34,7 @@ use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
 use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
 
 $report = HearingImpairedRemover::apply($subtitle);   // '(laughs) You came back.' becomes 'You came back.'
-$report->removedLines;                      // the lines that went, the lines of removed cues included
+$report->removedLines;                      // the removed lines, the lines of removed cues included
 $report->removedCues;                       // the cues that had text and have none left
 
 HearingImpairedRemover::apply($subtitle, new HearingImpairedOptions(
@@ -56,10 +56,10 @@ HearingImpairedRemover::isAnnotation('JOHN: Hi.');   // true, apply() would chan
 | `lyrics` | off | Text between two music symbols, and lines that start or end with one |
 
 - **Rules**: they follow the "Remove text for hearing impaired" tool of [Subtitle Edit](https://github.com/SubtitleEdit/subtitleedit). Its interjection list and its "only separate lines" options are not available.
-- **Tags**: the rules see text runs, but a bracket can span tags and lines. Tags stay, and a tag pair that becomes empty, such as `<i></i>`, goes.
-- **Spaces**: the space next to a removed annotation goes too. `Wait (sighs) now.` becomes `Wait now.`
-- **Empty lines and cues**: a line with only a dash left goes. A cue with no text left goes, and comments stay before the next cue.
-- **Dialogue dashes**: when only one of two or more dash lines stays, its `- ` goes too. `- Is it open?` and `- (laughs)` become `Is it open?`.
+- **Tags**: the rules see text runs, but a bracket can span tags and lines. Tags stay. The remover removes a tag pair that becomes empty, such as `<i></i>`.
+- **Spaces**: the remover also removes the space next to a removed annotation. `Wait (sighs) now.` becomes `Wait now.`
+- **Empty lines and cues**: the remover removes a line with only a dash left. It also removes a cue with no text left. The comments of that cue stay before the next cue.
+- **Dialogue dashes**: when only one of two or more dash lines stays, the remover also removes its `- `. `- Is it open?` and `- (laughs)` become `Is it open?`.
 
 ## Speakers
 Core markup holds a speaker as `<v Anna>`. `SpeakerLabels` converts it to the forms that formats without `<v>` can show, and back.
@@ -113,8 +113,8 @@ $subtitle->toString(Format::SubRip);
 - **Dashes**: only cues with two or more speakers get dashes. Text without a speaker counts as one speaker. A line that already starts with `-` gets no second dash.
 - **Colors**: the BBC order is white, yellow, cyan and green, from the [BBC Subtitle Guidelines](https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/). Each speaker gets the next color in the order of its first cue. The fifth speaker gets the first color again. A color that is not `#rrggbb` throws `InvalidArgumentException`.
 - **Labels**: `readPrefixes: true` uses the `speakerLabels` rule of `HearingImpairedOptions`. With `readUpperCaseOnly: false`, it also reads `Baker:` and `Note:`.
-- **Label names**: an upper case label becomes title case, so `DR. O'NEIL:` becomes `<v Dr. O'Neil>`. The dash before a label goes. A label on a line of its own names the speaker of the next line.
-- **Whisper**: the `speaker` field also stays in the cue format data. whisper.cpp `-di` writes the speakers `0` and `1`, and `?` when it cannot tell. The parser ignores the speaker of each WhisperX word.
+- **Label names**: an upper case label becomes title case, so `DR. O'NEIL:` becomes `<v Dr. O'Neil>`. The converter removes the dash before a label. A label on a line of its own names the speaker of the next line.
+- **Whisper**: the `speaker` field also stays in the cue format data. whisper.cpp `-di` writes the speakers `0` and `1`. It writes `?` when it cannot tell. The parser ignores the speaker of each WhisperX word.
 - **Names**: the `list()` key of a speaker such as `0` is an int. A quote in a name stays a raw character, see [markup.md](markup.md).
 
 ## Profanity filter
@@ -140,8 +140,8 @@ $ranges[0]->end;                                 // 62.9
 file_put_contents('movie.edl', MuteRange::toEdl($ranges));     // "62.380 62.900 1\n"
 MuteRange::toFfmpegVolumeFilter($ranges);                       // "volume=enable='between(t,62.380,62.900)':volume=0"
 
-new ProfanityOptions(preg_split('/\R+/', trim(file_get_contents('words-en.txt'))));   // one word per line
-new ProfanityOptions(['hell'], fn (string $word): string => '[beep]');
+new ProfanityOptions(words: preg_split('/\R+/', trim(file_get_contents('words-en.txt'))));   // one word per line
+new ProfanityOptions(words: ['hell'], mask: fn (string $word): string => '[beep]');
 ```
 
 | Mask | `What the hell?` becomes |
@@ -243,7 +243,7 @@ CommonErrorFixer::apply($subtitle);                                            /
 - **Language**: `language` takes a code such as `en`, `de-AT` or `fra`. Null takes the `language` metadata of the subtitle. English, German, French and Spanish have their own rules for I and l. Other languages get only the rules that apply to all languages, for example `lT` to `IT`.
 - **I and l**: OCR reads a capital I as l when the font draws both the same. `ocrLowercaseL` changes an `l` at the start of a word before a consonant: `lch` to `Ich`, `lsabel` to `Isabel`. French also changes `ll` to `Il`, and keeps `l'hôtel`. Spanish keeps `llega`. English also changes `l`, `l'm`, `l'll`, `l've` and `l'd`. `5 lbs` and `2 l` stay.
 - **Image cues**: run the fixes after [OCR](ocr.md). Cues without text lines stay unchanged.
-- **Empty cues**: a cue that the replace list empties goes. `cueIndex` is the index before the removal.
+- **Empty cues**: the fixer removes a cue that the replace list empties. `cueIndex` is the index before the removal.
 - **Limits**: a fix sees one text run, so it does not find `l<i>t's</i>`. A 0 that stands for another letter, such as `B0ro` for `Büro`, becomes `o`.
 
 ### OCR replace lists
@@ -254,7 +254,7 @@ CommonErrorFixer::apply($subtitle);                                            /
 | `WholeWords` | a word between spaces, also with the punctuation around it, such as `"Teh,` |
 | `PartialWordsAlways` | a part of any word, before the `WholeWords` lookup |
 | `WholeLines` | the whole visible text of a line |
-| `BeginLines` | the start of a line, after a dialogue dash or a quote, and the start of a sentence after `. `, `! ` or `? ` |
+| `BeginLines` | the start of a line, also after a dialogue dash or a quote. Also the start of a sentence after `. `, `! ` or `? ` |
 | `EndLines` | the end of the cue. It adds no period when the next cue starts with a lower case letter within 0.6 s |
 | `PartialLines` | a text that starts and ends at a space, a punctuation mark or the line edge |
 | `PartialLinesAlways` | any part of a line |

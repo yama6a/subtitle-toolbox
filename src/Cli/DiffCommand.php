@@ -29,7 +29,7 @@ final class DiffCommand extends ReportCommand
 
     public function summary(): string
     {
-        return "Lists the added, removed and changed cues between two subtitle files.";
+        return "List the added, removed and changed cues between two subtitle files.";
     }
 
 
@@ -41,8 +41,8 @@ final class DiffCommand extends ReportCommand
 
     protected function details(): string
     {
-        return "The diff pairs cues by time and text, not by cue number, so one added cue does not shift the rest. Cue numbers start at 1. " .
-               "The exit code is 1 when the files differ, as with diff. The files can have different formats. " .
+        return "The diff pairs cues by time and text, not by cue number. So one added cue does not shift the rest. Cue numbers start at 1. " .
+               "The exit code is 1 when the files differ, as with the Unix diff command. The files can have different formats. " .
                "--from and --track apply to the old file, --from2 and --track2 to the new file.";
     }
 

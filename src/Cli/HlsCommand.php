@@ -31,7 +31,7 @@ final class HlsCommand extends FileCommand
 
     public function summary(): string
     {
-        return "Cuts a subtitle into WebVTT segments and writes an HLS playlist for them.";
+        return "Cut a subtitle into WebVTT segments and write an HLS playlist for them.";
     }
 
 

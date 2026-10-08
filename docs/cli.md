@@ -30,7 +30,7 @@ php subtitle-toolbox.phar --version
 - **Version**: the PHAR file, the image tag, the Git tag and the Packagist version are the same string, for example `2.0.0`. The image also has the tags `2.0`, `2` and `latest`. The Tesseract image has the tags `2.0.0-tesseract`, `2.0-tesseract`, `2-tesseract` and `tesseract`.
 - **Image**: the tool runs in `/work`, so mount your files there. `--user` makes the tool write files that you own. Without it, the tool runs as `www-data` and cannot write to most mounted folders.
 - **Platforms**: the image is for `linux/amd64` and `linux/arm64`.
-- **OCR**: `convert --ocr` works in every form with no extra steps, because all include php-glyph-ocr. The Tesseract image adds Tesseract with the fast models of all its languages. It is about 340 MB larger.
+- **OCR**: `convert --ocr` works in every form with no extra steps, because all include php-glyph-ocr. The Tesseract image adds Tesseract with the `tessdata_fast` models of all its languages, see [ocr.md](ocr.md#tesseract). It is about 340 MB larger.
 - **Memory**: the image sets `memory_limit` to 512 MB. The PHAR raises a `memory_limit` of 128 MB to 512 MB when you pass `--ocr`. It keeps any other value, for example from `php -d memory_limit=1G`.
 
 ## Commands
@@ -61,14 +61,14 @@ php subtitle-toolbox.phar --version
 | 3 | a file could not be read or written | a missing input, a file that does not parse, an output that cannot be created, content that the output format cannot hold such as 5 lines in SCC, a side file that is missing or does not parse, a translation service that answers with an error |
 
 - **Failures**: a failed file prints `FILE: MESSAGE` to standard error. The message of a library exception starts with its class, for example `ParsingException (Error #100):`. Any other PHP error prints its class and message, for example `movie.json: TypeError: ...`, and fails that file with exit code 3. An error outside a file, such as an output that cannot be created, prints `Error: MESSAGE` and exits with code 3. A PHP error outside a file also prints its class.
-- **Side files**: a side file is a file that an option names besides the inputs: `--reference`, `--silence-log`, `--mask-words`, `--errors-replace-list`, `--snap-shot-changes` and `--ocr-database`. The tool reads each side file once, after the checks of the arguments. So `convert a.srt b.srt --to vtt --mask-words missing.txt` fails with exit code 2, because 2 inputs need `--output-dir`. A side file that is missing or does not parse stops the run before the first input, also with `--keep-going`. The tool prints `Error: PATH: MESSAGE`, for example `Error: words.txt: The file does not exist.`, and exits with code 3.
-- **Stable parts**: semantic versioning covers the binary, its commands, options, the meaning of each exit code and `--json` shapes. The text output and the messages can change in a minor release. The PHP classes in `src/Cli` are `@internal` and can change in any release. See [compatibility.md](compatibility.md).
+- **Side files**: a side file is a file that an option names besides the inputs. These options take a side file: `--reference`, `--silence-log`, `--mask-words`, `--errors-replace-list`, `--snap-shot-changes` and `--ocr-database`. The tool reads each side file once, after the checks of the arguments. So `convert a.srt b.srt --to vtt --mask-words missing.txt` fails with exit code 2, because 2 inputs need `--output-dir`. A side file that is missing or does not parse stops the run before the first input, also with `--keep-going`. The tool prints `Error: PATH: MESSAGE`, for example `Error: words.txt: The file does not exist.`, and exits with code 3.
+- **Stable parts**: see [compatibility.md](compatibility.md) for the parts of the tool that semantic versioning covers.
 - **Messages**: where a library message names a PHP method or option, the tool names the CLI option. For example "Call loadTrack() with one of them" becomes "Pass --track N with one of them".
 
 ## Input and output
 - **Inputs**: a file, a directory, a glob such as `"season1/*.srt"`, or `-` for standard input. A directory gives its files with a known extension. The tool counts the inputs after it expands directories and globs.
 - **Positional files**: only inputs with the same role, so their order does not matter. A file with another role takes an option, for example `sync --reference FILE` and `dual --primary FILE --secondary FILE`. `diff OLD NEW` keeps 2 positional files, as `diff` and `git diff` do.
-- **Input format**: `--from`. Without it, the tool detects the format from the content. When that fails, it uses the file extension. Chapters and cloud speech-to-text JSON need `--from`, for example `--from deepgram` or `--from ffmeta-chapters`. `--from` and `--to` also take the 1.x names `ytchapter`, `podcast`, `ogm` and `ffmeta`. The tool reads like `Subtitle::loadAutoDetectFormat()`, see [formats.md](formats.md#load-and-save).
+- **Input format**: `--from`. Without it, the tool detects the format from the content. When that fails, it uses the file extension. Chapters and cloud speech-to-text JSON need `--from`, for example `--from deepgram` or `--from ffmeta-chapters`. `--from` and `--to` also take the aliases `ytchapter`, `podcast`, `ogm` and `ffmeta`. The tool reads like `Subtitle::loadAutoDetectFormat()`, see [formats.md](formats.md#load-and-save).
 - **Output**: never positional. `convert`, `retime`, `sync`, `translate` and `dual` write one input to standard output, or to the file of `-o FILE` (`--output FILE`). Several inputs need `--output-dir DIR`. `hls` always needs `--output-dir`.
 
 | Call | Writes |
@@ -94,7 +94,7 @@ php subtitle-toolbox.phar --version
 | `-o` names a directory | `-o out` with an existing directory `out`. Pass `--output-dir out` |
 | `--output-dir` names a file, also for `hls` | `--output-dir movie.srt` |
 
-- **Read files**: the `.sub` file of a VobSub input and the files of options such as `--mask-words` and `--reference` count as read files. A file passed twice, such as `movie.srt ./movie.srt`, counts once.
+- **Read files**: a read file is a file that the command reads. The inputs, the `.sub` file of a VobSub input and each side file are read files. A file passed twice, such as `movie.srt ./movie.srt`, counts once.
 - **Output paths**: the tool resolves `..` in an output path before it checks the path or creates a directory. `-o new/../keep.vtt` writes `keep.vtt` and creates no directory `new`. With an existing `keep.vtt`, it fails with exit code 2.
 - **Race**: the tool creates each file with exclusive create (`fopen($path, 'x')`). When another process creates the file between the check and the write, the create fails. The tool then removes every file that it wrote in the run and exits with code 3.
 - **Standard output**: the tool does not check it. A shell redirect such as `> movie.vtt` overwrites a file. `-o -` also writes standard output.
@@ -105,7 +105,7 @@ php subtitle-toolbox.phar --version
 - **Choice values**: a value from a fixed list ignores case. `--line-ending CRLF`, `--mode Top-Bottom` and `--preset BBC` work.
 - **Encoding**: `--encoding` names the encoding of the input, for example `Windows-1252`. See [encodings.md](encodings.md).
 - **Output bytes**: `--line-ending lf|crlf`, `--bom` and `--no-bom`.
-- **Broken files**: `--lenient` skips or repairs broken cues and prints one warning for each broken cue in each file that a command reads, also a second file or a `--reference`, see [lenient-parsing.md](lenient-parsing.md).
+- **Broken files**: `--lenient` skips or repairs broken cues and prints one warning for each broken cue. It applies to each file that a command reads, also a second file or a `--reference`. See [lenient-parsing.md](lenient-parsing.md).
 - **Frame rate**: see [Frame rates](#frame-rates).
 - **Word timestamps**: `--word-timestamps` keeps the word times of the speech-to-text JSON formats, YouTube timed text and Podcasting 2.0 transcripts. `--structure-resegment`, `--karaoke` and `--ass-karaoke-tag` turn it on.
 - **MKV and WebM**: `--track` picks a subtitle track, see [MKV and WebM](#mkv-and-webm).
@@ -120,18 +120,18 @@ php subtitle-toolbox.phar --version
 | `--fps RATE` | each of the 3 options above that the command has | all that read a file |
 
 - **Override**: a specific option wins over `--fps`. `convert movie.sub --to microdvd -o new.sub --fps 25 --output-fps 23.976` reads at 25 fps and writes at 23.976 fps.
-- **Output default**: without `--output-fps`, MicroDVD output takes the frame rate of a MicroDVD input, and iTT output the frame rate of an iTT input.
+- **Output default**: without `--output-fps`, the frame rate of the output comes from the input, see [Load and save](formats.md#load-and-save).
 - **Formats**: `--from` and `--to` always name formats. `retime` changes the frame rate with `--from-fps` and `--to-fps`.
 
 ## Formats and file extensions
-Run `subtitle-toolbox formats` for the list. When two formats share an extension, the first one in the list owns it.
+Run `subtitle-toolbox formats` for the list. For an extension that two formats share, see [Shared extensions](formats.md#the-format-enum).
 
 - **Output extension**: `--to` sets the output format, never the extension of `-o`. So `--to mpl2 -o film.txt` writes MPL2, and `--to txt -o film.txt` writes plain text. The tool cannot write Whisper JSON, so convert it with `--to json` to the library JSON.
 - **`.sub`**: MicroDVD. Pass `--from subviewer` for SubViewer. A directory skips a `.sub` file that has an `.idx` file next to it.
 - **VobSub**: pass the `.idx` file. The tool reads the `.sub` file next to it. Standard input does not work.
-- **`.json` and `.txt` input**: format detection finds the library JSON, Whisper JSON, YouTube json3, Podcasting 2.0 transcripts, MPL2 and TMPlayer by their content. Other `.json` and `.txt` input fails. Pass `--from` for chapters and cloud speech-to-text JSON.
+- **`.json` and `.txt` input**: format detection finds 6 of these formats by their content. These are the library JSON, Whisper JSON, YouTube json3, Podcasting 2.0 transcripts, MPL2 and TMPlayer. Other `.json` and `.txt` input fails without `--from`.
 - **Other output formats**: pass `--to`, for example `--to mpl2`, `--to podcast-transcript` or `--to youtube-chapters`.
-- **CSV and TSV**: TSV output has tabs between the cells. CSV output from a TSV input has commas. Other CSV output keeps the delimiter of the input table.
+- **CSV and TSV**: see [Load and save](formats.md#load-and-save) for the delimiter of the output.
 
 ## MKV and WebM
 Every command reads a subtitle track of an MKV or WebM file with [`Subtitle::loadTrack()`](mkv.md). `--track` takes the track number that `info` lists.
@@ -157,7 +157,7 @@ movie.mkv
 - **Second file**: `diff` reads the track of the new file with `--track2`, for example `diff old.mkv new.mkv --track 3 --track2 8`. `dual` takes `--primary-track` and `--secondary-track`.
 - **Info**: without `--track`, `info` lists the tracks of a file whose extension names no subtitle format, such as `.mkv` and `.webm`. The JSON object has `file`, `container` and `tracks`. Each track has `number`, `codecId`, `language`, `name`, `default` and `forced`. With `--track`, `info` prints the statistics of the track.
 - **Directories**: a directory argument skips MKV and WebM files. Pass them by name or with a glob.
-- **Errors**: `S_VOBSUB` tracks, bzlib and LZO compression and encryption fail, see [mkv.md](mkv.md).
+- **Errors**: `S_VOBSUB` tracks, encrypted tracks and tracks with bzlib or LZO compression fail, see [mkv.md](mkv.md).
 
 ## Retime
 `retime` changes the cue times with one or more edits. It applies them in this order: `--shift`, `--scale`, then `--from-fps` and `--to-fps`. The word timestamps in the cue text move with the cues.
@@ -187,7 +187,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --to srt --output-dir fixed/ -
 ```
 
 ### Order
-`convert` always runs the edits in this order, whatever the order of the options. The options form groups. `convert --help GROUP` lists the options of one group, and `convert --help all` lists every option. A word after `--help` that holds a dot or a slash, or names a file, is no group, so `convert in.srt -h out.srt` prints the convert help. Most groups use the group name as the option prefix, for example `--structure-wrap` and `--timing-min-gap`. The `retime`, `text` and `masking` groups have no prefixed option. In the `snap` group, `--video-fps` has no prefix. An option that turns a default off puts `--no-` before the prefix, for example `--no-snap-chain`.
+`convert` always runs the edits in this order, whatever the order of the options. The options form groups. `convert --help GROUP` lists the options of one group, and `convert --help all` lists every option. A word after `--help` that holds a dot or a slash, or names a file, is not a group name. So `convert in.srt -h out.srt` prints the convert help. Most groups use the group name as the option prefix, for example `--structure-wrap` and `--timing-min-gap`. The `retime`, `text` and `masking` groups have no prefixed option. In the `snap` group, `--video-fps` has no prefix. An option that turns a default off puts `--no-` before the prefix, for example `--no-snap-chain`.
 
 | Step | Group | Options | Why here |
 |:--- |:--- |:--- |:--- |
@@ -216,7 +216,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --to srt --output-dir fixed/ -
 | `--errors-fix` | [`CommonErrorFixer::apply()`](text.md#fixing-common-errors) with all default fixes |
 | `--errors-replace-list FILE` | adds a Subtitle Edit OCR replace list to `--errors-fix` |
 | `--errors-list-fixes` | prints each change of `--errors-fix` to standard error, for example `movie.srt: cue 15: ocrLowercaseL: "lt's late." -> "It's late."`. A byte that is not valid UTF-8 prints as U+FFFD |
-| `--sdh` | removes everything that [`HearingImpairedRemover::apply()`](text.md#hearing-impaired-annotations) removes by default. A cue with no text left goes |
+| `--sdh` | removes everything that [`HearingImpairedRemover::apply()`](text.md#hearing-impaired-annotations) removes by default. It also removes a cue with no text left |
 | `--sdh-keep-square-brackets`, `--sdh-keep-parentheses`, `--sdh-keep-speaker-labels`, `--sdh-keep-music-lines` | turns off one rule of `--sdh` |
 | `--sdh-any-case-labels` | also removes speaker labels that are not upper case, such as `Baker:` |
 | `--sdh-lyrics` | also removes text between two music symbols |
@@ -234,7 +234,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --to srt --output-dir fixed/ -
 |:--- |:--- |
 | `--mask-words FILE` | masks the words of a word file, as [`ProfanityFilter::apply()`](text.md#profanity-filter) does |
 | `--mask STYLE` | `stars`, `first-letter`, `remove`, or `none`. `none` keeps the text and only finds the times for `--mute-edl` and `--mute-filter` |
-| `--mute-edl FILE` | writes the times of the matches to an EDL file with [`MuteRange::toEdl()`](text.md#profanity-filter), for Kodi and MPlayer |
+| `--mute-edl FILE` | writes the times of the matches to an EDL (edit decision list) file with [`MuteRange::toEdl()`](text.md#profanity-filter), for Kodi and MPlayer |
 | `--mute-filter FILE` | writes the FFmpeg volume filter of `MuteRange::toFfmpegVolumeFilter()` |
 | `--mute-padding SECONDS` | widens each time range on both sides |
 
@@ -268,7 +268,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 
 | Option | Calls |
 |:--- |:--- |
-| `--snap-shot-changes FILE` | [`ShotChangeTiming::apply()`](editing.md#shot-changes-and-gaps) with the shot changes of the file: the log of the FFmpeg `showinfo` filter, or one time per line in seconds or `hh:mm:ss.mmm` |
+| `--snap-shot-changes FILE` | [`ShotChangeTiming::apply()`](editing.md#shot-changes-and-gaps) with the shot changes of the file. The file is the log of the FFmpeg `showinfo` filter, or it has one time per line in seconds or `hh:mm:ss.mmm` |
 | `--video-fps RATE` | `frameRate`, the frame rate of the shot changes and of the frame options. Required with the `--snap-` options |
 | `--snap-window-frames FRAMES` | `snapWindowFrames` |
 | `--snap-min-gap-frames FRAMES` | `minGapFrames` |
@@ -284,7 +284,7 @@ vendor/bin/subtitle-toolbox convert movie.srt --to srt -o movie.timed.srt --vide
 ```
 
 - **Gaps only**: without `--snap-shot-changes`, a `--snap-` option such as `--snap-min-gap-frames 2` only [closes gaps](editing.md#closing-gaps).
-- **Frame rates**: `--input-fps` sets the frame rate of a MicroDVD input on its own.
+- **Frame rates**: `--input-fps` sets only the frame rate of the input. It does not set `--video-fps`.
 
 ### Karaoke and ASS output
 | Option | Effect |
@@ -296,7 +296,7 @@ vendor/bin/subtitle-toolbox convert movie.srt --to srt -o movie.timed.srt --vide
 - **Library only**: the cumulative mode and the word limit of `WordHighlightOptions` have no option. Call `WordHighlight::apply()` for them.
 
 ## JSON output
-`info`, `validate` and `diff` print JSON with `--json`: a list with one object for each input, also for one input. For `diff`, the list holds one object for its pair of files. A file that fails has no object, so the list is `[]` when all files fail.
+`info`, `validate` and `diff` print JSON with `--json`: a list with one object for each input. For `diff`, the list holds one object for its pair of files. A file that fails has no object, so the list is `[]` when all files fail.
 
 | Command | Object |
 |:--- |:--- |
@@ -323,7 +323,7 @@ vendor/bin/subtitle-toolbox convert movie.srt --to srt -o movie.timed.srt --vide
 | `--max-cps`, `--max-cpl`, `--max-lines` | `maxCharactersPerSecond`, `maxCharactersPerLine`, `maxLinesPerCue` |
 | `--min-duration`, `--max-duration`, `--min-gap` | `minDuration`, `maxDuration`, `minGap` |
 | `--max-wpm`, `--min-seconds-per-word` | `maxWordsPerMinute`, `minSecondsPerWord` |
-| `--max-speakers`, `--dialogue-dash STYLE`, `--allowed-characters CHARS` | `maxSpeakersPerCue`, `dialogueDashStyle`, `allowedCharacters` |
+| `--max-speakers`, `--dialogue-dash STYLE`, `--allowed-characters LIST` | `maxSpeakersPerCue`, `dialogueDashStyle`, `allowedCharacters` |
 | `--check-overlaps`, `--check-empty-cues`, `--check-double-spaces` | `noOverlap`, `noEmptyCues`, `noDoubleSpaces` |
 | `--check-leading-or-trailing-spaces`, `--check-unbalanced-tags`, `--check-all-caps-lines` | `noLeadingOrTrailingSpaces`, `noUnbalancedTags`, `noAllCapsLines` |
 
@@ -349,16 +349,16 @@ movie.de.srt: scale 1.04271, offset -2.3 s, score 0.89
 |:--- |:--- |
 | `--reference FILE` | the subtitle in sync with the video, in any format that the tool reads. A Whisper JSON transcript of the audio also works |
 | `--silence-log FILE`, `--media-duration SECONDS` | the speech in an FFmpeg `silencedetect` log as the reference, with [`SpeechReference`](sync.md#sync-to-speech) |
-| `--min-offset SECONDS`, `--max-offset SECONDS` | `minOffset` and `maxOffset`. From -86400 to 86400 and at most 7200 apart, see [sync.md](sync.md#sync-to-a-reference-subtitle) |
+| `--min-offset SECONDS`, `--max-offset SECONDS` | `minOffset` and `maxOffset`, see [sync.md](sync.md#sync-to-a-reference-subtitle) for their limits |
 | `--no-scale` | `searchScale: false` |
-| `--max-splits N`, `--split-penalty SCORE` | `maxSplits` from 0 to 10, and `splitPenalty` |
+| `--max-splits SPLITS`, `--split-penalty SCORE` | `maxSplits` and `splitPenalty` |
 
 - **Score**: below 0.5, the tool also prints that the files likely do not match. The exit code stays 0.
 - **Splits**: for each part, the tool prints a line such as `movie.de.srt: from 414.32 s: offset 147.7 s`.
 - **Reference**: the tool detects the format of the reference. `--from` and `--track` apply only to the input.
 
 ## Diff
-`diff` compares an old and a new file with [`SubtitleDiff`](compare.md) and prints `toText()`. The files can have different formats. The exit code is 1 when they differ, as with `diff`. Equal files give no output. The first argument must name one file. A directory or a glob that matches more than one file fails with exit code 2.
+`diff` compares an old and a new file with [`SubtitleDiff`](compare.md) and prints `toText()`. The files can have different formats. The exit code is 1 when they differ, as with the Unix `diff` command. Equal files give no output. The first argument must name one file. A directory or a glob that matches more than one file fails with exit code 2.
 
 ```sh
 vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-formatting
@@ -390,12 +390,14 @@ GOOGLE_TRANSLATE_API_KEY=... vendor/bin/subtitle-toolbox translate season1/ --en
 | `--target-language CODE` | the language of the output, for example `en-US` for DeepL or `fr` for Google. Required |
 | `--fps`, `--input-fps`, `--output-fps` | `frameRate` of the MicroDVD, CSV and iTT read and write options, see [Frame rates](#frame-rates) |
 
-- **Output**: one input goes to standard output, or to the file of `-o`. Several inputs need `--output-dir`. See [Input and output](#input-and-output).
 - **Key**: the tool reads only the variable of the chosen engine. With `--engine deepl`, a set `GOOGLE_TRANSLATE_API_KEY` does not help. The key never appears in the output or in error messages.
 - **Shared machine**: other users can read the arguments of a process, for example with `ps`, and the shell history keeps them. On a shared machine, set the variable in place of `--api-key`.
 - **Language codes**: the tool passes the codes to the service as they are and does not check them. The service rejects an unknown code, and the file fails.
-- **Usage errors**: a missing or unknown `--engine`, a missing key or a missing `--target-language` stops the tool with exit code 2 before it reads a file.
-- **Service errors**: a wrong key (HTTP 403), too many requests (HTTP 429), a used-up DeepL quota (HTTP 456) or no response fails the file with exit code 3 and a message that names the cause. `--keep-going` goes on with the next file.
+- **Usage errors**: the tool stops with exit code 2 before it reads a file in these cases:
+  - A missing or unknown `--engine`.
+  - A missing key.
+  - A missing `--target-language`.
+- **Service errors**: an error of the service fails the file with exit code 3. The message names the cause, for example a wrong key (HTTP 403), too many requests (HTTP 429), a used-up DeepL quota (HTTP 456) or no response. `--keep-going` goes on with the next file.
 - **Warnings**: when the service drops a placeholder tag, the tool prints `movie.srt: cue 4: ...` to standard error and writes the cue without tags.
 - **No curl**: without `ext-curl`, `translate` stops with exit code 2 and names the extension. The other commands run without it. The container images include it. For the PHAR, install the curl extension of your PHP.
 
@@ -440,7 +442,7 @@ This writes `hls/sub0.vtt` to `hls/sub899.vtt` and `hls/subs.m3u8`.
 | `--local SECONDS` | `local`, the WebVTT cue time that maps to `--mpegts` |
 | `--media-duration SECONDS` | `mediaDuration`. Set it to the video duration, so the playlist covers the whole video. Without it, the playlist ends with the last cue |
 
-- **Overwrite**: `hls` fails with exit code 2 before it reads the input when the playlist exists, or when any file in `--output-dir` matches `--pattern`. The playlist can be outside `--output-dir`, so `--output-dir new --playlist ../keep.txt` fails when `keep.txt` exists. The segment count is known only after the read, so `hls/sub950.vtt` blocks a run that writes 900 segments.
+- **Overwrite**: `hls` fails with exit code 2 before it reads the input when the playlist exists. It also fails when a file in `--output-dir` matches `--pattern`. The playlist can be outside `--output-dir`, so `--output-dir new --playlist ../keep.txt` fails when `keep.txt` exists. The segment count is known only after the read, so `hls/sub950.vtt` blocks a run that writes 900 segments.
 - **Names**: `hls` fails with exit code 2 before it writes a file when `--playlist` matches `--pattern`, for example `--playlist sub0.vtt`. It also fails when the playlist or a segment would overwrite the input.
 
 ## OCR
@@ -453,10 +455,10 @@ vendor/bin/subtitle-toolbox convert movie.sup --to srt -o movie.srt --ocr --ocr-
 vendor/bin/subtitle-toolbox convert movie.idx --to srt -o movie.srt --ocr --ocr-database my-font.nocr
 ```
 
-- **Engine**: `--ocr-engine` forces one engine. A forced engine that is not installed stops the tool with exit code 2 and an install hint.
+- **Engine**: `--ocr-engine` picks one engine. When that engine is not installed, the tool stops with exit code 2 and an install hint.
 - **Language**: `--ocr-language` takes Tesseract language codes. A language without installed data stops the tool before the first file with exit code 2 and lists the installed languages. The glyph engine ignores the option and prints a warning.
 - **Database**: `--ocr-database` loads a `.nocr` file in place of the subtitle fonts database. See [Training a database](ocr.md#training-a-database).
-- **No engine**: without Tesseract and php-glyph-ocr, `--ocr` stops with exit code 2 and prints the install commands of both.
+- **No engine**: when neither Tesseract nor php-glyph-ocr is installed, `--ocr` stops with exit code 2 and prints the install commands of both.
 - **Progress**: the tool prints `movie.sup: OCR 100/1500` to standard error after every 100 image cues and after the last one.
-- **Memory**: with php-glyph-ocr, a 1,500-cue PGS file needs up to 170 MB, above the default `memory_limit` of 128 MB. Run `php -d memory_limit=512M vendor/bin/subtitle-toolbox convert movie.sup --to srt -o movie.srt --ocr` for long files.
+- **Memory**: php-glyph-ocr can need more than the default `memory_limit` of 128 MB, see [ocr.md](ocr.md#php-glyph-ocr). Raise it, for example with `php -d memory_limit=512M vendor/bin/subtitle-toolbox convert movie.sup --to srt -o movie.srt --ocr`.
 - **Info**: `info` prints `Image cues: 12, 0 with text` for a file with image cues. The JSON holds `"imageCues": {"count": 12, "withText": 0}` for every file.

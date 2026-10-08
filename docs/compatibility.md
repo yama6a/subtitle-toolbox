@@ -6,16 +6,16 @@ The library follows semantic versioning. A 2.x minor or patch release does not b
 | Part | What stays stable in 2.x |
 |:--- |:--- |
 | PHP API | public classes, methods, properties, constants and enums that are not `@internal` |
-| Parameter names | every parameter name. Call option constructors with named arguments, for example `new WriteOptions(bom: true)` |
+| Parameter names | every parameter name. Call options constructors with named arguments, for example `new WriteOptions(bom: true)` |
 | Exceptions | the exception classes, their codes and the parents that [errors.md](errors.md) lists, including the SPL parents |
 | CLI | the commands, the options, the meaning of each exit code and the `--json` shapes of the binary `subtitle-toolbox`. The CLI never overwrites a file |
 
 ## Changes a minor or patch release can make
-- **Bug fixes and new formats**: a release that fixes a bug or adds a format can change the written bytes, the parsed cues and the detection result of a file. The release notes list each change.
+- **Bug fixes and new formats**: a bug fix or a new format can change the written bytes, the parsed cues and the detection result of a file. The release notes list each change.
 
 ## Changes a minor release can make
 - **Enum cases**: an enum such as `Format`, `ValidationRule` or `CommonErrorRule` can get a new case. Give a `match` on an enum a `default` arm.
-- **String values in JSON**: a string field of the `--json` output or the library JSON, such as `kind`, `rule`, `action` or `format`, can get a new value, as an enum can get a new case.
+- **String values in JSON**: a string field of the `--json` output or the library JSON can get a new value. Examples are `kind`, `rule`, `action` and `format`.
 - **Default values**: an option can get a new default value, also a CLI default such as `hls --segment 6`. The release notes list each change. Pass the value to keep it.
 - **PHP version and extensions**: a minor release can raise the minimum PHP version or need a new PHP extension. The release notes announce it.
 - **Interface methods**: implement only `OcrEngine`, `TranslationEngine` and `HttpClient`. They stay as they are. The other interfaces, such as `CueStreamReader`, can get new methods.
@@ -26,7 +26,7 @@ The library follows semantic versioning. A 2.x minor or patch release does not b
 - **Messages**: the text of an exception message and the text output of the CLI can change. Test the exception class, `getCode()` or `ParsingException::getLineNumber()`, and parse `--json` output.
 
 ## Text fixes and presets
-- **Existing rules**: a patch release can change a rule of `CommonErrorFixer`, `HearingImpairedRemover`, `ProfanityFilter` or `SpeakerLabels` so that it stops changing text that it should keep.
+- **Existing rules**: a patch release can change a rule so that it stops changing text that it should keep. This applies to `CommonErrorFixer`, `HearingImpairedRemover`, `ProfanityFilter` and `SpeakerLabels`.
 - **New rules**: a new rule is off by default. Turn it on with its option.
 - **Presets**: `ValidationRules::netflixEnglish()`, `ValidationRules::bbc()` and the CLI `validate --preset` never get a new rule in 2.x.
 
@@ -34,7 +34,11 @@ The library follows semantic versioning. A 2.x minor or patch release does not b
 Before 3.0 removes a class, method, option or command, at least one 2.x minor release marks it `@deprecated`. The CLI prints a warning when you use a deprecated command or option.
 
 ## Not covered
-- **`@internal`**: a class, method or constant marked `@internal` can change in any release. Examples are `ImageFormatter`, and the constructors of the reports and results that the library returns, such as `CommonErrorReport`, `ValidationViolation` and `ParseWarning`. Read their fields, but do not create them. `RecognizedText` stays public, because an `OcrEngine` returns it. The constructor of `Comment` also stays public.
+- **`@internal`**: a class, method or constant marked `@internal` can change in any release. An example is `ImageFormatter`.
+- **Constructors of reports and results**: only the library creates reports and results. Read their fields, but do not create them. `RecognizedText` and `Comment` are the 2 exceptions with a public constructor, because an `OcrEngine` returns `RecognizedText`. These constructors are `@internal`:
+  - Reports: `CommonErrorReport`, `HearingImpairedReport`, `OcrReport`, `ProfanityReport`, `ReferenceSyncReport`, `ResegmentReport`, `ShotChangeReport`, `SpeakerLabelReport`, `TranslationReport` and `WordHighlightReport`.
+  - Results: `AppliedFix`, `CueDifference`, `ValidationViolation`, `TranslationWarning`, `MuteRange`, `MatroskaTrack` and `HlsWebVttRendition`.
+  - `ParseWarning`, also `ParseWarning::skipped()`.
 - **Parsers and formatters as base classes**: do not extend `SubtitleParser` or `SubtitleFormatter`. Their protected members can change in any release. Call a parser or formatter from your own class.
 - **Exceptions as base classes**: do not extend an exception class. `InvalidArgumentException` and `InvalidParserException` are not `final`, because a library class extends each of them. Their protected `CODE` constant is not API. `GenericException` is not API, also as a parent.
 - **`SubtitleToolbox\Cli`**: the PHP classes of the command line tool. Run the binary instead.

@@ -264,8 +264,8 @@ class ApplicationTest extends TestCase
     {
         $sdh = "sdh: Remove hearing-impaired annotations.\n" .
                "  --sdh                       Remove hearing-impaired annotations such as [DOOR\n" .
-               "                              SLAMS], (laughs) and JOHN:. A cue with no text\n" .
-               "                              left goes.\n";
+               "                              SLAMS], (laughs) and JOHN:. Remove a cue with no\n" .
+               "                              text left.\n";
 
         $this->assertStringStartsWith($sdh, self::runApplication(["convert", "--help", "sdh"])[1]);
         $this->assertSame(self::runApplication(["convert", "--help", "sdh"]), self::runApplication(["convert", "-h", "sdh"]));
@@ -324,7 +324,7 @@ class ApplicationTest extends TestCase
         $this->assertStringStartsWith(
             "Usage: subtitle-toolbox retime <input>... [--shift SECONDS] [--scale FACTOR]\n" .
             "                               [--from-fps RATE --to-fps RATE] [options]\n\n" .
-            "Shifts and scales all cue times, or fits them to a video with another frame\nrate.\n\n" .
+            "Shift and scale all cue times, or fit them to a video with another frame rate.\n\n" .
             "Pass one or more edits. retime applies them in this order: --shift, --scale,\n--from-fps and --to-fps.",
             $stdout
         );
@@ -337,7 +337,7 @@ class ApplicationTest extends TestCase
         ], $matches[1]);
         $this->assertMatchesRegularExpression('/^  --shift-after SECONDS +Shift only the cues that start at this time or later\.$/m', $stdout);
         $this->assertMatchesRegularExpression('/^  --from-fps RATE +Frame rate of the video that the subtitle fits now\. Needs --to-fps\.$/m', $stdout);
-        $this->assertMatchesRegularExpression('/^  --fps RATE +Sets --input-fps and --output-fps\. Each of them overrides it\.$/m', $stdout);
+        $this->assertMatchesRegularExpression('/^  --fps RATE +Sets --input-fps and --output-fps\. A specific option wins over --fps\.$/m', $stdout);
         $this->assertSame(array_map(fn (Option $option): string => $option->name, (new RetimeCommand())->options()), array_slice($matches[1], 0, -1));
     }
 
@@ -376,7 +376,7 @@ class ApplicationTest extends TestCase
                                           "  -V, --version  Print the version.\n",
                                           self::runApplication(["--help"])[1]);
         $this->assertMatchesRegularExpression('/^  --json +Print the differences as JSON: a list with one object for the pair of files\.$/m', BinaryTestCase::unwrapHelp(self::runApplication(["diff", "--help"])[1]));
-        $this->assertMatchesRegularExpression('/^  --json +Print JSON: a list with one object for each input file, also for one file\.$/m',
+        $this->assertMatchesRegularExpression('/^  --json +Print JSON: a list with one object for each input file\.$/m',
                                               BinaryTestCase::unwrapHelp(self::runApplication(["info", "--help"])[1]));
     }
 

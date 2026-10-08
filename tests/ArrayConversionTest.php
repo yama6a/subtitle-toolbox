@@ -18,7 +18,7 @@ class ArrayConversionTest extends TestCase
 {
     private const DIR = __DIR__ . "/files/";
 
-    // Format::detect() does not detect cloud speech JSON, so these fixtures load with the format of their directory.
+    // Format::detect() does not detect cloud speech-to-text JSON, so these fixtures load with the format of their directory.
     private const CLOUD_SPEECH = ["assemblyai", "aws-transcribe", "deepgram", "google-speech"];
 
 

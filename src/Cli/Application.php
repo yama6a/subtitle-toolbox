@@ -159,7 +159,7 @@ final class Application
         $name      = self::NAME;
         $commands  = Command::table([
             ...array_map(fn (Command $command): array => [$command->name(), $command->summary()], $this->commands),
-            ["help", "Shows the help of a command."],
+            ["help", "Show the help of a command."],
         ]);
         $about     = Command::wrap(
             "Run \"$name help <command>\" or \"$name <command> --help\" for the options of a command. " .

@@ -34,7 +34,7 @@ class FormatDetectorTest extends TestCase
         "youtube"  => Format::YouTubeTimedText,
     ];
 
-    // Chapters and cloud speech JSON load only with an explicit format.
+    // Chapters and cloud speech-to-text JSON load only with an explicit format.
     private const NOT_DETECTED_DIRECTORIES = ["chapters", "aws-transcribe", "deepgram", "assemblyai", "google-speech"];
 
     // These fixtures break their own format on purpose, so their parser rejects them.

@@ -27,7 +27,7 @@ The value of a `ValidationRule` case is the name of its field in `ValidationRule
 | `maxCharactersPerLine` | characters | one violation per line that is too long |
 | `maxLinesPerCue` | lines | lines with visible text |
 | `minDuration`, `maxDuration` | seconds | end minus start |
-| `minGap` | seconds | start minus the latest end of the earlier cues. Overlaps are not gaps |
+| `minGap` | seconds | the [gap](subtitle.md#statistics) to the earlier cues. Overlaps are not gaps |
 | `noOverlap` | `true` to check, violation limit `null` | seconds of overlap with the earlier cues |
 | `noEmptyCues` | `true` to check, violation limit `null` | 0 |
 | `noDoubleSpaces` | `true` to check, violation limit `null` | runs of two or more spaces between words. A non-breaking space counts as a space |
@@ -45,9 +45,9 @@ The value of a `ValidationRule` case is the name of its field in `ValidationRule
 
 - **Off by default**: a rule with the limit `null` or `false` is off.
 - **Number limits**: a limit must be 0 or more. NAN throws `InvalidArgumentException`. A maximum accepts `INF`, which checks nothing. A minimum must be finite.
-- **Characters**: the count leaves out tags and leading and trailing spaces. It counts an entity such as `&amp;` as one character and a UTF-8 letter of several bytes as one character.
+- **Characters**: the rules count characters as `SubtitleStatistics` does, see [Statistics](subtitle.md#statistics).
 - **Spaces**: the text rules check the text without tags, with entities decoded. A cue stores runs of spaces as one space. So two spaces come from tags, as in `you? <i> Home</i>`, or from non-breaking spaces.
-- **Dialogue dash**: a hyphen, an en dash or an em dash at the start of a line, not followed by a digit or another dash. So `-20 degrees` has no dialogue dash.
+- **Dialogue dash**: a hyphen, an en dash or an em dash at the start of a line. A digit or another dash must not follow it. So `-20 degrees` has no dialogue dash.
 - **Words**: text runs between white space, as `SubtitleStatistics` counts them. A lone dash is a word.
 - **Milliseconds**: cue times have millisecond precision. So a cue of 0.833 s meets a minimum duration of 5/6 s.
 
@@ -59,4 +59,4 @@ The value of a `ValidationRule` case is the name of its field in `ValidationRule
 | `ValidationRules::structure()` | `requireCues`, `noUnsortedCues`, `noNegativeDuration` and `noOverlap` | the cue list of `Subtitle` |
 
 - **Netflix**: 20 characters per second is the limit for adult programs.
-- **BBC**: 37 characters is the broadcast line length. 180 words per minute is the upper end of the 160 to 180 that the guide gives. 0.3 s per word allows 200 words per minute, so a cue can break the speed rule and still meet the time per word.
+- **BBC**: 37 characters is the broadcast line length. 180 words per minute is the upper end of the 160 to 180 that the guide gives. 0.3 s per word allows 200 words per minute. So a cue can break the speed rule and still meet the time per word.

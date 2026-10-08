@@ -32,7 +32,7 @@ final class SyncCommand extends WriteCommand
 
     public function summary(): string
     {
-        return "Finds the offset and frame-rate scale against a reference subtitle or the speech, and retimes the input.";
+        return "Find the offset and frame-rate scale against a reference subtitle or the speech, and retime the input.";
     }
 
 
@@ -45,9 +45,9 @@ final class SyncCommand extends WriteCommand
     protected function details(): string
     {
         return "Only the cue times count, so the reference can be in another language. " .
-               "The scale is 1 or a factor between 23.976, 24 and 25 fps. The tool prints the scale, the offset and a score from 0 to 1. " .
+               "The scale is 1 or a factor between 23.976, 24 and 25 fps. sync prints the scale, the offset and a score from 0 to 1. " .
                "A score below 0.5 means that the files likely do not match. " .
-               "One input file goes to standard output, or to the file of -o. Several input files need --output-dir.\n" .
+               self::OUTPUT_DETAILS . "\n" .
                "For a sync to the speech, run this command and pass --silence-log silence.log:\n" .
                "  ffmpeg -i movie.mkv -af silencedetect=n=-30dB:d=0.4 -f null - 2> silence.log\n" .
                "A Whisper JSON transcript of the audio also works as --reference.";
