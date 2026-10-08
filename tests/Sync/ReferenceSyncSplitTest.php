@@ -121,7 +121,7 @@ class ReferenceSyncSplitTest extends TestCase
 
     private static function retimeSegments(Subtitle $subtitle, ReferenceSyncReport $result): void
     {
-        (new \ReflectionMethod(ReferenceSync::class, "retimeSegments"))->invoke(null, $subtitle, $result->scale, $result->getSegments());
+        (new \ReflectionMethod(ReferenceSync::class, "retimeSegments"))->invoke(null, $subtitle, $result->getSegments());
     }
 
 
