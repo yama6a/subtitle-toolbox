@@ -11,7 +11,6 @@ use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\OcrProgress;
 use SubtitleToolbox\Cli\Option;
-use SubtitleToolbox\Cli\OptionsCopy;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Ocr\GlyphOcrEngine;
 use SubtitleToolbox\Ocr\GlyphOcrOptions;
@@ -20,6 +19,7 @@ use SubtitleToolbox\Ocr\OcrEngineChooser;
 use SubtitleToolbox\Ocr\OcrEngineName;
 use SubtitleToolbox\Ocr\TesseractOcrEngine;
 use SubtitleToolbox\Ocr\TesseractOcrOptions;
+use SubtitleToolbox\OptionsCopy;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 

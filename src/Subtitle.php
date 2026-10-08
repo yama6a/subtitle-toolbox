@@ -100,17 +100,9 @@ final class Subtitle implements \IteratorAggregate, \Countable
         $other     = self::pairedFile($path, $isIdx ? "sub" : "idx");
         [$idxPath, $subPath] = $isIdx ? [$path, $other] : [$other, $path];
 
-        $given = $options->format;
-        $vobSubOptions = new ReadOptions(
-            encoding: $options->encoding,
-            lenient: $options->lenient,
-            lastCueDuration: $options->lastCueDuration,
-            format: new VobSubReadOptions(
-                StringHelpers::convertToUtf8(self::readFile($idxPath), $options->encoding),
-                $given?->track,
-                $given?->language,
-            ),
-        );
+        $vobSubOptions = OptionsCopy::with($options, ["format" => OptionsCopy::with($options->format ?? new VobSubReadOptions(), [
+            "idx" => StringHelpers::convertToUtf8(self::readFile($idxPath), $options->encoding),
+        ])]);
 
         return self::parseUtf8(self::readFile($subPath), Format::VobSub, $vobSubOptions);
     }
@@ -403,28 +395,20 @@ final class Subtitle implements \IteratorAggregate, \Countable
         };
         $csv = $formatOptions ?? new CsvWriteOptions();
         if ($delimiter !== null && $csv instanceof CsvWriteOptions && $csv->delimiter === null) {
-            $formatOptions = new CsvWriteOptions($delimiter, $csv->timeFormat, $csv->frameRate, $csv->secondText,
-                                            $csv->secondTextHeader, $csv->escapeFormulas);
+            $formatOptions = OptionsCopy::with($csv, ["delimiter" => $delimiter]);
         }
         if ($format === Format::MicroDvd && ($formatOptions === null || ($formatOptions instanceof MicroDvdWriteOptions && $formatOptions->frameRate === null))) {
-            $formatOptions = new MicroDvdWriteOptions(
-                $this->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
+            $formatOptions = OptionsCopy::with($formatOptions ?? new MicroDvdWriteOptions(), [
+                "frameRate" => $this->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
                     ?? throw new InvalidArgumentException("MicroDVD output needs the frame rate of the video. Pass MicroDvdWriteOptions::frameRate."),
-                $formatOptions instanceof MicroDvdWriteOptions && $formatOptions->writeFrameRateLine,
-            );
+            ]);
         }
         if ($format === Format::Itt && ($formatOptions === null || ($formatOptions instanceof IttWriteOptions && $formatOptions->frameRate === null))
             && !isset($this->findFormatData(IttParser::FORMAT_DATA_KEY)["frameRate"])) {
             throw new InvalidArgumentException("iTT output needs the frame rate of the video. Pass IttWriteOptions::frameRate.");
         }
 
-        return $formatOptions === $options->format ? $options : new WriteOptions(
-            $options->lineEnding,
-            $options->bom,
-            $options->stripTags,
-            $options->skipImageCues,
-            $formatOptions,
-        );
+        return $formatOptions === $options->format ? $options : OptionsCopy::with($options, ["format" => $formatOptions]);
     }
 
 
