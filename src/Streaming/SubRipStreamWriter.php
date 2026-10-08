@@ -11,10 +11,7 @@ use SubtitleToolbox\WriteOptions;
 
 final class SubRipStreamWriter implements CueStreamWriter
 {
-    /** @var resource|null */
-    private $handle;
-
-    private bool $ownsHandle;
+    private readonly StreamHandle $handle;
 
     private SubRipFormatter $formatter;
 
@@ -32,28 +29,19 @@ final class SubRipStreamWriter implements CueStreamWriter
         $this->options = $options;
         $this->formatter  = new SubRipFormatter();
         $prefix           = $this->formatter->format(new Subtitle(), $options);
-        $this->ownsHandle = !is_resource($stream);
-        $this->handle     = Streams::open($stream, "wb");
-        Streams::write($this->handle, $prefix);
+        $this->handle     = new StreamHandle($stream);
+        $this->handle->write($prefix);
     }
 
 
     public function write(SubtitleCue $cue): void
     {
-        Streams::write($this->handle, $this->formatter->formatCueBlock($cue, $this->cueIndex++, $this->options));
+        $this->handle->write($this->formatter->formatCueBlock($cue, $this->cueIndex++, $this->options));
     }
 
 
     public function close(): void
     {
-        if ($this->handle === null) {
-            return;
-        }
-
-        fflush($this->handle);
-        if ($this->ownsHandle) {
-            fclose($this->handle);
-        }
-        $this->handle = null;
+        $this->handle->close();
     }
 }

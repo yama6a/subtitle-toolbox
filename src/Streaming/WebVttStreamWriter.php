@@ -12,10 +12,7 @@ use SubtitleToolbox\WriteOptions;
 
 final class WebVttStreamWriter implements CueStreamWriter
 {
-    /** @var resource|null */
-    private $handle;
-
-    private bool $ownsHandle;
+    private readonly StreamHandle $handle;
 
     private WebVttFormatter $formatter;
 
@@ -41,30 +38,21 @@ final class WebVttStreamWriter implements CueStreamWriter
         $prefix           = $this->formatter->format($headerOnly, $options);
         $this->lineEnding = $options->lineEnding->value;
         $this->hasBlocks  = ($header["styles"] ?? []) !== [] || ($header["regions"] ?? []) !== [];
-        $this->ownsHandle = !is_resource($stream);
-        $this->handle     = Streams::open($stream, "wb");
-        Streams::write($this->handle, $prefix);
+        $this->handle     = new StreamHandle($stream);
+        $this->handle->write($prefix);
     }
 
 
     public function write(SubtitleCue $cue): void
     {
         $block = $this->formatter->formatCueBlock($cue, $this->cueIndex++, $this->options) . $this->lineEnding;
-        Streams::write($this->handle, $this->hasBlocks ? $this->lineEnding . $block : $block);
+        $this->handle->write($this->hasBlocks ? $this->lineEnding . $block : $block);
         $this->hasBlocks = true;
     }
 
 
     public function close(): void
     {
-        if ($this->handle === null) {
-            return;
-        }
-
-        fflush($this->handle);
-        if ($this->ownsHandle) {
-            fclose($this->handle);
-        }
-        $this->handle = null;
+        $this->handle->close();
     }
 }
