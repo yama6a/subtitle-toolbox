@@ -44,6 +44,6 @@ final class DualSubtitleOptions
             return null;
         }
 
-        return strtolower(preg_split("/\s+/", trim($this->secondaryStyle))[0]);
+        return Markup::tagName($this->secondaryStyle);
     }
 }

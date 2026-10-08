@@ -322,4 +322,11 @@ class MarkupTest extends TestCase
         $this->assertSame("0080ff", Markup::rgbToBgr("ff8000"));
         $this->assertSame("123456", Markup::rgbToBgr(Markup::bgrToRgb("123456")));
     }
+
+
+    public function testTagNameIsTheFirstWordInLowerCase(): void
+    {
+        $this->assertSame("font", Markup::tagName(' FONT color="yellow"'));
+        $this->assertSame("c.yellow", Markup::tagName("c.yellow"));
+    }
 }
