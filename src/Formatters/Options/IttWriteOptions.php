@@ -10,8 +10,11 @@ use SubtitleToolbox\OptionChecks;
 
 final class IttWriteOptions implements FormatWriteOptions
 {
+    /**
+     * @param ?float $frameRate 23.976, 24, 25, 29.97 or 30. Null takes the frame rate that IttParser stored.
+     */
     public function __construct(
-        public readonly ?float $frameRate = null,            // 23.976, 24, 25, 29.97 or 30, null takes the frame rate that IttParser stored
+        public readonly ?float $frameRate = null,
     ) {
         if ($frameRate !== null && IttFrameRates::supported($frameRate) === null) {
             $rates = array_map(strval(...), array_keys(IttFrameRates::PARAMETERS));

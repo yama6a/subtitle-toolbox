@@ -8,9 +8,13 @@ use SubtitleToolbox\FrameRate;
 
 final class MicroDvdWriteOptions implements FormatWriteOptions
 {
+    /**
+     * @param ?float $frameRate          Frames per second of the video. Null takes the frame rate that MicroDvdParser stored.
+     * @param bool   $writeFrameRateLine Write the frame rate as the first line, such as {1}{1}23.976.
+     */
     public function __construct(
-        public readonly ?float $frameRate = null,            // frames per second of the video, null takes the frame rate that MicroDvdParser stored
-        public readonly bool $writeFrameRateLine = false,    // writes the frame rate as the first line, {1}{1}23.976
+        public readonly ?float $frameRate = null,
+        public readonly bool $writeFrameRateLine = false,
     ) {
         if ($frameRate !== null) {
             FrameRate::check($frameRate, "The MicroDVD frame rate must be greater than 0, got %s.");
