@@ -10,10 +10,9 @@ use SubtitleToolbox\OptionChecks;
 final class ResegmentOptions
 {
     /**
-     * Creates the settings for Resegmenter::apply().
-     *
-     * @param CueLimits $limits     the limits of each new cue
-     * @param float     $maxWordGap seconds between 2 words of one cue. ResegmentMode::ByWords only
+     * @param ResegmentMode $mode       how the cues change
+     * @param CueLimits     $limits     the limits of each new cue
+     * @param float         $maxWordGap a gap of this many seconds or more between 2 words starts a new cue. ResegmentMode::ByWords only
      */
     public function __construct(
         public readonly ResegmentMode $mode,
