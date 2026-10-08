@@ -25,6 +25,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | text before the first cue | skipped | skipped | skipped |
 | truncated last cue | skipped | skipped | skipped |
 
+- **No empty line between two cues**: SubRip and SBV split the block before each timing line in strict mode too, without a warning. A SubRip cue without a cue number still throws in strict mode.
 - **Cue without text**: a timing line without text lines gives a cue with no lines, in strict and lenient mode. WebVTT allows an empty cue. To drop these cues, call `$subtitle->removeCuesWhere(fn (SubtitleCue $cue): bool => $cue->getLines() === [])`.
 
 ## Other formats

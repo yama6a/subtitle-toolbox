@@ -362,7 +362,7 @@ $subtitle->findFormatData('sami');                                              
 ## SBV
 SBV is the YouTube caption format `0:00:01.500,0:00:04.000`.
 
-- **Parser**: accepts any number of hour digits. A file that holds only whitespace or a BOM gives 0 cues. A timing line without text gives a cue with no lines.
+- **Parser**: accepts any number of hour digits. A file that holds only whitespace or a BOM gives 0 cues. A timing line without text gives a cue with no lines. A timing line starts a new cue, also without an empty line before it.
 - **Formatter**: writes one hour digit below 10 hours, and no UTF-8 BOM. It strips all tags and decodes HTML entities. Text with `<`, `>` and `&` round-trips. It skips a cue with no lines.
 
 ## SCC
@@ -406,6 +406,7 @@ $subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dr
 
 - A file that holds only whitespace or a BOM gives 0 cues.
 - A timing line without text gives a cue with no lines. The formatter writes such a cue as its number and its timing line.
+- A cue number and a timing line start a new cue, also without an empty line before them.
 - Other override tags such as `{\pos(10,20)}` stay in the cue text.
 - The formatter keeps `<b>`, `<i>`, `<u>`, `<s>` and `<font>`, and strips all other tags.
 

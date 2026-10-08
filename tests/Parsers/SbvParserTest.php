@@ -136,6 +136,17 @@ class SbvParserTest extends TestCase
     }
 
 
+    public function testStrictModeStartsANewCueAtEveryTimingLine(): void
+    {
+        $cues = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/lenient/missing_empty_line.sbv"), Format::Sbv)->getCues();
+
+        $this->assertSame(
+            [[1.0, 2.5, ["The wind is cold today."]], [3.0, 5.0, ["Snow falls in the hills."]], [5.5, 7.0, ["The roads are closed."]]],
+            array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], $cues)
+        );
+    }
+
+
     public function testLastCueWithoutTextHasNoLines(): void
     {
         $cues = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sbv/missing_text.sbv"), Format::Sbv)->getCues();
