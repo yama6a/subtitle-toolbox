@@ -277,7 +277,7 @@ final class CodePage
         0xFC => "\u{207F}", 0xFD => "\u{00B2}", 0xFE => "\u{25A0}", 0xFF => "\u{00A0}",
     ];
 
-    private const REPLACEMENT = "?";
+    public const REPLACEMENT = "?";
 
 
     /**

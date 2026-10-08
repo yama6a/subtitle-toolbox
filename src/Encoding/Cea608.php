@@ -75,6 +75,9 @@ final class Cea608
         0x04 => [14, 15], 0x05 => [5, 6], 0x06 => [7, 8], 0x07 => [9, 10],
     ];
 
+    /** @var ?array<string, array{byte?: int, pair?: array{int, int}}> */
+    private static ?array $characterCodes = null;
+
 
     public static function hasOddParity(int $byte): bool
     {
@@ -137,10 +140,9 @@ final class Cea608
      */
     public static function encodeCharacter(string $character): ?array
     {
-        static $codes = null;
-        $codes ??= self::characterCodes();
+        self::$characterCodes ??= self::buildCharacterCodes();
 
-        return $codes[$character] ?? null;
+        return self::$characterCodes[$character] ?? null;
     }
 
 
@@ -228,7 +230,7 @@ final class Cea608
     /**
      * @return array<string, array{byte?: int, pair?: array{int, int}}>
      */
-    private static function characterCodes(): array
+    private static function buildCharacterCodes(): array
     {
         $codes = [];
         foreach (self::EXTENDED_CHARACTERS as $firstByte => $characters) {
