@@ -27,14 +27,6 @@ abstract class FileCommand extends Command
 {
     public const DASH = "-";
 
-    // The 1.x names of the chapter formats, kept so that 1.x scripts still run.
-    private const FORMAT_ALIASES = [
-        "ytchapter" => Format::YouTubeChapters,
-        "podcast"   => Format::PodcastChapters,
-        "ogm"       => Format::OgmChapters,
-        "ffmeta"    => Format::FfMetadataChapters,
-    ];
-
     protected ?Format $fromFormat = null;
 
     protected ?Format $secondFormat = null;
@@ -159,9 +151,9 @@ abstract class FileCommand extends Command
         $this->secondTrack    = $arguments->positiveInt($names["track2"]);
 
         $from               = $arguments->value($names["from"]);
-        $this->fromFormat   = $from === null ? null : self::readableFormat($from);
+        $this->fromFormat   = $from === null ? null : FormatArgument::readable($from);
         $from2              = $arguments->value($names["from2"]);
-        $this->secondFormat = $from2 === null ? null : self::readableFormat($from2);
+        $this->secondFormat = $from2 === null ? null : FormatArgument::readable($from2);
 
         $this->readOptions = new ReadOptions(
             encoding: $arguments->value("encoding"),
@@ -305,29 +297,6 @@ abstract class FileCommand extends Command
     protected static function label(string $input): string
     {
         return $input === self::DASH ? "stdin" : $input;
-    }
-
-
-    /**
-     * Returns the format for a format name or a file extension such as "SRT" or ".ssa".
-     */
-    protected static function findFormat(string $nameOrExtension): Format
-    {
-        $key = strtolower(ltrim($nameOrExtension, "."));
-
-        return Format::tryFrom($key) ?? self::FORMAT_ALIASES[$key] ?? Format::fromPath("file.$key")
-            ?? self::fail("Unknown format \"$nameOrExtension\". Run \"" . Application::NAME . " formats\" for the list.");
-    }
-
-
-    private static function readableFormat(string $nameOrExtension): Format
-    {
-        $format = self::findFormat($nameOrExtension);
-        if (!$format->canRead()) {
-            self::fail("The format $format->value can be written but not read.");
-        }
-
-        return $format;
     }
 
 

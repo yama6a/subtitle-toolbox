@@ -308,7 +308,7 @@ abstract class WriteCommand extends FileCommand
 
     private static function writableFormat(string $nameOrExtension): Format
     {
-        $format = self::findFormat($nameOrExtension);
+        $format = FormatArgument::find($nameOrExtension);
         if (!$format->canWrite()) {
             self::fail("The format $format->value can be read but not written.");
         }
