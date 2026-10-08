@@ -158,6 +158,26 @@ class YouTubeTimedTextParserTest extends TestCase
     }
 
 
+    public static function filesWithoutDuration(): array
+    {
+        return [
+            "srv1" => ["missing-dur.en.srv1"],
+            "srv2" => ["missing-d.en.srv2"],
+        ];
+    }
+
+
+    #[DataProvider("filesWithoutDuration")]
+    public function testTextWithoutDurationEndsAtTheNextStartOrAfterLastCueDuration(string $file): void
+    {
+        $content  = file_get_contents(__DIR__ . "/../files/youtube/real/" . $file);
+        $describe = fn (Subtitle $subtitle): array => array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues());
+
+        $this->assertSame([[1.0, 3.0], [4.0, 6.5], [6.5, 6.5], [8.0, 13.0]], $describe((new YouTubeTimedTextParser())->parse($content, new ReadOptions())));
+        $this->assertSame([[1.0, 3.0], [4.0, 6.5], [6.5, 6.5], [8.0, 10.5]], $describe((new YouTubeTimedTextParser())->parse($content, new ReadOptions(lastCueDuration: 2.5))));
+    }
+
+
     public function testMissingDurationGivesAZeroLengthCue(): void
     {
         $cue = (new YouTubeTimedTextParser())->parse('<timedtext format="3"><body><p t="500">Hi</p></body></timedtext>', new ReadOptions())->getCues()[0];

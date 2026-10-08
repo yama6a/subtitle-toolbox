@@ -187,7 +187,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
         foreach ($this->children($root) as $index => $text) {
             try {
                 $start = $this->time($text, $startName) / $unitsPerSecond;
-                $end   = $start + $this->time($text, $durationName, "0") / $unitsPerSecond;
+                $end   = $text->hasAttribute($durationName) ? $start + $this->time($text, $durationName) / $unitsPerSecond : null;
             } catch (ParsingException $exception) {
                 $this->fail($exception, $text->getLineNo(), $index, [$text->ownerDocument->saveXML($text)]);
                 continue;
@@ -202,6 +202,11 @@ final class YouTubeTimedTextParser extends SubtitleParser
                 "segments"   => [[Markup::decodeEntities($text->textContent), null, []]],
                 "formatData" => array_diff_key($this->attributes($text), [$startName => true, $durationName => true]),
             ];
+        }
+
+        $starts = array_column($captions, "start");
+        foreach ($captions as $index => $caption) {
+            $captions[$index]["end"] ??= $this->endAtNextStart($starts, $index);
         }
 
         return $captions;
