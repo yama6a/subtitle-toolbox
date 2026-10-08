@@ -121,4 +121,35 @@ class EncodingTest extends TestCase
             array_map(fn (SubtitleCue $cue) => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $again->getCues())
         );
     }
+
+
+    public static function xmlFilesThatDeclareUtf16(): array
+    {
+        return [
+            "TTML, UTF-8 bytes"           => ["utf-8-declared-utf-16.ttml", Format::Ttml, [1.0, 2.5, "Le café ouvre à midi."]],
+            "TTML, UTF-16 LE with BOM"    => ["utf-16le-bom.ttml", Format::Ttml, [1.0, 2.5, "Le café ouvre à midi."]],
+            "iTT, UTF-8 bytes"            => ["utf-8-declared-utf-16.ttml", Format::Itt, [1.0, 2.5, "Le café ouvre à midi."]],
+            "YouTube, UTF-16 LE with BOM" => ["youtube-utf-16le-bom.srv1", Format::YouTubeTimedText, [0.5, 2.5, "café on the corner"]],
+        ];
+    }
+
+
+    #[DataProvider("xmlFilesThatDeclareUtf16")]
+    public function testXmlThatDeclaresUtf16Parses(string $file, Format $format, array $firstCue): void
+    {
+        $cue = Subtitle::fromString(file_get_contents(self::DIR . $file), $format)->getCues()[0];
+
+        $this->assertSame($firstCue, [$cue->getStart(), $cue->getEnd(), $cue->getText()]);
+    }
+
+
+    public function testUtf16TtmlRoundTrips(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "utf-16le-bom.ttml"), Format::Ttml);
+        $output   = $subtitle->toString(Format::Ttml);
+        $again    = Subtitle::fromString("\xFF\xFE" . iconv("UTF-8", "UTF-16LE", $output), Format::Ttml);
+
+        $this->assertSame(["Le café ouvre à midi.", "À bientôt."], array_map(fn (SubtitleCue $cue) => $cue->getText(), $again->getCues()));
+        $this->assertSame($output, $again->toString(Format::Ttml));
+    }
 }

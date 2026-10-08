@@ -11,3 +11,6 @@ All files are written for this repository. Each one started as a UTF-8 file with
 | `notepad-utf-16le.vtt` | Written for this repository in the shape that Windows Notepad saves as "UTF-16 LE": the BOM `FF FE` and CR LF | MIT |
 | `arabic-utf-8.srt` | Written for this repository. UTF-8, CR LF, no BOM. Same cues as `arabic-windows-1256.srt` | MIT |
 | `arabic-windows-1256.srt` | Written for this repository. Windows-1256, CR LF, no BOM | MIT |
+| `utf-8-declared-utf-16.ttml` | Written for this repository. UTF-8, LF, no BOM, with `encoding="utf-16"` in the XML declaration, as some tools write it | MIT |
+| `utf-16le-bom.ttml` | Written for this repository. The same file as `utf-8-declared-utf-16.ttml`, saved as UTF-16 LE with the BOM `FF FE` | MIT |
+| `youtube-utf-16le-bom.srv1` | Written for this repository in the shape of a YouTube srv1 transcript. UTF-16 LE with the BOM `FF FE` and `encoding="utf-16"` | MIT |
