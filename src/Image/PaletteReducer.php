@@ -13,6 +13,11 @@ final class PaletteReducer
 {
     public const MAX_COLORS = 256;
 
+    // A color tuple holds the red, green, blue and alpha channels, then the pixel count and the color.
+    private const CHANNELS = 4;
+    private const COUNT    = 4;
+    private const COLOR    = 5;
+
 
     /**
      * Maps 0xRRGGBBAA pixels to at most $maxColors palette entries, with median cut when the image has more colors.
@@ -74,25 +79,25 @@ final class PaletteReducer
             }
 
             [$colors, $channel] = $boxes[$boxIndex];
-            usort($colors, fn (array $a, array $b): int => $a[$channel] <=> $b[$channel] ?: $a[5] <=> $b[5]);
-            $half  = array_sum(array_column($colors, 4)) / 2;
+            usort($colors, fn (array $a, array $b): int => $a[$channel] <=> $b[$channel] ?: $a[self::COLOR] <=> $b[self::COLOR]);
+            $half  = array_sum(array_column($colors, self::COUNT)) / 2;
             $split = 1;
-            for ($sum = $colors[0][4]; $split < count($colors) - 1 && $sum + $colors[$split][4] <= $half; $split++) {
-                $sum += $colors[$split][4];
+            for ($sum = $colors[0][self::COUNT]; $split < count($colors) - 1 && $sum + $colors[$split][self::COUNT] <= $half; $split++) {
+                $sum += $colors[$split][self::COUNT];
             }
             array_splice($boxes, $boxIndex, 1, [self::box(array_slice($colors, 0, $split)), self::box(array_slice($colors, $split))]);
         }
 
         $palette = [0];
         foreach (array_column($boxes, 0) as $box) {
-            $total = array_sum(array_column($box, 4));
+            $total = array_sum(array_column($box, self::COUNT));
             $mean  = 0;
-            for ($channel = 0; $channel < 4; $channel++) {
-                $sum  = array_sum(array_map(fn (array $color): int => $color[$channel] * $color[4], $box));
+            for ($channel = 0; $channel < self::CHANNELS; $channel++) {
+                $sum  = array_sum(array_map(fn (array $color): int => $color[$channel] * $color[self::COUNT], $box));
                 $mean = $mean << 8 | (int) round($sum / $total);
             }
             foreach ($box as $color) {
-                $entryOf[$color[5]] = count($palette);
+                $entryOf[$color[self::COLOR]] = count($palette);
             }
             $palette[] = $mean;
         }
@@ -108,7 +113,7 @@ final class PaletteReducer
     private static function box(array $colors): array
     {
         $box = [$colors, 0, 0];
-        for ($channel = 0; $channel < 4; $channel++) {
+        for ($channel = 0; $channel < self::CHANNELS; $channel++) {
             $values = array_column($colors, $channel);
             if (max($values) - min($values) > $box[2]) {
                 $box = [$colors, $channel, max($values) - min($values)];

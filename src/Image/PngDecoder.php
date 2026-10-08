@@ -15,6 +15,18 @@ final class PngDecoder
     /** @internal */
     public const SIGNATURE = "\x89PNG\r\n\x1a\n";
 
+    private const IHDR_LENGTH = 13;
+
+    // A chunk has 4 bytes of length and 4 bytes of type before its data, and a 4-byte CRC after it.
+    private const CHUNK_HEADER   = 8;
+    private const CHUNK_OVERHEAD = 12;
+
+    private const FILTER_NONE    = 0;
+    private const FILTER_SUB     = 1;
+    private const FILTER_UP      = 2;
+    private const FILTER_AVERAGE = 3;
+    private const FILTER_PAETH   = 4;
+
     private const COLOR_GRAY       = 0;
     private const COLOR_RGB        = 2;
     private const COLOR_PALETTE    = 3;
@@ -45,7 +57,7 @@ final class PngDecoder
 
         $chunks = self::readChunks($png);
         $header = $chunks["IHDR"][0] ?? "";
-        if (strlen($header) !== 13) {
+        if (strlen($header) !== self::IHDR_LENGTH) {
             throw new InvalidArgumentException("Cannot decode the PNG: it has no valid IHDR chunk.");
         }
 
@@ -105,13 +117,13 @@ final class PngDecoder
         $length = strlen($png);
         $offset = strlen(self::SIGNATURE);
         while ($offset < $length) {
-            if ($length - $offset < 12 || $length - $offset - 12 < unpack("N", $png, $offset)[1]) {
+            if ($length - $offset < self::CHUNK_OVERHEAD || $length - $offset - self::CHUNK_OVERHEAD < unpack("N", $png, $offset)[1]) {
                 throw new InvalidArgumentException("Cannot decode the PNG: the chunk at byte $offset is cut off.");
             }
 
             ["size" => $size, "type" => $type] = unpack("Nsize/a4type", $png, $offset);
-            $chunks[$type][] = substr($png, $offset + 8, $size);
-            $offset         += 12 + $size;
+            $chunks[$type][] = substr($png, $offset + self::CHUNK_HEADER, $size);
+            $offset         += self::CHUNK_OVERHEAD + $size;
             if ($type === "IEND") {
                 break;
             }
@@ -132,12 +144,12 @@ final class PngDecoder
             $offset = $index * ($rowLength + 1);
             $type   = ord($scanlines[$offset]);
             $row    = substr($scanlines, $offset + 1, $rowLength);
-            if ($type === 0) {
+            if ($type === self::FILTER_NONE) {
                 $rows[]   = $row;
                 $previous = null;
                 continue;
             }
-            if ($type > 4) {
+            if ($type > self::FILTER_PAETH) {
                 throw new InvalidArgumentException("Cannot decode the PNG: row $index has the unknown filter type $type.");
             }
 
@@ -149,10 +161,10 @@ final class PngDecoder
                 $upper = $position >= $bytesPerPixel ? $previous[$position - $bytesPerPixel] : 0;
 
                 $bytes[$position] = ($bytes[$position] + match ($type) {
-                    1 => $left,
-                    2 => $up,
-                    3 => ($left + $up) >> 1,
-                    4 => self::paeth($left, $up, $upper),
+                    self::FILTER_SUB     => $left,
+                    self::FILTER_UP      => $up,
+                    self::FILTER_AVERAGE => ($left + $up) >> 1,
+                    self::FILTER_PAETH   => self::paeth($left, $up, $upper),
                 }) & 0xFF;
             }
             $rows[]   = pack("C*", ...$bytes);
