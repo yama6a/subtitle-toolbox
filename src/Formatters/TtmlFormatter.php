@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
-use DOMDocument;
 use DOMElement;
 use DOMNode;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
@@ -28,53 +27,28 @@ final class TtmlFormatter extends SubtitleFormatter
         7 => "topLeft", 8 => "topCenter", 9 => "topRight",
     ];
 
-    private string $namespace;
-
-    /** @var array<string, string> prefix => namespace URI, "" for the default namespace */
-    private array $namespaces;
-
-    private string $tts;
-
-    private string $ttm;
-
-    private DOMDocument $headDocument;
-
-    private DOMElement $head;
-
-    /** @var array<string, string> agent name => xml:id */
-    private array $agentIds;
-
-    /** @var array<int, string> alignment => region xml:id */
-    private array $regionIds;
-
-    /** @var array<string, true> */
-    private array $usedIds;
-
-    /** @var array<string, bool> region xml:id => itts:forcedDisplay of the region */
-    private array $forcedRegions;
-
-
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $fileData        = $subtitle->findFormatData(TtmlParser::FORMAT_DATA_KEY);
-        $this->namespace = ($fileData["namespace"] ?? "") ?: TtmlNamespaces::TTML;
-        $this->prepareNamespaces($fileData["namespaces"] ?? []);
-        $this->loadHead($fileData["head"] ?? "<head/>");
-        $this->regionIds = [];
+        $fileData = $subtitle->findFormatData(TtmlParser::FORMAT_DATA_KEY);
+        $context  = $this->createContext(
+            ($fileData["namespace"] ?? "") ?: TtmlNamespaces::TTML,
+            $fileData["namespaces"] ?? [],
+            $fileData["head"] ?? "<head/>"
+        );
 
         $title = $subtitle->findMetadata(Subtitle::METADATA_TITLE);
         if ($title !== null) {
-            $element = $this->headDocument->createElementNS($this->namespaces[$this->ttm], "$this->ttm:title");
-            $element->appendChild($this->headDocument->createTextNode($title));
-            $this->insertChild($this->head, $element, $this->head->firstChild, 2);
+            $element = $context->headDocument->createElementNS($context->namespaces[$context->ttm], "$context->ttm:title");
+            $element->appendChild($context->headDocument->createTextNode($title));
+            $this->insertChild($context->head, $element, $context->head->firstChild, 2);
         }
 
         // Regions and agents go into the head while the paragraphs are formatted, so the IDs of the body come later.
         $divs = [];
         foreach ($subtitle->getCues() as $cue) {
-            $div       = $this->writableAttributes($cue->findFormatData(TtmlParser::FORMAT_DATA_KEY)["div"] ?? [], []);
-            $paragraph = [$this->paragraphId($cue), $this->formatParagraph($cue, $options, $fileData === [])];
+            $div       = $this->writableAttributes($context, $cue->findFormatData(TtmlParser::FORMAT_DATA_KEY)["div"] ?? [], []);
+            $paragraph = [$this->paragraphId($cue), $this->formatParagraph($context, $cue, $options, $fileData === [])];
             if ($divs !== [] && $divs[count($divs) - 1]["attributes"] === $div) {
                 $divs[count($divs) - 1]["paragraphs"][] = $paragraph;
             } else {
@@ -83,16 +57,16 @@ final class TtmlFormatter extends SubtitleFormatter
         }
 
         $output = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" . LineEnding::Lf->value
-                  . "<tt" . $this->formatRootAttributes($subtitle, $fileData["attributes"] ?? []) . ">" . LineEnding::Lf->value
-                  . "  " . $this->headDocument->saveXML($this->head) . LineEnding::Lf->value
-                  . "  <body" . $this->formatAttributes($fileData["body"] ?? [], []) . ">" . LineEnding::Lf->value;
+                  . "<tt" . $this->formatRootAttributes($context, $subtitle, $fileData["attributes"] ?? []) . ">" . LineEnding::Lf->value
+                  . "  " . $context->headDocument->saveXML($context->head) . LineEnding::Lf->value
+                  . "  <body" . $this->formatAttributes($context, $fileData["body"] ?? [], []) . ">" . LineEnding::Lf->value;
         if ($divs === []) {
             $output .= "    <div/>" . LineEnding::Lf->value;
         }
         foreach ($divs as $div) {
-            $output .= "    <div" . $this->formatWritableAttributes($div["attributes"]) . ">" . LineEnding::Lf->value;
+            $output .= "    <div" . $this->formatWritableAttributes($context, $div["attributes"]) . ">" . LineEnding::Lf->value;
             foreach ($div["paragraphs"] as [$id, $paragraph]) {
-                $idAttribute = $id === null ? "" : $this->formatAttribute("xml:id", $this->unusedId($id));
+                $idAttribute = $id === null ? "" : $this->formatAttribute("xml:id", $this->unusedId($context, $id));
                 $output     .= "      <p$idAttribute$paragraph" . LineEnding::Lf->value;
             }
             $output .= "    </div>" . LineEnding::Lf->value;
@@ -102,20 +76,45 @@ final class TtmlFormatter extends SubtitleFormatter
     }
 
 
-    private function prepareNamespaces(array $stored): void
+    private function createContext(string $namespace, array $stored, string $headXml): TtmlContext
     {
-        $namespaces = ["" => $this->namespace];
+        $namespaces = ["" => $namespace];
         foreach ($stored as $prefix => $uri) {
             if ($prefix !== "") {
                 $namespaces[$prefix] = $uri;
             }
         }
 
-        $isDfxp    = $this->namespace === TtmlNamespaces::DFXP;
-        $this->tts = $this->bindPrefix($namespaces, "tts", TtmlNamespaces::STYLING, $isDfxp ? 1 : 0);
-        $this->ttm = $this->bindPrefix($namespaces, "ttm", TtmlNamespaces::METADATA, $isDfxp ? 1 : 0);
+        $isDfxp = $namespace === TtmlNamespaces::DFXP;
+        $tts    = $this->bindPrefix($namespaces, "tts", TtmlNamespaces::STYLING, $isDfxp ? 1 : 0);
+        $ttm    = $this->bindPrefix($namespaces, "ttm", TtmlNamespaces::METADATA, $isDfxp ? 1 : 0);
         ksort($namespaces);
-        $this->namespaces = $namespaces;
+
+        $declarations = $this->formatNamespaceDeclarations($namespaces);
+        $document     = XmlLoader::xml("<tt$declarations>$headXml</tt>");
+        $head         = $document?->documentElement->firstChild;
+        if (!$head instanceof DOMElement || $head->localName !== "head") {
+            throw new UnwritableContentException("The stored TTML head is not a well-formed <head> element!");
+        }
+
+        $context = new TtmlContext($namespace, $namespaces, $tts, $ttm, $document, $head);
+        foreach ($head->getElementsByTagName("*") as $element) {
+            $id = $element->getAttributeNS(TtmlNamespaces::XML, "id");
+            if ($id !== "") {
+                $context->usedIds[$id] = true;
+            }
+            if ($element->localName === "region" && $element->namespaceURI === $namespace
+                && $element->hasAttributeNS(TtmlNamespaces::IMSC_STYLING, "forcedDisplay")) {
+                $context->forcedRegions[$id] ??= trim($element->getAttributeNS(TtmlNamespaces::IMSC_STYLING, "forcedDisplay")) === "true";
+            }
+            if ($element->localName === "agent" && in_array($element->namespaceURI, TtmlNamespaces::METADATA, true)) {
+                foreach ($element->getElementsByTagNameNS($element->namespaceURI, "name") as $name) {
+                    $context->agentIds[trim($name->textContent)] ??= $id;
+                }
+            }
+        }
+
+        return $context;
     }
 
 
@@ -137,48 +136,16 @@ final class TtmlFormatter extends SubtitleFormatter
     }
 
 
-    private function loadHead(string $headXml): void
+    private function formatRootAttributes(TtmlContext $context, Subtitle $subtitle, array $attributes): string
     {
-        $declarations = $this->formatNamespaceDeclarations();
-        $document     = XmlLoader::xml("<tt$declarations>$headXml</tt>");
-        $head     = $document?->documentElement->firstChild;
-        if (!$head instanceof DOMElement || $head->localName !== "head") {
-            throw new UnwritableContentException("The stored TTML head is not a well-formed <head> element!");
-        }
-
-        $this->headDocument  = $document;
-        $this->head          = $head;
-        $this->agentIds      = [];
-        $this->usedIds       = [];
-        $this->forcedRegions = [];
-        foreach ($head->getElementsByTagName("*") as $element) {
-            $id = $element->getAttributeNS(TtmlNamespaces::XML, "id");
-            if ($id !== "") {
-                $this->usedIds[$id] = true;
-            }
-            if ($element->localName === "region" && $element->namespaceURI === $this->namespace
-                && $element->hasAttributeNS(TtmlNamespaces::IMSC_STYLING, "forcedDisplay")) {
-                $this->forcedRegions[$id] ??= trim($element->getAttributeNS(TtmlNamespaces::IMSC_STYLING, "forcedDisplay")) === "true";
-            }
-            if ($element->localName === "agent" && in_array($element->namespaceURI, TtmlNamespaces::METADATA, true)) {
-                foreach ($element->getElementsByTagNameNS($element->namespaceURI, "name") as $name) {
-                    $this->agentIds[trim($name->textContent)] ??= $id;
-                }
-            }
-        }
-    }
-
-
-    private function formatRootAttributes(Subtitle $subtitle, array $attributes): string
-    {
-        $output  = $this->formatNamespaceDeclarations();
+        $output  = $this->formatNamespaceDeclarations($context->namespaces);
         $output .= $this->formatAttribute("xml:lang", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE) ?? "");
 
         foreach ($attributes as $name => $value) {
             [$prefix, $localName] = $this->splitName($name);
-            $isParameter = in_array($this->namespaces[$prefix] ?? null, TtmlNamespaces::PARAMETER, true);
-            if ($this->isWritable($name) && !($isParameter && in_array($localName, self::SKIPPED_ROOT_PARAMETERS, true))) {
-                $output .= $this->formatAttribute($name, $name === "xml:id" ? $this->unusedId($value) : $value);
+            $isParameter = in_array($context->namespaces[$prefix] ?? null, TtmlNamespaces::PARAMETER, true);
+            if ($this->isWritable($context, $name) && !($isParameter && in_array($localName, self::SKIPPED_ROOT_PARAMETERS, true))) {
+                $output .= $this->formatAttribute($name, $name === "xml:id" ? $this->unusedId($context, $value) : $value);
             }
         }
 
@@ -197,26 +164,26 @@ final class TtmlFormatter extends SubtitleFormatter
     /**
      * Returns the paragraph without "<p" and without xml:id, so that the caller adds the ID in output order.
      */
-    private function formatParagraph(SubtitleCue $cue, WriteOptions $options, bool $isForeignSubtitle): string
+    private function formatParagraph(TtmlContext $context, SubtitleCue $cue, WriteOptions $options, bool $isForeignSubtitle): string
     {
         $attributes  = $this->formatAttribute("begin", Markup::coreTimestamp($cue->getStart()));
         $attributes .= $this->formatAttribute("end", Markup::coreTimestamp($cue->getEnd()));
 
         $cueData     = $cue->findFormatData(TtmlParser::FORMAT_DATA_KEY);
         $stored      = $cueData["attributes"] ?? [];
-        $forcedName  = $this->forcedDisplayName($stored);
+        $forcedName  = $this->forcedDisplayName($context, $stored);
         $forced      = $forcedName === null
-            ? $this->forcedDisplay($cueData["div"] ?? []) ?? $this->forcedRegions[$stored["region"] ?? ""] ?? false
+            ? $this->forcedDisplay($context, $cueData["div"] ?? []) ?? $context->forcedRegions[$stored["region"] ?? ""] ?? false
             : trim($stored[$forcedName]) === "true";
         if ($forced !== $cue->isForced() && $forcedName !== null) {
             $stored[$forcedName] = $cue->isForced() ? "true" : "false";
         }
-        $attributes .= $this->formatAttributes($stored, ["xml:id", "begin", "end", "dur"]);
+        $attributes .= $this->formatAttributes($context, $stored, ["xml:id", "begin", "end", "dur"]);
         if (!isset($stored["region"]) && ($cue->getAlignment() !== null || $isForeignSubtitle)) {
-            $attributes .= $this->formatAttribute("region", $this->regionId($cue->getAlignment() ?? 2));
+            $attributes .= $this->formatAttribute("region", $this->regionId($context, $cue->getAlignment() ?? 2));
         }
         if ($forced !== $cue->isForced() && $forcedName === null) {
-            $attributes .= $this->formatAttribute($this->ittsPrefix() . ":forcedDisplay", $cue->isForced() ? "true" : "false");
+            $attributes .= $this->formatAttribute($this->ittsPrefix($context) . ":forcedDisplay", $cue->isForced() ? "true" : "false");
         }
 
         $text = implode(LineEnding::Lf->value, $cue->getLines());
@@ -224,9 +191,9 @@ final class TtmlFormatter extends SubtitleFormatter
             return "$attributes>" . $this->formatText(Markup::stripAllTags($text)) . "</p>";
         }
 
-        [$agent, $content] = $this->markupToTtml($text);
+        [$agent, $content] = $this->markupToTtml($context, $text);
         if ($agent !== null) {
-            $attributes .= $this->formatAttribute("$this->ttm:agent", $this->agentId($agent));
+            $attributes .= $this->formatAttribute("$context->ttm:agent", $this->agentId($context, $agent));
         }
 
         return "$attributes>$content</p>";
@@ -236,12 +203,12 @@ final class TtmlFormatter extends SubtitleFormatter
     /**
      * Returns the name of the stored itts:forcedDisplay attribute, or null when the attributes do not hold it.
      */
-    private function forcedDisplayName(array $attributes): ?string
+    private function forcedDisplayName(TtmlContext $context, array $attributes): ?string
     {
         foreach (array_keys($attributes) as $name) {
             [$prefix, $localName] = $this->splitName($name);
             if ($localName === "forcedDisplay" && $prefix !== ""
-                && ($this->namespaces[$prefix] ?? null) === TtmlNamespaces::IMSC_STYLING) {
+                && ($context->namespaces[$prefix] ?? null) === TtmlNamespaces::IMSC_STYLING) {
                 return $name;
             }
         }
@@ -250,9 +217,9 @@ final class TtmlFormatter extends SubtitleFormatter
     }
 
 
-    private function forcedDisplay(array $attributes): ?bool
+    private function forcedDisplay(TtmlContext $context, array $attributes): ?bool
     {
-        $name = $this->forcedDisplayName($attributes);
+        $name = $this->forcedDisplayName($context, $attributes);
 
         return $name === null ? null : trim($attributes[$name]) === "true";
     }
@@ -261,10 +228,10 @@ final class TtmlFormatter extends SubtitleFormatter
     /**
      * Declares the IMSC styling namespace on the root element when the input file did not.
      */
-    private function ittsPrefix(): string
+    private function ittsPrefix(TtmlContext $context): string
     {
-        $prefix = $this->bindPrefix($this->namespaces, "itts", [TtmlNamespaces::IMSC_STYLING], 0);
-        ksort($this->namespaces);
+        $prefix = $this->bindPrefix($context->namespaces, "itts", [TtmlNamespaces::IMSC_STYLING], 0);
+        ksort($context->namespaces);
 
         return $prefix;
     }
@@ -275,7 +242,7 @@ final class TtmlFormatter extends SubtitleFormatter
      *
      * @return array{?string, string}
      */
-    private function markupToTtml(string $text): array
+    private function markupToTtml(TtmlContext $context, string $text): array
     {
         $tokens = Markup::splitTags($text);
         $agent  = null;
@@ -305,7 +272,7 @@ final class TtmlFormatter extends SubtitleFormatter
             if ($tag === "v") {
                 $output .= $this->closeSpan($stack, "v");
             }
-            $span = $this->openSpan($tag, $matches[2] ?? "");
+            $span = $this->openSpan($context, $tag, $matches[2] ?? "");
             if ($span !== null) {
                 $stack[] = ["tag" => $tag, "span" => $span];
                 $output .= $span;
@@ -324,7 +291,7 @@ final class TtmlFormatter extends SubtitleFormatter
      * Returns the opening span of a core markup tag, an empty string for a tag without TTML style, or null for
      * a tag outside the core markup.
      */
-    private function openSpan(string $tag, string $rest): ?string
+    private function openSpan(TtmlContext $context, string $tag, string $rest): ?string
     {
         $style = match ($tag) {
             "b"     => ["fontWeight", "bold"],
@@ -334,19 +301,19 @@ final class TtmlFormatter extends SubtitleFormatter
             default => null,
         };
         if ($style !== null) {
-            return "<span" . $this->formatAttribute("$this->tts:$style[0]", $style[1]) . ">";
+            return "<span" . $this->formatAttribute("$context->tts:$style[0]", $style[1]) . ">";
         }
 
         if ($tag === "font") {
             $color = Markup::decodeEntities(trim(Markup::fontColor($rest) ?? ""));
 
-            return $color === "" ? "" : "<span" . $this->formatAttribute("$this->tts:color", $color) . ">";
+            return $color === "" ? "" : "<span" . $this->formatAttribute("$context->tts:color", $color) . ">";
         }
 
         if ($tag === "v") {
             $name = Markup::decodeEntities(trim(preg_replace("/^\.[^\s]*/", "", $rest)));
 
-            return $name === "" ? "" : "<span" . $this->formatAttribute("$this->ttm:agent", $this->agentId($name)) . ">";
+            return $name === "" ? "" : "<span" . $this->formatAttribute("$context->ttm:agent", $this->agentId($context, $name)) . ">";
         }
 
         return null;
@@ -390,76 +357,76 @@ final class TtmlFormatter extends SubtitleFormatter
     }
 
 
-    private function agentId(string $name): string
+    private function agentId(TtmlContext $context, string $name): string
     {
-        if (isset($this->agentIds[$name])) {
-            return $this->agentIds[$name];
+        if (isset($context->agentIds[$name])) {
+            return $context->agentIds[$name];
         }
 
-        $id      = $this->unusedId("agent" . (count($this->agentIds) + 1));
-        $uri     = $this->namespaces[$this->ttm];
-        $element = $this->headDocument->createElementNS($uri, "$this->ttm:agent");
+        $id      = $this->unusedId($context, "agent" . (count($context->agentIds) + 1));
+        $uri     = $context->namespaces[$context->ttm];
+        $element = $context->headDocument->createElementNS($uri, "$context->ttm:agent");
         $element->setAttributeNS(TtmlNamespaces::XML, "xml:id", $id);
         $element->setAttribute("type", "person");
-        $nameElement = $this->headDocument->createElementNS($uri, "$this->ttm:name");
+        $nameElement = $context->headDocument->createElementNS($uri, "$context->ttm:name");
         $nameElement->setAttribute("type", "full");
-        $nameElement->appendChild($this->headDocument->createTextNode($name));
+        $nameElement->appendChild($context->headDocument->createTextNode($name));
         $element->appendChild($nameElement);
 
         $before = null;
-        foreach ($this->head->childNodes as $child) {
+        foreach ($context->head->childNodes as $child) {
             if ($child instanceof DOMElement && in_array($child->localName, ["styling", "layout"], true)) {
                 $before = $child;
                 break;
             }
         }
-        $this->insertChild($this->head, $element, $before, 2);
+        $this->insertChild($context->head, $element, $before, 2);
 
-        return $this->agentIds[$name] = $id;
+        return $context->agentIds[$name] = $id;
     }
 
 
     /**
      * Adds a region for the alignment, in the shape of the IMSC 1.1 examples with a safe area of 10%.
      */
-    private function regionId(int $alignment): string
+    private function regionId(TtmlContext $context, int $alignment): string
     {
-        if (isset($this->regionIds[$alignment])) {
-            return $this->regionIds[$alignment];
+        if (isset($context->regionIds[$alignment])) {
+            return $context->regionIds[$alignment];
         }
 
         $layout = null;
-        foreach ($this->head->childNodes as $child) {
-            if ($child instanceof DOMElement && $child->localName === "layout" && $child->namespaceURI === $this->namespace) {
+        foreach ($context->head->childNodes as $child) {
+            if ($child instanceof DOMElement && $child->localName === "layout" && $child->namespaceURI === $context->namespace) {
                 $layout = $child;
             }
         }
         if ($layout === null) {
-            $layout = $this->headDocument->createElementNS($this->namespace, "layout");
-            $this->insertChild($this->head, $layout, null, 2);
+            $layout = $context->headDocument->createElementNS($context->namespace, "layout");
+            $this->insertChild($context->head, $layout, null, 2);
         }
 
-        $id     = $this->unusedId(self::REGION_NAMES[$alignment]);
-        $region = $this->headDocument->createElementNS($this->namespace, "region");
+        $id     = $this->unusedId($context, self::REGION_NAMES[$alignment]);
+        $region = $context->headDocument->createElementNS($context->namespace, "region");
         $region->setAttributeNS(TtmlNamespaces::XML, "xml:id", $id);
-        $uri = $this->namespaces[$this->tts];
-        $region->setAttributeNS($uri, "$this->tts:origin", "10% 10%");
-        $region->setAttributeNS($uri, "$this->tts:extent", "80% 80%");
-        $region->setAttributeNS($uri, "$this->tts:displayAlign", ["after", "center", "before"][intdiv($alignment - 1, 3)]);
-        $region->setAttributeNS($uri, "$this->tts:textAlign", ["left", "center", "right"][($alignment - 1) % 3]);
+        $uri = $context->namespaces[$context->tts];
+        $region->setAttributeNS($uri, "$context->tts:origin", "10% 10%");
+        $region->setAttributeNS($uri, "$context->tts:extent", "80% 80%");
+        $region->setAttributeNS($uri, "$context->tts:displayAlign", ["after", "center", "before"][intdiv($alignment - 1, 3)]);
+        $region->setAttributeNS($uri, "$context->tts:textAlign", ["left", "center", "right"][($alignment - 1) % 3]);
         $this->insertChild($layout, $region, null, 3);
 
-        return $this->regionIds[$alignment] = $id;
+        return $context->regionIds[$alignment] = $id;
     }
 
 
-    private function unusedId(string $id): string
+    private function unusedId(TtmlContext $context, string $id): string
     {
         $candidate = $id;
-        for ($idx = 2; isset($this->usedIds[$candidate]); $idx++) {
+        for ($idx = 2; isset($context->usedIds[$candidate]); $idx++) {
             $candidate = $id . "_" . $idx;
         }
-        $this->usedIds[$candidate] = true;
+        $context->usedIds[$candidate] = true;
 
         return $candidate;
     }
@@ -486,27 +453,27 @@ final class TtmlFormatter extends SubtitleFormatter
     }
 
 
-    private function formatAttributes(array $attributes, array $skip): string
+    private function formatAttributes(TtmlContext $context, array $attributes, array $skip): string
     {
-        return $this->formatWritableAttributes($this->writableAttributes($attributes, $skip));
+        return $this->formatWritableAttributes($context, $this->writableAttributes($context, $attributes, $skip));
     }
 
 
-    private function writableAttributes(array $attributes, array $skip): array
+    private function writableAttributes(TtmlContext $context, array $attributes, array $skip): array
     {
         return array_filter(
             $attributes,
-            fn (string $name): bool => $this->isWritable($name) && !in_array($name, $skip, true),
+            fn (string $name): bool => $this->isWritable($context, $name) && !in_array($name, $skip, true),
             ARRAY_FILTER_USE_KEY
         );
     }
 
 
-    private function formatWritableAttributes(array $attributes): string
+    private function formatWritableAttributes(TtmlContext $context, array $attributes): string
     {
         $output = "";
         foreach ($attributes as $name => $value) {
-            $output .= $this->formatAttribute($name, $name === "xml:id" ? $this->unusedId($value) : $value);
+            $output .= $this->formatAttribute($name, $name === "xml:id" ? $this->unusedId($context, $value) : $value);
         }
 
         return $output;
@@ -516,21 +483,24 @@ final class TtmlFormatter extends SubtitleFormatter
     /**
      * Skips attributes whose prefix the output does not declare, for example a prefix declared on the paragraph.
      */
-    private function isWritable(string $name): bool
+    private function isWritable(TtmlContext $context, string $name): bool
     {
         if (!str_contains($name, ":")) {
             return true;
         }
         [$prefix] = $this->splitName($name);
 
-        return $prefix === "xml" || ($prefix !== "" && isset($this->namespaces[$prefix]));
+        return $prefix === "xml" || ($prefix !== "" && isset($context->namespaces[$prefix]));
     }
 
 
-    private function formatNamespaceDeclarations(): string
+    /**
+     * @param array<string, string> $namespaces
+     */
+    private function formatNamespaceDeclarations(array $namespaces): string
     {
         $output = "";
-        foreach ($this->namespaces as $prefix => $uri) {
+        foreach ($namespaces as $prefix => $uri) {
             $output .= $this->formatAttribute($prefix === "" ? "xmlns" : "xmlns:$prefix", $uri);
         }
 
