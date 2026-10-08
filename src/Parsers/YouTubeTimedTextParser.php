@@ -71,16 +71,9 @@ final class YouTubeTimedTextParser extends SubtitleParser
             }
 
             try {
-                $start    = $this->milliseconds($event, "tStartMs", $path) / 1000;
-                $end      = $start + $this->milliseconds($event, "dDurationMs", $path, 0) / 1000;
-                $segments = [];
-                $extras   = [];
-                foreach (is_array($event["segs"] ?? null) ? $event["segs"] : [] as $segIndex => $seg) {
-                    $offset     = isset($seg["tOffsetMs"]) ? $this->milliseconds($seg, "tOffsetMs", "$path.segs[$segIndex]") / 1000 : null;
-                    $pen        = $this->entry($pens, $seg["pPenId"] ?? $event["pPenId"] ?? null);
-                    $segments[] = [is_string($seg["utf8"] ?? null) ? $seg["utf8"] : "", $offset, $pen === null ? [] : $this->jsonPenStyle($pen)];
-                    $extras[]   = is_array($seg) ? array_diff_key($seg, ["utf8" => true, "tOffsetMs" => true]) : [];
-                }
+                $start               = $this->milliseconds($event, "tStartMs", $path) / 1000;
+                $end                 = $start + $this->milliseconds($event, "dDurationMs", $path, 0) / 1000;
+                [$segments, $extras] = $this->jsonSegments($event, $pens, $path);
             } catch (ParsingException $exception) {
                 $this->fail($exception, null, $index, [RawJson::encode($event)]);
                 continue;
@@ -102,6 +95,26 @@ final class YouTubeTimedTextParser extends SubtitleParser
         }
 
         return [$fileData, $captions];
+    }
+
+
+    /**
+     * Returns the text segments of an event and the extra fields of each segment.
+     *
+     * @return array{list<array{string, ?float, array}>, list<array>}
+     */
+    private function jsonSegments(array $event, array $pens, string $path): array
+    {
+        $segments = [];
+        $extras   = [];
+        foreach (is_array($event["segs"] ?? null) ? $event["segs"] : [] as $segIndex => $seg) {
+            $offset     = isset($seg["tOffsetMs"]) ? $this->milliseconds($seg, "tOffsetMs", "$path.segs[$segIndex]") / 1000 : null;
+            $pen        = $this->entry($pens, $seg["pPenId"] ?? $event["pPenId"] ?? null);
+            $segments[] = [is_string($seg["utf8"] ?? null) ? $seg["utf8"] : "", $offset, $pen === null ? [] : $this->jsonPenStyle($pen)];
+            $extras[]   = is_array($seg) ? array_diff_key($seg, ["utf8" => true, "tOffsetMs" => true]) : [];
+        }
+
+        return [$segments, $extras];
     }
 
 
