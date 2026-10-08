@@ -60,6 +60,9 @@ final class AssParser extends SubtitleParser
                 if ($this->isStylesSection($section)) {
                     $data["stylesSection"] = $section;
                 }
+                if (strcasecmp($section, "Events") === 0) {
+                    $data["eventFormat"] ??= $this->isSsa($data) ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT;
+                }
                 continue;
             }
 
@@ -79,7 +82,6 @@ final class AssParser extends SubtitleParser
             throw new ParsingException("The subtitle has no [Events] section.");
         }
 
-        $data["eventFormat"] ??= $this->isSsa($data) ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT;
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, $data);
 
         return CommentAnchors::addParsed($subtitle, $this->cues, $this->comments);
@@ -144,8 +146,7 @@ final class AssParser extends SubtitleParser
 
     private function readEvent(array &$data, string $line, int $lineNumber, string $value, bool $isComment): void
     {
-        $format = $data["eventFormat"] ?? ($this->isSsa($data) ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT);
-        $fields = $this->combine($format, $value, false);
+        $fields = $this->combine($data["eventFormat"], $value, false);
         if ($fields === null) {
             throw new ParsingException("The line \"$line\" has fewer fields than the Format line of the [Events] section.", $lineNumber);
         }
