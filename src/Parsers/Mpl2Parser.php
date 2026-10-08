@@ -11,6 +11,9 @@ use SubtitleToolbox\SubtitleCue;
 
 final class Mpl2Parser extends SubtitleParser
 {
+    /** @internal MPL2 counts time in tenths of a second. */
+    public const DECISECONDS_PER_SECOND = 10;
+
     private const CUE_REGEX = '/^\[(\d+)\]\[(\d+)\](.*)$/';
 
 
@@ -26,7 +29,7 @@ final class Mpl2Parser extends SubtitleParser
             }
 
             if (preg_match(self::CUE_REGEX, $rawLine, $matches)) {
-                $parsedCues[] = new SubtitleCue((int) $matches[1] / 10, (int) $matches[2] / 10, $this->parseText($matches[3]));
+                $parsedCues[] = new SubtitleCue((int) $matches[1] / self::DECISECONDS_PER_SECOND, (int) $matches[2] / self::DECISECONDS_PER_SECOND, $this->parseText($matches[3]));
             } else {
                 $lineNumber = $lineIndex + 1;
                 $this->fail(new ParsingException("The line \"$rawLine\" is not an MPL2 cue.", $lineNumber), $lineNumber, $blockIndex, [$rawLine]);

@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\Mpl2Parser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
@@ -16,7 +17,7 @@ final class Mpl2Formatter extends SubtitleFormatter
         $options ??= new WriteOptions();
         $output = "";
         foreach ($subtitle->getCues() as $cue) {
-            $output .= "[" . (int) round($cue->getStart() * 10) . "][" . (int) round($cue->getEnd() * 10) . "]" .
+            $output .= "[" . (int) round($cue->getStart() * Mpl2Parser::DECISECONDS_PER_SECOND) . "][" . (int) round($cue->getEnd() * Mpl2Parser::DECISECONDS_PER_SECOND) . "]" .
                        implode("|", $this->linesWithItalics($cue->getLines())) .
                        LineEnding::Lf->value;
         }

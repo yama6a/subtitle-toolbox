@@ -30,6 +30,20 @@ final class PgsParser extends SubtitleParser
     private const HEADER_LENGTH  = 13;
     private const PTS_PER_SECOND = 90000;
 
+    // Byte lengths of the segment parts.
+    private const PRESENTATION_HEADER = 11;
+    private const COMPOSITION_OBJECT  = 8;
+    private const CROPPING            = 8;
+    private const WINDOW_COUNT        = 1;
+    private const WINDOW              = 9;
+    private const PALETTE_HEADER      = 2;
+    private const PALETTE_ENTRY       = 5;
+    private const OBJECT_HEADER       = 4;
+    private const FIRST_OBJECT_HEADER = 11;
+
+    // The object width and height follow the object header and the 3-byte object data length.
+    private const OBJECT_SIZE_OFFSET = 7;
+
     private const SEGMENT_PALETTE      = 0x14;
     private const SEGMENT_OBJECT       = 0x15;
     private const SEGMENT_PRESENTATION = 0x16;
@@ -116,7 +130,7 @@ final class PgsParser extends SubtitleParser
     {
         $this->endDisplaySet();
 
-        if (strlen($data) < 11) {
+        if (strlen($data) < self::PRESENTATION_HEADER) {
             throw new ParsingException("The presentation composition segment at " . $this->seconds($pts) . " s is cut off.");
         }
 
@@ -128,20 +142,20 @@ final class PgsParser extends SubtitleParser
         }
 
         $references = [];
-        $position   = 11;
+        $position   = self::PRESENTATION_HEADER;
         for ($index = 0; $index < $header["count"]; $index++) {
-            if (strlen($data) < $position + 8) {
+            if (strlen($data) < $position + self::COMPOSITION_OBJECT) {
                 throw new ParsingException("The composition object $index at " . $this->seconds($pts) . " s is cut off.");
             }
 
             $reference = unpack("nid/CwindowId/Cflags/nx/ny", $data, $position);
-            $position += 8;
+            $position += self::COMPOSITION_OBJECT;
             if ($reference["flags"] & self::FLAG_CROPPED) {
-                if (strlen($data) < $position + 8) {
+                if (strlen($data) < $position + self::CROPPING) {
                     throw new ParsingException("The cropping of composition object $index at " . $this->seconds($pts) . " s is cut off.");
                 }
                 $reference["crop"] = array_values(unpack("n4", $data, $position));
-                $position         += 8;
+                $position         += self::CROPPING;
             }
             $references[] = $reference;
         }
@@ -159,8 +173,8 @@ final class PgsParser extends SubtitleParser
     private function readWindows(string $data): void
     {
         $count = ord($data[0] ?? "\0");
-        for ($index = 0; $index < $count && strlen($data) >= 10 + $index * 9; $index++) {
-            $window = unpack("Cid/nx/ny/nwidth/nheight", $data, 1 + $index * 9);
+        for ($index = 0; $index < $count && strlen($data) >= self::WINDOW_COUNT + ($index + 1) * self::WINDOW; $index++) {
+            $window = unpack("Cid/nx/ny/nwidth/nheight", $data, self::WINDOW_COUNT + $index * self::WINDOW);
             $this->windows[$window["id"]] = array_slice($window, 1);
         }
     }
@@ -169,8 +183,8 @@ final class PgsParser extends SubtitleParser
     private function readPalette(string $data): void
     {
         $paletteId = ord($data[0] ?? "\0");
-        foreach (str_split(substr($data, 2), 5) as $entry) {
-            if (strlen($entry) === 5) {
+        foreach (str_split(substr($data, self::PALETTE_HEADER), self::PALETTE_ENTRY) as $entry) {
+            if (strlen($entry) === self::PALETTE_ENTRY) {
                 [, $entryId, $luma, $chromaRed, $chromaBlue, $alpha] = unpack("C5", $entry);
                 $this->palettes[$paletteId][$entryId] = [$luma, $chromaRed, $chromaBlue, $alpha];
             }
@@ -180,20 +194,20 @@ final class PgsParser extends SubtitleParser
 
     private function readObject(string $data): void
     {
-        if (strlen($data) < 4) {
+        if (strlen($data) < self::OBJECT_HEADER) {
             return;
         }
 
         ["id" => $id, "sequence" => $sequence] = unpack("nid/Cversion/Csequence", $data);
         if ($sequence & self::SEQUENCE_FIRST) {
-            if (strlen($data) < 11) {
+            if (strlen($data) < self::FIRST_OBJECT_HEADER) {
                 throw new ParsingException("The first definition segment of object $id is cut off.");
             }
-            ["width" => $width, "height" => $height] = unpack("nwidth/nheight", $data, 7);
+            ["width" => $width, "height" => $height] = unpack("nwidth/nheight", $data, self::OBJECT_SIZE_OFFSET);
             self::checkSize($width, $height, "read object $id");
-            $this->objects[$id] = ["width" => $width, "height" => $height, "rle" => substr($data, 11)];
+            $this->objects[$id] = ["width" => $width, "height" => $height, "rle" => substr($data, self::FIRST_OBJECT_HEADER)];
         } elseif (isset($this->objects[$id])) {
-            $this->objects[$id]["rle"] .= substr($data, 4);
+            $this->objects[$id]["rle"] .= substr($data, self::OBJECT_HEADER);
         }
     }
 
@@ -224,7 +238,7 @@ final class PgsParser extends SubtitleParser
         $image = $this->shownImage["image"];
         $cue   = $image->toCue(new SubtitleCue($this->shownImage["start"], $end));
         if ((2 * $image->y + $image->height) * 3 < 2 * $image->screenHeight) {
-            $cue->setAlignment(8);
+            $cue->setAlignment(SubtitleCue::TOP_CENTER_ALIGNMENT);
         }
 
         $this->cues[] = $cue;

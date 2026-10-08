@@ -23,6 +23,9 @@ final class TtmlParser extends SubtitleParser
 
     private const TIMING_ATTRIBUTES = ["begin", "end", "dur"];
 
+    // Styles can refer to each other in a loop, so the parser follows at most 20 references.
+    private const MAX_STYLE_DEPTH = 20;
+
     private ?string $namespace;
 
     private DOMElement $root;
@@ -300,7 +303,7 @@ final class TtmlParser extends SubtitleParser
         }
 
         $forced = null;
-        if ($depth < 20) {
+        if ($depth < self::MAX_STYLE_DEPTH) {
             foreach (preg_split("/\s+/", trim($element->getAttribute("style")), -1, PREG_SPLIT_NO_EMPTY) as $id) {
                 if (isset($this->styles[$id])) {
                     $forced = $this->forcedDisplay($this->styles[$id], $depth + 1) ?? $forced;
@@ -495,7 +498,7 @@ final class TtmlParser extends SubtitleParser
     private function ownStyleProperties(DOMElement $element, int $depth = 0): array
     {
         $properties = [];
-        if ($depth < 20) {
+        if ($depth < self::MAX_STYLE_DEPTH) {
             foreach (preg_split("/\s+/", trim($element->getAttribute("style")), -1, PREG_SPLIT_NO_EMPTY) as $id) {
                 if (isset($this->styles[$id])) {
                     $properties = [...$properties, ...$this->ownStyleProperties($this->styles[$id], $depth + 1)];

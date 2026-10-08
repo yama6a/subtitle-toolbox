@@ -11,6 +11,9 @@ final class SubtitleCue
     /** @internal The alignment that formatters write for a cue without one: bottom center, 2 on the numpad. */
     public const DEFAULT_ALIGNMENT = 2;
 
+    /** @internal The alignment of a cue at the top of the screen: top center, 8 on the numpad. */
+    public const TOP_CENTER_ALIGNMENT = 8;
+
     private float $start = 0;
 
     private float $end = 0;

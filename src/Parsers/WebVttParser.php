@@ -24,6 +24,9 @@ final class WebVttParser extends SubtitleParser
     /** @internal */
     public const REGION_SETTINGS = ["id", "width", "lines", "regionanchor", "viewportanchor", "scroll"];
 
+    private const SIGNATURE = "WEBVTT";
+    private const NOTE      = "NOTE";
+
     private const TIMESTAMP_PATTERN = "((\d{2,3}):)?([0-5]\d):([0-5]\d)\.(\d{3})";
 
     private const ENTITIES = ["&nbsp;" => "\u{00A0}", "&lrm;" => "\u{200E}", "&rlm;" => "\u{200F}"];
@@ -35,7 +38,7 @@ final class WebVttParser extends SubtitleParser
         $leadingLines = substr_count(substr($rawSubtitle, 0, strlen($rawSubtitle) - strlen(ltrim($rawSubtitle))), "\n");
         $rawSubtitle  = trim($rawSubtitle);
 
-        if (!str_starts_with($rawSubtitle, "WEBVTT")) {
+        if (!str_starts_with($rawSubtitle, self::SIGNATURE)) {
             throw new ParsingException("The file does not start with WEBVTT.", $leadingLines + 1);
         }
 
@@ -84,7 +87,7 @@ final class WebVttParser extends SubtitleParser
             switch (true) {
                 case str_contains($rawLines[0], "-->") || str_contains($rawLines[1] ?? "", "-->"):
                     return $this->parseCueBlock($rawLines, $idx, $lineNumber);
-                case $this->startsWithKeyword($firstLine, "NOTE"):
+                case $this->startsWithKeyword($firstLine, self::NOTE):
                     return $this->parseComment($rawLines);
                 case !$seenCue && $firstLine === "STYLE":
                     $fileData["styles"][] = implode(LineEnding::Lf->value, array_slice($rawLines, 1));
@@ -218,7 +221,7 @@ final class WebVttParser extends SubtitleParser
     public function parseHeader(array $rawLines, int $lineNumber = 1): array
     {
         $fileData   = [];
-        $headerText = trim(substr($rawLines[0], 6));
+        $headerText = trim(substr($rawLines[0], strlen(self::SIGNATURE)));
         if ($headerText !== "") {
             $fileData["header"] = $headerText;
         }
@@ -354,7 +357,7 @@ final class WebVttParser extends SubtitleParser
 
     private function parseComment(array $rawLines): string
     {
-        $rawLines[0] = substr(trim($rawLines[0]), 4);
+        $rawLines[0] = substr(trim($rawLines[0]), strlen(self::NOTE));
         $lines       = array_filter(array_map("trim", $rawLines), fn (string $line): bool => $line !== "");
 
         return implode(LineEnding::Lf->value, $lines);

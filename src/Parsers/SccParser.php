@@ -33,6 +33,15 @@ final class SccParser extends SubtitleParser
     private const MODE_PAINT_ON = "paint-on";
     private const MODE_TEXT     = "text";
 
+    // SCC time codes count 30 frame labels per second at 29.97 fps, so a frame lasts 1001/30000 s.
+    private const NOMINAL_FRAME_RATE   = 30;
+    private const FRAME_RATE_NUMERATOR = 30000;
+    private const FRAME_RATE_DIVISOR   = 1001;
+
+    // The display change of paint-on or roll-up data, and of EOC or EDM. Null means no change.
+    private const DISPLAY_DIRECT  = "direct";
+    private const DISPLAY_REPLACE = "replace";
+
     private const DEFAULT_ATTRIBUTES = ["color" => Cea608::WHITE, "italic" => false, "underline" => false];
 
     private int $channel;
@@ -60,7 +69,6 @@ final class SccParser extends SubtitleParser
 
     private ?int $lastControl = null;
 
-    // "direct" for a change by paint-on or roll-up data, "replace" for EOC and EDM, or null for no change.
     private ?string $displayChange = null;
 
 
@@ -110,7 +118,7 @@ final class SccParser extends SubtitleParser
             }
 
             $cue = new SubtitleCue($start, $end, array_column($state["lines"], "text"));
-            $cue->setAlignment($state["lines"][0]["row"] <= 4 ? 8 : null);
+            $cue->setAlignment($state["lines"][0]["row"] <= 4 ? SubtitleCue::TOP_CENTER_ALIGNMENT : null);
             $cue->setFormatData(self::FORMAT_DATA_KEY, [
                 "mode"    => $state["mode"],
                 "rows"    => array_column($state["lines"], "row"),
@@ -129,7 +137,7 @@ final class SccParser extends SubtitleParser
      */
     private static function timecodeToFrames(int $hours, int $minutes, int $seconds, int $frames, bool $dropFrame): int
     {
-        $count = (($hours * 60 + $minutes) * 60 + $seconds) * 30 + $frames;
+        $count = (($hours * 60 + $minutes) * 60 + $seconds) * self::NOMINAL_FRAME_RATE + $frames;
         if ($dropFrame) {
             $totalMinutes = $hours * 60 + $minutes;
             $count       -= 2 * ($totalMinutes - intdiv($totalMinutes, 10));
@@ -344,7 +352,7 @@ final class SccParser extends SubtitleParser
                 break;
             case Cea608::ERASE_DISPLAYED_MEMORY:
                 $this->displayed     = [];
-                $this->displayChange = "replace";
+                $this->displayChange = self::DISPLAY_REPLACE;
                 break;
             case Cea608::ERASE_NON_DISPLAYED:
                 $this->nonDisplayed = [];
@@ -352,7 +360,7 @@ final class SccParser extends SubtitleParser
             case Cea608::END_OF_CAPTION:
                 [$this->displayed, $this->nonDisplayed] = [$this->nonDisplayed, $this->displayed];
                 $this->mode          = self::MODE_POP_ON;
-                $this->displayChange = "replace";
+                $this->displayChange = self::DISPLAY_REPLACE;
                 break;
         }
     }
@@ -364,7 +372,7 @@ final class SccParser extends SubtitleParser
             $this->displayed     = [];
             $this->nonDisplayed  = [];
             $this->row           = Cea608::ROWS;
-            $this->displayChange = "replace";
+            $this->displayChange = self::DISPLAY_REPLACE;
         }
 
         $this->mode       = self::MODE_ROLL_UP;
@@ -454,7 +462,7 @@ final class SccParser extends SubtitleParser
     private function markDirectChange(): void
     {
         if ($this->mode !== self::MODE_POP_ON) {
-            $this->displayChange ??= "direct";
+            $this->displayChange ??= self::DISPLAY_DIRECT;
         }
     }
 
@@ -471,7 +479,7 @@ final class SccParser extends SubtitleParser
         }
 
         $mode = $this->mode === self::MODE_TEXT ? self::MODE_POP_ON : $this->mode;
-        if ($last !== null && $this->displayChange === "direct" && $last["direct"] && $last["line"] === $lineIdx
+        if ($last !== null && $this->displayChange === self::DISPLAY_DIRECT && $last["direct"] && $last["line"] === $lineIdx
             && $last["lines"] !== [] && $lines !== []) {
             $states[count($states) - 1]["lines"] = $lines;
             $states[count($states) - 1]["mode"]  = $mode;
@@ -479,7 +487,7 @@ final class SccParser extends SubtitleParser
             return;
         }
 
-        $states[] = ["frame" => $frame, "line" => $lineIdx, "lines" => $lines, "mode" => $mode, "direct" => $this->displayChange === "direct"];
+        $states[] = ["frame" => $frame, "line" => $lineIdx, "lines" => $lines, "mode" => $mode, "direct" => $this->displayChange === self::DISPLAY_DIRECT];
     }
 
 
@@ -525,6 +533,6 @@ final class SccParser extends SubtitleParser
 
     private function frameToSeconds(int $frame): float
     {
-        return $frame * 1001 / 30000;
+        return $frame * self::FRAME_RATE_DIVISOR / self::FRAME_RATE_NUMERATOR;
     }
 }
