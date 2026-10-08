@@ -168,22 +168,4 @@ final class FormatRegistry
     {
         return self::FORMATS[$format->value][2];
     }
-
-
-    /**
-     * @return list<class-string<Parsers\SubtitleParser>>
-     */
-    public static function parserClasses(): array
-    {
-        return array_values(array_filter(array_column(self::FORMATS, 0)));
-    }
-
-
-    /**
-     * @return list<class-string<Formatters\SubtitleFormatter>>
-     */
-    public static function formatterClasses(): array
-    {
-        return array_values(array_filter(array_column(self::FORMATS, 1)));
-    }
 }

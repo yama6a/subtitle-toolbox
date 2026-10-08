@@ -23,9 +23,19 @@ class FormatTest extends TestCase
     public static function classDirectories(): array
     {
         return [
-            "parsers"    => ["Parsers", Parsers\SubtitleParser::class, FormatRegistry::parserClasses()],
-            "formatters" => ["Formatters", Formatters\SubtitleFormatter::class, FormatRegistry::formatterClasses()],
+            "parsers"    => ["Parsers", Parsers\SubtitleParser::class, self::registered(FormatRegistry::parserClass(...))],
+            "formatters" => ["Formatters", Formatters\SubtitleFormatter::class, self::registered(FormatRegistry::formatterClass(...))],
         ];
+    }
+
+
+    /**
+     * @param \Closure(Format): ?string $classOf
+     * @return list<string>
+     */
+    private static function registered(\Closure $classOf): array
+    {
+        return array_values(array_filter(array_map($classOf, Format::cases())));
     }
 
 
