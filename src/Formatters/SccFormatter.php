@@ -28,6 +28,8 @@ final class SccFormatter extends SubtitleFormatter
 
     private const MAX_LINES = 4;
 
+    private const FRAMES_PER_SECOND = 30000 / 1001;
+
     private const NAMED_COLORS = [
         "white" => 0, "lime" => 1, "blue" => 2, "cyan" => 3, "aqua" => 3, "red" => 4, "yellow" => 5, "magenta" => 6, "fuchsia" => 6,
     ];
@@ -57,8 +59,7 @@ final class SccFormatter extends SubtitleFormatter
 
             [$eoc, $edm] = $this->schedule(count($load), $this->secondsToFrame($cue->getStart()), $nextFree, $previousEnd);
             if ($edm !== null) {
-                $timeline[$edm]     = $this->command(Cea608::ERASE_DISPLAYED_MEMORY);
-                $timeline[$edm + 1] = $this->command(Cea608::ERASE_DISPLAYED_MEMORY);
+                [$timeline[$edm], $timeline[$edm + 1]] = $this->commandTwice(Cea608::ERASE_DISPLAYED_MEMORY);
             }
             $frame = $eoc - 1;
             foreach (array_reverse($load) as $word) {
@@ -67,16 +68,14 @@ final class SccFormatter extends SubtitleFormatter
                 }
                 $timeline[$frame--] = $word;
             }
-            $timeline[$eoc]     = $this->command(Cea608::END_OF_CAPTION);
-            $timeline[$eoc + 1] = $this->command(Cea608::END_OF_CAPTION);
+            [$timeline[$eoc], $timeline[$eoc + 1]] = $this->commandTwice(Cea608::END_OF_CAPTION);
 
             $nextFree    = $eoc + 2;
             $previousEnd = $this->secondsToFrame($cue->getEnd());
         }
         if ($previousEnd !== null) {
-            $edm                = max($previousEnd, $nextFree);
-            $timeline[$edm]     = $this->command(Cea608::ERASE_DISPLAYED_MEMORY);
-            $timeline[$edm + 1] = $this->command(Cea608::ERASE_DISPLAYED_MEMORY);
+            $edm                                   = max($previousEnd, $nextFree);
+            [$timeline[$edm], $timeline[$edm + 1]] = $this->commandTwice(Cea608::ERASE_DISPLAYED_MEMORY);
         }
 
         return $this->applyOutputOptions($this->writeLines($timeline, $dropFrame), $options);
@@ -127,12 +126,12 @@ final class SccFormatter extends SubtitleFormatter
 
         if (count($lines) > self::MAX_LINES) {
             throw new UnwritableContentException("Cue #$idx at {$cue->getStart()} s has " . count($lines) . " lines, " .
-                                                 "but SCC allows " . self::MAX_LINES . ". " . self::fitHint($cue));
+                                                 "but SCC allows " . self::MAX_LINES . ". " . $this->fitHint($cue));
         }
         foreach ($lines as $characters) {
             if (count($characters) > Cea608::COLUMNS) {
                 throw new UnwritableContentException("Cue #$idx at {$cue->getStart()} s has a line with " . count($characters) .
-                                                     " characters, but SCC allows " . Cea608::COLUMNS . ". " . self::fitHint($cue));
+                                                     " characters, but SCC allows " . Cea608::COLUMNS . ". " . $this->fitHint($cue));
             }
             foreach ($characters as $character) {
                 if (Cea608::encodeCharacter($character["char"]) === null) {
@@ -144,8 +143,7 @@ final class SccFormatter extends SubtitleFormatter
 
         $cells     = array_map(fn (array $characters): array => $this->cells($characters), $lines);
         $positions = $this->positions($cue, $cells);
-        $words     = [$this->command(Cea608::ERASE_NON_DISPLAYED), $this->command(Cea608::ERASE_NON_DISPLAYED),
-                      $this->command(Cea608::RESUME_CAPTION_LOADING), $this->command(Cea608::RESUME_CAPTION_LOADING)];
+        $words     = [...$this->commandTwice(Cea608::ERASE_NON_DISPLAYED), ...$this->commandTwice(Cea608::RESUME_CAPTION_LOADING)];
         foreach ($cells as $lineIdx => $lineCells) {
             array_push($words, ...$this->rowWords($positions[$lineIdx][0], $positions[$lineIdx][1], $lineCells));
         }
@@ -157,7 +155,7 @@ final class SccFormatter extends SubtitleFormatter
     /**
      * Names wrapLines() when the cue text wraps into 4 lines or fewer at 32 characters, and also the split step when it does not.
      */
-    private static function fitHint(SubtitleCue $cue): string
+    private function fitHint(SubtitleCue $cue): string
     {
         return count(LineWrapper::wrap($cue->getLines(), Cea608::COLUMNS, PHP_INT_MAX)) <= self::MAX_LINES
             ? "Call wrapLines(32, 4) first."
@@ -413,9 +411,14 @@ final class SccFormatter extends SubtitleFormatter
     }
 
 
-    private function command(int $command): int
+    /**
+     * @return array{int, int} the command word twice, as CEA-608 sends control codes
+     */
+    private function commandTwice(int $command): array
     {
-        return $this->word(0x14, $command);
+        $word = $this->word(0x14, $command);
+
+        return [$word, $word];
     }
 
 
@@ -427,7 +430,7 @@ final class SccFormatter extends SubtitleFormatter
 
     private function secondsToFrame(float $seconds): int
     {
-        return (int) round(max(0.0, $seconds) * 30000 / 1001);
+        return (new FrameRate(self::FRAMES_PER_SECOND))->secondsToFrames(max(0.0, $seconds));
     }
 
 
@@ -439,7 +442,7 @@ final class SccFormatter extends SubtitleFormatter
     private function writeLines(array $wordsByFrame, bool $dropFrame): string
     {
         ksort($wordsByFrame);
-        $frameRate = new FrameRate(30000 / 1001);
+        $frameRate = new FrameRate(self::FRAMES_PER_SECOND);
         $lines     = [];
         $previous  = null;
         foreach ($wordsByFrame as $frame => $word) {
