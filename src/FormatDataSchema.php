@@ -229,14 +229,12 @@ final class FormatDataSchema
 
     private static function checkType(string|array $type, mixed $value, string $path): ?string
     {
-        if (is_string($type) && str_starts_with($type, "?")) {
-            return $value === null ? null : self::checkType(substr($type, 1), $value, $path);
-        }
-        if (is_array($type) && str_starts_with($type[0], "?")) {
-            return $value === null ? null : self::checkType([substr($type[0], 1), ...array_slice($type, 1)], $value, $path);
+        $name = is_array($type) ? $type[0] : $type;
+        if (str_starts_with($name, "?")) {
+            return $value === null ? null : self::checkType(is_array($type) ? [substr($name, 1), ...array_slice($type, 1)] : substr($name, 1), $value, $path);
         }
 
-        $valid = match (is_array($type) ? $type[0] : $type) {
+        $valid = match ($name) {
             "string"   => is_string($value),
             "int"      => is_int($value),
             "bool"     => is_bool($value),
