@@ -9,7 +9,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 final class OcrEngineChooser
 {
-    private const GLYPH_INSTALL_HINT = "Install php-glyph-ocr with: composer require yama6a/php-glyph-ocr";
+    private const GLYPH_INSTALL_HINT = "Install php-glyph-ocr with: " . GlyphOcrEngine::INSTALL_COMMAND;
 
 
     /**
@@ -22,13 +22,12 @@ final class OcrEngineChooser
         $glyph     = class_exists(Recognizer::class);
         $problem   = match (true) {
             $engine === OcrEngineName::Tesseract && !$tesseract
-                => "Cannot run OCR with Tesseract - the program \"$tesseractProgram\" is missing! " .
-                   TesseractOcrEngine::INSTALL_HINT,
+                => TesseractOcrEngine::missingProgramMessage($tesseractProgram),
             $engine === OcrEngineName::Glyph && !$glyph
-                => "Cannot run OCR with php-glyph-ocr - the package yama6a/php-glyph-ocr is missing! " .
+                => "Cannot run OCR with php-glyph-ocr - the package " . GlyphOcrEngine::PACKAGE . " is missing! " .
                    self::GLYPH_INSTALL_HINT,
             $engine === null && !$tesseract && !$glyph
-                => "Cannot run OCR - neither Tesseract nor the package yama6a/php-glyph-ocr is installed! " .
+                => "Cannot run OCR - neither Tesseract nor the package " . GlyphOcrEngine::PACKAGE . " is installed! " .
                    TesseractOcrEngine::INSTALL_HINT . " Or " . lcfirst(self::GLYPH_INSTALL_HINT),
             default => null,
         };

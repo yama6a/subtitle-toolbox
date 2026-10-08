@@ -18,6 +18,12 @@ use WeakReference;
 
 final class GlyphOcrEngine implements OcrEngine
 {
+    /** @internal */
+    public const PACKAGE = "yama6a/php-glyph-ocr";
+
+    /** @internal */
+    public const INSTALL_COMMAND = "composer require " . self::PACKAGE;
+
     // The subtitle fonts database takes about 76 MB, so engines that are alive at the same time share one copy.
     private static ?WeakReference $subtitleFonts = null;
 
@@ -134,8 +140,8 @@ final class GlyphOcrEngine implements OcrEngine
     private static function requireClass(string $class): void
     {
         if (!class_exists($class)) {
-            throw new InvalidArgumentException("Cannot create a GlyphOcrEngine - the package yama6a/php-glyph-ocr " .
-                                               "is missing! Install it with: composer require yama6a/php-glyph-ocr");
+            throw new InvalidArgumentException("Cannot create a GlyphOcrEngine - the package " . self::PACKAGE .
+                                               " is missing! Install it with: " . self::INSTALL_COMMAND);
         }
     }
 }
