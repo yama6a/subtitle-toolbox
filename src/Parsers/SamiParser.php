@@ -140,12 +140,12 @@ final class SamiParser extends SubtitleParser
         $syncs = [];
         foreach (array_slice(preg_split('/<SYNC\b/i', $body, -1, PREG_SPLIT_OFFSET_CAPTURE), 1) as $index => [$chunk, $offset]) {
             try {
-                [$start, $content] = $this->readSyncTag($chunk, $index);
+                [$start, $content] = $this->readSyncTag($chunk, $index, fn (): int => $this->lineNumberInBody($rawSubtitle, $bodyStart, $body, $offset));
             } catch (ParsingException $exception) {
                 $lineNumber = $this->lineNumberInBody($rawSubtitle, $bodyStart, $body, $offset);
                 $lines      = array_map("trim", explode("\n", "<SYNC" . $chunk));
                 $block      = array_values(array_filter($lines, fn (string $line): bool => $line !== ""));
-                $this->fail(self::atLine($exception, $lineNumber), $lineNumber, $index, $block);
+                $this->fail($exception, $lineNumber, $index, $block);
                 continue;
             }
 
@@ -161,11 +161,11 @@ final class SamiParser extends SubtitleParser
     /**
      * @return array{float, string} the Start time in seconds and the content after the SYNC tag
      */
-    private function readSyncTag(string $chunk, int $index): array
+    private function readSyncTag(string $chunk, int $index, callable $lineNumber): array
     {
         if (!preg_match('/^([^>]*)>(.*)$/s', $chunk, $matches) ||
             !preg_match('/\bStart\s*=\s*["\']?\s*(\d+)/i', $matches[1], $start)) {
-            throw new ParsingException("SYNC tag " . ($index + 1) . " has no valid Start attribute.");
+            throw new ParsingException("SYNC tag " . ($index + 1) . " has no valid Start attribute.", $lineNumber());
         }
 
         return [((int) $start[1]) / 1000, $matches[2]];

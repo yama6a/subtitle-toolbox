@@ -59,11 +59,7 @@ final class SubRipParser extends SubtitleParser
     public function parseBlock(array $rawLines, int $index, int $lineNumber): array
     {
         if (!$this->options->lenient) {
-            try {
-                return [$this->parseCueBlock($rawLines, $index)];
-            } catch (ParsingException $exception) {
-                throw self::atLine($exception, $lineNumber);
-            }
+            return [$this->parseCueBlock($rawLines, $index, $lineNumber)];
         }
 
         return $this->parseRepairedBlock(
@@ -74,7 +70,7 @@ final class SubRipParser extends SubtitleParser
             true,
             function (array $part, int $partLine) use ($index): SubtitleCue {
                 $hasNumber = !$this->isTimingLine($part[0]);
-                $cue       = $this->parseCueBlock($hasNumber ? $part : array_merge(["0"], $part), $index);
+                $cue       = $this->parseCueBlock($hasNumber ? $part : array_merge(["0"], $part), $index, $partLine);
                 if (!$hasNumber) {
                     $this->warn(
                         "Block #$index has no cue number on line $partLine. The parser read the cue without it.",
@@ -102,25 +98,25 @@ final class SubRipParser extends SubtitleParser
      *
      * @internal
      */
-    public function parseCueBlock(array $rawLines, int $idx): SubtitleCue
+    public function parseCueBlock(array $rawLines, int $idx, ?int $lineNumber = null): SubtitleCue
     {
         if (!is_numeric($rawLines[0])) {
-            throw new ParsingException("Block #$idx has no cue number on its first line.");
+            throw new ParsingException("Block #$idx has no cue number on its first line.", $lineNumber);
         }
 
         if (!str_contains($rawLines[1] ?? "", ' --> ')) {
-            throw new ParsingException("Block #$idx has no timing line on its second line.");
+            throw new ParsingException("Block #$idx has no timing line on its second line.", $lineNumber);
         }
 
         if (count($rawLines) < 3) {
-            throw new ParsingException("Block #$idx has no text lines.");
+            throw new ParsingException("Block #$idx has no text lines.", $lineNumber);
         }
 
         $times       = explode('-->', $rawLines[1]);
         $coordinates = $this->extractCoordinates($times[1]);
         $cue         = new SubtitleCue(
-            $this->secondsFromString($times[0]),
-            $this->secondsFromString($times[1]),
+            $this->secondsFromString($times[0], $lineNumber),
+            $this->secondsFromString($times[1], $lineNumber),
             array_map($this->escapeText(...), array_slice($rawLines, 2))
         );
         $this->convertOverrideTags($cue);
@@ -146,11 +142,11 @@ final class SubRipParser extends SubtitleParser
     }
 
 
-    private function secondsFromString(string $timeString): float
+    private function secondsFromString(string $timeString, ?int $lineNumber): float
     {
         $timeString = trim($timeString);
         if (!preg_match("/^(\d{1,3}):([0-5]\d):([0-5]\d)(?:[,.](\d{1,3}))?$/", $timeString, $matches)) {
-            throw new ParsingException("The time \"$timeString\" is not valid.");
+            throw new ParsingException("The time \"$timeString\" is not valid.", $lineNumber);
         }
 
         return Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4] ?? "");

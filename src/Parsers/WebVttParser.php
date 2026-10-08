@@ -83,7 +83,7 @@ final class WebVttParser extends SubtitleParser
         try {
             switch (true) {
                 case str_contains($rawLines[0], "-->") || str_contains($rawLines[1] ?? "", "-->"):
-                    return $this->parseCueBlock($rawLines, $idx);
+                    return $this->parseCueBlock($rawLines, $idx, $lineNumber);
                 case $this->startsWithKeyword($firstLine, "NOTE"):
                     return $this->parseComment($rawLines);
                 case !$seenCue && $firstLine === "STYLE":
@@ -96,10 +96,10 @@ final class WebVttParser extends SubtitleParser
                     // The spec parser ignores every block that is not a cue, so these blocks do not throw.
                     break;
                 default:
-                    throw new ParsingException("Block #$idx is not a WebVTT cue, comment, style or region.");
+                    throw new ParsingException("Block #$idx is not a WebVTT cue, comment, style or region.", $lineNumber);
             }
         } catch (ParsingException $exception) {
-            $this->fail(self::atLine($exception, $lineNumber), $lineNumber, $idx, $rawLines);
+            $this->fail($exception, $lineNumber, $idx, $rawLines);
         }
 
         return null;
@@ -242,9 +242,9 @@ final class WebVttParser extends SubtitleParser
      *
      * @internal
      */
-    public function parseCueBlock(array $rawLines, int $index): SubtitleCue
+    public function parseCueBlock(array $rawLines, int $index, ?int $lineNumber = null): SubtitleCue
     {
-        return $this->parseCue($this->cleanLines($rawLines), $index);
+        return $this->parseCue($this->cleanLines($rawLines), $index, $lineNumber);
     }
 
 
@@ -254,26 +254,26 @@ final class WebVttParser extends SubtitleParser
     }
 
 
-    private function parseCue(array $rawLines, int $index): SubtitleCue
+    private function parseCue(array $rawLines, int $index, ?int $lineNumber): SubtitleCue
     {
         if (str_contains($rawLines[1] ?? "", "-->")) {
             $identifier = $rawLines[0];
             $rawLines   = array_slice($rawLines, 1);
         }
         if (count($rawLines) < 2) {
-            throw new ParsingException("Block #$index has no text lines.");
+            throw new ParsingException("Block #$index has no text lines.", $lineNumber);
         }
 
         $times = explode("-->", $rawLines[0], 2);
         $end   = trim($times[1]);
         if (!preg_match("/^(" . self::TIMESTAMP_PATTERN . ")([ \t]+(.*))?$/", $end, $matches)) {
-            throw new ParsingException("The time \"$end\" is not valid.");
+            throw new ParsingException("The time \"$end\" is not valid.", $lineNumber);
         }
 
         $lines = str_replace(array_keys(self::ENTITIES), array_values(self::ENTITIES), array_slice($rawLines, 1));
         $cue   = new SubtitleCue(
-            $this->secondsFromString($times[0]),
-            $this->secondsFromString($matches[1]),
+            $this->secondsFromString($times[0], $lineNumber),
+            $this->secondsFromString($matches[1], $lineNumber),
             $lines
         );
         $cue->setIdentifier($identifier ?? null);
@@ -286,11 +286,11 @@ final class WebVttParser extends SubtitleParser
     }
 
 
-    private function secondsFromString(string $timeString): float
+    private function secondsFromString(string $timeString, ?int $lineNumber): float
     {
         $timeString = trim($timeString);
         if (!preg_match("/^" . self::TIMESTAMP_PATTERN . "$/", $timeString, $matches)) {
-            throw new ParsingException("The time \"$timeString\" is not valid.");
+            throw new ParsingException("The time \"$timeString\" is not valid.", $lineNumber);
         }
 
         return Timecode::toSeconds((int) $matches[2], (int) $matches[3], (int) $matches[4], $matches[5]);

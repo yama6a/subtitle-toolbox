@@ -128,21 +128,6 @@ abstract class SubtitleParser
 
 
     /**
-     * Returns $exception with $lineNumber, or $exception itself when it has a line number already.
-     */
-    protected static function atLine(ParsingException $exception, int $lineNumber): ParsingException
-    {
-        if ($exception->getLineNumber() !== null) {
-            return $exception;
-        }
-
-        $message = preg_replace('/^ParsingException \(Error #\d+\): /', "", $exception->getMessage());
-
-        return new ParsingException($message, $lineNumber, $exception->getPrevious());
-    }
-
-
-    /**
      * @param list<string> $block
      */
     protected function warn(string $message, ?int $lineNumber, ?int $blockIndex, array $block, ParseWarningAction $action): void
@@ -321,7 +306,7 @@ abstract class SubtitleParser
             try {
                 $cues[] = $parsePart($part, $lineNumber + $offset);
             } catch (ParsingException $exception) {
-                $this->fail(self::atLine($exception, $lineNumber + $offset), $lineNumber + $offset, $blockIndex, $part);
+                $this->fail($exception, $lineNumber + $offset, $blockIndex, $part);
             }
         }
 
