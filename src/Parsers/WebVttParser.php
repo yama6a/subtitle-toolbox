@@ -27,7 +27,7 @@ final class WebVttParser extends SubtitleParser
     private const SIGNATURE = "WEBVTT";
     private const NOTE      = "NOTE";
 
-    private const TIMESTAMP_PATTERN = "((\d{2,3}):)?([0-5]\d):([0-5]\d)\.(\d{3})";
+    private const TIMESTAMP_PATTERN = "((\d+):)?([0-5]\d):([0-5]\d)\.(\d{3})";
 
     private const ENTITIES = ["&nbsp;" => "\u{00A0}", "&lrm;" => "\u{200E}", "&rlm;" => "\u{200F}"];
 

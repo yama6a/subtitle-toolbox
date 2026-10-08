@@ -20,3 +20,4 @@
 | `webvttpy_youtube.vtt` | Written for this repository in the shape of https://github.com/glut23/webvtt-py/blob/fdbf129c514328ab1344565174ffb46162c8535d/tests/samples/youtube_dl.vtt | MIT |
 | `own_empty_cues.vtt` | Written for this repository. Cue 2 has an identifier and no text, as in a user report of a naver.com file. Cue 4 has `align:middle line:90%` settings, no text and two empty lines after it, as in user reports of vendor files. | MIT |
 | `own_ytdlp_auto_captions.vtt` | Written for this repository in the shape of YouTube automatic captions that `yt-dlp --write-auto-subs` saves. Each cue holds a line with one space. | MIT |
+| `own_hour_digits.vtt` | Written for this repository. One cue with 1 hour digit, then the times of https://github.com/captioning/captioning/blob/27d0e86693f4d9bc2046102f74aa54febcd902dc/tests/Fixtures/Webvtt/long-hours.vtt with hours of 2 to 4 digits and leading zeros | MIT |
