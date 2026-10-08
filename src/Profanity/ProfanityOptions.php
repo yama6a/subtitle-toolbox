@@ -15,10 +15,11 @@ final class ProfanityOptions
 
 
     /**
-     * Creates the filter settings, see docs/text.md#profanity-filter.
+     * docs/text.md#profanity-filter shows an example of each mask.
      *
-     * @param list<string> $words one word or phrase each, with an optional * at the end for any word ending
-     * @param ProfanityMask|Closure(string): string $mask
+     * @param list<string>                          $words   one word or phrase each, with an optional * at the end for any word ending
+     * @param ProfanityMask|Closure(string): string $mask    how the filter writes a match, or a function that returns the new text of a match
+     * @param float                                 $padding the seconds added on both sides of a mute range
      */
     public function __construct(
         array $words,

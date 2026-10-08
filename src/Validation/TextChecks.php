@@ -15,7 +15,7 @@ use SubtitleToolbox\Timecode;
 final class TextChecks
 {
     /**
-     * Returns one result per text rule that the cue breaks.
+     * Returns one violation per text rule that the cue breaks.
      *
      * @return list<ValidationViolation>
      */
@@ -39,8 +39,8 @@ final class TextChecks
 
 
     /**
-     * Returns each text rule in the order of the results, with a flag that tells if it is on and a check that returns
-     * the value and the limit of the rule.
+     * Returns each text rule in the order of the violations, with a flag that tells if it is on.
+     * The check of each rule returns its value and its limit.
      *
      * @param list<string> $visible
      * @return list<array{ValidationRule, bool, callable(): array{int|float, int|float|null}}>

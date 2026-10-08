@@ -7,8 +7,6 @@ namespace SubtitleToolbox\Validation;
 final class ValidationViolation
 {
     /**
-     * Holds one broken rule.
-     *
      * @internal
      *
      * @param ?int           $cueIndex the cue that breaks the rule, or null for a rule about the whole subtitle such as requireCues

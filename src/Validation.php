@@ -15,7 +15,7 @@ use SubtitleToolbox\Validation\ValidationViolation;
 trait Validation
 {
     /**
-     * Checks every cue against the rules that have a limit and returns one result per broken rule.
+     * Checks every cue against the rules that are on and returns one violation per broken rule.
      *
      * @return list<ValidationViolation>
      */
