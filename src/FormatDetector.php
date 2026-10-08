@@ -7,7 +7,7 @@ namespace SubtitleToolbox;
 /** @internal */
 final class FormatDetector
 {
-    private const LRC_TIMESTAMP = '\[\d{2,3}:\d{2}(?:[.:]\d{2,3})?\]';
+    private const LRC_TIMESTAMP = '\[[ \t]*(?:\d{1,2}:)?\d{1,3}:[0-5]\d(?:\.\d{1,3})?[ \t]*\]';
 
     private const SUBVIEWER_TIMING = '\d{2}:\d{2}:\d{2}\.\d{2},\d{2}:\d{2}:\d{2}\.\d{2}';
 
