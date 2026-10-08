@@ -141,28 +141,49 @@ final class HearingImpairedRemover
                 if ($widen) {
                     [$start, $end] = self::widenRange($visible, $start, $end);
                 }
-                for ($offset = $start; $offset < $end; $offset++) {
-                    if ($map[$offset] !== null) {
-                        $removed[$map[$offset][0]][$map[$offset][1]] = $map[$offset][2];
-                    }
-                }
+                self::markRemoved($removed, $map, $start, $end);
             }
         }
 
         foreach ($removed as $lineIndex => $spans) {
-            $line   = $lines[$lineIndex];
-            $result = "";
-            for ($offset = 0, $length = strlen($line); $offset < $length;) {
-                if (isset($spans[$offset])) {
-                    $offset += $spans[$offset];
-                    continue;
-                }
-                $result .= $line[$offset++];
-            }
-            $lines[$lineIndex] = $result;
+            $lines[$lineIndex] = self::cutSpans($lines[$lineIndex], $spans);
         }
 
         return $lines;
+    }
+
+
+    /**
+     * Marks the raw bytes of the visible range from $start to $end as removed, by line and offset with their length.
+     *
+     * @param array<int, array<int, int>>     $removed
+     * @param list<array{int, int, int}|null> $map
+     */
+    private static function markRemoved(array &$removed, array $map, int $start, int $end): void
+    {
+        for ($offset = $start; $offset < $end; $offset++) {
+            if ($map[$offset] !== null) {
+                $removed[$map[$offset][0]][$map[$offset][1]] = $map[$offset][2];
+            }
+        }
+    }
+
+
+    /**
+     * @param array<int, int> $spans the length of each removed span by its offset
+     */
+    private static function cutSpans(string $line, array $spans): string
+    {
+        $result = "";
+        for ($offset = 0, $length = strlen($line); $offset < $length;) {
+            if (isset($spans[$offset])) {
+                $offset += $spans[$offset];
+                continue;
+            }
+            $result .= $line[$offset++];
+        }
+
+        return $result;
     }
 
 
