@@ -30,7 +30,7 @@ final class LyricsFormatter extends SubtitleFormatter
             $output .= LineEnding::Lf->value;
 
             if ($cue->findFormatData(LyricsParser::FORMAT_DATA_KEY)["endLine"] ?? false) {
-                $output .= $this->stamp($cue->getEnd()) . LineEnding::Lf->value;
+                $output .= "[" . $this->stamp($cue->getEnd()) . "]" . LineEnding::Lf->value;
             }
         }
         $output .= $this->formatComments($comments, count($cues), PHP_INT_MAX);
@@ -76,28 +76,25 @@ final class LyricsFormatter extends SubtitleFormatter
 
     private function formatCue(SubtitleCue $cue): string
     {
-        $timestamp = $this->stamp($cue->getStart());
+        $timestamp = "[" . $this->stamp($cue->getStart()) . "]";
 
         $parts = preg_split(Markup::WORD_TIMESTAMP_REGEX, implode(" ", $cue->getLines()), -1, PREG_SPLIT_DELIM_CAPTURE);
         $lines = "";
         foreach ($parts as $idx => $part) {
-            $lines .= $idx % 2 === 1 ? $this->wordStamp($part) : Markup::plainText($part);
+            $lines .= $idx % 2 === 1 ? "<" . $this->stamp(Markup::wordTimestampSeconds($part)) . ">" : Markup::plainText($part);
         }
 
         return $timestamp . " " . $lines;
     }
 
 
-    private function wordStamp(string $coreTag): string
-    {
-        return "<" . trim($this->stamp(Markup::wordTimestampSeconds($coreTag)), "[]") . ">";
-    }
-
-
+    /**
+     * Returns the time as mm:ss.cc, without the brackets of a line stamp or a word stamp.
+     */
     private function stamp(float $seconds): string
     {
         [$hours, $minutes, $wholeSeconds, $centiseconds] = Timecode::centiseconds($seconds);
 
-        return sprintf("[%02d:%02d.%02d]", 60 * $hours + $minutes, $wholeSeconds, $centiseconds);
+        return sprintf("%02d:%02d.%02d", 60 * $hours + $minutes, $wholeSeconds, $centiseconds);
     }
 }
