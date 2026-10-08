@@ -48,7 +48,7 @@ $subtitle->wrapLines(42);                         // at most 42 characters per l
 $subtitle->unwrapLines();                         // join the lines of each cue with a space
 ```
 
-- **Start times**: these fixes move only end times. `fixOverlaps()` ends a cue at its own start when the gap does not fit. `extendShortCues()` never creates an overlap and never makes a cue shorter.
+- **Start times**: these fixes move only end times. `fixOverlaps()` ends a cue at its own start when the gap does not fit. Cues with the same start, such as a sign and a line of dialogue, end before the next cue with a later start. `extendShortCues()` never creates an overlap and never makes a cue shorter.
 - **Line breaks**: `wrapLines()` changes only cues with a longer line or with more lines than allowed. It uses the fewest lines that fit and makes them about equal in length. When the text does not fit, the lines get longer than the limit.
 - **Characters**: tags count 0 characters, and an entity such as `&amp;` counts 1. `wrapLines()` breaks only at spaces outside tags. It closes the open core markup tags at a break and opens them again on the next line.
 - **Text without spaces**: Chinese or Japanese text has no break points, so `wrapLines()` keeps such a line long.

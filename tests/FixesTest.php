@@ -89,6 +89,17 @@ class FixesTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testFixOverlapsTrimsCuesWithTheSameStartAgainstTheNextLaterStart(): void
+    {
+        $subtitle = TestSubtitles::fromTimes([[1, 4], [1, 3], [2, 5], [6, 7], [6, 8]]);
+
+        $subtitle->fixOverlaps();
+
+        $this->assertSame([[1.0, 2.0], [1.0, 2.0], [2.0, 5.0], [6.0, 7.0], [6.0, 8.0]],
+                          TestSubtitles::times($subtitle));
+    }
+
+
     public function testFixOverlapsWithNegativeGapThrowsException(): void
     {
         $this->expectException(InvalidArgumentException::class);
