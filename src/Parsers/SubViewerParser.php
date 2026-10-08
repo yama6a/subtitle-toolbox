@@ -184,24 +184,13 @@ final class SubViewerParser extends SubtitleParser
                 continue;
             }
 
-            if ($this->options->lenient && $this->hasOneBadTime($line)) {
+            $badTime = $this->options->lenient && $this->hasOneBadTime($line);
+            if ($badTime || preg_match(self::VERSION_2_TIME_REGEX, $line, $matches)) {
                 $this->addCueWithText($parsedCues, $cue);
                 $this->warnSkipped($skipped);
-                $cue     = null;
-                $skipped = [$lineNumber, $cueIndex++, [$line]];
-                continue;
-            }
-
-            if (preg_match(self::VERSION_2_TIME_REGEX, $line, $matches)) {
-                $this->addCueWithText($parsedCues, $cue);
-                $this->warnSkipped($skipped);
-                $skipped = null;
+                $cue     = $badTime ? null : self::version2Cue($matches);
+                $skipped = $badTime ? [$lineNumber, $cueIndex, [$line]] : null;
                 $cueIndex++;
-                $cue = new SubtitleCue(
-                    Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]),
-                    Timecode::toSeconds((int) $matches[5], (int) $matches[6], (int) $matches[7], $matches[8]),
-                    []
-                );
                 continue;
             }
 
@@ -212,31 +201,12 @@ final class SubViewerParser extends SubtitleParser
                 }
                 continue;
             }
-
             if ($skipped !== null) {
                 $skipped[2][] = $line;
-                continue;
-            }
-
-            if ($cue !== null) {
-                foreach (explode("[br]", $line) as $textLine) {
-                    if (trim($textLine) !== "") {
-                        $cue->addLine(Markup::escapeText(trim($textLine)));
-                    }
-                }
-                continue;
-            }
-
-            try {
-                $matches = $this->headerTag($line, $lineNumber, "is neither a header tag nor a timing line");
-            } catch (ParsingException $exception) {
-                $this->fail($exception, $lineNumber, 0, [$line]);
-                continue;
-            }
-
-            $tag = strtoupper(trim($matches[1]));
-            if (!in_array($tag, self::VERSION_2_BLOCK_TAGS, true)) {
-                $this->addHeaderTag($subtitle, $header, $tag, trim($matches[2]));
+            } elseif ($cue !== null) {
+                self::addTextLines($cue, $line);
+            } else {
+                $this->readVersion2Header($line, $lineNumber, $subtitle, $header);
             }
         }
         $this->addCueWithText($parsedCues, $cue);
@@ -248,6 +218,49 @@ final class SubViewerParser extends SubtitleParser
         ));
 
         return $subtitle->addCues($parsedCues);
+    }
+
+
+    /**
+     * @param array<int, string> $matches the matches of VERSION_2_TIME_REGEX
+     */
+    private static function version2Cue(array $matches): SubtitleCue
+    {
+        return new SubtitleCue(
+            Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]),
+            Timecode::toSeconds((int) $matches[5], (int) $matches[6], (int) $matches[7], $matches[8]),
+            []
+        );
+    }
+
+
+    private static function addTextLines(SubtitleCue $cue, string $line): void
+    {
+        foreach (explode("[br]", $line) as $textLine) {
+            if (trim($textLine) !== "") {
+                $cue->addLine(Markup::escapeText(trim($textLine)));
+            }
+        }
+    }
+
+
+    /**
+     * @param array<string, string> $header
+     */
+    private function readVersion2Header(string $line, int $lineNumber, Subtitle $subtitle, array &$header): void
+    {
+        try {
+            $matches = $this->headerTag($line, $lineNumber, "is neither a header tag nor a timing line");
+        } catch (ParsingException $exception) {
+            $this->fail($exception, $lineNumber, 0, [$line]);
+
+            return;
+        }
+
+        $tag = strtoupper(trim($matches[1]));
+        if (!in_array($tag, self::VERSION_2_BLOCK_TAGS, true)) {
+            $this->addHeaderTag($subtitle, $header, $tag, trim($matches[2]));
+        }
     }
 
 
