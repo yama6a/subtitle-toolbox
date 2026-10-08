@@ -14,7 +14,7 @@ use SubtitleToolbox\WriteOptions;
 
 final class TtmlFormatter extends SubtitleFormatter
 {
-    // The formatter writes media times, so these parameters no longer apply.
+    // The formatter writes media times, which these time parameters would change.
     private const SKIPPED_ROOT_PARAMETERS = ["timeBase", "clockMode", "dropMode", "markerMode"];
 
 
@@ -217,8 +217,8 @@ final class TtmlFormatter extends SubtitleFormatter
 
 
     /**
-     * Returns the opening span of a core markup tag, an empty string for a tag without TTML style, or null for
-     * a tag outside the core markup.
+     * Returns the opening span of a core markup tag, or "" for a tag without TTML style.
+     * Returns null for a tag outside the core markup.
      */
     private function openSpan(TtmlContext $context, string $tag, string $rest): ?string
     {

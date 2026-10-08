@@ -17,7 +17,8 @@ final class PlainTextFormatter extends SubtitleFormatter
 
 
     /**
-     * Writes the text of the cues without markup and entities, in paragraphs that a gap of PlainTextWriteOptions::$paragraphGap seconds starts.
+     * Writes the text of the cues without markup and entities.
+     * A gap of PlainTextWriteOptions::$paragraphGap seconds starts a new paragraph.
      */
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {

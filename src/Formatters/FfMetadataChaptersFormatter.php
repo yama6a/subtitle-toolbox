@@ -41,7 +41,9 @@ final class FfMetadataChaptersFormatter extends SubtitleFormatter
     }
 
 
-    // The stored tags keep their order, so an unchanged file comes out byte for byte.
+    /**
+     * The stored tags keep their order, so an unchanged file comes out byte for byte.
+     */
     private function globalTags(Subtitle $subtitle, array $storedTags): array
     {
         $tags = [];

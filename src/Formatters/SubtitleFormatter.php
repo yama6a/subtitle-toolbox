@@ -12,8 +12,8 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
 /**
- * The base class of the formatters of this library. Only the library extends it. Its protected members are not API and
- * can change in any release.
+ * The base class of the formatters of this library. Only the library extends it.
+ * Its protected members are not API and can change in any release.
  */
 abstract class SubtitleFormatter
 {
@@ -61,8 +61,8 @@ abstract class SubtitleFormatter
 
 
     /**
-     * Returns WriteOptions::$format, or the default options of the format when $options holds none. Returns null for a
-     * formatter without format options.
+     * Returns WriteOptions::$format, or the default options of the format when $options holds none.
+     * Returns null for a formatter without format options.
      *
      * @throws InvalidArgumentException when WriteOptions::$format holds the settings of another format.
      */

@@ -26,7 +26,8 @@ final class EbuStlFormatter extends SubtitleFormatter
 {
     protected const FORMAT_OPTIONS = EbuStlWriteOptions::class;
 
-    // The values of a new GSI block. EBU Tech 3264 section 4.2.5 fills unused bytes with spaces.
+    // The values of a new GSI (General Subtitle Information) block.
+    // EBU Tech 3264 section 4.2.5 fills unused bytes with spaces.
     private const DEFAULT_GSI = [
         "CPN" => "850", "DSC" => "1", "CCT" => "00", "RN" => "00", "MNC" => "40", "MNR" => "23",
         "TCS" => "1", "TCP" => "00000000", "TND" => "1", "DSN" => "1",
@@ -155,8 +156,8 @@ final class EbuStlFormatter extends SubtitleFormatter
 
 
     /**
-     * Writes bytes 0 and 4 to 15 of $header into each block where they differ from the first block,
-     * so that unchanged values stay as they are in every block.
+     * Writes bytes 0 and 4 to 15 of $header into each block where they differ from the first block.
+     * So unchanged values stay as they are in every block.
      *
      * @param list<string> $blocks
      *
@@ -226,7 +227,7 @@ final class EbuStlFormatter extends SubtitleFormatter
 
 
     /**
-     * Returns the 16 header bytes of a TTI block, EBU Tech 3264 table 2. The formatter writes the subtitle number later.
+     * Returns the 16 header bytes of a TTI (Text and Timing Information) block, EBU Tech 3264 table 2. The formatter writes the subtitle number later.
      *
      * @param array{int, int} $position the vertical position and the justification code
      */
@@ -240,8 +241,8 @@ final class EbuStlFormatter extends SubtitleFormatter
 
 
     /**
-     * Returns the vertical position and the justification code for an alignment: the first row of the subtitle
-     * at the top, in the middle or at the bottom of the rows, and left, centred or right text.
+     * Returns the vertical position and the justification code for an alignment.
+     * The first row of the subtitle goes at the top, in the middle or at the bottom of the rows.
      *
      * @return array{int, int}
      */
@@ -272,8 +273,8 @@ final class EbuStlFormatter extends SubtitleFormatter
 
 
     /**
-     * Converts the core markup of the cue lines to text field codes: 80h to 83h for italics and underline,
-     * and the teletext alpha colors for the eight colors of EBU Tech 3264 appendix 2.
+     * Converts the core markup of the cue lines to text field codes, EBU Tech 3264 appendix 2.
+     * Italics and underline take 80h to 83h. The eight colors take the teletext alpha color codes.
      */
     private function encodeText(EbuStlContext $context, SubtitleCue $cue): string
     {
