@@ -7,8 +7,8 @@ namespace SubtitleToolbox\Encoding;
 use SubtitleToolbox\StyleRuns;
 
 /**
- * Decodes CEA-608 byte pairs of one data channel into the captions on screen. It follows the screen model of
- * 47 CFR 15.119 and records a state at each change of the displayed captions.
+ * Decodes CEA-608 byte pairs of one data channel into the captions on screen.
+ * It follows the screen model of 47 CFR 15.119 and records a state at each change of the displayed captions.
  *
  * @see https://www.govinfo.gov/content/pkg/CFR-2010-title47-vol1/xml/CFR-2010-title47-vol1-sec15-119.xml
  *
@@ -24,7 +24,8 @@ final class Cea608Decoder
 
     private const DEFAULT_ATTRIBUTES = ["color" => Cea608::WHITE, "italic" => false, "underline" => false];
 
-    // The display change of paint-on or roll-up data, and of EOC or EDM. Null means no change.
+    // The display change of paint-on or roll-up data, or of an EOC (End Of Caption) or EDM (Erase Displayed Memory) code.
+    // Null means no change.
     private const DISPLAY_DIRECT  = "direct";
     private const DISPLAY_REPLACE = "replace";
 

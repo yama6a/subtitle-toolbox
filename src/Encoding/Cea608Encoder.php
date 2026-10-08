@@ -7,8 +7,8 @@ namespace SubtitleToolbox\Encoding;
 use SubtitleToolbox\Markup;
 
 /**
- * Encodes lines of core markup as CEA-608 cells and byte pairs: preamble address codes, tab offsets, mid-row codes and
- * characters.
+ * Encodes lines of core markup as CEA-608 cells and byte pairs.
+ * The byte pairs are PACs (preamble address codes), tab offsets, mid-row codes and characters.
  *
  * @see https://www.govinfo.gov/content/pkg/CFR-2010-title47-vol1/xml/CFR-2010-title47-vol1-sec15-119.xml
  *
@@ -24,7 +24,8 @@ final class Cea608Encoder
 
 
     /**
-     * Splits a line of core markup into characters with their color, italics and underline, without the spaces at both ends.
+     * Splits a line of core markup into characters with their color, italics and underline.
+     * The spaces at both ends of the line drop.
      *
      * @return list<array{char: string, color: int, italic: bool, underline: bool}>
      */
@@ -104,8 +105,9 @@ final class Cea608Encoder
 
 
     /**
-     * Turns the characters into cells. A style change takes a mid-row code, which shows as a space. The code replaces
-     * the space before the change when there is one. Styles that need more than 32 cells are dropped for the line.
+     * Turns the characters into cells. A style change takes a mid-row code, which shows as a space.
+     * The code replaces the space before the change when there is one.
+     * Styles that need more than 32 cells are dropped for the line.
      *
      * @return list<array{char?: string, midRow?: int}>
      */
@@ -137,8 +139,8 @@ final class Cea608Encoder
 
 
     /**
-     * Returns the second bytes of the mid-row codes that change the style. A color code turns italics off,
-     * and the italics code keeps the color, as 47 CFR 15.119 (h)(1)(ii) says.
+     * Returns the second bytes of the mid-row codes that change the style.
+     * A color code turns italics off, and the italics code keeps the color, as 47 CFR 15.119 (h)(1)(ii) says.
      *
      * @return list<int>
      */
@@ -189,8 +191,8 @@ final class Cea608Encoder
 
 
     /**
-     * Returns the PAC bytes, the column that the PAC and the tab offset reach, and the cells after the PAC. When the
-     * leading mid-row codes do not fit before $column, the PAC takes over their style at column 0.
+     * Returns the PAC bytes, the column that the PAC and the tab offset reach, and the cells after the PAC.
+     * When the leading mid-row codes do not fit before $column, the PAC takes over their style at column 0.
      *
      * @return array{array{int, int}, int, array}
      */
