@@ -30,11 +30,7 @@ final class TtmlParser extends SubtitleParser
 
     private DOMElement $root;
 
-    /** @var array<string, DOMElement> */
-    private array $styles = [];
-
-    /** @var array<string, DOMElement> */
-    private array $regions = [];
+    private TtmlStyles $styles;
 
     /** @var array<string, string> */
     private array $agents = [];
@@ -69,9 +65,8 @@ final class TtmlParser extends SubtitleParser
         $this->readTimingParameters();
         $head = $this->firstChild($this->root, "head");
         $body = $this->firstChild($this->root, "body");
-        $this->styles  = $head === null ? [] : $this->elementsById($head, "style");
-        $this->regions = $head === null ? [] : $this->elementsById($head, "region");
-        $this->agents  = $head === null ? [] : $this->readAgents($head);
+        $this->styles = new TtmlStyles($this->namespace, $head);
+        $this->agents = $head === null ? [] : $this->readAgents($head);
 
         $subtitle = new Subtitle();
         $language = $this->root->getAttributeNS(TtmlNamespaces::XML, "lang");
@@ -197,13 +192,15 @@ final class TtmlParser extends SubtitleParser
     private function readContainer(array &$cues, DOMElement $container, TtmlScope $parent, array $divAttributes): void
     {
         [$begin, $end] = $this->interval($container, $parent->begin, $parent->end);
+        $properties    = $this->styles->ownProperties($container);
         $scope         = new TtmlScope(
             $begin,
             $end,
             $container->hasAttribute("region") ? $container->getAttribute("region") : $parent->region,
-            $this->ownStyleProperties($container)["textAlign"] ?? $parent->textAlign,
+            $properties["textAlign"] ?? $parent->textAlign,
             $this->preservesSpace($container, $parent->preserveSpace),
             $this->forcedDisplay($container) ?? $parent->forced,
+            $properties === [] ? $parent->styleProperties : [...$parent->styleProperties, $properties],
         );
         if ($this->isTtElement($container, "div")) {
             $divAttributes = [
@@ -250,7 +247,12 @@ final class TtmlParser extends SubtitleParser
             throw new ParsingException("The paragraph that begins at {$begin}s has no end time.");
         }
 
-        $style = $this->resolveStyle($paragraph, ["b" => false, "i" => false, "u" => false, "s" => false, "color" => null]);
+        $region = $paragraph->hasAttribute("region") ? $paragraph->getAttribute("region") : $scope->region;
+        $style  = TtmlStyles::DEFAULT_STYLE;
+        foreach ([$this->styles->regionProperties($region), ...$scope->styleProperties] as $properties) {
+            $style = TtmlStyles::apply($style, $properties);
+        }
+        $style = $this->resolveStyle($paragraph, $style);
         $agent = $this->agentName($paragraph);
         $runs  = [];
         $this->collectRuns($paragraph, $style, $agent, $this->preservesSpace($paragraph, $scope->preserveSpace), $runs);
@@ -265,8 +267,7 @@ final class TtmlParser extends SubtitleParser
         }
         $cue->setFormatData(self::FORMAT_DATA_KEY, $attributes === [] ? [] : ["attributes" => $attributes]);
 
-        $textAlign = $this->ownStyleProperties($paragraph)["textAlign"] ?? $scope->textAlign;
-        $region    = $paragraph->hasAttribute("region") ? $paragraph->getAttribute("region") : $scope->region;
+        $textAlign = $this->styles->ownProperties($paragraph)["textAlign"] ?? $scope->textAlign;
         $cue->setAlignment($this->alignment($region, $textAlign));
 
         $forced = $this->forcedDisplay($paragraph) ?? $scope->forced ?? $this->regionForcedDisplay($region) ?? false;
@@ -292,9 +293,9 @@ final class TtmlParser extends SubtitleParser
 
         $forced = null;
         if ($depth < self::MAX_STYLE_DEPTH) {
-            foreach (preg_split("/\s+/", trim($element->getAttribute("style")), -1, PREG_SPLIT_NO_EMPTY) as $id) {
-                if (isset($this->styles[$id])) {
-                    $forced = $this->forcedDisplay($this->styles[$id], $depth + 1) ?? $forced;
+            foreach ($this->styles->styleIds($element) as $id) {
+                if (isset($this->styles->styles[$id])) {
+                    $forced = $this->forcedDisplay($this->styles->styles[$id], $depth + 1) ?? $forced;
                 }
             }
         }
@@ -305,12 +306,12 @@ final class TtmlParser extends SubtitleParser
 
     private function regionForcedDisplay(?string $regionId): ?bool
     {
-        if ($regionId === null || !isset($this->regions[$regionId])) {
+        if ($regionId === null || !isset($this->styles->regions[$regionId])) {
             return null;
         }
 
-        $forced = $this->forcedDisplay($this->regions[$regionId]);
-        foreach ($this->regions[$regionId]->childNodes as $child) {
+        $forced = $this->forcedDisplay($this->styles->regions[$regionId]);
+        foreach ($this->styles->regions[$regionId]->childNodes as $child) {
             if ($forced === null && $this->isTtElement($child, "style")) {
                 $forced = $this->forcedDisplay($child);
             }
@@ -455,89 +456,9 @@ final class TtmlParser extends SubtitleParser
     }
 
 
-    /**
-     * @see https://www.w3.org/TR/ttml2/#semantics-style-resolution-processing-sss
-     */
     private function resolveStyle(DOMElement $element, array $inherited): array
     {
-        $style = $inherited;
-        foreach ($this->ownStyleProperties($element) as $name => $value) {
-            $value = trim($value);
-            switch ($name) {
-                case "fontWeight":
-                    $style["b"] = $value === "bold";
-                    break;
-                case "fontStyle":
-                    $style["i"] = $value === "italic" || $value === "oblique";
-                    break;
-                case "textDecoration":
-                    $decorations = preg_split("/\s+/", $value);
-                    if (in_array("none", $decorations, true)) {
-                        $style["u"] = $style["s"] = false;
-                    }
-                    $style["u"] = in_array("underline", $decorations, true)
-                                  || $style["u"] && !in_array("noUnderline", $decorations, true);
-                    $style["s"] = in_array("lineThrough", $decorations, true)
-                                  || $style["s"] && !in_array("noLineThrough", $decorations, true);
-                    break;
-                case "color":
-                    $color          = $this->normalizeColor($value);
-                    // White is the default text color of every player, so it adds no markup.
-                    $style["color"] = $color === "#ffffff" ? null : $color;
-                    break;
-            }
-        }
-
-        return $style;
-    }
-
-
-    private function ownStyleProperties(DOMElement $element, int $depth = 0): array
-    {
-        $properties = [];
-        if ($depth < self::MAX_STYLE_DEPTH) {
-            foreach (preg_split("/\s+/", trim($element->getAttribute("style")), -1, PREG_SPLIT_NO_EMPTY) as $id) {
-                if (isset($this->styles[$id])) {
-                    $properties = [...$properties, ...$this->ownStyleProperties($this->styles[$id], $depth + 1)];
-                }
-            }
-        }
-
-        return [...$properties, ...$this->stylingAttributes($element)];
-    }
-
-
-    private function stylingAttributes(DOMElement $element): array
-    {
-        $properties = [];
-        foreach ($element->attributes as $attribute) {
-            if (in_array($attribute->namespaceURI, TtmlNamespaces::STYLING, true)) {
-                $properties[$attribute->localName] = $attribute->value;
-            } elseif ($attribute->namespaceURI === null && str_starts_with($attribute->nodeName, "tts:")) {
-                $properties[substr($attribute->nodeName, 4)] = $attribute->value;
-            }
-        }
-
-        return $properties;
-    }
-
-
-    /**
-     * Drops the alpha channel, because core markup has none.
-     *
-     * @see https://www.w3.org/TR/ttml2/#style-value-color
-     */
-    private function normalizeColor(string $color): ?string
-    {
-        $color = strtolower(trim($color));
-        if (preg_match("/^#([0-9a-f]{6})([0-9a-f]{2})?$/", $color, $matches)) {
-            return "#" . $matches[1];
-        }
-        if (preg_match("/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(,\s*\d{1,3}\s*)?\)$/", $color, $matches)) {
-            return sprintf("#%02x%02x%02x", min(255, (int) $matches[1]), min(255, (int) $matches[2]), min(255, (int) $matches[3]));
-        }
-
-        return ColorNames::TTML[$color] ?? null;
+        return TtmlStyles::apply($inherited, $this->styles->ownProperties($element));
     }
 
 
@@ -548,22 +469,11 @@ final class TtmlParser extends SubtitleParser
      */
     private function alignment(?string $regionId, ?string $textAlign): ?int
     {
-        if ($regionId !== null && !isset($this->regions[$regionId]) || $regionId === null && $this->regions !== []) {
+        if ($regionId !== null && !isset($this->styles->regions[$regionId]) || $regionId === null && $this->styles->regions !== []) {
             return null;
         }
 
-        $properties = [];
-        if ($regionId !== null) {
-            $region     = $this->regions[$regionId];
-            $properties = $this->ownStyleProperties($region);
-            foreach ($region->childNodes as $child) {
-                if ($this->isTtElement($child, "style")) {
-                    $properties = [...$properties, ...$this->ownStyleProperties($child)];
-                }
-            }
-            $properties = [...$properties, ...$this->stylingAttributes($region)];
-        }
-
+        $properties = $this->styles->regionProperties($regionId);
         $column = match (trim($textAlign ?? $properties["textAlign"] ?? "start")) {
             "left"   => 1,
             "center" => 2,
@@ -616,8 +526,8 @@ final class TtmlParser extends SubtitleParser
         }
 
         $body       = $this->firstChild($this->root, "body");
-        $rootExtent = $this->stylingAttributes($this->root)["extent"]
-                      ?? ($body === null ? null : $this->stylingAttributes($body)["extent"] ?? null);
+        $rootExtent = TtmlStyles::stylingAttributes($this->root)["extent"]
+                      ?? ($body === null ? null : TtmlStyles::stylingAttributes($body)["extent"] ?? null);
         if ($rootExtent === null || !preg_match("/^\s*\d+(?:\.\d+)?px\s+(\d+(?:\.\d+)?)px\s*$/", $rootExtent, $matches)
             || (float) $matches[1] <= 0) {
             return null;
@@ -765,22 +675,5 @@ final class TtmlParser extends SubtitleParser
         }
 
         return null;
-    }
-
-
-    /**
-     * @return array<string, DOMElement>
-     */
-    private function elementsById(DOMElement $head, string $localName): array
-    {
-        $elements = [];
-        foreach ($head->getElementsByTagName("*") as $element) {
-            $id = $element->getAttributeNS(TtmlNamespaces::XML, "id");
-            if ($this->isTtElement($element, $localName) && $id !== "" && !isset($elements[$id])) {
-                $elements[$id] = $element;
-            }
-        }
-
-        return $elements;
     }
 }

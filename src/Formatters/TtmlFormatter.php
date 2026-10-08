@@ -8,6 +8,7 @@ use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\TtmlNamespaces;
 use SubtitleToolbox\Parsers\TtmlParser;
+use SubtitleToolbox\Parsers\TtmlStyles;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
@@ -33,11 +34,14 @@ final class TtmlFormatter extends SubtitleFormatter
             TtmlHead::addTitle($context, $title);
         }
 
+        $styles = new TtmlStyles($context->namespace, $context->head);
+        $body   = $this->styleProperties($context, $styles, $this->writableAttributes($context, $fileData["body"] ?? [], []));
         // Regions and agents go into the head while the paragraphs are formatted, so the IDs of the body come later.
         $divs = [];
         foreach ($subtitle->getCues() as $cue) {
-            $div       = $this->writableAttributes($context, $cue->findFormatData(TtmlParser::FORMAT_DATA_KEY)["div"] ?? [], []);
-            $paragraph = [$this->paragraphId($cue), $this->formatParagraph($context, $cue, $options, $fileData === [])];
+            $div        = $this->writableAttributes($context, $cue->findFormatData(TtmlParser::FORMAT_DATA_KEY)["div"] ?? [], []);
+            $containers = [$body, $this->styleProperties($context, $styles, $div)];
+            $paragraph  = [$this->paragraphId($cue), $this->formatParagraph($context, $styles, $containers, $cue, $options, $fileData === [])];
             if ($divs !== [] && $divs[count($divs) - 1]["attributes"] === $div) {
                 $divs[count($divs) - 1]["paragraphs"][] = $paragraph;
             } else {
@@ -92,8 +96,17 @@ final class TtmlFormatter extends SubtitleFormatter
 
     /**
      * Returns the paragraph without "<p" and without xml:id, so that the caller adds the ID in output order.
+     *
+     * @param list<array<string, string>> $containers the style properties of <body> and <div>
      */
-    private function formatParagraph(TtmlContext $context, SubtitleCue $cue, WriteOptions $options, bool $isForeignSubtitle): string
+    private function formatParagraph(
+        TtmlContext $context,
+        TtmlStyles $styles,
+        array $containers,
+        SubtitleCue $cue,
+        WriteOptions $options,
+        bool $isForeignSubtitle
+    ): string
     {
         $attributes  = $this->formatAttribute("begin", Markup::coreTimestamp($cue->getStart()));
         $attributes .= $this->formatAttribute("end", Markup::coreTimestamp($cue->getEnd()));
@@ -107,7 +120,8 @@ final class TtmlFormatter extends SubtitleFormatter
         if ($forced !== $cue->isForced() && $forcedName !== null) {
             $stored[$forcedName] = $cue->isForced() ? "true" : "false";
         }
-        $attributes .= $this->formatAttributes($context, $stored, ["xml:id", "begin", "end", "dur"]);
+        $stored      = $this->writableAttributes($context, $stored, ["xml:id", "begin", "end", "dur"]);
+        $attributes .= $this->formatWritableAttributes($context, $stored);
         if (!isset($stored["region"]) && ($cue->getAlignment() !== null || $isForeignSubtitle)) {
             $attributes .= $this->formatAttribute("region", TtmlHead::regionId($context, $cue->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT));
         }
@@ -120,7 +134,12 @@ final class TtmlFormatter extends SubtitleFormatter
             return "$attributes>" . $this->formatText(Markup::stripAllTags($text)) . "</p>";
         }
 
-        [$agent, $content] = $this->markupToTtml($context, $text);
+        $inherited = TtmlStyles::DEFAULT_STYLE;
+        $region    = $styles->regionProperties($stored["region"] ?? null);
+        foreach ([$region, ...$containers, $this->styleProperties($context, $styles, $stored)] as $properties) {
+            $inherited = TtmlStyles::apply($inherited, $properties);
+        }
+        [$agent, $content] = $this->markupToTtml($context, $text, $inherited);
         if ($agent !== null) {
             $attributes .= $this->formatAttribute("$context->ttm:agent", TtmlHead::agentId($context, $agent));
         }
@@ -171,7 +190,7 @@ final class TtmlFormatter extends SubtitleFormatter
      *
      * @return array{?string, string}
      */
-    private function markupToTtml(TtmlContext $context, string $text): array
+    private function markupToTtml(TtmlContext $context, string $text, array $inherited): array
     {
         $tokens = Markup::splitTags($text);
         $agent  = null;
@@ -183,9 +202,13 @@ final class TtmlFormatter extends SubtitleFormatter
 
         $output = "";
         $stack  = [];
+        $resets = [];
         foreach ($tokens as $index => $token) {
             if ($index % 2 === 0) {
                 $output .= $this->formatText($token);
+                if (trim($token) !== "") {
+                    $resets += $this->resets($inherited, $stack);
+                }
                 continue;
             }
 
@@ -211,8 +234,83 @@ final class TtmlFormatter extends SubtitleFormatter
         while ($stack !== []) {
             $output .= array_pop($stack)["span"] === "" ? "" : "</span>";
         }
+        if ($resets !== []) {
+            $output = "<span" . $this->resetAttributes($context, $resets) . ">$output</span>";
+        }
 
         return [$agent, $output];
+    }
+
+
+    /**
+     * Returns the inherited styles that the open spans do not repeat. Core markup has no tag that turns a style off.
+     *
+     * @return array<string, true>
+     */
+    private function resets(array $inherited, array $stack): array
+    {
+        $open = [];
+        foreach ($stack as $entry) {
+            if ($entry["span"] !== "") {
+                $open[$entry["tag"]] = true;
+            }
+        }
+
+        $resets = [];
+        foreach (["b", "i", "u", "s"] as $tag) {
+            if ($inherited[$tag] && !isset($open[$tag])) {
+                $resets[$tag] = true;
+            }
+        }
+        if ($inherited["color"] !== null && !isset($open["font"])) {
+            $resets["color"] = true;
+        }
+
+        return $resets;
+    }
+
+
+    /**
+     * @param array<string, true> $resets
+     */
+    private function resetAttributes(TtmlContext $context, array $resets): string
+    {
+        $decorations = array_intersect_key(["u" => "noUnderline", "s" => "noLineThrough"], $resets);
+        $values      = [
+            "fontWeight"     => isset($resets["b"]) ? "normal" : null,
+            "fontStyle"      => isset($resets["i"]) ? "normal" : null,
+            "textDecoration" => $decorations === [] ? null : implode(" ", $decorations),
+            "color"          => isset($resets["color"]) ? "white" : null,
+        ];
+
+        $output = "";
+        foreach (array_filter($values, fn (?string $value): bool => $value !== null) as $name => $value) {
+            $output .= $this->formatAttribute("$context->tts:$name", $value);
+        }
+
+        return $output;
+    }
+
+
+    /**
+     * Resolves stored attributes through a detached element, so that style references and prefixes resolve as in
+     * the parser.
+     *
+     * @return array<string, string>
+     */
+    private function styleProperties(TtmlContext $context, TtmlStyles $styles, array $attributes): array
+    {
+        $element = $context->headDocument->createElementNS($context->namespace, "p");
+        foreach ($attributes as $name => $value) {
+            [$prefix] = $this->splitName($name);
+            if ($prefix === "") {
+                $element->setAttribute($name, $value);
+            } elseif ($prefix !== "xml") {
+                $element->setAttributeNS($context->namespaces[$prefix], $name, $value);
+            }
+        }
+
+        return $styles->ownProperties($element);
     }
 
 

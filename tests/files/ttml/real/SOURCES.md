@@ -22,3 +22,4 @@
 | `w3c_ttml1_timed_spans.ttml` | https://www.w3.org/TR/ttml1/, annex O.3, paint-on caption example | W3C Software and Document License, https://www.w3.org/copyright/software-license-2023/ |
 | `w3c_ttml1_timing.ttml` | https://www.w3.org/TR/ttml1/, section 9.3.5, elaborated example | W3C Software and Document License, https://www.w3.org/copyright/software-license-2023/ |
 | `smpte_drop_ntsc.ttml` | Written for this repository with SMPTE drop-frame times at 29.97 fps across minute 1, minute 10 and one hour | MIT |
+| `style_inheritance.ttml` | Written for this repository with styles on a region, `<body>`, `<div>` and `<p>`, and spans that reset them | MIT |
