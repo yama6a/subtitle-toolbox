@@ -108,7 +108,7 @@ final class FormatRegistry
     ];
 
 
-    public static function forExtension(string $extension): ?Format
+    private static function forExtension(string $extension): ?Format
     {
         $extension = strtolower(ltrim($extension, "."));
         foreach (self::FORMATS as $name => [, , $extensions]) {
