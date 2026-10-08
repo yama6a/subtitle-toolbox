@@ -164,17 +164,9 @@ trait TextTransforms
      */
     private function textTransformsMapCues(callable $fn): self
     {
-        $emptied = new \SplObjectStorage();
-        foreach ($this->cues as $cue) {
-            $hadText = Markup::hasVisibleText($cue->getLines());
-            $cue->setLines($fn($cue));
+        $this->setLinesAndRemoveEmptied(fn (SubtitleCue $cue): array => $fn($cue));
 
-            if ($hadText && !Markup::hasVisibleText($cue->getLines())) {
-                $emptied[$cue] = true;
-            }
-        }
-
-        return $emptied->count() === 0 ? $this : $this->removeCuesWhere(fn (SubtitleCue $cue): bool => isset($emptied[$cue]));
+        return $this;
     }
 
 

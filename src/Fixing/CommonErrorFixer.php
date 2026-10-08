@@ -51,20 +51,19 @@ final class CommonErrorFixer
 
     private static function run(Subtitle $subtitle, CommonErrorOptions $options, bool $change): CommonErrorReport
     {
-        $language    = self::language($options->language ?? $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
-        $cues        = $subtitle->getCues();
-        $indexes     = array_keys($cues);
-        $fixes       = [];
-        $removedCues = new \SplObjectStorage();
+        $language  = self::language($options->language ?? $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
+        $cues      = $subtitle->getCues();
+        $indexes   = array_keys($cues);
+        $positions = array_flip($indexes);
+        $fixes     = [];
 
-        foreach ($indexes as $position => $index) {
-            $cue   = $cues[$index];
+        $fixCue = function (SubtitleCue $cue, int $index) use ($cues, $indexes, $positions, $options, $language, $change, &$fixes): ?array {
             $lines = array_values($cue->getLines());
             if ($lines === []) {
-                continue;
+                return null;
             }
 
-            $next      = $cues[$indexes[$position + 1] ?? -1] ?? null;
+            $next      = $cues[$indexes[$positions[$index] + 1] ?? -1] ?? null;
             $continues = $next !== null && $next->getStart() - $cue->getEnd() <= 0.6
                          && preg_match('/^\p{Ll}/u', implode("\n", Markup::plainLines($next->getLines()))) === 1;
             $original  = $lines;
@@ -76,18 +75,9 @@ final class CommonErrorFixer
                 }
             }
 
-            if (!$change || $lines === $original) {
-                continue;
-            }
-            $cue->setLines($lines);
-            if (Markup::plainLines($cue->getLines()) === [] && Markup::plainLines($original) !== []) {
-                $removedCues[$cue] = true;
-            }
-        }
-
-        if ($removedCues->count() > 0) {
-            $subtitle->removeCuesWhere(fn (SubtitleCue $cue): bool => isset($removedCues[$cue]));
-        }
+            return $change && $lines !== $original ? $lines : null;
+        };
+        $subtitle->setLinesAndRemoveEmptied($fixCue, fn (array $lines): bool => Markup::plainLines($lines) !== []);
 
         return new CommonErrorReport($fixes);
     }

@@ -480,6 +480,41 @@ final class Subtitle implements \IteratorAggregate, \Countable
     }
 
 
+    /**
+     * Sets the lines that $linesOf returns for each cue, or keeps the cue as is when it returns null. Then it removes,
+     * in one pass, each cue that had text before and has none after. $hasText decides, Markup::hasVisibleText() by default.
+     *
+     * @param callable(SubtitleCue, int): ?list<string> $linesOf
+     * @param ?callable(array<string>): bool            $hasText
+     *
+     * @return \SplObjectStorage<SubtitleCue, true> the removed cues
+     *
+     * @internal
+     */
+    public function setLinesAndRemoveEmptied(callable $linesOf, ?callable $hasText = null): \SplObjectStorage
+    {
+        $hasText ??= Markup::hasVisibleText(...);
+        $emptied   = new \SplObjectStorage();
+        foreach ($this->cues as $index => $cue) {
+            $before = $cue->getLines();
+            $lines  = $linesOf($cue, $index);
+            if ($lines === null) {
+                continue;
+            }
+
+            $cue->setLines($lines);
+            if ($hasText($before) && !$hasText($cue->getLines())) {
+                $emptied[$cue] = true;
+            }
+        }
+        if ($emptied->count() > 0) {
+            $this->removeCuesWhere(fn (SubtitleCue $cue): bool => isset($emptied[$cue]));
+        }
+
+        return $emptied;
+    }
+
+
     public function findMetadata(string $key): ?string
     {
         return $this->metadata[$key] ?? null;
