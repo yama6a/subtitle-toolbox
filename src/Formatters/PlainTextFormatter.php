@@ -22,30 +22,23 @@ final class PlainTextFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $plainText = $this->formatOptions($options) ?? new PlainTextWriteOptions();
+        $plainText = $this->formatOptions($options);
 
-        $paragraphs = [];
-        $latestEnd  = null;
+        $items = [];
         foreach ($subtitle->getCues() as $cue) {
             $lines = array_values(array_filter(
                 array_map($this->plainLine(...), $cue->getLines()),
                 fn (string $line): bool => $line !== ""
             ));
-            if ($lines === []) {
-                continue;
+            if ($lines !== []) {
+                $items[] = [$cue->getStart(), $cue->getEnd(), implode($plainText->joinLines ? " " : LineEnding::Lf->value, $lines)];
             }
-
-            if ($latestEnd === null || $cue->getStart() - $latestEnd >= $plainText->paragraphGap) {
-                $paragraphs[] = ["start" => $cue->getStart(), "cues" => []];
-            }
-            $paragraphs[count($paragraphs) - 1]["cues"][] = implode($plainText->joinLines ? " " : LineEnding::Lf->value, $lines);
-            $latestEnd = max($latestEnd ?? $cue->getEnd(), $cue->getEnd());
         }
 
         $blocks = array_map(fn (array $paragraph): string =>
             ($plainText->withTimes ? sprintf("[%02d:%02d:%02d] ", ...Timecode::seconds(floor($paragraph["start"]))) : "") .
-            implode($plainText->joinCues ? " " : LineEnding::Lf->value, $paragraph["cues"]) .
-            LineEnding::Lf->value, $paragraphs);
+            implode($plainText->joinCues ? " " : LineEnding::Lf->value, $paragraph["values"]) .
+            LineEnding::Lf->value, Paragraphs::byGap($items, $plainText->paragraphGap));
 
         return $this->applyOutputOptions(implode(LineEnding::Lf->value, $blocks), $options);
     }

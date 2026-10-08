@@ -8,6 +8,9 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 final class SubtitleCue
 {
+    /** @internal The alignment that formatters write for a cue without one: bottom center, 2 on the numpad. */
+    public const DEFAULT_ALIGNMENT = 2;
+
     private float $start = 0;
 
     private float $end = 0;

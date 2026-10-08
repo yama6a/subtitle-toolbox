@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\TtmlNamespaces;
@@ -24,18 +25,19 @@ final class IttFormatter extends SubtitleFormatter
 {
     protected const FORMAT_OPTIONS = IttWriteOptions::class;
 
-    private const HEAD = "<head>\n"
-                         . "    <styling>\n"
-                         . "      <style xml:id=\"normal\" tts:fontFamily=\"sansSerif\" tts:fontWeight=\"normal\" tts:fontStyle=\"normal\""
-                         . " tts:color=\"white\" tts:fontSize=\"100%\"/>\n"
-                         . "    </styling>\n"
-                         . "    <layout>\n"
-                         . "      <region xml:id=\"top\" tts:origin=\"0% 0%\" tts:extent=\"100% 15%\" tts:textAlign=\"center\""
-                         . " tts:displayAlign=\"before\"/>\n"
-                         . "      <region xml:id=\"bottom\" tts:origin=\"0% 85%\" tts:extent=\"100% 15%\" tts:textAlign=\"center\""
-                         . " tts:displayAlign=\"after\"/>\n"
-                         . "    </layout>\n"
-                         . "  </head>";
+    private const TIME_PATTERN = "%02d:%02d:%02d:%02d";
+
+    private const HEAD_LINES = [
+        "<head>",
+        "    <styling>",
+        "      <style xml:id=\"normal\" tts:fontFamily=\"sansSerif\" tts:fontWeight=\"normal\" tts:fontStyle=\"normal\" tts:color=\"white\" tts:fontSize=\"100%\"/>",
+        "    </styling>",
+        "    <layout>",
+        "      <region xml:id=\"top\" tts:origin=\"0% 0%\" tts:extent=\"100% 15%\" tts:textAlign=\"center\" tts:displayAlign=\"before\"/>",
+        "      <region xml:id=\"bottom\" tts:origin=\"0% 85%\" tts:extent=\"100% 15%\" tts:textAlign=\"center\" tts:displayAlign=\"after\"/>",
+        "    </layout>",
+        "  </head>",
+    ];
 
     // TTML 1, section 8.3.13, named colors.
     private const NAMED_COLORS = [
@@ -54,7 +56,7 @@ final class IttFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $fps                      = $this->formatOptions($options)?->frameRate;
+        $fps                      = $this->formatOptions($options)->frameRate;
         [$frameRate, $multiplier] = $this->frameRateParameters($subtitle->findFormatData(IttParser::FORMAT_DATA_KEY), $fps);
         $rate                     = new FrameRate((float) $frameRate * $this->multiplierFactor($multiplier));
 
@@ -74,8 +76,8 @@ final class IttFormatter extends SubtitleFormatter
         foreach ($paragraphs as $idx => $paragraph) {
             $begin = $rate->secondsToFrames(max(0.0, $cues[$idx]->getStart()));
             $end   = max($begin + 1, $rate->secondsToFrames(max(0.0, $cues[$idx]->getEnd())));
-            $paragraph->setAttribute("begin", sprintf("%02d:%02d:%02d:%02d", ...Timecode::frameNumber($begin, $rate)));
-            $paragraph->setAttribute("end", sprintf("%02d:%02d:%02d:%02d", ...Timecode::frameNumber($end, $rate)));
+            $paragraph->setAttribute("begin", sprintf(self::TIME_PATTERN, ...Timecode::frameNumber($begin, $rate)));
+            $paragraph->setAttribute("end", sprintf(self::TIME_PATTERN, ...Timecode::frameNumber($end, $rate)));
         }
 
         return $this->applyOutputOptions($document->saveXML(), $options);
@@ -125,7 +127,7 @@ final class IttFormatter extends SubtitleFormatter
         $ttml->setFormatData(TtmlParser::FORMAT_DATA_KEY, [
             "namespace"  => TtmlNamespaces::TTML,
             "namespaces" => ["ttp" => TtmlNamespaces::PARAMETER[0]],
-            "head"       => self::HEAD,
+            "head"       => implode(LineEnding::Lf->value, self::HEAD_LINES),
             "body"       => ["style" => "normal"],
         ]);
 

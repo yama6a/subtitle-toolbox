@@ -28,29 +28,28 @@ final class SamiFormatter extends SubtitleFormatter
         $class    = isset($data["style"]) || isset($data["class"]) ? ($data["class"] ?? null) : $this->classFor($language);
         $style    = isset($data["style"]) ? $this->keepOnlyClass($data["style"], $class) : $this->defaultStyle($class, $language);
         $title    = $subtitle->findMetadata(Subtitle::METADATA_TITLE);
-        $eol      = LineEnding::Lf->value;
 
-        $output = "<SAMI>$eol<HEAD>$eol";
+        $output = "<SAMI>" . LineEnding::Lf->value . "<HEAD>" . LineEnding::Lf->value;
         if ($title !== null) {
-            $output .= "<TITLE>" . htmlspecialchars($title, ENT_NOQUOTES, "UTF-8") . "</TITLE>$eol";
+            $output .= "<TITLE>" . htmlspecialchars($title, ENT_NOQUOTES, "UTF-8") . "</TITLE>" . LineEnding::Lf->value;
         }
         if (isset($data["samiParam"])) {
-            $output .= "<SAMIParam>{$data["samiParam"]}</SAMIParam>$eol";
+            $output .= "<SAMIParam>{$data["samiParam"]}</SAMIParam>" . LineEnding::Lf->value;
         }
-        $output .= "<STYLE TYPE=\"text/css\">$style</STYLE>$eol</HEAD>$eol<BODY>$eol";
+        $output .= "<STYLE TYPE=\"text/css\">$style</STYLE>" . LineEnding::Lf->value . "</HEAD>" . LineEnding::Lf->value . "<BODY>" . LineEnding::Lf->value;
 
         $cues = array_values($subtitle->getCues());
         foreach ($cues as $index => $cue) {
             $end    = Timecode::totalMilliseconds($cue->getEnd());
-            $output .= "<SYNC Start=" . Timecode::totalMilliseconds($cue->getStart()) . ">" . $this->formatParagraphs($cue, $class, $stripAll) . $eol;
+            $output .= "<SYNC Start=" . Timecode::totalMilliseconds($cue->getStart()) . ">" . $this->formatParagraphs($cue, $class, $stripAll) . LineEnding::Lf->value;
 
             $next = $cues[$index + 1] ?? null;
             if ($next === null || Timecode::totalMilliseconds($next->getStart()) > $end) {
-                $output .= "<SYNC Start=$end>" . $this->openParagraph($class, []) . "&nbsp;$eol";
+                $output .= "<SYNC Start=$end>" . $this->openParagraph($class, []) . "&nbsp;" . LineEnding::Lf->value;
             }
         }
 
-        return $this->applyOutputOptions($output . "</BODY>$eol</SAMI>$eol", $options);
+        return $this->applyOutputOptions($output . "</BODY>" . LineEnding::Lf->value . "</SAMI>" . LineEnding::Lf->value, $options);
     }
 
 
@@ -121,9 +120,8 @@ final class SamiFormatter extends SubtitleFormatter
 
     private function defaultStyle(?string $class, ?string $language): string
     {
-        $eol   = LineEnding::Lf->value;
         $rules = $language === null ? "Name: Subtitles;" : "Name: $language; lang: $language;";
 
-        return "<!--{$eol}P { font-family: Arial; text-align: center; }$eol.$class { $rules }$eol-->";
+        return "<!--" . LineEnding::Lf->value . "P { font-family: Arial; text-align: center; }" . LineEnding::Lf->value . ".$class { $rules }" . LineEnding::Lf->value . "-->";
     }
 }

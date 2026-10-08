@@ -23,28 +23,25 @@ final class HtmlTranscriptFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $paragraphGap = ($this->formatOptions($options) ?? new HtmlTranscriptWriteOptions())->paragraphGap;
-
-        $paragraphs = [];
-        $latestEnd  = null;
-        foreach ((new PodcastTranscriptFormatter())->segments($subtitle) as $segment) {
-            $speaker = $segment["speaker"] ?? null;
-            $last    = $paragraphs === [] ? null : $paragraphs[count($paragraphs) - 1];
-            if ($last === null || $last["speaker"] !== $speaker || $segment["startTime"] - $latestEnd >= $paragraphGap) {
-                $paragraphs[] = ["speaker" => $speaker, "start" => $segment["startTime"], "bodies" => []];
-            }
-            $paragraphs[count($paragraphs) - 1]["bodies"][] = $segment["body"];
-            $latestEnd = max($latestEnd ?? $segment["endTime"], $segment["endTime"]);
-        }
+        $items = array_map(
+            fn (array $segment): array => [$segment["startTime"], $segment["endTime"], $segment],
+            (new PodcastTranscriptFormatter())->segments($subtitle)
+        );
+        $paragraphs = Paragraphs::byGap(
+            $items,
+            $this->formatOptions($options)->paragraphGap,
+            fn (array $previous, array $segment): bool => ($previous["speaker"] ?? null) !== ($segment["speaker"] ?? null)
+        );
 
         $html = "";
         foreach ($paragraphs as $paragraph) {
-            if ($paragraph["speaker"] !== null) {
-                $html .= "<cite>" . Markup::escapeText($paragraph["speaker"]) . ":</cite>" . LineEnding::Lf->value;
+            $speaker = $paragraph["values"][0]["speaker"] ?? null;
+            if ($speaker !== null) {
+                $html .= "<cite>" . Markup::escapeText($speaker) . ":</cite>" . LineEnding::Lf->value;
             }
             $time = Timecode::shortClock($paragraph["start"]);
             $html .= "<time>$time</time>" . LineEnding::Lf->value .
-                     "<p>" . Markup::escapeText(implode(" ", $paragraph["bodies"])) . "</p>" . LineEnding::Lf->value;
+                     "<p>" . Markup::escapeText(implode(" ", array_column($paragraph["values"], "body"))) . "</p>" . LineEnding::Lf->value;
         }
 
         return $this->applyOutputOptions($html, $options);

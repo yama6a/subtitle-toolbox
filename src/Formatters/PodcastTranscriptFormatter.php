@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 use SubtitleToolbox\Formatters\Options\PodcastTranscriptWriteOptions;
-use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\PodcastTranscriptParser;
 use SubtitleToolbox\Subtitle;
@@ -28,7 +27,7 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $podcast      = $this->formatOptions($options) ?? new PodcastTranscriptWriteOptions();
+        $podcast      = $this->formatOptions($options);
         $wordSegments = $podcast->wordSegments;
         $fileData     = $subtitle->findFormatData(PodcastTranscriptParser::FORMAT_DATA_KEY);
         $cues         = $subtitle->getCues();
@@ -45,12 +44,8 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
         }
 
         $document = ["version" => $fileData["version"] ?? self::VERSION, "segments" => $segments] + $fileData;
-        $flags    = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
-        $json     = $podcast->prettyPrint
-            ? JsonOutput::encode($document, $flags | JSON_PRETTY_PRINT) . LineEnding::Lf->value
-            : JsonOutput::encode($document, $flags);
 
-        return $this->applyOutputOptions($json, $options);
+        return $this->applyOutputOptions(JsonOutput::document($document, $podcast->prettyPrint), $options);
     }
 
 

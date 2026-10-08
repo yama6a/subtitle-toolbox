@@ -8,6 +8,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\CsvParser;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
@@ -20,6 +21,8 @@ final class CsvFormatter extends SubtitleFormatter
 {
     protected const FORMAT_OPTIONS = CsvWriteOptions::class;
 
+    protected const DEFAULT_BOM = true;
+
     private const SPEAKER_REGEX = '/^' . Markup::VOICE_TAG . '/';
 
 
@@ -31,7 +34,7 @@ final class CsvFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $csv       = $this->formatOptions($options) ?? new CsvWriteOptions();
+        $csv       = $this->formatOptions($options);
         $data      = $subtitle->findFormatData(CsvParser::FORMAT_DATA_KEY);
         $delimiter = $csv->delimiter ?? $data["delimiter"] ?? ",";
         CsvReadOptions::checkDelimiter($delimiter);
@@ -74,7 +77,7 @@ final class CsvFormatter extends SubtitleFormatter
             $record
         )), $records);
 
-        return $this->applyOutputOptions(implode($lineEnding, $lines) . $lineEnding, new WriteOptions(bom: $options->bom ?? true, format: $csv));
+        return $this->applyBom(implode($lineEnding, $lines) . $lineEnding, $options);
     }
 
 
@@ -137,7 +140,7 @@ final class CsvFormatter extends SubtitleFormatter
             $lines[0] = substr($lines[0], strlen($matches[0]));
         }
 
-        return [$speaker, implode("\n", Markup::plainLines($lines))];
+        return [$speaker, implode(LineEnding::Lf->value, Markup::plainLines($lines))];
     }
 
 
@@ -168,7 +171,7 @@ final class CsvFormatter extends SubtitleFormatter
                 continue;
             }
             $used[$best] = true;
-            $texts[]     = implode("\n", Markup::plainLines($secondCues[$best]->getLines()));
+            $texts[]     = implode(LineEnding::Lf->value, Markup::plainLines($secondCues[$best]->getLines()));
         }
 
         return $texts;

@@ -72,7 +72,7 @@ final class SubtitleStatistics
                 continue;
             }
 
-            $words           = Markup::words(Markup::plainText(implode("\n", $cue->getLines())));
+            $words           = Markup::words(Markup::plainText(implode(LineEnding::Lf->value, $cue->getLines())));
             $characterCount += $characters;
             $wordCount      += count($words);
             foreach ($words as $word) {

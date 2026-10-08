@@ -7,7 +7,6 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\SubRipParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -15,6 +14,11 @@ use SubtitleToolbox\WriteOptions;
 
 final class SubRipFormatter extends SubtitleFormatter
 {
+    protected const DEFAULT_BOM = true;
+
+    private const TIME_PATTERN = "%02d:%02d:%02d,%03d";
+
+
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
@@ -23,7 +27,7 @@ final class SubRipFormatter extends SubtitleFormatter
             $output .= $this->formatNumberedCue($cue, $cueIndex, $options);
         }
 
-        return $this->applyOutputOptions(StringHelpers::addUtf8Bom($output), $options);
+        return $this->applyOutputOptions($output, $options);
     }
 
 
@@ -36,7 +40,9 @@ final class SubRipFormatter extends SubtitleFormatter
     {
         $block = $this->formatNumberedCue($cue, $cueIndex, $options);
 
-        return $this->applyOutputOptions($block, new WriteOptions($options->lineEnding, format: $options->format));
+        $this->rejectForeignOptions($options);
+
+        return $this->applyLineEnding($block, $options);
     }
 
 
@@ -56,7 +62,8 @@ final class SubRipFormatter extends SubtitleFormatter
 
     private function formatCue(SubtitleCue $cue, WriteOptions $options): string
     {
-        $time  = sprintf("%02d:%02d:%02d,%03d --> %02d:%02d:%02d,%03d", ...Timecode::milliseconds($cue->getStart()), ...Timecode::milliseconds($cue->getEnd()));
+        $time  = sprintf(self::TIME_PATTERN, ...Timecode::milliseconds($cue->getStart())) . " --> "
+                 . sprintf(self::TIME_PATTERN, ...Timecode::milliseconds($cue->getEnd()));
         $time .= $this->formatCoordinates($cue);
         $lines = implode(LineEnding::Lf->value, $cue->getLines());
 
@@ -69,7 +76,7 @@ final class SubRipFormatter extends SubtitleFormatter
         $lines = explode(LineEnding::Lf->value, $lines);
         $lines = implode(LineEnding::Lf->value, array_filter($lines, fn(string $line) => trim($line) !== ""));
 
-        if ($cue->getAlignment() !== null && $cue->getAlignment() !== 2) {
+        if ($cue->getAlignment() !== null && $cue->getAlignment() !== SubtitleCue::DEFAULT_ALIGNMENT) {
             $lines = "{\\an{$cue->getAlignment()}}" . $lines;
         }
 

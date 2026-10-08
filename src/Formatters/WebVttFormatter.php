@@ -14,6 +14,8 @@ use SubtitleToolbox\WriteOptions;
 
 final class WebVttFormatter extends SubtitleFormatter
 {
+    protected const DEFAULT_BOM = true;
+
     private const INLINE_TIMESTAMP_PATTERN = "/(<(?:\d{2,}:)?[0-5]\d:[0-5]\d\.\d{3}>)/";
 
     private const SPAN_TAGS = ["strong", "b", "u", "i", "v", "lang", "c", "ruby", "rt"];
@@ -59,7 +61,7 @@ final class WebVttFormatter extends SubtitleFormatter
                        . LineEnding::Lf->value;
         }
 
-        return $this->applyOutputOptions(StringHelpers::addUtf8Bom($output), $options);
+        return $this->applyOutputOptions($output, $options);
     }
 
 
@@ -72,7 +74,9 @@ final class WebVttFormatter extends SubtitleFormatter
     {
         $block = $this->formatIdentifiedCue($cue, $cueIndex, $options);
 
-        return $this->applyOutputOptions($block, new WriteOptions($options->lineEnding, format: $options->format));
+        $this->rejectForeignOptions($options);
+
+        return $this->applyLineEnding($block, $options);
     }
 
 

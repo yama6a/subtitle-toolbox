@@ -47,25 +47,18 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
     // Clamped colors such as BT.601 yellow need a step of 2 to find the code that the parser decodes to the same RGB.
     private const SEARCH_STEPS = [0, -1, 1, -2, 2];
 
-    private int $compositionNumber = 0;
-
-    /** @var array<string, array{int, int, int}> matrix and 0xRRGGBB => [Y, Cr, Cb] */
-    private array $ycrcb = [];
-
-
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $this->formatOptions($options);
+        $this->rejectForeignOptions($options);
         $cues = array_values($subtitle->getCues());
         usort($cues, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());
 
-        $this->compositionNumber = 0;
-        $output                  = "";
+        $context = new PgsContext();
+        $output  = "";
         foreach ($cues as $index => $cue) {
             if (!CueImage::isImageCue($cue)) {
-                throw new UnwritableContentException("Cannot write cue [{$cue->getStart()} >>> {$cue->getEnd()}] as PGS - " .
-                                                     "the cue holds no image, and PgsFormatter does not render text!");
+                throw new UnwritableContentException($this->cueError($cue, "the cue holds no image, and PgsFormatter does not render text"));
             }
 
             $image = CueImage::fromCue($cue);
@@ -73,9 +66,9 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
             $end   = $this->pts($cue, $cue->getEnd());
             $next  = isset($cues[$index + 1]) ? $this->pts($cues[$index + 1], $cues[$index + 1]->getStart()) : null;
 
-            $output .= $this->showImage($cue, $image, $start);
+            $output .= $this->showImage($context, $cue, $image, $start);
             if ($next === null || $next > $end) {
-                $output .= $this->clearScreen($image, $end);
+                $output .= $this->clearScreen($context, $image, $end);
             }
         }
 
@@ -83,47 +76,45 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
     }
 
 
-    private function showImage(SubtitleCue $cue, CueImage $image, int $pts): string
+    private function showImage(PgsContext $context, SubtitleCue $cue, CueImage $image, int $pts): string
     {
         foreach ([$image->x, $image->y, $image->width, $image->height, $image->screenWidth, $image->screenHeight] as $value) {
             if ($value < 0 || $value > self::MAX_FIELD) {
-                throw new UnwritableContentException("Cannot write cue [{$cue->getStart()} >>> {$cue->getEnd()}] as PGS - " .
-                                                     "the image position and size must be from 0 to " . self::MAX_FIELD . "!");
+                throw new UnwritableContentException($this->cueError($cue, "the image position and size must be from 0 to " . self::MAX_FIELD));
             }
         }
 
         ["width" => $width, "height" => $height, "pixels" => $pixels] = PngDecoder::decode($image->png);
         if ($width !== $image->width || $height !== $image->height) {
-            throw new UnwritableContentException("Cannot write cue [{$cue->getStart()} >>> {$cue->getEnd()}] as PGS - " .
-                                                 "the PNG has {$width}x{$height} pixels, but the image data says " .
-                                                 "{$image->width}x{$image->height}!");
+            throw new UnwritableContentException($this->cueError($cue, "the PNG has {$width}x{$height} pixels, " .
+                                                                       "but the image data says {$image->width}x{$image->height}"));
         }
 
         ["palette" => $palette, "indexes" => $indexes] = PaletteReducer::reduce($pixels);
 
-        $presentation = $this->presentation($image, self::STATE_EPOCH_START, 1)
+        $presentation = $this->presentation($context, $image, self::STATE_EPOCH_START, 1)
             . pack("nCCnn", 0, 0, $cue->isForced() ? self::FLAG_FORCED : 0, $image->x, $image->y);
 
         return $this->segment($pts, self::SEGMENT_PRESENTATION, $presentation)
             . $this->segment($pts, self::SEGMENT_WINDOW, $this->window($image))
-            . $this->segment($pts, self::SEGMENT_PALETTE, $this->palette($palette, $image->screenHeight > self::SD_MAX_HEIGHT))
+            . $this->segment($pts, self::SEGMENT_PALETTE, $this->palette($context, $palette, $image->screenHeight > self::SD_MAX_HEIGHT))
             . $this->objects($pts, $width, $height, $this->encodeRle($indexes, $width))
             . $this->segment($pts, self::SEGMENT_END, "");
     }
 
 
-    private function clearScreen(CueImage $image, int $pts): string
+    private function clearScreen(PgsContext $context, CueImage $image, int $pts): string
     {
-        return $this->segment($pts, self::SEGMENT_PRESENTATION, $this->presentation($image, self::STATE_NORMAL, 0))
+        return $this->segment($pts, self::SEGMENT_PRESENTATION, $this->presentation($context, $image, self::STATE_NORMAL, 0))
             . $this->segment($pts, self::SEGMENT_WINDOW, $this->window($image))
             . $this->segment($pts, self::SEGMENT_END, "");
     }
 
 
-    private function presentation(CueImage $image, int $state, int $objectCount): string
+    private function presentation(PgsContext $context, CueImage $image, int $state, int $objectCount): string
     {
-        $number                  = $this->compositionNumber;
-        $this->compositionNumber = ($number + 1) & 0xFFFF;
+        $number                     = $context->compositionNumber;
+        $context->compositionNumber = ($number + 1) & 0xFFFF;
 
         return pack("nnCnCCCC", $image->screenWidth, $image->screenHeight, self::FRAME_RATE, $number, $state, 0, 0, $objectCount);
     }
@@ -138,11 +129,11 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
     /**
      * @param list<int> $palette 0xRRGGBBAA colors
      */
-    private function palette(array $palette, bool $highDefinition): string
+    private function palette(PgsContext $context, array $palette, bool $highDefinition): string
     {
         $data = pack("CC", 0, 0);
         foreach ($palette as $entryId => $color) {
-            [$luma, $chromaRed, $chromaBlue] = $this->toYcrcb($color >> 8 & 0xFFFFFF, $highDefinition);
+            [$luma, $chromaRed, $chromaBlue] = $this->toYcrcb($context, $color >> 8 & 0xFFFFFF, $highDefinition);
             $data .= pack("C5", $entryId, $luma, $chromaRed, $chromaBlue, $color & 0xFF);
         }
 
@@ -207,11 +198,11 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
      *
      * @return array{int, int, int}
      */
-    private function toYcrcb(int $rgb, bool $highDefinition): array
+    private function toYcrcb(PgsContext $context, int $rgb, bool $highDefinition): array
     {
         $key = ($highDefinition ? "709:" : "601:") . $rgb;
-        if (isset($this->ycrcb[$key])) {
-            return $this->ycrcb[$key];
+        if (isset($context->ycrcb[$key])) {
+            return $context->ycrcb[$key];
         }
 
         [$kr, $kb] = $highDefinition ? self::MATRIX_BT709 : self::MATRIX_BT601;
@@ -240,7 +231,7 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
             }
         }
 
-        return $this->ycrcb[$key] = $best;
+        return $context->ycrcb[$key] = $best;
     }
 
 
@@ -270,11 +261,16 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
     {
         $pts = (int) round($seconds * self::PTS_PER_SECOND);
         if ($pts < 0 || $pts > self::MAX_PTS) {
-            throw new UnwritableContentException("Cannot write cue [{$cue->getStart()} >>> {$cue->getEnd()}] as PGS - " .
-                                                 "a time stamp must be from 0 to " . self::MAX_PTS . " ticks of 90 kHz!");
+            throw new UnwritableContentException($this->cueError($cue, "a time stamp must be from 0 to " . self::MAX_PTS . " ticks of 90 kHz"));
         }
 
         return $pts;
+    }
+
+
+    private function cueError(SubtitleCue $cue, string $reason): string
+    {
+        return "Cannot write cue [{$cue->getStart()} >>> {$cue->getEnd()}] as PGS - $reason!";
     }
 
 

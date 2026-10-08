@@ -17,7 +17,12 @@ abstract class GenericException extends \RuntimeException implements SubtitleToo
 
     public function __construct(string $message, ?\Throwable $previous = null)
     {
-        $className = substr(strrchr("\\" . static::class, "\\"), 1);
-        parent::__construct("$className (Error #" . static::CODE . "): " . $message, static::CODE, $previous);
+        parent::__construct($this->shortName(static::class) . " (Error #" . static::CODE . "): " . $message, static::CODE, $previous);
+    }
+
+
+    private function shortName(string $class): string
+    {
+        return substr(strrchr("\\" . $class, "\\"), 1);
     }
 }

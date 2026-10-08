@@ -12,6 +12,9 @@ use SubtitleToolbox\WriteOptions;
 
 final class SbvFormatter extends SubtitleFormatter
 {
+    private const TIME_PATTERN = "%d:%02d:%02d.%03d";
+
+
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
@@ -24,7 +27,8 @@ final class SbvFormatter extends SubtitleFormatter
                 continue;
             }
 
-            $blocks[] = sprintf("%d:%02d:%02d.%03d,%d:%02d:%02d.%03d", ...Timecode::milliseconds($cue->getStart()), ...Timecode::milliseconds($cue->getEnd())) .
+            $blocks[] = sprintf(self::TIME_PATTERN, ...Timecode::milliseconds($cue->getStart())) . "," .
+                        sprintf(self::TIME_PATTERN, ...Timecode::milliseconds($cue->getEnd())) .
                         LineEnding::Lf->value .
                         implode(LineEnding::Lf->value, $lines) .
                         LineEnding::Lf->value;

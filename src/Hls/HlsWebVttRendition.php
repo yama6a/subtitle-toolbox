@@ -28,7 +28,7 @@ final class HlsWebVttRendition
 
     public function getSegmentCount(): int
     {
-        return intdiv($this->totalMilliseconds + $this->options->segmentMilliseconds() - 1, $this->options->segmentMilliseconds());
+        return iterator_count($this->options->segmentBounds($this->totalMilliseconds));
     }
 
 
@@ -51,9 +51,8 @@ final class HlsWebVttRendition
      */
     public function getDurations(): Generator
     {
-        $segmentMilliseconds = $this->options->segmentMilliseconds();
-        for ($startMilliseconds = 0, $index = 0; $startMilliseconds < $this->totalMilliseconds; $startMilliseconds += $segmentMilliseconds, $index++) {
-            yield $this->options->fileName($index) => (min($startMilliseconds + $segmentMilliseconds, $this->totalMilliseconds) - $startMilliseconds) / 1000.0;
+        foreach ($this->options->segmentBounds($this->totalMilliseconds) as $fileName => [$start, $end]) {
+            yield $fileName => ($end - $start) / 1000.0;
         }
     }
 

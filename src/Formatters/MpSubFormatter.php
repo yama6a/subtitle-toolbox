@@ -9,7 +9,6 @@ use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\MpSubParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
@@ -18,6 +17,8 @@ final class MpSubFormatter extends SubtitleFormatter
 {
     protected const FORMAT_OPTIONS = MpSubWriteOptions::class;
 
+    protected const DEFAULT_BOM = true;
+
     private const DEFAULT_TYPE = "VIDEO";
     private const DEFAULT_NOTE = "Created with the PHP Subtitle Toolbox (https://github.com/yama6a/subtitle-toolbox)";
 
@@ -25,7 +26,7 @@ final class MpSubFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $fps         = $this->formatOptions($options)?->frameRate;
+        $fps         = $this->formatOptions($options)->frameRate;
         $frameRate   = $fps === null ? null : new FrameRate($fps);
         $output      = $this->getHeader($subtitle, $frameRate);
         $previousEnd = 0;
@@ -45,7 +46,7 @@ final class MpSubFormatter extends SubtitleFormatter
             $previousEnd = $cue->getEnd();
         }
 
-        return $this->applyOutputOptions(StringHelpers::addUtf8Bom($output), $options);
+        return $this->applyOutputOptions($output, $options);
     }
 
 

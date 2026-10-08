@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Hls;
 
+use Generator;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\OptionChecks;
 use SubtitleToolbox\Timecode;
@@ -55,6 +56,22 @@ final class HlsSegmentOptions
     public function segmentMilliseconds(): int
     {
         return Timecode::totalMilliseconds($this->segmentDuration);
+    }
+
+
+    /**
+     * Yields the start and the end in milliseconds of each segment, keyed by its file name, in playlist order.
+     *
+     * @internal
+     *
+     * @return Generator<string, array{int, int}>
+     */
+    public function segmentBounds(int $totalMilliseconds): Generator
+    {
+        $segmentMilliseconds = $this->segmentMilliseconds();
+        for ($start = 0, $index = 0; $start < $totalMilliseconds; $start += $segmentMilliseconds, $index++) {
+            yield $this->fileName($index) => [$start, min($start + $segmentMilliseconds, $totalMilliseconds)];
+        }
     }
 
 

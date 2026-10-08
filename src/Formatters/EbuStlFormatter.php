@@ -10,6 +10,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\EbuStl;
 use SubtitleToolbox\Parsers\EbuStlParser;
@@ -40,7 +41,7 @@ final class EbuStlFormatter extends SubtitleFormatter
         $options ??= new WriteOptions();
         $data = $subtitle->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
         $gsi  = ($data["gsi"] ?? []) + self::DEFAULT_GSI;
-        $fps  = $this->formatOptions($options)?->frameRate ?? EbuStl::FRAME_RATES[$gsi["DFC"] ?? ""] ?? 25;
+        $fps  = $this->formatOptions($options)->frameRate ?? EbuStl::FRAME_RATES[$gsi["DFC"] ?? ""] ?? 25;
 
         if (!array_key_exists($gsi["CCT"], EbuStl::CHARACTER_CODE_TABLES)) {
             throw new InvalidArgumentException("The character code table \"{$gsi["CCT"]}\" is not 00, 01, 02, 03 or 04.");
@@ -86,7 +87,7 @@ final class EbuStlFormatter extends SubtitleFormatter
         $sets     = [];
         foreach ([...array_keys($cues), count($cues)] as $index) {
             while ($comments !== [] && $comments[0]->beforeCueIndex <= $index) {
-                $timeCode = $this->smpteBytes($context, isset($cues[$index]) ? $cues[$index]->getStart() : (end($cues) ?: new SubtitleCue())->getEnd());
+                $timeCode = $this->smpteBytes($context, isset($cues[$index]) ? $cues[$index]->getStart() : ($cues === [] ? 0 : end($cues)->getEnd()));
                 $sets[]   = ["blocks" => $this->commentBlocks($context, array_shift($comments)->text, $storedComments, $timeCode), "comment" => true];
             }
 
@@ -114,8 +115,8 @@ final class EbuStlFormatter extends SubtitleFormatter
             }
         }
 
-        $bytes = implode(chr(EbuStl::NEW_LINE), array_map(fn (string $line): string => $this->encodeCharacters($context, $line), explode("\n", $text)));
-        [$verticalPosition, $justificationCode] = $this->position($context, 2, count(explode("\n", $text)));
+        $bytes = implode(chr(EbuStl::NEW_LINE), array_map(fn (string $line): string => $this->encodeCharacters($context, $line), explode(LineEnding::Lf->value, $text)));
+        [$verticalPosition, $justificationCode] = $this->position($context, 2, count(explode(LineEnding::Lf->value, $text)));
 
         return $this->textBlocks($context, $bytes, $this->header(0, 0, $smpteBytes, $smpteBytes, $verticalPosition, $justificationCode, 1));
     }
@@ -129,7 +130,7 @@ final class EbuStlFormatter extends SubtitleFormatter
     private function cueBlocks(EbuStlContext $context, SubtitleCue $cue): array
     {
         $stored    = $cue->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
-        $alignment = $cue->getAlignment() ?? 2;
+        $alignment = $cue->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT;
         $timeIn    = $this->smpteBytes($context, $cue->getStart());
         $timeOut   = $this->smpteBytes($context, $cue->getEnd());
 
