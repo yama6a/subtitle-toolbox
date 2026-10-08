@@ -8,7 +8,6 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 final class PngEncoder
 {
-    private const SIGNATURE        = "\x89PNG\r\n\x1a\n";
     private const STORED_BLOCK_MAX = 65535;
 
 
@@ -40,8 +39,8 @@ final class PngEncoder
             ? gzcompress($scanlines, 6)
             : self::storeUncompressed($scanlines);
 
-        return self::SIGNATURE
-            . self::chunk("IHDR", pack("NNCCCCC", $width, $height, 8, 6, 0, 0, 0))
+        return PngDecoder::SIGNATURE
+            . self::chunk("IHDR", pack("NNCCCCC", $width, $height, 8, PngDecoder::COLOR_RGBA, 0, 0, 0))
             . self::chunk("IDAT", $imageData)
             . self::chunk("IEND", "");
     }

@@ -11,13 +11,15 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
  */
 final class PngDecoder
 {
-    private const SIGNATURE = "\x89PNG\r\n\x1a\n";
+    /** @internal */
+    public const SIGNATURE = "\x89PNG\r\n\x1a\n";
 
     private const COLOR_GRAY       = 0;
     private const COLOR_RGB        = 2;
     private const COLOR_PALETTE    = 3;
     private const COLOR_GRAY_ALPHA = 4;
-    private const COLOR_RGBA       = 6;
+    /** @internal */
+    public const COLOR_RGBA = 6;
 
     /** Color type => channels and the allowed bit depths. */
     private const COLOR_TYPES = [
