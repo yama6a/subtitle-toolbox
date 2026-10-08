@@ -30,7 +30,6 @@ final class PgsParser extends SubtitleParser
     private const HEADER_LENGTH  = 13;
     private const PTS_PER_SECOND = 90000;
 
-    // Byte lengths of the segment parts.
     private const PRESENTATION_HEADER = 11;
     private const COMPOSITION_OBJECT  = 8;
     private const CROPPING            = 8;

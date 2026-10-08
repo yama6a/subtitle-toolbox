@@ -18,7 +18,7 @@ final class ReferenceSync
     // An earlier cue ends at least 1 ms before the first cue of a later part.
     private const PART_GAP = 0.001;
 
-    // Film, PAL and NTSC film rates. A speed change between 2 of them is a common cause of drift.
+    // A video converted between 2 of these frame rates plays at another speed, so its subtitles drift.
     private const FRAME_RATE_PAIRS = [[24, 23.976], [25, 24], [25, 23.976]];
 
 

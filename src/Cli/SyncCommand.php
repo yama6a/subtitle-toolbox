@@ -18,7 +18,6 @@ final class SyncCommand extends WriteCommand
 {
     private const LOW_SCORE = 0.5;
 
-    // The decimals of the numbers in the sync report.
     private const SCALE_DECIMALS   = 5;
     private const SECONDS_DECIMALS = 3;
     private const SCORE_DECIMALS   = 2;
