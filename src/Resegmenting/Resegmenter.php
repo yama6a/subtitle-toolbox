@@ -235,17 +235,10 @@ final class Resegmenter
     private static function fits(array $lines, float $start, float $end, ResegmentOptions $options): bool
     {
         $duration = round($end - $start, 3);
-        if ($duration > round($options->limits->maxDuration, 3)
-            || LineWrapper::wrapToFit($lines, $options->limits->maxCharactersPerLine, $options->limits->maxLinesPerCue) === null) {
-            return false;
-        }
-        if ($options->limits->maxCharactersPerSecond === null) {
-            return true;
-        }
 
-        $characters = LineWrapper::visibleCharacters($lines);
-
-        return $characters === 0 || LineWrapper::charactersPerSecond($characters, $duration) <= $options->limits->maxCharactersPerSecond;
+        return $duration <= round($options->limits->maxDuration, 3)
+            && LineWrapper::wrapToFit($lines, $options->limits->maxCharactersPerLine, $options->limits->maxLinesPerCue) !== null
+            && LineWrapper::fitsCharactersPerSecond($lines, $duration, $options->limits->maxCharactersPerSecond);
     }
 
 

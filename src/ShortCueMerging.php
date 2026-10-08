@@ -85,16 +85,10 @@ trait ShortCueMerging
         $lines = LineWrapper::wrapToFit(self::shortCueMergingOneVoiceTag($first, $second, $speakers)
                                         ?? [...$first->getLines(), ...$second->getLines()],
                                         $options->limits->maxCharactersPerLine, $options->limits->maxLinesPerCue);
-        if ($lines === null || $options->limits->maxCharactersPerSecond === null) {
-            return $lines;
-        }
 
-        $characters = LineWrapper::visibleCharacters($lines);
-        if ($characters > 0 && LineWrapper::charactersPerSecond($characters, $duration) > $options->limits->maxCharactersPerSecond) {
-            return null;
-        }
-
-        return $lines;
+        return $lines !== null && LineWrapper::fitsCharactersPerSecond($lines, $duration, $options->limits->maxCharactersPerSecond)
+            ? $lines
+            : null;
     }
 
 

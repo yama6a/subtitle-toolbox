@@ -63,6 +63,23 @@ final class LineWrapper
 
 
     /**
+     * Returns true when $maxCharactersPerSecond is null, when the lines have no visible character, or when their
+     * visible characters per second over $duration stay at or below $maxCharactersPerSecond.
+     *
+     * @param array<string> $lines
+     */
+    public static function fitsCharactersPerSecond(array $lines, float $duration, ?float $maxCharactersPerSecond): bool
+    {
+        if ($maxCharactersPerSecond === null) {
+            return true;
+        }
+        $characters = self::visibleCharacters($lines);
+
+        return $characters === 0 || self::charactersPerSecond($characters, $duration) <= $maxCharactersPerSecond;
+    }
+
+
+    /**
      * @param array<string> $lines
      */
     public static function fits(array $lines, int $maxCharsPerLine, int $maxLines): bool

@@ -105,4 +105,14 @@ class LineWrapperTest extends TestCase
     {
         $this->assertSame([5, 3], LineWrapper::visibleLineLengths(["<i>Hello</i>", "<b></b>", "", "a b"]));
     }
+
+
+    public function testFitsCharactersPerSecond(): void
+    {
+        $this->assertTrue(LineWrapper::fitsCharactersPerSecond(["<i>Hello</i>"], 1.0, null));
+        $this->assertTrue(LineWrapper::fitsCharactersPerSecond(["<i>Hello</i>"], 1.0, 5.0));
+        $this->assertFalse(LineWrapper::fitsCharactersPerSecond(["<i>Hello</i>"], 1.0, 4.9));
+        $this->assertTrue(LineWrapper::fitsCharactersPerSecond(["<i></i>"], 0.0, 1.0));
+        $this->assertFalse(LineWrapper::fitsCharactersPerSecond(["Hi"], 0.0, 1000.0));
+    }
 }
