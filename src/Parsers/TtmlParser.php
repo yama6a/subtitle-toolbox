@@ -243,9 +243,6 @@ final class TtmlParser extends SubtitleParser
     private function readParagraph(DOMElement $paragraph, TtmlScope $scope): SubtitleCue
     {
         [$begin, $end] = $this->interval($paragraph, $scope->begin, $scope->end);
-        if ($end === null) {
-            throw new ParsingException("The paragraph that begins at {$begin}s has no end time.");
-        }
 
         $region = $paragraph->hasAttribute("region") ? $paragraph->getAttribute("region") : $scope->region;
         $style  = TtmlStyles::DEFAULT_STYLE;
@@ -255,7 +252,15 @@ final class TtmlParser extends SubtitleParser
         $style = $this->resolveStyle($paragraph, $style);
         $agent = $this->agentName($paragraph);
         $runs  = [];
-        $this->collectRuns($paragraph, $style, $agent, $this->preservesSpace($paragraph, $scope->preserveSpace), $runs);
+        $this->collectRuns($paragraph, $style, $agent, $this->preservesSpace($paragraph, $scope->preserveSpace), [$begin, $end], $runs);
+        if ($end === null) {
+            [$begin, $end] = $this->timedSpansInterval($runs)
+                ?? throw new ParsingException("The paragraph that begins at {$begin}s has no end time.");
+        }
+        $runs = array_values(array_filter(
+            $runs,
+            fn (array $run): bool => !isset($run["begin"]) || $run["begin"] > $begin && $run["begin"] < $end
+        ));
 
         $cue = new SubtitleCue($begin, $end, $this->runsToLines($runs));
         $id  = $paragraph->getAttributeNS(TtmlNamespaces::XML, "id");
@@ -359,9 +364,11 @@ final class TtmlParser extends SubtitleParser
 
 
     /**
-     * A run with null text marks a line break.
+     * A run with null text marks a line break. A run with a begin marks the start of a timed span.
+     *
+     * @param array{float, ?float} $interval the time interval of $node
      */
-    private function collectRuns(DOMNode $node, array $style, ?string $agent, bool $preserveSpace, array &$runs): void
+    private function collectRuns(DOMNode $node, array $style, ?string $agent, bool $preserveSpace, array $interval, array &$runs): void
     {
         foreach ($node->childNodes as $child) {
             if ($child->nodeType === XML_TEXT_NODE || $child->nodeType === XML_CDATA_SECTION_NODE) {
@@ -369,15 +376,42 @@ final class TtmlParser extends SubtitleParser
             } elseif ($this->isTtElement($child, "br")) {
                 $runs[] = ["text" => null];
             } elseif ($this->isTtElement($child, "span")) {
+                $spanInterval = $interval;
+                if (array_filter(self::TIMING_ATTRIBUTES, $child->hasAttribute(...)) !== []) {
+                    try {
+                        $spanInterval = $this->interval($child, ...$interval);
+                        $runs[]       = ["text" => "", "begin" => $spanInterval[0], "end" => $spanInterval[1]];
+                    } catch (ParsingException) {
+                        // A broken span time only drops the word timestamp, so the text of the cue stays.
+                    }
+                }
                 $this->collectRuns(
                     $child,
                     $this->resolveStyle($child, $style),
                     $this->agentName($child) ?? $agent,
                     $this->preservesSpace($child, $preserveSpace),
+                    $spanInterval,
                     $runs
                 );
             }
         }
+    }
+
+
+    /**
+     * Returns the union of the timed spans, for a paragraph that has no end of its own.
+     *
+     * @return ?array{float, float}
+     */
+    private function timedSpansInterval(array $runs): ?array
+    {
+        $timed = array_filter($runs, fn (array $run): bool => isset($run["begin"]));
+        $ends  = array_filter(array_column($timed, "end"), fn (?float $end): bool => $end !== null);
+        if ($ends === []) {
+            return null;
+        }
+
+        return [min(array_column($timed, "begin")), max($ends)];
     }
 
 
@@ -443,6 +477,11 @@ final class TtmlParser extends SubtitleParser
         $markup    = "";
         $agentRuns = [];
         foreach ($runs as $run) {
+            if (isset($run["begin"])) {
+                $markup   .= StyleRuns::toMarkup($agentRuns) . "<" . Markup::coreTimestamp($run["begin"]) . ">";
+                $agentRuns = [];
+                continue;
+            }
             if (trim($run["text"]) !== "" && $run["agent"] !== $openAgent) {
                 $markup   .= StyleRuns::toMarkup($agentRuns) . ($openAgent === null ? "" : "</v>")
                     . ($run["agent"] === null ? "" : Markup::voiceTag($run["agent"]));

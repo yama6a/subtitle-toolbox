@@ -7,6 +7,8 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Markup;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Tests\Support\RealFiles;
@@ -51,9 +53,10 @@ class TtmlRealFileTest extends TestCase
             "w3c_imsc11_paragraphs"      => ["w3c_imsc11_paragraphs.ttml", 4, 0.0, 30.0, "Paragraph 1", 2, 0.0, 30.0, "Paragraph 2", 8],
             "w3c_imsc11_regions"         => ["w3c_imsc11_regions.ttml", 3, 0.0, 6.0, "This region is within the editorial area.", 8, 0.0, 6.0, "<font color=\"#ffff00\">This region is not.</font>", 2],
             "w3c_ttml1_cells"            => ["w3c_ttml1_cells.ttml", 5, 0.0, 8.0, "Lorem ipsum dolor sit", null, 18.0, 29.0, "Ut enim ad minim veniam quis, nostrud", null],
-            "w3c_ttml1_timed_spans"      => ["w3c_ttml1_timed_spans.ttml", 5, 0.0, 25.0, "Lorem ipsum dolor sit", null, 0.0, 25.0, "Ut enim ad minim veniam quis, nostrud", null],
+            "w3c_ttml1_timed_spans"      => ["w3c_ttml1_timed_spans.ttml", 5, 0.0, 25.0, "Lorem <00:00:01.000>ipsum <00:00:02.000>dolor <00:00:03.000>sit", null, 0.0, 25.0, "<00:00:18.000>Ut <00:00:19.000>enim <00:00:20.000>ad <00:00:21.000>minim <00:00:22.000>veniam <00:00:23.000>quis, <00:00:24.000>nostrud", null],
             "w3c_ttml1_timing"           => ["w3c_ttml1_timing.ttml", 4, 0.0, 2.0, "<font color=\"#ff0000\"><b>Text 1</b></font>", 8, 1.0, 3.0, "<font color=\"#ff0000\"><b>Text 4</b></font>", 8],
             "style_inheritance"          => ["style_inheritance.ttml", 5, 1.0, 2.0, "<i>The ferry leaves at noon.</i>", null, 9.0, 10.0, "<font color=\"#00ffff\"><i>Next stop </i></font>harbour", null],
+            "word_timed_spans"           => ["word_timed_spans.ttml", 3, 1.0, 4.5, "The <00:00:02.000>tide <00:00:03.000>turns", null, 10.0, 13.0, "Boats <00:00:11.000>return <00:00:12.000>home", null],
             "smpte_drop_ntsc"            => ["smpte_drop_ntsc.ttml", 5, 57.391, 60.027, "The morning train leaves platform two.", 2, 3599.996, 3602.999, "The evening train runs on time.", 2],
         ];
     }
@@ -87,8 +90,12 @@ class TtmlRealFileTest extends TestCase
         $output   = $subtitle->toString(Format::Ttml);
         $reparsed = Subtitle::fromString($output, Format::Ttml);
 
+        // The formatter strips word timestamps.
         $this->assertSame(
-            array_map($this->describeCue(...), $subtitle->getCues()),
+            array_map(
+                fn (SubtitleCue $cue): array => [...$this->describeCue($cue), 2 => preg_replace(Markup::WORD_TIMESTAMP_REGEX, "", $cue->getText())],
+                $subtitle->getCues()
+            ),
             array_map($this->describeCue(...), $reparsed->getCues())
         );
         $this->assertSame($subtitle->getAllMetadata(), $reparsed->getAllMetadata());
@@ -149,6 +156,24 @@ class TtmlRealFileTest extends TestCase
             "<span tts:fontStyle=\"normal\" tts:color=\"white\"><span tts:color=\"#00ffff\"><span tts:fontStyle=\"italic\">Next stop </span></span>harbour</span>",
             $output
         );
+    }
+
+
+    public function testRealFileTakesTheCueTimesFromTimedSpansInStrictAndLenientMode(): void
+    {
+        foreach ([false, true] as $lenient) {
+            $subtitle = $this->parseFile("word_timed_spans.ttml", new ReadOptions(lenient: $lenient));
+
+            $this->assertSame(
+                [
+                    [1.0, 4.5, "The <00:00:02.000>tide <00:00:03.000>turns", null],
+                    [5.5, 8.0, "at <00:00:06.500><i>dusk</i>", null],
+                    [10.0, 13.0, "Boats <00:00:11.000>return <00:00:12.000>home", null],
+                ],
+                array_map($this->describeCue(...), $subtitle->getCues())
+            );
+            $this->assertSame([], $subtitle->getParseWarnings());
+        }
     }
 
 
