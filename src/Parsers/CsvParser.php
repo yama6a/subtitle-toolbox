@@ -44,12 +44,7 @@ final class CsvParser extends SubtitleParser
         foreach (array_values($records) as $rowIndex => [$lineNumber, $cells]) {
             $cell = fn (string $role): string => isset($roles[$role]) ? trim($cells[$roles[$role]] ?? "") : "";
             try {
-                $start = self::parseTime($cell("start"), $frameRate, $lineNumber);
-                $end   = match (true) {
-                    $cell("end") !== ""      => self::parseTime($cell("end"), $frameRate, $lineNumber),
-                    $cell("duration") !== "" => $start + self::parseTime($cell("duration"), $frameRate, $lineNumber),
-                    default                  => null,
-                };
+                [$start, $end] = self::readTimes($cell, $frameRate, $lineNumber);
             } catch (ParsingException $exception) {
                 $this->fail($exception, $lineNumber, $rowIndex, [implode($delimiter, $cells)]);
                 continue;
@@ -60,13 +55,9 @@ final class CsvParser extends SubtitleParser
             if ($cell("identifier") !== "") {
                 $cue->setIdentifier($cell("identifier"));
             }
-            $others = array_diff_key($cells + array_fill(0, count($header ?? $cells), ""), array_flip($roles));
+            $others = self::otherColumns($cells, $roles, $header);
             if ($others !== []) {
-                $named = [];
-                foreach ($others as $index => $value) {
-                    $named[$header[$index] ?? $index] = $value;
-                }
-                $cue->setFormatData(self::FORMAT_DATA_KEY, ["columns" => $named]);
+                $cue->setFormatData(self::FORMAT_DATA_KEY, ["columns" => $others]);
             }
             if ($end === null) {
                 $openEnds[] = $cue;
@@ -86,6 +77,44 @@ final class CsvParser extends SubtitleParser
         ]);
 
         return $subtitle;
+    }
+
+
+    /**
+     * Returns the start and the end of a record. The end is null when the record has neither an end nor a duration.
+     *
+     * @param \Closure(string): string $cell the trimmed cell of a role
+     * @return array{float, ?float}
+     */
+    private static function readTimes(\Closure $cell, ?FrameRate $frameRate, int $lineNumber): array
+    {
+        $start = self::parseTime($cell("start"), $frameRate, $lineNumber);
+        $end   = match (true) {
+            $cell("end") !== ""      => self::parseTime($cell("end"), $frameRate, $lineNumber),
+            $cell("duration") !== "" => $start + self::parseTime($cell("duration"), $frameRate, $lineNumber),
+            default                  => null,
+        };
+
+        return [$start, $end];
+    }
+
+
+    /**
+     * Returns the cells without a role, keyed by their header name or else by their column index.
+     *
+     * @param list<string>       $cells
+     * @param array<string, int> $roles
+     * @param list<string>|null  $header
+     * @return array<int|string, string>
+     */
+    private static function otherColumns(array $cells, array $roles, ?array $header): array
+    {
+        $named = [];
+        foreach (array_diff_key($cells + array_fill(0, count($header ?? $cells), ""), array_flip($roles)) as $index => $value) {
+            $named[$header[$index] ?? $index] = $value;
+        }
+
+        return $named;
     }
 
 
