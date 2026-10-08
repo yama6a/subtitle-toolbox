@@ -176,8 +176,8 @@ final class MpSubParser extends SubtitleParser
 
         try {
             return new FrameRate((int)$matches[0]);
-        } catch (InvalidArgumentException $e) {
-            throw new ParsingException("The frame rate \"$value\" is not valid.", $lineNumber, $e);
+        } catch (InvalidArgumentException $exception) {
+            throw new ParsingException("The frame rate \"$value\" is not valid.", $lineNumber, $exception);
         }
     }
 

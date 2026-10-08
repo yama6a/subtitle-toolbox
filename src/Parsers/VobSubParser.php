@@ -70,13 +70,13 @@ final class VobSubParser extends SubtitleParser
      */
     protected function read(string $content): Subtitle
     {
-        $options = $this->formatOptions();
-        if ($options->idx === null) {
+        $formatOptions = $this->formatOptions();
+        if ($formatOptions->idx === null) {
             throw new InvalidArgumentException("VobSub needs the .idx content. Set VobSubReadOptions::\$idx.");
         }
         $this->palette      = [];
         $this->customColors = null;
-        $this->selectTrack($this->readIndex($options->idx), $options->track, $options->language);
+        $this->selectTrack($this->readIndex($formatOptions->idx), $formatOptions->track, $formatOptions->language);
 
         $units = [];
         foreach ($this->entries as $entry) {

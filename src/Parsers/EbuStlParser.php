@@ -119,8 +119,8 @@ final class EbuStlParser extends SubtitleParser
         foreach ($sets as $blocks) {
             $header      = $blocks[0];
             $blockIndex += count($blocks);
-            $lines  = self::decodeLines(self::textBytes($blocks), $gsi["CCT"]);
-            $hexes  = array_map("bin2hex", $blocks);
+            $lines       = self::decodeLines(self::textBytes($blocks), $gsi["CCT"]);
+            $hexes       = array_map("bin2hex", $blocks);
             if (ord($header[EbuStl::TTI_CF]) === 1) {
                 $lines = array_filter(array_map("trim", $lines), fn (string $line): bool => $line !== "");
                 $text  = Markup::plainText(implode("\n", $lines));
