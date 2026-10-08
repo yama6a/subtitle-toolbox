@@ -6,10 +6,10 @@ namespace SubtitleToolbox\Streaming;
 
 use Generator;
 use SubtitleToolbox\Exceptions\ParsingException;
-use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\SubtitleCue;
 
 final class WebVttStreamReader implements CueStreamReader
 {
@@ -18,9 +18,6 @@ final class WebVttStreamReader implements CueStreamReader
     private readonly ReadOptions $options;
 
     private array $header = [];
-
-    /** @var list<ParseWarning> */
-    private array $warnings = [];
 
 
     /**
@@ -37,7 +34,7 @@ final class WebVttStreamReader implements CueStreamReader
 
     public function getWarnings(): array
     {
-        $warnings = array_merge($this->parser->getWarnings(), $this->warnings);
+        $warnings = $this->parser->getWarnings();
         usort($warnings, fn (ParseWarning $a, ParseWarning $b): int => $a->lineNumber <=> $b->lineNumber);
 
         return $warnings;
@@ -47,10 +44,9 @@ final class WebVttStreamReader implements CueStreamReader
     public function read($stream): Generator
     {
         $this->parser->useOptions($this->options);
-        $this->header   = [];
-        $this->warnings = [];
-        $seenCue        = false;
-        $lines          = $this->trimmedLines($stream);
+        $this->header = [];
+        $seenCue      = false;
+        $lines        = $this->trimmedLines($stream);
         if (!str_starts_with($lines->current() ?? "", "WEBVTT")) {
             throw new ParsingException("The file doesn't start with the string WEBVTT!");
         }
@@ -63,36 +59,11 @@ final class WebVttStreamReader implements CueStreamReader
                 continue;
             }
 
-            $firstLine = trim($rawLines[0]);
-            $cue       = null;
-            try {
-                switch (true) {
-                    case str_contains($rawLines[0], "-->") || str_contains($rawLines[1] ?? "", "-->"):
-                        $cue     = $this->parser->parseCueBlock($rawLines, $idx);
-                        $seenCue = true;
-                        break;
-                    case !$seenCue && $firstLine === "STYLE":
-                        $this->header["styles"][] = implode(LineEnding::Lf->value, array_slice($rawLines, 1));
-                        break;
-                    case !$seenCue && $firstLine === "REGION":
-                        $this->header["regions"][] = $this->parser->parseSettings(
-                            implode(" ", array_slice($rawLines, 1)),
-                            WebVttParser::REGION_SETTINGS
-                        );
-                        break;
-                    case preg_match("/^(NOTE|STYLE|REGION)/i", $firstLine) === 1:
-                        break;
-                    default:
-                        throw new ParsingException("Block #$idx doesn't match anything that we can parse as a WebVTT cue!");
-                }
-            } catch (ParsingException $exception) {
-                if (!$this->options->lenient) {
-                    throw $exception;
-                }
-                $this->warnings[] = ParseWarning::skipped($exception, $lineNumber, $idx, $rawLines);
-            }
-            if ($cue !== null) {
-                yield $cue;
+            // The stream skips NOTE blocks, which WebVttParser keeps as comments.
+            $block = $this->parser->parseBlock($rawLines, $idx, $lineNumber, $seenCue, $this->header);
+            if ($block instanceof SubtitleCue) {
+                $seenCue = true;
+                yield $block;
             }
         }
     }

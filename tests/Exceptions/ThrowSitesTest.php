@@ -599,8 +599,6 @@ class ThrowSitesTest extends TestCase
             "Streaming/Streams.php: read-only stream"       => [fn () => new SubRipStreamWriter(fopen("php://memory", "rb")), ...$invalid],
             "Streaming/WebVttStreamReader.php: no WEBVTT"   => [fn () => iterator_to_array((new WebVttStreamReader())->read(self::stream("text"))),
                                                                 ...$parsing],
-            "Streaming/WebVttStreamReader.php: unknown block" => [fn () => iterator_to_array((new WebVttStreamReader())->read(
-                self::stream("WEBVTT\n\ntext\nmore"))), ...$parsing],
             "StringHelpers.php: unknown encoding"           => [fn () => StringHelpers::convertToUtf8("text", "NO-SUCH-ENCODING"),
                                                                 ...$parsing],
             "Subtitle.php: addCues no cue"                 => [fn () => (new Subtitle())->addCues([5]), ...$invalid],

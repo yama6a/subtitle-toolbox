@@ -53,37 +53,56 @@ final class WebVttParser extends SubtitleParser
                 continue;
             }
 
-            $firstLine = trim($rawLines[0]);
-            try {
-                switch (true) {
-                    case str_contains($rawLines[0], "-->") || str_contains($rawLines[1] ?? "", "-->"):
-                        $parsedCues[] = $this->parseCueBlock($rawLines, $idx);
-                        $seenCue = true;
-                        break;
-                    case $this->startsWithKeyword($firstLine, "NOTE"):
-                        $comments[] = [$this->parseComment($rawLines), count($parsedCues)];
-                        break;
-                    case !$seenCue && $firstLine === "STYLE":
-                        $fileData["styles"][] = implode(LineEnding::Lf->value, array_slice($rawLines, 1));
-                        break;
-                    case !$seenCue && $firstLine === "REGION":
-                        $fileData["regions"][] = $this->parseSettings(
-                            implode(" ", array_slice($rawLines, 1)),
-                            self::REGION_SETTINGS
-                        );
-                        break;
-                    case preg_match("/^(NOTE|STYLE|REGION)/i", $firstLine) === 1:
-                        // The spec parser ignores every block that is not a cue, so these blocks do not throw.
-                        break;
-                    default:
-                        throw new ParsingException("Block #$idx doesn't match anything that we can parse as a WebVTT cue!");
-                }
-            } catch (ParsingException $exception) {
-                $this->fail($exception, $lineNumber, $idx, $rawLines);
+            $block = $this->parseBlock($rawLines, $idx, $lineNumber, $seenCue, $fileData);
+            if ($block instanceof SubtitleCue) {
+                $parsedCues[] = $block;
+                $seenCue      = true;
+            } elseif ($block !== null) {
+                $comments[] = [$block, count($parsedCues)];
             }
         }
 
         return CommentAnchors::addParsed($subtitle, $parsedCues, $comments)->setFormatData(self::FORMAT_DATA_KEY, $fileData);
+    }
+
+
+    /**
+     * Parses one block after the header. A STYLE or REGION block before the first cue goes into $fileData and gives
+     * null, as other blocks that start with NOTE, STYLE or REGION do. In lenient mode, it skips a broken block and warns.
+     *
+     * @param list<string>         $rawLines
+     * @param array<string, mixed> $fileData
+     *
+     * @return SubtitleCue|string|null the cue, the text of a NOTE block, or null
+     *
+     * @internal
+     */
+    public function parseBlock(array $rawLines, int $idx, int $lineNumber, bool $seenCue, array &$fileData): SubtitleCue|string|null
+    {
+        $firstLine = trim($rawLines[0]);
+        try {
+            switch (true) {
+                case str_contains($rawLines[0], "-->") || str_contains($rawLines[1] ?? "", "-->"):
+                    return $this->parseCueBlock($rawLines, $idx);
+                case $this->startsWithKeyword($firstLine, "NOTE"):
+                    return $this->parseComment($rawLines);
+                case !$seenCue && $firstLine === "STYLE":
+                    $fileData["styles"][] = implode(LineEnding::Lf->value, array_slice($rawLines, 1));
+                    break;
+                case !$seenCue && $firstLine === "REGION":
+                    $fileData["regions"][] = $this->parseSettings(implode(" ", array_slice($rawLines, 1)), self::REGION_SETTINGS);
+                    break;
+                case preg_match("/^(NOTE|STYLE|REGION)/i", $firstLine) === 1:
+                    // The spec parser ignores every block that is not a cue, so these blocks do not throw.
+                    break;
+                default:
+                    throw new ParsingException("Block #$idx doesn't match anything that we can parse as a WebVTT cue!");
+            }
+        } catch (ParsingException $exception) {
+            $this->fail($exception, $lineNumber, $idx, $rawLines);
+        }
+
+        return null;
     }
 
 
