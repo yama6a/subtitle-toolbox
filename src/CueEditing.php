@@ -104,20 +104,20 @@ trait CueEditing
             }
         }
 
-        $lastCue    = end($this->cues) ?: null;
-        $keepsEnd   = $lastCue !== null && isset($copies[$lastCue]);
-        $comments   = [];
-        $newAnchors = [];
+        $lastCue     = end($this->cues) ?: null;
+        $keepsEnd    = $lastCue !== null && isset($copies[$lastCue]);
+        $comments    = [];
+        $keptAnchors = [];
         foreach ($this->comments as $commentIndex => $comment) {
             $anchor = $anchors[$commentIndex];
             if ($anchor === null ? $keepsEnd : isset($copies[$anchor])) {
-                $comments[]   = $comment;
-                $newAnchors[] = $anchor === null ? null : $copies[$anchor];
+                $comments[]    = $comment;
+                $keptAnchors[] = $anchor;
             }
         }
 
-        $copy->cues = $cues;
-        $copy->comments = CommentAnchors::comments($copy->cues, $comments, $newAnchors);
+        $copy->cues     = $cues;
+        $copy->comments = CommentAnchors::comments($copy->cues, $comments, CommentAnchors::remap($keptAnchors, $copies));
 
         return $copy;
     }

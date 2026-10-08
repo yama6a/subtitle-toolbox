@@ -95,10 +95,7 @@ final class Resegmenter
         }
         $result = [...$result, ...self::flush($group, $newCues, $options)];
 
-        $subtitle->replaceCues(
-            $result,
-            array_map(fn (?SubtitleCue $anchor): ?SubtitleCue => $anchor === null ? null : $newCues[$anchor], $anchors)
-        );
+        $subtitle->replaceCues($result, CommentAnchors::remap($anchors, $newCues));
     }
 
 

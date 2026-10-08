@@ -71,6 +71,20 @@ final class CommentAnchors
 
 
     /**
+     * Replaces each anchor with the cue that $map holds for it. A null anchor stays null.
+     *
+     * @param array<int, ?SubtitleCue>                    $anchors
+     * @param \SplObjectStorage<SubtitleCue, SubtitleCue> $map
+     *
+     * @return array<int, ?SubtitleCue>
+     */
+    public static function remap(array $anchors, \SplObjectStorage $map): array
+    {
+        return array_map(fn (?SubtitleCue $anchor): ?SubtitleCue => $anchor === null ? null : $map[$anchor], $anchors);
+    }
+
+
+    /**
      * Returns the comments sorted by their new cue index. A comment whose anchor is not in $cues goes after the last cue.
      *
      * @param SubtitleCue[]            $cues

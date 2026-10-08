@@ -30,10 +30,7 @@ final class WordHighlight
         $cues = CueList::inStartOrder(array_merge([], ...$groups));
 
         $cuesBefore = count($subtitle->getCues());
-        $subtitle->replaceCues(
-            $cues,
-            array_map(fn (?SubtitleCue $anchor): ?SubtitleCue => $anchor === null ? null : $firstNew[$anchor], $anchors)
-        );
+        $subtitle->replaceCues($cues, CommentAnchors::remap($anchors, $firstNew));
 
         return new WordHighlightReport($cuesBefore, count($cues));
     }
