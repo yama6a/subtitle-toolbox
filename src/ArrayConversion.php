@@ -185,4 +185,5 @@ trait ArrayConversion
         }
 
         return $value;
-    }}
+    }
+}
