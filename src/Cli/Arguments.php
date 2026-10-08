@@ -51,14 +51,7 @@ final class Arguments
                 continue;
             }
 
-            $value = null;
-            if (str_starts_with($argument, "--")) {
-                [$name, $value] = array_pad(explode("=", substr($argument, 2), 2), 2, null);
-                $option         = $byName[$name] ?? Command::fail("Unknown option --$name.");
-            } else {
-                $option = $byShort[substr($argument, 1)] ?? Command::fail("Unknown option $argument.");
-            }
-
+            [$option, $value] = self::findOption($argument, $byName, $byShort);
             if (!$option->takesValue()) {
                 if ($value !== null) {
                     Command::fail("The option --$option->name takes no value.");
@@ -79,6 +72,25 @@ final class Arguments
         }
 
         return new self($positionals, $options);
+    }
+
+
+    /**
+     * Returns the option that $argument names, and the value after "=" in a long option.
+     *
+     * @param array<string, Option> $byName
+     * @param array<string, Option> $byShort
+     * @return array{Option, ?string}
+     */
+    private static function findOption(string $argument, array $byName, array $byShort): array
+    {
+        if (!str_starts_with($argument, "--")) {
+            return [$byShort[substr($argument, 1)] ?? Command::fail("Unknown option $argument."), null];
+        }
+
+        [$name, $value] = array_pad(explode("=", substr($argument, 2), 2), 2, null);
+
+        return [$byName[$name] ?? Command::fail("Unknown option --$name."), $value];
     }
 
 
