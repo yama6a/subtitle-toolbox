@@ -488,19 +488,9 @@ final class Subtitle implements \IteratorAggregate, \Countable
      */
     public function reIndexCues(): self
     {
-        $commentCues = array_map(
-            fn (Comment $comment): ?SubtitleCue => $this->findCueAtOrAfter($comment->beforeCueIndex),
-            $this->comments
-        );
-
+        $anchors = CommentAnchors::of($this->cues, $this->comments);
         $this->sortCues();
-
-        foreach ($commentCues as $commentIndex => $cue) {
-            $cueIndex = $cue === null ? false : array_search($cue, $this->cues, true);
-
-            $this->comments[$commentIndex] = $this->comments[$commentIndex]->withBeforeCueIndex($cueIndex === false ? count($this->cues) : $cueIndex);
-        }
-        $this->sortComments();
+        $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
 
         return $this;
     }
@@ -555,8 +545,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
                                                 "the cue index must not be negative!");
         }
 
-        $this->comments[] = new Comment($text, $beforeCueIndex);
-        $this->sortComments();
+        $this->comments = CommentAnchors::sorted([...$this->comments, new Comment($text, $beforeCueIndex)]);
 
         return $this;
     }
@@ -592,27 +581,9 @@ final class Subtitle implements \IteratorAggregate, \Countable
     }
 
 
-    private function findCueAtOrAfter(int $cueIndex): ?SubtitleCue
-    {
-        foreach ($this->cues as $index => $cue) {
-            if ($index >= $cueIndex) {
-                return $cue;
-            }
-        }
-
-        return null;
-    }
-
-
     private function sortCues(): void
     {
         $this->cues = CueList::inStartOrder($this->cues);
-    }
-
-
-    private function sortComments(): void
-    {
-        usort($this->comments, fn (Comment $comment1, Comment $comment2): int => $comment1->beforeCueIndex <=> $comment2->beforeCueIndex);
     }
 
 
@@ -638,13 +609,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
         $copy = clone $this;
         $kept = array_diff_key($this->cues, array_flip($cueIndexes));
 
-        $copy->cues = array_values($kept);
-        foreach ($copy->comments as $commentIndex => $comment) {
-            $copy->comments[$commentIndex] = $comment->withBeforeCueIndex(count(array_filter(
-                array_keys($kept),
-                fn (int $cueIndex): bool => $cueIndex < $comment->beforeCueIndex
-            )));
-        }
+        $copy->cues     = array_values($kept);
+        $copy->comments = CommentAnchors::comments($copy->cues, $this->comments, CommentAnchors::of($kept, $this->comments));
 
         return $copy;
     }

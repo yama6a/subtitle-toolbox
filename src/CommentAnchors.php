@@ -89,6 +89,17 @@ final class CommentAnchors
             $comments[$commentIndex] = $comment->withBeforeCueIndex($cueIndex === false ? count($cues) : $cueIndex);
         }
 
+        return self::sorted($comments);
+    }
+
+
+    /**
+     * @param list<Comment> $comments
+     *
+     * @return list<Comment> the comments in the order of their cue index, ties in the given order
+     */
+    public static function sorted(array $comments): array
+    {
         usort($comments, fn (Comment $comment1, Comment $comment2): int => $comment1->beforeCueIndex <=> $comment2->beforeCueIndex);
 
         return $comments;
