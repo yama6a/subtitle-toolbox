@@ -21,11 +21,11 @@ final class YouTubeChaptersParser extends SubtitleParser
 
 
     /**
-     * Reads the lines of $rawSubtitle that start or end with a time such as 2:48 or 1:02:48, for example a video description.
+     * Reads the lines of $content that start or end with a time such as 2:48 or 1:02:48, for example a video description.
      */
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $lines = $this->lines($rawSubtitle);
+        $lines = $this->lines($content);
 
         $chapters = [];
         foreach ($lines as $line) {

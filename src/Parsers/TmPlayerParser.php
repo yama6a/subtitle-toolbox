@@ -15,11 +15,11 @@ final class TmPlayerParser extends SubtitleParser
     private const LINE_REGEX = '/^(\d+):([0-5]\d):([0-5]\d)(?:,(\d+))?[:=](.*)$/';
 
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
         $entries    = [];
         $blockIndex = -1;
-        foreach ($this->lines($rawSubtitle) as $lineIndex => $rawLine) {
+        foreach ($this->lines($content) as $lineIndex => $rawLine) {
             $rawLine = trim($rawLine);
             if ($rawLine === "") {
                 continue;

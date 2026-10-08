@@ -27,17 +27,17 @@ final class SamiParser extends SubtitleParser
     private const NBSP = "\u{00A0}";
 
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $rawSubtitle = StringHelpers::normalizeEOLs($rawSubtitle);
-        if (!preg_match('//u', $rawSubtitle)) {
+        $content = StringHelpers::normalizeEOLs($content);
+        if (!preg_match('//u', $content)) {
             throw new ParsingException("The SAMI file is not valid UTF-8. Convert it to UTF-8 before parsing.");
         }
 
         $subtitle               = new Subtitle();
-        [$formatData, $classes] = $this->readHead($rawSubtitle, $subtitle);
+        [$formatData, $classes] = $this->readHead($content, $subtitle);
 
-        $syncs = $this->readSyncs($rawSubtitle);
+        $syncs = $this->readSyncs($content);
         $class = $this->chooseClass($classes, $syncs);
         if ($class !== null) {
             $formatData["class"] = $class;
@@ -57,18 +57,18 @@ final class SamiParser extends SubtitleParser
      *
      * @return array{array<string, string>, array<string, array{name: string, lang: ?string}>}
      */
-    private function readHead(string $rawSubtitle, Subtitle $subtitle): array
+    private function readHead(string $content, Subtitle $subtitle): array
     {
         $formatData = [];
-        if (preg_match('/<TITLE\b[^>]*>(.*?)<\/TITLE\s*>/is', $rawSubtitle, $matches) && trim($matches[1]) !== "") {
+        if (preg_match('/<TITLE\b[^>]*>(.*?)<\/TITLE\s*>/is', $content, $matches) && trim($matches[1]) !== "") {
             $subtitle->setMetadata(Subtitle::METADATA_TITLE, Markup::decodeEntities(trim($matches[1])));
         }
-        if (preg_match('/<SAMIParam\b[^>]*>(.*?)<\/SAMIParam\s*>/is', $rawSubtitle, $matches)) {
+        if (preg_match('/<SAMIParam\b[^>]*>(.*?)<\/SAMIParam\s*>/is', $content, $matches)) {
             $formatData["samiParam"] = $matches[1];
         }
 
         $classes = [];
-        if (preg_match('/<STYLE\b[^>]*>(.*?)<\/STYLE\s*>/is', $rawSubtitle, $matches)) {
+        if (preg_match('/<STYLE\b[^>]*>(.*?)<\/STYLE\s*>/is', $content, $matches)) {
             $formatData["style"] = $matches[1];
             $classes             = $this->readClasses($matches[1]);
         }
@@ -147,10 +147,10 @@ final class SamiParser extends SubtitleParser
     /**
      * @return list<array{start: float, paragraphs: list<array{class: ?string, attributes: array<string, string>, html: string, lines: list<string>}>}>
      */
-    private function readSyncs(string $rawSubtitle): array
+    private function readSyncs(string $content): array
     {
-        $bodyStart = self::bodyStart($rawSubtitle);
-        $body      = substr($rawSubtitle, $bodyStart);
+        $bodyStart = self::bodyStart($content);
+        $body      = substr($content, $bodyStart);
         if (preg_match('/<\/BODY\s*>/i', $body, $end, PREG_OFFSET_CAPTURE) === 1) {
             $body = substr($body, 0, $end[0][1]);
         }
@@ -159,16 +159,16 @@ final class SamiParser extends SubtitleParser
         $syncs = [];
         foreach (array_slice(preg_split('/<SYNC\b/i', $body, -1, PREG_SPLIT_OFFSET_CAPTURE), 1) as $index => [$chunk, $offset]) {
             try {
-                [$start, $content] = $this->readSyncTag($chunk, $index, fn (): int => $this->lineNumberInBody($rawSubtitle, $bodyStart, $body, $offset));
+                [$start, $syncContent] = $this->readSyncTag($chunk, $index, fn (): int => $this->lineNumberInBody($content, $bodyStart, $body, $offset));
             } catch (ParsingException $exception) {
-                $lineNumber = $this->lineNumberInBody($rawSubtitle, $bodyStart, $body, $offset);
+                $lineNumber = $this->lineNumberInBody($content, $bodyStart, $body, $offset);
                 $lines      = array_map("trim", explode("\n", "<SYNC" . $chunk));
                 $block      = array_values(array_filter($lines, fn (string $line): bool => $line !== ""));
                 $this->fail($exception, $lineNumber, $index, $block);
                 continue;
             }
 
-            $syncs[] = ["start" => $start, "paragraphs" => $this->readParagraphs($content)];
+            $syncs[] = ["start" => $start, "paragraphs" => $this->readParagraphs($syncContent)];
         }
 
         usort($syncs, fn (array $sync1, array $sync2): int => $sync1["start"] <=> $sync2["start"]);
@@ -191,9 +191,9 @@ final class SamiParser extends SubtitleParser
     }
 
 
-    private function lineNumberInBody(string $rawSubtitle, int $bodyStart, string $body, int $offset): int
+    private function lineNumberInBody(string $content, int $bodyStart, string $body, int $offset): int
     {
-        return 1 + substr_count($rawSubtitle, "\n", 0, $bodyStart) + substr_count(substr($body, 0, $offset), "\n");
+        return 1 + substr_count($content, "\n", 0, $bodyStart) + substr_count(substr($body, 0, $offset), "\n");
     }
 
 
@@ -201,9 +201,9 @@ final class SamiParser extends SubtitleParser
      * Returns the offset after the BODY start tag, or 0 without one.
      * A pattern that starts with ^.*? would hit the PCRE backtrack limit after about 1 MB of head.
      */
-    private static function bodyStart(string $rawSubtitle): int
+    private static function bodyStart(string $content): int
     {
-        return preg_match('/<BODY\b[^>]*>/i', $rawSubtitle, $start, PREG_OFFSET_CAPTURE) === 1 ? $start[0][1] + strlen($start[0][0]) : 0;
+        return preg_match('/<BODY\b[^>]*>/i', $content, $start, PREG_OFFSET_CAPTURE) === 1 ? $start[0][1] + strlen($start[0][0]) : 0;
     }
 
 

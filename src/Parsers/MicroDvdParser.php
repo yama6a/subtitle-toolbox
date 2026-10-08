@@ -24,10 +24,10 @@ final class MicroDvdParser extends SubtitleParser
     private const CUE_REGEX = '/^\{(\d+)\}\{(\d+)\}(.*)$/';
 
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
         $rawLines = array_filter(
-            array_map("trim", $this->lines($rawSubtitle)),
+            array_map("trim", $this->lines($content)),
             fn (string $line): bool => $line !== ""
         );
         $blockIndexes = array_flip(array_keys($rawLines));

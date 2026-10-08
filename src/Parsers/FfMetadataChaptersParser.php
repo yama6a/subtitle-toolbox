@@ -32,9 +32,9 @@ final class FfMetadataChaptersParser extends SubtitleParser
     private const DEFAULT_TIME_BASE = "1/1000000000";
 
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $content = StringHelpers::normalizeEOLs($rawSubtitle);
+        $content = StringHelpers::normalizeEOLs($content);
         if (!str_starts_with($content, ";FFMETADATA")) {
             throw new ParsingException("The content does not start with the ;FFMETADATA header.", 1);
         }

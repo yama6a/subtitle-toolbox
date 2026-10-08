@@ -23,12 +23,12 @@ final class CsvParser extends SubtitleParser
     private CsvColumns $columns;
 
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
         $this->columns = $this->formatOptions()->columns ?? new CsvColumns();
-        $delimiter     = $this->formatOptions()->delimiter ?? self::detectDelimiter($rawSubtitle);
+        $delimiter     = $this->formatOptions()->delimiter ?? self::detectDelimiter($content);
         $records       = array_filter(
-            self::records($rawSubtitle, $delimiter),
+            self::records($content, $delimiter),
             fn (array $record): bool => array_filter($record[1], fn (string $cell): bool => trim($cell) !== "") !== []
         );
 

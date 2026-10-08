@@ -28,9 +28,9 @@ final class WhisperJsonParser extends SubtitleParser
      * Reads the JSON of the OpenAI transcription API, openai-whisper, faster-whisper, WhisperX and whisper.cpp.
      * It makes one cue per segment.
      */
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $data = $this->decodeJsonObject($rawSubtitle);
+        $data = $this->decodeJsonObject($content);
 
         $segments = match (true) {
             self::isList($data["segments"] ?? null)      => $this->readSegments($data["segments"], $data["words"] ?? null),

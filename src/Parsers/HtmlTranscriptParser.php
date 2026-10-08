@@ -21,9 +21,9 @@ final class HtmlTranscriptParser extends SubtitleParser
     /**
      * Reads the Podcasting 2.0 HTML transcript, one cue per <time> with the <p> paragraphs up to the next <time>.
      */
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $paragraphs = $this->paragraphs(StringHelpers::normalizeEOLs($rawSubtitle));
+        $paragraphs = $this->paragraphs(StringHelpers::normalizeEOLs($content));
 
         $cues = [];
         foreach ($paragraphs as $index => $paragraph) {

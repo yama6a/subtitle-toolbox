@@ -17,12 +17,12 @@ final class SubRipParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::SubRip->value;
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
         $subtitle   = new Subtitle();
         $parsedCues = [];
         $index      = 0;
-        foreach ($this->splitIntoBlocks($this->lines($rawSubtitle)) as $lineNumber => $rawLines) {
+        foreach ($this->splitIntoBlocks($this->lines($content)) as $lineNumber => $rawLines) {
             foreach ($this->parseBlock($rawLines, $index++, $lineNumber) as $cue) {
                 $parsedCues[] = $cue;
             }
@@ -99,18 +99,18 @@ final class SubRipParser extends SubtitleParser
      *
      * @internal
      */
-    public function parseCueBlock(array $rawLines, int $idx, ?int $lineNumber = null): SubtitleCue
+    public function parseCueBlock(array $rawLines, int $index, ?int $lineNumber = null): SubtitleCue
     {
         if (!is_numeric($rawLines[0])) {
-            throw new ParsingException("Block #$idx has no cue number on its first line.", $lineNumber);
+            throw new ParsingException("Block #$index has no cue number on its first line.", $lineNumber);
         }
 
         if (!str_contains($rawLines[1] ?? "", ' --> ')) {
-            throw new ParsingException("Block #$idx has no timing line on its second line.", $lineNumber);
+            throw new ParsingException("Block #$index has no timing line on its second line.", $lineNumber);
         }
 
         if (count($rawLines) < 3) {
-            throw new ParsingException("Block #$idx has no text lines.", $lineNumber);
+            throw new ParsingException("Block #$index has no text lines.", $lineNumber);
         }
 
         $times       = explode('-->', $rawLines[1]);

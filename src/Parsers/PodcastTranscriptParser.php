@@ -25,9 +25,9 @@ final class PodcastTranscriptParser extends SubtitleParser
     /**
      * Reads the Podcasting 2.0 JSON transcript, and joins single-word segments into cues by speaker and sentence end.
      */
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $data = $this->decodeJsonObject($rawSubtitle);
+        $data = $this->decodeJsonObject($content);
         if (!is_array($data["segments"] ?? null) || !array_is_list($data["segments"])) {
             throw new ParsingException("The JSON has no \"segments\" list.");
         }

@@ -31,17 +31,17 @@ final class LyricsParser extends SubtitleParser
     private const OFFSET_REGEX         = "/^[+-]?\d+$/";
 
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $rawSubtitle = StringHelpers::normalizeEOLs($rawSubtitle);
+        $content = StringHelpers::normalizeEOLs($content);
         if ($this->options->lenient) {
-            $this->warnBrokenTimeTags($this->lines($rawSubtitle));
+            $this->warnBrokenTimeTags($this->lines($content));
         }
-        $rawSubtitle = StringHelpers::normalizeSpaces($rawSubtitle);
-        $rawSubtitle = StringHelpers::removeEmptyLines($rawSubtitle);
-        $rawSubtitle = StringHelpers::trimEachLine($rawSubtitle);
+        $content = StringHelpers::normalizeSpaces($content);
+        $content = StringHelpers::removeEmptyLines($content);
+        $content = StringHelpers::trimEachLine($content);
 
-        $lines      = $this->lines($rawSubtitle);
+        $lines      = $this->lines($content);
         $subtitle   = new Subtitle();
         $parsedCues = [];
         $offset     = $this->findOffset($lines);
@@ -160,12 +160,12 @@ final class LyricsParser extends SubtitleParser
     {
         usort($timeline, fn (array $entry1, array $entry2): int => $entry1["time"] <=> $entry2["time"]);
 
-        foreach ($timeline as $idx => $entry) {
+        foreach ($timeline as $index => $entry) {
             if ($entry["cue"] === null) {
                 continue;
             }
 
-            $next = $timeline[$idx + 1] ?? null;
+            $next = $timeline[$index + 1] ?? null;
             if ($next === null) {
                 $entry["cue"]->setEnd($entry["time"] + $this->options->lastCueDuration);
                 continue;

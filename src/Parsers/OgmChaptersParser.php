@@ -23,9 +23,9 @@ final class OgmChaptersParser extends SubtitleParser
     private const NAME_LINE      = '/^CHAPTER\d+NAME\s*=(.*)$/';
 
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $lines = $this->lines($rawSubtitle);
+        $lines = $this->lines($content);
 
         $chapters = [];
         $start    = null;

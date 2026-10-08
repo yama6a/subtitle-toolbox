@@ -33,9 +33,9 @@ final class SccParser extends SubtitleParser
     private const FRAME_RATE_DIVISOR   = 1001;
 
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $codeLines = $this->readCodeLines($this->lines($rawSubtitle), $dropFrame);
+        $codeLines = $this->readCodeLines($this->lines($content), $dropFrame);
         $states    = (new Cea608Decoder($this->formatOptions()->channel))->decode($codeLines);
 
         $subtitle   = new Subtitle();
@@ -43,16 +43,16 @@ final class SccParser extends SubtitleParser
         if ($dropFrame !== null) {
             $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["dropFrame" => $dropFrame]);
         }
-        foreach ($states as $idx => $state) {
+        foreach ($states as $index => $state) {
             if ($state["lines"] === []) {
                 continue;
             }
 
             $start = $this->frameToSeconds($state["frame"]);
-            if (!isset($states[$idx + 1])) {
+            if (!isset($states[$index + 1])) {
                 $end = $start + $this->options->lastCueDuration;
             } else {
-                $end = $this->frameToSeconds($states[$idx + 1]["frame"]);
+                $end = $this->frameToSeconds($states[$index + 1]["frame"]);
                 if ($end <= $start) {
                     continue;
                 }

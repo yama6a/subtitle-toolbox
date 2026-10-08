@@ -30,13 +30,13 @@ final class EbuStlParser extends SubtitleParser
     protected const BINARY = true;
 
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $rawSubtitle = $this->cutIncompleteBlock($rawSubtitle);
-        $gsi         = self::checkedGsi($rawSubtitle);
-        $frameRate   = new FrameRate(EbuStl::FRAME_RATES[$gsi["DFC"]]);
-        $offset      = $this->formatOptions()->subtractStartOfProgramme ? EbuStl::timeCodeToSeconds($gsi["TCP"], $frameRate) : 0.0;
-        $sets        = self::readSubtitleSets(substr($rawSubtitle, EbuStl::GSI_BLOCK_SIZE));
+        $content   = $this->cutIncompleteBlock($content);
+        $gsi       = self::checkedGsi($content);
+        $frameRate = new FrameRate(EbuStl::FRAME_RATES[$gsi["DFC"]]);
+        $offset    = $this->formatOptions()->subtractStartOfProgramme ? EbuStl::timeCodeToSeconds($gsi["TCP"], $frameRate) : 0.0;
+        $sets      = self::readSubtitleSets(substr($content, EbuStl::GSI_BLOCK_SIZE));
 
         $subtitle = new Subtitle();
         $title    = rtrim($gsi["OPT"], " \0");
@@ -52,7 +52,7 @@ final class EbuStlParser extends SubtitleParser
             "firstSubtitleNumber"        => $sets === [] ? null : unpack("v", $sets[0][0], EbuStl::TTI_SN)[1],
             "comments"                   => $read["comments"],
             "counts"                     => [
-                "TNB" => intdiv(strlen($rawSubtitle) - EbuStl::GSI_BLOCK_SIZE, EbuStl::TTI_BLOCK_SIZE),
+                "TNB" => intdiv(strlen($content) - EbuStl::GSI_BLOCK_SIZE, EbuStl::TTI_BLOCK_SIZE),
                 "TNS" => count($subtitle->getCues()),
                 "TNG" => count($read["groups"]),
                 "TCF" => $read["firstTimeIn"] ?? "00000000",
@@ -66,31 +66,31 @@ final class EbuStlParser extends SubtitleParser
     /**
      * Fails on a file shorter than the GSI block. Cuts an incomplete last TTI block, or fails on it when not lenient.
      */
-    private function cutIncompleteBlock(string $rawSubtitle): string
+    private function cutIncompleteBlock(string $content): string
     {
-        if (strlen($rawSubtitle) < EbuStl::GSI_BLOCK_SIZE) {
+        if (strlen($content) < EbuStl::GSI_BLOCK_SIZE) {
             throw new ParsingException("An EBU STL file starts with a GSI block of " . EbuStl::GSI_BLOCK_SIZE . " bytes.");
         }
 
         try {
-            self::checkTtiBlockSize($rawSubtitle);
+            self::checkTtiBlockSize($content);
         } catch (ParsingException $exception) {
-            $complete    = intdiv(strlen($rawSubtitle) - EbuStl::GSI_BLOCK_SIZE, EbuStl::TTI_BLOCK_SIZE);
-            $cutLength   = EbuStl::GSI_BLOCK_SIZE + $complete * EbuStl::TTI_BLOCK_SIZE;
-            $this->fail($exception, null, $complete, [bin2hex(substr($rawSubtitle, $cutLength))]);
-            $rawSubtitle = substr($rawSubtitle, 0, $cutLength);
+            $complete  = intdiv(strlen($content) - EbuStl::GSI_BLOCK_SIZE, EbuStl::TTI_BLOCK_SIZE);
+            $cutLength = EbuStl::GSI_BLOCK_SIZE + $complete * EbuStl::TTI_BLOCK_SIZE;
+            $this->fail($exception, null, $complete, [bin2hex(substr($content, $cutLength))]);
+            $content   = substr($content, 0, $cutLength);
         }
 
-        return $rawSubtitle;
+        return $content;
     }
 
 
     /**
      * @return array<string, string>
      */
-    private static function checkedGsi(string $rawSubtitle): array
+    private static function checkedGsi(string $content): array
     {
-        $gsi = EbuStl::readGsi(substr($rawSubtitle, 0, EbuStl::GSI_BLOCK_SIZE));
+        $gsi = EbuStl::readGsi(substr($content, 0, EbuStl::GSI_BLOCK_SIZE));
         if (!isset(EbuStl::FRAME_RATES[$gsi["DFC"]])) {
             throw new ParsingException("The disk format code \"{$gsi["DFC"]}\" is not STL25.01 or STL30.01.");
         }
@@ -183,9 +183,9 @@ final class EbuStlParser extends SubtitleParser
     }
 
 
-    private static function checkTtiBlockSize(string $rawSubtitle): void
+    private static function checkTtiBlockSize(string $content): void
     {
-        if ((strlen($rawSubtitle) - EbuStl::GSI_BLOCK_SIZE) % EbuStl::TTI_BLOCK_SIZE !== 0) {
+        if ((strlen($content) - EbuStl::GSI_BLOCK_SIZE) % EbuStl::TTI_BLOCK_SIZE !== 0) {
             throw new ParsingException("The TTI blocks of an EBU STL file must have " . EbuStl::TTI_BLOCK_SIZE . " bytes each.");
         }
     }

@@ -27,9 +27,9 @@ final class DeepgramParser extends SubtitleParser
      * Reads the JSON response of the Deepgram pre-recorded audio API.
      * It makes one cue per utterance, else one per paragraph sentence, else cues grouped from the words.
      */
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $data    = $this->decodeJsonObject($rawSubtitle);
+        $data    = $this->decodeJsonObject($content);
         $results = $data["results"] ?? null;
         if (!is_array($results) || !self::isList($results["channels"] ?? null)) {
             throw new ParsingException("The JSON has no \"results.channels\" list.");
