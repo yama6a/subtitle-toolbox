@@ -44,6 +44,19 @@ final class HearingImpairedRemover
 
 
     /**
+     * Returns the text of a cue with $text after apply() with $options. An emptied cue gives its remaining lines.
+     *
+     * @internal
+     */
+    public static function removeFromText(string $text, HearingImpairedOptions $options): string
+    {
+        $cue = new SubtitleCue(0, 1, $text);
+
+        return $cue->setLines(self::removeFromLines(array_values($cue->getLines()), $options))->getText();
+    }
+
+
+    /**
      * Returns true when apply() with $options changes $line or removes it.
      */
     public static function isAnnotation(string $line, ?HearingImpairedOptions $options = null): bool

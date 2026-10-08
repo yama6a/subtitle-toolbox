@@ -105,6 +105,17 @@ trait TextTransforms
     }
 
 
+    /**
+     * Returns plain $text in upper or lower case as changeCase() with CaseMode::Upper or CaseMode::Lower writes it.
+     *
+     * @internal
+     */
+    public static function toUpperOrLower(string $text, bool $upper): string
+    {
+        return $upper ? self::textTransformsUpper($text, false) : self::textTransformsLower($text, false);
+    }
+
+
     private function textTransformsSentenceCase(bool $turkic): self
     {
         $currentCue       = null;

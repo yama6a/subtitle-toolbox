@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Speakers;
 
-use SubtitleToolbox\CaseMode;
 use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
 use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
 use SubtitleToolbox\Markup;
@@ -99,7 +98,7 @@ final class SpeakerLabels
         self::convert($subtitle, function (array $lines) use ($upperCase, $separator): array {
             $result = [];
             foreach ($lines as [$speaker, $line, $startsSpeaker]) {
-                $name     = $speaker === null ? "" : Markup::escapeText($upperCase ? self::changeCase($speaker, CaseMode::Upper) : $speaker);
+                $name     = $speaker === null ? "" : Markup::escapeText($upperCase ? Subtitle::toUpperOrLower($speaker, true) : $speaker);
                 $result[] = $startsSpeaker && $speaker !== null ? $name . Markup::escapeText($separator) . $line : $line;
             }
 
@@ -291,9 +290,7 @@ final class SpeakerLabels
      */
     private static function removeLabel(string $line, HearingImpairedOptions $options): array
     {
-        $cue = new SubtitleCue(0, 1, $line);
-        HearingImpairedRemover::apply((new Subtitle())->addCue($cue), $options);
-        $rest = $cue->getText();
+        $rest = HearingImpairedRemover::removeFromText($line, $options);
         if ($rest === $line) {
             return [null, $line];
         }
@@ -315,20 +312,8 @@ final class SpeakerLabels
     {
         return preg_replace_callback(
             "/(?:^|(?<=[\\s.'-]))\\p{Ll}/u",
-            fn (array $match): string => self::changeCase($match[0], CaseMode::Upper),
-            self::changeCase($name, CaseMode::Lower)
+            fn (array $match): string => Subtitle::toUpperOrLower($match[0], true),
+            Subtitle::toUpperOrLower($name, false)
         ) ?? $name;
-    }
-
-
-    /**
-     * Uses the case rules of Subtitle::changeCase(), which fall back to A to Z without ext-mbstring.
-     */
-    private static function changeCase(string $text, CaseMode $mode): string
-    {
-        $cue = new SubtitleCue(0, 1, Markup::escapeText($text));
-        (new Subtitle())->addCue($cue)->changeCase($mode);
-
-        return Markup::decodeEntities($cue->getText());
     }
 }
