@@ -12,16 +12,12 @@ use SubtitleToolbox\Timecode;
 
 final class YouTubeChaptersParser extends SubtitleParser
 {
+    protected const FORMAT_OPTIONS = ChapterReadOptions::class;
+
     // A space, "|", ":", "-", an en dash or an em dash. The dashes are UTF-8 bytes, so the patterns need no /u flag.
     private const SEPARATOR       = '(?:[\s|:-]|\xE2\x80[\x93\x94])';
     private const AFTER_SEPARATOR = '(?<=^|[\s|:-]|\xE2\x80\x93|\xE2\x80\x94)';
     private const TIME            = '[(\[]?(?:(\d+):)?(\d+):(\d{2})[)\]]?';
-
-
-    protected static function formatOptionsClass(): string
-    {
-        return ChapterReadOptions::class;
-    }
 
 
     /**

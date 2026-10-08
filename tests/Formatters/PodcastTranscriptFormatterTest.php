@@ -44,7 +44,8 @@ class PodcastTranscriptFormatterTest extends TestCase
 
     public function testWritesOneSegmentPerWordTimestamp(): void
     {
-        $segments = (new PodcastTranscriptFormatter())->segments($this->dialogue(), true);
+        $json     = $this->dialogue()->toString(Format::PodcastTranscript, new WriteOptions(format: new PodcastTranscriptWriteOptions(wordSegments: true)));
+        $segments = json_decode($json, true, 512, JSON_THROW_ON_ERROR)["segments"];
 
         $this->assertSame([
             ["speaker" => "Anna", "startTime" => 1.0, "endTime" => 1.5, "body" => "Where"],

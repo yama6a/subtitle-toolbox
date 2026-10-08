@@ -54,10 +54,9 @@ final class SubViewerParser extends SubtitleParser
      */
     private function parseVersion1(array $headerLines, array $scriptLines): Subtitle
     {
-        $subtitle   = new Subtitle();
-        $parsedCues = [];
-        $header     = [];
-        $delay      = 0;
+        $subtitle = new Subtitle();
+        $header   = [];
+        $delay    = 0;
         for ($idx = 0; $idx < count($headerLines); $idx++) {
             $line = $headerLines[$idx];
             if ($line === "") {
@@ -126,13 +125,11 @@ final class SubViewerParser extends SubtitleParser
             if (!$hasEndLine[$idx]) {
                 $cue->setEnd(isset($cues[$idx + 1]) ? $cues[$idx + 1]->getStart() : $cue->getStart() + $this->options->lastCueDuration);
             }
-
-            $parsedCues[] = $cue;
         }
 
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["version" => 1, "header" => $header]);
 
-        return $subtitle->addCues($parsedCues);
+        return $subtitle->addCues($cues);
     }
 
 

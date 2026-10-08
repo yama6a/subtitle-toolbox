@@ -88,7 +88,7 @@ final class SyncCommand extends WriteCommand
     }
 
 
-    protected function checkReference(Arguments $arguments): void
+    private function checkReference(Arguments $arguments): void
     {
         if ($arguments->has("reference") === $arguments->has("silence-log")) {
             self::fail("Pass one of --reference FILE and --silence-log FILE.");

@@ -7,7 +7,6 @@ namespace SubtitleToolbox\Parsers;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\FormatReadOptions;
-use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -40,12 +39,6 @@ trait WordGrouping
      * @param list<string> $block
      */
     abstract protected function fail(ParsingException $exception, ?int $lineNumber, ?int $blockIndex, array $block): void;
-
-
-    protected static function formatOptionsClass(): string
-    {
-        return TranscriptReadOptions::class;
-    }
 
 
     /**

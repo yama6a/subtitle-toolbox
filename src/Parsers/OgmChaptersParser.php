@@ -15,14 +15,9 @@ use SubtitleToolbox\Timecode;
 // of parse_simple() in mkvtoolnix src/common/chapters/chapters.cpp.
 final class OgmChaptersParser extends SubtitleParser
 {
+    protected const FORMAT_OPTIONS = ChapterReadOptions::class;
     private const TIMESTAMP_LINE = '/^CHAPTER\d+\s*=\s*(\d+)\s*:\s*(\d+)\s*:\s*(\d+)\s*[.,]\s*(\d{1,9})/';
     private const NAME_LINE      = '/^CHAPTER\d+NAME\s*=(.*)$/';
-
-
-    protected static function formatOptionsClass(): string
-    {
-        return ChapterReadOptions::class;
-    }
 
 
     protected function read(string $rawSubtitle): Subtitle

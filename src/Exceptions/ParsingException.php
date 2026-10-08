@@ -9,9 +9,24 @@ final class ParsingException extends GenericException
     protected const CODE = 100;
 
 
+    private readonly string $rawMessage;
+
+
     public function __construct(string $message, private readonly ?int $lineNumber = null, ?\Throwable $previous = null)
     {
+        $this->rawMessage = $message;
         parent::__construct($lineNumber === null ? $message : "$message (line $lineNumber)", $previous);
+    }
+
+
+    /**
+     * Returns the message without the class prefix and without the " (line N)" end.
+     *
+     * @internal
+     */
+    public function getRawMessage(): string
+    {
+        return $this->rawMessage;
     }
 
 

@@ -62,15 +62,12 @@ final class PgsParser extends SubtitleParser
     /** @var array{start: float, image: CueImage}|null */
     private ?array $shownImage = null;
 
-    private Subtitle $subtitle;
-
     /** @var list<SubtitleCue> */
     private array $cues = [];
 
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->subtitle     = new Subtitle();
         $this->cues         = [];
         $this->palettes     = [];
         $this->objects      = [];
@@ -111,7 +108,7 @@ final class PgsParser extends SubtitleParser
             $this->addCue($this->shownImage["start"] + $this->options->lastCueDuration);
         }
 
-        return $this->subtitle->addCues($this->cues);
+        return (new Subtitle())->addCues($this->cues);
     }
 
 

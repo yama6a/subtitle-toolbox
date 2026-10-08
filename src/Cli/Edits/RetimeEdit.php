@@ -16,11 +16,11 @@ use SubtitleToolbox\Subtitle;
 final class RetimeEdit extends Edit
 {
     private function __construct(
-        private readonly ?float $shift = null,
-        private readonly ?float $shiftAfter = null,
-        private readonly ?float $scale = null,
-        private readonly ?float $fromFps = null,
-        private readonly ?float $toFps = null,
+        private readonly ?float $shift,
+        private readonly ?float $shiftAfter,
+        private readonly ?float $scale,
+        private readonly ?float $fromFps,
+        private readonly ?float $toFps,
     ) {
     }
 

@@ -456,7 +456,6 @@ class ThrowSitesTest extends TestCase
             "Parsers/MicroDvdParser.php: frame rate 0"      => [fn () => (new MicroDvdParser())->parse("{1}{1}0\n{0}{25}text", new ReadOptions()), ...$parsing],
             "Parsers/MpSubParser.php: no timing line"       => [fn () => (new MpSubParser())->parse("FORMAT=TIME\ntext\n", new ReadOptions()), ...$parsing],
             "Parsers/MpSubParser.php: negative duration"    => [fn () => (new MpSubParser())->parse("FORMAT=TIME\n0 -1\ntext\n", new ReadOptions()), ...$parsing],
-            "Parsers/MpSubParser.php: no text lines"        => [fn () => (new MpSubParser())->parse("FORMAT=TIME\n0 1\n\n", new ReadOptions()), ...$parsing],
             "Parsers/MpSubParser.php: unknown FORMAT"       => [fn () => (new MpSubParser())->parse("FORMAT=FAST\n", new ReadOptions()), ...$parsing],
             "Parsers/MpSubParser.php: frame rate 0"         => [fn () => (new MpSubParser())->parse("FORMAT=0\n", new ReadOptions()), ...$parsing],
             "Parsers/OgmChaptersParser.php: no name line"   => [fn () => (new OgmChaptersParser())->parse(

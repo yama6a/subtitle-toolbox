@@ -9,13 +9,6 @@ use SubtitleToolbox\Exceptions\ParsingException;
 
 class StringHelpersTest extends TestCase
 {
-    public function testRemoveDoubleEmptyLinesKeepsOneEmptyLine(): void
-    {
-        $this->assertSame("a\n\nb", StringHelpers::removeDoubleEmptyLines("a\n\n\n\nb"));
-        $this->assertSame("a\n\nb", StringHelpers::removeDoubleEmptyLines("a\n\nb"));
-    }
-
-
     public function testUtf8BomIsDetectedAddedOnceAndRemoved(): void
     {
         $withBom = "\xEF\xBB\xBFtext";

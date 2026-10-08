@@ -21,19 +21,17 @@ use SubtitleToolbox\SubtitleCue;
  */
 final class SccParser extends SubtitleParser
 {
+    protected const FORMAT_OPTIONS = SccReadOptions::class;
     public const FORMAT_DATA_KEY = Format::Scc->value;
 
     /** @internal */
     public const HEADER = "Scenarist_SCC V1.0";
 
     // The values of the 3 caption modes appear as "mode" in the format data of a cue.
-    /** @internal */
-    public const MODE_POP_ON   = "pop-on";
-    /** @internal */
-    public const MODE_ROLL_UP  = "roll-up";
-    /** @internal */
-    public const MODE_PAINT_ON = "paint-on";
-    private const MODE_TEXT    = "text";
+    private const MODE_POP_ON   = "pop-on";
+    private const MODE_ROLL_UP  = "roll-up";
+    private const MODE_PAINT_ON = "paint-on";
+    private const MODE_TEXT     = "text";
 
     private const DEFAULT_ATTRIBUTES = ["color" => Cea608::WHITE, "italic" => false, "underline" => false];
 
@@ -64,12 +62,6 @@ final class SccParser extends SubtitleParser
 
     // "direct" for a change by paint-on or roll-up data, "replace" for EOC and EDM, or null for no change.
     private ?string $displayChange = null;
-
-
-    protected static function formatOptionsClass(): string
-    {
-        return SccReadOptions::class;
-    }
 
 
     protected function read(string $rawSubtitle): Subtitle

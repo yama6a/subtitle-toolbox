@@ -70,7 +70,7 @@ final class Resegmenter
         foreach (CueList::inStartOrder($subtitle->getCues()) as $cue) {
             $words = CueImage::isImageCue($cue) ? [] : self::words($cue);
             if ($words === []) {
-                $result        = [...$result, ...self::flush($group, $newCues, $options)];
+                $result[]      = self::flush($group, $newCues, $options);
                 $group         = [];
                 $result[]      = $cue;
                 $newCues[$cue] = $cue;
@@ -82,20 +82,20 @@ final class Resegmenter
                 if ($last !== null && ($last["cue"] !== $cue && !CueList::canJoin($last["cue"], $cue)
                     || round($word["start"] - $last["end"], 3) >= round($options->maxWordGap, 3)
                     || !self::groupFits([...$group, $word], $options))) {
-                    $result = [...$result, ...self::flush($group, $newCues, $options)];
-                    $group  = [];
+                    $result[] = self::flush($group, $newCues, $options);
+                    $group    = [];
                 }
 
                 $group[] = $word;
                 if ($word["endsSentence"]) {
-                    $result = [...$result, ...self::flush($group, $newCues, $options)];
-                    $group  = [];
+                    $result[] = self::flush($group, $newCues, $options);
+                    $group    = [];
                 }
             }
         }
-        $result = [...$result, ...self::flush($group, $newCues, $options)];
+        $result[] = self::flush($group, $newCues, $options);
 
-        $subtitle->replaceCues($result, CommentAnchors::remap($anchors, $newCues));
+        $subtitle->replaceCues(array_filter($result), CommentAnchors::remap($anchors, $newCues));
     }
 
 
@@ -482,13 +482,11 @@ final class Resegmenter
      *
      * @param list<array>                                 $group
      * @param \SplObjectStorage<SubtitleCue, SubtitleCue> $newCues
-     *
-     * @return list<SubtitleCue>
      */
-    private static function flush(array $group, \SplObjectStorage $newCues, ResegmentOptions $options): array
+    private static function flush(array $group, \SplObjectStorage $newCues, ResegmentOptions $options): ?SubtitleCue
     {
         if ($group === []) {
-            return [];
+            return null;
         }
 
         $first = $group[0];
@@ -504,6 +502,6 @@ final class Resegmenter
             }
         }
 
-        return [$cue];
+        return $cue;
     }
 }

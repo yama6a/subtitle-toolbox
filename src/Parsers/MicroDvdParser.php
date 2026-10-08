@@ -16,17 +16,12 @@ use SubtitleToolbox\SubtitleCue;
 
 final class MicroDvdParser extends SubtitleParser
 {
+    protected const FORMAT_OPTIONS = MicroDvdReadOptions::class;
     public const FORMAT_DATA_KEY = Format::MicroDvd->value;
 
     private const STYLE_TAGS = ["b", "i", "u", "s"];
 
     private const CUE_REGEX = '/^\{(\d+)\}\{(\d+)\}(.*)$/';
-
-
-    protected static function formatOptionsClass(): string
-    {
-        return MicroDvdReadOptions::class;
-    }
 
 
     protected function read(string $rawSubtitle): Subtitle

@@ -14,13 +14,8 @@ use SubtitleToolbox\SubtitleCue;
 // Spec: https://github.com/Podcastindex-org/podcast-namespace/blob/main/docs/examples/chapters/jsonChapters.md
 final class PodcastChaptersParser extends SubtitleParser
 {
+    protected const FORMAT_OPTIONS = ChapterReadOptions::class;
     public const FORMAT_DATA_KEY = Format::PodcastChapters->value;
-
-
-    protected static function formatOptionsClass(): string
-    {
-        return ChapterReadOptions::class;
-    }
 
 
     protected function read(string $rawSubtitle): Subtitle

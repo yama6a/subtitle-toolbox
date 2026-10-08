@@ -13,17 +13,12 @@ use SubtitleToolbox\SubtitleCue;
 
 final class PodcastTranscriptParser extends SubtitleParser
 {
+    protected const FORMAT_OPTIONS = TranscriptReadOptions::class;
     public const FORMAT_DATA_KEY = Format::PodcastTranscript->value;
 
     private const SEGMENT_FIELDS = ["speaker", "startTime", "endTime", "body"];
 
     private const SENTENCE_END = '/[.?!\x{2026}]["\'\x{201D}\x{2019})\]]*$/u';
-
-
-    protected static function formatOptionsClass(): string
-    {
-        return TranscriptReadOptions::class;
-    }
 
 
     /**

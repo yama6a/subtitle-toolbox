@@ -57,6 +57,22 @@ trait ArrayConversion
      */
     public static function fromArray(array $data): self
     {
+        return self::fromArrayLeavingOut($data, [], static fn (ParsingException $exception): never => throw $exception);
+    }
+
+
+    /**
+     * Builds a subtitle as fromArray() does, but passes each bad cue, comment, metadata field and format data entry to
+     * $reject and leaves it out. It also leaves out the cues in $skippedCues. The comments after a left-out cue move
+     * up by one cue, so they stay before the same cue.
+     *
+     * @internal
+     *
+     * @param array<int, true>                                     $skippedCues
+     * @param \Closure(ParsingException, string, int|string): void $reject      gets the error, the top-level field and the key of the entry
+     */
+    public static function fromArrayLeavingOut(array $data, array $skippedCues, \Closure $reject): self
+    {
         if (!array_key_exists("version", $data)) {
             throw new ParsingException("The field version is missing.");
         }
@@ -66,12 +82,23 @@ trait ArrayConversion
 
         $subtitle = new self();
         foreach (self::arrayConversionMap($data, "metadata") as $key => $value) {
-            if (!is_string($value)) {
-                throw new ParsingException("The field metadata.$key must be a string.");
+            try {
+                if (!is_string($value)) {
+                    throw new ParsingException("The field metadata.$key must be a string.");
+                }
+            } catch (ParsingException $exception) {
+                $reject($exception, "metadata", $key);
+                continue;
             }
             $subtitle->setMetadata((string)$key, $value);
         }
-        foreach (self::arrayConversionFormatData($data, "formatData") as $format => $formatData) {
+        foreach (self::arrayConversionMap($data, "formatData") as $format => $formatData) {
+            try {
+                self::arrayConversionCheckFormatData($format, $formatData, "formatData.$format", false);
+            } catch (ParsingException $exception) {
+                $reject($exception, "formatData", $format);
+                continue;
+            }
             $subtitle->setFormatData($format, $formatData);
         }
 
@@ -79,21 +106,35 @@ trait ArrayConversion
             throw new ParsingException("The field cues must be a list.");
         }
         foreach ($data["cues"] as $index => $cueData) {
-            $subtitle->cues[] = self::arrayConversionCue($cueData, "cues[$index]");
+            if (isset($skippedCues[$index])) {
+                continue;
+            }
+            try {
+                $subtitle->cues[] = self::arrayConversionCue($cueData, "cues[$index]");
+            } catch (ParsingException $exception) {
+                $reject($exception, "cues", $index);
+                $skippedCues[$index] = true;
+            }
         }
 
         foreach (self::arrayConversionList($data, "comments") as $index => $comment) {
             $path = "comments[$index]";
-            if (!is_array($comment)) {
-                throw new ParsingException("The field $path must be an object.");
+            try {
+                if (!is_array($comment)) {
+                    throw new ParsingException("The field $path must be an object.");
+                }
+                if (!is_string($comment["text"] ?? null)) {
+                    throw new ParsingException("The field $path.text must be a string.");
+                }
+                if (!is_int($comment["beforeCueIndex"] ?? null) || $comment["beforeCueIndex"] < 0) {
+                    throw new ParsingException("The field $path.beforeCueIndex must be an integer of 0 or more.");
+                }
+            } catch (ParsingException $exception) {
+                $reject($exception, "comments", $index);
+                continue;
             }
-            if (!is_string($comment["text"] ?? null)) {
-                throw new ParsingException("The field $path.text must be a string.");
-            }
-            if (!is_int($comment["beforeCueIndex"] ?? null) || $comment["beforeCueIndex"] < 0) {
-                throw new ParsingException("The field $path.beforeCueIndex must be an integer of 0 or more.");
-            }
-            $subtitle->addComment($comment["text"], $comment["beforeCueIndex"]);
+            $before = $comment["beforeCueIndex"];
+            $subtitle->addComment($comment["text"], $before - count(array_filter(array_keys($skippedCues), fn (int $cue): bool => $cue < $before)));
         }
 
         return $subtitle;
@@ -138,7 +179,8 @@ trait ArrayConversion
             ->setIdentifier($identifier)
             ->setAlignment($alignment)
             ->setForced($forced);
-        foreach (self::arrayConversionFormatData($cueData, "formatData", "$path.") as $format => $formatData) {
+        foreach (self::arrayConversionMap($cueData, "formatData", "$path.") as $format => $formatData) {
+            self::arrayConversionCheckFormatData($format, $formatData, "$path.formatData.$format", true);
             $cue->setFormatData($format, $formatData);
         }
 
@@ -146,23 +188,15 @@ trait ArrayConversion
     }
 
 
-    /**
-     * @return array<string, array>
-     */
-    private static function arrayConversionFormatData(array $data, string $key, string $pathPrefix = ""): array
+    private static function arrayConversionCheckFormatData(int|string $format, mixed $value, string $path, bool $isCue): void
     {
-        $formatData = self::arrayConversionMap($data, $key, $pathPrefix);
-        foreach ($formatData as $format => $value) {
-            if (!is_array($value)) {
-                throw new ParsingException("The field $pathPrefix$key.$format must be an object.");
-            }
-            $problem = FormatDataSchema::problem((string) $format, $value, "$pathPrefix$key.$format", $pathPrefix !== "");
-            if ($problem !== null) {
-                throw new ParsingException($problem);
-            }
+        if (!is_array($value)) {
+            throw new ParsingException("The field $path must be an object.");
         }
-
-        return $formatData;
+        $problem = $isCue ? FormatDataSchema::checkCue((string) $format, $value, $path) : FormatDataSchema::checkFile((string) $format, $value, $path);
+        if ($problem !== null) {
+            throw new ParsingException($problem);
+        }
     }
 
 
@@ -185,4 +219,5 @@ trait ArrayConversion
         }
 
         return $value;
-    }}
+    }
+}

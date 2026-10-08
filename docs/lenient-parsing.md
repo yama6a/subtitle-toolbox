@@ -43,7 +43,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | JSON | a cue with a bad field. The parser also drops a bad metadata field, a bad comment and the bad format data of one format. Their warnings have `blockIndex` null | cues |
 | Whisper JSON | a segment without `start`, `end` or `text`, or with a time that is negative or not a finite number | segments |
 | YouTube timed text | an event or element with a bad or negative time, for example `"tStartMs": -5000` | events or elements |
-| Amazon Transcribe, Deepgram, AssemblyAI, Google | a word, segment, utterance, sentence or result with a bad or negative time or a bad text. Also a Google result whose `alternatives` is not a list of objects | the index in its list |
+| Amazon Transcribe, Deepgram, AssemblyAI, Google | a word, segment, utterance, sentence or result with a bad or negative time or a bad text. Also a Google result whose `alternatives` is not a list of objects | the index in its own list. Each list starts at 0, for example the sentences of each Deepgram paragraph. So 2 warnings can have the same `blockIndex` |
 | Podcasting 2.0 transcript JSON | a segment with a bad field, for example `"startTime": -5` | segments |
 | HTML transcript | a paragraph with a bad time or without a `<time>` | the paragraphs that each `<cite>` or `<time>` starts |
 

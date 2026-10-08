@@ -19,8 +19,6 @@ final class AssParser extends SubtitleParser
     // A tag ends at the next backslash, except inside parentheses such as \t(\1c&HFF&).
     private const OVERRIDE_TAG_REGEX = '/\\\\[^\\\\(]*(?<args>\((?:[^()]++|(?&args))*\))?[^\\\\]*/';
 
-    private int $eventIndex = 0;
-
     /** @var list<SubtitleCue> */
     private array $cues = [];
 
@@ -30,9 +28,8 @@ final class AssParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        $this->eventIndex = 0;
-        $this->cues       = [];
-        $this->comments   = [];
+        $this->cues     = [];
+        $this->comments = [];
 
         $subtitle = new Subtitle();
         $data     = [
@@ -47,7 +44,8 @@ final class AssParser extends SubtitleParser
             "sections"           => [],
         ];
 
-        $section = null;
+        $section    = null;
+        $eventIndex = 0;
         foreach ($this->lines($rawSubtitle) as $lineIndex => $line) {
             $line = trim($line);
             if ($line === "") {
@@ -60,6 +58,9 @@ final class AssParser extends SubtitleParser
                 if ($this->isStylesSection($section)) {
                     $data["stylesSection"] = $section;
                 }
+                if (strcasecmp($section, "Events") === 0) {
+                    $data["eventFormat"] ??= $this->isSsa($data) ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT;
+                }
                 continue;
             }
 
@@ -70,7 +71,7 @@ final class AssParser extends SubtitleParser
             match (true) {
                 strcasecmp($section, "Script Info") === 0 => $this->readScriptInfoLine($subtitle, $data, $line),
                 $this->isStylesSection($section)          => $this->readStyleLine($data, $section, $line),
-                strcasecmp($section, "Events") === 0      => $this->readEventLine($data, $line, $lineIndex + 1),
+                strcasecmp($section, "Events") === 0      => $this->readEventLine($data, $line, $lineIndex + 1, $eventIndex),
                 default                                   => $data["sections"][$section][] = $line,
             };
         }
@@ -79,7 +80,6 @@ final class AssParser extends SubtitleParser
             throw new ParsingException("The subtitle has no [Events] section.");
         }
 
-        $data["eventFormat"] ??= $this->isSsa($data) ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT;
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, $data);
 
         return CommentAnchors::addParsed($subtitle, $this->cues, $this->comments);
@@ -119,7 +119,7 @@ final class AssParser extends SubtitleParser
     }
 
 
-    private function readEventLine(array &$data, string $line, int $lineNumber): void
+    private function readEventLine(array &$data, string $line, int $lineNumber, int &$eventIndex): void
     {
         [$type, $value] = $this->splitDescriptor($line);
         if (strcasecmp($type, "Format") === 0) {
@@ -136,16 +136,15 @@ final class AssParser extends SubtitleParser
         try {
             $this->readEvent($data, $line, $lineNumber, $value, $isComment);
         } catch (ParsingException $exception) {
-            $this->fail($exception, $lineNumber, $this->eventIndex, [$line]);
+            $this->fail($exception, $lineNumber, $eventIndex, [$line]);
         }
-        $this->eventIndex++;
+        $eventIndex++;
     }
 
 
     private function readEvent(array &$data, string $line, int $lineNumber, string $value, bool $isComment): void
     {
-        $format = $data["eventFormat"] ?? ($this->isSsa($data) ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT);
-        $fields = $this->combine($format, $value, false);
+        $fields = $this->combine($data["eventFormat"], $value, false);
         if ($fields === null) {
             throw new ParsingException("The line \"$line\" has fewer fields than the Format line of the [Events] section.", $lineNumber);
         }

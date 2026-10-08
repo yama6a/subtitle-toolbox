@@ -24,6 +24,13 @@ use SubtitleToolbox\SubtitleCue;
  */
 abstract class SubtitleParser
 {
+    /**
+     * The FormatReadOptions class that this parser reads from ReadOptions::$format, or null for none.
+     *
+     * @var class-string<FormatReadOptions>|null
+     */
+    protected const FORMAT_OPTIONS = null;
+
     // parse() strips the UTF-8 BOM of a text format only.
     protected const BINARY = false;
 
@@ -54,18 +61,7 @@ abstract class SubtitleParser
 
 
     /**
-     * Returns the FormatReadOptions class that this parser reads from ReadOptions::$format, or null for none.
-     *
-     * @return class-string<FormatReadOptions>|null
-     */
-    protected static function formatOptionsClass(): ?string
-    {
-        return null;
-    }
-
-
-    /**
-     * Returns ReadOptions::$format, or the defaults of formatOptionsClass() when it is null. useOptions() builds the
+     * Returns ReadOptions::$format, or the defaults of FORMAT_OPTIONS when it is null. useOptions() builds the
      * defaults once per read.
      */
     protected function formatOptions(): FormatReadOptions
@@ -82,7 +78,7 @@ abstract class SubtitleParser
      */
     public function useOptions(ReadOptions $options): static
     {
-        $class = static::formatOptionsClass();
+        $class = static::FORMAT_OPTIONS;
         if ($options->format !== null && ($class === null || !$options->format instanceof $class)) {
             $parser = $this->shortName(static::class);
             $given  = $this->shortName($options->format::class);

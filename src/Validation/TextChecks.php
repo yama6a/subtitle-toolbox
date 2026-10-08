@@ -25,26 +25,26 @@ final class TextChecks
         $counts  = [];
 
         if ($rules->noDoubleSpaces) {
-            $counts[ValidationRule::NoDoubleSpaces->value] = [array_sum(array_map(
+            $counts[] = [ValidationRule::NoDoubleSpaces, array_sum(array_map(
                 fn (string $line): int => self::count('/(?<=\S)\h{2,}(?=\S)/u', '/(?<=\S)[ \t]{2,}(?=\S)/', $line),
                 $visible
             )), null];
         }
 
         if ($rules->noLeadingOrTrailingSpaces) {
-            $counts[ValidationRule::NoLeadingOrTrailingSpaces->value] = [count(array_filter(
+            $counts[] = [ValidationRule::NoLeadingOrTrailingSpaces, count(array_filter(
                 $visible,
                 fn (string $line): bool => self::count('/^\h|\h$/u', '/^[ \t]|[ \t]$/', $line) > 0
             )), null];
         }
 
         if ($rules->noUnbalancedTags) {
-            $counts[ValidationRule::NoUnbalancedTags->value] = [self::unbalancedTags(implode("\n", $cue->getLines())), null];
+            $counts[] = [ValidationRule::NoUnbalancedTags, self::unbalancedTags(implode("\n", $cue->getLines())), null];
         }
 
         if ($rules->dialogueDashStyle !== null) {
             $style = '/^' . preg_quote($rules->dialogueDashStyle->value, "/") . '(?=\S)/u';
-            $counts[ValidationRule::DialogueDashStyle->value] = [count(array_filter(
+            $counts[] = [ValidationRule::DialogueDashStyle, count(array_filter(
                 $visible,
                 fn (string $line): bool => self::startsWithDialogueDash($line) && preg_match($style, ltrim($line)) !== 1
             )), null];
@@ -53,7 +53,7 @@ final class TextChecks
         if ($rules->maxSpeakersPerCue !== null) {
             $speakers = self::speakers($cue->getLines(), $visible);
             if ($speakers > $rules->maxSpeakersPerCue) {
-                $counts[ValidationRule::MaxSpeakersPerCue->value] = [$speakers, $rules->maxSpeakersPerCue];
+                $counts[] = [ValidationRule::MaxSpeakersPerCue, $speakers, $rules->maxSpeakersPerCue];
             }
         }
 
@@ -61,34 +61,34 @@ final class TextChecks
         if ($rules->maxWordsPerMinute !== null && $words > 0) {
             $wordsPerMinute = $duration > 0 ? $words / $duration * 60 : INF;
             if ($wordsPerMinute > $rules->maxWordsPerMinute) {
-                $counts[ValidationRule::MaxWordsPerMinute->value] = [$wordsPerMinute, $rules->maxWordsPerMinute];
+                $counts[] = [ValidationRule::MaxWordsPerMinute, $wordsPerMinute, $rules->maxWordsPerMinute];
             }
         }
 
         // Cue times have millisecond precision, so compare the duration with the needed time in milliseconds.
         if ($rules->minSecondsPerWord !== null && $words > 0 && $duration < round($rules->minSecondsPerWord * $words, 3)) {
-            $counts[ValidationRule::MinSecondsPerWord->value] = [$duration / $words, $rules->minSecondsPerWord];
+            $counts[] = [ValidationRule::MinSecondsPerWord, $duration / $words, $rules->minSecondsPerWord];
         }
 
         if ($rules->allowedCharacters !== null) {
-            $counts[ValidationRule::AllowedCharacters->value] = [array_sum(array_map(
+            $counts[] = [ValidationRule::AllowedCharacters, array_sum(array_map(
                 fn (string $line): int => self::disallowedCharacters($line, $rules->allowedCharacters),
                 $visible
             )), null];
         }
 
         if ($rules->noAllCapsLines) {
-            $counts[ValidationRule::NoAllCapsLines->value] = [count(array_filter(
+            $counts[] = [ValidationRule::NoAllCapsLines, count(array_filter(
                 $visible,
                 fn (string $line): bool => self::isAllCaps($line)
             )), null];
         }
 
         $results = [];
-        foreach ($counts as $rule => [$value, $limit]) {
+        foreach ($counts as [$rule, $value, $limit]) {
             // A count rule gives the int 0 for a cue without problems. A limit rule is only set when the cue breaks it.
             if ($value !== 0) {
-                $results[] = new ValidationViolation($cueIndex, ValidationRule::from($rule), $value, $limit);
+                $results[] = new ValidationViolation($cueIndex, $rule, $value, $limit);
             }
         }
 

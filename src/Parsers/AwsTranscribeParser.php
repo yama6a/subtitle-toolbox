@@ -6,12 +6,14 @@ namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\Subtitle;
 
 final class AwsTranscribeParser extends SubtitleParser
 {
     use WordGrouping;
 
+    protected const FORMAT_OPTIONS = TranscriptReadOptions::class;
     public const FORMAT_DATA_KEY = Format::AwsTranscribe->value;
 
 

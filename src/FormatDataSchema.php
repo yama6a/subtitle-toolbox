@@ -5,6 +5,21 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\Parsers\AssParser;
+use SubtitleToolbox\Parsers\CsvParser;
+use SubtitleToolbox\Parsers\EbuStlParser;
+use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
+use SubtitleToolbox\Parsers\IttParser;
+use SubtitleToolbox\Parsers\LyricsParser;
+use SubtitleToolbox\Parsers\MicroDvdParser;
+use SubtitleToolbox\Parsers\MpSubParser;
+use SubtitleToolbox\Parsers\SamiParser;
+use SubtitleToolbox\Parsers\SccParser;
+use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Parsers\SubViewerParser;
+use SubtitleToolbox\Parsers\TtmlParser;
+use SubtitleToolbox\Parsers\WebVttParser;
 
 /**
  * FormatDataSchema checks the types of the format data fields that the formatters read, so that setFormatData(),
@@ -30,18 +45,18 @@ final class FormatDataSchema
     private const TTI_BLOCKS = ["list", "ttiBlock"];
 
     private const FILE = [
-        "ass"        => [
+        AssParser::FORMAT_DATA_KEY                => [
             "sectionOrder"       => self::STRINGS,
             "scriptInfoComments" => self::STRINGS,
-            "scriptInfo"         => ["list", "string"],
+            "scriptInfo"         => self::STRINGS,
             "stylesSection"      => "?string",
             "styleFormat"        => ["?list", "string"],
-            "styles"             => ["list", ["list", "string"]],
+            "styles"             => ["list", self::STRINGS],
             "eventFormat"        => self::STRINGS,
             "commentEvents"      => ["list", self::ATTRIBUTES],
             "sections"           => ["list", self::STRINGS],
         ],
-        "csv"        => [
+        CsvParser::FORMAT_DATA_KEY                => [
             "delimiter"  => "string",
             "!header"    => ["?list", "string"],
             "!roles"     => ["keys", ["identifier", "start", "end", "duration", "speaker", "text"], ["range", 0, 999]],
@@ -49,67 +64,67 @@ final class FormatDataSchema
             "timeFormat" => "string",
             "frameRate"  => "?number",
         ],
-        "ffmeta-chapters" => [
+        FfMetadataChaptersParser::FORMAT_DATA_KEY => [
             "tags"    => ["list", "?string"],
-            "streams" => ["list", ["list", "string"]],
+            "streams" => ["list", self::STRINGS],
         ],
-        "itt"        => [
+        IttParser::FORMAT_DATA_KEY                => [
             "frameRate"           => "string",
             "frameRateMultiplier" => "string",
         ],
-        "lrc"        => [
-            "idTags" => ["list", "string"],
+        LyricsParser::FORMAT_DATA_KEY             => [
+            "idTags" => self::STRINGS,
         ],
-        "microdvd"   => [
+        MicroDvdParser::FORMAT_DATA_KEY           => [
             "frameRate" => "number",
         ],
-        "mpsub"      => "strings",
-        "sami"       => [
+        MpSubParser::FORMAT_DATA_KEY              => "strings",
+        SamiParser::FORMAT_DATA_KEY               => [
             "style"     => "?string",
             "class"     => "?string",
             "samiParam" => "?string",
         ],
-        "scc"        => [
+        SccParser::FORMAT_DATA_KEY                => [
             "dropFrame" => "bool",
         ],
-        "stl"        => [
-            "gsi"                        => ["list", "string"],
+        EbuStlParser::FORMAT_DATA_KEY             => [
+            "gsi"                        => self::STRINGS,
             "startOfProgrammeSubtracted" => "bool",
             "firstSubtitleNumber"        => "?int",
             "comments"                   => ["list", ["object", ["!text" => "string", "!blocks" => self::TTI_BLOCKS]]],
         ],
-        "subviewer"  => [
-            "header" => ["list", "string"],
+        SubViewerParser::FORMAT_DATA_KEY          => [
+            "header" => self::STRINGS,
             "style"  => "?string",
         ],
-        "ttml"       => [
+        TtmlParser::FORMAT_DATA_KEY               => [
             "namespace"  => "string",
             "namespaces" => self::ATTRIBUTES,
             "head"       => "string",
             "attributes" => self::ATTRIBUTES,
             "body"       => self::ATTRIBUTES,
         ],
-        "vtt"        => [
+        WebVttParser::FORMAT_DATA_KEY             => [
             "header"      => "string",
             "headerLines" => self::STRINGS,
-            "regions"     => ["list", ["list", "string"]],
+            "regions"     => ["list", self::STRINGS],
             "styles"      => self::STRINGS,
         ],
     ];
 
     private const CUE = [
-        "ass"        => [
+        AssParser::FORMAT_DATA_KEY                => [
             "fields" => self::ATTRIBUTES,
             "text"   => "string",
         ],
-        "csv"        => [
+        CsvParser::FORMAT_DATA_KEY                => [
             "columns" => ["list", "scalar"],
         ],
-        "ffmeta-chapters" => [
+        FfMetadataChaptersParser::FORMAT_DATA_KEY => [
             "timeBase" => "timeBase",
-            "tags"     => ["list", "string"],
+            "tags"     => self::STRINGS,
         ],
-        "image"      => [
+        CueImage::FORMAT_DATA_KEY                 => [
             "png"          => "string",
             "x"            => "int",
             "y"            => "int",
@@ -119,30 +134,30 @@ final class FormatDataSchema
             "screenHeight" => "int",
             "forced"       => "bool",
         ],
-        "lrc"        => [
+        LyricsParser::FORMAT_DATA_KEY             => [
             "endLine" => "bool",
         ],
-        "microdvd"   => [
+        MicroDvdParser::FORMAT_DATA_KEY           => [
             "lines" => ["list", ["object", ["!codes" => "string", "!color" => "?string", "!tags" => self::STRINGS, "otherCodes" => "string"]]],
         ],
-        "sami"       => [
+        SamiParser::FORMAT_DATA_KEY               => [
             "paragraphs" => ["list", ["object", ["!attributes" => self::ATTRIBUTES, "!html" => "string"]]],
         ],
-        "srt"        => [
+        SubRipParser::FORMAT_DATA_KEY             => [
             "coordinates" => ["object", ["!x1" => "int", "!x2" => "int", "!y1" => "int", "!y2" => "int"]],
         ],
-        "stl"        => [
+        EbuStlParser::FORMAT_DATA_KEY             => [
             "subtitleGroupNumber" => "int",
             "cumulativeStatus"    => "int",
             "verticalPosition"    => "int",
             "justificationCode"   => "int",
             "blocks"              => self::TTI_BLOCKS,
         ],
-        "ttml"       => [
+        TtmlParser::FORMAT_DATA_KEY               => [
             "attributes" => self::ATTRIBUTES,
             "div"        => self::ATTRIBUTES,
         ],
-        "vtt"        => [
+        WebVttParser::FORMAT_DATA_KEY             => [
             "vertical" => "string",
             "line"     => "string",
             "position" => "string",
@@ -154,19 +169,26 @@ final class FormatDataSchema
 
 
     /**
-     * Returns the error message for the first field of $data, the format data under format data key $key, that has the
-     * wrong type, or null when every field has the right type.
+     * Returns the error message for the first field of $data, the file format data under format data key $key, that
+     * has the wrong type, or null when every field has the right type.
+     *
+     * @param string $path the path of $data, for example "formatData.ass"
+     */
+    public static function checkFile(string $key, array $data, string $path): ?string
+    {
+        return self::check(self::FILE[$key] ?? null, $data, $path);
+    }
+
+
+    /**
+     * Returns the error message for the first field of $data, the cue format data under format data key $key, that has
+     * the wrong type, or null when every field has the right type.
      *
      * @param string $path the path of $data, for example "cues[3].formatData.ass"
      */
-    public static function problem(string $key, array $data, string $path, bool $isCue): ?string
+    public static function checkCue(string $key, array $data, string $path): ?string
     {
-        $fields = ($isCue ? self::CUE : self::FILE)[$key] ?? null;
-        if ($fields === "strings") {
-            return self::checkType(["list", "string"], $data, $path);
-        }
-
-        return $fields !== null && $data !== [] ? self::checkType(["object", $fields], $data, $path) : null;
+        return self::check(self::CUE[$key] ?? null, $data, $path);
     }
 
 
@@ -178,7 +200,7 @@ final class FormatDataSchema
      */
     public static function withData(array $formatData, string $key, array $data, bool $isCue): array
     {
-        $problem = self::problem($key, $data, "formatData.$key", $isCue);
+        $problem = $isCue ? self::checkCue($key, $data, "formatData.$key") : self::checkFile($key, $data, "formatData.$key");
         if ($problem !== null) {
             throw new InvalidArgumentException($problem);
         }
@@ -192,16 +214,27 @@ final class FormatDataSchema
     }
 
 
-    private static function checkType(string|array $type, mixed $value, string $path): ?string
+    /**
+     * @param array<string, string|array>|"strings"|null $fields
+     */
+    private static function check(array|string|null $fields, array $data, string $path): ?string
     {
-        if (is_string($type) && str_starts_with($type, "?")) {
-            return $value === null ? null : self::checkType(substr($type, 1), $value, $path);
-        }
-        if (is_array($type) && str_starts_with($type[0], "?")) {
-            return $value === null ? null : self::checkType([substr($type[0], 1), ...array_slice($type, 1)], $value, $path);
+        if ($fields === "strings") {
+            return self::checkType(self::STRINGS, $data, $path);
         }
 
-        $valid = match (is_array($type) ? $type[0] : $type) {
+        return $fields !== null && $data !== [] ? self::checkType(["object", $fields], $data, $path) : null;
+    }
+
+
+    private static function checkType(string|array $type, mixed $value, string $path): ?string
+    {
+        $name = is_array($type) ? $type[0] : $type;
+        if (str_starts_with($name, "?")) {
+            return $value === null ? null : self::checkType(is_array($type) ? [substr($name, 1), ...array_slice($type, 1)] : substr($name, 1), $value, $path);
+        }
+
+        $valid = match ($name) {
             "string"   => is_string($value),
             "int"      => is_int($value),
             "bool"     => is_bool($value),
