@@ -94,7 +94,7 @@ final class TtmlFormatter extends SubtitleFormatter
         $document     = XmlLoader::xml("<tt$declarations>$headXml</tt>");
         $head         = $document?->documentElement->firstChild;
         if (!$head instanceof DOMElement || $head->localName !== "head") {
-            throw new UnwritableContentException("The stored TTML head is not a well-formed <head> element!");
+            throw new UnwritableContentException("The stored TTML head is not a well-formed <head> element.");
         }
 
         $context = new TtmlContext($namespace, $namespaces, $tts, $ttm, $document, $head);

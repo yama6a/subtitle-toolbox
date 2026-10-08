@@ -42,7 +42,7 @@ final class CsvFormatter extends SubtitleFormatter
         $fps        = $csv->frameRate ?? $data["frameRate"] ?? null;
         $frameRate  = $fps === null ? null : new FrameRate($fps);
         if ($timeFormat === CsvTimeFormat::Frames && $frameRate === null) {
-            throw new InvalidArgumentException("The time format " . CsvTimeFormat::Frames->value . " needs CsvWriteOptions::\$frameRate.");
+            throw new InvalidArgumentException("The time format " . CsvTimeFormat::Frames->value . " needs a frame rate. Set CsvWriteOptions::\$frameRate.");
         }
         $second = $csv->secondText;
 

@@ -50,7 +50,7 @@ final class TimestampMap
     public static function fromHeader(string $line): self
     {
         if (!self::isHeader($line)) {
-            throw new ParsingException("The line does not start with " . self::HEADER_NAME . "=: $line");
+            throw new ParsingException("The line \"$line\" does not start with " . self::HEADER_NAME . "=.");
         }
 
         $attributes = [];
@@ -61,8 +61,8 @@ final class TimestampMap
 
         if (!preg_match("/^\d+$/", $attributes["MPEGTS"] ?? "")
             || !preg_match(self::LOCAL_PATTERN, $attributes["LOCAL"] ?? "", $local)) {
-            throw new ParsingException("The " . self::HEADER_NAME . " header needs a LOCAL cue time and an " .
-                                       "integer MPEGTS value: $line");
+            throw new ParsingException("The " . self::HEADER_NAME . " header \"$line\" needs a LOCAL cue time and an " .
+                                       "integer MPEGTS value.");
         }
 
         $seconds = Timecode::toSeconds((int) $local[1], (int) $local[2], (int) $local[3], $local[4]);

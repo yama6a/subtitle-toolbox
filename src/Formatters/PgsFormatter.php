@@ -270,7 +270,7 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
 
     private function cueError(SubtitleCue $cue, string $reason): string
     {
-        return "Cannot write cue [{$cue->getStart()} >>> {$cue->getEnd()}] as PGS - $reason!";
+        return "Cannot write cue {$cue->getStart()} to {$cue->getEnd()} as PGS: $reason.";
     }
 
 
