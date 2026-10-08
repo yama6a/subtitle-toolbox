@@ -31,6 +31,42 @@ final class EbuStlParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
+        $rawSubtitle = $this->cutIncompleteBlock($rawSubtitle);
+        $gsi         = self::checkedGsi($rawSubtitle);
+        $frameRate   = new FrameRate(EbuStl::FRAME_RATES[$gsi["DFC"]]);
+        $offset      = $this->formatOptions()->subtractStartOfProgramme ? EbuStl::timeCodeToSeconds($gsi["TCP"], $frameRate) : 0.0;
+        $sets        = self::readSubtitleSets(substr($rawSubtitle, EbuStl::GSI_BLOCK_SIZE));
+
+        $subtitle = new Subtitle();
+        $title    = rtrim($gsi["OPT"], " \0");
+        $subtitle->setMetadata(Subtitle::METADATA_TITLE, $title === "" ? null : $title);
+        $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, EbuStl::LANGUAGES[strtoupper($gsi["LC"])] ?? null);
+
+        $read = $this->readSets($sets, $gsi, $frameRate, $offset);
+        CommentAnchors::addParsed($subtitle, $read["cues"], $read["cueComments"]);
+
+        $subtitle->setFormatData(self::FORMAT_DATA_KEY, [
+            "gsi"                        => $gsi,
+            "startOfProgrammeSubtracted" => $this->formatOptions()->subtractStartOfProgramme,
+            "firstSubtitleNumber"        => $sets === [] ? null : unpack("v", $sets[0][0], EbuStl::TTI_SN)[1],
+            "comments"                   => $read["comments"],
+            "counts"                     => [
+                "TNB" => intdiv(strlen($rawSubtitle) - EbuStl::GSI_BLOCK_SIZE, EbuStl::TTI_BLOCK_SIZE),
+                "TNS" => count($subtitle->getCues()),
+                "TNG" => count($read["groups"]),
+                "TCF" => $read["firstTimeIn"] ?? "00000000",
+            ],
+        ]);
+
+        return $subtitle;
+    }
+
+
+    /**
+     * Fails on a file shorter than the GSI block. Cuts an incomplete last TTI block, or fails on it when not lenient.
+     */
+    private function cutIncompleteBlock(string $rawSubtitle): string
+    {
         if (strlen($rawSubtitle) < EbuStl::GSI_BLOCK_SIZE) {
             throw new ParsingException("An EBU STL file starts with a GSI block of " . EbuStl::GSI_BLOCK_SIZE . " bytes.");
         }
@@ -44,6 +80,15 @@ final class EbuStlParser extends SubtitleParser
             $rawSubtitle = substr($rawSubtitle, 0, $cutLength);
         }
 
+        return $rawSubtitle;
+    }
+
+
+    /**
+     * @return array<string, string>
+     */
+    private static function checkedGsi(string $rawSubtitle): array
+    {
         $gsi = EbuStl::readGsi(substr($rawSubtitle, 0, EbuStl::GSI_BLOCK_SIZE));
         if (!isset(EbuStl::FRAME_RATES[$gsi["DFC"]])) {
             throw new ParsingException("The disk format code \"{$gsi["DFC"]}\" is not STL25.01 or STL30.01.");
@@ -53,22 +98,23 @@ final class EbuStlParser extends SubtitleParser
             throw new ParsingException("The character code table \"{$gsi["CCT"]}\" is not 00, 01, 02, 03 or 04.");
         }
 
-        $frameRate = new FrameRate(EbuStl::FRAME_RATES[$gsi["DFC"]]);
-        $offset    = $this->formatOptions()->subtractStartOfProgramme ? EbuStl::timeCodeToSeconds($gsi["TCP"], $frameRate) : 0.0;
-        $sets      = self::readSubtitleSets(substr($rawSubtitle, EbuStl::GSI_BLOCK_SIZE));
-        $maxRow    = EbuStl::maxRow($gsi);
+        return $gsi;
+    }
 
-        $subtitle   = new Subtitle();
-        $parsedCues = [];
-        $title      = rtrim($gsi["OPT"], " \0");
-        $subtitle->setMetadata(Subtitle::METADATA_TITLE, $title === "" ? null : $title);
-        $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, EbuStl::LANGUAGES[strtoupper($gsi["LC"])] ?? null);
 
-        $comments    = [];
-        $cueComments = [];
-        $groups      = [];
-        $firstTimeIn = null;
-        $blockIndex  = 0;
+    /**
+     * Reads the cues and the comments of the subtitle sets.
+     *
+     * @param list<list<string>>    $sets
+     * @param array<string, string> $gsi
+     *
+     * @return array{cues: list<SubtitleCue>, cueComments: list<array{string, int}>, comments: list<array{text: string, blocks: list<string>}>, groups: array<int, true>, firstTimeIn: ?string}
+     */
+    private function readSets(array $sets, array $gsi, FrameRate $frameRate, float $offset): array
+    {
+        $read       = ["cues" => [], "cueComments" => [], "comments" => [], "groups" => [], "firstTimeIn" => null];
+        $maxRow     = EbuStl::maxRow($gsi);
+        $blockIndex = 0;
         foreach ($sets as $blocks) {
             $header      = $blocks[0];
             $blockIndex += count($blocks);
@@ -77,57 +123,62 @@ final class EbuStlParser extends SubtitleParser
             if (ord($header[EbuStl::TTI_CF]) === 1) {
                 $lines = array_filter(array_map("trim", $lines), fn (string $line): bool => $line !== "");
                 $text  = Markup::plainText(implode("\n", $lines));
-                $cueComments[] = [$text, count($parsedCues)];
-                $comments[] = ["text" => $text, "blocks" => $hexes];
+                $read["cueComments"][] = [$text, count($read["cues"])];
+                $read["comments"][] = ["text" => $text, "blocks" => $hexes];
                 continue;
             }
 
             if ($this->options->lenient && !self::hasValidTimeCodes($header, $frameRate)) {
-                $this->warn(
-                    "Subtitle number " . unpack("v", $header, EbuStl::TTI_SN)[1] . " has a time code that is not valid: " .
-                    EbuStl::timeCodeDigits(substr($header, EbuStl::TTI_TCI, EbuStl::TIME_CODE_SIZE)) . " to " .
-                    EbuStl::timeCodeDigits(substr($header, EbuStl::TTI_TCO, EbuStl::TIME_CODE_SIZE)) . ".",
-                    null,
-                    $blockIndex - count($blocks),
-                    $hexes,
-                    ParseWarningAction::Skipped
-                );
+                $this->warnInvalidTimeCodes($header, $blockIndex - count($blocks), $hexes);
                 continue;
             }
 
-            $groups[ord($header[EbuStl::TTI_SGN])] = true;
-            $firstTimeIn ??= EbuStl::timeCodeDigits(substr($header, EbuStl::TTI_TCI, EbuStl::TIME_CODE_SIZE));
-
-            $start = max(0.0, self::timeCodeBytesToSeconds(substr($header, EbuStl::TTI_TCI, EbuStl::TIME_CODE_SIZE), $frameRate) - $offset);
-            $end   = max(0.0, self::timeCodeBytesToSeconds(substr($header, EbuStl::TTI_TCO, EbuStl::TIME_CODE_SIZE), $frameRate) - $offset);
-            $cue   = new SubtitleCue($start, $end, $lines);
-            $cue->setAlignment(EbuStl::alignment(ord($header[EbuStl::TTI_VP]), ord($header[EbuStl::TTI_JC]), $maxRow));
-            $cue->setFormatData(self::FORMAT_DATA_KEY, [
-                "subtitleGroupNumber" => ord($header[EbuStl::TTI_SGN]),
-                "cumulativeStatus"    => ord($header[EbuStl::TTI_CS]),
-                "verticalPosition"    => ord($header[EbuStl::TTI_VP]),
-                "justificationCode"   => ord($header[EbuStl::TTI_JC]),
-                "text"                => $cue->getText(),
-                "blocks"              => $hexes,
-            ]);
-            $parsedCues[] = $cue;
+            $read["groups"][ord($header[EbuStl::TTI_SGN])] = true;
+            $read["firstTimeIn"] ??= EbuStl::timeCodeDigits(substr($header, EbuStl::TTI_TCI, EbuStl::TIME_CODE_SIZE));
+            $read["cues"][] = self::cue($header, $lines, $hexes, $frameRate, $offset, $maxRow);
         }
-        CommentAnchors::addParsed($subtitle, $parsedCues, $cueComments);
 
-        $subtitle->setFormatData(self::FORMAT_DATA_KEY, [
-            "gsi"                        => $gsi,
-            "startOfProgrammeSubtracted" => $this->formatOptions()->subtractStartOfProgramme,
-            "firstSubtitleNumber"        => $sets === [] ? null : unpack("v", $sets[0][0], EbuStl::TTI_SN)[1],
-            "comments"                   => $comments,
-            "counts"                     => [
-                "TNB" => intdiv(strlen($rawSubtitle) - EbuStl::GSI_BLOCK_SIZE, EbuStl::TTI_BLOCK_SIZE),
-                "TNS" => count($subtitle->getCues()),
-                "TNG" => count($groups),
-                "TCF" => $firstTimeIn ?? "00000000",
-            ],
+        return $read;
+    }
+
+
+    /**
+     * @param list<string> $hexes
+     */
+    private function warnInvalidTimeCodes(string $header, int $blockIndex, array $hexes): void
+    {
+        $this->warn(
+            "Subtitle number " . unpack("v", $header, EbuStl::TTI_SN)[1] . " has a time code that is not valid: " .
+            EbuStl::timeCodeDigits(substr($header, EbuStl::TTI_TCI, EbuStl::TIME_CODE_SIZE)) . " to " .
+            EbuStl::timeCodeDigits(substr($header, EbuStl::TTI_TCO, EbuStl::TIME_CODE_SIZE)) . ".",
+            null,
+            $blockIndex,
+            $hexes,
+            ParseWarningAction::Skipped
+        );
+    }
+
+
+    /**
+     * @param list<string> $lines
+     * @param list<string> $hexes
+     */
+    private static function cue(string $header, array $lines, array $hexes, FrameRate $frameRate, float $offset, int $maxRow): SubtitleCue
+    {
+        $start = max(0.0, self::timeCodeBytesToSeconds(substr($header, EbuStl::TTI_TCI, EbuStl::TIME_CODE_SIZE), $frameRate) - $offset);
+        $end   = max(0.0, self::timeCodeBytesToSeconds(substr($header, EbuStl::TTI_TCO, EbuStl::TIME_CODE_SIZE), $frameRate) - $offset);
+        $cue   = new SubtitleCue($start, $end, $lines);
+        $cue->setAlignment(EbuStl::alignment(ord($header[EbuStl::TTI_VP]), ord($header[EbuStl::TTI_JC]), $maxRow));
+        $cue->setFormatData(self::FORMAT_DATA_KEY, [
+            "subtitleGroupNumber" => ord($header[EbuStl::TTI_SGN]),
+            "cumulativeStatus"    => ord($header[EbuStl::TTI_CS]),
+            "verticalPosition"    => ord($header[EbuStl::TTI_VP]),
+            "justificationCode"   => ord($header[EbuStl::TTI_JC]),
+            "text"                => $cue->getText(),
+            "blocks"              => $hexes,
         ]);
 
-        return $subtitle;
+        return $cue;
     }
 
 
