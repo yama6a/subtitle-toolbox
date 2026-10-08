@@ -40,13 +40,13 @@ final class PngDecoder
     public static function decode(string $png): array
     {
         if (!str_starts_with($png, self::SIGNATURE)) {
-            throw new InvalidArgumentException("Cannot decode the PNG - the data does not start with the PNG signature!");
+            throw new InvalidArgumentException("Cannot decode the PNG: the data does not start with the PNG signature.");
         }
 
         $chunks = self::readChunks($png);
         $header = $chunks["IHDR"][0] ?? "";
         if (strlen($header) !== 13) {
-            throw new InvalidArgumentException("Cannot decode the PNG - it has no valid IHDR chunk!");
+            throw new InvalidArgumentException("Cannot decode the PNG: it has no valid IHDR chunk.");
         }
 
         ["width" => $width, "height" => $height, "depth" => $depth, "color" => $color, "compression" => $compression,
@@ -54,24 +54,24 @@ final class PngDecoder
         [$channels, $depths] = self::COLOR_TYPES[$color] ?? [0, []];
         if ($width < 1 || $height < 1 || !in_array($depth, $depths, true) || $compression !== 0 || $filter !== 0 || $interlace !== 0) {
             throw new InvalidArgumentException("Cannot decode a PNG of {$width}x{$height} pixels with color type $color, bit depth " .
-                                               "$depth and interlace method $interlace - only non-interlaced PNG files are supported!");
+                                               "$depth and interlace method $interlace: only non-interlaced PNG files are supported.");
         }
 
-        CueImage::checkSize($width, $height, "Cannot decode the PNG -");
+        CueImage::checkSize($width, $height, "decode the PNG");
 
         $rowLength = intdiv($width * $channels * $depth + 7, 8);
         $dataSize  = ($rowLength + 1) * $height;
-        Dependency::check("gzuncompress", "Cannot decode a PNG - PHP has no ext-zlib. Use a PHP build with zlib, " .
-                                          "for example one compiled with --with-zlib!");
+        Dependency::check("gzuncompress", "Cannot decode a PNG: PHP has no ext-zlib. Use a PHP build with zlib, " .
+                                          "for example one compiled with --with-zlib.");
         $scanlines = @gzuncompress(implode("", $chunks["IDAT"] ?? []), $dataSize);
         if ($scanlines === false) {
-            throw new InvalidArgumentException("Cannot decode the PNG - its IDAT chunks hold no valid zlib data, " .
-                                               "or more data than {$width}x{$height} pixels need!");
+            throw new InvalidArgumentException("Cannot decode the PNG: its IDAT chunks hold no valid zlib data, " .
+                                               "or more data than {$width}x{$height} pixels need.");
         }
 
         if (strlen($scanlines) < $dataSize) {
             throw new InvalidArgumentException("Cannot decode a PNG of {$width}x{$height} pixels from " . strlen($scanlines) .
-                                               " bytes of image data - it needs $dataSize!");
+                                               " bytes of image data: it needs $dataSize.");
         }
 
         $rows = self::unfilter($scanlines, $rowLength, $height, max(1, intdiv($channels * $depth, 8)));
@@ -106,7 +106,7 @@ final class PngDecoder
         $offset = strlen(self::SIGNATURE);
         while ($offset < $length) {
             if ($length - $offset < 12 || $length - $offset - 12 < unpack("N", $png, $offset)[1]) {
-                throw new InvalidArgumentException("Cannot decode the PNG - the chunk at byte $offset is cut off!");
+                throw new InvalidArgumentException("Cannot decode the PNG: the chunk at byte $offset is cut off.");
             }
 
             ["size" => $size, "type" => $type] = unpack("Nsize/a4type", $png, $offset);
@@ -138,7 +138,7 @@ final class PngDecoder
                 continue;
             }
             if ($type > 4) {
-                throw new InvalidArgumentException("Cannot decode the PNG - row $index has the unknown filter type $type!");
+                throw new InvalidArgumentException("Cannot decode the PNG: row $index has the unknown filter type $type.");
             }
 
             $previous ??= array_values(unpack("C*", $rows[$index - 1]));

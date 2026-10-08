@@ -145,7 +145,7 @@ final class SamiParser extends SubtitleParser
                 $lineNumber = $this->lineNumberInBody($rawSubtitle, $bodyStart, $body, $offset);
                 $lines      = array_map("trim", explode("\n", "<SYNC" . $chunk));
                 $block      = array_values(array_filter($lines, fn (string $line): bool => $line !== ""));
-                $this->fail($exception, $lineNumber, $index, $block);
+                $this->fail(self::atLine($exception, $lineNumber), $lineNumber, $index, $block);
                 continue;
             }
 

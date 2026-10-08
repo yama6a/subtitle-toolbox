@@ -76,7 +76,7 @@ final class AssParser extends SubtitleParser
         }
 
         if (!in_array("events", array_map("strtolower", $data["sectionOrder"]), true)) {
-            throw new ParsingException("The subtitle has no [Events] section!");
+            throw new ParsingException("The subtitle has no [Events] section.");
         }
 
         $data["eventFormat"] ??= $this->isSsa($data) ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT;
@@ -147,14 +147,14 @@ final class AssParser extends SubtitleParser
         $format = $data["eventFormat"] ?? ($this->isSsa($data) ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT);
         $fields = $this->combine($format, $value, false);
         if ($fields === null) {
-            throw new ParsingException("Line $lineNumber has fewer fields than the Format line of the [Events] section: $line", $lineNumber);
+            throw new ParsingException("The line \"$line\" has fewer fields than the Format line of the [Events] section.", $lineNumber);
         }
 
         $start = $this->findField($fields, "Start");
         $end   = $this->findField($fields, "End");
         $text  = $this->findField($fields, "Text");
         if ($start === null || $end === null || $text === null) {
-            throw new ParsingException("The Format line of the [Events] section needs the fields Start, End and Text!", $lineNumber);
+            throw new ParsingException("The Format line of the [Events] section needs the fields Start, End and Text.", $lineNumber);
         }
 
         if ($isComment) {
@@ -246,7 +246,7 @@ final class AssParser extends SubtitleParser
     private function secondsFromString(string $time, int $lineNumber): float
     {
         if (!preg_match('/^(\d+):(\d{1,2}):(\d{1,2})\.(\d{1,3})$/', trim($time), $matches)) {
-            throw new ParsingException("The time of at least one event could not be parsed: $time", $lineNumber);
+            throw new ParsingException("The time \"$time\" is not valid.", $lineNumber);
         }
 
         return Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]);

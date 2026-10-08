@@ -31,11 +31,11 @@ final class SbvParser extends SubtitleParser
     private function parseCueBlock(array $rawLines, int $idx): SubtitleCue
     {
         if (substr_count($rawLines[0], ",") !== 1) {
-            throw new ParsingException("Block #$idx doesn't seem to have its timestamps on its first line!");
+            throw new ParsingException("Block #$idx has no timing line on its first line.");
         }
 
         if (count($rawLines) < 2) {
-            throw new ParsingException("Block #$idx doesn't have any text lines!");
+            throw new ParsingException("Block #$idx has no text lines.");
         }
 
         $times = explode(",", $rawLines[0]);
@@ -58,7 +58,7 @@ final class SbvParser extends SubtitleParser
     {
         $timeString = trim($timeString);
         if (!preg_match("/^(\d+):([0-5]\d):([0-5]\d)\.(\d{3})$/", $timeString, $matches)) {
-            throw new ParsingException("The timeString-string of at least one cue could not be parsed: $timeString");
+            throw new ParsingException("The time \"$timeString\" is not valid.");
         }
 
         return Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]);

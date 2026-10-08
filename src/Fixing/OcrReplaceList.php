@@ -52,7 +52,7 @@ final class OcrReplaceList
     ) {
         foreach (array_keys($regularExpressions) as $pattern) {
             if (@preg_match((string)$pattern, "") === false) {
-                throw new InvalidArgumentException("The regular expression $pattern is invalid: " . preg_last_error_msg());
+                throw new InvalidArgumentException("The regular expression \"$pattern\" is not valid: " . preg_last_error_msg() . ".");
             }
         }
     }

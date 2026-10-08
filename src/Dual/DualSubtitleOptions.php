@@ -27,8 +27,7 @@ final class DualSubtitleOptions
         }
 
         if (!OptionChecks::isAlignment($secondaryAlignment)) {
-            throw new InvalidArgumentException("Cannot set alignment $secondaryAlignment - " .
-                                               "the alignment must be a number from 1 to 9!");
+            throw new InvalidArgumentException("The secondary alignment must be a number from 1 to 9, got $secondaryAlignment.");
         }
     }
 

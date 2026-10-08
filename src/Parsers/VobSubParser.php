@@ -64,7 +64,7 @@ final class VobSubParser extends SubtitleParser
     {
         $options = $this->formatOptions();
         if ($options->idx === null) {
-            throw new InvalidArgumentException("VobSub needs the .idx content in VobSubReadOptions.");
+            throw new InvalidArgumentException("VobSub needs the .idx content. Set VobSubReadOptions::\$idx.");
         }
         $this->palette      = [];
         $this->customColors = null;
@@ -153,7 +153,7 @@ final class VobSubParser extends SubtitleParser
             switch (strtolower($key)) {
                 case "size":
                     if (!preg_match('/^(\d+)\s*x\s*(\d+)$/i', $value, $matches) || $matches[1] < 1 || $matches[2] < 1) {
-                        throw new ParsingException("The .idx size line is invalid: $line");
+                        throw new ParsingException("The .idx size line \"$line\" is not valid.");
                     }
                     $size = [(int) $matches[1], (int) $matches[2]];
                     break;
@@ -164,7 +164,7 @@ final class VobSubParser extends SubtitleParser
 
                 case "custom colors":
                     if (!preg_match('/^(on|off|1|0)\s*,\s*tridx\s*:\s*([01]{4})\s*,\s*colors\s*:\s*(.*)$/i', $value, $matches)) {
-                        throw new ParsingException("The .idx custom colors line is invalid: $line");
+                        throw new ParsingException("The .idx custom colors line \"$line\" is not valid.");
                     }
                     $this->customColors = null;
                     if (in_array(strtolower($matches[1]), ["on", "1"], true)) {
@@ -178,7 +178,7 @@ final class VobSubParser extends SubtitleParser
 
                 case "id":
                     if (!preg_match('/^([^,]*),\s*index:\s*(\d+)$/i', $value, $matches) || $matches[2] > 31) {
-                        throw new ParsingException("The .idx id line is invalid: $line");
+                        throw new ParsingException("The .idx id line \"$line\" is not valid.");
                     }
                     $tracks[] = ["id" => trim($matches[1]), "index" => (int) $matches[2], "entries" => []];
                     $delay    = 0.0;
@@ -191,10 +191,10 @@ final class VobSubParser extends SubtitleParser
 
                 case "timestamp":
                     if ($tracks === []) {
-                        throw new ParsingException("The .idx timestamp line comes before any id line: $line");
+                        throw new ParsingException("The .idx timestamp line \"$line\" comes before any id line.");
                     }
                     if (!preg_match('/^(.+?),\s*filepos:\s*([0-9a-f]+)$/i', $value, $matches)) {
-                        throw new ParsingException("The .idx timestamp line is invalid: $line");
+                        throw new ParsingException("The .idx timestamp line \"$line\" is not valid.");
                     }
                     $tracks[array_key_last($tracks)]["entries"][] = [
                         "time"    => $this->readTime($matches[1], $line) + $delay,
@@ -223,7 +223,7 @@ final class VobSubParser extends SubtitleParser
     {
         $colors = array_map("trim", explode(",", $value));
         if (count($colors) !== $count || preg_grep('/^[0-9a-f]{1,6}$/i', $colors, PREG_GREP_INVERT) !== []) {
-            throw new ParsingException("The .idx line needs $count colors as hex RGB: $line");
+            throw new ParsingException("The .idx line \"$line\" needs $count colors as hex RGB.");
         }
 
         return array_map("hexdec", $colors);
@@ -233,7 +233,7 @@ final class VobSubParser extends SubtitleParser
     private function readTime(string $value, string $line): float
     {
         if (!preg_match('/^([+-]?)(\d+):(\d{1,2}):(\d{1,2})[:.,](\d{1,3})$/', trim($value), $matches)) {
-            throw new ParsingException("The .idx time is invalid: $line");
+            throw new ParsingException("The .idx time \"$line\" is not valid.");
         }
         $seconds = Timecode::toSeconds((int) $matches[2], (int) $matches[3], (int) $matches[4], str_pad($matches[5], 3, "0", STR_PAD_LEFT));
 
@@ -407,7 +407,7 @@ final class VobSubParser extends SubtitleParser
                                  array $pixelColors, bool $forced): CueImage
     {
         try {
-            CueImage::checkSize($width, $height, "The subtitle packet cannot be read:");
+            CueImage::checkSize($width, $height, "read the subtitle packet");
         } catch (InvalidArgumentException $exception) {
             throw new ParsingException($exception->getMessage());
         }

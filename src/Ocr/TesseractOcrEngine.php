@@ -59,8 +59,7 @@ final class TesseractOcrEngine implements OcrEngine
             unlink($file);
         }
         if ($code !== 0) {
-            throw new OcrException("Cannot read the cue image at {$image->x}, {$image->y} - tesseract " .
-                                   "exits with code $code: " . trim($error));
+            throw new OcrException("Tesseract exits with code $code for the cue image at {$image->x}, {$image->y}: " . trim($error));
         }
 
         return self::fromTsv($output);
@@ -96,7 +95,7 @@ final class TesseractOcrEngine implements OcrEngine
      */
     public static function missingProgramMessage(string $program): string
     {
-        return "Cannot run OCR with Tesseract - the program \"$program\" is missing! " . self::INSTALL_HINT;
+        return "Cannot run OCR with Tesseract: the program \"$program\" is missing. " . self::INSTALL_HINT;
     }
 
 
@@ -121,8 +120,8 @@ final class TesseractOcrEngine implements OcrEngine
 
         $missing = array_diff(explode("+", $language), self::$languages[$program]);
         if ($missing !== []) {
-            throw new InvalidArgumentException("Cannot run OCR with Tesseract in the language \"$language\" - " .
-                                               "the language data of " . implode(", ", $missing) . " is missing! " .
+            throw new InvalidArgumentException("Cannot run OCR with Tesseract in the language \"$language\": " .
+                                               "the language data of " . implode(", ", $missing) . " is missing. " .
                                                "Install it, for example with apt install tesseract-ocr-" .
                                                reset($missing) . ". The installed languages are: " .
                                                implode(", ", self::$languages[$program]) . ".");

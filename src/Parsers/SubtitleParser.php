@@ -84,11 +84,11 @@ abstract class SubtitleParser
     {
         $class = static::formatOptionsClass();
         if ($options->format !== null && ($class === null || !$options->format instanceof $class)) {
-            throw new InvalidArgumentException(sprintf(
-                "%s does not read %s.",
-                $this->shortName(static::class),
-                $this->shortName($options->format::class)
-            ));
+            $parser = $this->shortName(static::class);
+            $given  = $this->shortName($options->format::class);
+            throw new InvalidArgumentException($class === null
+                ? "$parser takes no format options, got $given."
+                : "$parser takes " . $this->shortName($class) . ", got $given.");
         }
 
         $this->options       = $options;
@@ -124,6 +124,21 @@ abstract class SubtitleParser
         }
 
         $this->warnings[] = ParseWarning::skipped($exception, $lineNumber, $blockIndex, $block);
+    }
+
+
+    /**
+     * Returns $exception with $lineNumber, or $exception itself when it has a line number already.
+     */
+    protected static function atLine(ParsingException $exception, int $lineNumber): ParsingException
+    {
+        if ($exception->getLineNumber() !== null) {
+            return $exception;
+        }
+
+        $message = preg_replace('/^ParsingException \(Error #\d+\): /', "", $exception->getMessage());
+
+        return new ParsingException($message, $lineNumber, $exception->getPrevious());
     }
 
 
@@ -306,7 +321,7 @@ abstract class SubtitleParser
             try {
                 $cues[] = $parsePart($part, $lineNumber + $offset);
             } catch (ParsingException $exception) {
-                $this->fail($exception, $lineNumber + $offset, $blockIndex, $part);
+                $this->fail(self::atLine($exception, $lineNumber + $offset), $lineNumber + $offset, $blockIndex, $part);
             }
         }
 

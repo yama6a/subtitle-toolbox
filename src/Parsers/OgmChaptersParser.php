@@ -43,7 +43,7 @@ final class OgmChaptersParser extends SubtitleParser
                 $chapters[] = new SubtitleCue($start, $start, Markup::escapeText($matches[1]));
                 $start      = null;
             } else {
-                throw new ParsingException("Line " . ($index + 1) . " is not a CHAPTERxxNAME= line: $line", $index + 1);
+                throw new ParsingException("The line \"$line\" is not a CHAPTERxxNAME= line.", $index + 1);
             }
         }
 
@@ -54,10 +54,10 @@ final class OgmChaptersParser extends SubtitleParser
     private function readTimestampLine(string $line, int $lineNumber): float
     {
         if (preg_match(self::TIMESTAMP_LINE, $line, $matches) !== 1) {
-            throw new ParsingException("Line $lineNumber is not a CHAPTERxx= line: $line", $lineNumber);
+            throw new ParsingException("The line \"$line\" is not a CHAPTERxx= line.", $lineNumber);
         }
         if ((int) $matches[2] > 59 || (int) $matches[3] > 59) {
-            throw new ParsingException("Line $lineNumber has a minute or second above 59: $line", $lineNumber);
+            throw new ParsingException("The line \"$line\" has a minute or second above 59.", $lineNumber);
         }
 
         return Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]);

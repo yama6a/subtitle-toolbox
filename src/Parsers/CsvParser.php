@@ -195,7 +195,7 @@ final class CsvParser extends SubtitleParser
 
         throw new ParsingException(
             substr_count($time, ":") === 3
-                ? "The time \"$time\" counts frames. Pass CsvReadOptions::frameRate."
+                ? "The time \"$time\" counts frames. Set CsvReadOptions::\$frameRate."
                 : "The time \"$time\" is not seconds, hh:mm:ss.mmm, hh:mm:ss,mmm or hh:mm:ss:ff.",
             $lineNumber
         );

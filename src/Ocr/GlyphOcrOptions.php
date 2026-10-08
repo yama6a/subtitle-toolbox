@@ -44,21 +44,17 @@ final readonly class GlyphOcrOptions
         public bool $lineContext = true,
     ) {
         if ($inkThreshold < 1 || $inkThreshold > 765) {
-            throw new InvalidArgumentException("Cannot create GlyphOcrOptions with ink threshold $inkThreshold - " .
-                                               "it must be from 1 to 765!");
+            throw new InvalidArgumentException("The ink threshold must be from 1 to 765, got $inkThreshold.");
         }
         if ($spaceWidth !== null && $spaceWidth < 1) {
-            throw new InvalidArgumentException("Cannot create GlyphOcrOptions with space width $spaceWidth - " .
-                                               "it must be at least 1!");
+            throw new InvalidArgumentException("The space width must be at least 1, got $spaceWidth.");
         }
         if ($maxWrongPixels < 0) {
-            throw new InvalidArgumentException("Cannot create GlyphOcrOptions with $maxWrongPixels wrong pixels - " .
-                                               "the number must be at least 0!");
+            throw new InvalidArgumentException("The number of wrong pixels must be at least 0, got $maxWrongPixels.");
         }
-        OptionChecks::between($italicSlant, 0, 1, "Cannot create GlyphOcrOptions with italic slant %s - it must be from 0 to 1!");
+        OptionChecks::between($italicSlant, 0, 1, "The italic slant must be from 0 to 1, got %s.");
         if ($minLineHeight < 1) {
-            throw new InvalidArgumentException("Cannot create GlyphOcrOptions with minimum line height " .
-                                               "$minLineHeight - it must be at least 1!");
+            throw new InvalidArgumentException("The minimum line height must be at least 1, got $minLineHeight.");
         }
     }
 }

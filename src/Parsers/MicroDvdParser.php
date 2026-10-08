@@ -52,13 +52,13 @@ final class MicroDvdParser extends SubtitleParser
         }
 
         if ($frameRate === null) {
-            throw new ParsingException("The frame rate is unknown. Set MicroDvdReadOptions::frameRate or start the file with {1}{1}<fps>.");
+            throw new ParsingException("The frame rate is unknown. Set MicroDvdReadOptions::\$frameRate or start the file with {1}{1}<fps>.");
         }
 
         try {
             $frames = new FrameRate($frameRate);
         } catch (InvalidArgumentException $exception) {
-            throw new ParsingException($exception->getMessage());
+            throw new ParsingException($exception->getMessage(), null, $exception);
         }
 
         $subtitle   = new Subtitle();
@@ -67,7 +67,7 @@ final class MicroDvdParser extends SubtitleParser
         foreach ($rawLines as $lineIndex => $rawLine) {
             if (!preg_match(self::CUE_REGEX, $rawLine, $matches)) {
                 $lineNumber = $lineIndex + 1;
-                $this->fail(new ParsingException("Line $lineNumber is not a MicroDVD cue: $rawLine", $lineNumber), $lineNumber, $blockIndexes[$lineIndex], [$rawLine]);
+                $this->fail(new ParsingException("The line \"$rawLine\" is not a MicroDVD cue.", $lineNumber), $lineNumber, $blockIndexes[$lineIndex], [$rawLine]);
                 continue;
             }
 

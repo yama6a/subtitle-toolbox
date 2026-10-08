@@ -35,23 +35,23 @@ final class CueImage
     ) {
         if ($width < 1 || $height < 1 || $screenWidth < 1 || $screenHeight < 1) {
             throw new InvalidArgumentException("Cannot create a cue image of {$width}x{$height} pixels on a screen of " .
-                                               "{$screenWidth}x{$screenHeight} pixels - every size must be at least 1!");
+                                               "{$screenWidth}x{$screenHeight} pixels: every size must be at least 1.");
         }
-        self::checkSize($width, $height, "Cannot create a cue image -");
+        self::checkSize($width, $height, "create a cue image");
     }
 
 
     /**
      * Throws InvalidArgumentException when an image of $width x $height pixels does not fit MAX_SIDE and MAX_PIXELS.
-     * The message starts with $what, for example "Cannot decode the PNG -", and then gives the reason.
+     * The message is "Cannot $action: " and the reason, for example "Cannot decode the PNG: an image of ...".
      *
      * @internal
      */
-    public static function checkSize(int $width, int $height, string $what): void
+    public static function checkSize(int $width, int $height, string $action): void
     {
         $tooLarge = self::sizeLimitError($width, $height);
         if ($tooLarge !== null) {
-            throw new InvalidArgumentException("$what $tooLarge");
+            throw new InvalidArgumentException("Cannot $action: $tooLarge");
         }
     }
 
@@ -88,19 +88,19 @@ final class CueImage
     {
         $data = $cue->findFormatData(self::FORMAT_DATA_KEY);
         if ($data === []) {
-            throw new InvalidArgumentException("Cannot read the image of cue [{$cue->getStart()} >>> {$cue->getEnd()}] - " .
-                                               "the cue holds no image!");
+            throw new InvalidArgumentException("Cannot read the image of cue {$cue->getStart()} to {$cue->getEnd()}: " .
+                                               "the cue holds no image.");
         }
 
         foreach (self::INTEGER_KEYS as $key) {
             if (!is_int($data[$key] ?? null)) {
-                throw new InvalidArgumentException("Cannot read the image of cue [{$cue->getStart()} >>> {$cue->getEnd()}] - " .
-                                                   "the image data has no integer \"$key\"!");
+                throw new InvalidArgumentException("Cannot read the image of cue {$cue->getStart()} to {$cue->getEnd()}: " .
+                                                   "the image data has no integer \"$key\".");
             }
         }
         if (!is_string($data["png"] ?? null)) {
-            throw new InvalidArgumentException("Cannot read the image of cue [{$cue->getStart()} >>> {$cue->getEnd()}] - " .
-                                               "the image data has no string \"png\"!");
+            throw new InvalidArgumentException("Cannot read the image of cue {$cue->getStart()} to {$cue->getEnd()}: " .
+                                               "the image data has no string \"png\".");
         }
 
         return new self($data["png"], $data["x"], $data["y"], $data["width"], $data["height"],

@@ -29,7 +29,7 @@ final class SpeechReference
             }
 
             if (str_contains($line, "channel:")) {
-                throw new ParsingException("Cannot read a silencedetect log with one line per channel - run it without mono.",
+                throw new ParsingException("Cannot read a silencedetect log with one line per channel. Run silencedetect without mono.",
                                            $index + 1);
             }
 
@@ -41,7 +41,7 @@ final class SpeechReference
                 $speechStart  = $time;
                 $silenceStart = null;
             } else {
-                throw new ParsingException("Found silence_$match[1] out of order - silence_start and silence_end must alternate.",
+                throw new ParsingException("The line silence_$match[1] is out of order. The silence_start and silence_end lines must alternate.",
                                            $index + 1);
             }
         }

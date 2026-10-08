@@ -19,12 +19,11 @@ final class RecognizedText
     ) {
         foreach ($lines as $line) {
             if (!is_string($line)) {
-                throw new InvalidArgumentException("Cannot create an OCR result - every line must be a string!");
+                throw new InvalidArgumentException("Every line of a RecognizedText must be a string.");
             }
         }
         if ($confidence !== null && ($confidence < 0 || $confidence > 1)) {
-            throw new InvalidArgumentException("Cannot create an OCR result with confidence $confidence - " .
-                                               "the confidence must be from 0 to 1!");
+            throw new InvalidArgumentException("The confidence must be from 0 to 1, got $confidence.");
         }
     }
 }
