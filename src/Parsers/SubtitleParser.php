@@ -86,8 +86,8 @@ abstract class SubtitleParser
         if ($options->format !== null && ($class === null || !$options->format instanceof $class)) {
             throw new InvalidArgumentException(sprintf(
                 "%s does not read %s.",
-                substr(strrchr(static::class, "\\"), 1),
-                substr(strrchr($options->format::class, "\\"), 1)
+                $this->shortName(static::class),
+                $this->shortName($options->format::class)
             ));
         }
 
@@ -351,5 +351,11 @@ abstract class SubtitleParser
         }
 
         return $parts;
+    }
+
+
+    private function shortName(string $class): string
+    {
+        return substr(strrchr("\\" . $class, "\\"), 1);
     }
 }

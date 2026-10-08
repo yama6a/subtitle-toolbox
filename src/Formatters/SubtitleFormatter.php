@@ -69,13 +69,19 @@ abstract class SubtitleFormatter
     {
         $class = static::FORMAT_OPTIONS;
         if ($options->format !== null && ($class === null || !$options->format instanceof $class)) {
-            $formatter = substr(strrchr(static::class, "\\"), 1);
-            $given     = substr(strrchr($options->format::class, "\\"), 1);
+            $formatter = $this->shortName(static::class);
+            $given     = $this->shortName($options->format::class);
             throw new InvalidArgumentException($class === null
                 ? "$formatter takes no format options, got $given."
-                : "$formatter takes " . substr(strrchr($class, "\\"), 1) . ", got $given.");
+                : "$formatter takes " . $this->shortName($class) . ", got $given.");
         }
 
         return $options->format;
+    }
+
+
+    private function shortName(string $class): string
+    {
+        return substr(strrchr("\\" . $class, "\\"), 1);
     }
 }
