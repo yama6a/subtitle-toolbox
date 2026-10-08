@@ -160,58 +160,42 @@ final class VobSubParser extends SubtitleParser
             [$key, $value] = array_map("trim", explode(":", $line, 2));
             switch (strtolower($key)) {
                 case "size":
-                    if (!preg_match('/^(\d+)\s*x\s*(\d+)$/i', $value, $matches) || $matches[1] < 1 || $matches[2] < 1) {
-                        throw new ParsingException("The .idx size line \"$line\" is not valid.");
-                    }
-                    $size = [(int) $matches[1], (int) $matches[2]];
+                    $size = self::readSize($value, $line);
                     break;
-
                 case "palette":
                     $this->palette = $this->readColors($value, 16, $line);
                     break;
-
                 case "custom colors":
-                    if (!preg_match('/^(on|off|1|0)\s*,\s*tridx\s*:\s*([01]{4})\s*,\s*colors\s*:\s*(.*)$/i', $value, $matches)) {
-                        throw new ParsingException("The .idx custom colors line \"$line\" is not valid.");
-                    }
-                    $this->customColors = null;
-                    if (in_array(strtolower($matches[1]), ["on", "1"], true)) {
-                        $this->customColors = array_map(
-                            fn (int $rgb, int $pixelValue): int => $rgb << 8 | ($matches[2][$pixelValue] === "1" ? 0x00 : 0xFF),
-                            $this->readColors($matches[3], 4, $line),
-                            [0, 1, 2, 3]
-                        );
-                    }
+                    $this->customColors = $this->readCustomColors($value, $line);
                     break;
-
                 case "id":
-                    if (!preg_match('/^([^,]*),\s*index:\s*(\d+)$/i', $value, $matches) || $matches[2] > 31) {
-                        throw new ParsingException("The .idx id line \"$line\" is not valid.");
-                    }
-                    $tracks[] = ["id" => trim($matches[1]), "index" => (int) $matches[2], "entries" => []];
+                    $tracks[] = self::readTrackId($value, $line);
                     $delay    = 0.0;
                     break;
-
                 case "delay":
                     // VSFilter adds up the delay lines of a track and resets the sum at each id line.
                     $delay += $this->readTime($value, $line);
                     break;
-
                 case "timestamp":
                     if ($tracks === []) {
                         throw new ParsingException("The .idx timestamp line \"$line\" comes before any id line.");
                     }
-                    if (!preg_match('/^(.+?),\s*filepos:\s*([0-9a-f]+)$/i', $value, $matches)) {
-                        throw new ParsingException("The .idx timestamp line \"$line\" is not valid.");
-                    }
-                    $tracks[array_key_last($tracks)]["entries"][] = [
-                        "time"    => $this->readTime($matches[1], $line) + $delay,
-                        "filepos" => (int) hexdec($matches[2]),
-                    ];
+                    $tracks[array_key_last($tracks)]["entries"][] = $this->readEntry($value, $line, $delay);
                     break;
             }
         }
 
+        $this->setScreen($size);
+
+        return $tracks;
+    }
+
+
+    /**
+     * @param array{int, int}|null $size
+     */
+    private function setScreen(?array $size): void
+    {
         if ($size === null) {
             throw new ParsingException("The .idx content has no size line.");
         }
@@ -219,8 +203,70 @@ final class VobSubParser extends SubtitleParser
             throw new ParsingException("The .idx content has no palette line.");
         }
         [$this->screenWidth, $this->screenHeight] = $size;
+    }
 
-        return $tracks;
+
+    /**
+     * @return array{int, int}
+     */
+    private static function readSize(string $value, string $line): array
+    {
+        if (!preg_match('/^(\d+)\s*x\s*(\d+)$/i', $value, $matches) || $matches[1] < 1 || $matches[2] < 1) {
+            throw new ParsingException("The .idx size line \"$line\" is not valid.");
+        }
+
+        return [(int) $matches[1], (int) $matches[2]];
+    }
+
+
+    /**
+     * Returns the colors of an enabled "custom colors" line, or null for a disabled one.
+     *
+     * @return list<int>|null
+     */
+    private function readCustomColors(string $value, string $line): ?array
+    {
+        if (!preg_match('/^(on|off|1|0)\s*,\s*tridx\s*:\s*([01]{4})\s*,\s*colors\s*:\s*(.*)$/i', $value, $matches)) {
+            throw new ParsingException("The .idx custom colors line \"$line\" is not valid.");
+        }
+        if (!in_array(strtolower($matches[1]), ["on", "1"], true)) {
+            return null;
+        }
+
+        return array_map(
+            fn (int $rgb, int $pixelValue): int => $rgb << 8 | ($matches[2][$pixelValue] === "1" ? 0x00 : 0xFF),
+            $this->readColors($matches[3], 4, $line),
+            [0, 1, 2, 3]
+        );
+    }
+
+
+    /**
+     * @return array{id: string, index: int, entries: list<array{time: float, filepos: int}>}
+     */
+    private static function readTrackId(string $value, string $line): array
+    {
+        if (!preg_match('/^([^,]*),\s*index:\s*(\d+)$/i', $value, $matches) || $matches[2] > 31) {
+            throw new ParsingException("The .idx id line \"$line\" is not valid.");
+        }
+
+        return ["id" => trim($matches[1]), "index" => (int) $matches[2], "entries" => []];
+    }
+
+
+    /**
+     * @return array{time: float, filepos: int}
+     */
+    private function readEntry(string $value, string $line, float $delay): array
+    {
+        if (!preg_match('/^(.+?),\s*filepos:\s*([0-9a-f]+)$/i', $value, $matches)) {
+            throw new ParsingException("The .idx timestamp line \"$line\" is not valid.");
+        }
+
+        return [
+            "time"    => $this->readTime($matches[1], $line) + $delay,
+            "filepos" => (int) hexdec($matches[2]),
+        ];
     }
 
 
