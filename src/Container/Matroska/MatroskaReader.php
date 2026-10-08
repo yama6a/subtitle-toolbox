@@ -93,7 +93,8 @@ final class MatroskaReader
     private const ALGO_ZLIB               = 0;
     private const ALGO_HEADER_STRIPPING   = 3;
 
-    // A block header holds the track number as a vint of up to 8 bytes, then a 16-bit relative timestamp and 1 flag byte.
+    // A block header holds the track number as a vint of up to 8 bytes.
+    // A 16-bit relative timestamp and 1 flag byte follow it.
     private const MAX_BLOCK_HEADER  = 11;
     private const BLOCK_HEADER_TAIL = 3;
     private const LACING_MASK       = 0x06;
@@ -182,8 +183,8 @@ final class MatroskaReader
 
 
     /**
-     * Reads all blocks of the subtitle track with the TrackNumber $trackNumber. ReadOptions::$lastCueDuration sets the
-     * end of a last text block without a duration.
+     * Reads all blocks of the subtitle track with the TrackNumber $trackNumber.
+     * ReadOptions::$lastCueDuration sets the end of a last text block without a duration.
      */
     public function extract(int $trackNumber, ?ReadOptions $options = null): Subtitle
     {
@@ -587,8 +588,9 @@ final class MatroskaReader
 
 
     /**
-     * Converts the block times to milliseconds and sets the end of each block. A block without BlockDuration and
-     * DefaultDuration ends at the start of the next block, the last one after $lastDuration seconds.
+     * Converts the block times to milliseconds and sets the end of each block.
+     * A block without BlockDuration and DefaultDuration ends at the start of the next block.
+     * The last such block ends after $lastDuration seconds.
      *
      * @return list<array{start: int, end: int, data: string, additional: ?string}>
      */
