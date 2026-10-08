@@ -51,17 +51,7 @@ final class HlsWebVttSegmenter
             $next   = 0;
             $active = [];
             foreach ($options->segmentBounds($totalMilliseconds) as $fileName => [$startMilliseconds, $endMilliseconds]) {
-                for (; $next < count($starts) && $starts[$next] < $endMilliseconds; $next++) {
-                    $active[$next] = true;
-                }
-                foreach (array_keys($active) as $cueIndex) {
-                    $isEmpty = $ends[$cueIndex] === $starts[$cueIndex];
-                    // RFC 8216 section 3.5: a cue keeps its full time range in every segment it overlaps.
-                    if ($ends[$cueIndex] <= $startMilliseconds && !($isEmpty && $starts[$cueIndex] >= $startMilliseconds)) {
-                        unset($active[$cueIndex]);
-                    }
-                }
-                ksort($active);
+                self::moveWindow($active, $next, $starts, $ends, $startMilliseconds, $endMilliseconds);
 
                 yield $fileName => $active === []
                     ? $empty ??= self::write($fileData, [])
@@ -70,6 +60,29 @@ final class HlsWebVttSegmenter
         };
 
         return new HlsWebVttRendition($segments, $options, $totalMilliseconds);
+    }
+
+
+    /**
+     * Updates the active cues to those that overlap the segment. $next is the first cue that has not started yet.
+     *
+     * @param array<int, true> $active
+     * @param list<int>        $starts
+     * @param list<int>        $ends
+     */
+    private static function moveWindow(array &$active, int &$next, array $starts, array $ends, int $startMilliseconds, int $endMilliseconds): void
+    {
+        for (; $next < count($starts) && $starts[$next] < $endMilliseconds; $next++) {
+            $active[$next] = true;
+        }
+        foreach (array_keys($active) as $cueIndex) {
+            $isEmpty = $ends[$cueIndex] === $starts[$cueIndex];
+            // RFC 8216 section 3.5: a cue keeps its full time range in every segment it overlaps.
+            if ($ends[$cueIndex] <= $startMilliseconds && !($isEmpty && $starts[$cueIndex] >= $startMilliseconds)) {
+                unset($active[$cueIndex]);
+            }
+        }
+        ksort($active);
     }
 
 
