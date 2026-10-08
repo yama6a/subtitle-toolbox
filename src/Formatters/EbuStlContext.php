@@ -19,7 +19,7 @@ final readonly class EbuStlContext
         public string $characterCodeTable,
         public int $maxRow,
         public bool $teletext,
-        public bool $stripAll,
+        public bool $stripTags,
     ) {
     }
 }

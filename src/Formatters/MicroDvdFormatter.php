@@ -24,21 +24,21 @@ final class MicroDvdFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $microDvd  = $this->formatOptions($options);
-        $frameRate = new FrameRate($microDvd->frameRate
+        $formatOptions = $this->formatOptions($options);
+        $frameRate     = new FrameRate($formatOptions->frameRate
             ?? $subtitle->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
             ?? throw new InvalidArgumentException("The MicroDVD formatter needs a frame rate. Set MicroDvdWriteOptions::\$frameRate."));
-        $stripAll  = $options->stripTags;
+        $stripTags     = $options->stripTags;
 
         $output = "";
-        if ($microDvd->writeFrameRateLine) {
+        if ($formatOptions->writeFrameRateLine) {
             $output .= "{1}{1}" . $frameRate->getFramesPerSecond() . LineEnding::Lf->value;
         }
 
         foreach ($subtitle->getCues() as $cue) {
             $output .= "{" . $frameRate->secondsToFrames($cue->getStart()) . "}" .
                        "{" . $frameRate->secondsToFrames($cue->getEnd()) . "}" .
-                       $this->formatText($cue, $stripAll) .
+                       $this->formatText($cue, $stripTags) .
                        LineEnding::Lf->value;
         }
 
@@ -46,12 +46,12 @@ final class MicroDvdFormatter extends SubtitleFormatter
     }
 
 
-    private function formatText(SubtitleCue $cue, bool $stripAll): string
+    private function formatText(SubtitleCue $cue, bool $stripTags): string
     {
         $storedLines = $cue->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["lines"] ?? [];
         $lines       = array_map(fn (string $line): array => $this->readLine($line), $cue->getLines());
 
-        $keepStoredCodes = !$stripAll && count($storedLines) === count($lines);
+        $keepStoredCodes = !$stripTags && count($storedLines) === count($lines);
         foreach ($lines as $index => $line) {
             $keepStoredCodes = $keepStoredCodes &&
                                $line["color"] === $storedLines[$index]["color"] &&
@@ -66,7 +66,7 @@ final class MicroDvdFormatter extends SubtitleFormatter
             }
 
             $codes = "";
-            if (!$stripAll) {
+            if (!$stripTags) {
                 $codes .= $line["color"] === null ? "" : "{c:$" . strtoupper(Markup::rgbToBgr(substr($line["color"], 1))) . "}";
                 $codes .= implode("", array_map(fn (string $tag): string => "{y:$tag}", $line["tags"]));
             }

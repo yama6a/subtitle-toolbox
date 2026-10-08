@@ -58,7 +58,7 @@ final class EbuStlFormatter extends SubtitleFormatter
             characterCodeTable: $gsi["CCT"],
             maxRow: EbuStl::maxRow($gsi),
             teletext: in_array($gsi["DSC"], ["1", "2"], true),
-            stripAll: $options->stripTags,
+            stripTags: $options->stripTags,
         );
 
         $sets = $this->subtitleSets($context, $subtitle, $data["comments"] ?? []);
@@ -90,7 +90,7 @@ final class EbuStlFormatter extends SubtitleFormatter
         $sets     = [];
         foreach ([...array_keys($cues), count($cues)] as $index) {
             while ($comments !== [] && $comments[0]->beforeCueIndex <= $index) {
-                $timeCode = $this->smpteBytes($context, isset($cues[$index]) ? $cues[$index]->getStart() : ($cues === [] ? 0 : end($cues)->getEnd()));
+                $timeCode = $this->timeCode($context, isset($cues[$index]) ? $cues[$index]->getStart() : ($cues === [] ? 0 : end($cues)->getEnd()));
                 $sets[]   = ["blocks" => $this->commentBlocks($context, array_shift($comments)->text, $storedComments, $timeCode), "comment" => true];
             }
 
@@ -108,7 +108,7 @@ final class EbuStlFormatter extends SubtitleFormatter
      *
      * @return list<string>
      */
-    private function commentBlocks(EbuStlContext $context, string $text, array &$storedComments, string $smpteBytes): array
+    private function commentBlocks(EbuStlContext $context, string $text, array &$storedComments, string $timeCode): array
     {
         foreach ($storedComments as $index => $stored) {
             if ($stored["text"] === $text) {
@@ -118,10 +118,10 @@ final class EbuStlFormatter extends SubtitleFormatter
             }
         }
 
-        $bytes = implode(chr(EbuStl::NEW_LINE), array_map(fn (string $line): string => $this->encodeCharacters($context, $line), explode(LineEnding::Lf->value, $text)));
+        $bytes    = implode(chr(EbuStl::NEW_LINE), array_map(fn (string $line): string => $this->encodeCharacters($context, $line), explode(LineEnding::Lf->value, $text)));
         $position = $this->position($context, 2, count(explode(LineEnding::Lf->value, $text)));
 
-        return $this->textBlocks($context, $bytes, $this->header(0, 0, $smpteBytes, $smpteBytes, $position, 1));
+        return $this->textBlocks($context, $bytes, $this->header(0, 0, $timeCode, $timeCode, $position, 1));
     }
 
 
@@ -132,10 +132,10 @@ final class EbuStlFormatter extends SubtitleFormatter
      */
     private function cueBlocks(EbuStlContext $context, SubtitleCue $cue): array
     {
-        $stored    = $cue->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
-        $alignment = $cue->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT;
-        $timeIn    = $this->smpteBytes($context, $cue->getStart());
-        $timeOut   = $this->smpteBytes($context, $cue->getEnd());
+        $stored      = $cue->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
+        $alignment   = $cue->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT;
+        $timeCodeIn  = $this->timeCode($context, $cue->getStart());
+        $timeCodeOut = $this->timeCode($context, $cue->getEnd());
 
         $position = [$stored["verticalPosition"] ?? -1, $stored["justificationCode"] ?? -1];
         if (!isset($stored["verticalPosition"], $stored["justificationCode"]) ||
@@ -143,9 +143,9 @@ final class EbuStlFormatter extends SubtitleFormatter
             $position = $this->position($context, $alignment, max(1, count($cue->getLines())));
         }
 
-        $header = $this->header($stored["subtitleGroupNumber"] ?? 0, $stored["cumulativeStatus"] ?? 0, $timeIn, $timeOut, $position);
+        $header = $this->header($stored["subtitleGroupNumber"] ?? 0, $stored["cumulativeStatus"] ?? 0, $timeCodeIn, $timeCodeOut, $position);
         $blocks = array_map("hex2bin", $stored["blocks"] ?? []);
-        if ($blocks !== [] && !$context->stripAll && ($stored["text"] ?? null) === $cue->getText()) {
+        if ($blocks !== [] && !$context->stripTags && ($stored["text"] ?? null) === $cue->getText()) {
             return $this->patchHeaders($blocks, $header);
         }
 
@@ -231,11 +231,11 @@ final class EbuStlFormatter extends SubtitleFormatter
      *
      * @param array{int, int} $position the vertical position and the justification code
      */
-    private function header(int $group, int $cumulativeStatus, string $tci, string $tco, array $position, int $commentFlag = 0): string
+    private function header(int $group, int $cumulativeStatus, string $timeCodeIn, string $timeCodeOut, array $position, int $commentFlag = 0): string
     {
         [$verticalPosition, $justificationCode] = $position;
 
-        return chr($group) . "\0\0" . chr(EbuStl::LAST_BLOCK) . chr($cumulativeStatus) . $tci . $tco .
+        return chr($group) . "\0\0" . chr(EbuStl::LAST_BLOCK) . chr($cumulativeStatus) . $timeCodeIn . $timeCodeOut .
                chr($verticalPosition) . chr($justificationCode) . chr($commentFlag);
     }
 
@@ -264,7 +264,7 @@ final class EbuStlFormatter extends SubtitleFormatter
     /**
      * Returns the 4 time code bytes hours, minutes, seconds and frames, EBU Tech 3264 section 4.3.2.
      */
-    private function smpteBytes(EbuStlContext $context, float $seconds): string
+    private function timeCode(EbuStlContext $context, float $seconds): string
     {
         [$hours, $minutes, $wholeSeconds, $frames] = Timecode::frames(max(0.0, $seconds + $context->offset), $context->frameRate);
 
@@ -280,9 +280,9 @@ final class EbuStlFormatter extends SubtitleFormatter
     {
         $rows = [];
         foreach ($cue->getLines() as $line) {
-            $bytes   = "";
-            $italic  = 0;
-            $under   = 0;
+            $bytes  = "";
+            $italic = 0;
+            $under  = 0;
             $colors = [];
             foreach (Markup::splitTags($line) as $index => $token) {
                 if ($index % 2 === 0) {
@@ -290,7 +290,7 @@ final class EbuStlFormatter extends SubtitleFormatter
                     continue;
                 }
 
-                if ($context->stripAll) {
+                if ($context->stripTags) {
                     continue;
                 }
 

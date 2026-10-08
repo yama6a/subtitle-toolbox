@@ -16,7 +16,7 @@ final class IttWriteOptions implements FormatWriteOptions
     public function __construct(
         public readonly ?float $frameRate = null,
     ) {
-        if ($frameRate !== null && IttFrameRates::supported($frameRate) === null) {
+        if ($frameRate !== null && IttFrameRates::key($frameRate) === null) {
             $rates = array_map(strval(...), array_keys(IttFrameRates::PARAMETERS));
             throw new InvalidArgumentException("The ITT formatter accepts the frame rates " . implode(", ", array_slice($rates, 0, -1)) .
                                                " and " . end($rates) . ", got " . OptionChecks::text($frameRate) . ".");

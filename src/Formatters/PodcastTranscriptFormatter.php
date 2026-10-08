@@ -28,12 +28,12 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $podcast      = $this->formatOptions($options);
-        $wordSegments = $podcast->wordSegments;
-        $fileData     = $subtitle->findFormatData(PodcastTranscriptParser::FORMAT_DATA_KEY);
-        $cues         = $subtitle->getCues();
-        $pieces       = $this->pieces($subtitle, $wordSegments);
-        $piecesPerCue = array_count_values(array_column($pieces, "cue"));
+        $formatOptions = $this->formatOptions($options);
+        $wordSegments  = $formatOptions->wordSegments;
+        $fileData      = $subtitle->findFormatData(PodcastTranscriptParser::FORMAT_DATA_KEY);
+        $cues          = $subtitle->getCues();
+        $pieces        = $this->pieces($subtitle, $wordSegments);
+        $piecesPerCue  = array_count_values(array_column($pieces, "cue"));
 
         $segments = [];
         foreach ($pieces as $piece) {
@@ -46,7 +46,7 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
 
         $document = ["version" => $fileData["version"] ?? self::VERSION, "segments" => $segments] + $fileData;
 
-        return $this->applyOutputOptions(JsonOutput::document($document, $podcast->prettyPrint), $options);
+        return $this->applyOutputOptions(JsonOutput::document($document, $formatOptions->prettyPrint), $options);
     }
 
 
