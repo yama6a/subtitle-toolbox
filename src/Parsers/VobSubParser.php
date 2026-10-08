@@ -35,6 +35,19 @@ final class VobSubParser extends SubtitleParser
     private const PRIVATE_STREAM_1  = 0xBD;
     private const FIRST_STREAM_CODE = 0xBB;
 
+    // The SP_DCSQ commands of the DVD-Video subpicture unit.
+    private const FSTA_DSP   = 0x00;
+    private const STA_DSP    = 0x01;
+    private const STP_DSP    = 0x02;
+    private const SET_COLOR  = 0x03;
+    private const SET_CONTR  = 0x04;
+    private const SET_DAREA  = 0x05;
+    private const SET_DSPXA  = 0x06;
+    private const CHG_COLCON = 0x07;
+    private const CMD_END    = 0xFF;
+
+    private const ARGUMENT_SIZES = [self::SET_COLOR => 2, self::SET_CONTR => 2, self::SET_DAREA => 6, self::SET_DSPXA => 4];
+
     private int $screenWidth;
     private int $screenHeight;
 
@@ -314,34 +327,34 @@ final class VobSubParser extends SubtitleParser
             // Sequences after the start sequence animate the colors or the area, which one cue image cannot hold.
             $shown    = $startDelay !== null;
 
-            while ($position < $size && ($command = ord($unit[$position++])) !== 0xFF) {
-                $argumentSize = [0x03 => 2, 0x04 => 2, 0x05 => 6, 0x06 => 4][$command] ?? 0;
+            while ($position < $size && ($command = ord($unit[$position++])) !== self::CMD_END) {
+                $argumentSize = self::ARGUMENT_SIZES[$command] ?? 0;
                 if ($position + $argumentSize > $size) {
                     throw new ParsingException("The subtitle packet ends inside command " . sprintf("%02x", $command) . ".");
                 }
                 $arguments = array_values(unpack("C*", substr($unit, $position, $argumentSize)) ?: []);
 
-                if ($command === 0x00 || $command === 0x01) {
+                if ($command === self::FSTA_DSP || $command === self::STA_DSP) {
                     $startDelay ??= $delay;
-                    $forced       = $forced || $command === 0x00;
-                } elseif ($command === 0x02) {
+                    $forced       = $forced || $command === self::FSTA_DSP;
+                } elseif ($command === self::STP_DSP) {
                     $stopDelay ??= $delay;
-                } elseif ($command === 0x07) {
+                } elseif ($command === self::CHG_COLCON) {
                     $argumentSize = $position + 2 <= $size ? unpack("n", $unit, $position)[1] : $size;
-                } elseif ($command > 0x07) {
+                } elseif ($command > self::CHG_COLCON) {
                     break;
-                } elseif (!$shown && $command === 0x03) {
+                } elseif (!$shown && $command === self::SET_COLOR) {
                     $colors = $this->readNibbles($arguments);
-                } elseif (!$shown && $command === 0x04) {
+                } elseif (!$shown && $command === self::SET_CONTR) {
                     $alphas = $this->readNibbles($arguments);
-                } elseif (!$shown && $command === 0x05) {
+                } elseif (!$shown && $command === self::SET_DAREA) {
                     $area = [
                         $arguments[0] << 4 | $arguments[1] >> 4,
                         ($arguments[1] & 0x0F) << 8 | $arguments[2],
                         $arguments[3] << 4 | $arguments[4] >> 4,
                         ($arguments[4] & 0x0F) << 8 | $arguments[5],
                     ];
-                } elseif (!$shown && $command === 0x06) {
+                } elseif (!$shown && $command === self::SET_DSPXA) {
                     $offsets = [$arguments[0] << 8 | $arguments[1], $arguments[2] << 8 | $arguments[3]];
                 }
                 $position += $argumentSize;
