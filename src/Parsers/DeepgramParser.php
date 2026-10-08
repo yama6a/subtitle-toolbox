@@ -62,27 +62,41 @@ final class DeepgramParser extends SubtitleParser
                 continue;
             }
 
-            $wordIndex = 0;
-            foreach ($paragraphs as $paragraphIndex => $paragraph) {
-                $speaker = self::speaker(is_array($paragraph) ? $paragraph["speaker"] ?? null : null);
-                foreach (self::listOrEmpty($paragraph["sentences"] ?? null) as $sentenceIndex => $sentence) {
-                    $sentencePath = "$path.paragraphs.paragraphs[$paragraphIndex].sentences[$sentenceIndex]";
-                    try {
-                        $start = $this->seconds(is_array($sentence) ? $sentence["start"] ?? null : null, "$sentencePath.start");
-                        $end   = $this->seconds($sentence["end"] ?? null, "$sentencePath.end");
-                        $text  = $this->text($sentence, "text", $sentencePath);
-                    } catch (ParsingException $exception) {
-                        $this->fail($exception, null, $sentenceIndex, [RawJson::encode($sentence)]);
-                        continue;
-                    }
+            array_push($cues, ...$this->paragraphCues($paragraphs, $words, $path, $channelIndex));
+        }
 
-                    $sentenceWords = self::wordsBetween($words, $wordIndex, $start, $end);
-                    $formatData    = ["channel" => $channelIndex] + ($speaker === null ? [] : ["speaker" => $paragraph["speaker"]]);
-                    $cue           = $this->cue($start, $end, $text, $sentenceWords, $speaker,
-                                                $formatData + ["words" => array_merge([], ...array_column($sentenceWords, "data"))]);
-                    if ($cue !== null) {
-                        $cues[] = $cue;
-                    }
+        return $cues;
+    }
+
+
+    /**
+     * Returns a cue for each sentence of the paragraphs, with the words between its start and its end.
+     *
+     * @return list<SubtitleCue>
+     */
+    private function paragraphCues(array $paragraphs, array $words, string $path, int $channelIndex): array
+    {
+        $cues      = [];
+        $wordIndex = 0;
+        foreach ($paragraphs as $paragraphIndex => $paragraph) {
+            $speaker = self::speaker(is_array($paragraph) ? $paragraph["speaker"] ?? null : null);
+            foreach (self::listOrEmpty($paragraph["sentences"] ?? null) as $sentenceIndex => $sentence) {
+                $sentencePath = "$path.paragraphs.paragraphs[$paragraphIndex].sentences[$sentenceIndex]";
+                try {
+                    $start = $this->seconds(is_array($sentence) ? $sentence["start"] ?? null : null, "$sentencePath.start");
+                    $end   = $this->seconds($sentence["end"] ?? null, "$sentencePath.end");
+                    $text  = $this->text($sentence, "text", $sentencePath);
+                } catch (ParsingException $exception) {
+                    $this->fail($exception, null, $sentenceIndex, [RawJson::encode($sentence)]);
+                    continue;
+                }
+
+                $sentenceWords = self::wordsBetween($words, $wordIndex, $start, $end);
+                $formatData    = ["channel" => $channelIndex] + ($speaker === null ? [] : ["speaker" => $paragraph["speaker"]]);
+                $cue           = $this->cue($start, $end, $text, $sentenceWords, $speaker,
+                                            $formatData + ["words" => array_merge([], ...array_column($sentenceWords, "data"))]);
+                if ($cue !== null) {
+                    $cues[] = $cue;
                 }
             }
         }
