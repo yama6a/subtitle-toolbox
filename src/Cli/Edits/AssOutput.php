@@ -16,7 +16,7 @@ use SubtitleToolbox\Formatters\Options\AssWriteOptions;
  *
  * @internal
  */
-final class AssOutput
+final class AssOutput implements OptionGroup
 {
     private function __construct(private readonly AssKaraokeTag $karaokeTag)
     {
@@ -41,6 +41,12 @@ final class AssOutput
     public static function options(): array
     {
         return [Option::value("ass-karaoke-tag", "TAG", "ASS karaoke tag for word timestamps: k, kf or ko. Default: k.")];
+    }
+
+
+    public static function needsWordTimestamps(Arguments $arguments): bool
+    {
+        return $arguments->has("ass-karaoke-tag");
     }
 
 

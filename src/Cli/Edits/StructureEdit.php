@@ -68,6 +68,12 @@ final class StructureEdit extends Edit
     }
 
 
+    public static function needsWordTimestamps(Arguments $arguments): bool
+    {
+        return $arguments->has("structure-resegment");
+    }
+
+
     public static function fromArguments(Arguments $arguments): ?static
     {
         self::needs($arguments, "structure-resegment", ["structure-max-word-gap"]);
