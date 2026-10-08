@@ -12,6 +12,8 @@ use SubtitleToolbox\OptionChecks;
  */
 final readonly class TesseractOcrOptions
 {
+    private const MAX_PAGE_SEGMENTATION_MODE = 13;
+
     /** The Tesseract model name, for example "deu" or "deu+eng". */
     public string $language;
 
@@ -37,8 +39,8 @@ final readonly class TesseractOcrOptions
         public ?int $threshold = null,
     ) {
         $this->language = $language instanceof OcrLanguage ? $language->value : $language;
-        if ($pageSegmentationMode < 0 || $pageSegmentationMode > 13) {
-            throw new InvalidArgumentException("The page segmentation mode must be from 0 to 13, got $pageSegmentationMode.");
+        if ($pageSegmentationMode < 0 || $pageSegmentationMode > self::MAX_PAGE_SEGMENTATION_MODE) {
+            throw new InvalidArgumentException("The page segmentation mode must be from 0 to " . self::MAX_PAGE_SEGMENTATION_MODE . ", got $pageSegmentationMode.");
         }
         if ($scale !== null) {
             OptionChecks::between($scale, 1, 8, "The scale must be from 1 to 8, got %s.");

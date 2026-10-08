@@ -14,6 +14,18 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
  */
 final class Timecode
 {
+    // Comparisons of computed seconds and scores add this margin, so that float rounding errors do not change the result.
+    public const EPSILON = 1e-9;
+
+    private const SECONDS_PER_MINUTE = 60;
+
+    // Drop-frame time code keeps every label in each tenth minute and drops labels in the other 9 minutes.
+    private const DROP_CYCLE_MINUTES = 10;
+    private const DROPPING_MINUTES   = self::DROP_CYCLE_MINUTES - 1;
+
+    // A dropping minute skips 1 label for each 15 labels per second: 2 labels at 30, 4 at 60.
+    private const LABELS_PER_DROPPED_LABEL = 15;
+
     /**
      * @return array{int, int, int} hours, minutes, seconds
      */
@@ -38,6 +50,15 @@ final class Timecode
     public static function milliseconds(float $seconds): array
     {
         return self::split(self::totalMilliseconds($seconds), 1000);
+    }
+
+
+    /**
+     * Rounds seconds to whole milliseconds, the precision of cue times. For example 0.8333 becomes 0.833.
+     */
+    public static function roundToMilliseconds(float $seconds): float
+    {
+        return round($seconds, 3);
     }
 
 
@@ -69,17 +90,18 @@ final class Timecode
      */
     public static function frameNumber(int $frame, FrameRate $frameRate, bool $dropFrame = false): array
     {
-        $labels = (int) round($frameRate->getFramesPerSecond());
+        $labels = self::labels($frameRate);
         if ($dropFrame) {
             if ($labels !== 30 && $labels !== 60) {
                 throw new InvalidArgumentException("Drop-frame time code needs 29.97 or 59.94 fps, got {$frameRate->getFramesPerSecond()}.");
             }
 
-            $dropped       = intdiv($labels, 15);
-            $perTenMinutes = 600 * $labels - 9 * $dropped;
-            $perMinute     = 60 * $labels - $dropped;
-            $rest          = $frame % $perTenMinutes;
-            $frame        += 9 * $dropped * intdiv($frame, $perTenMinutes) + ($rest >= $dropped ? $dropped * intdiv($rest - $dropped, $perMinute) : 0);
+            $dropped   = intdiv($labels, self::LABELS_PER_DROPPED_LABEL);
+            $perCycle  = self::DROP_CYCLE_MINUTES * self::SECONDS_PER_MINUTE * $labels - self::DROPPING_MINUTES * $dropped;
+            $perMinute = self::SECONDS_PER_MINUTE * $labels - $dropped;
+            $rest      = $frame % $perCycle;
+            $frame    += self::DROPPING_MINUTES * $dropped * intdiv($frame, $perCycle)
+                         + ($rest >= $dropped ? $dropped * intdiv($rest - $dropped, $perMinute) : 0);
         }
 
         return self::split($frame, $labels);
@@ -97,7 +119,7 @@ final class Timecode
         $milliseconds = self::totalMilliseconds($seconds);
         $whole        = intdiv($milliseconds, 1000);
         $frame        = $frameRate->secondsToFrames($milliseconds % 1000 / 1000);
-        if ($frame >= round($frameRate->getFramesPerSecond())) {
+        if ($frame >= self::labels($frameRate)) {
             $whole++;
             $frame = 0;
         }
@@ -143,6 +165,15 @@ final class Timecode
         [$hours, $minutes, $wholeSeconds] = self::seconds(floor($seconds));
 
         return $hours > 0 ? sprintf("%d:%02d:%02d", $hours, $minutes, $wholeSeconds) : sprintf("%d:%02d", $minutes, $wholeSeconds);
+    }
+
+
+    /**
+     * Returns the frame labels in one second: the frame rate rounded to a whole number, so 23.976 fps gives 24.
+     */
+    private static function labels(FrameRate $frameRate): int
+    {
+        return (int) round($frameRate->getFramesPerSecond());
     }
 
 

@@ -11,6 +11,9 @@ final class SubtitleCue
     /** @internal The alignment that formatters write for a cue without one: bottom center, 2 on the numpad. */
     public const DEFAULT_ALIGNMENT = 2;
 
+    /** @internal The alignment of a cue at the top of the screen: top center, 8 on the numpad. */
+    public const TOP_CENTER_ALIGNMENT = 8;
+
     private float $start = 0;
 
     private float $end = 0;
@@ -54,13 +57,13 @@ final class SubtitleCue
 
     public function getStart(): float
     {
-        return round($this->start, 3);
+        return Timecode::roundToMilliseconds($this->start);
     }
 
 
     public function setStart(float $start): self
     {
-        $this->start = round($start, 3);
+        $this->start = Timecode::roundToMilliseconds($start);
         self::$timeEdits++;
 
         return $this;
@@ -69,13 +72,13 @@ final class SubtitleCue
 
     public function getEnd(): float
     {
-        return round($this->end, 3);
+        return Timecode::roundToMilliseconds($this->end);
     }
 
 
     public function setEnd(float $end): self
     {
-        $this->end = round($end, 3);
+        $this->end = Timecode::roundToMilliseconds($end);
         self::$timeEdits++;
 
         return $this;

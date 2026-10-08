@@ -9,6 +9,7 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\PodcastTranscriptParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
 
 final class PodcastTranscriptFormatter extends SubtitleFormatter
@@ -132,6 +133,6 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
 
     private function wordStartInCue(float $time, SubtitleCue $cue): float
     {
-        return round(min(max($time, $cue->getStart()), $cue->getEnd()), 3);
+        return Timecode::roundToMilliseconds(min(max($time, $cue->getStart()), $cue->getEnd()));
     }
 }

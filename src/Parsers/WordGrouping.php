@@ -9,6 +9,7 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 /**
  * Builds cues from the JSON transcripts of speech-to-text services, and groups their words into cues. A word is an array
@@ -141,7 +142,7 @@ trait WordGrouping
             throw new ParsingException("The field $path must be a time.");
         }
 
-        return round($seconds, 3);
+        return Timecode::roundToMilliseconds($seconds);
     }
 
 
@@ -189,7 +190,7 @@ trait WordGrouping
             if ($group !== []) {
                 $previous = $group[count($group) - 1];
                 if ($previous["speaker"] !== $word["speaker"]
-                    || round($word["start"] - $previous["end"], 3) >= self::MAX_WORD_GAP
+                    || Timecode::roundToMilliseconds($word["start"] - $previous["end"]) >= self::MAX_WORD_GAP
                     || $length + 1 + $wordLength > self::MAX_CUE_CHARACTERS
                     // A full stop before a word in lower case, as in "e.g. this", ends no sentence.
                     || (preg_match(self::SENTENCE_END, $previous["text"]) === 1 && preg_match('/^\p{Ll}/u', $word["text"]) !== 1)) {

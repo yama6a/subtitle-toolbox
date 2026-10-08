@@ -8,6 +8,7 @@ use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\CueList;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 final class DualSubtitle
 {
@@ -133,7 +134,7 @@ final class DualSubtitle
         $snapped  = $time;
         $distance = INF;
         foreach ($times as $candidate) {
-            $candidateDistance = round(abs($candidate - $time), 3);
+            $candidateDistance = Timecode::roundToMilliseconds(abs($candidate - $time));
             if ($candidateDistance <= $tolerance && $candidateDistance < $distance) {
                 $snapped  = $candidate;
                 $distance = $candidateDistance;

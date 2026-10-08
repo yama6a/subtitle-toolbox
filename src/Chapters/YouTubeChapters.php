@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Chapters;
 
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Timecode;
 use SubtitleToolbox\Validation\ValidationRule;
 use SubtitleToolbox\Validation\ValidationViolation;
 
@@ -12,6 +13,7 @@ use SubtitleToolbox\Validation\ValidationViolation;
 final class YouTubeChapters
 {
     public const MIN_CHAPTERS = 3;
+    // In seconds.
     public const MIN_DURATION = 10;
 
 
@@ -26,14 +28,14 @@ final class YouTubeChapters
         $cues   = array_values($chapters->getCues());
         $broken = [];
         if ($cues !== [] && floor($cues[0]->getStart()) > 0) {
-            $broken[] = new ValidationViolation(0, ValidationRule::FirstChapterAtZero, $cues[0]->getStart(), 0);
+            $broken[] = new ValidationViolation(cueIndex: 0, rule: ValidationRule::FirstChapterAtZero, value: $cues[0]->getStart(), limit: 0);
         }
         if (count($cues) < self::MIN_CHAPTERS) {
             $broken[] = new ValidationViolation(null, ValidationRule::MinChapters, count($cues), self::MIN_CHAPTERS);
         }
 
         foreach ($cues as $index => $cue) {
-            $duration = round($cue->getEnd() - $cue->getStart(), 3);
+            $duration = Timecode::roundToMilliseconds($cue->getEnd() - $cue->getStart());
             // A last chapter that ends at its own start has an unknown length, because the parser did not know the video length.
             $unknown = $index === count($cues) - 1 && $duration <= 0;
             if (!$unknown && $duration < self::MIN_DURATION) {

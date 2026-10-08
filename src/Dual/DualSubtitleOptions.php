@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Dual;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\OptionChecks;
+use SubtitleToolbox\SubtitleCue;
 
 final class DualSubtitleOptions
 {
@@ -17,7 +18,7 @@ final class DualSubtitleOptions
         public readonly DualSubtitleMode $mode = DualSubtitleMode::Stack,
         public readonly float $snapTolerance = 0.25,
         public readonly ?string $secondaryStyle = null,
-        public readonly int $secondaryAlignment = 8,
+        public readonly int $secondaryAlignment = SubtitleCue::TOP_CENTER_ALIGNMENT,
     ) {
         OptionChecks::nonNegativeFinite($snapTolerance, "The snap tolerance %s must not be negative.");
 

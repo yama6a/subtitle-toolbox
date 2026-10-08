@@ -8,6 +8,7 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\TimeRanges;
+use SubtitleToolbox\Timecode;
 
 final class ProfanityFilter
 {
@@ -126,7 +127,7 @@ final class ProfanityFilter
      */
     private static function join(array $ranges, float $padding): array
     {
-        $ranges = array_map(fn (array $range): array => [round(max(0, $range[0] - $padding), 3), round($range[1] + $padding, 3)], $ranges);
+        $ranges = array_map(fn (array $range): array => [Timecode::roundToMilliseconds(max(0, $range[0] - $padding)), Timecode::roundToMilliseconds($range[1] + $padding)], $ranges);
 
         return array_map(fn (array $range): MuteRange => new MuteRange($range[0], $range[1]), TimeRanges::merged($ranges));
     }

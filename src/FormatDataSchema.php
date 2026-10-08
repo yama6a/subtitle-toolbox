@@ -40,6 +40,8 @@ final class FormatDataSchema
 {
     private const STRINGS = ["list", "string"];
 
+    private const CSV_MAX_COLUMNS = 1000;
+
     private const ATTRIBUTES = ["names", "string"];
 
     private const TTI_BLOCKS = ["list", "ttiBlock"];
@@ -59,8 +61,8 @@ final class FormatDataSchema
         CsvParser::FORMAT_DATA_KEY                => [
             "delimiter"  => "string",
             "!header"    => ["?list", "string"],
-            "!roles"     => ["keys", ["identifier", "start", "end", "duration", "speaker", "text"], ["range", 0, 999]],
-            "!width"     => ["range", 0, 1000],
+            "!roles"     => ["keys", ["identifier", "start", "end", "duration", "speaker", "text"], ["range", 0, self::CSV_MAX_COLUMNS - 1]],
+            "!width"     => ["range", 0, self::CSV_MAX_COLUMNS],
             "timeFormat" => "string",
             "frameRate"  => "?number",
         ],

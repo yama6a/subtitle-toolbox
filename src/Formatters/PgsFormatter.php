@@ -39,10 +39,24 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
     private const MAX_SEGMENT_DATA = 0xFFFF;
     private const MAX_RUN          = 0x3FFF;
 
+    // An object segment starts with the object id, version and sequence flag. The first one adds the 3-byte data length.
+    private const OBJECT_HEADER       = 4;
+    private const OBJECT_DATA_LENGTH  = 3;
+    private const FIRST_OBJECT_HEADER = self::OBJECT_HEADER + self::OBJECT_DATA_LENGTH;
+
     // PgsParser uses BT.601 up to this video height and BT.709 above it.
     private const SD_MAX_HEIGHT = 576;
     private const MATRIX_BT709  = [0.2126, 0.0722];
     private const MATRIX_BT601  = [0.299, 0.114];
+
+    // The limited range of 8-bit video: luma from 16 to 235, chroma from 16 to 240 around 128.
+    private const LUMA_MIN      = 16;
+    private const LUMA_MAX      = 235;
+    private const LUMA_RANGE    = self::LUMA_MAX - self::LUMA_MIN;
+    private const CHROMA_MIN    = 16;
+    private const CHROMA_MAX    = 240;
+    private const CHROMA_CENTER = 128;
+    private const CHROMA_RANGE  = self::CHROMA_MAX - self::CHROMA_MIN;
 
     // Clamped colors such as BT.601 yellow need a step of 2 to find the code that the parser decodes to the same RGB.
     private const SEARCH_STEPS = [0, -1, 1, -2, 2];
@@ -147,8 +161,8 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
     private function objects(int $pts, int $width, int $height, string $rle): string
     {
         $data      = pack("nn", $width, $height) . $rle;
-        $fragments = array_merge([substr($data, 0, self::MAX_SEGMENT_DATA - 7)],
-                                 str_split(substr($data, self::MAX_SEGMENT_DATA - 7), self::MAX_SEGMENT_DATA - 4));
+        $fragments = array_merge([substr($data, 0, self::MAX_SEGMENT_DATA - self::FIRST_OBJECT_HEADER)],
+                                 str_split(substr($data, self::MAX_SEGMENT_DATA - self::FIRST_OBJECT_HEADER), self::MAX_SEGMENT_DATA - self::OBJECT_HEADER));
         $fragments = array_values(array_filter($fragments, fn (string $fragment): bool => $fragment !== ""));
 
         $output = "";
@@ -208,18 +222,18 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
         [$kr, $kb] = $highDefinition ? self::MATRIX_BT709 : self::MATRIX_BT601;
         $target    = [$rgb >> 16, $rgb >> 8 & 0xFF, $rgb & 0xFF];
         $y         = $kr * $target[0] + (1 - $kr - $kb) * $target[1] + $kb * $target[2];
-        $center    = [(int) round(16 + $y * 219 / 255),
-                      (int) round(128 + ($target[0] - $y) / (2 * (1 - $kr)) * 224 / 255),
-                      (int) round(128 + ($target[2] - $y) / (2 * (1 - $kb)) * 224 / 255)];
+        $center    = [(int) round(self::LUMA_MIN + $y * self::LUMA_RANGE / 255),
+                      (int) round(self::CHROMA_CENTER + ($target[0] - $y) / (2 * (1 - $kr)) * self::CHROMA_RANGE / 255),
+                      (int) round(self::CHROMA_CENTER + ($target[2] - $y) / (2 * (1 - $kb)) * self::CHROMA_RANGE / 255)];
 
         $best      = $center;
         $bestError = PHP_INT_MAX;
         foreach (self::SEARCH_STEPS as $lumaStep) {
             foreach (self::SEARCH_STEPS as $redStep) {
                 foreach (self::SEARCH_STEPS as $blueStep) {
-                    $candidate = [max(16, min(235, $center[0] + $lumaStep)),
-                                  max(16, min(240, $center[1] + $redStep)),
-                                  max(16, min(240, $center[2] + $blueStep))];
+                    $candidate = [max(self::LUMA_MIN, min(self::LUMA_MAX, $center[0] + $lumaStep)),
+                                  max(self::CHROMA_MIN, min(self::CHROMA_MAX, $center[1] + $redStep)),
+                                  max(self::CHROMA_MIN, min(self::CHROMA_MAX, $center[2] + $blueStep))];
                     $error     = 0;
                     foreach ($this->toRgb($candidate, $kr, $kb) as $channel => $value) {
                         $error += ($value - $target[$channel]) ** 2;
@@ -245,9 +259,9 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
     {
         [$luma, $chromaRed, $chromaBlue] = $ycrcb;
         $kg = 1 - $kr - $kb;
-        $y  = ($luma - 16) * 255 / 219;
-        $cr = ($chromaRed - 128) * 255 / 224;
-        $cb = ($chromaBlue - 128) * 255 / 224;
+        $y  = ($luma - self::LUMA_MIN) * 255 / self::LUMA_RANGE;
+        $cr = ($chromaRed - self::CHROMA_CENTER) * 255 / self::CHROMA_RANGE;
+        $cb = ($chromaBlue - self::CHROMA_CENTER) * 255 / self::CHROMA_RANGE;
 
         return array_map(fn (float $value): int => max(0, min(255, (int) round($value))), [
             $y + 2 * (1 - $kr) * $cr,

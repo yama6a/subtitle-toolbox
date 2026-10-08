@@ -31,8 +31,25 @@ final class Cea608
     public const ERASE_NON_DISPLAYED      = 0x2E;
     public const END_OF_CAPTION           = 0x2F;
 
+    // The first bytes of control codes on data channel 1. 0x11 also starts the special characters.
+    public const FIRST_BYTE_MID_ROW    = 0x11;
+    public const FIRST_BYTE_CONTROL    = 0x14;
+    public const FIRST_BYTE_TAB_OFFSET = 0x17;
+
+    // A tab offset moves the cursor right by its second byte minus 0x20: 1, 2 or 3 columns.
+    public const TAB_OFFSET_BASE = 0x20;
+
     public const ROWS    = 15;
     public const COLUMNS = 32;
+
+    // A caption shows at most 4 rows at once.
+    public const MAX_LINES = 4;
+
+    // Preamble address codes set the column in steps of 4.
+    public const PAC_INDENT_STEP = 4;
+
+    // The style index 7 of preamble address codes and mid-row codes means italics, not a color.
+    public const STYLE_ITALIC = 7;
 
     /** The colors of preamble address codes and mid-row codes by their 3-bit index. */
     public const COLORS = ["#ffffff", "#00ff00", "#0000ff", "#00ffff", "#ff0000", "#ffff00", "#ff00ff"];
@@ -165,12 +182,12 @@ final class Cea608
         $attributes = $secondByte & 0x1F;
         $underline  = ($attributes & 0x01) === 1;
         if ($attributes >= 0x10) {
-            return ["row" => $row, "column" => (($attributes & 0x0E) >> 1) * 4, "color" => self::WHITE, "italic" => false, "underline" => $underline];
+            return ["row" => $row, "column" => (($attributes & 0x0E) >> 1) * self::PAC_INDENT_STEP, "color" => self::WHITE, "italic" => false, "underline" => $underline];
         }
 
         $style = $attributes >> 1;
 
-        return ["row" => $row, "column" => 0, "color" => $style === 7 ? self::WHITE : $style, "italic" => $style === 7, "underline" => $underline];
+        return ["row" => $row, "column" => 0, "color" => $style === self::STYLE_ITALIC ? self::WHITE : $style, "italic" => $style === self::STYLE_ITALIC, "underline" => $underline];
     }
 
 
@@ -191,7 +208,7 @@ final class Cea608
             $attributes = match (true) {
                 $italic                => 0x0E,
                 $color !== self::WHITE => $color << 1,
-                default                => 0x10 | (intdiv($column, 4) << 1),
+                default                => 0x10 | (intdiv($column, self::PAC_INDENT_STEP) << 1),
             };
 
             return [0x10 | $low, 0x40 | ($half === 1 ? 0x20 : 0x00) | $attributes | ($underline ? 0x01 : 0x00)];
@@ -211,8 +228,8 @@ final class Cea608
         $style = ($secondByte & 0x0E) >> 1;
 
         return [
-            "color"     => $style === 7 ? null : $style,
-            "italic"    => $style === 7,
+            "color"     => $style === self::STYLE_ITALIC ? null : $style,
+            "italic"    => $style === self::STYLE_ITALIC,
             "underline" => ($secondByte & 0x01) === 1,
         ];
     }
@@ -223,7 +240,7 @@ final class Cea608
      */
     public static function encodeMidRow(?int $color, bool $underline): int
     {
-        return 0x20 | (($color ?? 7) << 1) | ($underline ? 0x01 : 0x00);
+        return 0x20 | (($color ?? self::STYLE_ITALIC) << 1) | ($underline ? 0x01 : 0x00);
     }
 
 
@@ -239,7 +256,7 @@ final class Cea608
             }
         }
         foreach (self::SPECIAL_CHARACTERS as $idx => $character) {
-            $codes[$character] = ["pair" => [0x11, 0x30 + $idx]];
+            $codes[$character] = ["pair" => [self::FIRST_BYTE_MID_ROW, 0x30 + $idx]];
         }
         for ($code = 0x20; $code <= 0x7E; $code++) {
             $codes[self::standardCharacter($code)] = ["byte" => $code];

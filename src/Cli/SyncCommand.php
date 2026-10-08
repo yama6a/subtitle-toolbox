@@ -18,6 +18,10 @@ final class SyncCommand extends WriteCommand
 {
     private const LOW_SCORE = 0.5;
 
+    private const SCALE_DECIMALS   = 5;
+    private const SECONDS_DECIMALS = 3;
+    private const SCORE_DECIMALS   = 2;
+
     private ?ReferenceSyncOptions $syncOptions = null;
 
     private Subtitle $reference;
@@ -119,12 +123,13 @@ final class SyncCommand extends WriteCommand
         $result = ReferenceSync::apply($subtitle, OptionsCopy::with($this->syncOptions, ["reference" => $this->reference]));
 
         $label = self::label($input);
-        $text  = "$label: scale " . self::number($result->scale, 5) . ", offset " . self::number($result->offset, 3) .
-                 " s, score " . self::number($result->score, 2) . "\n";
+        $text  = "$label: scale " . self::number($result->scale, self::SCALE_DECIMALS) . ", offset " .
+                 self::number($result->offset, self::SECONDS_DECIMALS) . " s, score " . self::number($result->score, self::SCORE_DECIMALS) . "\n";
         $segments = $result->getSegments();
         if (count($segments) > 1) {
             foreach ($segments as $segment) {
-                $text .= "$label: from " . self::number($segment["from"], 3) . " s: offset " . self::number($segment["offset"], 3) . " s\n";
+                $text .= "$label: from " . self::number($segment["from"], self::SECONDS_DECIMALS) . " s: offset " .
+                         self::number($segment["offset"], self::SECONDS_DECIMALS) . " s\n";
             }
         }
         $console->err($text);

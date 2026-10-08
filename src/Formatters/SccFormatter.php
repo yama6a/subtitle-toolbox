@@ -26,8 +26,6 @@ final class SccFormatter extends SubtitleFormatter
 {
     protected const FORMAT_OPTIONS = SccWriteOptions::class;
 
-    private const MAX_LINES = 4;
-
     private const FRAMES_PER_SECOND = 30000 / 1001;
 
     private const NAMED_COLORS = [
@@ -124,9 +122,9 @@ final class SccFormatter extends SubtitleFormatter
             return [];
         }
 
-        if (count($lines) > self::MAX_LINES) {
+        if (count($lines) > Cea608::MAX_LINES) {
             throw new UnwritableContentException("Cue #$idx at {$cue->getStart()} s has " . count($lines) . " lines, " .
-                                                 "but SCC allows " . self::MAX_LINES . ". " . $this->fitHint($cue));
+                                                 "but SCC allows " . Cea608::MAX_LINES . ". " . $this->fitHint($cue));
         }
         foreach ($lines as $characters) {
             if (count($characters) > Cea608::COLUMNS) {
@@ -157,9 +155,12 @@ final class SccFormatter extends SubtitleFormatter
      */
     private function fitHint(SubtitleCue $cue): string
     {
-        return count(LineWrapper::wrap($cue->getLines(), Cea608::COLUMNS, PHP_INT_MAX)) <= self::MAX_LINES
-            ? "Call wrapLines(32, 4) first."
-            : "Call Resegmenter::apply() with ResegmentMode::SplitLong and new CueLimits(32, 4), then wrapLines(32, 4).";
+        $columns = Cea608::COLUMNS;
+        $lines   = Cea608::MAX_LINES;
+
+        return count(LineWrapper::wrap($cue->getLines(), Cea608::COLUMNS, PHP_INT_MAX)) <= Cea608::MAX_LINES
+            ? "Call wrapLines($columns, $lines) first."
+            : "Call Resegmenter::apply() with ResegmentMode::SplitLong and new CueLimits($columns, $lines), then wrapLines($columns, $lines).";
     }
 
 
@@ -305,7 +306,7 @@ final class SccFormatter extends SubtitleFormatter
         $columns   = $stored["columns"] ?? null;
         $storedOk  = is_array($rows) && is_array($columns) && count($rows) === $count && count($columns) === $count
                      && array_is_list($rows) && array_is_list($columns)
-                     && (($rows[0] ?? 0) <= 4) === in_array($alignment, [7, 8, 9], true);
+                     && (($rows[0] ?? 0) <= Cea608::MAX_LINES) === in_array($alignment, [7, 8, 9], true);
         for ($idx = 0; $storedOk && $idx < $count; $idx++) {
             $storedOk = is_int($rows[$idx]) && is_int($columns[$idx]) && $rows[$idx] >= 1 && $rows[$idx] <= Cea608::ROWS
                         && ($idx === 0 || $rows[$idx] > $rows[$idx - 1]);
@@ -374,18 +375,18 @@ final class SccFormatter extends SubtitleFormatter
             }
             $start = 0;
         } else {
-            $pac = Cea608::encodePac($row, intdiv($start, 4) * 4);
+            $pac = Cea608::encodePac($row, intdiv($start, Cea608::PAC_INDENT_STEP) * Cea608::PAC_INDENT_STEP);
         }
 
         $words = [$this->word(...$pac), $this->word(...$pac)];
-        if ($start % 4 > 0) {
-            $tab   = $this->word(0x17, 0x20 + $start % 4);
+        if ($start % Cea608::PAC_INDENT_STEP > 0) {
+            $tab   = $this->word(Cea608::FIRST_BYTE_TAB_OFFSET, Cea608::TAB_OFFSET_BASE + $start % Cea608::PAC_INDENT_STEP);
             $words = [...$words, $tab, $tab];
         }
 
         $pending = null;
         foreach ($cells as $cell) {
-            $code = isset($cell["midRow"]) ? ["pair" => [0x11, $cell["midRow"]]] : Cea608::encodeCharacter($cell["char"]);
+            $code = isset($cell["midRow"]) ? ["pair" => [Cea608::FIRST_BYTE_MID_ROW, $cell["midRow"]]] : Cea608::encodeCharacter($cell["char"]);
             if (isset($code["byte"])) {
                 if ($pending === null) {
                     $pending = $code["byte"];
@@ -416,7 +417,7 @@ final class SccFormatter extends SubtitleFormatter
      */
     private function commandTwice(int $command): array
     {
-        $word = $this->word(0x14, $command);
+        $word = $this->word(Cea608::FIRST_BYTE_CONTROL, $command);
 
         return [$word, $word];
     }

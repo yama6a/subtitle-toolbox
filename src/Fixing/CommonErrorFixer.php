@@ -18,6 +18,9 @@ use SubtitleToolbox\SubtitleCue;
  */
 final class CommonErrorFixer
 {
+    // A next cue that starts within 0.6 s and with a lowercase letter continues the sentence of the cue before it.
+    private const CONTINUATION_GAP = 0.6;
+
     private const NOT_IN_WORD  = '(?<![\p{L}\p{N}\'\x{2019}])';
     private const WORD_ENDS    = '(?![\p{L}\p{N}\'\x{2019}])';
     private const SPACES       = '[ \t\x{00A0}]';
@@ -65,7 +68,7 @@ final class CommonErrorFixer
             }
 
             $next      = $cues[$indexes[$positions[$index] + 1] ?? -1] ?? null;
-            $continues = $next !== null && $next->getStart() - $cue->getEnd() <= 0.6
+            $continues = $next !== null && $next->getStart() - $cue->getEnd() <= self::CONTINUATION_GAP
                          && preg_match('/^\p{Ll}/u', implode("\n", Markup::plainLines($next->getLines()))) === 1;
             $original  = $lines;
             foreach (CommonErrorRule::cases() as $rule) {

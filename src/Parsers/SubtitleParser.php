@@ -17,6 +17,7 @@ use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 /**
  * The base class of the parsers of this library. Only the library extends it. Its protected members are not API and
@@ -176,7 +177,7 @@ abstract class SubtitleParser
             }
         }
 
-        return round($starts[$index] + $this->options->lastCueDuration, 3);
+        return Timecode::roundToMilliseconds($starts[$index] + $this->options->lastCueDuration);
     }
 
 

@@ -7,12 +7,20 @@ namespace SubtitleToolbox\Diff;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 final class SubtitleDiff
 {
     private const MIN_TEXT_SIMILARITY = 0.7;
     private const MIN_OVERLAP_SHARE   = 0.5;
     private const DENSE_LIMIT         = 40000;
+
+    // The step of each cell in the dense alignment table: from the cell above, from the left, or diagonal for a pair.
+    private const UP       = "u";
+    private const LEFT     = "l";
+    private const DIAGONAL = "d";
+
+    private const TEXT_WEIGHT = 2;
 
     /** @var list<float> */
     private array $oldStarts;
@@ -347,19 +355,19 @@ final class SubtitleDiff
         $previous   = array_fill(0, $m + 1, 0.0);
         for ($i = 1; $i <= $n; $i++) {
             $current = [0.0];
-            $row     = str_repeat("u", $m + 1);
+            $row     = str_repeat(self::UP, $m + 1);
             for ($j = 1; $j <= $m; $j++) {
                 $best      = $current[$j - 1];
-                $direction = "l";
+                $direction = self::LEFT;
                 if ($previous[$j] > $best) {
                     $best      = $previous[$j];
-                    $direction = "u";
+                    $direction = self::UP;
                 }
 
                 $weight = $this->pairWeight($oldFrom + $i - 1, $newFrom + $j - 1);
-                if ($weight > 0 && $previous[$j - 1] + $weight > $best + 1e-9) {
+                if ($weight > 0 && $previous[$j - 1] + $weight > $best + Timecode::EPSILON) {
                     $best      = $previous[$j - 1] + $weight;
-                    $direction = "d";
+                    $direction = self::DIAGONAL;
                 }
 
                 $current[$j] = $best;
@@ -373,10 +381,10 @@ final class SubtitleDiff
         $i     = $n;
         $j     = $m;
         while ($i > 0 || $j > 0) {
-            $direction = $i === 0 ? "l" : ($j === 0 ? "u" : $directions[$i][$j]);
-            if ($direction === "d") {
+            $direction = $i === 0 ? self::LEFT : ($j === 0 ? self::UP : $directions[$i][$j]);
+            if ($direction === self::DIAGONAL) {
                 $pairs[] = [$oldFrom + --$i, $newFrom + --$j];
-            } elseif ($direction === "u") {
+            } elseif ($direction === self::UP) {
                 $pairs[] = [$oldFrom + --$i, null];
             } else {
                 $pairs[] = [null, $newFrom + --$j];
@@ -388,7 +396,7 @@ final class SubtitleDiff
 
 
     /**
-     * Returns 0 for cues that do not pair. Otherwise up to 2 for the text likeness plus up to 1 for the time likeness.
+     * Returns 0 for cues that do not pair. Otherwise up to TEXT_WEIGHT for the text likeness plus up to 1 for the time likeness.
      */
     private function pairWeight(int $i, int $j): float
     {
@@ -411,15 +419,15 @@ final class SubtitleDiff
             }
         }
 
-        return $textScore + $textScore + $timeScore;
+        return self::TEXT_WEIGHT * $textScore + $timeScore;
     }
 
 
     private function isSameTime(int $i, int $j): bool
     {
         // The epsilon keeps a difference of exactly the tolerance inside it despite float rounding.
-        return abs($this->oldStarts[$i] - $this->newStarts[$j]) <= $this->tolerance + 1e-9
-            && abs($this->oldEnds[$i] - $this->newEnds[$j]) <= $this->tolerance + 1e-9;
+        return abs($this->oldStarts[$i] - $this->newStarts[$j]) <= $this->tolerance + Timecode::EPSILON
+            && abs($this->oldEnds[$i] - $this->newEnds[$j]) <= $this->tolerance + Timecode::EPSILON;
     }
 
 

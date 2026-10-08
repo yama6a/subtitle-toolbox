@@ -53,7 +53,7 @@ trait ShortCueMerging
 
     private static function shortCueMergingIsShort(SubtitleCue $cue, MergeShortCuesOptions $options): bool
     {
-        return round($cue->getEnd() - $cue->getStart(), 3) < round($options->limits->minDuration, 3)
+        return Timecode::roundToMilliseconds($cue->getEnd() - $cue->getStart()) < Timecode::roundToMilliseconds($options->limits->minDuration)
             || ($options->minCharacters !== null && LineWrapper::visibleCharacters($cue->getLines()) < $options->minCharacters);
     }
 
@@ -76,9 +76,9 @@ trait ShortCueMerging
             return null;
         }
 
-        $duration = round(max($first->getEnd(), $second->getEnd()) - $first->getStart(), 3);
-        if (round($second->getStart() - $first->getEnd(), 3) > round($options->maxGap, 3)
-            || (!$options->mergeSameSpeakerAnyDuration && $duration > round($options->limits->maxDuration, 3))) {
+        $duration = Timecode::roundToMilliseconds(max($first->getEnd(), $second->getEnd()) - $first->getStart());
+        if (Timecode::roundToMilliseconds($second->getStart() - $first->getEnd()) > Timecode::roundToMilliseconds($options->maxGap)
+            || (!$options->mergeSameSpeakerAnyDuration && $duration > Timecode::roundToMilliseconds($options->limits->maxDuration))) {
             return null;
         }
 
