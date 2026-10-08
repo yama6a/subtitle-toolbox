@@ -32,24 +32,7 @@ final class MicroDvdParser extends SubtitleParser
         );
         $blockIndexes = array_flip(array_keys($rawLines));
 
-        // In lenient mode, the {1}{1}<fps> line can follow lines without frames.
-        $firstLine = null;
-        foreach ($rawLines as $lineIndex => $rawLine) {
-            if (!$this->options->lenient || preg_match(self::CUE_REGEX, $rawLine)) {
-                $firstLine = $lineIndex;
-                break;
-            }
-        }
-        $frameRate = $this->formatOptions()->frameRate;
-        if ($firstLine !== null && preg_match('/^\{1\}\{1\}(\d+(?:\.\d+)?)$/', $rawLines[$firstLine], $matches)) {
-            $frameRate ??= (float) $matches[1];
-            unset($rawLines[$firstLine]);
-        }
-
-        if ($frameRate === null) {
-            throw new ParsingException("The frame rate is unknown. Set MicroDvdReadOptions::\$frameRate or start the file with {1}{1}<fps>.");
-        }
-
+        $frameRate = $this->readFrameRate($rawLines);
         try {
             $frames = new FrameRate($frameRate);
         } catch (InvalidArgumentException $exception) {
@@ -74,6 +57,35 @@ final class MicroDvdParser extends SubtitleParser
         }
 
         return $subtitle->addCues($parsedCues);
+    }
+
+
+    /**
+     * Returns the frame rate of the options or of the {1}{1}<fps> line, and removes that line from $rawLines.
+     *
+     * @param array<int, string> $rawLines
+     */
+    private function readFrameRate(array &$rawLines): float
+    {
+        // In lenient mode, the {1}{1}<fps> line can follow lines without frames.
+        $firstLine = null;
+        foreach ($rawLines as $lineIndex => $rawLine) {
+            if (!$this->options->lenient || preg_match(self::CUE_REGEX, $rawLine)) {
+                $firstLine = $lineIndex;
+                break;
+            }
+        }
+        $frameRate = $this->formatOptions()->frameRate;
+        if ($firstLine !== null && preg_match('/^\{1\}\{1\}(\d+(?:\.\d+)?)$/', $rawLines[$firstLine], $matches)) {
+            $frameRate ??= (float) $matches[1];
+            unset($rawLines[$firstLine]);
+        }
+
+        if ($frameRate === null) {
+            throw new ParsingException("The frame rate is unknown. Set MicroDvdReadOptions::\$frameRate or start the file with {1}{1}<fps>.");
+        }
+
+        return $frameRate;
     }
 
 
