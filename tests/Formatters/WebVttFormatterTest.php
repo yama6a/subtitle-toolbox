@@ -222,4 +222,28 @@ class WebVttFormatterTest extends TestCase
     {
         $this->assertSame("\xEF\xBB\xBFWEBVTT\n\n", (new Subtitle())->toString(Format::WebVtt));
     }
+
+
+    public function testTimingArrowInCueTextIsEscaped(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, ["a --> b", "", "c"]));
+        $output   = $subtitle->toString(Format::WebVtt, new WriteOptions(bom: false));
+
+        $this->assertSame(file_get_contents(__DIR__ . "/../files/vtt/real/own_arrow_in_text.vtt"), $output);
+        $this->assertSame(
+            ["a --&gt; b", "c"],
+            Subtitle::fromString($output, Format::WebVtt)->getCues()[0]->getLines()
+        );
+    }
+
+
+    public function testTimingArrowIsEscapedWhenTagsAreStripped(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "<i>a --> b</i>"));
+
+        $this->assertSame(
+            "WEBVTT\n\n1\n00:00:01.000 --> 00:00:02.000\na --&gt; b\n",
+            $subtitle->toString(Format::WebVtt, new WriteOptions(stripTags: true, bom: false))
+        );
+    }
 }
