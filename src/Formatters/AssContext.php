@@ -15,7 +15,7 @@ final readonly class AssContext
 {
     public function __construct(
         public bool $isSsa,
-        public bool $stripAll,
+        public bool $stripTags,
         public AssKaraokeTag $karaokeTag,
     ) {
     }

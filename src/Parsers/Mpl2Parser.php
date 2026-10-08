@@ -17,12 +17,12 @@ final class Mpl2Parser extends SubtitleParser
     private const CUE_REGEX = '/^\[(\d+)\]\[(\d+)\](.*)$/';
 
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
         $subtitle   = new Subtitle();
         $parsedCues = [];
         $blockIndex = 0;
-        foreach ($this->lines($rawSubtitle) as $lineIndex => $rawLine) {
+        foreach ($this->lines($content) as $lineIndex => $rawLine) {
             $rawLine = trim($rawLine);
             if ($rawLine === "") {
                 continue;

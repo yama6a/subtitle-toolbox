@@ -28,7 +28,7 @@ final class MpSubFormatter extends SubtitleFormatter
         $options ??= new WriteOptions();
         $fps         = $this->formatOptions($options)->frameRate;
         $frameRate   = $fps === null ? null : new FrameRate($fps);
-        $output      = $this->getHeader($subtitle, $frameRate);
+        $output      = $this->header($subtitle, $frameRate);
         $previousEnd = 0;
         foreach ($subtitle->getCues() as $cue) {
             $output .= LineEnding::Lf->value;
@@ -50,7 +50,7 @@ final class MpSubFormatter extends SubtitleFormatter
     }
 
 
-    private function getHeader(Subtitle $subtitle, ?FrameRate $frameRate): string
+    private function header(Subtitle $subtitle, ?FrameRate $frameRate): string
     {
         $formatData = $subtitle->findFormatData(MpSubParser::FORMAT_DATA_KEY);
         $headers    = [

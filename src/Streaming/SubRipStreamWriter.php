@@ -26,10 +26,10 @@ final class SubRipStreamWriter implements CueStreamWriter
     public function __construct($stream, ?WriteOptions $options = null)
     {
         $options ??= new WriteOptions();
-        $this->options = $options;
-        $this->formatter  = new SubRipFormatter();
-        $prefix           = $this->formatter->format(new Subtitle(), $options);
-        $this->handle     = new StreamHandle($stream);
+        $this->options   = $options;
+        $this->formatter = new SubRipFormatter();
+        $prefix          = $this->formatter->format(new Subtitle(), $options);
+        $this->handle    = new StreamHandle($stream);
         $this->handle->write($prefix);
     }
 

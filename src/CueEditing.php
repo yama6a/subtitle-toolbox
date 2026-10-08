@@ -38,7 +38,7 @@ trait CueEditing
         $this->cues       = $cues;
         $this->metadata   = $this->metadata + $other->getAllMetadata();
         $this->formatData = $this->formatData + $other->formatData;
-        $this->comments = CommentAnchors::comments($this->cues, $comments, array_merge($ownAnchors, $otherAnchors));
+        $this->comments   = CommentAnchors::comments($this->cues, $comments, array_merge($ownAnchors, $otherAnchors));
 
         return $this;
     }
@@ -69,7 +69,7 @@ trait CueEditing
             $copies[$cue] = $copy;
         }
 
-        return $this->copyWithCues($copies);
+        return $this->cueEditingCopyWithCues($copies);
     }
 
 
@@ -85,7 +85,7 @@ trait CueEditing
             }
         }
 
-        return $this->copyWithCues($copies);
+        return $this->cueEditingCopyWithCues($copies);
     }
 
 
@@ -94,7 +94,7 @@ trait CueEditing
      *
      * @param \SplObjectStorage<SubtitleCue, SubtitleCue> $copies original cue => copy
      */
-    private function copyWithCues(\SplObjectStorage $copies): self
+    private function cueEditingCopyWithCues(\SplObjectStorage $copies): self
     {
         $anchors = CommentAnchors::of($this->cues, $this->comments);
         $copy    = clone $this;
@@ -129,7 +129,7 @@ trait CueEditing
      */
     public function splitCue(int $index, float $at, int $splitAfterLine): self
     {
-        $cue = $this->getEditableCue($index);
+        $cue = $this->cueEditingCueAt($index);
         if ($at <= $cue->getStart() || $at >= $cue->getEnd()) {
             throw new InvalidArgumentException("Cannot split cue $index at $at: the time must be after the cue " .
                                                "start {$cue->getStart()} and before the cue end {$cue->getEnd()}.");
@@ -169,8 +169,8 @@ trait CueEditing
             throw new InvalidArgumentException("Cannot join cues $first to $last: the first index must be " .
                                                "lower than the last index.");
         }
-        $this->getEditableCue($first);
-        $this->getEditableCue($last);
+        $this->cueEditingCueAt($first);
+        $this->cueEditingCueAt($last);
 
         $anchors = CommentAnchors::of($this->cues, $this->comments);
         $group   = array_filter(
@@ -236,7 +236,7 @@ trait CueEditing
     }
 
 
-    private function getEditableCue(int $index): SubtitleCue
+    private function cueEditingCueAt(int $index): SubtitleCue
     {
         if (!array_key_exists($index, $this->cues)) {
             throw new InvalidArgumentException("Cannot edit cue $index: the cue does not exist.");

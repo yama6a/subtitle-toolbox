@@ -60,7 +60,7 @@ final class SpeakerLabels
         match ($options->to) {
             SpeakerStyle::Prefix         => self::toPrefix($subtitle, $options->writeUpperCase, $options->separator),
             SpeakerStyle::DialogueDashes => self::toDialogueDashes($subtitle, $options->dialogueDashStyle->value),
-            SpeakerStyle::Colors        => self::toColors($subtitle, $options->colors),
+            SpeakerStyle::Colors         => self::toColors($subtitle, $options->colors),
             null                         => null,
         };
 

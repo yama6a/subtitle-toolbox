@@ -31,9 +31,9 @@ final class MpSubParser extends SubtitleParser
     private array $formatData = [];
 
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $lines            = $this->lines($rawSubtitle);
+        $lines            = $this->lines($content);
         $this->frameRate  = null;
         $this->hasFormat  = false;
         $this->formatData = [];
@@ -44,9 +44,9 @@ final class MpSubParser extends SubtitleParser
         $cueLine          = 0;
         $cueIndex         = 0;
         $skipping         = false;
-        foreach ($lines as $lineIdx => $line) {
+        foreach ($lines as $lineIndex => $line) {
             $line       = trim($line);
-            $lineNumber = $lineIdx + 1;
+            $lineNumber = $lineIndex + 1;
             if ($cue !== null && $line !== "") {
                 $cue->addLine(Markup::escapeText($line));
                 continue;
@@ -176,8 +176,8 @@ final class MpSubParser extends SubtitleParser
 
         try {
             return new FrameRate((int)$matches[0]);
-        } catch (InvalidArgumentException $e) {
-            throw new ParsingException("The frame rate \"$value\" is not valid.", $lineNumber, $e);
+        } catch (InvalidArgumentException $exception) {
+            throw new ParsingException("The frame rate \"$value\" is not valid.", $lineNumber, $exception);
         }
     }
 

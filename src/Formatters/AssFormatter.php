@@ -165,7 +165,7 @@ final class AssFormatter extends SubtitleFormatter
         $stored = $cue->findFormatData(AssParser::FORMAT_DATA_KEY);
         $fields = $stored["fields"] ?? [];
 
-        $unchanged = !$context->stripAll && isset($stored["text"]) &&
+        $unchanged = !$context->stripTags && isset($stored["text"]) &&
                      ($stored["lines"] ?? null) === $cue->getLines() &&
                      ($stored["alignment"] ?? null) === $cue->getAlignment();
         [$text, $name] = $unchanged
@@ -199,10 +199,10 @@ final class AssFormatter extends SubtitleFormatter
 
         $parts = [];
         if ($cue->getAlignment() !== null) {
-            $parts[] = ["tag", $context->isSsa ? "\\a" . array_flip(SsaOverrideTags::LEGACY_ALIGNMENTS)[$cue->getAlignment()] : "\\an" . $cue->getAlignment()];
+            $parts[] = ["tag", $context->isSsa ? "\\a" . array_flip(SsaOverrideTags::SSA_ALIGNMENTS)[$cue->getAlignment()] : "\\an" . $cue->getAlignment()];
         }
 
-        $tokens = $context->stripAll ? [Markup::stripAllTags($text)] : Markup::splitTags($text);
+        $tokens = $context->stripTags ? [Markup::stripAllTags($text)] : Markup::splitTags($text);
         $parts  = [...$parts, ...$this->convertTokens($tokens, $cue, $context)];
 
         $output = "";

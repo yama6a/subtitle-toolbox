@@ -12,7 +12,7 @@ namespace SubtitleToolbox\Parsers;
 final class SsaOverrideTags
 {
     // Legacy SSA codes: 1 to 3 are bottom, +4 is top, +8 is middle. The values are numpad alignments.
-    public const LEGACY_ALIGNMENTS = [1 => 1, 2 => 2, 3 => 3, 5 => 7, 6 => 8, 7 => 9, 9 => 4, 10 => 5, 11 => 6];
+    public const SSA_ALIGNMENTS = [1 => 1, 2 => 2, 3 => 3, 5 => 7, 6 => 8, 7 => 9, 9 => 4, 10 => 5, 11 => 6];
 
 
     /**
@@ -25,7 +25,7 @@ final class SsaOverrideTags
             return (int) $matches[1];
         }
         if (preg_match('/^\\\\a(\d{1,2})$/', $tag, $matches)) {
-            return self::LEGACY_ALIGNMENTS[(int) $matches[1]] ?? null;
+            return self::SSA_ALIGNMENTS[(int) $matches[1]] ?? null;
         }
 
         return null;

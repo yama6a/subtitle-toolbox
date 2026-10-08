@@ -56,9 +56,9 @@ final class IttFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $fps                      = $this->formatOptions($options)->frameRate;
-        [$frameRate, $multiplier] = $this->frameRateParameters($subtitle->findFormatData(IttParser::FORMAT_DATA_KEY), $fps);
-        $rate                     = new FrameRate((float) $frameRate * $this->multiplierFactor($multiplier));
+        $fps                         = $this->formatOptions($options)->frameRate;
+        [$ttpFrameRate, $multiplier] = $this->frameRateParameters($subtitle->findFormatData(IttParser::FORMAT_DATA_KEY), $fps);
+        $frameRate                   = new FrameRate((float) $ttpFrameRate * $this->multiplierFactor($multiplier));
 
         $ttml = $this->toTtmlSubtitle($subtitle);
         $xml  = (new TtmlFormatter())->format($ttml, new WriteOptions(stripTags: $options->stripTags));
@@ -67,17 +67,17 @@ final class IttFormatter extends SubtitleFormatter
         $document = XmlLoader::xml($xml);
         $root     = $document->documentElement;
         $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:timeBase", "smpte");
-        $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:frameRate", $frameRate);
+        $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:frameRate", $ttpFrameRate);
         $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:frameRateMultiplier", $multiplier);
         $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:dropMode", "nonDrop");
 
         $cues       = $ttml->getCues();
         $paragraphs = $document->getElementsByTagNameNS(TtmlNamespaces::TTML, "p");
-        foreach ($paragraphs as $idx => $paragraph) {
-            $begin = $rate->secondsToFrames(max(0.0, $cues[$idx]->getStart()));
-            $end   = max($begin + 1, $rate->secondsToFrames(max(0.0, $cues[$idx]->getEnd())));
-            $paragraph->setAttribute("begin", sprintf(self::TIME_PATTERN, ...Timecode::frameNumber($begin, $rate)));
-            $paragraph->setAttribute("end", sprintf(self::TIME_PATTERN, ...Timecode::frameNumber($end, $rate)));
+        foreach ($paragraphs as $index => $paragraph) {
+            $begin = $frameRate->secondsToFrames(max(0.0, $cues[$index]->getStart()));
+            $end   = max($begin + 1, $frameRate->secondsToFrames(max(0.0, $cues[$index]->getEnd())));
+            $paragraph->setAttribute("begin", sprintf(self::TIME_PATTERN, ...Timecode::frameNumber($begin, $frameRate)));
+            $paragraph->setAttribute("end", sprintf(self::TIME_PATTERN, ...Timecode::frameNumber($end, $frameRate)));
         }
 
         return $this->applyOutputOptions($document->saveXML(), $options);
@@ -92,19 +92,19 @@ final class IttFormatter extends SubtitleFormatter
         $stored = null;
         if (isset($ittData["frameRate"])) {
             $multiplier = $ittData["frameRateMultiplier"] ?? "1 1";
-            $rate       = IttFrameRates::supported((float) $ittData["frameRate"] * $this->multiplierFactor($multiplier));
-            if ($rate !== null && IttFrameRates::PARAMETERS[$rate][0] === $ittData["frameRate"]) {
-                $stored = [$rate, [$ittData["frameRate"], $multiplier]];
+            $key        = IttFrameRates::key((float) $ittData["frameRate"] * $this->multiplierFactor($multiplier));
+            if ($key !== null && IttFrameRates::PARAMETERS[$key][0] === $ittData["frameRate"]) {
+                $stored = [$key, [$ittData["frameRate"], $multiplier]];
             }
         }
 
         if ($fps === null) {
             return $stored[1] ?? throw new InvalidArgumentException("The ITT formatter needs a frame rate. Set IttWriteOptions::\$frameRate.");
         }
-        $option = IttFrameRates::supported($fps);
+        $optionKey = IttFrameRates::key($fps);
 
         // Keeps a parsed multiplier such as "1000 1001" when the option names the same frame rate.
-        return $stored !== null && $stored[0] === $option ? $stored[1] : IttFrameRates::PARAMETERS[$option];
+        return $stored !== null && $stored[0] === $optionKey ? $stored[1] : IttFrameRates::PARAMETERS[$optionKey];
     }
 
 

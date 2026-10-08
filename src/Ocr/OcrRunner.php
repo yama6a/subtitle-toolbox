@@ -23,14 +23,14 @@ final class OcrRunner
     public function run(Subtitle $subtitle, OcrLanguage|string|null $language = null): OcrReport
     {
         $language = $language instanceof OcrLanguage ? $language->value : $language;
-        $results = [];
+        $texts = [];
         foreach ($subtitle->getCues() as $cueIndex => $cue) {
             if (CueImage::isImageCue($cue) && $cue->getLines() === []) {
-                $results[$cueIndex] = $this->engine->recognize(CueImage::fromCue($cue), $language);
-                $cue->setLines($results[$cueIndex]->lines);
+                $texts[$cueIndex] = $this->engine->recognize(CueImage::fromCue($cue), $language);
+                $cue->setLines($texts[$cueIndex]->lines);
             }
         }
 
-        return new OcrReport($results);
+        return new OcrReport($texts);
     }
 }

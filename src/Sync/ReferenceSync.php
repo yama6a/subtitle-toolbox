@@ -18,8 +18,8 @@ final class ReferenceSync
     private const FINE_STEP    = 0.01;
     private const SPLIT_BLOCKS = 200;
 
-    // An earlier cue ends at least 1 ms before the first cue of a later part.
-    private const PART_GAP = 0.001;
+    // An earlier cue ends at least 1 ms before the first cue of a later segment.
+    private const SEGMENT_GAP = 0.001;
 
     // A video converted between 2 of these frame rates plays at another speed, so its subtitles drift.
     private const FRAME_RATE_PAIRS = [[24, 23.976], [25, 24], [25, 23.976]];
@@ -31,55 +31,55 @@ final class ReferenceSync
      */
     public static function apply(Subtitle $subtitle, ReferenceSyncOptions $options): ReferenceSyncReport
     {
-        $result   = self::find($subtitle, $options);
-        $segments = $result->getSegments();
+        $report   = self::find($subtitle, $options);
+        $segments = $report->getSegments();
         if (count($segments) > 1) {
             self::retimeSegments($subtitle, $segments);
 
-            return $result;
+            return $report;
         }
 
-        if ($result->scale != 1) {
-            $subtitle->scale($result->scale);
+        if ($report->scale != 1) {
+            $subtitle->scale($report->scale);
         }
-        if ($result->offset != 0) {
-            $subtitle->shift($result->offset);
+        if ($report->offset != 0) {
+            $subtitle->shift($report->offset);
         }
 
-        return $result;
+        return $report;
     }
 
 
     /**
-     * Scales and then shifts each cue with the segment that holds its start. An earlier cue ends before a later part starts.
+     * Scales and then shifts each cue with the segment that holds its start. An earlier cue ends before a later segment starts.
      *
      * @param list<array{from: float, to: float, scale: float, offset: float}> $segments
      */
     private static function retimeSegments(Subtitle $target, array $segments): void
     {
-        $parts = array_fill(0, count($segments), []);
+        $segmentCues = array_fill(0, count($segments), []);
         foreach ($target->getCues() as $cue) {
             $index = count($segments) - 1;
             while ($index > 0 && $cue->getStart() < $segments[$index]["from"]) {
                 $index--;
             }
-            $parts[$index][] = $cue;
+            $segmentCues[$index][] = $cue;
         }
 
-        foreach ($parts as $index => $cues) {
+        foreach ($segmentCues as $index => $cues) {
             foreach ($cues as $cue) {
                 $cue->mapTimes(fn (float $time): float => $time * $segments[$index]["scale"] + $segments[$index]["offset"]);
             }
         }
 
-        for ($index = 1; $index < count($parts); $index++) {
-            if ($parts[$index] === []) {
+        for ($index = 1; $index < count($segmentCues); $index++) {
+            if ($segmentCues[$index] === []) {
                 continue;
             }
 
-            $laterStart = min(array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $parts[$index]));
+            $laterStart = min(array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $segmentCues[$index]));
             for ($earlier = 0; $earlier < $index; $earlier++) {
-                self::endBefore($parts[$earlier], $laterStart);
+                self::endBefore($segmentCues[$earlier], $laterStart);
             }
         }
 
@@ -88,15 +88,15 @@ final class ReferenceSync
 
 
     /**
-     * Ends each cue that starts before $laterStart at least PART_GAP before it.
+     * Ends each cue that starts before $laterStart at least SEGMENT_GAP before it.
      *
      * @param list<SubtitleCue> $cues
      */
     private static function endBefore(array $cues, float $laterStart): void
     {
         foreach ($cues as $cue) {
-            if ($cue->getStart() < $laterStart && $cue->getEnd() > $laterStart - self::PART_GAP) {
-                $cue->setEnd(max($cue->getStart(), $laterStart - self::PART_GAP));
+            if ($cue->getStart() < $laterStart && $cue->getEnd() > $laterStart - self::SEGMENT_GAP) {
+                $cue->setEnd(max($cue->getStart(), $laterStart - self::SEGMENT_GAP));
             }
         }
     }
@@ -128,12 +128,12 @@ final class ReferenceSync
                 $best = new ReferenceSyncReport(Timecode::roundToMilliseconds($offset), $scale, min(1, max(0, $score)));
             }
 
-            $candidates = $options->maxSplits > 0 ? self::splitCandidates($targetSpans, $scaled, $referenceSpans, $options) : [];
-            foreach ($candidates as [$parts, $partsOverlap]) {
-                $partsScore = $partsOverlap / ($targetTime * $scale + $referenceTime - $partsOverlap);
-                $value      = $partsScore - (count($parts) - 1) * $options->splitPenalty;
+            $candidates = $options->maxSplits > 0 ? self::segmentCandidates($targetSpans, $scaled, $referenceSpans, $options) : [];
+            foreach ($candidates as [$segments, $segmentsOverlap]) {
+                $segmentsScore = $segmentsOverlap / ($targetTime * $scale + $referenceTime - $segmentsOverlap);
+                $value         = $segmentsScore - (count($segments) - 1) * $options->splitPenalty;
                 if ($bestSplit === null || $value > $bestSplit[0] + Timecode::EPSILON) {
-                    $bestSplit = [$value, new ReferenceSyncReport($parts[0]["offset"], $scale, min(1, max(0, $partsScore)), $parts)];
+                    $bestSplit = [$value, new ReferenceSyncReport($segments[0]["offset"], $scale, min(1, max(0, $segmentsScore)), $segments)];
                 }
             }
         }
@@ -147,7 +147,7 @@ final class ReferenceSync
 
 
     /**
-     * Returns the best parts for each number of splits from 1 to maxSplits, with the overlap of all parts together.
+     * Returns the best segments for each number of splits from 1 to maxSplits, with the overlap of all segments together.
      * A search over single spans takes too long in PHP. So the splits first fall on block boundaries.
      * Then each split moves to the best span near its boundary.
      *
@@ -156,7 +156,7 @@ final class ReferenceSync
      * @param list<array{float, float}> $reference
      * @return list<array{list<array{from: float, offset: float}>, float}>
      */
-    private static function splitCandidates(array $original, array $target, array $reference, ReferenceSyncOptions $options): array
+    private static function segmentCandidates(array $original, array $target, array $reference, ReferenceSyncOptions $options): array
     {
         $blockSize = (int)ceil(count($target) / self::SPLIT_BLOCKS);
         $search    = self::forwardPass(array_chunk($target, $blockSize), $reference, $options);
@@ -176,7 +176,7 @@ final class ReferenceSync
     /**
      * Finds the highest overlap up to each block, for each layer and each coarse offset.
      * A layer is the number of splits so far.
-     * A part that starts at a block takes the best value of the layer below as its floor.
+     * A segment that starts at a block takes the best value of the layer below as its floor.
      *
      * @param list<list<array{float, float}>> $blocks
      * @param list<array{float, float}>       $reference
@@ -210,7 +210,7 @@ final class ReferenceSync
 
 
     /**
-     * Adds the overlaps of one block to a layer. An offset whose value is below the floor starts a new part here.
+     * Adds the overlaps of one block to a layer. An offset whose value is below the floor starts a new segment here.
      *
      * @param SplitSearch $search
      * @param list<float> $overlaps
@@ -252,7 +252,7 @@ final class ReferenceSync
 
 
     /**
-     * Returns the parts of the best path of a layer, each with its coarse offset index and its first span.
+     * Returns the segments of the best path of a layer, each with its coarse offset index and its first span.
      *
      * @param SplitSearch $search
      * @return list<array{n: int, start: int}>
@@ -274,7 +274,7 @@ final class ReferenceSync
 
 
     /**
-     * Moves each split to its best span and refines the offset of each part.
+     * Moves each split to its best span and refines the offset of each segment.
      *
      * @param list<array{n: int, start: int}> $chain
      * @param list<array{float, float}>       $original
@@ -284,26 +284,26 @@ final class ReferenceSync
      */
     private static function refineChain(array $chain, array $original, array $target, array $reference, int $blockSize, ReferenceSyncOptions $options): array
     {
-        foreach ($chain as $index => &$part) {
-            $part["offset"] = $options->minOffset + $part["n"] * self::COARSE_STEP;
+        foreach ($chain as $index => &$segment) {
+            $segment["offset"] = $options->minOffset + $segment["n"] * self::COARSE_STEP;
             if ($index > 0) {
-                $limit         = ($chain[$index + 1]["start"] ?? count($target)) - 1;
-                $part["start"] = self::bestSplit($target, $reference, $chain[$index - 1], $part, $blockSize, $limit);
+                $limit            = ($chain[$index + 1]["start"] ?? count($target)) - 1;
+                $segment["start"] = self::bestSplit($target, $reference, $chain[$index - 1], $segment, $blockSize, $limit);
             }
         }
-        unset($part);
+        unset($segment);
 
-        $parts   = [];
-        $overlap = 0.0;
-        foreach ($chain as $index => $part) {
-            $end                    = $chain[$index + 1]["start"] ?? count($target);
-            [$offset, $partOverlap] = self::refine(array_slice($target, $part["start"], $end - $part["start"]),
-                                                   $reference, $part["offset"], $options);
-            $parts[]                = ["from" => $index === 0 ? 0.0 : $original[$part["start"]][0], "offset" => Timecode::roundToMilliseconds($offset)];
-            $overlap               += $partOverlap;
+        $segments = [];
+        $overlap  = 0.0;
+        foreach ($chain as $index => $segment) {
+            $end                       = $chain[$index + 1]["start"] ?? count($target);
+            [$offset, $segmentOverlap] = self::refine(array_slice($target, $segment["start"], $end - $segment["start"]),
+                                                      $reference, $segment["offset"], $options);
+            $segments[]                = ["from" => $index === 0 ? 0.0 : $original[$segment["start"]][0], "offset" => Timecode::roundToMilliseconds($offset)];
+            $overlap                  += $segmentOverlap;
         }
 
-        return [$parts, $overlap];
+        return [$segments, $overlap];
     }
 
 

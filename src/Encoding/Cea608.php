@@ -252,12 +252,12 @@ final class Cea608
     {
         $codes = [];
         foreach (self::EXTENDED_CHARACTERS as $firstByte => $characters) {
-            foreach ($characters as $idx => $character) {
-                $codes[$character] = ["byte" => ord(self::EXTENDED_FALLBACKS[$firstByte][$idx]), "pair" => [$firstByte, 0x20 + $idx]];
+            foreach ($characters as $index => $character) {
+                $codes[$character] = ["byte" => ord(self::EXTENDED_FALLBACKS[$firstByte][$index]), "pair" => [$firstByte, 0x20 + $index]];
             }
         }
-        foreach (self::SPECIAL_CHARACTERS as $idx => $character) {
-            $codes[$character] = ["pair" => [self::FIRST_BYTE_MID_ROW, 0x30 + $idx]];
+        foreach (self::SPECIAL_CHARACTERS as $index => $character) {
+            $codes[$character] = ["pair" => [self::FIRST_BYTE_MID_ROW, 0x30 + $index]];
         }
         for ($code = 0x20; $code <= 0x7E; $code++) {
             $codes[self::standardCharacter($code)] = ["byte" => $code];

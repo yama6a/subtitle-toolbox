@@ -68,24 +68,24 @@ final class VobSubParser extends SubtitleParser
      * Reads the image cues of one track from the .sub content. VobSubReadOptions holds the .idx content.
      * Its $track and $language select the track. Without them, the parser reads the first track.
      */
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $options = $this->formatOptions();
-        if ($options->idx === null) {
+        $formatOptions = $this->formatOptions();
+        if ($formatOptions->idx === null) {
             throw new InvalidArgumentException("VobSub needs the .idx content. Set VobSubReadOptions::\$idx.");
         }
         $this->palette      = [];
         $this->customColors = null;
-        $this->selectTrack($this->readIndex($options->idx), $options->track, $options->language);
+        $this->selectTrack($this->readIndex($formatOptions->idx), $formatOptions->track, $formatOptions->language);
 
         $units = [];
         foreach ($this->entries as $entry) {
-            if ($entry["filepos"] >= strlen($rawSubtitle)) {
+            if ($entry["filepos"] >= strlen($content)) {
                 throw new ParsingException(sprintf("The filepos %09x of timestamp %.3f is outside the .sub content of %d bytes.",
-                                                   $entry["filepos"], $entry["time"], strlen($rawSubtitle)));
+                                                   $entry["filepos"], $entry["time"], strlen($content)));
             }
 
-            $unit          = $this->decodeUnit($this->readUnit($rawSubtitle, $entry["filepos"]));
+            $unit          = $this->decodeUnit($this->readUnit($content, $entry["filepos"]));
             $unit["start"] = $entry["time"] + $unit["startDelay"];
             $unit["stop"]  = $unit["stopDelay"] === null ? null : $entry["time"] + $unit["stopDelay"];
             $units[]       = $unit;

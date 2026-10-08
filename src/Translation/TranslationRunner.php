@@ -48,7 +48,7 @@ final class TranslationRunner
             }
 
             foreach ($batch as $requestIndex => $request) {
-                array_push($warnings, ...$this->apply($cues, $request["cueIndexes"], $request["tags"], $translations[$requestIndex]));
+                array_push($warnings, ...$this->fillCues($cues, $request["cueIndexes"], $request["tags"], $translations[$requestIndex]));
             }
         }
 
@@ -196,7 +196,7 @@ final class TranslationRunner
      * @param array<int, array{0: string, 1: ?string}>    $tags
      * @return list<TranslationWarning>
      */
-    private function apply(array $cues, array $cueIndexes, array $tags, string $translation): array
+    private function fillCues(array $cues, array $cueIndexes, array $tags, string $translation): array
     {
         $warnings = [];
         if (!$this->keepsPlaceholders($translation, $tags)) {

@@ -14,9 +14,9 @@ final class JsonParser extends SubtitleParser
      * Reads the JSON that JsonFormatter writes.
      * A bad field throws ParsingException with the path of the field, for example cues[3].start.
      */
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $data = $this->decodeJsonObject($rawSubtitle);
+        $data = $this->decodeJsonObject($content);
 
         $this->decodeFileFormatData($data);
         $skipped = $this->decodeCueFormatData($data);

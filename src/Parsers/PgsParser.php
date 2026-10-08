@@ -84,7 +84,7 @@ final class PgsParser extends SubtitleParser
     private array $cues = [];
 
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
         $this->cues         = [];
         $this->palettes     = [];
@@ -93,22 +93,22 @@ final class PgsParser extends SubtitleParser
         $this->presentation = null;
         $this->shownImage   = null;
 
-        $length = strlen($rawSubtitle);
+        $length = strlen($content);
         $offset = 0;
         while ($offset < $length) {
-            if (substr($rawSubtitle, $offset, 2) !== self::MAGIC) {
+            if (substr($content, $offset, 2) !== self::MAGIC) {
                 throw new ParsingException("The segment at byte $offset does not start with the PG magic bytes.");
             }
             if ($length - $offset < self::HEADER_LENGTH) {
                 throw new ParsingException("The segment header at byte $offset is cut off.");
             }
 
-            ["pts" => $pts, "type" => $type, "size" => $size] = unpack("Npts/Ndts/Ctype/nsize", $rawSubtitle, $offset + 2);
+            ["pts" => $pts, "type" => $type, "size" => $size] = unpack("Npts/Ndts/Ctype/nsize", $content, $offset + 2);
             if ($length - $offset - self::HEADER_LENGTH < $size) {
                 throw new ParsingException("The segment at byte $offset has $size bytes of data, but the file ends before.");
             }
 
-            $data    = substr($rawSubtitle, $offset + self::HEADER_LENGTH, $size);
+            $data    = substr($content, $offset + self::HEADER_LENGTH, $size);
             $offset += self::HEADER_LENGTH + $size;
 
             match ($type) {

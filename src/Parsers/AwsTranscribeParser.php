@@ -27,9 +27,9 @@ final class AwsTranscribeParser extends SubtitleParser
      * Reads the JSON transcript of an Amazon Transcribe batch job.
      * It makes one cue per audio segment, else cues grouped from the words.
      */
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $data    = $this->decodeJsonObject($rawSubtitle);
+        $data    = $this->decodeJsonObject($content);
         $results = $data["results"] ?? null;
         if (!is_array($results) || !self::isList($results["items"] ?? null)) {
             throw new ParsingException("The JSON has no \"results.items\" list.");

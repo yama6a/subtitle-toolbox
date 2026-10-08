@@ -183,8 +183,8 @@ final class TtmlFormatter extends SubtitleFormatter
 
         $output = "";
         $stack  = [];
-        foreach ($tokens as $idx => $token) {
-            if ($idx % 2 === 0) {
+        foreach ($tokens as $index => $token) {
+            if ($index % 2 === 0) {
                 $output .= $this->formatText($token);
                 continue;
             }
@@ -255,9 +255,9 @@ final class TtmlFormatter extends SubtitleFormatter
     private function closeSpan(array &$stack, string $tag): string
     {
         $position = null;
-        foreach ($stack as $idx => $entry) {
+        foreach ($stack as $index => $entry) {
             if ($entry["tag"] === $tag) {
-                $position = $idx;
+                $position = $index;
             }
         }
         if ($position === null) {
@@ -266,8 +266,8 @@ final class TtmlFormatter extends SubtitleFormatter
 
         $output = "";
         $above  = array_slice($stack, $position + 1);
-        for ($idx = count($stack) - 1; $idx >= $position; $idx--) {
-            $output .= $stack[$idx]["span"] === "" ? "" : "</span>";
+        for ($index = count($stack) - 1; $index >= $position; $index--) {
+            $output .= $stack[$index]["span"] === "" ? "" : "</span>";
         }
         $stack = [...array_slice($stack, 0, $position), ...$above];
         foreach ($above as $entry) {

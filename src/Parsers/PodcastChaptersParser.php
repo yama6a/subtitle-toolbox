@@ -20,9 +20,9 @@ final class PodcastChaptersParser extends SubtitleParser
     public const FORMAT_DATA_KEY = Format::PodcastChapters->value;
 
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $data = $this->decodeJsonObject($rawSubtitle);
+        $data = $this->decodeJsonObject($content);
         if (!is_array($data["chapters"] ?? null) || !array_is_list($data["chapters"])) {
             throw new ParsingException("The JSON has no \"chapters\" list.");
         }

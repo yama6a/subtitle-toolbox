@@ -28,9 +28,9 @@ final class YouTubeTimedTextParser extends SubtitleParser
     /**
      * Reads the YouTube timed text formats json3, srv3, srv2 and srv1, which is also the transcript XML.
      */
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $content = ltrim($rawSubtitle);
+        $content = ltrim($content);
         [$fileData, $captions] = str_starts_with($content, "{") ? $this->readJson($content) : $this->readXml($content);
 
         $subtitle   = new Subtitle();

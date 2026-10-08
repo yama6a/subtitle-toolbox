@@ -38,7 +38,7 @@ final class AssParser extends SubtitleParser
     private array $comments = [];
 
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
         $this->cues     = [];
         $this->comments = [];
@@ -48,7 +48,7 @@ final class AssParser extends SubtitleParser
 
         $section    = null;
         $eventIndex = 0;
-        foreach ($this->lines($rawSubtitle) as $lineIndex => $line) {
+        foreach ($this->lines($content) as $lineIndex => $line) {
             $line = trim($line);
             if ($line === "") {
                 continue;

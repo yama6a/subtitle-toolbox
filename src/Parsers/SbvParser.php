@@ -12,30 +12,30 @@ use SubtitleToolbox\Timecode;
 
 final class SbvParser extends SubtitleParser
 {
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
         $subtitle   = new Subtitle();
         $parsedCues = [];
-        $idx        = 0;
-        foreach ($this->splitAtEmptyLines($this->lines($rawSubtitle)) as $lineNumber => $rawLines) {
-            $cues = $this->parseRepairedBlock($rawLines, $lineNumber, $idx, $this->isTimingLine(...), false,
-                                              fn (array $part, int $partLine): SubtitleCue => $this->parseCueBlock($part, $idx, $partLine));
+        $index      = 0;
+        foreach ($this->splitAtEmptyLines($this->lines($content)) as $lineNumber => $rawLines) {
+            $cues = $this->parseRepairedBlock($rawLines, $lineNumber, $index, $this->isTimingLine(...), false,
+                                              fn (array $part, int $partLine): SubtitleCue => $this->parseCueBlock($part, $index, $partLine));
             array_push($parsedCues, ...$cues);
-            $idx++;
+            $index++;
         }
 
         return $subtitle->addCues($parsedCues);
     }
 
 
-    private function parseCueBlock(array $rawLines, int $idx, int $lineNumber): SubtitleCue
+    private function parseCueBlock(array $rawLines, int $index, int $lineNumber): SubtitleCue
     {
         if (substr_count($rawLines[0], ",") !== 1) {
-            throw new ParsingException("Block #$idx has no timing line on its first line.", $lineNumber);
+            throw new ParsingException("Block #$index has no timing line on its first line.", $lineNumber);
         }
 
         if (count($rawLines) < 2) {
-            throw new ParsingException("Block #$idx has no text lines.", $lineNumber);
+            throw new ParsingException("Block #$index has no text lines.", $lineNumber);
         }
 
         $times = explode(",", $rawLines[0]);

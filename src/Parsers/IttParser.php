@@ -17,9 +17,9 @@ final class IttParser extends SubtitleParser
     /**
      * Parses the file as TTML and copies the SMPTE timing parameters of the root element to the `itt` format data.
      */
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $subtitle       = (new TtmlParser())->parse($rawSubtitle, $this->options);
+        $subtitle       = (new TtmlParser())->parse($content, $this->options);
         $this->warnings = $subtitle->getParseWarnings();
         $ttmlData       = $subtitle->findFormatData(TtmlParser::FORMAT_DATA_KEY);
 

@@ -32,9 +32,9 @@ final class SubViewerParser extends SubtitleParser
     private const VERSION_2_BLOCK_TAGS = ["INFORMATION", "END INFORMATION", "SUBTITLE"];
 
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $lines = array_map("trim", $this->lines($rawSubtitle));
+        $lines = array_map("trim", $this->lines($content));
 
         $startScript = array_search(self::START_SCRIPT, $lines, true);
 
@@ -70,25 +70,25 @@ final class SubViewerParser extends SubtitleParser
     private function readVersion1Header(array $headerLines, Subtitle $subtitle, array &$header): int
     {
         $delay = 0;
-        for ($idx = 0; $idx < count($headerLines); $idx++) {
-            $line = $headerLines[$idx];
+        for ($index = 0; $index < count($headerLines); $index++) {
+            $line = $headerLines[$index];
             if ($line === "") {
                 continue;
             }
 
             try {
-                $matches = $this->headerTag($line, $idx + 1, "is not a SubViewer 1 header tag");
+                $matches = $this->headerTag($line, $index + 1, "is not a SubViewer 1 header tag");
             } catch (ParsingException $exception) {
-                $this->fail($exception, $idx + 1, 0, [$line]);
+                $this->fail($exception, $index + 1, 0, [$line]);
                 continue;
             }
 
             $tag   = strtoupper(trim($matches[1]));
             $value = trim($matches[2]);
-            $next  = $headerLines[$idx + 1] ?? "";
+            $next  = $headerLines[$index + 1] ?? "";
             if ($value === "" && $next !== "" && !str_starts_with($next, "[")) {
                 $value = $next;
-                $idx++;
+                $index++;
             }
 
             if ($tag === "DELAY") {
@@ -136,9 +136,9 @@ final class SubViewerParser extends SubtitleParser
             self::endLastCue($cues, $hasEndLine, $afterTime);
         }
 
-        foreach ($cues as $idx => $cue) {
-            if (!$hasEndLine[$idx]) {
-                $cue->setEnd(isset($cues[$idx + 1]) ? $cues[$idx + 1]->getStart() : $cue->getStart() + $this->options->lastCueDuration);
+        foreach ($cues as $index => $cue) {
+            if (!$hasEndLine[$index]) {
+                $cue->setEnd(isset($cues[$index + 1]) ? $cues[$index + 1]->getStart() : $cue->getStart() + $this->options->lastCueDuration);
             }
         }
 
@@ -174,8 +174,8 @@ final class SubViewerParser extends SubtitleParser
         $cue        = null;
         $cueIndex   = 0;
         $skipped    = null;
-        foreach ($lines as $idx => $line) {
-            $lineNumber = $idx + 1;
+        foreach ($lines as $index => $line) {
+            $lineNumber = $index + 1;
             if ($line === "") {
                 continue;
             }

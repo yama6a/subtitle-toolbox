@@ -32,17 +32,17 @@ final class WebVttParser extends SubtitleParser
     private const ENTITIES = ["&nbsp;" => "\u{00A0}", "&lrm;" => "\u{200E}", "&rlm;" => "\u{200F}"];
 
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $rawSubtitle  = StringHelpers::normalizeEOLs($rawSubtitle);
-        $leadingLines = substr_count(substr($rawSubtitle, 0, strlen($rawSubtitle) - strlen(ltrim($rawSubtitle))), "\n");
-        $rawSubtitle  = trim($rawSubtitle);
+        $content      = StringHelpers::normalizeEOLs($content);
+        $leadingLines = substr_count(substr($content, 0, strlen($content) - strlen(ltrim($content))), "\n");
+        $content      = trim($content);
 
-        if (!str_starts_with($rawSubtitle, self::SIGNATURE)) {
+        if (!str_starts_with($content, self::SIGNATURE)) {
             throw new ParsingException("The file does not start with WEBVTT.", $leadingLines + 1);
         }
 
-        $lines      = array_merge(array_fill(0, $leadingLines, ""), $this->lines($rawSubtitle));
+        $lines      = array_merge(array_fill(0, $leadingLines, ""), $this->lines($content));
         $subtitle   = new Subtitle();
         $parsedCues = [];
         $comments   = [];
@@ -50,13 +50,13 @@ final class WebVttParser extends SubtitleParser
         $seenCue    = false;
         $count      = 0;
         foreach ($this->numberedBlocks($lines) as $lineNumber => $rawLines) {
-            $idx = $count++;
-            if ($idx === 0) {
+            $index = $count++;
+            if ($index === 0) {
                 $fileData = $this->parseHeader($rawLines, $lineNumber);
                 continue;
             }
 
-            $block = $this->parseBlock($rawLines, $idx, $lineNumber, $seenCue, $fileData);
+            $block = $this->parseBlock($rawLines, $index, $lineNumber, $seenCue, $fileData);
             if ($block instanceof SubtitleCue) {
                 $parsedCues[] = $block;
                 $seenCue      = true;
@@ -82,13 +82,13 @@ final class WebVttParser extends SubtitleParser
      *
      * @internal
      */
-    public function parseBlock(array $rawLines, int $idx, int $lineNumber, bool $seenCue, array &$fileData): SubtitleCue|string|null
+    public function parseBlock(array $rawLines, int $index, int $lineNumber, bool $seenCue, array &$fileData): SubtitleCue|string|null
     {
         $firstLine = trim($rawLines[0]);
         try {
             switch (true) {
                 case str_contains($rawLines[0], "-->") || str_contains($rawLines[1] ?? "", "-->"):
-                    return $this->parseCueBlock($rawLines, $idx, $lineNumber);
+                    return $this->parseCueBlock($rawLines, $index, $lineNumber);
                 case $this->startsWithKeyword($firstLine, self::NOTE):
                     return $this->parseComment($rawLines);
                 case !$seenCue && $firstLine === "STYLE":
@@ -101,10 +101,10 @@ final class WebVttParser extends SubtitleParser
                     // The spec parser ignores every block that is not a cue, so these blocks do not throw.
                     break;
                 default:
-                    throw new ParsingException("Block #$idx is not a WebVTT cue, comment, style or region.", $lineNumber);
+                    throw new ParsingException("Block #$index is not a WebVTT cue, comment, style or region.", $lineNumber);
             }
         } catch (ParsingException $exception) {
-            $this->fail($exception, $lineNumber, $idx, $rawLines);
+            $this->fail($exception, $lineNumber, $index, $rawLines);
         }
 
         return null;

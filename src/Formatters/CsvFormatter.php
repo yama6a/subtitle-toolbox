@@ -34,17 +34,17 @@ final class CsvFormatter extends SubtitleFormatter
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
         $options ??= new WriteOptions();
-        $csv       = $this->formatOptions($options);
-        $data      = $subtitle->findFormatData(CsvParser::FORMAT_DATA_KEY);
-        $delimiter = $csv->delimiter ?? $data["delimiter"] ?? ",";
+        $formatOptions = $this->formatOptions($options);
+        $data          = $subtitle->findFormatData(CsvParser::FORMAT_DATA_KEY);
+        $delimiter     = $formatOptions->delimiter ?? $data["delimiter"] ?? ",";
         CsvReadOptions::checkDelimiter($delimiter);
-        $timeFormat = $csv->timeFormat ?? CsvTimeFormat::tryFrom($data["timeFormat"] ?? "") ?? CsvTimeFormat::Dot;
-        $fps        = $csv->frameRate ?? $data["frameRate"] ?? null;
+        $timeFormat = $formatOptions->timeFormat ?? CsvTimeFormat::tryFrom($data["timeFormat"] ?? "") ?? CsvTimeFormat::Dot;
+        $fps        = $formatOptions->frameRate ?? $data["frameRate"] ?? null;
         $frameRate  = $fps === null ? null : new FrameRate($fps);
         if ($timeFormat === CsvTimeFormat::Frames && $frameRate === null) {
             throw new InvalidArgumentException("The time format " . CsvTimeFormat::Frames->value . " needs a frame rate. Set CsvWriteOptions::\$frameRate.");
         }
-        $second = $csv->secondText;
+        $second = $formatOptions->secondText;
 
         $cues               = array_values($subtitle->getCues());
         $rows               = array_map($this->splitSpeaker(...), $cues);
@@ -52,7 +52,7 @@ final class CsvFormatter extends SubtitleFormatter
         if ($second !== null) {
             $position = array_search(["text", null], $columns, true) + 1;
             array_splice($columns, $position, 0, [["second", null]]);
-            array_splice($header, $position, 0, [$csv->secondTextHeader]);
+            array_splice($header, $position, 0, [$formatOptions->secondTextHeader]);
             $secondTexts = $this->secondTexts($cues, array_values($second->getCues()));
         }
 
@@ -60,9 +60,9 @@ final class CsvFormatter extends SubtitleFormatter
         foreach ($cues as $index => $cue) {
             $records[] = array_map(fn (array $column): string => match ($column[0]) {
                 "identifier" => $cue->getIdentifier() ?? "",
-                "start"      => $this->secondsCell($cue->getStart(), $timeFormat, $frameRate),
-                "end"        => $this->secondsCell($cue->getEnd(), $timeFormat, $frameRate),
-                "duration"   => $this->secondsCell($cue->getEnd() - $cue->getStart(), $timeFormat, $frameRate),
+                "start"      => $this->timeCell($cue->getStart(), $timeFormat, $frameRate),
+                "end"        => $this->timeCell($cue->getEnd(), $timeFormat, $frameRate),
+                "duration"   => $this->timeCell($cue->getEnd() - $cue->getStart(), $timeFormat, $frameRate),
                 "speaker"    => $rows[$index][0],
                 "text"       => $rows[$index][1],
                 "second"     => $secondTexts[$index],
@@ -73,7 +73,7 @@ final class CsvFormatter extends SubtitleFormatter
         // In-cell line breaks stay LF, as in Excel, so the records get the line ending here.
         $lineEnding = $options->lineEnding->value;
         $lines      = array_map(fn (array $record): string => implode($delimiter, array_map(
-            fn (string $cell): string => $this->quote($csv->escapeFormulas ? $this->escapeFormula($cell) : $cell, $delimiter),
+            fn (string $cell): string => $this->quote($formatOptions->escapeFormulas ? $this->escapeFormula($cell) : $cell, $delimiter),
             $record
         )), $records);
 
@@ -178,12 +178,12 @@ final class CsvFormatter extends SubtitleFormatter
     }
 
 
-    private function secondsCell(float $seconds, CsvTimeFormat $layout, ?FrameRate $frameRate): string
+    private function timeCell(float $seconds, CsvTimeFormat $timeFormat, ?FrameRate $frameRate): string
     {
         $seconds      = max(0, $seconds);
         $milliseconds = Timecode::totalMilliseconds($seconds);
 
-        return match ($layout) {
+        return match ($timeFormat) {
             CsvTimeFormat::Seconds => rtrim(rtrim(sprintf("%d.%03d", intdiv($milliseconds, 1000), $milliseconds % 1000), "0"), "."),
             CsvTimeFormat::Dot     => Markup::coreTimestamp($seconds),
             CsvTimeFormat::Comma   => sprintf("%02d:%02d:%02d,%03d", ...Timecode::milliseconds($seconds)),

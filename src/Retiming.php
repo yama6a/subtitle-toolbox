@@ -17,7 +17,7 @@ trait Retiming
      */
     public function shift(float $seconds, ?float $fromTime = null): self
     {
-        return $this->applyLinearCorrection(1, $seconds, $fromTime);
+        return $this->retimingApplyLinearCorrection(1, $seconds, $fromTime);
     }
 
 
@@ -28,7 +28,7 @@ trait Retiming
     {
         OptionChecks::positiveFinite($factor, "The scale factor must be greater than 0, got %s.");
 
-        return $this->applyLinearCorrection($factor, 0);
+        return $this->retimingApplyLinearCorrection($factor, 0);
     }
 
 
@@ -56,11 +56,11 @@ trait Retiming
             throw new InvalidArgumentException("The two new times must be in the same order as the two old times.");
         }
 
-        return $this->applyLinearCorrection($factor, $newA - $oldA * $factor);
+        return $this->retimingApplyLinearCorrection($factor, $newA - $oldA * $factor);
     }
 
 
-    private function applyLinearCorrection(float $factor, float $offset, ?float $fromTime = null): self
+    private function retimingApplyLinearCorrection(float $factor, float $offset, ?float $fromTime = null): self
     {
         foreach ($this->getCues() as $cue) {
             if ($fromTime !== null && $cue->getStart() < $fromTime) {

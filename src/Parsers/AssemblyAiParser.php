@@ -28,9 +28,9 @@ final class AssemblyAiParser extends SubtitleParser
     /**
      * Reads the JSON of an AssemblyAI transcript, one cue per utterance, else cues grouped from the words.
      */
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
-        $data       = $this->decodeJsonObject($rawSubtitle);
+        $data       = $this->decodeJsonObject($content);
         $words      = $data["words"] ?? null;
         $utterances = self::listOrEmpty($data["utterances"] ?? null);
         if ($utterances === [] && !self::isList($words)) {

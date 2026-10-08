@@ -53,14 +53,14 @@ final class WebVttStreamReader implements CueStreamReader
 
         $count = 0;
         foreach ($this->parser->numberedBlocks($lines) as $lineNumber => $rawLines) {
-            $idx = $count++;
-            if ($idx === 0) {
+            $index = $count++;
+            if ($index === 0) {
                 $this->header = $this->parser->parseHeader($rawLines, $lineNumber);
                 continue;
             }
 
             // The stream skips NOTE blocks, which WebVttParser keeps as comments.
-            $block = $this->parser->parseBlock($rawLines, $idx, $lineNumber, $seenCue, $this->header);
+            $block = $this->parser->parseBlock($rawLines, $index, $lineNumber, $seenCue, $this->header);
             if ($block instanceof SubtitleCue) {
                 $seenCue = true;
                 yield $block;

@@ -55,12 +55,12 @@ final class TtmlParser extends SubtitleParser
     private int $paragraphIndex = 0;
 
 
-    protected function read(string $rawSubtitle): Subtitle
+    protected function read(string $content): Subtitle
     {
         $this->paragraphIndex = 0;
-        $document             = $this->loadDocument($rawSubtitle);
-        $this->root      = $document->documentElement;
-        $this->namespace = $this->root->namespaceURI;
+        $document             = $this->loadDocument($content);
+        $this->root           = $document->documentElement;
+        $this->namespace      = $this->root->namespaceURI;
         if ($this->root->localName !== "tt"
             || !in_array($this->namespace, [TtmlNamespaces::TTML, TtmlNamespaces::DFXP, null], true)) {
             throw new ParsingException("The root element is not a TTML <tt> element.");
@@ -387,8 +387,8 @@ final class TtmlParser extends SubtitleParser
     {
         $text  = str_replace(["\r\n", "\r"], "\n", $text);
         $parts = $preserveSpace ? explode("\n", $text) : [$text];
-        foreach ($parts as $idx => $part) {
-            if ($idx > 0) {
+        foreach ($parts as $index => $part) {
+            if ($index > 0) {
                 $runs[] = ["text" => null];
             }
             $runs[] = ["text" => preg_replace("/[ \t\n]+/", " ", $part), "style" => $style, "agent" => $agent];
@@ -411,17 +411,17 @@ final class TtmlParser extends SubtitleParser
             }
 
             $endsWithSpace = true;
-            foreach ($lineRuns as $idx => $lineRun) {
+            foreach ($lineRuns as $index => $lineRun) {
                 if ($endsWithSpace && str_starts_with($lineRun["text"], " ")) {
-                    $lineRuns[$idx]["text"] = substr($lineRun["text"], 1);
+                    $lineRuns[$index]["text"] = substr($lineRun["text"], 1);
                 }
-                if ($lineRuns[$idx]["text"] !== "") {
-                    $endsWithSpace = str_ends_with($lineRuns[$idx]["text"], " ");
+                if ($lineRuns[$index]["text"] !== "") {
+                    $endsWithSpace = str_ends_with($lineRuns[$index]["text"], " ");
                 }
             }
-            for ($idx = count($lineRuns) - 1; $idx >= 0; $idx--) {
-                $lineRuns[$idx]["text"] = rtrim($lineRuns[$idx]["text"], " ");
-                if ($lineRuns[$idx]["text"] !== "") {
+            for ($index = count($lineRuns) - 1; $index >= 0; $index--) {
+                $lineRuns[$index]["text"] = rtrim($lineRuns[$index]["text"], " ");
+                if ($lineRuns[$index]["text"] !== "") {
                     break;
                 }
             }
