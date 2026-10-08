@@ -48,7 +48,7 @@ final class SubRipParser extends SubtitleParser
 
 
     /**
-     * Returns the cues of one block from splitIntoBlocks().
+     * Returns the cues of one block from splitIntoBlocks(). It splits the block before each timing line.
      * In lenient mode, it skips or repairs a broken block and warns.
      *
      * @param list<string> $rawLines
@@ -59,10 +59,6 @@ final class SubRipParser extends SubtitleParser
      */
     public function parseBlock(array $rawLines, int $index, int $lineNumber): array
     {
-        if (!$this->options->lenient) {
-            return [$this->parseCueBlock($rawLines, $index, $lineNumber)];
-        }
-
         return $this->parseRepairedBlock(
             $rawLines,
             $lineNumber,
@@ -71,16 +67,18 @@ final class SubRipParser extends SubtitleParser
             true,
             function (array $part, int $partLine) use ($index): SubtitleCue {
                 $hasNumber = !$this->isTimingLine($part[0]);
-                $cue       = $this->parseCueBlock($hasNumber ? $part : array_merge(["0"], $part), $index, $partLine);
-                if (!$hasNumber) {
-                    $this->warn(
-                        "Block #$index has no cue number on line $partLine. The parser read the cue without it.",
-                        $partLine,
-                        $index,
-                        $part,
-                        ParseWarningAction::Repaired
-                    );
+                if ($hasNumber || !$this->options->lenient) {
+                    return $this->parseCueBlock($part, $index, $partLine);
                 }
+
+                $cue = $this->parseCueBlock(array_merge(["0"], $part), $index, $partLine);
+                $this->warn(
+                    "Block #$index has no cue number on line $partLine. The parser read the cue without it.",
+                    $partLine,
+                    $index,
+                    $part,
+                    ParseWarningAction::Repaired
+                );
 
                 return $cue;
             }

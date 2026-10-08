@@ -62,7 +62,7 @@ class LenientParsingTest extends TestCase
             "SubRip without empty lines between cues" => [
                 "missing_empty_line.srt",
                 SubRipParser::class,
-                2,
+                "Block #0 has no cue number on its first line.",
                 [
                     [1, 2.5, "The wind is cold today."],
                     [3, 5, "Snow falls in the hills."],
@@ -187,7 +187,7 @@ class LenientParsingTest extends TestCase
             "SBV without an empty line between cues" => [
                 "missing_empty_line.sbv",
                 SbvParser::class,
-                2,
+                3,
                 [
                     [1, 2.5, "The wind is cold today."],
                     [3, 5, "Snow falls in the hills."],

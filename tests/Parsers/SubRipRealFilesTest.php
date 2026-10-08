@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Streaming\SubRipStreamReader;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Tests\Support\RealFiles;
@@ -73,6 +74,12 @@ class SubRipRealFilesTest extends TestCase
                 5,
                 [1.0, 3.5, "I &lt;3 bread &amp; jam"],
                 [12.5, 15.0, "<font color=\"#ffcc00\">Rain &amp; wind &gt;&gt; 40 km/h</font>"],
+            ],
+            "Own missing empty lines" => [
+                "own_missing_empty_line.srt",
+                4,
+                [1.0, 2.5, "The bus to the airport is full."],
+                [8.0, 10.0, "Mind the step."],
             ],
             "Own empty cues" => [
                 "own_empty_cues.srt",
@@ -147,6 +154,22 @@ class SubRipRealFilesTest extends TestCase
         $formatted = $this->parseFile("own_timestamp_without_millis.srt")->toString(Format::SubRip);
 
         $this->assertStringStartsWith("\u{feff}1\n00:01:39,000 --> 00:01:41,040\n(train brakes squeal)\n", $formatted);
+    }
+
+
+    public function testStrictModeStartsANewCueAtEveryTimingLine(): void
+    {
+        $expected = [
+            [1.0, 2.5, ["The bus to the airport is full."]],
+            [3.0, 5.0, ["The next one leaves at four."]],
+            [5.5, 7.0, ["Tickets are on sale inside."]],
+            [8.0, 10.0, ["Mind the step."]],
+        ];
+        $describe = fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()];
+        $stream   = fopen(__DIR__ . "/../files/srt/real/own_missing_empty_line.srt", "r");
+
+        $this->assertSame($expected, array_map($describe, $this->parseFile("own_missing_empty_line.srt")->getCues()));
+        $this->assertSame($expected, array_map($describe, iterator_to_array((new SubRipStreamReader())->read($stream), false)));
     }
 
 

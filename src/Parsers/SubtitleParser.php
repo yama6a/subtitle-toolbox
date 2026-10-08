@@ -258,7 +258,7 @@ abstract class SubtitleParser
 
 
     /**
-     * Returns the parts of a block that splitAtTimingLines() returns in lenient mode, and warns for each split.
+     * Returns the parts of a block that splitAtTimingLines() returns. In lenient mode, it warns for each split.
      *
      * @param list<string> $block
      *
@@ -266,13 +266,9 @@ abstract class SubtitleParser
      */
     protected function repairMissingEmptyLines(array $block, int $lineNumber, int $blockIndex, callable $isTimingLine, bool $withCueNumbers): array
     {
-        if (!$this->options->lenient) {
-            return [0 => $block];
-        }
-
         $parts = $this->splitAtTimingLines($block, $isTimingLine, $withCueNumbers);
         foreach (array_keys($parts) as $offset) {
-            if ($offset > 0) {
+            if ($offset > 0 && $this->options->lenient) {
                 $this->warn(
                     "Block #$blockIndex has no empty line before line " . ($lineNumber + $offset) . ". The parser split the block there.",
                     $lineNumber + $offset,
