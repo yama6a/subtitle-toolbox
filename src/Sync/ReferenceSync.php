@@ -79,15 +79,26 @@ final class ReferenceSync
 
             $laterStart = min(array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $parts[$index]));
             for ($earlier = 0; $earlier < $index; $earlier++) {
-                foreach ($parts[$earlier] as $cue) {
-                    if ($cue->getStart() < $laterStart && $cue->getEnd() > $laterStart - self::PART_GAP) {
-                        $cue->setEnd(max($cue->getStart(), $laterStart - self::PART_GAP));
-                    }
-                }
+                self::endBefore($parts[$earlier], $laterStart);
             }
         }
 
         $target->reIndexCues();
+    }
+
+
+    /**
+     * Ends each cue that starts before $laterStart at least PART_GAP before it.
+     *
+     * @param list<SubtitleCue> $cues
+     */
+    private static function endBefore(array $cues, float $laterStart): void
+    {
+        foreach ($cues as $cue) {
+            if ($cue->getStart() < $laterStart && $cue->getEnd() > $laterStart - self::PART_GAP) {
+                $cue->setEnd(max($cue->getStart(), $laterStart - self::PART_GAP));
+            }
+        }
     }
 
 
