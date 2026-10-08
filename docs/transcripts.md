@@ -133,7 +133,7 @@ $subtitle = Subtitle::fromString($json, Format::PodcastTranscript, new ReadOptio
 | `HtmlTranscriptWriteOptions` | `paragraphGap` | the gap in seconds that starts a new paragraph, 2.0 by default |
 
 - **Speakers**: the `speaker` of a segment and the name in `<cite>` become `<v Name>`, and back. A cue with two `<v>` speakers gives one segment per speaker, both with the times of the cue.
-- **Joined words**: the parser joins a segment of one word with the next segment of the same speaker. It stops after a word that ends with `.`, `?`, `!` or the ellipsis U+2026. A segment with a space in its body stays one cue.
+- **Joined words**: the parser joins a segment of one word with the next segment of the same speaker. It stops after a word that ends with `.`, `?`, `!` or the ellipsis U+2026. It also stops before a pause of 1 s or more. A segment with a space in its body stays one cue.
 - **Word segments**: a word ends where the next word of its cue starts. The last word ends with the cue. So a round trip keeps the start of each word, not its end.
 - **No end time**: a segment without `endTime` and an HTML paragraph end at the next later start. The last one lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **HTML input**: each `<time>` starts a cue. The cue holds the `<p>` elements up to the next `<time>` or `<cite>`, one line per `<p>` and `<br>`. A `<cite>` names only the next cue. The parser strips other tags and reads times such as `0:09`, `12:05` and `1:02:03.5`.

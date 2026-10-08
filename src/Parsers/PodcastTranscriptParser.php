@@ -21,9 +21,12 @@ final class PodcastTranscriptParser extends SubtitleParser
 
     private const SENTENCE_END = '/[.?!\x{2026}]["\'\x{201D}\x{2019})\]]*$/u';
 
+    // The same gap as WordGrouping::MAX_WORD_GAP of the cloud speech-to-text parsers.
+    private const MAX_WORD_GAP = 1.0;
+
 
     /**
-     * Reads the Podcasting 2.0 JSON transcript, and joins single-word segments into cues by speaker and sentence end.
+     * Reads the Podcasting 2.0 JSON transcript, and joins single-word segments into cues by speaker, sentence end and pause.
      */
     protected function read(string $content): Subtitle
     {
@@ -112,7 +115,8 @@ final class PodcastTranscriptParser extends SubtitleParser
 
 
     /**
-     * Joins runs of single-word segments of one speaker into a group that ends after a word with a sentence end.
+     * Joins runs of single-word segments of one speaker into a group that ends after a word with a sentence end,
+     * or before a pause of MAX_WORD_GAP or more.
      *
      * @return list<list<array>>
      */
@@ -123,7 +127,8 @@ final class PodcastTranscriptParser extends SubtitleParser
         foreach ($segments as $segment) {
             $isWord = !$this->formatOptions()->keepSegments && !str_contains($segment["body"], " ");
             $last   = $open ? $groups[count($groups) - 1] : null;
-            if ($isWord && $last !== null && $last[0]["speaker"] === $segment["speaker"]) {
+            if ($isWord && $last !== null && $last[0]["speaker"] === $segment["speaker"]
+                && Timecode::roundToMilliseconds($segment["start"] - $last[count($last) - 1]["end"]) < self::MAX_WORD_GAP) {
                 $groups[count($groups) - 1][] = $segment;
             } else {
                 $groups[] = [$segment];
