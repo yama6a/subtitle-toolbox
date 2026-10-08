@@ -75,10 +75,10 @@ class BinaryInfoValidateTest extends BinaryTestCase
         $this->assertSame([[
             "lineNumber" => 5,
             "blockIndex" => 1,
-            "message"    => "Block #1 doesn't seem to have its timestamps on its second line!",
+            "message"    => "Block #1 has no timing line on its second line.",
             "action"     => "skipped",
         ]], json_decode($stdout, true)[0]["warnings"]);
-        $this->assertSame("broken.srt: line 5: Block #1 doesn't seem to have its timestamps on its second line! (skipped)\n", $stderr);
+        $this->assertSame("broken.srt: line 5: Block #1 has no timing line on its second line. (skipped)\n", $stderr);
 
         $this->assertMatchesRegularExpression('/^  Warnings: +1$/m', $this->runBinary(["info", "broken.srt", "--lenient"])[1]);
         $this->assertDoesNotMatchRegularExpression('/Warnings/', $this->runBinary(["info", "trip.srt"])[1]);
@@ -226,10 +226,10 @@ class BinaryInfoValidateTest extends BinaryTestCase
         $warning = [
             "lineNumber" => 5,
             "blockIndex" => 1,
-            "message"    => "Block #1 doesn't seem to have its timestamps on its second line!",
+            "message"    => "Block #1 has no timing line on its second line.",
             "action"     => "skipped",
         ];
-        $line    = "line 5: Block #1 doesn't seem to have its timestamps on its second line! (skipped)\n";
+        $line    = "line 5: Block #1 has no timing line on its second line. (skipped)\n";
 
         [$code, $stdout, $stderr] = $this->runBinary(["validate", "broken.srt", "--max-cpl", "42", "--json", "--lenient"]);
         $this->assertSame([0, [$warning], "broken.srt: $line"], [$code, json_decode($stdout, true)[0]["warnings"], $stderr]);

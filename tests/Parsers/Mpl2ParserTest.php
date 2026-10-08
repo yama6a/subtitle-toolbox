@@ -129,7 +129,7 @@ class Mpl2ParserTest extends TestCase
             $this->fail("The parser accepted a line without times.");
         } catch (ParsingException $exception) {
             $this->assertSame(1, $exception->getLineNumber());
-            $this->assertStringContainsString("Line 1 is not an MPL2 cue: Downloaded from a subtitle site", $exception->getMessage());
+            $this->assertStringContainsString("The line \"Downloaded from a subtitle site\" is not an MPL2 cue.", $exception->getMessage());
         }
     }
 
@@ -141,8 +141,8 @@ class Mpl2ParserTest extends TestCase
         $this->assertSame([[1.0, 3.0, "The market opens at ten."], [7.0, 9.5, "<i>Bring a basket.</i>"]], array_map($this->row(...), $subtitle->getCues()));
         $this->assertSame(
             [
-                [1, 0, ParseWarningAction::Skipped, "Line 1 is not an MPL2 cue: Downloaded from a subtitle site"],
-                [3, 2, ParseWarningAction::Skipped, "Line 3 is not an MPL2 cue: [4x][60]The stalls sell fish."],
+                [1, 0, ParseWarningAction::Skipped, "The line \"Downloaded from a subtitle site\" is not an MPL2 cue."],
+                [3, 2, ParseWarningAction::Skipped, "The line \"[4x][60]The stalls sell fish.\" is not an MPL2 cue."],
             ],
             array_map(fn (ParseWarning $warning): array => [$warning->lineNumber, $warning->blockIndex, $warning->action, $warning->message], $subtitle->getParseWarnings())
         );

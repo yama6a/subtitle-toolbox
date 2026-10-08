@@ -68,7 +68,7 @@ class SubViewerParserTest extends TestCase
     public function testSubViewer2TextBeforeTheFirstTimingLineThrows(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Line 2 is neither a header tag nor a timing line: Hello");
+        $this->expectExceptionMessage("The line \"Hello\" is neither a header tag nor a timing line.");
 
         (new SubViewerParser())->parse("[SUBTITLE]\nHello\n00:00:01.00,00:00:02.00\nWorld\n", new ReadOptions());
     }
@@ -112,7 +112,7 @@ class SubViewerParserTest extends TestCase
     public function testSubViewer1HeaderLineWithoutTagThrows(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Line 1 is not a SubViewer 1 header tag: Ferry times");
+        $this->expectExceptionMessage("The line \"Ferry times\" is not a SubViewer 1 header tag.");
 
         (new SubViewerParser())->parse("Ferry times\n******** START SCRIPT ********\n[00:00:02]\nHello\n", new ReadOptions());
     }

@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
@@ -136,15 +137,20 @@ class MicroDvdParserTest extends TestCase
 
     public function testZeroFrameRateThrowsException(): void
     {
-        $this->expectException(ParsingException::class);
-        Subtitle::fromString("{1}{1}0\n{25}{50}Hello", Format::MicroDvd);
+        try {
+            Subtitle::fromString("{1}{1}0\n{25}{50}Hello", Format::MicroDvd);
+            $this->fail("No exception");
+        } catch (ParsingException $exception) {
+            $this->assertInstanceOf(InvalidArgumentException::class, $exception->getPrevious());
+            $this->assertStringEndsWith($exception->getPrevious()->getMessage(), $exception->getMessage());
+        }
     }
 
 
     public function testLineWithoutFramesThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Line 3 is not a MicroDVD cue: 00:00:01,000 --> 00:00:02,000");
+        $this->expectExceptionMessage("The line \"00:00:01,000 --> 00:00:02,000\" is not a MicroDVD cue.");
         Subtitle::fromString("{1}{1}25\n{25}{50}Hello\n00:00:01,000 --> 00:00:02,000", Format::MicroDvd);
     }
 }

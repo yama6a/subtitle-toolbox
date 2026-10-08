@@ -49,7 +49,7 @@ class WebVttParserTest extends TestCase
     public function testMissingEmptyLineAfterWebvttHeader()
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("No empty line found after the first line containing WEBVTT");
+        $this->expectExceptionMessage("The WEBVTT header has no empty line before the first cue");
         Subtitle::fromString(
             file_get_contents(__DIR__ . "/../files/vtt/no_empty_line_after_webvtt_header.vtt"), Format::WebVtt);
     }
@@ -58,7 +58,7 @@ class WebVttParserTest extends TestCase
     public function testMissingWebvttHeaderThrowsException()
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("file doesn't start with the string WEBVTT!");
+        $this->expectExceptionMessage("file does not start with WEBVTT.");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/missing_webvtt_header.vtt"), Format::WebVtt);
     }
 
@@ -66,7 +66,7 @@ class WebVttParserTest extends TestCase
     public function testExceededHoursThrowsException()
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("time-string of at least one cue could not be parsed");
+        $this->expectExceptionMessage("is not valid");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/exceeded_hours.vtt"), Format::WebVtt);
     }
 
@@ -74,7 +74,7 @@ class WebVttParserTest extends TestCase
     public function testExceededMinutesThrowsException()
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("time-string of at least one cue could not be parsed");
+        $this->expectExceptionMessage("is not valid");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/exceeded_minutes.vtt"), Format::WebVtt);
     }
 
@@ -82,7 +82,7 @@ class WebVttParserTest extends TestCase
     public function testExceededSecondsThrowsException()
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("time-string of at least one cue could not be parsed");
+        $this->expectExceptionMessage("is not valid");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/exceeded_seconds.vtt"), Format::WebVtt);
     }
 
@@ -90,7 +90,7 @@ class WebVttParserTest extends TestCase
     public function testExceededMilliSecondAccuracyThrowsException()
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("time-string of at least one cue could not be parsed");
+        $this->expectExceptionMessage("is not valid");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/exceeded_milli_accuracy.vtt"), Format::WebVtt);
     }
 
@@ -106,7 +106,7 @@ class WebVttParserTest extends TestCase
     public function testMissingTextThrowsException()
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("doesn't have any text lines");
+        $this->expectExceptionMessage("has no text lines");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/missing_text.vtt"), Format::WebVtt);
     }
 
@@ -114,7 +114,7 @@ class WebVttParserTest extends TestCase
     public function testMissingTimestampsThrowsException()
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("doesn't match anything that we can parse");
+        $this->expectExceptionMessage("is not a WebVTT cue, comment, style or region");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/missing_timestamps.vtt"), Format::WebVtt);
     }
 
@@ -133,7 +133,7 @@ class WebVttParserTest extends TestCase
     public function testSingleLineBlockThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Block #1 doesn't match anything");
+        $this->expectExceptionMessage("Block #1 is not a WebVTT cue");
         Subtitle::fromString("WEBVTT\n\nstray line", Format::WebVtt);
     }
 
@@ -141,7 +141,7 @@ class WebVttParserTest extends TestCase
     public function testCueWithOnlyATimestampThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Block #1 doesn't have any text lines");
+        $this->expectExceptionMessage("Block #1 has no text lines");
         Subtitle::fromString("WEBVTT\n\n00:01.000 --> 00:02.000", Format::WebVtt);
     }
 
@@ -279,7 +279,7 @@ class WebVttParserTest extends TestCase
     public function testTimestampWithoutDotThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("time-string of at least one cue could not be parsed: 00:00:01x000");
+        $this->expectExceptionMessage("The time \"00:00:01x000\" is not valid.");
         Subtitle::fromString("WEBVTT\n\n00:00:01x000 --> 00:00:04.000\nText\n", Format::WebVtt);
     }
 
@@ -287,7 +287,7 @@ class WebVttParserTest extends TestCase
     public function testTextBetweenStartTimeAndArrowThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("time-string of at least one cue could not be parsed");
+        $this->expectExceptionMessage("is not valid");
         Subtitle::fromString("WEBVTT\n\n00:00:01.000 align:left --> 00:00:04.000\nText\n", Format::WebVtt);
     }
 
@@ -376,7 +376,7 @@ class WebVttParserTest extends TestCase
     public function testHeaderLineWithArrowThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("No empty line found after the first line containing WEBVTT");
+        $this->expectExceptionMessage("The WEBVTT header has no empty line before the first cue");
         Subtitle::fromString("WEBVTT\nKind: captions\n00:01.000 --> 00:02.000\nText\n", Format::WebVtt);
     }
 

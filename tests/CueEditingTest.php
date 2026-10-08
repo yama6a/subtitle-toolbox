@@ -227,7 +227,7 @@ class CueEditingTest extends TestCase
     public function testSplitCueOutsideTheCueThrowsException(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot split cue 0 at 6 - the time must be after the cue start 0 " .
+        $this->expectExceptionMessage("Cannot split cue 0 at 6: the time must be after the cue start 0 " .
                                       "and before the cue end 6.");
         TestSubtitles::fromCues([[0, 6, "a\nb"]])->splitCue(0, 6, 1);
     }
@@ -236,7 +236,7 @@ class CueEditingTest extends TestCase
     public function testSplitCueAfterLastLineThrowsException(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot split cue 0 after line 2 - the cue has 2 lines.");
+        $this->expectExceptionMessage("Cannot split cue 0 after line 2: the cue has 2 lines.");
         TestSubtitles::fromCues([[0, 6, "a\nb"]])->splitCue(0, 3, 2);
     }
 
@@ -244,7 +244,7 @@ class CueEditingTest extends TestCase
     public function testSplitUnknownCueThrowsException(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot edit cue 3 - cue not found!");
+        $this->expectExceptionMessage("Cannot edit cue 3: the cue does not exist.");
         TestSubtitles::fromCues([[0, 6, "a\nb"]])->splitCue(3, 3, 1);
     }
 
@@ -286,7 +286,7 @@ class CueEditingTest extends TestCase
     public function testJoinCuesWithWrongOrderThrowsException(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot join cues 1 to 1 - the first index must be lower than the last index.");
+        $this->expectExceptionMessage("Cannot join cues 1 to 1: the first index must be lower than the last index.");
         TestSubtitles::fromCues([[0, 1, "zero"], [1, 2, "one"]])->joinCues(1, 1);
     }
 
@@ -294,7 +294,7 @@ class CueEditingTest extends TestCase
     public function testJoinUnknownCueThrowsException(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot edit cue 2 - cue not found!");
+        $this->expectExceptionMessage("Cannot edit cue 2: the cue does not exist.");
         TestSubtitles::fromCues([[0, 1, "zero"], [1, 2, "one"]])->joinCues(0, 2);
     }
 

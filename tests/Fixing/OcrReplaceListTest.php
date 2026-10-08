@@ -77,7 +77,7 @@ class OcrReplaceListTest extends TestCase
     public function testRejectsAnInvalidRegularExpressionInTheConstructor(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("The regular expression /[/u is invalid");
+        $this->expectExceptionMessage("The regular expression \"/[/u\" is not valid");
 
         new OcrReplaceList(regularExpressions: ["/[/u" => ""]);
     }

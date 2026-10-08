@@ -327,7 +327,7 @@ class AssParserTest extends TestCase
             $this->fail("No exception");
         } catch (ParsingException $exception) {
             $this->assertSame(12, $exception->getLineNumber());
-            $this->assertStringEndsWith("The time of at least one event could not be parsed: 0:00:0x.00 (line 12)", $exception->getMessage());
+            $this->assertStringEndsWith("The time \"0:00:0x.00\" is not valid. (line 12)", $exception->getMessage());
         }
     }
 }

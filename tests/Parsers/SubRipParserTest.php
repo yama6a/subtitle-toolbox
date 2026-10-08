@@ -27,7 +27,7 @@ class SubRipParserTest extends TestCase
     public function testExceededHoursThrowsException()
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("timeString-string of at least one cue could not be parsed");
+        $this->expectExceptionMessage("is not valid");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/exceeded_hours.srt"), Format::SubRip);
     }
 
@@ -35,7 +35,7 @@ class SubRipParserTest extends TestCase
     public function testExceededMinutesThrowsException()
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("timeString-string of at least one cue could not be parsed");
+        $this->expectExceptionMessage("is not valid");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/exceeded_minutes.srt"), Format::SubRip);
     }
 
@@ -43,7 +43,7 @@ class SubRipParserTest extends TestCase
     public function testExceededSecondsThrowsException()
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("timeString-string of at least one cue could not be parsed");
+        $this->expectExceptionMessage("is not valid");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/exceeded_seconds.srt"), Format::SubRip);
     }
 
@@ -51,7 +51,7 @@ class SubRipParserTest extends TestCase
     public function testExceededMilliSecondAccuracyThrowsException()
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("timeString-string of at least one cue could not be parsed");
+        $this->expectExceptionMessage("is not valid");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/exceeded_milli_accuracy.srt"), Format::SubRip);
     }
 
@@ -59,7 +59,7 @@ class SubRipParserTest extends TestCase
     public function testMissingCueNumberThrowsException()
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("doesn't seem to have a cue-number");
+        $this->expectExceptionMessage("has no cue number");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/missing_cue_number.srt"), Format::SubRip);
     }
 
@@ -67,7 +67,7 @@ class SubRipParserTest extends TestCase
     public function testMissingTextThrowsException()
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("doesn't have any text lines");
+        $this->expectExceptionMessage("has no text lines");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/missing_text.srt"), Format::SubRip);
     }
 
@@ -75,7 +75,7 @@ class SubRipParserTest extends TestCase
     public function testMissingTimestampsThrowsException()
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("doesn't seem to have its timestamps");
+        $this->expectExceptionMessage("has no timing line");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/missing_timestamps.srt"), Format::SubRip);
     }
 
@@ -94,7 +94,7 @@ class SubRipParserTest extends TestCase
     public function testBlockWithOnlyACueNumberThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Block #1 doesn't seem to have its timestamps on its second line");
+        $this->expectExceptionMessage("Block #1 has no timing line on its second line");
         Subtitle::fromString("1\n00:00:01,000 --> 00:00:02,000\nFirst\n\n2", Format::SubRip);
     }
 
@@ -128,7 +128,7 @@ class SubRipParserTest extends TestCase
     public function testIncompleteCoordinatesThrowException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("timeString-string of at least one cue could not be parsed");
+        $this->expectExceptionMessage("is not valid");
         Subtitle::fromString("1\n00:00:01,000 --> 00:00:04,000 X1:100 X2:600\nText\n", Format::SubRip);
     }
 

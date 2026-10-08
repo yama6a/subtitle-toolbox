@@ -35,7 +35,7 @@ class LenientParsingTest extends TestCase
             "SubRip without cue numbers" => [
                 "missing_cue_numbers.srt",
                 SubRipParser::class,
-                "Block #1 doesn't seem to have a cue-number on its first line!",
+                "Block #1 has no cue number on its first line.",
                 [
                     [1, 3.5, "The train leaves at nine."],
                     [4, 6, "Platform two, next to the bakery."],
@@ -50,14 +50,14 @@ class LenientParsingTest extends TestCase
             "SubRip with a bad timestamp and a broken arrow" => [
                 "bad_timestamp.srt",
                 SubRipParser::class,
-                "The timeString-string of at least one cue could not be parsed: 00:00:0G,000",
+                "The time \"00:00:0G,000\" is not valid.",
                 [
                     [1, 3, "Good morning."],
                     [10, 12, "See you tomorrow."],
                 ],
                 [
-                    [5, 1, self::SKIPPED, "The timeString-string of at least one cue could not be parsed: 00:00:0G,000"],
-                    [9, 2, self::SKIPPED, "Block #2 doesn't seem to have its timestamps on its second line!"],
+                    [5, 1, self::SKIPPED, "The time \"00:00:0G,000\" is not valid."],
+                    [9, 2, self::SKIPPED, "Block #2 has no timing line on its second line."],
                 ],
             ],
             "SubRip without empty lines between cues" => [
@@ -79,25 +79,25 @@ class LenientParsingTest extends TestCase
             "SubRip with text before the first cue" => [
                 "text_before_first_cue.srt",
                 SubRipParser::class,
-                "Block #0 doesn't seem to have a cue-number on its first line!",
+                "Block #0 has no cue number on its first line.",
                 [
                     [1, 3, "Clouds move in from the west."],
                     [4, 6, "Sun again by Friday."],
                 ],
                 [
-                    [1, 0, self::SKIPPED, "Block #0 doesn't seem to have a cue-number on its first line!"],
+                    [1, 0, self::SKIPPED, "Block #0 has no cue number on its first line."],
                 ],
             ],
             "SubRip with a truncated last cue" => [
                 "truncated_last_cue.srt",
                 SubRipParser::class,
-                "Block #2 doesn't have any text lines!",
+                "Block #2 has no text lines.",
                 [
                     [1, 3, "The next stop is the station."],
                     [4, 6, "Please mind the gap."],
                 ],
                 [
-                    [9, 2, self::SKIPPED, "Block #2 doesn't have any text lines!"],
+                    [9, 2, self::SKIPPED, "Block #2 has no text lines."],
                 ],
             ],
             "SubRip with mixed line endings" => [
@@ -114,19 +114,19 @@ class LenientParsingTest extends TestCase
             "WebVTT with a bad timestamp" => [
                 "bad_timestamp.vtt",
                 WebVttParser::class,
-                "The time-string of at least one cue could not be parsed: 00:00:06,000",
+                "The time \"00:00:06,000\" is not valid.",
                 [
                     [1, 3, "Good morning."],
                     [7, 9, "See you tomorrow."],
                 ],
                 [
-                    [7, 2, self::SKIPPED, "The time-string of at least one cue could not be parsed: 00:00:06,000"],
+                    [7, 2, self::SKIPPED, "The time \"00:00:06,000\" is not valid."],
                 ],
             ],
             "WebVTT without empty lines after the header and between cues" => [
                 "missing_empty_line.vtt",
                 WebVttParser::class,
-                "No empty line found after the first line containing WEBVTT!",
+                "The WEBVTT header has no empty line before the first cue.",
                 [
                     [1, 2.5, "The wind is cold today."],
                     [3, 5, "Snow falls in the hills."],
@@ -134,32 +134,32 @@ class LenientParsingTest extends TestCase
                     [8, 10, "Stay at home."],
                 ],
                 [
-                    [4, 0, self::REPAIRED, "No empty line found after the first line containing WEBVTT! " .
+                    [4, 0, self::REPAIRED, "The WEBVTT header has no empty line before the first cue. " .
                                            "The parser split the header block at line 4."],
                 ],
             ],
             "WebVTT with text before the first cue" => [
                 "text_before_first_cue.vtt",
                 WebVttParser::class,
-                "Block #1 doesn't match anything that we can parse as a WebVTT cue!",
+                "Block #1 is not a WebVTT cue, comment, style or region.",
                 [
                     [1, 3, "Clouds move in from the west."],
                     [4, 6, "Sun again by Friday."],
                 ],
                 [
-                    [3, 1, self::SKIPPED, "Block #1 doesn't match anything that we can parse as a WebVTT cue!"],
+                    [3, 1, self::SKIPPED, "Block #1 is not a WebVTT cue, comment, style or region."],
                 ],
             ],
             "WebVTT with a truncated last cue" => [
                 "truncated_last_cue.vtt",
                 WebVttParser::class,
-                "Block #3 doesn't have any text lines!",
+                "Block #3 has no text lines.",
                 [
                     [1, 3, "The next stop is the station."],
                     [4, 6, "Please mind the gap."],
                 ],
                 [
-                    [9, 3, self::SKIPPED, "Block #3 doesn't have any text lines!"],
+                    [9, 3, self::SKIPPED, "Block #3 has no text lines."],
                 ],
             ],
             "WebVTT with mixed line endings" => [
@@ -176,13 +176,13 @@ class LenientParsingTest extends TestCase
             "SBV with a bad timestamp" => [
                 "bad_timestamp.sbv",
                 SbvParser::class,
-                "The timeString-string of at least one cue could not be parsed: 0:00:06.00",
+                "The time \"0:00:06.00\" is not valid.",
                 [
                     [1, 3, "Good morning."],
                     [7, 9, "See you tomorrow."],
                 ],
                 [
-                    [4, 1, self::SKIPPED, "The timeString-string of at least one cue could not be parsed: 0:00:06.00"],
+                    [4, 1, self::SKIPPED, "The time \"0:00:06.00\" is not valid."],
                 ],
             ],
             "SBV without an empty line between cues" => [
@@ -201,25 +201,25 @@ class LenientParsingTest extends TestCase
             "SBV with text before the first cue" => [
                 "text_before_first_cue.sbv",
                 SbvParser::class,
-                "Block #0 doesn't have any text lines!",
+                "Block #0 has no text lines.",
                 [
                     [1, 3, "Clouds move in from the west."],
                     [4, 6, "Sun again by Friday."],
                 ],
                 [
-                    [1, 0, self::SKIPPED, "Block #0 doesn't have any text lines!"],
+                    [1, 0, self::SKIPPED, "Block #0 has no text lines."],
                 ],
             ],
             "SBV with a truncated last cue" => [
                 "truncated_last_cue.sbv",
                 SbvParser::class,
-                "Block #2 doesn't have any text lines!",
+                "Block #2 has no text lines.",
                 [
                     [1, 3, "The next stop is the station."],
                     [4, 6, "Please mind the gap."],
                 ],
                 [
-                    [7, 2, self::SKIPPED, "Block #2 doesn't have any text lines!"],
+                    [7, 2, self::SKIPPED, "Block #2 has no text lines."],
                 ],
             ],
             "SBV with mixed line endings" => [
@@ -236,55 +236,55 @@ class LenientParsingTest extends TestCase
             "MicroDVD with a release name and a line without frames" => [
                 "release_name.sub",
                 MicroDvdParser::class,
-                "The frame rate is unknown. Set MicroDvdReadOptions::frameRate or start the file with {1}{1}<fps>.",
+                "The frame rate is unknown. Set MicroDvdReadOptions::\$frameRate or start the file with {1}{1}<fps>.",
                 [
                     [1, 3, "The ferry leaves at noon."],
                     [5, 7, "<i>Tickets are sold on board.</i>"],
                 ],
                 [
-                    [1, 0, self::SKIPPED, "Line 1 is not a MicroDVD cue: Movie.Name.2003.DVDRip"],
-                    [4, 3, self::SKIPPED, "Line 4 is not a MicroDVD cue: {x}{120}The deck is wet."],
+                    [1, 0, self::SKIPPED, "The line \"Movie.Name.2003.DVDRip\" is not a MicroDVD cue."],
+                    [4, 3, self::SKIPPED, "The line \"{x}{120}The deck is wet.\" is not a MicroDVD cue."],
                 ],
             ],
             "ASS without a Format line, with a short event and a bad time" => [
                 "broken_events.ass",
                 AssParser::class,
-                "Line 11 has fewer fields than the Format line of the [Events] section: Dialogue: 0,0:00:04.00,0:00:06.00,Default",
+                "The line \"Dialogue: 0,0:00:04.00,0:00:06.00,Default\" has fewer fields than the Format line of the [Events] section.",
                 [
                     [1, 3, "The boats come in at dawn."],
                     [10, 12, "<i>Fish is sold at the pier.</i>"],
                 ],
                 [
-                    [11, 1, self::SKIPPED, "Line 11 has fewer fields than the Format line of the [Events] section: " .
-                                           "Dialogue: 0,0:00:04.00,0:00:06.00,Default"],
-                    [12, 2, self::SKIPPED, "The time of at least one event could not be parsed: 0:00:0x.00"],
+                    [11, 1, self::SKIPPED, "The line \"Dialogue: 0,0:00:04.00,0:00:06.00,Default\" has fewer fields than the " .
+                                           "Format line of the [Events] section."],
+                    [12, 2, self::SKIPPED, "The time \"0:00:0x.00\" is not valid."],
                 ],
             ],
             "SubViewer with text before the header and a bad time line" => [
                 "bad_time_line.sub",
                 SubViewerParser::class,
-                "Line 1 is neither a header tag nor a timing line: Downloaded from a subtitle site",
+                "The line \"Downloaded from a subtitle site\" is neither a header tag nor a timing line.",
                 [
                     [1, 3, "The market opens at eight."],
                     [7, 9, "The stalls close\nat noon."],
                 ],
                 [
-                    [1, 0, self::SKIPPED, "Line 1 is neither a header tag nor a timing line: Downloaded from a subtitle site"],
-                    [9, 1, self::SKIPPED, "Line 9 is a timing line with a bad time: 00:00:04.00,00:00:0x.00"],
+                    [1, 0, self::SKIPPED, "The line \"Downloaded from a subtitle site\" is neither a header tag nor a timing line."],
+                    [9, 1, self::SKIPPED, "The timing line \"00:00:04.00,00:00:0x.00\" has a time that is not valid."],
                 ],
             ],
             "MPSub without a FORMAT line, with a bad timing line and a truncated last cue" => [
                 "bad_timing_line.mpsub",
                 MpSubParser::class,
-                "Line 7 is neither a header, a comment nor a timing line: 1 x",
+                "The line \"1 x\" is not a header, a comment or a timing line.",
                 [
                     [1, 3, "The bus leaves at ten."],
                     [5, 7, "Seats are free."],
                 ],
                 [
                     [4, 0, self::REPAIRED, "The file has no FORMAT line before line 4. The parser read the times as seconds."],
-                    [7, 1, self::SKIPPED, "Line 7 is neither a header, a comment nor a timing line: 1 x"],
-                    [13, 3, self::SKIPPED, "The cue that ends on line 13 doesn't have any text lines!"],
+                    [7, 1, self::SKIPPED, "The line \"1 x\" is not a header, a comment or a timing line."],
+                    [13, 3, self::SKIPPED, "The cue has no text lines."],
                 ],
             ],
             "LRC with a broken time tag" => [
@@ -297,7 +297,7 @@ class LenientParsingTest extends TestCase
                     [9, 12, "We walk to the lake"],
                 ],
                 [
-                    [6, 4, self::SKIPPED, "Line 6 has a time tag that could not be parsed: [01:2x.00]The path is long"],
+                    [6, 4, self::SKIPPED, "The line \"[01:2x.00]The path is long\" has a time tag that is not valid."],
                 ],
             ],
             "SAMI with a SYNC tag without a Start time" => [
@@ -315,14 +315,14 @@ class LenientParsingTest extends TestCase
             "TTML with a bad begin time and a paragraph without end" => [
                 "bad_begin.ttml",
                 TtmlParser::class,
-                "The time expression \"00:00:0x.000\" could not be parsed!",
+                "The time expression \"00:00:0x.000\" is not valid.",
                 [
                     [1, 3, "The library opens at nine."],
                     [10, 12, "<i>The reading room</i> is upstairs."],
                 ],
                 [
-                    [6, 1, self::SKIPPED, "The time expression \"00:00:0x.000\" could not be parsed!"],
-                    [7, 2, self::SKIPPED, "The paragraph that begins at 7s has no end time!"],
+                    [6, 1, self::SKIPPED, "The time expression \"00:00:0x.000\" is not valid."],
+                    [7, 2, self::SKIPPED, "The paragraph that begins at 7s has no end time."],
                 ],
             ],
             "EBU STL with a bad time code and a cut-off last block" => [
@@ -335,7 +335,7 @@ class LenientParsingTest extends TestCase
                 ],
                 [
                     [null, 3, self::SKIPPED, "The TTI blocks of an EBU STL file must have 128 bytes each."],
-                    [null, 1, self::SKIPPED, "Subtitle number 2 has a time code that is not valid: 00000400 to 00000630"],
+                    [null, 1, self::SKIPPED, "Subtitle number 2 has a time code that is not valid: 00000400 to 00000630."],
                 ],
             ],
             "JSON with a cue without end and a line that is not a string" => [
@@ -444,7 +444,7 @@ class LenientParsingTest extends TestCase
         $this->assertEquals([[1, 4, "Hello"], [8, 10, "Still fine"]], $this->cueRows($subtitle->getCues()));
         $this->assertEquals(
             [new ParseWarning(
-                "Block #1 doesn't seem to have its timestamps on its second line!",
+                "Block #1 has no timing line on its second line.",
                 5,
                 1,
                 ["2", "00:00:05,000 -> 00:00:07,000", "Broken arrow"],
@@ -496,7 +496,7 @@ class LenientParsingTest extends TestCase
     public function testWebVttWithoutTheSignatureStillThrows(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("The file doesn't start with the string WEBVTT!");
+        $this->expectExceptionMessage("The file does not start with WEBVTT.");
         (new WebVttParser())->parse("00:00:01.000 --> 00:00:02.000\ntext\n", new ReadOptions(lenient: true));
     }
 
@@ -504,7 +504,7 @@ class LenientParsingTest extends TestCase
     public function testWebVttStreamReaderWithoutTheSignatureStillThrows(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("The file doesn't start with the string WEBVTT!");
+        $this->expectExceptionMessage("The file does not start with WEBVTT.");
         iterator_to_array((new WebVttStreamReader(new ReadOptions(lenient: true)))->read(self::DIR . "bad_timestamp.srt"));
     }
 
@@ -546,7 +546,7 @@ class LenientParsingTest extends TestCase
         $subtitle = (new SubViewerParser())->parse("[TITLE]\nMarket\nbroken\n" . SubViewerParser::START_SCRIPT . "\n[00:00:01]\nHello\n[00:00:02]\n", new ReadOptions(lenient: true));
 
         $this->assertSame("Hello", $subtitle->getCues()[0]->getText());
-        $this->assertSame([[3, 0, self::SKIPPED, "Line 3 is not a SubViewer 1 header tag: broken"]], $this->warningRows($subtitle->getParseWarnings()));
+        $this->assertSame([[3, 0, self::SKIPPED, "The line \"broken\" is not a SubViewer 1 header tag."]], $this->warningRows($subtitle->getParseWarnings()));
     }
 
 
@@ -555,7 +555,7 @@ class LenientParsingTest extends TestCase
         $subtitle = (new MpSubParser())->parse("FORMAT=PAL\n\n1 2\nHello\n", new ReadOptions(lenient: true));
 
         $this->assertEquals([[1, 3, "Hello"]], $this->cueRows($subtitle->getCues()));
-        $this->assertSame([[1, 0, self::SKIPPED, "Line 1 has an unknown FORMAT value: PAL"]], $this->warningRows($subtitle->getParseWarnings()));
+        $this->assertSame([[1, 0, self::SKIPPED, "The FORMAT value \"PAL\" is not known."]], $this->warningRows($subtitle->getParseWarnings()));
     }
 
 
@@ -570,7 +570,7 @@ class LenientParsingTest extends TestCase
     public function testTtmlWithInvalidXmlStillThrows(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("The file is not well-formed XML!");
+        $this->expectExceptionMessage("The file is not well-formed XML.");
         (new TtmlParser())->parse("<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><p begin=\"1s\" end=\"2s\">text</body></tt>", new ReadOptions(lenient: true));
     }
 

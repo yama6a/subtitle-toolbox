@@ -73,7 +73,7 @@ class MicroDvdFormatterTest extends TestCase
     public function testNullFrameRateWithoutAStoredFrameRateThrows(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("MicroDVD output needs the frame rate of the video. Pass MicroDvdWriteOptions::frameRate.");
+        $this->expectExceptionMessage("MicroDVD output needs the frame rate of the video. Set MicroDvdWriteOptions::\$frameRate.");
         (new Subtitle())->addCue(new SubtitleCue(1, 2, "Hello"))->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(writeFrameRateLine: true)));
     }
 
@@ -81,7 +81,7 @@ class MicroDvdFormatterTest extends TestCase
     public function testFrameRateOptionIsRequired(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("MicroDVD output needs the frame rate of the video. Pass MicroDvdWriteOptions::frameRate.");
+        $this->expectExceptionMessage("MicroDVD output needs the frame rate of the video. Set MicroDvdWriteOptions::\$frameRate.");
         (new Subtitle())->addCue(new SubtitleCue(1, 2, "Hello"))->toString(Format::MicroDvd);
     }
 

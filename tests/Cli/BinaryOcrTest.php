@@ -164,11 +164,11 @@ class BinaryOcrTest extends BinaryTestCase
                           $this->runBinary(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr-engine", "glyph"]));
         $this->assertSame([2, "", "Error: Pass --ocr with --ocr-language.\n$usage"],
                           $this->runBinary(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr-language", "deu"]));
-        $this->assertSame([2, "", "Error: Cannot run OCR with Tesseract - the program \"tesseract\" is missing! " .
+        $this->assertSame([2, "", "Error: Cannot run OCR with Tesseract: the program \"tesseract\" is missing. " .
                                   TesseractOcrEngine::INSTALL_HINT . "\n$usage"],
                           $this->runWithPath($this->dir, ["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr", "--ocr-engine", "tesseract"]));
-        $this->assertSame([2, "", "Error: Cannot run OCR with Tesseract in the language \"fra\" - the language data of " .
-                                  "fra is missing! Install it, for example with apt install tesseract-ocr-fra. The " .
+        $this->assertSame([2, "", "Error: Cannot run OCR with Tesseract in the language \"fra\": the language data of " .
+                                  "fra is missing. Install it, for example with apt install tesseract-ocr-fra. The " .
                                   "installed languages are: deu, eng, osd.\n$usage"],
                           $this->runWithFakeTesseract(["convert", "text.sup", "--to", "srt", "-o", "text.srt", "--ocr", "--ocr-language", "fra"]));
         $this->assertFileDoesNotExist("$this->dir/text.srt");

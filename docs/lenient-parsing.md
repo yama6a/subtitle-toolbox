@@ -12,7 +12,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
     $line = $warning->lineNumber ?? '-';   // lineNumber is null for EBU STL and JSON
     $logger->warning("line $line: $warning->message ({$warning->action->value})");
 }
-// line 5: Block #1 doesn't seem to have its timestamps on its second line! (skipped)
+// line 5: Block #1 has no timing line on its second line. (skipped)
 ```
 
 ## SubRip, WebVTT and SBV

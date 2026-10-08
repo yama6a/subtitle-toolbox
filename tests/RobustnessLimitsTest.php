@@ -150,7 +150,7 @@ class RobustnessLimitsTest extends TestCase
         $this->assertSame(7680, (new CueImage("png", 0, 0, 7680, 1080, 7680, 1080))->width);
 
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Object 7 cannot be read: an image of 8000x1 pixels is larger than the limit");
+        $this->expectExceptionMessage("Cannot read object 7: an image of 8000x1 pixels is larger than the limit");
         (new PgsParser())->parse(self::pgsSegment(0x15, "\0\7\0\xC0\0\0\4" . pack("nn", 8000, 1)), new ReadOptions());
     }
 

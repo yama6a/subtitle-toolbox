@@ -226,7 +226,7 @@ class LoadSaveTest extends TestCase
         file_put_contents("$this->dir/lone.idx", file_get_contents(self::FILES . "vobsub/text-pal.idx"));
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("VobSubParser does not read CsvReadOptions.");
+        $this->expectExceptionMessage("VobSubParser takes VobSubReadOptions, got CsvReadOptions.");
         Subtitle::load("$this->dir/lone.idx", Format::VobSub, new ReadOptions(format: new CsvReadOptions()));
     }
 
@@ -294,7 +294,7 @@ class LoadSaveTest extends TestCase
         $this->assertStringStartsWith("{50}{150}", file_get_contents("$this->dir/y.sub"));
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("MicroDvdWriteOptions::frameRate");
+        $this->expectExceptionMessage("MicroDvdWriteOptions::\$frameRate");
         Subtitle::load(self::FILES . "cli/trip.srt", Format::SubRip)->save("$this->dir/z.sub");
     }
 
@@ -306,7 +306,7 @@ class LoadSaveTest extends TestCase
         $this->assertSame($itt->toString(Format::Itt), file_get_contents("$this->dir/x.itt"));
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("IttWriteOptions::frameRate");
+        $this->expectExceptionMessage("IttWriteOptions::\$frameRate");
         Subtitle::load(self::FILES . "cli/trip.srt", Format::SubRip)->save("$this->dir/x.itt");
     }
 

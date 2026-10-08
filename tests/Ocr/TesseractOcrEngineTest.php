@@ -205,8 +205,8 @@ class TesseractOcrEngineTest extends TestCase
     public function testMissingProgramThrowsWithInstallHints(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot run OCR with Tesseract - the program \"" . __DIR__ . "/no-such-program\" " .
-                                      "is missing! Install Tesseract with: apt install tesseract-ocr (Debian, Ubuntu), " .
+        $this->expectExceptionMessage("Cannot run OCR with Tesseract: the program \"" . __DIR__ . "/no-such-program\" " .
+                                      "is missing. Install Tesseract with: apt install tesseract-ocr (Debian, Ubuntu), " .
                                       "apk add tesseract-ocr tesseract-ocr-data-eng (Alpine), dnf install tesseract (Fedora), brew install " .
                                       "tesseract (macOS), or the installer from https://github.com/UB-Mannheim/" .
                                       "tesseract/wiki (Windows).");
@@ -218,8 +218,8 @@ class TesseractOcrEngineTest extends TestCase
     public function testMissingLanguageThrowsWithTheInstalledLanguages(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot run OCR with Tesseract in the language \"deu+fra+jpn\" - the language " .
-                                      "data of fra, jpn is missing! Install it, for example with apt install " .
+        $this->expectExceptionMessage("Cannot run OCR with Tesseract in the language \"deu+fra+jpn\": the language " .
+                                      "data of fra, jpn is missing. Install it, for example with apt install " .
                                       "tesseract-ocr-fra. The installed languages are: deu, eng, osd.");
 
         (new TesseractOcrEngine(new TesseractOcrOptions(program: self::FAKE)))->recognize(self::image(), "deu+fra+jpn");
@@ -231,7 +231,7 @@ class TesseractOcrEngineTest extends TestCase
         putenv("FAKE_TESSERACT_FAIL=1");
 
         $this->expectException(OcrException::class);
-        $this->expectExceptionMessage("Cannot read the cue image at 3, 4 - tesseract exits with code 1: Error during processing.");
+        $this->expectExceptionMessage("Tesseract exits with code 1 for the cue image at 3, 4: Error during processing.");
 
         (new TesseractOcrEngine(new TesseractOcrOptions(program: self::FAKE)))->recognize(self::image(), null);
     }
@@ -266,10 +266,10 @@ class TesseractOcrEngineTest extends TestCase
     public static function invalidOptions(): array
     {
         return [
-            "mode 14"       => [["pageSegmentationMode" => 14], "page segmentation mode 14 - the mode must be from 0 to 13!"],
-            "scale 0.5"     => [["scale" => 0.5], "scale 0.5 - the scale must be from 1 to 8!"],
-            "threshold 0"   => [["threshold" => 0], "threshold 0 - the threshold must be from 1 to 255!"],
-            "threshold 256" => [["threshold" => 256], "threshold 256 - the threshold must be from 1 to 255!"],
+            "mode 14"       => [["pageSegmentationMode" => 14], "The page segmentation mode must be from 0 to 13, got 14."],
+            "scale 0.5"     => [["scale" => 0.5], "The scale must be from 1 to 8, got 0.5."],
+            "threshold 0"   => [["threshold" => 0], "The threshold must be from 1 to 255, got 0."],
+            "threshold 256" => [["threshold" => 256], "The threshold must be from 1 to 255, got 256."],
         ];
     }
 
@@ -278,7 +278,7 @@ class TesseractOcrEngineTest extends TestCase
     public function testInvalidOptionThrows(array $options, string $message): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot create TesseractOcrOptions with $message");
+        $this->expectExceptionMessage($message);
 
         new TesseractOcrOptions(...$options);
     }

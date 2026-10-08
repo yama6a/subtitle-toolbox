@@ -153,10 +153,10 @@ class ChapterFormatsTest extends TestCase
     public static function badOgm(): array
     {
         return [
-            "name first"      => ["CHAPTER01NAME=Intro\n", "Line 1 is not a CHAPTERxx= line: CHAPTER01NAME=Intro (line 1)"],
-            "no fraction"     => ["CHAPTER01=00:00:00\n", "Line 1 is not a CHAPTERxx= line: CHAPTER01=00:00:00 (line 1)"],
-            "minute 60"       => ["CHAPTER01=00:60:00.000\n", "Line 1 has a minute or second above 59: CHAPTER01=00:60:00.000 (line 1)"],
-            "two times"       => ["CHAPTER01=00:00:00.000\n\nCHAPTER02=00:01:00.000\n", "Line 3 is not a CHAPTERxxNAME= line: CHAPTER02=00:01:00.000 (line 3)"],
+            "name first"      => ["CHAPTER01NAME=Intro\n", "The line \"CHAPTER01NAME=Intro\" is not a CHAPTERxx= line. (line 1)"],
+            "no fraction"     => ["CHAPTER01=00:00:00\n", "The line \"CHAPTER01=00:00:00\" is not a CHAPTERxx= line. (line 1)"],
+            "minute 60"       => ["CHAPTER01=00:60:00.000\n", "The line \"CHAPTER01=00:60:00.000\" has a minute or second above 59. (line 1)"],
+            "two times"       => ["CHAPTER01=00:00:00.000\n\nCHAPTER02=00:01:00.000\n", "The line \"CHAPTER02=00:01:00.000\" is not a CHAPTERxxNAME= line. (line 3)"],
         ];
     }
 

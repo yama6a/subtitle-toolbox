@@ -115,7 +115,7 @@ class ReadOptionsTest extends TestCase
     public function testFormatOptionsOfAnotherFormatThrow(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("SubRipParser does not read CsvReadOptions.");
+        $this->expectExceptionMessage("SubRipParser takes no format options, got CsvReadOptions.");
 
         Subtitle::fromString("1\n00:00:01,000 --> 00:00:02,000\nHello\n", Format::SubRip, new ReadOptions(format: new CsvReadOptions()));
     }

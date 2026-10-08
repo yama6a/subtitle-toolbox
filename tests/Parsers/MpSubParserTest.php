@@ -205,7 +205,7 @@ class MpSubParserTest extends TestCase
     public function testUnknownLineThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Line 3 is neither a header, a comment nor a timing line: 00:00:01,000");
+        $this->expectExceptionMessage("The line \"00:00:01,000\" is not a header, a comment or a timing line.");
         Subtitle::fromString("FORMAT=TIME\n\n00:00:01,000\nHello\n", Format::MpSub);
     }
 
@@ -213,7 +213,7 @@ class MpSubParserTest extends TestCase
     public function testNegativeDurationThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("The cue on line 3 has a negative duration: 1 -2");
+        $this->expectExceptionMessage("The timing line \"1 -2\" has a negative duration.");
         Subtitle::fromString("FORMAT=TIME\n\n1 -2\nHello\n", Format::MpSub);
     }
 
@@ -221,7 +221,7 @@ class MpSubParserTest extends TestCase
     public function testCueWithoutTextThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("The cue that ends on line 3 doesn't have any text lines!");
+        $this->expectExceptionMessage("The cue has no text lines.");
         Subtitle::fromString("FORMAT=TIME\n\n1 2\n\n3 4\nHello\n", Format::MpSub);
     }
 
@@ -229,7 +229,7 @@ class MpSubParserTest extends TestCase
     public function testInvalidFormatThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Line 1 has an unknown FORMAT value: FRAMES");
+        $this->expectExceptionMessage("The FORMAT value \"FRAMES\" is not known.");
         Subtitle::fromString("FORMAT=FRAMES\n\n1 2\nHello\n", Format::MpSub);
     }
 
@@ -237,7 +237,7 @@ class MpSubParserTest extends TestCase
     public function testZeroFrameRateThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Line 1 has an invalid frame rate: 0");
+        $this->expectExceptionMessage("The frame rate \"0\" is not valid.");
         Subtitle::fromString("FORMAT=0\n\n1 2\nHello\n", Format::MpSub);
     }
 }

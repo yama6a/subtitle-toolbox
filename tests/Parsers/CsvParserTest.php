@@ -116,7 +116,7 @@ class CsvParserTest extends TestCase
     public function testFramesNeedAFrameRate(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("The time \"00:00:01:12\" counts frames. Pass CsvReadOptions::frameRate. (line 2)");
+        $this->expectExceptionMessage("The time \"00:00:01:12\" counts frames. Set CsvReadOptions::\$frameRate. (line 2)");
 
         (new CsvParser())->parse("start,end,text\n00:00:01:12,00:00:02:00,a\n", new ReadOptions());
     }

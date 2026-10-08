@@ -207,7 +207,7 @@ class CsvFormatterTest extends TestCase
     public function testFramesWithoutAFrameRateThrow(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("The time format hh:mm:ss:ff needs CsvWriteOptions::\$frameRate.");
+        $this->expectExceptionMessage("The time format hh:mm:ss:ff needs a frame rate. Set CsvWriteOptions::\$frameRate.");
 
         self::english()->toString(Format::Csv, new WriteOptions(format: new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames)));
     }
