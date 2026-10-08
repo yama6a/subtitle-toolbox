@@ -15,6 +15,12 @@ final class ReferenceSync
     private const FINE_STEP    = 0.01;
     private const SPLIT_BLOCKS = 200;
 
+    // An earlier cue ends at least 1 ms before the first cue of a later part.
+    private const PART_GAP = 0.001;
+
+    // Film, PAL and NTSC film rates. A speed change between 2 of them is a common cause of drift.
+    private const FRAME_RATE_PAIRS = [[24, 23.976], [25, 24], [25, 23.976]];
+
 
     /**
      * Finds the scale and offset that make the cue times of $subtitle match those of the reference in $options, and
@@ -71,8 +77,8 @@ final class ReferenceSync
             $laterStart = min(array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $parts[$index]));
             for ($earlier = 0; $earlier < $index; $earlier++) {
                 foreach ($parts[$earlier] as $cue) {
-                    if ($cue->getStart() < $laterStart && $cue->getEnd() > $laterStart - 0.001) {
-                        $cue->setEnd(max($cue->getStart(), $laterStart - 0.001));
+                    if ($cue->getStart() < $laterStart && $cue->getEnd() > $laterStart - self::PART_GAP) {
+                        $cue->setEnd(max($cue->getStart(), $laterStart - self::PART_GAP));
                     }
                 }
             }
@@ -104,7 +110,7 @@ final class ReferenceSync
             [$offset, $overlap] = self::refine($scaled, $referenceSpans, $coarseBest, $options);
 
             $score = $overlap / ($targetTime * $scale + $referenceTime - $overlap);
-            if ($score > $best->score + 1e-9) {
+            if ($score > $best->score + Timecode::EPSILON) {
                 $best = new ReferenceSyncReport(Timecode::roundToMilliseconds($offset), $scale, min(1, max(0, $score)));
             }
 
@@ -112,14 +118,14 @@ final class ReferenceSync
                 foreach (self::splitCandidates($targetSpans, $scaled, $referenceSpans, $options) as [$parts, $partsOverlap]) {
                     $partsScore = $partsOverlap / ($targetTime * $scale + $referenceTime - $partsOverlap);
                     $value      = $partsScore - (count($parts) - 1) * $options->splitPenalty;
-                    if ($bestSplit === null || $value > $bestSplit[0] + 1e-9) {
+                    if ($bestSplit === null || $value > $bestSplit[0] + Timecode::EPSILON) {
                         $bestSplit = [$value, new ReferenceSyncReport($parts[0]["offset"], $scale, min(1, max(0, $partsScore)), $parts)];
                     }
                 }
             }
         }
 
-        if ($bestSplit !== null && $bestSplit[0] > $best->score + 1e-9) {
+        if ($bestSplit !== null && $bestSplit[0] > $best->score + Timecode::EPSILON) {
             return $bestSplit[1];
         }
 
@@ -142,7 +148,7 @@ final class ReferenceSync
         $blockSize = (int)ceil(count($target) / self::SPLIT_BLOCKS);
         $blocks    = array_chunk($target, $blockSize);
         $layers    = $options->maxSplits + 1;
-        $offsets   = (int)floor(($options->maxOffset - $options->minOffset) / self::COARSE_STEP + 1e-9) + 1;
+        $offsets   = (int)floor(($options->maxOffset - $options->minOffset) / self::COARSE_STEP + Timecode::EPSILON) + 1;
         $values    = array_fill(0, $layers, array_fill(0, $offsets, 0.0));
         $starts    = array_fill(0, $layers, array_fill(0, $offsets, 0));
         $parents   = array_fill(0, $layers, array_fill(0, $offsets, -1));
@@ -171,7 +177,7 @@ final class ReferenceSync
                 [$floor, $floorNode] = $floors[$layer];
                 $row                 = &$values[$layer];
                 foreach ($overlaps as $n => $overlap) {
-                    if ($floor > $row[$n] + 1e-9) {
+                    if ($floor > $row[$n] + Timecode::EPSILON) {
                         $row[$n]             = $floor;
                         $starts[$layer][$n]  = $blockIndex;
                         $parents[$layer][$n] = $floorNode;
@@ -244,7 +250,7 @@ final class ReferenceSync
         $split     = $from;
         foreach (array_keys($window) as $index) {
             $total += $early[$index] - $late[$index];
-            if ($total > $bestTotal + 1e-9) {
+            if ($total > $bestTotal + Timecode::EPSILON) {
                 $bestTotal = $total;
                 $split     = $from + $index + 1;
             }
@@ -265,11 +271,11 @@ final class ReferenceSync
         $overlap = self::overlap($target, $reference, $offset);
         $from    = max($options->minOffset, $coarseBest - self::COARSE_STEP);
         $to      = min($options->maxOffset, $coarseBest + self::COARSE_STEP);
-        $steps   = (int)floor(($to - $from) / self::FINE_STEP + 1e-9);
+        $steps   = (int)floor(($to - $from) / self::FINE_STEP + Timecode::EPSILON);
         for ($n = 0; $n <= $steps; $n++) {
             $candidate        = $from + $n * self::FINE_STEP;
             $candidateOverlap = self::overlap($target, $reference, $candidate);
-            if ($candidateOverlap > $overlap + 1e-9) {
+            if ($candidateOverlap > $overlap + Timecode::EPSILON) {
                 $offset  = $candidate;
                 $overlap = $candidateOverlap;
             }
@@ -287,7 +293,7 @@ final class ReferenceSync
         }
 
         $factors = [1];
-        foreach ([[24, 23.976], [25, 24], [25, 23.976]] as [$faster, $slower]) {
+        foreach (self::FRAME_RATE_PAIRS as [$faster, $slower]) {
             $factors[] = $faster / $slower;
             $factors[] = $slower / $faster;
         }
@@ -396,7 +402,7 @@ final class ReferenceSync
     private static function overlapPerOffset(array $target, array $reference, float $minOffset, float $maxOffset): array
     {
         $step           = self::COARSE_STEP;
-        $last           = (int)floor(($maxOffset - $minOffset) / $step + 1e-9);
+        $last           = (int)floor(($maxOffset - $minOffset) / $step + Timecode::EPSILON);
         $maxGridOffset  = $minOffset + $last * $step;
         $secondDiffs    = array_fill(0, $last + 2, 0.0);
         $firstValue     = 0.0;
