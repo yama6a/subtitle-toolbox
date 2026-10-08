@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Profanity;
 final class ProfanityReport
 {
     /**
-     * @internal ProfanityFilter::apply() creates the report.
+     * @internal
      *
      * @param list<MuteRange> $muteRanges the time ranges of the matches, sorted and joined
      */

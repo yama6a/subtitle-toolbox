@@ -221,7 +221,7 @@ trait CueEditing
      * Sets the cue list to $cues. Each comment moves to the cue that $anchors holds at its position, or after the last
      * cue for null. CommentAnchors::of() returns the anchors.
      *
-     * @internal For the services that change the cue list, such as Resegmenter.
+     * @internal
      *
      * @param SubtitleCue[]            $cues
      * @param array<int, ?SubtitleCue> $anchors

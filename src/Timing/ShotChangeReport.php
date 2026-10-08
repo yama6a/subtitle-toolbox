@@ -9,7 +9,7 @@ final class ShotChangeReport
     /**
      * Holds the number of cue starts and of cue ends that moved by one frame or more.
      *
-     * @internal ShotChangeTiming::apply() creates the report.
+     * @internal
      */
     public function __construct(
         public readonly int $movedStarts,

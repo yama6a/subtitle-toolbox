@@ -9,7 +9,7 @@ use SubtitleToolbox\SubtitleCue;
 final class CueDifference
 {
     /**
-     * @internal SubtitleDiff::compare() creates the differences.
+     * @internal
      *
      * @param ?int $oldIndex the cue index in the old subtitle, or null for an added cue
      * @param ?int $newIndex the cue index in the new subtitle, or null for a removed cue

@@ -6,7 +6,11 @@ namespace SubtitleToolbox;
 
 final class SubtitleStatistics
 {
-    /** @internal The number of most used words that toArray() and the info command show. */
+    /**
+     * The number of most used words that toArray() and the info command show.
+     *
+     * @internal
+     */
     public const MOST_USED_WORDS = 10;
 
     /**

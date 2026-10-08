@@ -62,7 +62,9 @@ use SubtitleToolbox\Parsers\YouTubeChaptersParser;
 use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 
 /**
- * @internal The table behind Format. Use Format in place of it.
+ * The table behind Format. Use Format in place of it.
+ *
+ * @internal
  */
 final class FormatRegistry
 {

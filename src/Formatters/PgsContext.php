@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Formatters;
 
 /**
- * @internal The values that PgsFormatter changes during one format() call.
+ * The values that PgsFormatter changes during one format() call.
+ *
+ * @internal
  */
 final class PgsContext
 {

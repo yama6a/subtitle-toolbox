@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Ocr;
 final class OcrReport
 {
     /**
-     * @internal OcrRunner::run() creates the report.
+     * @internal
      *
      * @param array<int, RecognizedText> $texts the text that the engine read, by cue index
      */

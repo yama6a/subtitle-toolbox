@@ -341,7 +341,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * @internal SubtitleParser::parse() sets the warnings of its read.
+     * @internal
      *
      * @param list<ParseWarning> $warnings
      */

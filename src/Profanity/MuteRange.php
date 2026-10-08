@@ -9,7 +9,7 @@ final class MuteRange
     /**
      * Records that the audio from $start to $end in seconds holds a filtered word.
      *
-     * @internal ProfanityFilter::apply() creates the ranges.
+     * @internal
      */
     public function __construct(
         public readonly float $start,

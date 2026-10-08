@@ -7,7 +7,9 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\FrameRate;
 
 /**
- * @internal The values that EbuStlFormatter reads during one format() call.
+ * The values that EbuStlFormatter reads during one format() call.
+ *
+ * @internal
  */
 final readonly class EbuStlContext
 {

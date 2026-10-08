@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Sync;
 final class ReferenceSyncReport
 {
     /**
-     * @internal ReferenceSync::apply() creates the report.
+     * @internal
      *
      * @param float                                   $offset     the seconds to add to each time after the scale, in the first part when the sync split the subtitle
      * @param float                                   $scale      the factor to multiply each time with before the offset

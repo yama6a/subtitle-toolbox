@@ -8,7 +8,9 @@ use DOMDocument;
 use DOMElement;
 
 /**
- * @internal The values that TtmlFormatter reads and changes during one format() call.
+ * The values that TtmlFormatter reads and changes during one format() call.
+ *
+ * @internal
  */
 final class TtmlContext
 {

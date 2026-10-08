@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
-/**
- * @internal Use Format::detect().
- */
+/** @internal */
 final class FormatDetector
 {
     private const LRC_TIMESTAMP = '\[\d{2,3}:\d{2}(?:[.:]\d{2,3})?\]';
