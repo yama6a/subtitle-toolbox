@@ -481,6 +481,21 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
+     * Returns a copy with the metadata, the format data and the format of this subtitle, but without cues and comments.
+     *
+     * @internal
+     */
+    public function emptyCopy(): self
+    {
+        $copy           = clone $this;
+        $copy->cues     = [];
+        $copy->comments = [];
+
+        return $copy;
+    }
+
+
+    /**
      * Sets the lines that $linesOf returns for each cue, or keeps the cue as is when it returns null. Then it removes,
      * in one pass, each cue that had text before and has none after. $hasText decides, Markup::hasVisibleText() by default.
      *

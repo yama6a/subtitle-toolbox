@@ -29,8 +29,7 @@ final class DualSubtitle
 
         $cues = CueList::inStartOrder(array_merge(array_values($primaryCues), $ownCues));
 
-        // A slice that keeps no cue is a copy of the metadata and format data without cues and comments.
-        $result = $primary->withSlice(INF, INF);
+        $result = $primary->emptyCopy();
         $result->addCues($cues);
         $anchors = CommentAnchors::of($primaryCues, $primary->getComments());
         foreach (CommentAnchors::comments($cues, $primary->getComments(), $anchors) as $comment) {
