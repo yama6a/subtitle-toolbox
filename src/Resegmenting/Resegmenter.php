@@ -14,6 +14,10 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
 
+/**
+ * @phpstan-type Piece array{text: string, length: int, separator: string, time: ?float, openBefore: list<array{name: string, tag: string}>, openAfter: list<array{name: string, tag: string}>}
+ * @phpstan-type Word array{cue: SubtitleCue, pieces: list<Piece>, index: int, start: float, end: float, endsSentence: bool}
+ */
 final class Resegmenter
 {
     private const CLOSERS      = '["\'\)\]\x{2019}\x{201D}\x{3009}\x{300B}\x{300D}\x{300F}\x{3011}\x{FF09}\x{FF3D}\x{FF5D}]*';
@@ -101,7 +105,7 @@ final class Resegmenter
 
 
     /**
-     * @return ?array{list<array>, list<float>, list<int>} the pieces, their times and the break indexes, or null for no split
+     * @return ?array{list<Piece>, list<float>, list<int>} the pieces, their times and the break indexes, or null for no split
      */
     private static function findSplit(SubtitleCue $cue, ResegmentOptions $options): ?array
     {
@@ -119,7 +123,7 @@ final class Resegmenter
 
 
     /**
-     * @param ?array{list<array>, list<float>, list<int>} $split
+     * @param ?array{list<Piece>, list<float>, list<int>} $split
      *
      * @return list<SubtitleCue> $cue itself first, then the new cues
      */
@@ -146,7 +150,7 @@ final class Resegmenter
     /**
      * Returns the indexes of the pieces that start a new cue, best break point first, until each part fits.
      *
-     * @param list<array> $pieces
+     * @param list<Piece> $pieces
      * @param list<int>   $positions
      * @param list<float> $times
      *
@@ -195,7 +199,7 @@ final class Resegmenter
     /**
      * Returns 0 for a sentence end before piece $index, 1 for a clause end, 2 for another word boundary, or null.
      *
-     * @param list<array> $pieces
+     * @param list<Piece> $pieces
      */
     private static function breakRank(array $pieces, int $index): ?int
     {
@@ -215,7 +219,7 @@ final class Resegmenter
     /**
      * A full stop before a word in lower case, as in "e.g. this", ends no sentence.
      *
-     * @param list<array> $pieces
+     * @param list<Piece> $pieces
      */
     private static function endsSentence(array $pieces, int $index): bool
     {
@@ -260,7 +264,7 @@ final class Resegmenter
     /**
      * Splits the cue text into pieces at spaces, at line breaks, after CJK punctuation and before word timestamps inside a word.
      *
-     * @return list<array{text: string, length: int, separator: string, time: ?float, openBefore: list<array>, openAfter: list<array>}>
+     * @return list<Piece>
      */
     private static function pieces(SubtitleCue $cue): array
     {
@@ -354,7 +358,7 @@ final class Resegmenter
     /**
      * Joins the pieces from $first to $end - 1, opens the core markup tags that are open before them and closes the tags open after them.
      *
-     * @param list<array> $pieces
+     * @param list<Piece> $pieces
      */
     private static function text(array $pieces, int $first, int $end): string
     {
@@ -372,7 +376,7 @@ final class Resegmenter
 
 
     /**
-     * @param list<array> $pieces
+     * @param list<Piece> $pieces
      *
      * @return list<int> the visible characters before each piece, then the visible characters of the whole text
      */
@@ -392,7 +396,7 @@ final class Resegmenter
      * Returns the start time of each piece, then $end. A word timestamp sets the time of its piece.
      * Other times split in proportion to the visible characters.
      *
-     * @param list<array> $pieces
+     * @param list<Piece> $pieces
      * @param list<int>   $positions
      *
      * @return list<float>
@@ -426,7 +430,7 @@ final class Resegmenter
     /**
      * Returns the words of the cue with their times, or [] when the cue has no word timestamp.
      *
-     * @return list<array{cue: SubtitleCue, pieces: list<array>, index: int, start: float, end: float, endsSentence: bool}>
+     * @return list<Word>
      */
     private static function words(SubtitleCue $cue): array
     {
@@ -460,7 +464,7 @@ final class Resegmenter
 
 
     /**
-     * @param list<array> $group
+     * @param list<Word> $group
      *
      * @return list<string>
      */
@@ -481,7 +485,7 @@ final class Resegmenter
 
 
     /**
-     * @param list<array> $group
+     * @param list<Word> $group
      */
     private static function groupFits(array $group, ResegmentOptions $options): bool
     {
@@ -492,7 +496,7 @@ final class Resegmenter
     /**
      * Builds one cue from the words of $group and records it in $newCues for each cue whose first word it holds.
      *
-     * @param list<array>                                 $group
+     * @param list<Word>                                  $group
      * @param \SplObjectStorage<SubtitleCue, SubtitleCue> $newCues
      */
     private static function flush(array $group, \SplObjectStorage $newCues, ResegmentOptions $options): ?SubtitleCue
