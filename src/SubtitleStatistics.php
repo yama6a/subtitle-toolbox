@@ -42,23 +42,14 @@ final class SubtitleStatistics
     public static function of(Subtitle $subtitle): self
     {
         $cues = CueList::inStartOrder($subtitle->getCues());
+        $span = $cues === [] ? null
+            : Timecode::roundToMilliseconds(max(array_map(fn (SubtitleCue $cue): float => $cue->getEnd(), $cues)) - $cues[0]->getStart());
 
-        $span = null;
-        if ($cues !== []) {
-            $firstStart = min(array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $cues));
-            $lastEnd    = max(array_map(fn (SubtitleCue $cue): float => $cue->getEnd(), $cues));
-            $span       = Timecode::roundToMilliseconds($lastEnd - $firstStart);
-        }
-
-        $totalDisplayTime    = 0.0;
-        $gaps                = [];
-        $characterCount      = 0;
-        $wordCount           = 0;
-        $charactersPerSecond = [];
-        $wordsPerMinute      = [];
-        $charactersPerLine   = [];
-        $wordFrequencies     = [];
-        $previousEnd         = null;
+        $text             = ["characters" => 0, "words" => 0, "charactersPerSecond" => [], "wordsPerMinute" => [],
+                             "charactersPerLine" => [], "frequencies" => []];
+        $totalDisplayTime = 0.0;
+        $gaps             = [];
+        $previousEnd      = null;
         foreach ($cues as $cue) {
             $duration          = Timecode::roundToMilliseconds($cue->getEnd() - $cue->getStart());
             $totalDisplayTime += $duration;
@@ -68,48 +59,59 @@ final class SubtitleStatistics
             }
             $previousEnd = max($previousEnd ?? $cue->getEnd(), $cue->getEnd());
 
-            $lineLengths       = LineWrapper::visibleLineLengths($cue->getLines());
-            $charactersPerLine = [...$charactersPerLine, ...$lineLengths];
-            $characters        = array_sum($lineLengths);
-            if ($characters === 0) {
-                continue;
-            }
-
-            $words           = Markup::words(Markup::plainText(implode(LineEnding::Lf->value, $cue->getLines())));
-            $characterCount += $characters;
-            $wordCount      += count($words);
-            foreach ($words as $word) {
-                $word = self::normalizeWord($word);
-                if ($word !== "") {
-                    $wordFrequencies[$word] = ($wordFrequencies[$word] ?? 0) + 1;
-                }
-            }
-
-            // A cue without duration has no reading speed.
-            if ($duration > 0) {
-                $charactersPerSecond[] = $characters / $duration;
-                $wordsPerMinute[]      = count($words) / $duration * 60;
-            }
+            self::addText($cue, $duration, $text);
         }
-        arsort($wordFrequencies);
+        arsort($text["frequencies"]);
 
         $mostUsedWords = [];
-        foreach ($wordFrequencies as $word => $count) {
+        foreach ($text["frequencies"] as $word => $count) {
             $mostUsedWords[] = ["word" => (string) $word, "count" => $count];
         }
 
         return new self(
             cueCount: count($cues),
-            wordCount: $wordCount,
-            characterCount: $characterCount,
+            wordCount: $text["words"],
+            characterCount: $text["characters"],
             totalDisplayTime: Timecode::roundToMilliseconds($totalDisplayTime),
             span: $span,
-            charactersPerSecond: self::range($charactersPerSecond),
-            wordsPerMinute: self::range($wordsPerMinute),
-            charactersPerLine: self::range($charactersPerLine),
+            charactersPerSecond: self::range($text["charactersPerSecond"]),
+            wordsPerMinute: self::range($text["wordsPerMinute"]),
+            charactersPerLine: self::range($text["charactersPerLine"]),
             gaps: self::range($gaps),
             mostUsedWords: $mostUsedWords,
         );
+    }
+
+
+    /**
+     * Adds the line lengths, the characters, the words and the reading speed of one cue to $text.
+     *
+     * @param array{characters: int, words: int, charactersPerSecond: list<float>, wordsPerMinute: list<float>, charactersPerLine: list<int>, frequencies: array<string, int>} $text
+     */
+    private static function addText(SubtitleCue $cue, float $duration, array &$text): void
+    {
+        $lineLengths               = LineWrapper::visibleLineLengths($cue->getLines());
+        $text["charactersPerLine"] = [...$text["charactersPerLine"], ...$lineLengths];
+        $characters                = array_sum($lineLengths);
+        if ($characters === 0) {
+            return;
+        }
+
+        $words               = Markup::words(Markup::plainText(implode(LineEnding::Lf->value, $cue->getLines())));
+        $text["characters"] += $characters;
+        $text["words"]      += count($words);
+        foreach ($words as $word) {
+            $word = self::normalizeWord($word);
+            if ($word !== "") {
+                $text["frequencies"][$word] = ($text["frequencies"][$word] ?? 0) + 1;
+            }
+        }
+
+        // A cue without duration has no reading speed.
+        if ($duration > 0) {
+            $text["charactersPerSecond"][] = $characters / $duration;
+            $text["wordsPerMinute"][]      = count($words) / $duration * 60;
+        }
     }
 
 
