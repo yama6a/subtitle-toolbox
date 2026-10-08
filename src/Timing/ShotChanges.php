@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Timing;
 
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Timecode;
 
 final class ShotChanges
@@ -29,9 +30,8 @@ final class ShotChanges
      */
     public static function fromText(string $text): array
     {
-        $text  = preg_replace('/^\xEF\xBB\xBF/', "", $text);
         $times = [];
-        foreach (preg_split('/\r\n|\r|\n/', $text) as $index => $line) {
+        foreach (explode("\n", StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($text))) as $index => $line) {
             $line = trim($line);
             if ($line === "") {
                 continue;
