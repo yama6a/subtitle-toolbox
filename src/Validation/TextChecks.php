@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Validation;
 use SubtitleToolbox\DialogueDash;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 /**
  * @internal
@@ -66,7 +67,7 @@ final class TextChecks
         }
 
         // Cue times have millisecond precision, so compare the duration with the needed time in milliseconds.
-        if ($rules->minSecondsPerWord !== null && $words > 0 && $duration < round($rules->minSecondsPerWord * $words, 3)) {
+        if ($rules->minSecondsPerWord !== null && $words > 0 && $duration < Timecode::roundToMilliseconds($rules->minSecondsPerWord * $words)) {
             $counts[] = [ValidationRule::MinSecondsPerWord, $duration / $words, $rules->minSecondsPerWord];
         }
 

@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Sync;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\TimeRanges;
+use SubtitleToolbox\Timecode;
 
 final class ReferenceSync
 {
@@ -104,7 +105,7 @@ final class ReferenceSync
 
             $score = $overlap / ($targetTime * $scale + $referenceTime - $overlap);
             if ($score > $best->score + 1e-9) {
-                $best = new ReferenceSyncReport(round($offset, 3), $scale, min(1, max(0, $score)));
+                $best = new ReferenceSyncReport(Timecode::roundToMilliseconds($offset), $scale, min(1, max(0, $score)));
             }
 
             if ($options->maxSplits > 0) {
@@ -211,7 +212,7 @@ final class ReferenceSync
                 $end                    = $chain[$index + 1]["start"] ?? count($target);
                 [$offset, $partOverlap] = self::refine(array_slice($target, $part["start"], $end - $part["start"]),
                                                        $reference, $part["offset"], $options);
-                $parts[]                = ["from" => $index === 0 ? 0.0 : $original[$part["start"]][0], "offset" => round($offset, 3)];
+                $parts[]                = ["from" => $index === 0 ? 0.0 : $original[$part["start"]][0], "offset" => Timecode::roundToMilliseconds($offset)];
                 $overlap               += $partOverlap;
             }
             $candidates[] = [$parts, $overlap];

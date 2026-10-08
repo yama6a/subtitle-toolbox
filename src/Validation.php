@@ -32,11 +32,11 @@ trait Validation
         foreach ($this->getCues() as $cueIndex => $cue) {
             $lineLengths = LineWrapper::visibleLineLengths($cue->getLines());
             $characters = array_sum($lineLengths);
-            $duration   = round($cue->getEnd() - $cue->getStart(), 3);
+            $duration   = Timecode::roundToMilliseconds($cue->getEnd() - $cue->getStart());
 
             if ($rules->noUnsortedCues && $previousStart !== null && $cue->getStart() < $previousStart) {
                 $results[] = new ValidationViolation($cueIndex, ValidationRule::NoUnsortedCues,
-                                                  round($previousStart - $cue->getStart(), 3), null);
+                                                  Timecode::roundToMilliseconds($previousStart - $cue->getStart()), null);
             }
             $previousStart = $cue->getStart();
 
@@ -71,12 +71,12 @@ trait Validation
             }
 
             // Cue times have millisecond precision, so a limit such as 5/6 s must match a cue of 0.833 s.
-            if ($rules->minDuration !== null && $duration < round($rules->minDuration, 3)) {
+            if ($rules->minDuration !== null && $duration < Timecode::roundToMilliseconds($rules->minDuration)) {
                 $results[] = new ValidationViolation($cueIndex, ValidationRule::MinDuration,
                                                   $duration, $rules->minDuration);
             }
 
-            if ($rules->maxDuration !== null && $duration > round($rules->maxDuration, 3)) {
+            if ($rules->maxDuration !== null && $duration > Timecode::roundToMilliseconds($rules->maxDuration)) {
                 $results[] = new ValidationViolation($cueIndex, ValidationRule::MaxDuration,
                                                   $duration, $rules->maxDuration);
             }
@@ -84,13 +84,13 @@ trait Validation
             array_push($results, ...TextChecks::check($cueIndex, $cue, $duration, $rules));
 
             if ($previousEnd !== null) {
-                $gap = round($cue->getStart() - $previousEnd, 3);
+                $gap = Timecode::roundToMilliseconds($cue->getStart() - $previousEnd);
 
                 if ($rules->noOverlap && $gap < 0) {
                     $results[] = new ValidationViolation($cueIndex, ValidationRule::NoOverlap, -$gap, null);
                 }
 
-                if ($rules->minGap !== null && $gap >= 0 && $gap < round($rules->minGap, 3)) {
+                if ($rules->minGap !== null && $gap >= 0 && $gap < Timecode::roundToMilliseconds($rules->minGap)) {
                     $results[] = new ValidationViolation($cueIndex, ValidationRule::MinGap, $gap, $rules->minGap);
                 }
             }

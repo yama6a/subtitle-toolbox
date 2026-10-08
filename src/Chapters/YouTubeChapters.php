@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Chapters;
 
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Timecode;
 use SubtitleToolbox\Validation\ValidationRule;
 use SubtitleToolbox\Validation\ValidationViolation;
 
@@ -33,7 +34,7 @@ final class YouTubeChapters
         }
 
         foreach ($cues as $index => $cue) {
-            $duration = round($cue->getEnd() - $cue->getStart(), 3);
+            $duration = Timecode::roundToMilliseconds($cue->getEnd() - $cue->getStart());
             // A last chapter that ends at its own start has an unknown length, because the parser did not know the video length.
             $unknown = $index === count($cues) - 1 && $duration <= 0;
             if (!$unknown && $duration < self::MIN_DURATION) {

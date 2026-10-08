@@ -9,6 +9,7 @@ use SubtitleToolbox\CueList;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 final class WordHighlight
 {
@@ -59,7 +60,7 @@ final class WordHighlight
         for ($word = -1; $word < count($times); $word++) {
             $wordStart = $bounds[$word + 1];
             $wordEnd   = $bounds[$word + 2];
-            if (round($wordEnd - $wordStart, 3) <= 0) {
+            if (Timecode::roundToMilliseconds($wordEnd - $wordStart) <= 0) {
                 continue;
             }
 

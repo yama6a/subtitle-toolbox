@@ -24,7 +24,7 @@ trait Fixes
                 continue;
             }
 
-            $latestEnd = round($cues[$index + 1]->getStart() - $minGap, 3);
+            $latestEnd = Timecode::roundToMilliseconds($cues[$index + 1]->getStart() - $minGap);
             if ($cue->getEnd() > $latestEnd) {
                 $cue->setEnd(max($cue->getStart(), $latestEnd));
             }
@@ -50,7 +50,7 @@ trait Fixes
             }
 
             $hasSameStartAsPrevious = isset($cues[$index - 1]) && $cues[$index - 1]->getStart() === $cue->getStart();
-            if (!$hasSameStartAsPrevious && round($end, 3) > $cue->getEnd()) {
+            if (!$hasSameStartAsPrevious && Timecode::roundToMilliseconds($end) > $cue->getEnd()) {
                 $cue->setEnd($end);
             }
         }

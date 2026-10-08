@@ -8,6 +8,7 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\Timecode;
 
 final class WhisperJsonParser extends SubtitleParser
 {
@@ -111,7 +112,7 @@ final class WhisperJsonParser extends SubtitleParser
             foreach ($words as $word) {
                 $timedWords[] = [
                     "text"  => is_string($word["word"] ?? null) ? trim($word["word"]) : "",
-                    "start" => self::isTime($word["start"] ?? null) ? round($word["start"], 3) : null,
+                    "start" => self::isTime($word["start"] ?? null) ? Timecode::roundToMilliseconds($word["start"]) : null,
                 ];
             }
 
@@ -129,8 +130,8 @@ final class WhisperJsonParser extends SubtitleParser
             $path    = "transcription[$index]";
             $offsets = is_array($segment) ? $segment["offsets"] ?? null : null;
             try {
-                $start = round($this->number($offsets, "from", "$path.offsets") / 1000, 3);
-                $end   = round($this->number($offsets, "to", "$path.offsets") / 1000, 3);
+                $start = Timecode::roundToMilliseconds($this->number($offsets, "from", "$path.offsets") / 1000);
+                $end   = Timecode::roundToMilliseconds($this->number($offsets, "to", "$path.offsets") / 1000);
                 $text  = $this->text($segment, "text", $path);
             } catch (ParsingException $exception) {
                 $this->fail($exception, null, $index, [RawJson::encode($segment)]);
@@ -147,7 +148,7 @@ final class WhisperJsonParser extends SubtitleParser
 
                 if ($words === [] || str_starts_with($tokenText, " ")) {
                     $from    = $token["offsets"]["from"] ?? null;
-                    $words[] = ["text" => "", "start" => self::isTime($from) ? round($from / 1000, 3) : null];
+                    $words[] = ["text" => "", "start" => self::isTime($from) ? Timecode::roundToMilliseconds($from / 1000) : null];
                 }
                 $words[count($words) - 1]["text"] .= $tokenText;
             }
@@ -172,7 +173,7 @@ final class WhisperJsonParser extends SubtitleParser
             throw new ParsingException("The field $path.$key must be a number.");
         }
 
-        return round($value, 3);
+        return Timecode::roundToMilliseconds($value);
     }
 
 

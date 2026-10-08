@@ -54,13 +54,13 @@ final class SubtitleCue
 
     public function getStart(): float
     {
-        return round($this->start, 3);
+        return Timecode::roundToMilliseconds($this->start);
     }
 
 
     public function setStart(float $start): self
     {
-        $this->start = round($start, 3);
+        $this->start = Timecode::roundToMilliseconds($start);
         self::$timeEdits++;
 
         return $this;
@@ -69,13 +69,13 @@ final class SubtitleCue
 
     public function getEnd(): float
     {
-        return round($this->end, 3);
+        return Timecode::roundToMilliseconds($this->end);
     }
 
 
     public function setEnd(float $end): self
     {
-        $this->end = round($end, 3);
+        $this->end = Timecode::roundToMilliseconds($end);
         self::$timeEdits++;
 
         return $this;

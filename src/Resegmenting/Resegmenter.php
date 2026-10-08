@@ -12,6 +12,7 @@ use SubtitleToolbox\LineWrapper;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 final class Resegmenter
 {
@@ -80,7 +81,7 @@ final class Resegmenter
             foreach ($words as $word) {
                 $last = end($group) ?: null;
                 if ($last !== null && ($last["cue"] !== $cue && !CueList::canJoin($last["cue"], $cue)
-                    || round($word["start"] - $last["end"], 3) >= round($options->maxWordGap, 3)
+                    || Timecode::roundToMilliseconds($word["start"] - $last["end"]) >= Timecode::roundToMilliseconds($options->maxWordGap)
                     || !self::groupFits([...$group, $word], $options))) {
                     $result[] = self::flush($group, $newCues, $options);
                     $group    = [];
@@ -169,8 +170,8 @@ final class Resegmenter
         for ($index = $first + 1; $index < $end; $index++) {
             $rank = self::breakRank($pieces, $index);
             if ($rank === null
-                || round($times[$index] - $times[$first], 3) < round($options->limits->minDuration, 3)
-                || round($times[$end] - $times[$index], 3) < round($options->limits->minDuration, 3)) {
+                || Timecode::roundToMilliseconds($times[$index] - $times[$first]) < Timecode::roundToMilliseconds($options->limits->minDuration)
+                || Timecode::roundToMilliseconds($times[$end] - $times[$index]) < Timecode::roundToMilliseconds($options->limits->minDuration)) {
                 continue;
             }
 
@@ -234,9 +235,9 @@ final class Resegmenter
      */
     private static function fits(array $lines, float $start, float $end, ResegmentOptions $options): bool
     {
-        $duration = round($end - $start, 3);
+        $duration = Timecode::roundToMilliseconds($end - $start);
 
-        return $duration <= round($options->limits->maxDuration, 3)
+        return $duration <= Timecode::roundToMilliseconds($options->limits->maxDuration)
             && LineWrapper::wrapToFit($lines, $options->limits->maxCharactersPerLine, $options->limits->maxLinesPerCue) !== null
             && LineWrapper::fitsCharactersPerSecond($lines, $duration, $options->limits->maxCharactersPerSecond);
     }
@@ -294,7 +295,7 @@ final class Resegmenter
             $pieces[$index]["openAfter"]  = $openTags;
             $pieces[$index]["time"]       = null;
             if (preg_match('/^(?:(?!<\d)' . Markup::TAG . ')*(<' . Markup::WORD_TIMESTAMP . '>)/', $piece["text"], $matches) === 1) {
-                $pieces[$index]["time"] = round(Markup::wordTimestampSeconds($matches[1]), 3);
+                $pieces[$index]["time"] = Timecode::roundToMilliseconds(Markup::wordTimestampSeconds($matches[1]));
             }
         }
 
@@ -402,7 +403,7 @@ final class Resegmenter
             $span     = $positions[$next] - $positions[$previous];
             for ($index = $previous; $index < $next; $index++) {
                 $share         = $span > 0 ? ($positions[$index] - $positions[$previous]) / $span : 0;
-                $times[$index] = round($anchors[$previous] + ($anchors[$next] - $anchors[$previous]) * $share, 3);
+                $times[$index] = Timecode::roundToMilliseconds($anchors[$previous] + ($anchors[$next] - $anchors[$previous]) * $share);
             }
         }
         $times[count($pieces)] = $anchors[count($pieces)];

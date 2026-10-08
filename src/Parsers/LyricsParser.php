@@ -11,6 +11,7 @@ use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 final class LyricsParser extends SubtitleParser
 {
@@ -191,9 +192,9 @@ final class LyricsParser extends SubtitleParser
         $seconds  = match (strlen($fraction)) {
             0       => $matches[1] * 60 + $matches[2],
             2       => $matches[1] * 60 + $matches[2] + round($fraction / 100, 2),
-            default => $matches[1] * 60 + $matches[2] + round($fraction / 1000, 3),
+            default => $matches[1] * 60 + $matches[2] + Timecode::roundToMilliseconds($fraction / 1000),
         };
 
-        return $offset === 0.0 ? (float) $seconds : max(0.0, round($seconds - $offset, 3));
+        return $offset === 0.0 ? (float) $seconds : max(0.0, Timecode::roundToMilliseconds($seconds - $offset));
     }
 }

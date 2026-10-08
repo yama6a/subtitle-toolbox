@@ -44,7 +44,7 @@ final class SubtitleStatistics
         if ($cues !== []) {
             $firstStart = min(array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $cues));
             $lastEnd    = max(array_map(fn (SubtitleCue $cue): float => $cue->getEnd(), $cues));
-            $span       = round($lastEnd - $firstStart, 3);
+            $span       = Timecode::roundToMilliseconds($lastEnd - $firstStart);
         }
 
         $totalDisplayTime    = 0.0;
@@ -57,11 +57,11 @@ final class SubtitleStatistics
         $wordFrequencies     = [];
         $previousEnd         = null;
         foreach ($cues as $cue) {
-            $duration          = round($cue->getEnd() - $cue->getStart(), 3);
+            $duration          = Timecode::roundToMilliseconds($cue->getEnd() - $cue->getStart());
             $totalDisplayTime += $duration;
 
             if ($previousEnd !== null) {
-                $gaps[] = round($cue->getStart() - $previousEnd, 3);
+                $gaps[] = Timecode::roundToMilliseconds($cue->getStart() - $previousEnd);
             }
             $previousEnd = max($previousEnd ?? $cue->getEnd(), $cue->getEnd());
 
@@ -99,7 +99,7 @@ final class SubtitleStatistics
             cueCount: count($cues),
             wordCount: $wordCount,
             characterCount: $characterCount,
-            totalDisplayTime: round($totalDisplayTime, 3),
+            totalDisplayTime: Timecode::roundToMilliseconds($totalDisplayTime),
             span: $span,
             charactersPerSecond: self::range($charactersPerSecond),
             wordsPerMinute: self::range($wordsPerMinute),

@@ -32,7 +32,7 @@ final class HlsSegmentOptions
         public readonly string $fileNamePattern = "sub%d.vtt",
         public readonly ?float $mediaDuration = null,
     ) {
-        if (!is_finite($segmentDuration) || round($segmentDuration, 3) <= 0) {
+        if (!is_finite($segmentDuration) || Timecode::roundToMilliseconds($segmentDuration) <= 0) {
             throw new InvalidArgumentException("The segment duration must be a finite number of at least 0.001 s, got " . OptionChecks::text($segmentDuration) . ".");
         }
 
@@ -42,7 +42,7 @@ final class HlsSegmentOptions
                                                "placeholder, got \"$fileNamePattern\".");
         }
 
-        if ($mediaDuration !== null && (!is_finite($mediaDuration) || round($mediaDuration, 3) <= 0)) {
+        if ($mediaDuration !== null && (!is_finite($mediaDuration) || Timecode::roundToMilliseconds($mediaDuration) <= 0)) {
             throw new InvalidArgumentException("The media duration must be a finite number of at least 0.001 s, got " . OptionChecks::text($mediaDuration) . ".");
         }
 

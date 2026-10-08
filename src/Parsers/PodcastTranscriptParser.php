@@ -10,6 +10,7 @@ use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
 
 final class PodcastTranscriptParser extends SubtitleParser
 {
@@ -101,8 +102,8 @@ final class PodcastTranscriptParser extends SubtitleParser
         $end = $segment["endTime"] ?? null;
 
         return [
-            "start"   => round($segment["startTime"], 3),
-            "end"     => $end === null ? null : round($end, 3),
+            "start"   => Timecode::roundToMilliseconds($segment["startTime"]),
+            "end"     => $end === null ? null : Timecode::roundToMilliseconds($end),
             "speaker" => trim($segment["speaker"] ?? ""),
             "body"    => trim(preg_replace('/[ \t\n\r]+/', " ", $segment["body"] ?? "") ?? ""),
             "other"   => array_diff_key($segment, array_flip(self::SEGMENT_FIELDS)),
