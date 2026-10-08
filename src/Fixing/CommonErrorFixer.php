@@ -91,7 +91,19 @@ final class CommonErrorFixer
     private static function applyRule(CommonErrorRule $rule, array $lines, CommonErrorOptions $options, ?string $language,
                                       bool $continues): array
     {
-        $enabled = $rule === CommonErrorRule::ReplaceList ? $options->replaceList !== null : $options->{$rule->value};
+        $enabled = match ($rule) {
+            CommonErrorRule::ReplaceList                  => $options->replaceList !== null,
+            CommonErrorRule::UnbalancedTags               => $options->unbalancedTags,
+            CommonErrorRule::EmptyTags                    => $options->emptyTags,
+            CommonErrorRule::OcrPipe                      => $options->ocrPipe,
+            CommonErrorRule::OcrZeroInWords               => $options->ocrZeroInWords,
+            CommonErrorRule::OcrLowercaseL                => $options->ocrLowercaseL,
+            CommonErrorRule::Ellipsis                     => $options->ellipsis,
+            CommonErrorRule::DoubleSpaces                 => $options->doubleSpaces,
+            CommonErrorRule::SpaceBeforePunctuation       => $options->spaceBeforePunctuation,
+            CommonErrorRule::MissingSpaceAfterPunctuation => $options->missingSpaceAfterPunctuation,
+            CommonErrorRule::DialogueDashes               => $options->dialogueDashes,
+        };
         if (!$enabled) {
             return $lines;
         }
