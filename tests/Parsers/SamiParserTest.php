@@ -213,6 +213,28 @@ class SamiParserTest extends TestCase
     }
 
 
+    public function testNegativeStartIsReadAsZeroAndBareNbspEndsTheCue(): void
+    {
+        $content  = file_get_contents(self::DIR . "negative_start_bare_nbsp.smi");
+        $expected = [[0.0, 1.0, ["The tide is out."]], [2.0, 4.5, ["Boats wait on the sand."]]];
+        $describe = fn (Subtitle $subtitle): array => array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], $subtitle->getCues());
+
+        $strict = (new SamiParser())->parse($content);
+        $this->assertSame($expected, $describe($strict));
+        $this->assertSame([], $strict->getParseWarnings());
+
+        $lenient  = (new SamiParser())->parse($content, new ReadOptions(lenient: true));
+        $warnings = $lenient->getParseWarnings();
+        $this->assertSame($expected, $describe($lenient));
+        $this->assertCount(1, $warnings);
+        $this->assertSame("SYNC tag 1 has a negative Start. The parser read it as 0.", $warnings[0]->message);
+        $this->assertSame(10, $warnings[0]->lineNumber);
+        $this->assertSame(0, $warnings[0]->blockIndex);
+        $this->assertSame(["<SYNC Start=-200><P Class=ENUSCC>The tide is out."], $warnings[0]->block);
+        $this->assertSame(ParseWarningAction::Repaired, $warnings[0]->action);
+    }
+
+
     public function testSyncsAreSortedByStart(): void
     {
         $cues = $this->parseBody("<SYNC Start=3000><P Class=ENCC>two\n<SYNC Start=1000><P Class=ENCC>one\n<SYNC Start=4000><P Class=ENCC>&nbsp;\n");

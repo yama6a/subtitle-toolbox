@@ -39,7 +39,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | SubViewer 2 | a timing line with one bad time and its text, and text before the first cue | cues |
 | MPSub | a bad wait and duration pair and its text, a cue without text, a bad `FORMAT=` value. A file without `FORMAT=` gets a `repaired` warning, and the parser reads the times as seconds | cues |
 | LRC | a line with a time tag that the parser cannot read, for example `[01:2x.00]` | non-empty lines |
-| SAMI | a `<SYNC>` tag without a valid `Start`. A file whose `<P>` classes are all missing from the STYLE block gets a `repaired` warning with `blockIndex` null | `<SYNC>` tags |
+| SAMI | a `<SYNC>` tag without a valid `Start`. A negative `Start` gets a `repaired` warning, and the parser reads it as 0. A file whose `<P>` classes are all missing from the STYLE block gets a `repaired` warning with `blockIndex` null | `<SYNC>` tags |
 | TTML, iTT | a `<p>` with a bad time or without an end time | `<p>` elements |
 | EBU STL | a subtitle with a time code out of range, a cut-off last TTI block | TTI blocks |
 | CSV, TSV | a row with a bad time | rows after the header, without empty rows |

@@ -159,14 +159,29 @@ final class SamiParser extends SubtitleParser
 
         $syncs = [];
         foreach (array_slice(preg_split('/<SYNC\b/i', $body, -1, PREG_SPLIT_OFFSET_CAPTURE), 1) as $index => [$chunk, $offset]) {
+            $lineNumber = fn (): int => $this->lineNumberInBody($content, $bodyStart, $body, $offset);
+            $block      = fn (): array => array_values(array_filter(
+                array_map("trim", explode("\n", "<SYNC" . $chunk)),
+                fn (string $line): bool => $line !== ""
+            ));
             try {
-                [$start, $syncContent] = $this->readSyncTag($chunk, $index, fn (): int => $this->lineNumberInBody($content, $bodyStart, $body, $offset));
+                [$start, $syncContent] = $this->readSyncTag($chunk, $index, $lineNumber);
             } catch (ParsingException $exception) {
-                $lineNumber = $this->lineNumberInBody($content, $bodyStart, $body, $offset);
-                $lines      = array_map("trim", explode("\n", "<SYNC" . $chunk));
-                $block      = array_values(array_filter($lines, fn (string $line): bool => $line !== ""));
-                $this->fail($exception, $lineNumber, $index, $block);
+                $this->fail($exception, $lineNumber(), $index, $block());
                 continue;
+            }
+
+            if ($start < 0) {
+                if ($this->options->lenient) {
+                    $this->warn(
+                        "SYNC tag " . ($index + 1) . " has a negative Start. The parser read it as 0.",
+                        $lineNumber(),
+                        $index,
+                        $block(),
+                        ParseWarningAction::Repaired
+                    );
+                }
+                $start = 0.0;
             }
 
             $syncs[] = ["start" => $start, "paragraphs" => $this->readParagraphs($syncContent)];
@@ -184,7 +199,7 @@ final class SamiParser extends SubtitleParser
     private function readSyncTag(string $chunk, int $index, callable $lineNumber): array
     {
         if (!preg_match('/^([^>]*)>(.*)$/s', $chunk, $matches) ||
-            !preg_match('/\bStart\s*=\s*["\']?\s*(\d+)/i', $matches[1], $start)) {
+            !preg_match('/\bStart\s*=\s*["\']?\s*(-?\d+)/i', $matches[1], $start)) {
             throw new ParsingException("SYNC tag " . ($index + 1) . " has no valid Start attribute.", $lineNumber());
         }
 
@@ -215,6 +230,8 @@ final class SamiParser extends SubtitleParser
      */
     private function readParagraphs(string $html): array
     {
+        // libxml keeps &nbsp without a semicolon as text. Browsers and other SAMI readers read it as a non-breaking space.
+        $html = preg_replace('/&nbsp(?!;)/', "&nbsp;", $html);
         // The meta tag makes libxml read the input as UTF-8 in place of ISO-8859-1.
         $document = XmlLoader::html('<meta http-equiv="Content-Type" content="text/html; charset=utf-8"><body>' . $html);
 
