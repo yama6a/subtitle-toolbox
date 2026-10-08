@@ -12,20 +12,26 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 trait Fixes
 {
     /**
-     * Moves the end of each cue to at least $minGap seconds before the start of the next cue.
+     * Moves the end of each cue to at least $minGap seconds before the start of the next cue with a later start.
      * The end never moves before the start of its own cue.
      */
     public function fixOverlaps(float $minGap = 0): self
     {
         $this->fixesAssertGap($minGap);
 
-        $cues = CueList::inStartOrder($this->cues);
-        foreach ($cues as $index => $cue) {
-            if (!isset($cues[$index + 1])) {
+        $groupStart = null;
+        $laterStart = null;
+        foreach (array_reverse(CueList::inStartOrder($this->cues)) as $cue) {
+            if ($cue->getStart() !== $groupStart) {
+                $laterStart = $groupStart;
+                $groupStart = $cue->getStart();
+            }
+
+            if ($laterStart === null) {
                 continue;
             }
 
-            $latestEnd = Timecode::roundToMilliseconds($cues[$index + 1]->getStart() - $minGap);
+            $latestEnd = Timecode::roundToMilliseconds($laterStart - $minGap);
             if ($cue->getEnd() > $latestEnd) {
                 $cue->setEnd(max($cue->getStart(), $latestEnd));
             }
