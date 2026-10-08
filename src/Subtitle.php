@@ -121,17 +121,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
             return self::readOnlyTrack(MatroskaReader::open($path), $options);
         }
 
-        $content     = StringHelpers::convertToUtf8(self::readFile($path), $options->encoding);
-        $byExtension = Format::fromPath($path);
-        $format      = Format::detect($content);
-        // Detection returns TTML for an iTT file. IttParser reads the same cues and keeps the iTT timing.
-        if ($format === Format::Ttml && $byExtension === Format::Itt) {
-            $format = Format::Itt;
-        }
-        // An extension that a format without detection also uses, such as .json for Deepgram, says nothing.
-        $format ??= $byExtension !== null && self::extensionOnlyOfAutoDetectedFormats($path) && $byExtension->canRead()
-            ? $byExtension
-            : throw new UnknownFormatException(self::unknownFormatMessage("load()"));
+        $content = StringHelpers::convertToUtf8(self::readFile($path), $options->encoding);
+        $format  = self::detectFormat($content, $path) ?? throw new UnknownFormatException(self::unknownFormatMessage("load()"));
 
         return $format === Format::VobSub ? self::load($path, $format, $options) : self::parseUtf8($content, $format, $options);
     }
@@ -191,7 +182,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
         }
 
         $content = StringHelpers::convertToUtf8($content, $options->encoding);
-        $format  = Format::detect($content) ?? throw new UnknownFormatException(self::unknownFormatMessage("fromString()"));
+        $format  = self::detectFormat($content) ?? throw new UnknownFormatException(self::unknownFormatMessage("fromString()"));
 
         return self::parseUtf8($content, $format, $options);
     }
@@ -248,6 +239,28 @@ final class Subtitle implements \IteratorAggregate, \Countable
         }
 
         return self::readTrack($reader, $tracks[0]->number, $options);
+    }
+
+
+    /**
+     * Returns the format of the UTF-8 $content as loadAutoDetectFormat() and fromStringAutoDetectFormat() pick it, or
+     * null. Without detection, it falls back to the extension of $path.
+     *
+     * @internal
+     */
+    public static function detectFormat(string $content, ?string $path = null): ?Format
+    {
+        $format      = Format::detect($content);
+        $byExtension = $path === null ? null : Format::fromPath($path);
+        // Detection returns TTML for an iTT file. IttParser reads the same cues and keeps the iTT timing.
+        if ($format === Format::Ttml && $byExtension === Format::Itt) {
+            return Format::Itt;
+        }
+
+        // An extension that a format without detection also uses, such as .json for Deepgram, says nothing.
+        return $format ?? ($byExtension !== null && self::extensionOnlyOfAutoDetectedFormats($path) && $byExtension->canRead()
+            ? $byExtension
+            : null);
     }
 
 

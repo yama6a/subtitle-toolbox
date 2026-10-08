@@ -581,8 +581,7 @@ abstract class FileCommand extends Command
         }
 
         try {
-            $format = Format::detect(StringHelpers::convertToUtf8($content, $this->readOptions->encoding))
-                ?? ($path === null ? null : Format::fromPath($path));
+            $format = Subtitle::detectFormat(StringHelpers::convertToUtf8($content, $this->readOptions->encoding), $path);
         } catch (SubtitleToolboxException) {
             return null;
         }

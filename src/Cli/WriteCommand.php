@@ -247,11 +247,8 @@ abstract class WriteCommand extends FileCommand
             if ($this->fromFormat !== null) {
                 return $this->fromFormat;
             }
-            // The rule of Subtitle::loadAutoDetectFormat().
-            $byExtension = Format::fromPath($input);
-            $detected    = Format::detect(StringHelpers::convertToUtf8((string)file_get_contents($input), $this->readOptions->encoding));
 
-            return $detected === Format::Ttml && $byExtension === Format::Itt ? Format::Itt : $detected ?? $byExtension;
+            return Subtitle::detectFormat(StringHelpers::convertToUtf8((string)file_get_contents($input), $this->readOptions->encoding), $input);
         } catch (SubtitleToolboxException) {
             return null;
         }
