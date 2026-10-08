@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\Parsers\Options\SamiReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
@@ -186,6 +187,29 @@ class SamiParserTest extends TestCase
 
         $this->assertSame(["class" => "FRCC"], $subtitle->findFormatData("sami"));
         $this->assertSame(["un"], array_map(fn ($cue): string => $cue->getText(), $subtitle->getCues()));
+    }
+
+
+    public function testParagraphClassThatNoStyleRuleDefinesIsRead(): void
+    {
+        $content  = file_get_contents(self::DIR . "undefined_class.smi");
+        $expected = [[1.0, 3.5, ["Hello"]], [4.0, 6.0, ["The ferry leaves at noon."]]];
+        $describe = fn (Subtitle $subtitle): array => array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], $subtitle->getCues());
+
+        $strict = (new SamiParser())->parse($content);
+        $this->assertSame($expected, $describe($strict));
+        $this->assertSame("ENCC", $strict->findFormatData("sami")["class"]);
+        $this->assertNull($strict->findMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame([], $strict->getParseWarnings());
+
+        $lenient  = (new SamiParser())->parse($content, new ReadOptions(lenient: true));
+        $warnings = $lenient->getParseWarnings();
+        $this->assertSame($expected, $describe($lenient));
+        $this->assertCount(1, $warnings);
+        $this->assertSame("No <P> class matches a class of the STYLE block. The parser read the class ENCC.", $warnings[0]->message);
+        $this->assertSame(12, $warnings[0]->lineNumber);
+        $this->assertSame(["<SYNC Start=1000><P Class=ENCC>Hello"], $warnings[0]->block);
+        $this->assertSame(ParseWarningAction::Repaired, $warnings[0]->action);
     }
 
 
