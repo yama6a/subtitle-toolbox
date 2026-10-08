@@ -17,6 +17,26 @@ final class JsonParser extends SubtitleParser
     {
         $data = $this->decodeJsonObject($rawSubtitle);
 
+        $this->decodeFileFormatData($data);
+        $skipped = $this->decodeCueFormatData($data);
+
+        $reject   = function (ParsingException $exception, string $field, int|string $key) use ($data): void {
+            $entry = $data[$field][$key];
+            $block = $field === "cues" || $field === "comments" ? $entry : [$key => $entry];
+            $this->fail($exception, null, $field === "cues" ? $key : null, [RawJson::encode($block)]);
+        };
+        $subtitle = Subtitle::fromArrayLeavingOut($data, $skipped, $reject);
+        usort($this->warnings, fn (ParseWarning $warning1, ParseWarning $warning2): int => $warning1->blockIndex <=> $warning2->blockIndex);
+
+        return $subtitle;
+    }
+
+
+    /**
+     * Decodes the binary values of the file format data. An entry that fails drops out.
+     */
+    private function decodeFileFormatData(array &$data): void
+    {
         foreach (is_array($data["formatData"] ?? null) ? $data["formatData"] : [] as $format => $formatData) {
             if (!is_array($formatData)) {
                 continue;
@@ -28,29 +48,30 @@ final class JsonParser extends SubtitleParser
                 unset($data["formatData"][$format]);
             }
         }
+    }
+
+
+    /**
+     * Decodes the binary values of the cue format data. Returns the indexes of the cues where that fails.
+     *
+     * @return array<int, true>
+     */
+    private function decodeCueFormatData(array &$data): array
+    {
         $skipped = [];
-        if (is_array($data["cues"] ?? null)) {
-            foreach ($data["cues"] as $index => $cue) {
-                if (is_array($cue["formatData"] ?? null)) {
-                    try {
-                        $data["cues"][$index]["formatData"] = $this->decodeBinary($cue["formatData"], "cues[$index].formatData");
-                    } catch (ParsingException $exception) {
-                        $this->fail($exception, null, $index, [RawJson::encode($cue)]);
-                        $skipped[$index] = true;
-                    }
-                }
+        foreach (is_array($data["cues"] ?? null) ? $data["cues"] : [] as $index => $cue) {
+            if (!is_array($cue["formatData"] ?? null)) {
+                continue;
+            }
+            try {
+                $data["cues"][$index]["formatData"] = $this->decodeBinary($cue["formatData"], "cues[$index].formatData");
+            } catch (ParsingException $exception) {
+                $this->fail($exception, null, $index, [RawJson::encode($cue)]);
+                $skipped[$index] = true;
             }
         }
 
-        $reject   = function (ParsingException $exception, string $field, int|string $key) use ($data): void {
-            $entry = $data[$field][$key];
-            $block = $field === "cues" || $field === "comments" ? $entry : [$key => $entry];
-            $this->fail($exception, null, $field === "cues" ? $key : null, [RawJson::encode($block)]);
-        };
-        $subtitle = Subtitle::fromArrayLeavingOut($data, $skipped, $reject);
-        usort($this->warnings, fn (ParseWarning $warning1, ParseWarning $warning2): int => $warning1->blockIndex <=> $warning2->blockIndex);
-
-        return $subtitle;
+        return $skipped;
     }
 
 
