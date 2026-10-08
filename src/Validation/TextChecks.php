@@ -25,16 +25,16 @@ final class TextChecks
         $visible = array_values(array_filter($lines, fn (string $line): bool => trim($line) !== ""));
         $words   = count(Markup::words(implode("\n", $lines)));
 
-        $results = [];
+        $violations = [];
         foreach (self::rules($cue, $visible, $words, $duration, $rules) as [$rule, $enabled, $check]) {
             [$value, $limit] = $enabled ? $check() : [0, null];
             // A count rule gives the int 0 for a cue without problems. A limit rule gives it for a cue within its limit.
             if ($value !== 0) {
-                $results[] = new ValidationViolation($cueIndex, $rule, $value, $limit);
+                $violations[] = new ValidationViolation($cueIndex, $rule, $value, $limit);
             }
         }
 
-        return $results;
+        return $violations;
     }
 
 
