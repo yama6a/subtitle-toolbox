@@ -178,15 +178,9 @@ trait TextTransforms
     }
 
 
-    private static function textTransformsUsesMultibyte(string $text): bool
-    {
-        return extension_loaded("mbstring") && mb_check_encoding($text, "UTF-8");
-    }
-
-
     private static function textTransformsUpper(string $text, bool $turkic): string
     {
-        if (!self::textTransformsUsesMultibyte($text)) {
+        if (!StringHelpers::canUseMultibyte($text)) {
             return strtoupper($text);
         }
 
@@ -196,7 +190,7 @@ trait TextTransforms
 
     private static function textTransformsLower(string $text, bool $turkic): string
     {
-        if (!self::textTransformsUsesMultibyte($text)) {
+        if (!StringHelpers::canUseMultibyte($text)) {
             return strtolower($text);
         }
 
@@ -209,7 +203,7 @@ trait TextTransforms
 
     private static function textTransformsTitle(string $char, bool $turkic): string
     {
-        if (!self::textTransformsUsesMultibyte($char)) {
+        if (!StringHelpers::canUseMultibyte($char)) {
             return strtoupper($char);
         }
 

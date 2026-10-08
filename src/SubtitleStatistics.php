@@ -135,8 +135,7 @@ final class SubtitleStatistics
         $word = preg_replace('/^[\p{P}\p{S}]+|[\p{P}\p{S}]+$/u', "", $word)
             ?? preg_replace('/^[[:punct:]]+|[[:punct:]]+$/', "", $word);
 
-        // mbstring is not part of a default PHP build. Without it, only ASCII letters change case.
-        return function_exists("mb_strtolower") && preg_match('//u', $word) === 1
+        return StringHelpers::canUseMultibyte($word)
             ? mb_strtolower($word, "UTF-8")
             : strtolower($word);
     }

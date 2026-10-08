@@ -47,6 +47,17 @@ final class StringHelpers
 
 
     /**
+     * Returns true when ext-mbstring is loaded and $str is valid UTF-8. mbstring is not part of a default PHP build.
+     *
+     * @internal
+     */
+    public static function canUseMultibyte(string $str): bool
+    {
+        return extension_loaded("mbstring") && self::isValidUtf8($str);
+    }
+
+
+    /**
      * Converts $str to UTF-8 from the encoding that its BOM names, or else from $sourceEncoding when it is not null.
      *
      * @param TextEncoding|string|null $sourceEncoding A TextEncoding case, or any other name that iconv accepts, for example "CP1125".
