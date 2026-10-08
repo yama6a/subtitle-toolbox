@@ -144,7 +144,8 @@ final class MaskingEdit extends Edit
 
 
     /**
-     * Writes the mute ranges of the last apply() to the files of --mute-edl and --mute-filter, and returns their paths.
+     * Writes the mute ranges of the last apply() to the files of --mute-edl and --mute-filter.
+     * Returns the paths of the files.
      *
      * @return list<string>
      */

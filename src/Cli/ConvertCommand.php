@@ -48,8 +48,7 @@ final class ConvertCommand extends WriteCommand
 
 
     /**
-     * Prints the common options and the group list, the options of the group $topic, or with "all" every option. A
-     * $topic with a dot or a slash, or that names a file, is no group, so the help is the one without $topic.
+     * Returns the common options and the group list, the options of the group $topic, or every option for "all".
      */
     public function help(?string $topic = null): string
     {
@@ -58,7 +57,7 @@ final class ConvertCommand extends WriteCommand
             $groups[$class::group()] = $class;
         }
 
-        // In "convert in.srt -h out.srt" the word after -h is a file, not a group.
+        // In "convert in.srt -h out.srt" the word after -h is a file, not a group. A dot or a slash marks a file too.
         if ($topic !== null && $topic !== "all" && !isset($groups[$topic]) && (strpbrk($topic, "./\\") !== false || file_exists($topic))) {
             $topic = null;
         }

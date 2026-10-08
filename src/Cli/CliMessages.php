@@ -27,7 +27,7 @@ final class CliMessages
 
     /**
      * Rewords a library message that names a PHP method, class or option property, so that it names CLI options.
-     * $track and $from are the options that pick the track and the format of the file, or null when it has none.
+     * $track and $from name the options that pick the track and the format of the file, or are null.
      */
     public static function reword(string $message, ?string $track, ?string $from): string
     {

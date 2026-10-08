@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Cli;
 
 /**
- * Creates the files of one run with exclusive create, so it never overwrites a file. When a create fails, it removes
- * every file and directory that it created in the run.
+ * Creates the files of one run with exclusive create, so it never overwrites a file.
+ * When a create fails, it removes every file and directory that it created in the run.
  *
  * @internal
  */

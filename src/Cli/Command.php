@@ -68,8 +68,8 @@ abstract class Command
 
 
     /**
-     * Reports a file outside the inputs that the command cannot read, or an output that it cannot create. The tool then
-     * stops and exits with code 3.
+     * Reports a file outside the inputs that the command cannot read, or an output that it cannot create.
+     * The tool then stops and exits with code 3.
      */
     public static function failFile(string $message): never
     {
@@ -78,8 +78,8 @@ abstract class Command
 
 
     /**
-     * Returns the content of a side file, a file that an option names besides the inputs. Fails with exit code 3 when
-     * the file is missing or unreadable.
+     * Returns the content of a side file, a file that an option names besides the inputs.
+     * Fails with exit code 3 when the file is missing or unreadable.
      */
     public static function readSideFile(string $path): string
     {
@@ -96,8 +96,8 @@ abstract class Command
 
 
     /**
-     * Returns $parse applied to the content of a side file. Fails with exit code 3 when the file is missing or
-     * unreadable, or when $parse throws a $failure.
+     * Returns $parse applied to the content of a side file.
+     * Fails with exit code 3 when the file is missing or unreadable, or when $parse throws a $failure.
      *
      * @template T
      *
@@ -139,8 +139,8 @@ abstract class Command
 
 
     /**
-     * Returns $arguments without the null values. A constructor that gets the result as named arguments then uses its
-     * own default for each option that the user did not give.
+     * Returns $arguments without the null values.
+     * A constructor that gets the result as named arguments then uses its own default for each missing option.
      *
      * @param array<string, mixed> $arguments
      *
@@ -167,8 +167,9 @@ abstract class Command
 
 
     /**
-     * Returns the rows as text columns, each line indented by $indent spaces. Every column but the last is padded to
-     * its widest cell, plus $gap spaces. The last column wraps at WIDTH with a hanging indent.
+     * Returns the rows as text columns, each line indented by $indent spaces.
+     * Every column but the last is padded to its widest cell, plus $gap spaces.
+     * The last column wraps at WIDTH with a hanging indent.
      *
      * @param list<list<string>> $rows
      */
@@ -208,8 +209,8 @@ abstract class Command
 
 
     /**
-     * Joins the words into lines of at most WIDTH columns. The first line starts with $prefix, the others with
-     * $nextPrefix. A word wider than a line gets a line of its own.
+     * Joins the words into lines of at most WIDTH columns.
+     * The first line starts with $prefix, the others with $nextPrefix. A word wider than a line gets a line of its own.
      *
      * @param list<string> $words
      */
