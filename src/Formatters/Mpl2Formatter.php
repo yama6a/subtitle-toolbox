@@ -17,7 +17,7 @@ final class Mpl2Formatter extends SubtitleFormatter
         $output = "";
         foreach ($subtitle->getCues() as $cue) {
             $output .= "[" . (int) round($cue->getStart() * 10) . "][" . (int) round($cue->getEnd() * 10) . "]" .
-                       implode("|", self::linesWithItalics($cue->getLines())) .
+                       implode("|", $this->linesWithItalics($cue->getLines())) .
                        LineEnding::Lf->value;
         }
 
@@ -29,7 +29,7 @@ final class Mpl2Formatter extends SubtitleFormatter
      * @param list<string> $lines
      * @return list<string>
      */
-    private static function linesWithItalics(array $lines): array
+    private function linesWithItalics(array $lines): array
     {
         $italic = false;
         $result = [];
