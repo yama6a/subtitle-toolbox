@@ -106,7 +106,7 @@ final class HearingImpairedRemover
         }
         $lines = self::removeMatches($lines, $patterns, true);
 
-        return self::removeEmptyLines($original, $lines);
+        return self::removeEmptiedLines($original, $lines);
     }
 
 
@@ -256,14 +256,14 @@ final class HearingImpairedRemover
      * @param list<string> $lines
      * @return list<string>
      */
-    private static function removeEmptyLines(array $original, array $lines): array
+    private static function removeEmptiedLines(array $original, array $lines): array
     {
         $result     = [];
         $pending    = "";
         $dashLines  = 0;
         $anyRemoved = false;
         foreach ($lines as $index => $line) {
-            $wasText = self::plainText($original[$index]);
+            $wasText = self::visibleLine($original[$index]);
             if (preg_match('/^\h*-/', $wasText) === 1) {
                 $dashLines++;
             }
@@ -279,7 +279,7 @@ final class HearingImpairedRemover
                 $line   = preg_replace('/<([a-zA-Z][a-zA-Z0-9]*)(?:[\s.][^<>]*)?>\h*<\/\1\s*>/', "", $line) ?? $line;
             } while ($line !== $before);
 
-            if (trim($wasText) !== "" && in_array(trim(self::plainText($line)), ["", "-"], true)) {
+            if (trim($wasText) !== "" && in_array(trim(self::visibleLine($line)), ["", "-"], true)) {
                 preg_match_all('/' . Markup::TAG . '/', $line, $tags);
                 $pending   .= implode("", $tags[0]);
                 $anyRemoved = true;
@@ -305,7 +305,7 @@ final class HearingImpairedRemover
      */
     private static function removeLastDash(array $lines): array
     {
-        $dashLines = array_keys(array_filter($lines, fn (string $line): bool => preg_match('/^\h*-/', self::plainText($line)) === 1));
+        $dashLines = array_keys(array_filter($lines, fn (string $line): bool => preg_match('/^\h*-/', self::visibleLine($line)) === 1));
         if (count($dashLines) === 1) {
             $lines[$dashLines[0]] = self::removeMatches([$lines[$dashLines[0]]], ['/^\h*-\h*/'], false)[0];
         }
@@ -314,7 +314,7 @@ final class HearingImpairedRemover
     }
 
 
-    private static function plainText(string $line): string
+    private static function visibleLine(string $line): string
     {
         return self::visibleText([$line])[0];
     }

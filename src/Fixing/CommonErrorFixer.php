@@ -39,7 +39,7 @@ final class CommonErrorFixer
     public static function apply(Subtitle $subtitle, ?CommonErrorOptions $options = null): CommonErrorReport
     {
         $options ??= new CommonErrorOptions();
-        return self::run($subtitle, $options, true);
+        return self::run($subtitle, $options, change: true);
     }
 
 
@@ -49,7 +49,7 @@ final class CommonErrorFixer
     public static function preview(Subtitle $subtitle, ?CommonErrorOptions $options = null): CommonErrorReport
     {
         $options ??= new CommonErrorOptions();
-        return self::run($subtitle, $options, false);
+        return self::run($subtitle, $options, change: false);
     }
 
 

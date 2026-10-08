@@ -24,11 +24,11 @@ final class DualSubtitle
             array_values($secondary->getCues())
         );
 
-        $ownCues = $options->mode === DualSubtitleMode::Stack
+        $unpairedCues = $options->mode === DualSubtitleMode::Stack
             ? self::stack($primaryCues, $secondaryCues)
-            : self::placeAtTop($primaryCues, $secondaryCues, $options);
+            : self::placeApart($primaryCues, $secondaryCues, $options);
 
-        $cues = CueList::inStartOrder(array_merge(array_values($primaryCues), $ownCues));
+        $cues = CueList::inStartOrder(array_merge(array_values($primaryCues), $unpairedCues));
 
         $result = $primary->emptyCopy();
         $result->addCues($cues);
@@ -57,8 +57,8 @@ final class DualSubtitle
      */
     private static function stack(array $primaryCues, array $secondaryCues): array
     {
-        $partners = [];
-        $ownCues  = [];
+        $partners     = [];
+        $unpairedCues = [];
         foreach ($secondaryCues as $secondaryCue) {
             $bestIndex   = null;
             $bestOverlap = 0;
@@ -72,7 +72,7 @@ final class DualSubtitle
             }
 
             if ($bestIndex === null) {
-                $ownCues[] = $secondaryCue;
+                $unpairedCues[] = $secondaryCue;
             } else {
                 $partners[$bestIndex][] = $secondaryCue;
             }
@@ -91,7 +91,7 @@ final class DualSubtitle
             $joined->setStart($start)->setEnd($end)->setLines($lines);
         }
 
-        return $ownCues;
+        return $unpairedCues;
     }
 
 
@@ -103,7 +103,7 @@ final class DualSubtitle
      *
      * @return list<SubtitleCue>
      */
-    private static function placeAtTop(array $primaryCues, array $secondaryCues, DualSubtitleOptions $options): array
+    private static function placeApart(array $primaryCues, array $secondaryCues, DualSubtitleOptions $options): array
     {
         $primaryTimes = [];
         foreach ($primaryCues as $cue) {
