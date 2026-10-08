@@ -9,7 +9,8 @@ use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Timecode;
 
 /**
- * The block sizes, GSI fields, code tables and control codes of EBU Tech 3264, which EbuStlParser and EbuStlFormatter share.
+ * The block sizes, GSI fields, code tables and control codes of EBU Tech 3264.
+ * A file holds one GSI (General Subtitle Information) block, then TTI (Text and Timing Information) blocks.
  *
  * @see https://tech.ebu.ch/docs/tech/tech3264.pdf
  *
@@ -111,8 +112,8 @@ final class EbuStl
 
 
     /**
-     * Returns the cue alignment for a vertical position and a justification code. The top, middle and bottom
-     * thirds of the rows from 0 to $maxRow give the row of the numeric keypad layout.
+     * Returns the cue alignment for a vertical position and a justification code.
+     * The top, middle and bottom thirds of the rows from 0 to $maxRow give the row of the numeric keypad layout.
      */
     public static function alignment(int $verticalPosition, int $justificationCode, int $maxRow): int
     {

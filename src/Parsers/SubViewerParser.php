@@ -19,11 +19,7 @@ final class SubViewerParser extends SubtitleParser
     /** @internal */
     public const START_SCRIPT = "******** START SCRIPT ********";
 
-    /**
-     * Maps SubViewer header tags to the shared metadata keys of Subtitle.
-     *
-     * @internal
-     */
+    /** @internal */
     public const METADATA_TAGS = [
         "TITLE"  => Subtitle::METADATA_TITLE,
         "AUTHOR" => Subtitle::METADATA_AUTHOR,

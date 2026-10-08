@@ -17,7 +17,6 @@ final class TmPlayerParser extends SubtitleParser
 
     protected function read(string $rawSubtitle): Subtitle
     {
-        // An entry without text ends the cue before it. TMPlayer writes one where a gap follows a cue.
         $entries    = [];
         $blockIndex = -1;
         foreach ($this->lines($rawSubtitle) as $lineIndex => $rawLine) {
@@ -48,6 +47,7 @@ final class TmPlayerParser extends SubtitleParser
         $subtitle   = new Subtitle();
         $parsedCues = [];
         foreach ($entries as $index => $entry) {
+            // An entry without text ends the cue before it. TMPlayer writes one where a gap follows a cue.
             if ($entry["lines"] === []) {
                 continue;
             }

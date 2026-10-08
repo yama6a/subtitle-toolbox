@@ -33,9 +33,9 @@ final class SubRipParser extends SubtitleParser
 
 
     /**
-     * Yields the trimmed lines of each block between empty lines, keyed by the 1-based number of its first line.
+     * @see SubtitleParser::splitAtEmptyLines()
      *
-     * @param iterable<int, string> $lines keyed by the 0-based line number
+     * @param iterable<int, string> $lines
      *
      * @return Generator<int, list<string>>
      *
@@ -48,7 +48,8 @@ final class SubRipParser extends SubtitleParser
 
 
     /**
-     * Returns the cues of one block from splitIntoBlocks(). In lenient mode, it skips or repairs a broken block and warns.
+     * Returns the cues of one block from splitIntoBlocks().
+     * In lenient mode, it skips or repairs a broken block and warns.
      *
      * @param list<string> $rawLines
      *
@@ -94,7 +95,7 @@ final class SubRipParser extends SubtitleParser
 
 
     /**
-     * Parses one cue block of trimmed lines without empty lines, as parse() splits the file.
+     * Parses one cue block of trimmed lines without empty lines, as splitIntoBlocks() splits the file.
      *
      * @internal
      */

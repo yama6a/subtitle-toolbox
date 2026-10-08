@@ -296,7 +296,8 @@ final class PgsParser extends SubtitleParser
 
 
     /**
-     * Returns the part of the object inside its cropping rectangle and its window, as an area of the object and a screen position.
+     * Returns the part of the object inside its cropping rectangle and its window.
+     * The part is an area of the object and a screen position.
      */
     private function visibleArea(array $reference, array $object): ?array
     {
@@ -327,7 +328,8 @@ final class PgsParser extends SubtitleParser
 
 
     /**
-     * Places the parts on one transparent canvas that covers all of them, and returns its position, size and RGBA bytes.
+     * Places the parts on one transparent canvas that covers all of them.
+     * Returns the position, size and RGBA bytes of the canvas.
      */
     private function compose(array $parts): array
     {

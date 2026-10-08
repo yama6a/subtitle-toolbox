@@ -11,8 +11,11 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
 
-// Spec: https://mkvtoolnix.download/doc/mkvmerge.html#mkvmerge.chapters.simple. The line patterns are the ones
-// of parse_simple() in mkvtoolnix src/common/chapters/chapters.cpp.
+/**
+ * The line patterns are the ones of parse_simple() in mkvtoolnix src/common/chapters/chapters.cpp.
+ *
+ * @see https://mkvtoolnix.download/doc/mkvmerge.html#mkvmerge.chapters.simple
+ */
 final class OgmChaptersParser extends SubtitleParser
 {
     protected const FORMAT_OPTIONS = ChapterReadOptions::class;

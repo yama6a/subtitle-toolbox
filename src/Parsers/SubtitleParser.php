@@ -20,8 +20,8 @@ use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
 
 /**
- * The base class of the parsers of this library. Only the library extends it. Its protected members are not API and
- * can change in any release.
+ * The base class of the parsers of this library. Only the library extends it.
+ * Its protected members are not API and can change in any release.
  */
 abstract class SubtitleParser
 {
@@ -44,8 +44,8 @@ abstract class SubtitleParser
 
 
     /**
-     * Reads $content, which must be UTF-8 for a text format. In lenient mode, Subtitle::getParseWarnings() returns
-     * what the parser skipped or repaired.
+     * Reads $content, which must be UTF-8 for a text format.
+     * In lenient mode, Subtitle::getParseWarnings() returns what the parser skipped or repaired.
      */
     final public function parse(string $content, ?ReadOptions $options = null): Subtitle
     {
@@ -62,8 +62,8 @@ abstract class SubtitleParser
 
 
     /**
-     * Returns ReadOptions::$format, or the defaults of FORMAT_OPTIONS when it is null. useOptions() builds the
-     * defaults once per read.
+     * Returns ReadOptions::$format, or the defaults of FORMAT_OPTIONS when it is null.
+     * useOptions() builds the defaults once per read.
      */
     protected function formatOptions(): FormatReadOptions
     {
@@ -72,8 +72,7 @@ abstract class SubtitleParser
 
 
     /**
-     * Sets the options for the next read and clears the warnings. The stream readers call it before they call the
-     * block methods directly.
+     * Sets the options for the next read and clears the warnings.
      *
      * @internal
      */
@@ -164,8 +163,8 @@ abstract class SubtitleParser
 
 
     /**
-     * Returns the end of the cue at $index: the first later start in $starts, else its start plus
-     * ReadOptions::$lastCueDuration.
+     * Returns the end of the cue at $index: the first later start in $starts.
+     * Without one, the end is the start plus ReadOptions::$lastCueDuration.
      *
      * @param list<float> $starts
      */
@@ -182,8 +181,9 @@ abstract class SubtitleParser
 
 
     /**
-     * Sorts the chapters by start and sets their ends. A chapter ends at its value in $ends, else at the start of the
-     * next chapter. The last chapter ends at ChapterReadOptions::$mediaDuration, but not before it starts.
+     * Sorts the chapters by start and sets their ends.
+     * A chapter ends at its value in $ends, else at the start of the next chapter.
+     * The last chapter ends at ChapterReadOptions::$mediaDuration, but not before it starts.
      *
      * @param list<SubtitleCue> $chapters
      * @param array<int, float|null> $ends the end that the file gives, keyed like $chapters
@@ -288,8 +288,9 @@ abstract class SubtitleParser
 
 
     /**
-     * Returns the cues of the parts that repairMissingEmptyLines() returns. $parsePart gets a part and the number of its
-     * first line, and returns its cue. In lenient mode, a part for which $parsePart throws is skipped with a warning.
+     * Returns the cues of the parts that repairMissingEmptyLines() returns.
+     * $parsePart gets a part and the number of its first line, and returns its cue.
+     * In lenient mode, a part for which $parsePart throws is skipped with a warning.
      *
      * @param list<string> $block
      * @param callable(list<string>, int): SubtitleCue $parsePart
@@ -313,7 +314,8 @@ abstract class SubtitleParser
 
     /**
      * Splits a block before each line that $isTimingLine accepts, and before the cue number line in front of it.
-     * Each part is keyed by its 0-based offset in the block. A part that starts at a timing line has no cue number.
+     * Each part is keyed by its 0-based offset in the block.
+     * A part that starts at a timing line has no cue number.
      *
      * @param list<string> $block
      *

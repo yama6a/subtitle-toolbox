@@ -7,9 +7,6 @@ namespace SubtitleToolbox\Parsers\Options;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\FrameRate;
 
-/**
- * The read settings of CSV and TSV tables.
- */
 final class CsvReadOptions implements FormatReadOptions
 {
     /** @internal */
@@ -36,7 +33,7 @@ final class CsvReadOptions implements FormatReadOptions
 
 
     /**
-     * Throws InvalidArgumentException for a delimiter that is not in DELIMITERS. CsvWriteOptions and CsvFormatter use it too.
+     * Throws InvalidArgumentException for a delimiter that is not in DELIMITERS.
      *
      * @internal
      */

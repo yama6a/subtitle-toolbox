@@ -17,11 +17,7 @@ final class LyricsParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::Lyrics->value;
 
-    /**
-     * Maps LRC ID tags to the shared metadata keys of Subtitle.
-     *
-     * @internal
-     */
+    /** @internal */
     public const METADATA_TAGS = [
         "ti" => Subtitle::METADATA_TITLE,
         "ar" => Subtitle::METADATA_ARTIST,

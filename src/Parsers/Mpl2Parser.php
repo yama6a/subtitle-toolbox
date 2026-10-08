@@ -11,11 +11,7 @@ use SubtitleToolbox\SubtitleCue;
 
 final class Mpl2Parser extends SubtitleParser
 {
-    /**
-     * MPL2 counts time in tenths of a second.
-     *
-     * @internal
-     */
+    /** @internal */
     public const DECISECONDS_PER_SECOND = 10;
 
     private const CUE_REGEX = '/^\[(\d+)\]\[(\d+)\](.*)$/';

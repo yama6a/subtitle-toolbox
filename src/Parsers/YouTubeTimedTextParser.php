@@ -349,7 +349,8 @@ final class YouTubeTimedTextParser extends SubtitleParser
 
 
     /**
-     * Skips the append captions, which only add a line break, and ends a caption where the next one in its window starts.
+     * Skips the append captions, which only add a line break.
+     * Ends a caption where the next caption in its window starts.
      */
     private function endAtNextCaption(array $captions): array
     {

@@ -20,6 +20,7 @@ use SubtitleToolbox\Timecode;
 
 /**
  * Reads EBU STL files as defined in EBU Tech 3264: https://tech.ebu.ch/docs/tech/tech3264.pdf
+ * A file holds one GSI (General Subtitle Information) block, then TTI (Text and Timing Information) blocks.
  */
 final class EbuStlParser extends SubtitleParser
 {
@@ -190,7 +191,10 @@ final class EbuStlParser extends SubtitleParser
     }
 
 
-    // EBU Tech 3264 limits the TCI and TCO fields to hours 0 to 23, minutes and seconds 0 to 59, and frames below the frame rate.
+    /**
+     * EBU Tech 3264 limits the TCI and TCO fields to hours 0 to 23 and minutes and seconds 0 to 59.
+     * The frames stay below the frame rate.
+     */
     private static function hasValidTimeCodes(string $header, FrameRate $frameRate): bool
     {
         foreach ([EbuStl::TTI_TCI, EbuStl::TTI_TCO] as $offset) {
@@ -266,8 +270,8 @@ final class EbuStlParser extends SubtitleParser
 
     /**
      * Converts a text field to cue lines with core markup. EBU Tech 3264 section 5 lists the control codes.
-     * A teletext control code takes the place of a space. Italics and underline last until their off code,
-     * and the color returns to white at each new row.
+     * A teletext control code takes the place of a space. Italics and underline last until their off code.
+     * The color returns to white at each new row.
      *
      * @return list<string>
      */

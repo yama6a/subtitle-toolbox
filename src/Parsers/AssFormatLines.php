@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 /**
- * The default fields of the ASS and SSA "Format:" lines, which AssParser, AssFormatter and MatroskaReader share.
+ * The default fields of the ASS and SSA "Format:" lines.
  *
  * @internal
  */

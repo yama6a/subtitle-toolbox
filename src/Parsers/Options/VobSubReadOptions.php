@@ -8,12 +8,12 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\OptionChecks;
 
 /**
- * The read settings of VobSub. The parser reads the .sub content and takes the .idx content from here.
+ * The parser reads the .sub content and takes the .idx content from here.
  */
 final class VobSubReadOptions implements FormatReadOptions
 {
     /**
-     * @param ?string $idx      The content of the .idx file. Subtitle::load() always reads the .idx file next to the .sub file and replaces this value.
+     * @param ?string $idx      The content of the .idx file. Subtitle::load() replaces it with the .idx file next to the .sub file.
      * @param ?int    $track    The track with this "index:" value. Null reads the first track that matches $language.
      * @param ?string $language The track with this "id:" value, such as "de". Null reads the first track that matches $track.
      */

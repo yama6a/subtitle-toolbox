@@ -66,7 +66,7 @@ final class VobSubParser extends SubtitleParser
 
     /**
      * Reads the image cues of one track from the .sub content. VobSubReadOptions holds the .idx content.
-     * Its $track and $language select the track, else the parser reads the first track.
+     * Its $track and $language select the track. Without them, the parser reads the first track.
      */
     protected function read(string $rawSubtitle): Subtitle
     {
@@ -443,8 +443,8 @@ final class VobSubParser extends SubtitleParser
 
 
     /**
-     * Returns the four nibbles of a SET_COLOR or SET_CONTR argument, ordered by pixel value: background, pattern,
-     * emphasis 1, emphasis 2.
+     * Returns the four nibbles of a SET_COLOR or SET_CONTR argument, ordered by pixel value.
+     * The order is background, pattern, emphasis 1 and emphasis 2.
      *
      * @param list<int> $bytes
      * @return list<int>

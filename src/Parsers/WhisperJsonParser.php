@@ -25,7 +25,8 @@ final class WhisperJsonParser extends SubtitleParser
 
 
     /**
-     * Reads the JSON of the OpenAI transcription API, openai-whisper, faster-whisper, WhisperX and whisper.cpp, one cue per segment.
+     * Reads the JSON of the OpenAI transcription API, openai-whisper, faster-whisper, WhisperX and whisper.cpp.
+     * It makes one cue per segment.
      */
     protected function read(string $rawSubtitle): Subtitle
     {

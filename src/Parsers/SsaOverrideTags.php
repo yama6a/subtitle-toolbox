@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 /**
- * Reads the alignment override tags of SSA and ASS, which AssParser, SubRipParser and AssFormatter share.
+ * Reads the alignment override tags of SSA and ASS.
  *
  * @internal
  */
@@ -16,8 +16,8 @@ final class SsaOverrideTags
 
 
     /**
-     * Returns the numpad alignment of an \an or \a tag, for example 8 for "\an8" and for "\a6". Returns null for
-     * another tag.
+     * Returns the numpad alignment of an \an or \a tag, for example 8 for "\an8" and for "\a6".
+     * Returns null for another tag.
      */
     public static function alignment(string $tag): ?int
     {

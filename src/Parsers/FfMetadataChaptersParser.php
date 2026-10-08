@@ -12,7 +12,11 @@ use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
-// Spec: https://ffmpeg.org/ffmpeg-formats.html#Metadata-1. The section reading follows libavformat/ffmetadec.c.
+/**
+ * The section reading follows libavformat/ffmetadec.c.
+ *
+ * @see https://ffmpeg.org/ffmpeg-formats.html#Metadata-1
+ */
 final class FfMetadataChaptersParser extends SubtitleParser
 {
     protected const FORMAT_OPTIONS = ChapterReadOptions::class;
