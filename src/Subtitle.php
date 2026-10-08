@@ -614,15 +614,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
      */
     public function setFormatData(string $key, array $data): self
     {
-        $problem = FormatDataSchema::problem($key, $data, "formatData.$key", false);
-        if ($problem !== null) {
-            throw new InvalidArgumentException($problem);
-        }
-        if ($data === []) {
-            unset($this->formatData[$key]);
-        } else {
-            $this->formatData[$key] = $data;
-        }
+        $this->formatData = FormatDataSchema::withData($this->formatData, $key, $data, false);
 
         return $this;
     }
