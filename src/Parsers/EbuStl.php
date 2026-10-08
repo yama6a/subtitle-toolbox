@@ -32,6 +32,21 @@ final class EbuStl
         "UDA" => [448, 576],
     ];
 
+    // Byte offsets of the TTI block fields, EBU Tech 3264 table 2. The text field follows the 16 header bytes.
+    public const TTI_SGN = 0;
+    public const TTI_SN  = 1;
+    public const TTI_EBN = 3;
+    public const TTI_CS  = 4;
+    public const TTI_TCI = 5;
+    public const TTI_TCO = 9;
+    public const TTI_VP  = 13;
+    public const TTI_JC  = 14;
+    public const TTI_CF  = 15;
+    public const TTI_TF  = 16;
+
+    public const SUBTITLE_NUMBER_SIZE = 2;
+    public const TIME_CODE_SIZE       = 4;
+
     public const FRAME_RATES = ["STL25.01" => 25, "STL30.01" => 30];
 
     // EBU Tech 3264 section 4.2.2 and appendix 1.
@@ -75,6 +90,16 @@ final class EbuStl
 
     public const WHITE = 7;
 
+    public const TELETEXT_MAX_ROW = 23;
+
+    public const JUSTIFY_LEFT  = 1;
+    public const JUSTIFY_RIGHT = 3;
+
+    // The bottom, middle and top rows of the numeric keypad layout, as offsets from alignment 1.
+    private const KEYPAD_BOTTOM_ROW = 0;
+    private const KEYPAD_MIDDLE_ROW = 3;
+    private const KEYPAD_TOP_ROW    = 6;
+
     public const ITALICS_ON      = 0x80;
     public const ITALICS_OFF     = 0x81;
     public const UNDERLINE_ON    = 0x82;
@@ -92,15 +117,15 @@ final class EbuStl
     public static function alignment(int $verticalPosition, int $justificationCode, int $maxRow): int
     {
         $column = match ($justificationCode) {
-            1       => 0,
-            3       => 2,
-            default => 1,
+            self::JUSTIFY_LEFT  => 0,
+            self::JUSTIFY_RIGHT => 2,
+            default             => 1,
         };
 
         $row = match (true) {
-            3 * $verticalPosition < $maxRow     => 6,
-            3 * $verticalPosition < 2 * $maxRow => 3,
-            default                             => 0,
+            3 * $verticalPosition < $maxRow     => self::KEYPAD_TOP_ROW,
+            3 * $verticalPosition < 2 * $maxRow => self::KEYPAD_MIDDLE_ROW,
+            default                             => self::KEYPAD_BOTTOM_ROW,
         };
 
         return 1 + $row + $column;
@@ -113,12 +138,12 @@ final class EbuStl
     public static function maxRow(array $gsi): int
     {
         if (in_array($gsi["DSC"] ?? "", ["1", "2"], true)) {
-            return 23;
+            return self::TELETEXT_MAX_ROW;
         }
 
         $rows = (int) ($gsi["MNR"] ?? 0);
 
-        return $rows > 0 ? $rows : 23;
+        return $rows > 0 ? $rows : self::TELETEXT_MAX_ROW;
     }
 
 

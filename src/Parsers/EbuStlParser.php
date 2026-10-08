@@ -74,7 +74,7 @@ final class EbuStlParser extends SubtitleParser
             $blockIndex += count($blocks);
             $lines  = self::decodeLines(self::textBytes($blocks), $gsi["CCT"]);
             $hexes  = array_map("bin2hex", $blocks);
-            if (ord($header[15]) === 1) {
+            if (ord($header[EbuStl::TTI_CF]) === 1) {
                 $lines = array_filter(array_map("trim", $lines), fn (string $line): bool => $line !== "");
                 $text  = Markup::plainText(implode("\n", $lines));
                 $cueComments[] = [$text, count($parsedCues)];
@@ -84,8 +84,9 @@ final class EbuStlParser extends SubtitleParser
 
             if ($this->options->lenient && !self::hasValidTimeCodes($header, $frameRate)) {
                 $this->warn(
-                    "Subtitle number " . unpack("v", $header, 1)[1] . " has a time code that is not valid: " .
-                    EbuStl::timeCodeDigits(substr($header, 5, 4)) . " to " . EbuStl::timeCodeDigits(substr($header, 9, 4)) . ".",
+                    "Subtitle number " . unpack("v", $header, EbuStl::TTI_SN)[1] . " has a time code that is not valid: " .
+                    EbuStl::timeCodeDigits(substr($header, EbuStl::TTI_TCI, EbuStl::TIME_CODE_SIZE)) . " to " .
+                    EbuStl::timeCodeDigits(substr($header, EbuStl::TTI_TCO, EbuStl::TIME_CODE_SIZE)) . ".",
                     null,
                     $blockIndex - count($blocks),
                     $hexes,
@@ -94,18 +95,18 @@ final class EbuStlParser extends SubtitleParser
                 continue;
             }
 
-            $groups[ord($header[0])] = true;
-            $firstTimeIn ??= EbuStl::timeCodeDigits(substr($header, 5, 4));
+            $groups[ord($header[EbuStl::TTI_SGN])] = true;
+            $firstTimeIn ??= EbuStl::timeCodeDigits(substr($header, EbuStl::TTI_TCI, EbuStl::TIME_CODE_SIZE));
 
-            $start = max(0.0, self::timeCodeBytesToSeconds(substr($header, 5, 4), $frameRate) - $offset);
-            $end   = max(0.0, self::timeCodeBytesToSeconds(substr($header, 9, 4), $frameRate) - $offset);
+            $start = max(0.0, self::timeCodeBytesToSeconds(substr($header, EbuStl::TTI_TCI, EbuStl::TIME_CODE_SIZE), $frameRate) - $offset);
+            $end   = max(0.0, self::timeCodeBytesToSeconds(substr($header, EbuStl::TTI_TCO, EbuStl::TIME_CODE_SIZE), $frameRate) - $offset);
             $cue   = new SubtitleCue($start, $end, $lines);
-            $cue->setAlignment(EbuStl::alignment(ord($header[13]), ord($header[14]), $maxRow));
+            $cue->setAlignment(EbuStl::alignment(ord($header[EbuStl::TTI_VP]), ord($header[EbuStl::TTI_JC]), $maxRow));
             $cue->setFormatData(self::FORMAT_DATA_KEY, [
-                "subtitleGroupNumber" => ord($header[0]),
-                "cumulativeStatus"    => ord($header[4]),
-                "verticalPosition"    => ord($header[13]),
-                "justificationCode"   => ord($header[14]),
+                "subtitleGroupNumber" => ord($header[EbuStl::TTI_SGN]),
+                "cumulativeStatus"    => ord($header[EbuStl::TTI_CS]),
+                "verticalPosition"    => ord($header[EbuStl::TTI_VP]),
+                "justificationCode"   => ord($header[EbuStl::TTI_JC]),
                 "text"                => $cue->getText(),
                 "blocks"              => $hexes,
             ]);
@@ -116,7 +117,7 @@ final class EbuStlParser extends SubtitleParser
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, [
             "gsi"                        => $gsi,
             "startOfProgrammeSubtracted" => $this->formatOptions()->subtractStartOfProgramme,
-            "firstSubtitleNumber"        => $sets === [] ? null : unpack("v", $sets[0][0], 1)[1],
+            "firstSubtitleNumber"        => $sets === [] ? null : unpack("v", $sets[0][0], EbuStl::TTI_SN)[1],
             "comments"                   => $comments,
             "counts"                     => [
                 "TNB" => intdiv(strlen($rawSubtitle) - EbuStl::GSI_BLOCK_SIZE, EbuStl::TTI_BLOCK_SIZE),
@@ -141,8 +142,8 @@ final class EbuStlParser extends SubtitleParser
     // EBU Tech 3264 limits the TCI and TCO fields to hours 0 to 23, minutes and seconds 0 to 59, and frames below the frame rate.
     private static function hasValidTimeCodes(string $header, FrameRate $frameRate): bool
     {
-        foreach ([5, 9] as $offset) {
-            [$hours, $minutes, $seconds, $frames] = array_map("ord", str_split(substr($header, $offset, 4)));
+        foreach ([EbuStl::TTI_TCI, EbuStl::TTI_TCO] as $offset) {
+            [$hours, $minutes, $seconds, $frames] = array_map("ord", str_split(substr($header, $offset, EbuStl::TIME_CODE_SIZE)));
             if ($hours > 23 || $minutes > 59 || $seconds > 59 || $frames >= $frameRate->getFramesPerSecond()) {
                 return false;
             }
@@ -175,13 +176,13 @@ final class EbuStlParser extends SubtitleParser
                 continue;
             }
 
-            if ($current !== [] && substr($current[0], 1, 2) !== substr($block, 1, 2)) {
+            if ($current !== [] && substr($current[0], EbuStl::TTI_SN, EbuStl::SUBTITLE_NUMBER_SIZE) !== substr($block, EbuStl::TTI_SN, EbuStl::SUBTITLE_NUMBER_SIZE)) {
                 $sets[]  = $current;
                 $current = [];
             }
 
             $current[] = $block;
-            if (ord($block[3]) === EbuStl::LAST_BLOCK) {
+            if (ord($block[EbuStl::TTI_EBN]) === EbuStl::LAST_BLOCK) {
                 $sets[]  = $current;
                 $current = [];
             }
@@ -202,9 +203,9 @@ final class EbuStlParser extends SubtitleParser
     {
         $text = "";
         foreach ($blocks as $block) {
-            $extensionBlockNumber = ord($block[3]);
+            $extensionBlockNumber = ord($block[EbuStl::TTI_EBN]);
             if ($extensionBlockNumber <= 0xEF || $extensionBlockNumber === EbuStl::LAST_BLOCK) {
-                $text .= substr($block, 16, EbuStl::TEXT_FIELD_SIZE);
+                $text .= substr($block, EbuStl::TTI_TF, EbuStl::TEXT_FIELD_SIZE);
             }
         }
 

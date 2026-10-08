@@ -34,6 +34,8 @@ final class EbuStlFormatter extends SubtitleFormatter
 
     private const FIRST_SUBTITLE_NUMBER = 1;
     private const MAX_EXTENSION_BLOCKS  = 0xF0;
+    private const MAX_SUBTITLE_NUMBER   = 0xFFFF;
+    private const DEFAULT_FRAME_RATE    = 25;
 
 
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
@@ -41,7 +43,7 @@ final class EbuStlFormatter extends SubtitleFormatter
         $options ??= new WriteOptions();
         $data = $subtitle->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
         $gsi  = ($data["gsi"] ?? []) + self::DEFAULT_GSI;
-        $fps  = $this->formatOptions($options)->frameRate ?? EbuStl::FRAME_RATES[$gsi["DFC"] ?? ""] ?? 25;
+        $fps  = $this->formatOptions($options)->frameRate ?? EbuStl::FRAME_RATES[$gsi["DFC"] ?? ""] ?? self::DEFAULT_FRAME_RATE;
 
         if (!array_key_exists($gsi["CCT"], EbuStl::CHARACTER_CODE_TABLES)) {
             throw new InvalidArgumentException("The character code table \"{$gsi["CCT"]}\" is not 00, 01, 02, 03 or 04.");
@@ -63,12 +65,12 @@ final class EbuStlFormatter extends SubtitleFormatter
         $number = $data["firstSubtitleNumber"] ?? self::FIRST_SUBTITLE_NUMBER;
         $blocks = "";
         foreach ($sets as $set) {
-            if ($number > 0xFFFF) {
-                throw new UnwritableContentException("EBU STL allows subtitle numbers up to 65535.");
+            if ($number > self::MAX_SUBTITLE_NUMBER) {
+                throw new UnwritableContentException("EBU STL allows subtitle numbers up to " . self::MAX_SUBTITLE_NUMBER . ".");
             }
 
             foreach ($set["blocks"] as $block) {
-                $blocks .= substr_replace($block, pack("v", $number), 1, 2);
+                $blocks .= substr_replace($block, pack("v", $number), EbuStl::TTI_SN, EbuStl::SUBTITLE_NUMBER_SIZE);
             }
             $number++;
         }
@@ -146,7 +148,7 @@ final class EbuStlFormatter extends SubtitleFormatter
             return $this->patchHeaders($blocks, $header);
         }
 
-        $userData = array_filter($blocks, fn (string $block): bool => ord($block[3]) === EbuStl::USER_DATA_BLOCK);
+        $userData = array_filter($blocks, fn (string $block): bool => ord($block[EbuStl::TTI_EBN]) === EbuStl::USER_DATA_BLOCK);
 
         return [...$this->patchHeaders(array_values($userData), $header), ...$this->textBlocks($context, $this->encodeText($context, $cue), $header)];
     }
@@ -167,7 +169,11 @@ final class EbuStlFormatter extends SubtitleFormatter
         }
 
         $first = $blocks[0];
-        foreach ([[0, 1], [4, 1], [5, 4], [9, 4], [13, 1], [14, 1]] as [$offset, $length]) {
+        $fields = [
+            [EbuStl::TTI_SGN, 1], [EbuStl::TTI_CS, 1], [EbuStl::TTI_TCI, EbuStl::TIME_CODE_SIZE],
+            [EbuStl::TTI_TCO, EbuStl::TIME_CODE_SIZE], [EbuStl::TTI_VP, 1], [EbuStl::TTI_JC, 1],
+        ];
+        foreach ($fields as [$offset, $length]) {
             $old = substr($first, $offset, $length);
             $new = substr($header, $offset, $length);
             if ($old === $new) {
@@ -212,7 +218,7 @@ final class EbuStlFormatter extends SubtitleFormatter
         $blocks = [];
         foreach ($fields as $index => $field) {
             $extensionBlockNumber = $index === count($fields) - 1 ? EbuStl::LAST_BLOCK : $index;
-            $blocks[]             = substr_replace($header, chr($extensionBlockNumber), 3, 1) . $field;
+            $blocks[]             = substr_replace($header, chr($extensionBlockNumber), EbuStl::TTI_EBN, 1) . $field;
         }
 
         return $blocks;
@@ -343,8 +349,8 @@ final class EbuStlFormatter extends SubtitleFormatter
         $counts    = [
             "TNB" => array_sum(array_map(fn (array $set): int => count($set["blocks"]), $sets)),
             "TNS" => count($subtitles),
-            "TNG" => count(array_unique(array_map(fn (array $set): int => ord($set["blocks"][0][0]), $subtitles))),
-            "TCF" => $subtitles === [] ? "00000000" : EbuStl::timeCodeDigits(substr($subtitles[0]["blocks"][0], 5, 4)),
+            "TNG" => count(array_unique(array_map(fn (array $set): int => ord($set["blocks"][0][EbuStl::TTI_SGN]), $subtitles))),
+            "TCF" => $subtitles === [] ? "00000000" : EbuStl::timeCodeDigits(substr($subtitles[0]["blocks"][0], EbuStl::TTI_TCI, EbuStl::TIME_CODE_SIZE)),
         ];
         $formats = ["TNB" => "%05d", "TNS" => "%05d", "TNG" => "%03d", "TCF" => "%s"];
         foreach ($counts as $field => $count) {
