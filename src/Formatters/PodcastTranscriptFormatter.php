@@ -56,9 +56,9 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
      *
      * @return list<array{speaker?: string, startTime: float, endTime: float, body: string}>
      */
-    public function segments(Subtitle $subtitle, bool $wordSegments = false): array
+    public function segments(Subtitle $subtitle): array
     {
-        return array_map($this->segment(...), $this->pieces($subtitle, $wordSegments));
+        return array_map($this->segment(...), $this->pieces($subtitle, false));
     }
 
 
