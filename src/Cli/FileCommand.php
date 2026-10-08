@@ -108,7 +108,7 @@ abstract class FileCommand extends Command
     {
         $options = [
             Option::value("from", "FORMAT", "Input format. Default: the format detected from the content. When detection finds no format, the file extension sets it. Chapters and cloud speech-to-text JSON need --from."),
-            Option::value("encoding", "NAME", "Encoding of the input, for example Windows-1252. Default: UTF-8. A BOM in the input overrides it."),
+            Option::value("encoding", "NAME", "Encoding of input that is not UTF-8, for example Windows-1252. Valid UTF-8 input stays as is. A BOM in the input overrides it."),
             Option::flag("lenient", "Skip or repair broken cues and print a warning for each. SCC, PGS, VobSub and chapter input ignore it."),
             Option::value("input-fps", "RATE", "Frame rate of a MicroDVD input without a {1}{1}<fps> first line, and of CSV or TSV times in hh:mm:ss:ff."),
             Option::value("fps", "RATE", $this->fpsDescription()),

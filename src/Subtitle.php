@@ -153,6 +153,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     /**
      * Reads $content in $format. MKV and WebM content throws, see loadTrack().
      * A UTF-16 or UTF-32 BOM, or else ReadOptions::$encoding such as "Windows-1252", sets the encoding to convert from.
+     * Valid UTF-8 content without zero bytes stays as is.
      */
     public static function fromString(string $content, Format $format, ?ReadOptions $options = null): self
     {

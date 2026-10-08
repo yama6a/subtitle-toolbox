@@ -45,6 +45,18 @@ class EncodingTest extends TestCase
     }
 
 
+    public function testUtf8FileStaysIntactWithAnotherSourceEncoding(): void
+    {
+        $options = new ReadOptions(encoding: TextEncoding::Windows1256);
+        $utf8    = Subtitle::load(self::DIR . "arabic-utf-8.srt", Format::SubRip, $options);
+        $legacy  = Subtitle::load(self::DIR . "arabic-windows-1256.srt", Format::SubRip, $options);
+
+        $this->assertSame("مرحبا", $utf8->getCues()[0]->getText());
+        $this->assertSame("شكرا جزيلا.", $utf8->getCues()[2]->getText());
+        $this->assertSame($utf8->toString(Format::SubRip), $legacy->toString(Format::SubRip));
+    }
+
+
     #[DataProvider("legacyFiles")]
     public function testLegacyFileParsesWithItsSourceEncoding(
         string $file, string $encoding, Format $format, array $first, array $last
