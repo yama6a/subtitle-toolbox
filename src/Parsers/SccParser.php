@@ -118,7 +118,7 @@ final class SccParser extends SubtitleParser
             }
 
             $cue = new SubtitleCue($start, $end, array_column($state["lines"], "text"));
-            $cue->setAlignment($state["lines"][0]["row"] <= 4 ? SubtitleCue::TOP_CENTER_ALIGNMENT : null);
+            $cue->setAlignment($state["lines"][0]["row"] <= Cea608::MAX_LINES ? SubtitleCue::TOP_CENTER_ALIGNMENT : null);
             $cue->setFormatData(self::FORMAT_DATA_KEY, [
                 "mode"    => $state["mode"],
                 "rows"    => array_column($state["lines"], "row"),
@@ -276,7 +276,7 @@ final class SccParser extends SubtitleParser
 
     private function decodeControl(int $first, int $second): void
     {
-        if ($first === 0x14 || $first === 0x15) {
+        if ($first === Cea608::FIRST_BYTE_CONTROL || $first === 0x15) {
             if ($second <= 0x2F) {
                 $this->decodeCommand($second);
 
@@ -290,7 +290,7 @@ final class SccParser extends SubtitleParser
         $pac = Cea608::decodePac($first, $second);
         if ($pac !== null) {
             $this->applyPac($pac);
-        } elseif ($first === 0x11 && $second >= 0x20 && $second <= 0x2F) {
+        } elseif ($first === Cea608::FIRST_BYTE_MID_ROW && $second >= 0x20 && $second <= 0x2F) {
             $midRow           = Cea608::decodeMidRow($second);
             $this->attributes = [
                 "color"     => $midRow["color"] ?? $this->attributes["color"],
@@ -298,14 +298,14 @@ final class SccParser extends SubtitleParser
                 "underline" => $midRow["underline"],
             ];
             $this->writeCharacter(" ");
-        } elseif ($first === 0x11 && $second >= 0x30 && $second <= 0x3F) {
+        } elseif ($first === Cea608::FIRST_BYTE_MID_ROW && $second >= 0x30 && $second <= 0x3F) {
             $this->writeCharacter($second === 0x39 ? null : Cea608::specialCharacter($second));
         } elseif (($first === 0x12 || $first === 0x13) && $second >= 0x20 && $second <= 0x3F) {
             // An extended character replaces the standard character that goes before it for older decoders.
             $this->column = max(0, $this->column - 1);
             $this->writeCharacter(Cea608::extendedCharacter($first, $second));
-        } elseif ($first === 0x17 && $second >= 0x21 && $second <= 0x23) {
-            $this->column = min(Cea608::COLUMNS - 1, $this->column + $second - 0x20);
+        } elseif ($first === Cea608::FIRST_BYTE_TAB_OFFSET && $second >= 0x21 && $second <= 0x23) {
+            $this->column = min(Cea608::COLUMNS - 1, $this->column + $second - Cea608::TAB_OFFSET_BASE);
         }
     }
 
