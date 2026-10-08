@@ -17,6 +17,9 @@ final class SubViewerFormatter extends SubtitleFormatter
 {
     protected const FORMAT_OPTIONS = SubViewerWriteOptions::class;
 
+    private const VERSION_1_TIME_PATTERN = "[%02d:%02d:%02d]";
+    private const VERSION_2_TIME_PATTERN = "%02d:%02d:%02d.%02d";
+
     private const VERSION_1_DEFAULT_HEADER = ["SOURCE" => "", "PRG" => "", "FILEPATH" => "", "DELAY" => "0", "CD TRACK" => "0", "BEGIN" => ""];
     private const VERSION_2_DEFAULT_HEADER = ["SOURCE" => "", "PRG" => "", "FILEPATH" => "", "DELAY" => "0", "CD TRACK" => "0", "COMMENT" => ""];
 
@@ -52,9 +55,9 @@ final class SubViewerFormatter extends SubtitleFormatter
                 continue;
             }
 
-            $output .= sprintf("[%02d:%02d:%02d]", ...Timecode::seconds($cue->getStart())) . LineEnding::Lf->value .
+            $output .= sprintf(self::VERSION_1_TIME_PATTERN, ...Timecode::seconds($cue->getStart())) . LineEnding::Lf->value .
                        implode("|", $lines) . LineEnding::Lf->value .
-                       sprintf("[%02d:%02d:%02d]", ...Timecode::seconds($cue->getEnd())) . LineEnding::Lf->value .
+                       sprintf(self::VERSION_1_TIME_PATTERN, ...Timecode::seconds($cue->getEnd())) . LineEnding::Lf->value .
                        LineEnding::Lf->value;
         }
 
@@ -83,7 +86,8 @@ final class SubViewerFormatter extends SubtitleFormatter
                 continue;
             }
 
-            $blocks[] = sprintf("%02d:%02d:%02d.%02d,%02d:%02d:%02d.%02d", ...Timecode::centiseconds($cue->getStart()), ...Timecode::centiseconds($cue->getEnd())) .
+            $blocks[] = sprintf(self::VERSION_2_TIME_PATTERN, ...Timecode::centiseconds($cue->getStart())) . "," .
+                        sprintf(self::VERSION_2_TIME_PATTERN, ...Timecode::centiseconds($cue->getEnd())) .
                         LineEnding::Lf->value .
                         implode("[br]", $lines) . LineEnding::Lf->value;
         }

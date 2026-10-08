@@ -16,6 +16,8 @@ final class SubRipFormatter extends SubtitleFormatter
 {
     protected const DEFAULT_BOM = true;
 
+    private const TIME_PATTERN = "%02d:%02d:%02d,%03d";
+
 
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
@@ -60,7 +62,8 @@ final class SubRipFormatter extends SubtitleFormatter
 
     private function formatCue(SubtitleCue $cue, WriteOptions $options): string
     {
-        $time  = sprintf("%02d:%02d:%02d,%03d --> %02d:%02d:%02d,%03d", ...Timecode::milliseconds($cue->getStart()), ...Timecode::milliseconds($cue->getEnd()));
+        $time  = sprintf(self::TIME_PATTERN, ...Timecode::milliseconds($cue->getStart())) . " --> "
+                 . sprintf(self::TIME_PATTERN, ...Timecode::milliseconds($cue->getEnd()));
         $time .= $this->formatCoordinates($cue);
         $lines = implode(LineEnding::Lf->value, $cue->getLines());
 

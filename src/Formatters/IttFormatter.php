@@ -25,6 +25,8 @@ final class IttFormatter extends SubtitleFormatter
 {
     protected const FORMAT_OPTIONS = IttWriteOptions::class;
 
+    private const TIME_PATTERN = "%02d:%02d:%02d:%02d";
+
     private const HEAD_LINES = [
         "<head>",
         "    <styling>",
@@ -74,8 +76,8 @@ final class IttFormatter extends SubtitleFormatter
         foreach ($paragraphs as $idx => $paragraph) {
             $begin = $rate->secondsToFrames(max(0.0, $cues[$idx]->getStart()));
             $end   = max($begin + 1, $rate->secondsToFrames(max(0.0, $cues[$idx]->getEnd())));
-            $paragraph->setAttribute("begin", sprintf("%02d:%02d:%02d:%02d", ...Timecode::frameNumber($begin, $rate)));
-            $paragraph->setAttribute("end", sprintf("%02d:%02d:%02d:%02d", ...Timecode::frameNumber($end, $rate)));
+            $paragraph->setAttribute("begin", sprintf(self::TIME_PATTERN, ...Timecode::frameNumber($begin, $rate)));
+            $paragraph->setAttribute("end", sprintf(self::TIME_PATTERN, ...Timecode::frameNumber($end, $rate)));
         }
 
         return $this->applyOutputOptions($document->saveXML(), $options);
