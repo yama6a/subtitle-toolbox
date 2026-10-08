@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Sync;
 
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\TimeRanges;
 
 final class ReferenceSync
 {
@@ -308,19 +309,7 @@ final class ReferenceSync
             }
         }
 
-        sort($spans);
-
-        $merged = [];
-        foreach ($spans as [$start, $end]) {
-            $last = count($merged) - 1;
-            if ($last >= 0 && $start <= $merged[$last][1]) {
-                $merged[$last][1] = max($merged[$last][1], $end);
-            } else {
-                $merged[] = [$start, $end];
-            }
-        }
-
-        return $merged;
+        return TimeRanges::merged($spans);
     }
 
 

@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Profanity;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\TimeRanges;
 
 final class ProfanityFilter
 {
@@ -126,18 +127,7 @@ final class ProfanityFilter
     private static function join(array $ranges, float $padding): array
     {
         $ranges = array_map(fn (array $range): array => [round(max(0, $range[0] - $padding), 3), round($range[1] + $padding, 3)], $ranges);
-        sort($ranges);
 
-        $joined = [];
-        foreach ($ranges as [$start, $end]) {
-            $last = count($joined) - 1;
-            if ($last >= 0 && $start <= $joined[$last][1]) {
-                $joined[$last][1] = max($joined[$last][1], $end);
-            } else {
-                $joined[] = [$start, $end];
-            }
-        }
-
-        return array_map(fn (array $range): MuteRange => new MuteRange($range[0], $range[1]), $joined);
+        return array_map(fn (array $range): MuteRange => new MuteRange($range[0], $range[1]), TimeRanges::merged($ranges));
     }
 }
