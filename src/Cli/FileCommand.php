@@ -253,7 +253,7 @@ abstract class FileCommand extends Command
     {
         $this->prepare($arguments);
 
-        $inputs = $this->expandInputs($this->inputArguments($arguments));
+        $inputs = InputFiles::expand($this->inputArguments($arguments));
         if ($inputs === []) {
             self::fail("Pass at least one input file, or - for standard input.");
         }
@@ -297,66 +297,6 @@ abstract class FileCommand extends Command
     protected static function label(string $input): string
     {
         return $input === self::DASH ? "stdin" : $input;
-    }
-
-
-    /**
-     * Returns the files for each argument: "-", a file, the subtitle files of a directory, or the matches of a glob.
-     * A glob helps on shells that do not expand it, such as cmd.exe.
-     *
-     * @param list<string> $arguments
-     *
-     * @return list<string>
-     */
-    protected function expandInputs(array $arguments): array
-    {
-        $inputs = [];
-        foreach ($arguments as $argument) {
-            if ($argument !== self::DASH && is_dir($argument)) {
-                $files = $this->directoryFiles($argument);
-                if ($files === []) {
-                    self::fail("The directory $argument holds no file with a known subtitle extension.");
-                }
-                array_push($inputs, ...$files);
-            } elseif ($argument === self::DASH || file_exists($argument) || strpbrk($argument, "*?[") === false) {
-                $inputs[] = $argument;
-            } else {
-                $matches = array_values(array_filter(glob($argument) ?: [], "is_file"));
-                array_push($inputs, ...($matches === [] ? [$argument] : $matches));
-            }
-        }
-
-        $unique = [];
-        foreach ($inputs as $input) {
-            $unique[$input === self::DASH ? self::DASH : (realpath($input) ?: $input)] ??= $input;
-        }
-
-        return array_values($unique);
-    }
-
-
-    /**
-     * @return list<string>
-     */
-    private function directoryFiles(string $directory): array
-    {
-        $directory = rtrim($directory, "/\\");
-        $files     = [];
-        foreach (scandir($directory) ?: [] as $name) {
-            $path   = "$directory/$name";
-            $format = Format::fromPath($name);
-            if (!is_file($path) || $format === null || !$format->canRead()) {
-                continue;
-            }
-            // The .sub file of a VobSub pair is not MicroDVD. The parser reads it through its .idx file.
-            if (strtolower(pathinfo($name, PATHINFO_EXTENSION)) === "sub"
-                && glob($directory . "/" . pathinfo($name, PATHINFO_FILENAME) . ".[iI][dD][xX]") !== []) {
-                continue;
-            }
-            $files[] = $path;
-        }
-
-        return $files;
     }
 
 
