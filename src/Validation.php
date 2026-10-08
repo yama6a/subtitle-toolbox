@@ -30,13 +30,7 @@ trait Validation
         }
 
         foreach ($this->getCues() as $cueIndex => $cue) {
-            $lineLengths = [];
-            foreach ($cue->getLines() as $line) {
-                $length = Markup::visibleLength($line);
-                if ($length > 0) {
-                    $lineLengths[] = $length;
-                }
-            }
+            $lineLengths = LineWrapper::visibleLineLengths($cue->getLines());
             $characters = array_sum($lineLengths);
             $duration   = round($cue->getEnd() - $cue->getStart(), 3);
 

@@ -65,14 +65,9 @@ final class SubtitleStatistics
             }
             $previousEnd = max($previousEnd ?? $cue->getEnd(), $cue->getEnd());
 
-            $characters = 0;
-            foreach ($cue->getLines() as $line) {
-                $length = Markup::visibleLength($line);
-                if ($length > 0) {
-                    $charactersPerLine[] = $length;
-                    $characters         += $length;
-                }
-            }
+            $lineLengths       = LineWrapper::visibleLineLengths($cue->getLines());
+            $charactersPerLine = [...$charactersPerLine, ...$lineLengths];
+            $characters        = array_sum($lineLengths);
             if ($characters === 0) {
                 continue;
             }

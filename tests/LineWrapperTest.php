@@ -99,4 +99,10 @@ class LineWrapperTest extends TestCase
         $this->assertSame(INF, LineWrapper::charactersPerSecond(20, 0.0));
         $this->assertSame(INF, LineWrapper::charactersPerSecond(20, -1.0));
     }
+
+
+    public function testVisibleLineLengthsSkipLinesWithoutVisibleText(): void
+    {
+        $this->assertSame([5, 3], LineWrapper::visibleLineLengths(["<i>Hello</i>", "<b></b>", "", "a b"]));
+    }
 }

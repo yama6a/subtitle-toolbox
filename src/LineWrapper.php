@@ -92,6 +92,19 @@ final class LineWrapper
 
 
     /**
+     * Returns the visible characters of each line that has at least 1 visible character. Tags count 0 characters.
+     *
+     * @param array<string> $lines
+     *
+     * @return list<int>
+     */
+    public static function visibleLineLengths(array $lines): array
+    {
+        return array_values(array_filter(array_map(fn (string $line): int => Markup::visibleLength($line), $lines)));
+    }
+
+
+    /**
      * Returns $characters divided by $duration, or INF when $duration is 0 or less.
      */
     public static function charactersPerSecond(int $characters, float $duration): float
