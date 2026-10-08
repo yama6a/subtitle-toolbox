@@ -362,7 +362,7 @@ class ThrowSitesTest extends TestCase
                 ->toString(Format::Scc), ...$unwritable],
             "Formatters/SubtitleFormatter.php: options of another format" => [fn () => self::subtitle()->toString(Format::SubRip,
                 new WriteOptions(format: new CsvWriteOptions())), ...$invalid],
-            "Formatters/TtmlFormatter.php: stored head"     => [fn () => self::subtitle()->setFormatData(TtmlParser::FORMAT_DATA_KEY, ["head" => "<p/>"])
+            "Formatters/TtmlHead.php: stored head"          => [fn () => self::subtitle()->setFormatData(TtmlParser::FORMAT_DATA_KEY, ["head" => "<p/>"])
                 ->toString(Format::Ttml), ...$unwritable],
             "HearingImpaired/HearingImpairedOptions.php: empty bracket"     => [fn () => new HearingImpairedOptions(customBrackets: [["{", ""]]), ...$invalid],
             "Hls/HlsSegmentOptions.php: segment duration 0" => [fn () => new HlsSegmentOptions(segmentDuration: 0), ...$invalid],
