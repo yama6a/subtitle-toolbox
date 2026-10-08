@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 /**
- * The dashes that start a dialogue line, shared by CommonErrorFixer, TextChecks and LineWrapper.
+ * The dashes that start a dialogue line.
  *
  * @internal
  */

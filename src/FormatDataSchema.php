@@ -22,17 +22,18 @@ use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\WebVttParser;
 
 /**
- * FormatDataSchema checks the types of the format data fields that the formatters read, so that setFormatData(),
- * fromArray() and JsonParser reject a bad field with its path before a formatter fails on it. Other fields pass as they are.
+ * FormatDataSchema checks the types of the format data fields that the formatters read.
+ * So setFormatData(), fromArray() and JsonParser reject a bad field with its path before a formatter fails on it.
+ * Other fields pass as they are. The schema checks types only, not values.
  *
  * The format data of a format is an object of fields, or "strings" for an object of strings with any keys.
- * A type is "string", "int", "bool", "number", "scalar", "ttiBlock" or "timeBase", with "?" in front for null too,
- * or an array: ["list", type] for an array of values of one type, ["names", type] for an object whose keys are
- * names, ["object", [key => type]] for named fields, where "!" in front of a key marks a required field,
- * ["range", min, max] for an integer in a range, and ["keys", list of names, type] for an object with only these keys.
- *
- * The schema checks only the types. The csv "delimiter" must be ",", ";" or a tab, else CsvFormatter throws. The csv
- * "timeFormat" is a CsvTimeFormat value. CsvFormatter writes any other string as CsvTimeFormat::Dot.
+ * A type is one of these. A "?" in front of a type name, such as "?string" or "?list", also allows null.
+ * - "string", "int", "bool", "number", "scalar", "ttiBlock" or "timeBase"
+ * - ["list", type]: an array of values of one type
+ * - ["names", type]: an object whose keys are names
+ * - ["object", [key => type]]: named fields. A "!" in front of a key marks a required field.
+ * - ["range", min, max]: an integer in a range
+ * - ["keys", list of names, type]: an object with only these keys
  *
  * @internal
  */
@@ -171,8 +172,8 @@ final class FormatDataSchema
 
 
     /**
-     * Returns the error message for the first field of $data, the file format data under format data key $key, that
-     * has the wrong type, or null when every field has the right type.
+     * Returns the error message for the first field of $data with a wrong type, or null.
+     * $data is the file format data under the format data key $key.
      *
      * @param string $path the path of $data, for example "formatData.ass"
      */
@@ -183,8 +184,8 @@ final class FormatDataSchema
 
 
     /**
-     * Returns the error message for the first field of $data, the cue format data under format data key $key, that has
-     * the wrong type, or null when every field has the right type.
+     * Returns the error message for the first field of $data with a wrong type, or null.
+     * $data is the cue format data under the format data key $key.
      *
      * @param string $path the path of $data, for example "cues[3].formatData.ass"
      */
@@ -195,8 +196,8 @@ final class FormatDataSchema
 
 
     /**
-     * Returns $formatData with $data under $key, as setFormatData() of Subtitle and SubtitleCue store it. An empty
-     * $data removes the key.
+     * Returns $formatData with $data under $key, as setFormatData() of Subtitle and SubtitleCue store it.
+     * An empty $data removes the key.
      *
      * @throws InvalidArgumentException when a field of $data has the wrong type.
      */

@@ -47,7 +47,8 @@ enum Format: string
     /**
      * Returns the format of the file extension of $path, or null for an unknown or missing extension.
      * When two formats share an extension, the first matching row of FormatRegistry::FORMATS owns it.
-     * The rows follow the order of the cases, so `.sub` is MicroDVD and `.txt` is plain text.
+     * The rows follow the order of the cases, so `.sub` is MicroDVD, `.json` is the library JSON and `.txt` is plain text.
+     * The first extension of a format is the one for new files.
      */
     public static function fromPath(string $path): ?self
     {

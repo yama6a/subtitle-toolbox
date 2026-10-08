@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 /**
- * LineWrapper breaks cue text into lines of a maximum length.
- *
  * @internal
  */
 final class LineWrapper
@@ -63,8 +61,8 @@ final class LineWrapper
 
 
     /**
-     * Returns true when $maxCharactersPerSecond is null, when the lines have no visible character, or when their
-     * visible characters per second over $duration stay at or below $maxCharactersPerSecond.
+     * Returns true when the visible characters of the lines per second over $duration stay at or below $maxCharactersPerSecond.
+     * Also returns true when $maxCharactersPerSecond is null or the lines have no visible character.
      *
      * @param array<string> $lines
      */
@@ -212,8 +210,8 @@ final class LineWrapper
 
 
     /**
-     * Returns the best breaks for the words before $end when the last line starts at $firstStart or later, or null when
-     * no earlier breaks reach such a start.
+     * Returns the best breaks for the words before $end when the last line starts at $firstStart or later.
+     * Returns null when no earlier breaks reach such a start.
      *
      * @param array<int, array{int, int, list<int>}> $previous the best breaks with one line fewer, by their end
      * @param list<array{text: string, length: int}> $words

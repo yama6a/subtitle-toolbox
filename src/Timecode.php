@@ -7,8 +7,9 @@ namespace SubtitleToolbox;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 /**
- * Splits seconds into hours, minutes, seconds and one smaller unit, and turns such parts back into seconds. Each split
- * method rounds the total to its unit first, so 1.996 s becomes 2 s and 0 centiseconds, never 1 s and 100 centiseconds.
+ * Splits seconds into hours, minutes, seconds and one smaller unit, and turns such parts back into seconds.
+ * Each split method rounds the total to its unit first.
+ * So 1.996 s becomes 2 s and 0 centiseconds, never 1 s and 100 centiseconds.
  *
  * @internal
  */
@@ -81,9 +82,10 @@ final class Timecode
 
 
     /**
-     * Returns the SMPTE time code of a frame number. A second holds the frame rate rounded to a whole number of frame
-     * labels, so 23.976 fps counts 24 labels. Drop-frame time code skips the first labels of each minute except every
-     * tenth minute, so that it stays in step with the clock: 2 labels at 29.97 fps, 4 at 59.94 fps.
+     * Returns the SMPTE time code of a frame number.
+     * A second holds the frame rate rounded to a whole number of frame labels, so 23.976 fps counts 24 labels.
+     * Drop-frame time code skips the first labels of each minute except every tenth minute.
+     * So it stays in step with the clock. It skips 2 labels at 29.97 fps and 4 at 59.94 fps.
      *
      * @return array{int, int, int, int} hours, minutes, seconds, frames
      * @throws InvalidArgumentException when $dropFrame is true and the frame rate is not about 29.97 or 59.94 fps.
@@ -109,8 +111,8 @@ final class Timecode
 
 
     /**
-     * Returns whole clock seconds and the frames after the last whole second. The frame count restarts at each clock
-     * second, as CsvParser::parseTime() reads it. At a whole frame rate the result equals frames().
+     * Returns whole clock seconds and the frames after the last whole second.
+     * The frame count restarts at each clock second. At a whole frame rate the result equals frames().
      *
      * @return array{int, int, int, int} hours, minutes, seconds, frames
      */
@@ -129,8 +131,8 @@ final class Timecode
 
 
     /**
-     * Returns the seconds of a time in parts. $fraction holds the decimal digits after the point, so "5" adds 0.5 s and
-     * "005" adds 0.005 s. The result is the float nearest to the decimal value.
+     * Returns the seconds of a time in parts. $fraction holds the decimal digits after the point.
+     * So "5" adds 0.5 s and "005" adds 0.005 s. The result is the float nearest to the decimal value.
      *
      * @internal
      */
@@ -143,8 +145,8 @@ final class Timecode
 
 
     /**
-     * Returns the seconds of a time code that counts frames after the last whole second, for example 00:00:01:12 at
-     * 25 fps is 1.48 s.
+     * Returns the seconds of a time code that counts frames after the last whole second.
+     * For example, 00:00:01:12 at 25 fps is 1.48 s.
      *
      * @internal
      */
@@ -155,8 +157,8 @@ final class Timecode
 
 
     /**
-     * Formats the whole seconds as m:ss below 1 hour and as h:mm:ss from 1 hour, for example 62.9 becomes "1:02" and
-     * 3725 becomes "1:02:05".
+     * Formats the whole seconds as m:ss below 1 hour and as h:mm:ss from 1 hour.
+     * For example, 62.9 becomes "1:02" and 3725 becomes "1:02:05".
      *
      * @internal
      */

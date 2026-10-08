@@ -69,9 +69,8 @@ use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 final class FormatRegistry
 {
     /**
-     * Format value => parser class, formatter class and file extensions. Null means that the library cannot read or
-     * write the format. The first extension is the one for new files. When two formats list an extension, the
-     * earlier format owns it, so `.sub` is MicroDVD, `.json` is the library JSON and `.txt` is plain text.
+     * Format value => parser class, formatter class and file extensions, in the order of the Format cases.
+     * Null means that the library cannot read or write the format. Format::fromPath() explains the extension order.
      */
     private const FORMATS = [
         Format::Ass->value                => [AssParser::class, AssFormatter::class, ["ass", "ssa"]],

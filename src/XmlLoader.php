@@ -8,8 +8,8 @@ use DOMDocument;
 use LibXMLError;
 
 /**
- * Loads XML and HTML with the libxml errors collected, not printed. It restores the libxml error setting of the
- * caller, also when the load throws.
+ * Loads XML and HTML with the libxml errors collected, not printed.
+ * It restores the libxml error setting of the caller, also when the load throws.
  *
  * @internal
  */

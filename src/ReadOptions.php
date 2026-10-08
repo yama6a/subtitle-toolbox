@@ -8,8 +8,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 
 /**
- * The format-neutral settings of one read. Each parser ignores the fields it does not use. $format holds the
- * settings of one format.
+ * The format-neutral settings of one read. Each parser ignores the fields it does not use.
  */
 final class ReadOptions
 {

@@ -82,7 +82,8 @@ trait CueLookup
 
 
     /**
-     * Removes the cues for which $predicate returns true and moves the comments before the removed cues to the next kept cue.
+     * Removes the cues for which $predicate returns true.
+     * The comments before the removed cues move to the next kept cue.
      *
      * @param callable(SubtitleCue): bool $predicate
      */
@@ -135,7 +136,8 @@ trait CueLookup
 
 
     /**
-     * Returns the start and end times of the cues. When the cues are in start order, it adds a tree whose node holds the latest end of its cues.
+     * Returns the start and end times of the cues.
+     * For cues in start order, it adds a tree in which each node holds the latest end of its cues.
      * It does not sort. For unsorted cues, maxEnds is null and the caller scans every cue.
      * A time setter of any cue or a change of the cue list makes the next call rebuild the tree.
      *

@@ -95,15 +95,7 @@ final class StringHelpers
     }
 
 
-    /**
-     * Trims string, fixes line endings and multi-spaces
-     *
-     * @param string $str
-     *
-     * @return string
-     *
-     * @internal
-     */
+    /** @internal */
     public static function cleanString(string $str): string
     {
         $str = self::normalizeEOLs($str);
@@ -134,22 +126,14 @@ final class StringHelpers
     /** @internal */
     public static function normalizeSpaces(string $str): string
     {
-        $str = preg_replace('/\t+/', ' ', $str); // replace tabs with spaces
-        $str = preg_replace('/ +/', ' ', $str); // strip multi-spaces
+        $str = preg_replace('/\t+/', ' ', $str);
+        $str = preg_replace('/ +/', ' ', $str);
 
         return $str;
     }
 
 
-    /**
-     * Replaces all EOLs with UNIX EOLs.
-     *
-     * @param string $str
-     *
-     * @return string
-     *
-     * @internal
-     */
+    /** @internal */
     public static function normalizeEOLs(string $str): string
     {
         // CR CR LF comes from a CR LF file that went through a text-mode conversion a second time.

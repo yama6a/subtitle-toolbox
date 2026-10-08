@@ -53,7 +53,8 @@ trait ArrayConversion
 
 
     /**
-     * Builds a subtitle from the array that toArray() returns, keeps the cue order and throws ParsingException with the path of a bad field.
+     * Builds a subtitle from the array that toArray() returns, and keeps the cue order.
+     * A bad field throws ParsingException with the path of the field.
      */
     public static function fromArray(array $data): self
     {
@@ -62,9 +63,9 @@ trait ArrayConversion
 
 
     /**
-     * Builds a subtitle as fromArray() does, but passes each bad cue, comment, metadata field and format data entry to
-     * $reject and leaves it out. It also leaves out the cues in $skippedCues. The comments after a left-out cue move
-     * up by one cue, so they stay before the same cue.
+     * Builds a subtitle as fromArray() does, but leaves out each bad cue, comment, metadata field and format data entry.
+     * $reject gets each of them. The cues in $skippedCues stay out too.
+     * The comments after a left-out cue move up by one cue, so they stay before the same cue.
      *
      * @internal
      *

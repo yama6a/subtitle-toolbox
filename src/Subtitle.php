@@ -81,8 +81,9 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Reads the file at $path in $format. For Format::VobSub, $path is the .idx or the .sub file, and the other file
-     * must lie next to it. Its content replaces VobSubReadOptions::$idx. An MKV or WebM file throws, see loadTrack().
+     * Reads the file at $path in $format. An MKV or WebM file throws, see loadTrack().
+     * For Format::VobSub, $path is the .idx or the .sub file, and the other file must lie next to it.
+     * The content of the .idx file replaces VobSubReadOptions::$idx.
      */
     public static function load(string $path, Format $format, ?ReadOptions $options = null): self
     {
@@ -109,8 +110,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Reads the file at $path in the format that its content shows, else in the format of its extension. It tries only
-     * formats whose isAutoDetected() is true. An MKV or WebM file must hold exactly 1 subtitle track.
+     * Reads the file at $path in the format that its content shows, else in the format of its extension.
+     * It tries only formats whose isAutoDetected() is true. An MKV or WebM file must hold exactly 1 subtitle track.
      *
      * @throws UnknownFormatException when no such format matches.
      */
@@ -129,8 +130,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Reads the subtitle track with the TrackNumber $trackNumber of an MKV or WebM file. The codec of the track picks the
-     * parser. tracks() lists the track numbers.
+     * Reads the subtitle track with the TrackNumber $trackNumber of an MKV or WebM file.
+     * The codec of the track picks the parser. tracks() lists the track numbers.
      */
     public static function loadTrack(string $path, int $trackNumber, ?ReadOptions $options = null): self
     {
@@ -150,8 +151,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Reads $content in $format. A UTF-16 or UTF-32 BOM, or else ReadOptions::$encoding such as "Windows-1252", sets
-     * the encoding to convert from. MKV and WebM content throws, see loadTrack().
+     * Reads $content in $format. MKV and WebM content throws, see loadTrack().
+     * A UTF-16 or UTF-32 BOM, or else ReadOptions::$encoding such as "Windows-1252", sets the encoding to convert from.
      */
     public static function fromString(string $content, Format $format, ?ReadOptions $options = null): self
     {
@@ -189,8 +190,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Returns the format that load(), loadAutoDetectFormat(), loadTrack(), MatroskaReader::extract() or a fromString call
-     * read, or null for a subtitle from new Subtitle() or fromArray(). For an MKV track, it is the format of the track codec.
+     * Returns the format that load(), loadAutoDetectFormat(), loadTrack(), MatroskaReader::extract() or a fromString call read.
+     * Returns null for a subtitle from new Subtitle() or fromArray(). For an MKV track, it is the format of the track codec.
      */
     public function getFormat(): ?Format
     {
@@ -199,7 +200,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Sets the format that getFormat() returns. MatroskaReader::extract() calls it with the format of the track codec.
+     * Sets the format that getFormat() returns.
      *
      * @internal
      */
@@ -243,8 +244,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Returns the format of the UTF-8 $content as loadAutoDetectFormat() and fromStringAutoDetectFormat() pick it, or
-     * null. Without detection, it falls back to the extension of $path.
+     * Returns the format of the UTF-8 $content as loadAutoDetectFormat() and fromStringAutoDetectFormat() pick it, or null.
+     * Without detection, it falls back to the extension of $path.
      *
      * @internal
      */
@@ -370,8 +371,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     /**
      * Writes the subtitle in $format and throws on an image cue without text, unless the format writes images.
-     * MicroDVD and iTT take the frame rate from the options, else from the format data of their parser. TSV writes
-     * tabs and CSV from a TSV load writes commas, unless CsvWriteOptions::$delimiter is set.
+     * MicroDVD and iTT take the frame rate from the options, else from the format data of their parser.
+     * TSV writes tabs and CSV from a TSV load writes commas, unless CsvWriteOptions::$delimiter is set.
      */
     public function toString(Format $format, ?WriteOptions $options = null): string
     {
@@ -509,8 +510,9 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Sets the lines that $linesOf returns for each cue, or keeps the cue as is when it returns null. Then it removes,
-     * in one pass, each cue that had text before and has none after. $hasText decides, Markup::hasVisibleText() by default.
+     * Sets the lines that $linesOf returns for each cue, or keeps the cue as is when it returns null.
+     * Then it removes, in one pass, each cue that had text before and has none after.
+     * $hasText decides, Markup::hasVisibleText() by default.
      *
      * @param callable(SubtitleCue, int): ?list<string> $linesOf
      * @param ?callable(array<string>): bool            $hasText
