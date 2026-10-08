@@ -9,10 +9,13 @@ use Iterator;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 /**
+ * @phpstan-type CueLookupIndex array{cues: array<int, SubtitleCue>, timeEdits: int, starts: list<float>, keys: list<int>, maxEnds: ?list<float>, leafCount: int}
+ *
  * @internal
  */
 trait CueLookup
 {
+    /** @var CueLookupIndex|null */
     private ?array $cueLookupIndex = null;
 
 
@@ -119,7 +122,7 @@ trait CueLookup
         }
 
         $positions = [];
-        self::collectEndingAfter($index["maxEnds"], 1, 0, $index["leafCount"], $low, $from, $positions);
+        self::cueLookupCollectEndingAfter($index["maxEnds"], 1, 0, $index["leafCount"], ["position" => $low, "time" => $from], $positions);
 
         $cues = [];
         foreach ($positions as $position) {
@@ -135,6 +138,8 @@ trait CueLookup
      * Returns the start and end times of the cues. When the cues are in start order, it adds a tree whose node holds the latest end of its cues.
      * It does not sort. For unsorted cues, maxEnds is null and the caller scans every cue.
      * A time setter of any cue or a change of the cue list makes the next call rebuild the tree.
+     *
+     * @return CueLookupIndex
      */
     private function getCueLookupIndex(): array
     {
@@ -161,20 +166,7 @@ trait CueLookup
             }
         }
 
-        $leafCount = 1;
-        $maxEnds   = null;
-        if ($sorted) {
-            while ($leafCount < $count) {
-                $leafCount <<= 1;
-            }
-            $maxEnds = array_fill(0, 2 * $leafCount, -INF);
-            foreach ($ends as $position => $end) {
-                $maxEnds[$leafCount + $position] = $end;
-            }
-            for ($node = $leafCount - 1; $node >= 1; $node--) {
-                $maxEnds[$node] = max($maxEnds[2 * $node], $maxEnds[2 * $node + 1]);
-            }
-        }
+        [$maxEnds, $leafCount] = $sorted ? self::cueLookupMaxEndTree($ends) : [null, 1];
 
         return $this->cueLookupIndex = [
             "cues"      => $this->cues,
@@ -187,16 +179,41 @@ trait CueLookup
     }
 
 
-    private static function collectEndingAfter(
-        array $maxEnds,
-        int $node,
-        int $firstPosition,
-        int $size,
-        int $positionLimit,
-        float $time,
-        array &$positions
-    ): void {
-        if ($firstPosition >= $positionLimit || $maxEnds[$node] <= $time) {
+    /**
+     * Builds a binary tree over the ends in cue order. Node 1 is the root, and node n has the children 2n and 2n + 1.
+     * Each node holds the latest end of its leaves.
+     *
+     * @param list<float> $ends
+     * @return array{list<float>, int} the tree and its number of leaves
+     */
+    private static function cueLookupMaxEndTree(array $ends): array
+    {
+        $leafCount = 1;
+        while ($leafCount < count($ends)) {
+            $leafCount <<= 1;
+        }
+        $maxEnds = array_fill(0, 2 * $leafCount, -INF);
+        foreach ($ends as $position => $end) {
+            $maxEnds[$leafCount + $position] = $end;
+        }
+        for ($node = $leafCount - 1; $node >= 1; $node--) {
+            $maxEnds[$node] = max($maxEnds[2 * $node], $maxEnds[2 * $node + 1]);
+        }
+
+        return [$maxEnds, $leafCount];
+    }
+
+
+    /**
+     * Adds the positions below $limit["position"] in the subtree of $node whose cue ends after $limit["time"].
+     *
+     * @param list<float>                       $maxEnds
+     * @param array{position: int, time: float} $limit
+     * @param list<int>                         $positions
+     */
+    private static function cueLookupCollectEndingAfter(array $maxEnds, int $node, int $firstPosition, int $size, array $limit, array &$positions): void
+    {
+        if ($firstPosition >= $limit["position"] || $maxEnds[$node] <= $limit["time"]) {
             return;
         }
         if ($size === 1) {
@@ -206,8 +223,7 @@ trait CueLookup
         }
 
         $half = $size >> 1;
-        self::collectEndingAfter($maxEnds, 2 * $node, $firstPosition, $half, $positionLimit, $time, $positions);
-        self::collectEndingAfter($maxEnds, 2 * $node + 1, $firstPosition + $half, $half, $positionLimit, $time, $positions);
+        self::cueLookupCollectEndingAfter($maxEnds, 2 * $node, $firstPosition, $half, $limit, $positions);
+        self::cueLookupCollectEndingAfter($maxEnds, 2 * $node + 1, $firstPosition + $half, $half, $limit, $positions);
     }
-
 }
