@@ -37,6 +37,13 @@ class FormatDetectorTest extends TestCase
     // Chapters and cloud speech-to-text JSON load only with an explicit format.
     private const NOT_DETECTED_DIRECTORIES = ["chapters", "aws-transcribe", "deepgram", "assemblyai", "google-speech"];
 
+    // Spruce STL and headerless CSV start with hh:mm:ss:ff frame timecodes, which are not TMPlayer.
+    private const FRAME_TIMECODE_FIXTURES = [
+        "csv/real/headerless_frame_times.csv",
+        "spruce-stl/real/bakery.stl",
+        "spruce-stl/real/bakery_with_header.stl",
+    ];
+
     // These fixtures break their own format on purpose, so their parser rejects them.
     private const BROKEN_FIXTURES = [
         "sbv/missing_milli_digits.sbv"  => null,
@@ -150,6 +157,7 @@ class FormatDetectorTest extends TestCase
             "TMPlayer"                   => ["00:00:01:Hello|world\n", Format::TmPlayer],
             "TMPlayer+ with equals sign" => ["0:00:01=Hello\n", Format::TmPlayer],
             "TMPlayer+ with line numbers" => ["00:00:01,1=Hello\n00:00:01,2=world\n", Format::TmPlayer],
+            "TMPlayer with a number"     => ["00:00:01:5 trains leave\n", Format::TmPlayer],
             "SBV next to TMPlayer"       => ["0:00:01.000,0:00:02.000\nHello\n", Format::Sbv],
             "JSON with a chapters list"  => ["{\"version\": 1, \"formatData\": {\"chapters\": {\"chapters\": []}}, \"cues\": []}", Format::Json],
             "Podcasting 2.0 JSON"        => ["{\"version\": \"1.0.0\", \"segments\": [{\"speaker\": \"Anna\", \"startTime\": 0.5, \"body\": \"I\"}]}",
@@ -248,6 +256,9 @@ class FormatDetectorTest extends TestCase
             "Podcast chapters first"     => ["{\"chapters\": [], \"version\": \"1.2.0\"}"],
             "FFmpeg metadata"            => [";FFMETADATA1\ntitle=Meetup\n"],
             "OGM with blank line"        => ["CHAPTER00 = 00:00:00.000\r\n\r\nCHAPTER00NAME=Intro\r\n"],
+            "Spruce STL"                 => ["00:00:01:10 , 00:00:03:10 , The bakery opens at seven.\n"],
+            "Spruce STL without spaces"  => ["00:00:01:10,00:00:03:10,The bakery opens at seven.\n"],
+            "two frame timecodes"        => ["00:00:01:10:00:00:03:10 Hello\n"],
             "Podcast chapters, not a transcript" => ["{\"version\": \"1.2.0\", \"chapters\": [{\"startTime\": 0, \"title\": \"Intro\"}]}"],
         ];
     }
@@ -257,6 +268,19 @@ class FormatDetectorTest extends TestCase
     public function testReturnsNullForUnknownContent(string $content): void
     {
         $this->assertNull(FormatDetector::detect($content));
+    }
+
+
+    public static function frameTimecodeFixtures(): array
+    {
+        return array_combine(self::FRAME_TIMECODE_FIXTURES, array_map(fn (string $name): array => [$name], self::FRAME_TIMECODE_FIXTURES));
+    }
+
+
+    #[DataProvider("frameTimecodeFixtures")]
+    public function testReturnsNullForFrameTimecodeFixtures(string $file): void
+    {
+        $this->assertNull(FormatDetector::detect(file_get_contents(self::DIR . $file)));
     }
 
 

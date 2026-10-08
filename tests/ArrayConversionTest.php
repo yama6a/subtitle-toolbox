@@ -21,6 +21,9 @@ class ArrayConversionTest extends TestCase
     // Format::detect() does not detect cloud speech-to-text JSON, so these fixtures load with the format of their directory.
     private const CLOUD_SPEECH = ["assemblyai", "aws-transcribe", "deepgram", "google-speech"];
 
+    // No parser reads Spruce STL or headerless CSV yet. FormatDetectorTest uses these fixtures.
+    private const UNREADABLE = ["csv/real/headerless_frame_times.csv", "spruce-stl/real/bakery.stl", "spruce-stl/real/bakery_with_header.stl"];
+
 
     private function bakery(): Subtitle
     {
@@ -154,7 +157,7 @@ class ArrayConversionTest extends TestCase
         $files = [];
         foreach (glob(self::DIR . "*/real/*.*") as $path) {
             $name = substr($path, strlen(self::DIR));
-            if (!str_ends_with($path, ".md") && !str_starts_with($name, "plaintext/")) {
+            if (!str_ends_with($path, ".md") && !str_starts_with($name, "plaintext/") && !in_array($name, self::UNREADABLE, true)) {
                 $files[$name] = [$name];
             }
         }

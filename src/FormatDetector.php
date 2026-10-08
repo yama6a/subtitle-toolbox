@@ -35,7 +35,7 @@ final class FormatDetector
         Format::Scc->value      => '/\AScenarist_SCC V1\.0[ \t]*$/m',
         Format::YouTubeTimedText->value => '/\A' . self::XML_PROLOG . '<(?:timedtext|transcript)[\s>\/]/s',
         Format::Mpl2->value     => '/\A\[\d+\]\[\d+\]/',
-        Format::TmPlayer->value => '/\A\d+:[0-5]\d:[0-5]\d(?:,\d+)?[:=]/',
+        Format::TmPlayer->value => '/\A\d+:[0-5]\d:[0-5]\d(?:,\d+)?(?:=|:(?!\d{1,2}[ \t]*,|\d+:\d\d:\d\d))/',   // not hh:mm:ss:ff frame timecodes, as in Spruce STL and CSV
         Format::HtmlTranscript->value => '/\A' . self::XML_PROLOG . '(?=<)(?=.*?<cite[\s>])(?=.*?<time[\s>])/is',   // last, as TTML, SAMI and YouTube XML can hold <cite> and <time>
     ];
 

@@ -44,12 +44,13 @@ Other content goes to the signatures of the text and binary formats. Detection c
 | 13 | `Scc` | `Scenarist_SCC V1.0` |
 | 14 | `YouTubeTimedText` | a `<timedtext>` or `<transcript>` root |
 | 15 | `Mpl2` | `[12][45]` |
-| 16 | `TmPlayer` | `00:00:01:`, `0:00:01=` or `00:00:01,1=` |
+| 16 | `TmPlayer` | `00:00:01:`, `0:00:01=` or `00:00:01,1=`, but not an `hh:mm:ss:ff` frame timecode such as `00:00:01:10,` |
 | 17 | `HtmlTranscript` | a tag at the start, and a `<cite>` and a `<time>` element |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line but with cue numbers looks like SubRip, so it detects as SubRip.
 - **`.sub` files**: SBV has three digits after the dot, SubViewer 2 has two.
 - **MicroDVD**: detection does not find the frame rate. `fromStringAutoDetectFormat()` throws `ParsingException` for a MicroDVD file without a `{1}{1}<fps>` first line. Then pass the frame rate: `Subtitle::fromString($content, Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(frameRate: 23.976)))`.
 - **iTT**: an iTT file detects as `Format::Ttml`. Pass `Format::Itt` to keep the iTT format data.
+- **Frame timecodes**: Spruce STL and CSV files that start with an `hh:mm:ss:ff` timecode give null, not TMPlayer.
 - **No signature**: CSV and TSV. Pass `Format::Csv` or `Format::Tsv`, see [formats.md](formats.md#csv-and-tsv). VobSub needs its `.idx` file, see [ocr.md](ocr.md#vobsub).
 - **Not detected**: chapters and cloud speech-to-text JSON look like other formats. `Format::detect()` returns null for them, and `isAutoDetected()` is false. Pass the format, for example `Subtitle::fromString($json, Format::Deepgram)`. `Format::fromPath()` finds only FFmpeg metadata, by its `.ffmeta` extension. The other formats share `.json` or `.txt` with formats that come first.
