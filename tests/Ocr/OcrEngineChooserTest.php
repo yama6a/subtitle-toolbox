@@ -68,7 +68,7 @@ class OcrEngineChooserTest extends TestCase
     public function testForcedTesseractThrowsWhenItIsMissing(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot run OCR with Tesseract - the program \"" . self::MISSING . "\" is missing! " .
+        $this->expectExceptionMessage("Cannot run OCR with Tesseract: the program \"" . self::MISSING . "\" is missing. " .
                                       "Install Tesseract with: apt install tesseract-ocr");
 
         OcrEngineChooser::choose(OcrEngineName::Tesseract, self::MISSING);
@@ -81,7 +81,7 @@ class OcrEngineChooserTest extends TestCase
         self::hideGlyphOcr();
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot run OCR with php-glyph-ocr - the package yama6a/php-glyph-ocr is missing! " .
+        $this->expectExceptionMessage("Cannot run OCR with php-glyph-ocr: the package yama6a/php-glyph-ocr is missing. " .
                                       "Install php-glyph-ocr with: composer require yama6a/php-glyph-ocr");
 
         OcrEngineChooser::choose(OcrEngineName::Glyph, self::FAKE);
@@ -95,8 +95,8 @@ class OcrEngineChooserTest extends TestCase
         $this->assertSame(OcrEngineName::Tesseract, OcrEngineChooser::choose(null, self::FAKE));
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot run OCR - neither Tesseract nor the package yama6a/php-glyph-ocr is " .
-                                      "installed! Install Tesseract with: apt install tesseract-ocr (Debian, Ubuntu), " .
+        $this->expectExceptionMessage("Cannot run OCR: neither Tesseract nor the package yama6a/php-glyph-ocr is " .
+                                      "installed. Install Tesseract with: apt install tesseract-ocr (Debian, Ubuntu), " .
                                       "apk add tesseract-ocr tesseract-ocr-data-eng (Alpine), dnf install tesseract (Fedora), brew install " .
                                       "tesseract (macOS), or the installer from https://github.com/UB-Mannheim/" .
                                       "tesseract/wiki (Windows). Or install php-glyph-ocr with: composer require " .

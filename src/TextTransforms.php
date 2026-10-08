@@ -45,7 +45,7 @@ trait TextTransforms
         if ($regex) {
             $pattern = $caseSensitive ? $search : $search[0] . "(?i)" . substr($search, 1);
             if (@preg_match($pattern, "") === false) {
-                throw new InvalidArgumentException("The regular expression $search is invalid: " . preg_last_error_msg());
+                throw new InvalidArgumentException("The regular expression \"$search\" is not valid: " . preg_last_error_msg() . ".");
             }
 
             return $this->textTransformsMapRuns(fn (string $text): string =>

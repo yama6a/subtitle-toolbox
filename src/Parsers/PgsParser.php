@@ -193,7 +193,7 @@ final class PgsParser extends SubtitleParser
                 throw new ParsingException("The first definition segment of object $id is cut off.");
             }
             ["width" => $width, "height" => $height] = unpack("nwidth/nheight", $data, 7);
-            self::checkSize($width, $height, "Object $id cannot be read:");
+            self::checkSize($width, $height, "read object $id");
             $this->objects[$id] = ["width" => $width, "height" => $height, "rle" => substr($data, 11)];
         } elseif (isset($this->objects[$id])) {
             $this->objects[$id]["rle"] .= substr($data, 4);
@@ -322,7 +322,7 @@ final class PgsParser extends SubtitleParser
         $bottom = max(array_map(fn (array $part): int => $part["y"] + $part["height"], $parts));
         $width  = $right - $left;
         $height = $bottom - $top;
-        self::checkSize($width, $height, "The objects of one display set cannot be joined:");
+        self::checkSize($width, $height, "join the objects of one display set");
 
         if (count($parts) === 1) {
             return [$left, $top, $width, $height, $parts[0]["rgba"]];
@@ -418,10 +418,10 @@ final class PgsParser extends SubtitleParser
     }
 
 
-    private static function checkSize(int $width, int $height, string $what): void
+    private static function checkSize(int $width, int $height, string $action): void
     {
         try {
-            CueImage::checkSize($width, $height, $what);
+            CueImage::checkSize($width, $height, $action);
         } catch (InvalidArgumentException $exception) {
             throw new ParsingException($exception->getMessage());
         }

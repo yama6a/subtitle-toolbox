@@ -256,7 +256,7 @@ final class SubViewerParser extends SubtitleParser
     private function headerTag(string $line, int $lineNumber, string $problem): array
     {
         if (!preg_match(self::TAG_REGEX, $line, $matches)) {
-            throw new ParsingException("Line $lineNumber $problem: $line", $lineNumber);
+            throw new ParsingException("The line \"$line\" $problem.", $lineNumber);
         }
 
         return $matches;
@@ -281,7 +281,7 @@ final class SubViewerParser extends SubtitleParser
     {
         if ($skipped !== null) {
             [$lineNumber, $cueIndex, $block] = $skipped;
-            $this->warn("Line $lineNumber is a timing line with a bad time: $block[0]", $lineNumber, $cueIndex, $block, ParseWarningAction::Skipped);
+            $this->warn("The timing line \"$block[0]\" has a time that is not valid.", $lineNumber, $cueIndex, $block, ParseWarningAction::Skipped);
         }
     }
 

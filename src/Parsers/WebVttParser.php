@@ -36,7 +36,7 @@ final class WebVttParser extends SubtitleParser
         $rawSubtitle  = trim($rawSubtitle);
 
         if (!str_starts_with($rawSubtitle, "WEBVTT")) {
-            throw new ParsingException("The file doesn't start with the string WEBVTT!");
+            throw new ParsingException("The file does not start with WEBVTT.", $leadingLines + 1);
         }
 
         $lines      = array_merge(array_fill(0, $leadingLines, ""), $this->lines($rawSubtitle));
@@ -49,7 +49,7 @@ final class WebVttParser extends SubtitleParser
         foreach ($this->numberedBlocks($lines) as $lineNumber => $rawLines) {
             $idx = $count++;
             if ($idx === 0) {
-                $fileData = $this->parseHeader($rawLines);
+                $fileData = $this->parseHeader($rawLines, $lineNumber);
                 continue;
             }
 
@@ -83,7 +83,7 @@ final class WebVttParser extends SubtitleParser
         try {
             switch (true) {
                 case str_contains($rawLines[0], "-->") || str_contains($rawLines[1] ?? "", "-->"):
-                    return $this->parseCueBlock($rawLines, $idx);
+                    return $this->parseCueBlock($rawLines, $idx, $lineNumber);
                 case $this->startsWithKeyword($firstLine, "NOTE"):
                     return $this->parseComment($rawLines);
                 case !$seenCue && $firstLine === "STYLE":
@@ -96,7 +96,7 @@ final class WebVttParser extends SubtitleParser
                     // The spec parser ignores every block that is not a cue, so these blocks do not throw.
                     break;
                 default:
-                    throw new ParsingException("Block #$idx doesn't match anything that we can parse as a WebVTT cue!");
+                    throw new ParsingException("Block #$idx is not a WebVTT cue, comment, style or region.", $lineNumber);
             }
         } catch (ParsingException $exception) {
             $this->fail($exception, $lineNumber, $idx, $rawLines);
@@ -143,7 +143,7 @@ final class WebVttParser extends SubtitleParser
             }
 
             $this->warn(
-                "No empty line found after the first line containing WEBVTT! The parser split the header block at line " .
+                "The WEBVTT header has no empty line before the first cue. The parser split the header block at line " .
                 ($lineNumber + $timingOffset) . ".",
                 $lineNumber + $timingOffset,
                 0,
@@ -211,11 +211,11 @@ final class WebVttParser extends SubtitleParser
 
 
     /**
-     * Returns the file format data of the header block that starts with WEBVTT.
+     * Returns the file format data of the header block that starts with WEBVTT on line $lineNumber.
      *
      * @internal
      */
-    public function parseHeader(array $rawLines): array
+    public function parseHeader(array $rawLines, int $lineNumber = 1): array
     {
         $fileData   = [];
         $headerText = trim(substr($rawLines[0], 6));
@@ -224,9 +224,9 @@ final class WebVttParser extends SubtitleParser
         }
 
         $headerLines = array_slice($rawLines, 1);
-        foreach ($headerLines as $line) {
+        foreach ($headerLines as $offset => $line) {
             if (str_contains($line, "-->")) {
-                throw new ParsingException("No empty line found after the first line containing WEBVTT!");
+                throw new ParsingException("The WEBVTT header has no empty line before the first cue.", $lineNumber + 1 + $offset);
             }
         }
         if ($headerLines !== []) {
@@ -242,9 +242,9 @@ final class WebVttParser extends SubtitleParser
      *
      * @internal
      */
-    public function parseCueBlock(array $rawLines, int $index): SubtitleCue
+    public function parseCueBlock(array $rawLines, int $index, ?int $lineNumber = null): SubtitleCue
     {
-        return $this->parseCue($this->cleanLines($rawLines), $index);
+        return $this->parseCue($this->cleanLines($rawLines), $index, $lineNumber);
     }
 
 
@@ -254,26 +254,26 @@ final class WebVttParser extends SubtitleParser
     }
 
 
-    private function parseCue(array $rawLines, int $index): SubtitleCue
+    private function parseCue(array $rawLines, int $index, ?int $lineNumber): SubtitleCue
     {
         if (str_contains($rawLines[1] ?? "", "-->")) {
             $identifier = $rawLines[0];
             $rawLines   = array_slice($rawLines, 1);
         }
         if (count($rawLines) < 2) {
-            throw new ParsingException("Block #$index doesn't have any text lines!");
+            throw new ParsingException("Block #$index has no text lines.", $lineNumber);
         }
 
         $times = explode("-->", $rawLines[0], 2);
         $end   = trim($times[1]);
         if (!preg_match("/^(" . self::TIMESTAMP_PATTERN . ")([ \t]+(.*))?$/", $end, $matches)) {
-            throw new ParsingException("The time-string of at least one cue could not be parsed: $end");
+            throw new ParsingException("The time \"$end\" is not valid.", $lineNumber);
         }
 
         $lines = str_replace(array_keys(self::ENTITIES), array_values(self::ENTITIES), array_slice($rawLines, 1));
         $cue   = new SubtitleCue(
-            $this->secondsFromString($times[0]),
-            $this->secondsFromString($matches[1]),
+            $this->secondsFromString($times[0], $lineNumber),
+            $this->secondsFromString($matches[1], $lineNumber),
             $lines
         );
         $cue->setIdentifier($identifier ?? null);
@@ -286,11 +286,11 @@ final class WebVttParser extends SubtitleParser
     }
 
 
-    private function secondsFromString(string $timeString): float
+    private function secondsFromString(string $timeString, ?int $lineNumber): float
     {
         $timeString = trim($timeString);
         if (!preg_match("/^" . self::TIMESTAMP_PATTERN . "$/", $timeString, $matches)) {
-            throw new ParsingException("The time-string of at least one cue could not be parsed: $timeString");
+            throw new ParsingException("The time \"$timeString\" is not valid.", $lineNumber);
         }
 
         return Timecode::toSeconds((int) $matches[2], (int) $matches[3], (int) $matches[4], $matches[5]);

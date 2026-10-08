@@ -42,7 +42,7 @@ final class ShotChanges
             } elseif (preg_match('/^(\d+):([0-5]\d):([0-5]\d)(?:\.(\d+))?$/', $line, $parts)) {
                 $times[] = Timecode::toSeconds((int) $parts[1], (int) $parts[2], (int) $parts[3], $parts[4] ?? "");
             } else {
-                throw new ParsingException("Cannot read the shot change time \"$line\" - use seconds or hh:mm:ss.mmm.",
+                throw new ParsingException("The shot change time \"$line\" is not valid. Use seconds or hh:mm:ss.mmm.",
                                            $index + 1);
             }
         }

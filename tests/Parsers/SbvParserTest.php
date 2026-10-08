@@ -99,7 +99,7 @@ class SbvParserTest extends TestCase
     public function testExceededMinutesThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("timeString-string of at least one cue could not be parsed: 0:60:04.000");
+        $this->expectExceptionMessage("The time \"0:60:04.000\" is not valid.");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sbv/exceeded_minutes.sbv"), Format::Sbv);
     }
 
@@ -107,7 +107,7 @@ class SbvParserTest extends TestCase
     public function testExceededSecondsThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("timeString-string of at least one cue could not be parsed: 0:00:60.000");
+        $this->expectExceptionMessage("The time \"0:00:60.000\" is not valid.");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sbv/exceeded_seconds.sbv"), Format::Sbv);
     }
 
@@ -115,7 +115,7 @@ class SbvParserTest extends TestCase
     public function testMissingMilliDigitsThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("timeString-string of at least one cue could not be parsed: 0:00:01.5");
+        $this->expectExceptionMessage("The time \"0:00:01.5\" is not valid.");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sbv/missing_milli_digits.sbv"), Format::Sbv);
     }
 
@@ -123,7 +123,7 @@ class SbvParserTest extends TestCase
     public function testSubRipTimestampsThrowException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Block #0 doesn't seem to have its timestamps on its first line");
+        $this->expectExceptionMessage("Block #0 has no timing line on its first line");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sbv/srt_timestamps.sbv"), Format::Sbv);
     }
 
@@ -131,7 +131,7 @@ class SbvParserTest extends TestCase
     public function testMissingTimestampsThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Block #1 doesn't seem to have its timestamps on its first line");
+        $this->expectExceptionMessage("Block #1 has no timing line on its first line");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sbv/missing_timestamps.sbv"), Format::Sbv);
     }
 
@@ -139,7 +139,7 @@ class SbvParserTest extends TestCase
     public function testMissingTextThrowsException(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Block #1 doesn't have any text lines");
+        $this->expectExceptionMessage("Block #1 has no text lines");
         Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sbv/missing_text.sbv"), Format::Sbv);
     }
 

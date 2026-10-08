@@ -413,12 +413,12 @@ final class Subtitle implements \IteratorAggregate, \Countable
         if ($format === Format::MicroDvd && ($formatOptions === null || ($formatOptions instanceof MicroDvdWriteOptions && $formatOptions->frameRate === null))) {
             $formatOptions = OptionsCopy::with($formatOptions ?? new MicroDvdWriteOptions(), [
                 "frameRate" => $this->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
-                    ?? throw new InvalidArgumentException("MicroDVD output needs the frame rate of the video. Pass MicroDvdWriteOptions::frameRate."),
+                    ?? throw new InvalidArgumentException("MicroDVD output needs the frame rate of the video. Set MicroDvdWriteOptions::\$frameRate."),
             ]);
         }
         if ($format === Format::Itt && ($formatOptions === null || ($formatOptions instanceof IttWriteOptions && $formatOptions->frameRate === null))
             && !isset($this->findFormatData(IttParser::FORMAT_DATA_KEY)["frameRate"])) {
-            throw new InvalidArgumentException("iTT output needs the frame rate of the video. Pass IttWriteOptions::frameRate.");
+            throw new InvalidArgumentException("iTT output needs the frame rate of the video. Set IttWriteOptions::\$frameRate.");
         }
 
         return $formatOptions === $options->format ? $options : OptionsCopy::with($options, ["format" => $formatOptions]);
@@ -471,7 +471,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     public function removeCue(int $cueIndex): self
     {
         if (!array_key_exists($cueIndex, $this->cues)) {
-            throw new CueNotFoundException("Cannot remove cue $cueIndex - cue not found!");
+            throw new CueNotFoundException("Cannot remove cue $cueIndex: the cue does not exist.");
         }
 
         unset($this->cues[$cueIndex]);
@@ -588,8 +588,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     public function addComment(string $text, int $beforeCueIndex): self
     {
         if ($beforeCueIndex < 0) {
-            throw new InvalidArgumentException("Cannot add a comment before cue $beforeCueIndex - " .
-                                                "the cue index must not be negative!");
+            throw new InvalidArgumentException("The cue index of a comment must not be negative, got $beforeCueIndex.");
         }
 
         $this->comments = CommentAnchors::sorted([...$this->comments, new Comment($text, $beforeCueIndex)]);

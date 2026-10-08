@@ -26,8 +26,7 @@ final class PaletteReducer
     public static function reduce(array $pixels, int $maxColors = self::MAX_COLORS): array
     {
         if ($maxColors < 2 || $maxColors > self::MAX_COLORS) {
-            throw new InvalidArgumentException("Cannot reduce a palette to $maxColors colors - " .
-                                               "the count must be from 2 to " . self::MAX_COLORS . "!");
+            throw new InvalidArgumentException("The color count must be from 2 to " . self::MAX_COLORS . ", got $maxColors.");
         }
 
         $counts = array_count_values($pixels);

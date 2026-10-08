@@ -169,7 +169,7 @@ final class SccParser extends SubtitleParser
             }
 
             if (!preg_match("/^(\d{2}):(\d{2}):(\d{2})([:;])(\d{2})(?:\s+(.*))?$/", $rawLine, $matches)) {
-                throw new ParsingException("The SCC line does not start with a time code: $rawLine", $lineNumber + 1);
+                throw new ParsingException("The SCC line \"$rawLine\" does not start with a time code.", $lineNumber + 1);
             }
 
             $lineDropFrame = $matches[4] === ";";

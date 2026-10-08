@@ -24,16 +24,13 @@ final readonly class GoogleTranslateOptions
         public ?HttpClient $httpClient = null,
     ) {
         if (trim($apiKey) === "") {
-            throw new InvalidArgumentException("Cannot create GoogleTranslateOptions with an empty API key - pass the key of " .
-                                               "your Google Cloud project!");
+            throw new InvalidArgumentException("The API key must not be empty. Pass the key of your Google Cloud project.");
         }
         if (trim($apiKey) !== $apiKey || preg_match('/[\x00-\x1F\x7F]/', $apiKey) === 1) {
-            throw new InvalidArgumentException("Cannot create GoogleTranslateOptions with this API key - the key has a control " .
-                                               "character, or a space at the start or end!");
+            throw new InvalidArgumentException("The API key must not have a control character, or a space at the start or end.");
         }
         if ($baseUrl !== null && preg_match('#^https?://[^/]#i', $baseUrl) !== 1) {
-            throw new InvalidArgumentException("Cannot create GoogleTranslateOptions with the base URL \"$baseUrl\" - " .
-                                               "the URL must start with http:// or https://!");
+            throw new InvalidArgumentException("The base URL must start with http:// or https://, got \"$baseUrl\".");
         }
     }
 }

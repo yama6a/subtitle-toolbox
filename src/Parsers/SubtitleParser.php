@@ -84,11 +84,11 @@ abstract class SubtitleParser
     {
         $class = static::formatOptionsClass();
         if ($options->format !== null && ($class === null || !$options->format instanceof $class)) {
-            throw new InvalidArgumentException(sprintf(
-                "%s does not read %s.",
-                $this->shortName(static::class),
-                $this->shortName($options->format::class)
-            ));
+            $parser = $this->shortName(static::class);
+            $given  = $this->shortName($options->format::class);
+            throw new InvalidArgumentException($class === null
+                ? "$parser takes no format options, got $given."
+                : "$parser takes " . $this->shortName($class) . ", got $given.");
         }
 
         $this->options       = $options;

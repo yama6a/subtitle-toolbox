@@ -307,13 +307,13 @@ class VobSubParserTest extends TestCase
             "no palette"            => ["# VobSub index file, v7\nsize: 720x576\nid: en, index: 0\n", null,
                                         "The .idx content has no palette line."],
             "short palette"         => [self::IDX_HEADER . "palette: 000000, ffffff\n", null,
-                                        "The .idx line needs 16 colors as hex RGB: palette: 000000, ffffff"],
+                                        "The .idx line \"palette: 000000, ffffff\" needs 16 colors as hex RGB."],
             "no track"              => [self::IDX_HEADER, null, "The .idx content has no \"id:\" line."],
             "unknown language"      => [self::IDX_HEADER . "id: en, index: 0\n", "fr", "The .idx content has no track with language \"fr\"."],
             "timestamp before id"   => [self::IDX_HEADER . "timestamp: 00:00:01:000, filepos: 000000000\n", null,
-                                        "The .idx timestamp line comes before any id line: timestamp: 00:00:01:000, filepos: 000000000"],
+                                        "The .idx timestamp line \"timestamp: 00:00:01:000, filepos: 000000000\" comes before any id line."],
             "invalid timestamp"     => [self::IDX_HEADER . "id: en, index: 0\ntimestamp: 1.5, filepos: 0\n", null,
-                                        "The .idx time is invalid: timestamp: 1.5, filepos: 0"],
+                                        "The .idx time \"timestamp: 1.5, filepos: 0\" is not valid."],
         ];
     }
 
@@ -345,7 +345,7 @@ class VobSubParserTest extends TestCase
     public function testWithoutVobSubReadOptionsThrows(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("VobSub needs the .idx content in VobSubReadOptions.");
+        $this->expectExceptionMessage("VobSub needs the .idx content. Set VobSubReadOptions::\$idx.");
 
         Subtitle::fromString(file_get_contents(self::DIR . "two-tracks-pal.sub"), Format::VobSub);
     }

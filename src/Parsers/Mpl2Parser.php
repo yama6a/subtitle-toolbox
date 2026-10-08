@@ -29,7 +29,7 @@ final class Mpl2Parser extends SubtitleParser
                 $parsedCues[] = new SubtitleCue((int) $matches[1] / 10, (int) $matches[2] / 10, $this->parseText($matches[3]));
             } else {
                 $lineNumber = $lineIndex + 1;
-                $this->fail(new ParsingException("Line $lineNumber is not an MPL2 cue: $rawLine", $lineNumber), $lineNumber, $blockIndex, [$rawLine]);
+                $this->fail(new ParsingException("The line \"$rawLine\" is not an MPL2 cue.", $lineNumber), $lineNumber, $blockIndex, [$rawLine]);
             }
             $blockIndex++;
         }

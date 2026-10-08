@@ -29,7 +29,7 @@ final class TmPlayerParser extends SubtitleParser
             $blockIndex++;
             if (!preg_match(self::LINE_REGEX, $rawLine, $matches)) {
                 $lineNumber = $lineIndex + 1;
-                $this->fail(new ParsingException("Line $lineNumber is not a TMPlayer line: $rawLine", $lineNumber), $lineNumber, $blockIndex, [$rawLine]);
+                $this->fail(new ParsingException("The line \"$rawLine\" is not a TMPlayer line.", $lineNumber), $lineNumber, $blockIndex, [$rawLine]);
                 continue;
             }
 

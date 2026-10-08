@@ -39,7 +39,7 @@ final class HlsSegmentOptions
         $placeholders = str_replace("%%", "", $fileNamePattern);
         if (substr_count($placeholders, "%") !== 1 || preg_match("/%\d*d/", $placeholders) !== 1) {
             throw new InvalidArgumentException("The file name pattern must hold exactly one %d and no other " .
-                                               "placeholder, got $fileNamePattern.");
+                                               "placeholder, got \"$fileNamePattern\".");
         }
 
         if ($mediaDuration !== null && (!is_finite($mediaDuration) || round($mediaDuration, 3) <= 0)) {

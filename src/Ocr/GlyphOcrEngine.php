@@ -38,8 +38,8 @@ final class GlyphOcrEngine implements OcrEngine
     public function __construct(?GlyphOcrOptions $options = null)
     {
         $options ??= new GlyphOcrOptions();
-        Dependency::check(Recognizer::class, "Cannot create a GlyphOcrEngine - the package " . self::PACKAGE .
-                                             " is missing! Install it with: " . self::INSTALL_COMMAND);
+        Dependency::check(Recognizer::class, "Cannot create a GlyphOcrEngine: the package " . self::PACKAGE .
+                                             " is missing. Install it with: " . self::INSTALL_COMMAND);
 
         $this->database   = $options->database ?? self::subtitleFontsDatabase();
         $this->recognizer = new Recognizer(
@@ -65,8 +65,8 @@ final class GlyphOcrEngine implements OcrEngine
         try {
             $result = $this->recognizer->recognize(Image::fromPng($image->png));
         } catch (GlyphOcrException $exception) {
-            throw new OcrException("Cannot read the cue image at {$image->x}, {$image->y} - the " .
-                                   "recognizer says: " . $exception->getMessage(), $exception);
+            throw new OcrException("The recognizer fails on the cue image at {$image->x}, {$image->y}: " .
+                                   $exception->getMessage(), $exception);
         }
 
         return self::toRecognizedText($result);

@@ -90,7 +90,7 @@ final class EbuStlParser extends SubtitleParser
             if ($this->options->lenient && !self::hasValidTimeCodes($header, $frameRate)) {
                 $this->warn(
                     "Subtitle number " . unpack("v", $header, 1)[1] . " has a time code that is not valid: " .
-                    EbuStl::timeCodeDigits(substr($header, 5, 4)) . " to " . EbuStl::timeCodeDigits(substr($header, 9, 4)),
+                    EbuStl::timeCodeDigits(substr($header, 5, 4)) . " to " . EbuStl::timeCodeDigits(substr($header, 9, 4)) . ".",
                     null,
                     $blockIndex - count($blocks),
                     $hexes,

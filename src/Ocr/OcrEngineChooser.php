@@ -25,10 +25,10 @@ final class OcrEngineChooser
             $engine === OcrEngineName::Tesseract && !$tesseract
                 => TesseractOcrEngine::missingProgramMessage($tesseractProgram),
             $engine === OcrEngineName::Glyph && !$glyph
-                => "Cannot run OCR with php-glyph-ocr - the package " . GlyphOcrEngine::PACKAGE . " is missing! " .
+                => "Cannot run OCR with php-glyph-ocr: the package " . GlyphOcrEngine::PACKAGE . " is missing. " .
                    self::GLYPH_INSTALL_HINT,
             $engine === null && !$tesseract && !$glyph
-                => "Cannot run OCR - neither Tesseract nor the package " . GlyphOcrEngine::PACKAGE . " is installed! " .
+                => "Cannot run OCR: neither Tesseract nor the package " . GlyphOcrEngine::PACKAGE . " is installed. " .
                    TesseractOcrEngine::INSTALL_HINT . " Or " . lcfirst(self::GLYPH_INSTALL_HINT),
             default => null,
         };

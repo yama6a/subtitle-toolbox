@@ -96,7 +96,7 @@ final class LyricsParser extends SubtitleParser
 
             if (preg_match("/^\[\d/", $line) && !preg_match(self::TIMESTAMP_LINE_REGEX, $line)) {
                 $lineNumber = $lineIndex + 1;
-                $this->warn("Line $lineNumber has a time tag that could not be parsed: $line", $lineNumber, $blockIndex, [$line], ParseWarningAction::Skipped);
+                $this->warn("The line \"$line\" has a time tag that is not valid.", $lineNumber, $blockIndex, [$line], ParseWarningAction::Skipped);
             }
             $blockIndex++;
         }

@@ -60,7 +60,7 @@ final class TtmlParser extends SubtitleParser
         $this->namespace = $this->root->namespaceURI;
         if ($this->root->localName !== "tt"
             || !in_array($this->namespace, [TtmlNamespaces::TTML, TtmlNamespaces::DFXP, null], true)) {
-            throw new ParsingException("The root element is not a TTML <tt> element!");
+            throw new ParsingException("The root element is not a TTML <tt> element.");
         }
 
         $this->readTimingParameters();
@@ -134,7 +134,7 @@ final class TtmlParser extends SubtitleParser
             };
         }
 
-        throw new ParsingException("The time expression \"$expression\" could not be parsed!");
+        throw new ParsingException("The time expression \"$expression\" is not valid.");
     }
 
 
@@ -156,10 +156,10 @@ final class TtmlParser extends SubtitleParser
     private function loadDocument(string $xml): DOMDocument
     {
         if (trim($xml) === "") {
-            throw new ParsingException("The file is empty!");
+            throw new ParsingException("The file is empty.");
         }
 
-        return XmlLoader::xml($xml) ?? throw new ParsingException("The file is not well-formed XML!");
+        return XmlLoader::xml($xml) ?? throw new ParsingException("The file is not well-formed XML.");
     }
 
 
@@ -256,7 +256,7 @@ final class TtmlParser extends SubtitleParser
     ): SubtitleCue {
         [$begin, $end] = $this->interval($paragraph, $parentBegin, $parentEnd);
         if ($end === null) {
-            throw new ParsingException("The paragraph that begins at {$begin}s has no end time!");
+            throw new ParsingException("The paragraph that begins at {$begin}s has no end time.");
         }
 
         $style = $this->resolveStyle($paragraph, ["b" => false, "i" => false, "u" => false, "s" => false, "color" => null]);

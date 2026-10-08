@@ -19,7 +19,7 @@ final class SbvParser extends SubtitleParser
         $idx        = 0;
         foreach ($this->splitAtEmptyLines($this->lines($rawSubtitle)) as $lineNumber => $rawLines) {
             $cues = $this->parseRepairedBlock($rawLines, $lineNumber, $idx, $this->isTimingLine(...), false,
-                                              fn (array $part): SubtitleCue => $this->parseCueBlock($part, $idx));
+                                              fn (array $part, int $partLine): SubtitleCue => $this->parseCueBlock($part, $idx, $partLine));
             array_push($parsedCues, ...$cues);
             $idx++;
         }
@@ -28,21 +28,21 @@ final class SbvParser extends SubtitleParser
     }
 
 
-    private function parseCueBlock(array $rawLines, int $idx): SubtitleCue
+    private function parseCueBlock(array $rawLines, int $idx, int $lineNumber): SubtitleCue
     {
         if (substr_count($rawLines[0], ",") !== 1) {
-            throw new ParsingException("Block #$idx doesn't seem to have its timestamps on its first line!");
+            throw new ParsingException("Block #$idx has no timing line on its first line.", $lineNumber);
         }
 
         if (count($rawLines) < 2) {
-            throw new ParsingException("Block #$idx doesn't have any text lines!");
+            throw new ParsingException("Block #$idx has no text lines.", $lineNumber);
         }
 
         $times = explode(",", $rawLines[0]);
 
         return new SubtitleCue(
-            $this->secondsFromString($times[0]),
-            $this->secondsFromString($times[1]),
+            $this->secondsFromString($times[0], $lineNumber),
+            $this->secondsFromString($times[1], $lineNumber),
             array_map(Markup::escapeText(...), array_slice($rawLines, 1))
         );
     }
@@ -54,11 +54,11 @@ final class SbvParser extends SubtitleParser
     }
 
 
-    private function secondsFromString(string $timeString): float
+    private function secondsFromString(string $timeString, int $lineNumber): float
     {
         $timeString = trim($timeString);
         if (!preg_match("/^(\d+):([0-5]\d):([0-5]\d)\.(\d{3})$/", $timeString, $matches)) {
-            throw new ParsingException("The timeString-string of at least one cue could not be parsed: $timeString");
+            throw new ParsingException("The time \"$timeString\" is not valid.", $lineNumber);
         }
 
         return Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]);

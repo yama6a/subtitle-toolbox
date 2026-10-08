@@ -176,7 +176,7 @@ class BinaryOptionCoverageTest extends BinaryTestCase
         file_put_contents("$this->dir/late.srt", Subtitle::load(self::STATION, Format::SubRip)->shift(2)->toString(Format::SubRip));
 
         $this->assertSame([3, "2 files: 0 succeeded, 1 failed, 1 skipped.\n",
-                           "broken.srt: ParsingException (Error #100): Block #1 doesn't seem to have its timestamps on its second line!\n" .
+                           "broken.srt: ParsingException (Error #100): Block #1 has no timing line on its second line. (line 5)\n" .
                            "Stopped at the first failure. Pass --keep-going to process the other files.\n"],
                           $this->runBinary([$command, "broken.srt", "station.srt", ...$options, "--output-dir", "out"]));
         $this->assertDirectoryDoesNotExist("$this->dir/out");

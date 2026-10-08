@@ -44,7 +44,7 @@ class SubtitleTest extends \PHPUnit\Framework\TestCase
         $subtitle = new Subtitle();
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage("cue not found");
+        $this->expectExceptionMessage("the cue does not exist");
         $subtitle->removeCue(123);
 
     }

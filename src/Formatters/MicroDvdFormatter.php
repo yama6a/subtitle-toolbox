@@ -27,7 +27,7 @@ final class MicroDvdFormatter extends SubtitleFormatter
         $microDvd  = $this->formatOptions($options);
         $frameRate = new FrameRate($microDvd->frameRate
             ?? $subtitle->findFormatData(MicroDvdParser::FORMAT_DATA_KEY)["frameRate"]
-            ?? throw new InvalidArgumentException("The MicroDVD formatter needs MicroDvdWriteOptions with a frame rate."));
+            ?? throw new InvalidArgumentException("The MicroDVD formatter needs a frame rate. Set MicroDvdWriteOptions::\$frameRate."));
         $stripAll  = $options->stripTags;
 
         $output = "";

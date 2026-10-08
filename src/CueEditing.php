@@ -130,13 +130,13 @@ trait CueEditing
     {
         $cue = $this->getEditableCue($index);
         if ($at <= $cue->getStart() || $at >= $cue->getEnd()) {
-            throw new InvalidArgumentException("Cannot split cue $index at $at - the time must be after the cue " .
+            throw new InvalidArgumentException("Cannot split cue $index at $at: the time must be after the cue " .
                                                "start {$cue->getStart()} and before the cue end {$cue->getEnd()}.");
         }
 
         $lines = $cue->getLines();
         if ($splitAfterLine < 1 || $splitAfterLine >= count($lines)) {
-            throw new InvalidArgumentException("Cannot split cue $index after line $splitAfterLine - " .
+            throw new InvalidArgumentException("Cannot split cue $index after line $splitAfterLine: " .
                                                "the cue has " . count($lines) . " lines.");
         }
 
@@ -165,7 +165,7 @@ trait CueEditing
     public function joinCues(int $first, int $last): self
     {
         if ($first >= $last) {
-            throw new InvalidArgumentException("Cannot join cues $first to $last - the first index must be " .
+            throw new InvalidArgumentException("Cannot join cues $first to $last: the first index must be " .
                                                "lower than the last index.");
         }
         $this->getEditableCue($first);
@@ -238,7 +238,7 @@ trait CueEditing
     private function getEditableCue(int $index): SubtitleCue
     {
         if (!array_key_exists($index, $this->cues)) {
-            throw new InvalidArgumentException("Cannot edit cue $index - cue not found!");
+            throw new InvalidArgumentException("Cannot edit cue $index: the cue does not exist.");
         }
 
         return $this->cues[$index];

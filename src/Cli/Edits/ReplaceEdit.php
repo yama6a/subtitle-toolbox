@@ -63,7 +63,7 @@ final class ReplaceEdit extends Edit
             }
             [$from, $to] = explode("=", $pair, 2);
             if ($arguments->has("replace-regex") && @preg_match($from, "") === false) {
-                Command::fail("The option --replace has an invalid regular expression: $from");
+                Command::fail("The option --replace has the invalid regular expression \"$from\".");
             }
             $replacements[] = [$from, $to];
         }

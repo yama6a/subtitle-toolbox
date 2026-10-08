@@ -20,12 +20,12 @@ final class PngEncoder
     public static function encode(int $width, int $height, array $pixels, bool $compress = true): string
     {
         if ($width < 1 || $height < 1) {
-            throw new InvalidArgumentException("Cannot encode a PNG of {$width}x{$height} pixels - " .
-                                               "the width and the height must be at least 1!");
+            throw new InvalidArgumentException("Cannot encode a PNG of {$width}x{$height} pixels: " .
+                                               "the width and the height must be at least 1.");
         }
         if (count($pixels) !== $width * $height) {
             throw new InvalidArgumentException("Cannot encode a PNG of {$width}x{$height} pixels from " .
-                                               count($pixels) . " pixels - the counts must match!");
+                                               count($pixels) . " pixels: the counts must match.");
         }
 
         $pixels    = array_values($pixels);

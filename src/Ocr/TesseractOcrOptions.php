@@ -38,15 +38,13 @@ final readonly class TesseractOcrOptions
     ) {
         $this->language = $language instanceof OcrLanguage ? $language->value : $language;
         if ($pageSegmentationMode < 0 || $pageSegmentationMode > 13) {
-            throw new InvalidArgumentException("Cannot create TesseractOcrOptions with page segmentation mode " .
-                                               "$pageSegmentationMode - the mode must be from 0 to 13!");
+            throw new InvalidArgumentException("The page segmentation mode must be from 0 to 13, got $pageSegmentationMode.");
         }
         if ($scale !== null) {
-            OptionChecks::between($scale, 1, 8, "Cannot create TesseractOcrOptions with scale %s - the scale must be from 1 to 8!");
+            OptionChecks::between($scale, 1, 8, "The scale must be from 1 to 8, got %s.");
         }
         if ($threshold !== null && ($threshold < 1 || $threshold > 255)) {
-            throw new InvalidArgumentException("Cannot create TesseractOcrOptions with threshold $threshold - the " .
-                                               "threshold must be from 1 to 255!");
+            throw new InvalidArgumentException("The threshold must be from 1 to 255, got $threshold.");
         }
     }
 }

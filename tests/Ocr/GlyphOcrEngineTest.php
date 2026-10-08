@@ -219,12 +219,12 @@ class GlyphOcrEngineTest extends TestCase
     public static function invalidOptions(): array
     {
         return [
-            "ink threshold 0"   => [fn () => new GlyphOcrOptions(inkThreshold: 0), "ink threshold 0 - it must be from 1 to 765"],
-            "ink threshold 766" => [fn () => new GlyphOcrOptions(inkThreshold: 766), "ink threshold 766 - it must be from 1 to 765"],
-            "space width 0"     => [fn () => new GlyphOcrOptions(spaceWidth: 0), "space width 0 - it must be at least 1"],
-            "wrong pixels -1"   => [fn () => new GlyphOcrOptions(maxWrongPixels: -1), "-1 wrong pixels - the number must be at least 0"],
-            "italic slant -0.1" => [fn () => new GlyphOcrOptions(italicSlant: -0.1), "italic slant -0.1 - it must be from 0 to 1"],
-            "line height 0"     => [fn () => new GlyphOcrOptions(minLineHeight: 0), "minimum line height 0 - it must be at least 1"],
+            "ink threshold 0"   => [fn () => new GlyphOcrOptions(inkThreshold: 0), "The ink threshold must be from 1 to 765, got 0."],
+            "ink threshold 766" => [fn () => new GlyphOcrOptions(inkThreshold: 766), "The ink threshold must be from 1 to 765, got 766."],
+            "space width 0"     => [fn () => new GlyphOcrOptions(spaceWidth: 0), "The space width must be at least 1, got 0."],
+            "wrong pixels -1"   => [fn () => new GlyphOcrOptions(maxWrongPixels: -1), "The number of wrong pixels must be at least 0, got -1."],
+            "italic slant -0.1" => [fn () => new GlyphOcrOptions(italicSlant: -0.1), "The italic slant must be from 0 to 1, got -0.1."],
+            "line height 0"     => [fn () => new GlyphOcrOptions(minLineHeight: 0), "The minimum line height must be at least 1, got 0."],
         ];
     }
 
@@ -233,7 +233,7 @@ class GlyphOcrEngineTest extends TestCase
     public function testInvalidOptionThrows(Closure $create, string $message): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Cannot create GlyphOcrOptions with $message!");
+        $this->expectExceptionMessage($message);
 
         $create();
     }
@@ -242,7 +242,7 @@ class GlyphOcrEngineTest extends TestCase
     public function testImageThatIsNoPngThrows(): void
     {
         $this->expectException(OcrException::class);
-        $this->expectExceptionMessage("Cannot read the cue image at 3, 4 - the recognizer says: Cannot decode the PNG");
+        $this->expectExceptionMessage("The recognizer fails on the cue image at 3, 4: Cannot decode the PNG");
 
         (new GlyphOcrEngine())->recognize(new CueImage("no png", 3, 4, 1, 1, 720, 576), null);
     }
@@ -261,7 +261,7 @@ class GlyphOcrEngineTest extends TestCase
         }
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("the package yama6a/php-glyph-ocr is missing! " .
+        $this->expectExceptionMessage("the package yama6a/php-glyph-ocr is missing. " .
                                       "Install it with: composer require yama6a/php-glyph-ocr");
 
         new GlyphOcrEngine();
