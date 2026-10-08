@@ -268,6 +268,52 @@ class LyricsParserTest extends TestCase
     }
 
 
+    public static function timeTagShapes(): array
+    {
+        return [
+            "spaces inside the brackets" => ["spaces_in_time_tags.lrc", [
+                [12.0, 15.5, "The boats come home at dusk"],
+                [15.5, 20.5, "Gulls follow every one"],
+            ]],
+            "hours and text on the next line" => ["hours_with_text_on_next_line.lrc", [
+                [155.0, 171.0, "The boats come home at dusk"],
+                [171.0, 176.0, "Gulls follow every one"],
+            ]],
+            "1-digit fraction" => ["one_digit_fraction.lrc", [
+                [12.5, 15.25, "The boats come home at dusk"],
+                [15.25, 20.25, "Gulls follow every one"],
+            ]],
+            "1-digit minutes" => ["one_digit_minutes.lrc", [
+                [1.0, 65.0, "The boats come home at dusk"],
+                [65.0, 70.0, "Gulls follow every one"],
+            ]],
+        ];
+    }
+
+
+    #[DataProvider("timeTagShapes")]
+    public function testReadsTimeTagShapesInStrictAndLenientMode(string $file, array $expected): void
+    {
+        $content = file_get_contents(__DIR__ . "/../files/lrc/" . $file);
+        $this->assertSame(Format::Lyrics, Format::detect($content));
+        foreach ([false, true] as $lenient) {
+            $subtitle = (new LyricsParser())->parse($content, new ReadOptions(lenient: $lenient));
+
+            $this->assertSame($expected, array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $subtitle->getCues()));
+            $this->assertSame([], $subtitle->getParseWarnings());
+        }
+    }
+
+
+    public function testTimeTagWithoutTextDoesNotTakeAnIdTagOrATimeTagLine(): void
+    {
+        $subtitle = Subtitle::fromString("[00:01.00]\n[ar:Harbour Band]\n[00:02.00]\n[00:03.00]Gulls\n", Format::Lyrics);
+
+        $this->assertSame([[3.0, 8.0, "Gulls"]], array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $subtitle->getCues()));
+        $this->assertSame("Harbour Band", $subtitle->findMetadata(Subtitle::METADATA_ARTIST));
+    }
+
+
     public function testLastCueLastsFiveSecondsByDefault(): void
     {
         $subtitle = Subtitle::fromString("[00:01.00] First

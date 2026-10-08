@@ -25,10 +25,12 @@ final class LyricsParser extends SubtitleParser
         "au" => Subtitle::METADATA_AUTHOR,
     ];
 
-    private const TIMESTAMP_PATTERN    = "(\d{2,3}):([0-5]\d)(?:\.(\d{2,3}))?";
-    private const TIMESTAMP_LINE_REGEX = "/^((?:\[\d{2,3}:[0-5]\d(?:\.\d{2,3})?\])+)(.*)$/";
-    private const ID_TAG_REGEX         = "/^\[([A-Za-z][A-Za-z0-9_]*|#):(.*)\]$/";
-    private const OFFSET_REGEX         = "/^[+-]?\d+$/";
+    private const TIMESTAMP_PATTERN     = "(?:(\d{1,2}):)?(\d{1,3}):([0-5]\d)(?:\.(\d{1,3}))?";
+    private const TIME_TAG_PATTERN      = "\[\s*" . self::TIMESTAMP_PATTERN . "\s*\]";
+    private const TIMESTAMP_LINE_REGEX  = "/^((?:" . self::TIME_TAG_PATTERN . ")+)(.*)$/";
+    private const BROKEN_TIME_TAG_REGEX = "/^\[\s*\d/";
+    private const ID_TAG_REGEX          = "/^\[([A-Za-z][A-Za-z0-9_]*|#):(.*)\]$/";
+    private const OFFSET_REGEX          = "/^[+-]?\d+$/";
 
 
     protected function read(string $content): Subtitle
@@ -49,9 +51,14 @@ final class LyricsParser extends SubtitleParser
         $comments   = [];
         $timeline   = [];
 
-        foreach ($lines as $currentLine) {
+        for ($index = 0; $index < count($lines); $index++) {
+            $currentLine = $lines[$index];
             if (preg_match(self::TIMESTAMP_LINE_REGEX, $currentLine, $matches)) {
-                $this->readTimedLine($matches[1], $matches[2], $offset, $parsedCues, $timeline);
+                $text = substr($currentLine, strlen($matches[1]));
+                if (trim($text) === "" && $this->isPlainTextLine($lines[$index + 1] ?? null)) {
+                    $text = $lines[++$index];
+                }
+                $this->readTimedLine($matches[1], $text, $offset, $parsedCues, $timeline);
                 continue;
             }
 
@@ -79,7 +86,7 @@ final class LyricsParser extends SubtitleParser
         $text = StringHelpers::cleanString($text);
         $text = $this->convertWordTimestamps($text, $offset);
 
-        preg_match_all("/\[" . self::TIMESTAMP_PATTERN . "\]/", $timeTags, $timestamps, PREG_SET_ORDER);
+        preg_match_all("/" . self::TIME_TAG_PATTERN . "/", $timeTags, $timestamps, PREG_SET_ORDER);
         foreach ($timestamps as $timestamp) {
             $start = $this->toSeconds($timestamp, $offset);
             $cue   = $text === "" ? null : new SubtitleCue($start, $start, $text);
@@ -88,6 +95,15 @@ final class LyricsParser extends SubtitleParser
             }
             $timeline[] = ["time" => $start, "cue" => $cue];
         }
+    }
+
+
+    private function isPlainTextLine(?string $line): bool
+    {
+        return $line !== null
+            && !preg_match(self::TIMESTAMP_LINE_REGEX, $line)
+            && !preg_match(self::ID_TAG_REGEX, $line)
+            && !preg_match(self::BROKEN_TIME_TAG_REGEX, $line);
     }
 
 
@@ -103,7 +119,7 @@ final class LyricsParser extends SubtitleParser
                 continue;
             }
 
-            if (preg_match("/^\[\d/", $line) && !preg_match(self::TIMESTAMP_LINE_REGEX, $line)) {
+            if (preg_match(self::BROKEN_TIME_TAG_REGEX, $line) && !preg_match(self::TIMESTAMP_LINE_REGEX, $line)) {
                 $lineNumber = $lineIndex + 1;
                 $this->warn("The line \"$line\" has a time tag that is not valid.", $lineNumber, $blockIndex, [$line], ParseWarningAction::Skipped);
             }
@@ -183,7 +199,7 @@ final class LyricsParser extends SubtitleParser
     {
         return preg_replace_callback(
             "/<" . self::TIMESTAMP_PATTERN . ">|[^<]+|</",
-            fn (array $matches): string => isset($matches[1])
+            fn (array $matches): string => isset($matches[2])
                 ? "<" . Markup::coreTimestamp($this->toSeconds($matches, $offset)) . ">"
                 : Markup::escapeText($matches[0]),
             $text
@@ -192,15 +208,17 @@ final class LyricsParser extends SubtitleParser
 
 
     /**
-     * @param array<int, string> $matches minutes, seconds and an optional fraction in groups 1 to 3
+     * @param array<int, string> $matches optional hours, minutes, seconds and an optional fraction in groups 1 to 4
      */
     private function toSeconds(array $matches, float $offset): float
     {
-        $fraction = $matches[3] ?? "";
+        $fraction = $matches[4] ?? "";
+        $whole    = ((int) $matches[1]) * 3600 + $matches[2] * 60 + $matches[3];
         $seconds  = match (strlen($fraction)) {
-            0       => $matches[1] * 60 + $matches[2],
-            2       => $matches[1] * 60 + $matches[2] + round($fraction / 100, 2),
-            default => $matches[1] * 60 + $matches[2] + Timecode::roundToMilliseconds($fraction / 1000),
+            0       => $whole,
+            1       => Timecode::roundToMilliseconds($whole + $fraction / 10),
+            2       => $whole + round($fraction / 100, 2),
+            default => $whole + Timecode::roundToMilliseconds($fraction / 1000),
         };
 
         return $offset === 0.0 ? (float) $seconds : max(0.0, Timecode::roundToMilliseconds($seconds - $offset));
