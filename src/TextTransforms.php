@@ -134,25 +134,34 @@ trait TextTransforms
                     $capitalizeNext = true;
                 }
 
-                $result = "";
-                foreach (Markup::characters(self::textTransformsLower($text, $turkic)) as $char) {
-                    if (preg_match('/^[\p{L}\p{N}]$/u', $char) === 1 || (strlen($char) === 1 && ctype_alnum($char))) {
-                        if ($capitalizeNext) {
-                            $char = self::textTransformsTitle($char, $turkic);
-                        }
-                        $capitalizeNext   = false;
-                        $afterPunctuation = false;
-                    } elseif (in_array($char, [".", "!", "?"], true)) {
-                        $afterPunctuation = true;
-                    } elseif ($afterPunctuation && ctype_space($char)) {
-                        $capitalizeNext = true;
-                    }
-                    $result .= $char;
-                }
-
-                return $result;
+                return self::textTransformsSentenceCaseRun($text, $turkic, $capitalizeNext, $afterPunctuation);
             }
         );
+    }
+
+
+    /**
+     * Lowers a text run and capitalizes its first letter or digit after the start of a cue or a sentence.
+     */
+    private static function textTransformsSentenceCaseRun(string $text, bool $turkic, bool &$capitalizeNext, bool &$afterPunctuation): string
+    {
+        $result = "";
+        foreach (Markup::characters(self::textTransformsLower($text, $turkic)) as $char) {
+            if (preg_match('/^[\p{L}\p{N}]$/u', $char) === 1 || (strlen($char) === 1 && ctype_alnum($char))) {
+                if ($capitalizeNext) {
+                    $char = self::textTransformsTitle($char, $turkic);
+                }
+                $capitalizeNext   = false;
+                $afterPunctuation = false;
+            } elseif (in_array($char, [".", "!", "?"], true)) {
+                $afterPunctuation = true;
+            } elseif ($afterPunctuation && ctype_space($char)) {
+                $capitalizeNext = true;
+            }
+            $result .= $char;
+        }
+
+        return $result;
     }
 
 
