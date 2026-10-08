@@ -16,7 +16,6 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\WriteOptions;
-use SubtitleToolbox\XmlLoader;
 
 /**
  * @see https://help.apple.com/itc/videoaudioassetguide/en.lproj/static.html
@@ -63,8 +62,7 @@ final class IttFormatter extends SubtitleFormatter
         $ttml = $this->toTtmlSubtitle($subtitle);
         $xml  = (new TtmlFormatter())->format($ttml, new WriteOptions(stripTags: $options->stripTags));
 
-        // The CLI prints a libxml warning to standard output, in front of the file.
-        $document = XmlLoader::xml($xml);
+        $document = XmlOutput::load($xml);
         $root     = $document->documentElement;
         $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:timeBase", "smpte");
         $root->setAttributeNS(TtmlNamespaces::PARAMETER[0], "ttp:frameRate", $ttpFrameRate);

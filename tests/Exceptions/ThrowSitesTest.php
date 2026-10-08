@@ -22,6 +22,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
+use SubtitleToolbox\Formatters\XmlOutput;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\Formatters\Options\EbuStlWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
@@ -353,6 +354,9 @@ class ThrowSitesTest extends TestCase
                 ->toString(Format::Scc), ...$unwritable],
             "Formatters/SubtitleFormatter.php: options of another format" => [fn () => self::subtitle()->toString(Format::SubRip,
                 new WriteOptions(format: new CsvWriteOptions())), ...$invalid],
+            "Formatters/XmlOutput.php: invalid UTF-8"       => [fn () => Subtitle::load(self::FILES . "cli/latin1.srt", Format::SubRip)->toString(Format::Ttml),
+                                                                ...$unwritable],
+            "Formatters/XmlOutput.php: not well-formed"     => [fn () => XmlOutput::load("<p>"), ...$unwritable],
             "Formatters/TtmlHead.php: stored head"          => [fn () => self::subtitle()->setFormatData(TtmlParser::FORMAT_DATA_KEY, ["head" => "<p/>"])
                 ->toString(Format::Ttml), ...$unwritable],
             "HearingImpaired/HearingImpairedOptions.php: empty bracket"     => [fn () => new HearingImpairedOptions(customBrackets: [["{", ""]]), ...$invalid],

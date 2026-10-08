@@ -205,6 +205,6 @@ final class TtmlHead
 
     public static function attribute(string $name, string $value): string
     {
-        return " $name=\"" . htmlspecialchars($value, ENT_XML1 | ENT_COMPAT, "UTF-8") . "\"";
+        return " $name=\"" . htmlspecialchars(XmlOutput::requireUtf8($value), ENT_XML1 | ENT_COMPAT, "UTF-8") . "\"";
     }
 }
