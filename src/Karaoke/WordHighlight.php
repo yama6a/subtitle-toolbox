@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Karaoke;
 
 use SubtitleToolbox\CommentAnchors;
+use SubtitleToolbox\CueList;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -26,8 +27,7 @@ final class WordHighlight
             $firstNew[$cue] = $group[0];
         }
 
-        $cues = array_merge([], ...$groups);
-        usort($cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
+        $cues = CueList::inStartOrder(array_merge([], ...$groups));
 
         $cuesBefore = count($subtitle->getCues());
         $subtitle->replaceCues(

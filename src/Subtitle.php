@@ -606,7 +606,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     private function sortCues(): void
     {
-        usort($this->cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
+        $this->cues = CueList::inStartOrder($this->cues);
     }
 
 

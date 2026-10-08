@@ -38,8 +38,7 @@ final class SubtitleStatistics
      */
     public static function of(Subtitle $subtitle): self
     {
-        $cues = array_values($subtitle->getCues());
-        usort($cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
+        $cues = CueList::inStartOrder($subtitle->getCues());
 
         $span = null;
         if ($cues !== []) {

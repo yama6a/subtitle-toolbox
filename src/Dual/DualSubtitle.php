@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Dual;
 
+use SubtitleToolbox\CueList;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -25,8 +26,7 @@ final class DualSubtitle
             ? self::stack($primaryCues, $secondaryCues)
             : self::placeAtTop($primaryCues, $secondaryCues, $options);
 
-        $cues = array_merge(array_values($primaryCues), $ownCues);
-        usort($cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
+        $cues = CueList::inStartOrder(array_merge(array_values($primaryCues), $ownCues));
 
         // A slice that keeps no cue is a copy of the metadata and format data without cues and comments.
         $result = $primary->withSlice(INF, INF);

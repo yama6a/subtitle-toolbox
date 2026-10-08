@@ -32,8 +32,7 @@ trait CueEditing
         }
 
         $comments = array_merge($this->comments, $other->comments);
-        $cues     = array_merge(array_values($this->cues), array_values($otherCues));
-        usort($cues, fn (SubtitleCue $cue1, SubtitleCue $cue2): int => $cue1->getStart() <=> $cue2->getStart());
+        $cues     = CueList::inStartOrder(array_merge(array_values($this->cues), array_values($otherCues)));
 
         $this->cues       = $cues;
         $this->metadata   = $this->metadata + $other->getAllMetadata();
