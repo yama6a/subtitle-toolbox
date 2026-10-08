@@ -84,17 +84,39 @@ final class InfoCommand extends ReportCommand
     protected function process(string $input, Subtitle $subtitle, Format $format, Arguments $arguments, Console $console): void
     {
         $statistics = SubtitleStatistics::of($subtitle);
+        $imageCues  = array_filter($subtitle->getCues(), fn (SubtitleCue $cue): bool => CueImage::isImageCue($cue));
+        $images     = [
+            "count"    => count($imageCues),
+            "withText" => count(array_filter($imageCues, fn (SubtitleCue $cue): bool => $cue->getLines() !== [])),
+        ];
 
-        $range = fn (?array $values, string $unit = ""): string => $values === null ? "-" :
-            "min " . self::number($values["min"]) . ", average " . self::number($values["average"]) . ", max " .
-            self::number($values["max"]) . $unit;
+        $rows = $this->rows($subtitle, $format, $statistics, $images);
+        $text = self::label($input) . "\n" . self::table(array_map(fn (string $name, string $value): array => ["$name:", $value],
+                                                                   array_keys($rows), $rows), 2, 1);
+
+        $this->emit($console, ($this->succeeded > 0 ? "\n" : "") . $text, [
+            "file"       => $input,
+            "format"     => $format->value,
+            "metadata"   => (object)$subtitle->getAllMetadata(),
+            "statistics" => $statistics->toArray(),
+            "imageCues"  => $images,
+            "warnings"   => self::warningsJson($this->parseWarnings),
+        ]);
+    }
+
+
+    /**
+     * Returns the rows of the text output by name.
+     *
+     * @param array{count: int, withText: int} $images
+     * @return array<string, string>
+     */
+    private function rows(Subtitle $subtitle, Format $format, SubtitleStatistics $statistics, array $images): array
+    {
         $words = [];
         foreach (array_slice($statistics->mostUsedWords, 0, SubtitleStatistics::MOST_USED_WORDS) as ["word" => $word, "count" => $count]) {
             $words[] = "$word ($count)";
         }
-
-        $imageCues         = array_filter($subtitle->getCues(), fn (SubtitleCue $cue): bool => CueImage::isImageCue($cue));
-        $imageCuesWithText = count(array_filter($imageCues, fn (SubtitleCue $cue): bool => $cue->getLines() !== []));
 
         $rows = [
             "Format" => $format->value,
@@ -103,35 +125,34 @@ final class InfoCommand extends ReportCommand
         if ($this->parseWarnings !== []) {
             $rows["Warnings"] = (string)count($this->parseWarnings);
         }
-        if ($imageCues !== []) {
-            $rows["Image cues"] = count($imageCues) . ", $imageCuesWithText with text";
+        if ($images["count"] > 0) {
+            $rows["Image cues"] = "$images[count], $images[withText] with text";
         }
         $rows += [
             "Words"                 => (string)$statistics->wordCount,
             "Characters"            => (string)$statistics->characterCount,
             "Display time"          => self::number($statistics->totalDisplayTime) . " s",
             "Span"                  => $statistics->span === null ? "-" : self::number($statistics->span) . " s",
-            "Characters per second" => $range($statistics->charactersPerSecond),
-            "Words per minute"      => $range($statistics->wordsPerMinute),
-            "Characters per line"   => $range($statistics->charactersPerLine),
-            "Gaps"                  => $range($statistics->gaps, " s"),
+            "Characters per second" => self::range($statistics->charactersPerSecond),
+            "Words per minute"      => self::range($statistics->wordsPerMinute),
+            "Characters per line"   => self::range($statistics->charactersPerLine),
+            "Gaps"                  => self::range($statistics->gaps, " s"),
             "Most used words"       => implode(", ", $words),
         ];
         foreach ($subtitle->getAllMetadata() as $key => $value) {
             $rows["Metadata $key"] = $value;
         }
 
-        $text = self::label($input) . "\n" . self::table(array_map(fn (string $name, string $value): array => ["$name:", $value],
-                                                                   array_keys($rows), $rows), 2, 1);
+        return $rows;
+    }
 
-        $data = $statistics->toArray();
-        $this->emit($console, ($this->succeeded > 0 ? "\n" : "") . $text, [
-            "file"       => $input,
-            "format"     => $format->value,
-            "metadata"   => (object)$subtitle->getAllMetadata(),
-            "statistics" => $data,
-            "imageCues"  => ["count" => count($imageCues), "withText" => $imageCuesWithText],
-            "warnings"   => self::warningsJson($this->parseWarnings),
-        ]);
+
+    /**
+     * @param ?array{min: float, average: float, max: float} $values
+     */
+    private static function range(?array $values, string $unit = ""): string
+    {
+        return $values === null ? "-" : "min " . self::number($values["min"]) . ", average " . self::number($values["average"]) .
+                                        ", max " . self::number($values["max"]) . $unit;
     }
 }
