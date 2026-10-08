@@ -119,7 +119,7 @@ final class Cea608Encoder
             $wanted = ["color" => $character["color"], "italic" => $character["italic"], "underline" => $character["underline"]];
             if ($character["char"] !== " " && $wanted !== $current) {
                 $codes = self::midRowCodes($current, $wanted);
-                for ($idx = 0; $idx < count($codes) && $cells !== [] && ($cells[count($cells) - 1]["char"] ?? null) === " "; $idx++) {
+                for ($index = 0; $index < count($codes) && $cells !== [] && ($cells[count($cells) - 1]["char"] ?? null) === " "; $index++) {
                     array_pop($cells);
                 }
                 foreach ($codes as $code) {
@@ -205,8 +205,8 @@ final class Cea608Encoder
         }
 
         $attributes = self::DEFAULT_ATTRIBUTES;
-        for ($idx = 0; $idx < $leading; $idx++) {
-            $midRow     = Cea608::decodeMidRow($cells[$idx]["midRow"]);
+        for ($index = 0; $index < $leading; $index++) {
+            $midRow     = Cea608::decodeMidRow($cells[$index]["midRow"]);
             $attributes = ["color" => $midRow["color"] ?? $attributes["color"], "italic" => $midRow["italic"], "underline" => $midRow["underline"]];
         }
 

@@ -73,9 +73,9 @@ final class IttFormatter extends SubtitleFormatter
 
         $cues       = $ttml->getCues();
         $paragraphs = $document->getElementsByTagNameNS(TtmlNamespaces::TTML, "p");
-        foreach ($paragraphs as $idx => $paragraph) {
-            $begin = $rate->secondsToFrames(max(0.0, $cues[$idx]->getStart()));
-            $end   = max($begin + 1, $rate->secondsToFrames(max(0.0, $cues[$idx]->getEnd())));
+        foreach ($paragraphs as $index => $paragraph) {
+            $begin = $rate->secondsToFrames(max(0.0, $cues[$index]->getStart()));
+            $end   = max($begin + 1, $rate->secondsToFrames(max(0.0, $cues[$index]->getEnd())));
             $paragraph->setAttribute("begin", sprintf(self::TIME_PATTERN, ...Timecode::frameNumber($begin, $rate)));
             $paragraph->setAttribute("end", sprintf(self::TIME_PATTERN, ...Timecode::frameNumber($end, $rate)));
         }

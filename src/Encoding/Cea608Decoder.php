@@ -70,15 +70,15 @@ final class Cea608Decoder
     {
         $states = [];
         $frame  = 0;
-        foreach ($codeLines as $lineIdx => [$startFrame, $words]) {
+        foreach ($codeLines as $lineIndex => [$startFrame, $words]) {
             if ($startFrame > $frame) {
                 $this->lastControl = null;
             }
-            foreach ($words as $wordIdx => $word) {
-                $frame = max($frame, $startFrame + $wordIdx);
+            foreach ($words as $wordIndex => $word) {
+                $frame = max($frame, $startFrame + $wordIndex);
                 $this->decodeWord($word >> 8, $word & 0xFF);
                 if ($this->displayChange !== null) {
-                    $this->recordState($states, $frame, $lineIdx);
+                    $this->recordState($states, $frame, $lineIndex);
                     $this->displayChange = null;
                 }
             }
@@ -360,7 +360,7 @@ final class Cea608Decoder
     /**
      * Adds the displayed captions as a new state. Paint-on and roll-up data on one line of the file give one state.
      */
-    private function recordState(array &$states, int $frame, int $lineIdx): void
+    private function recordState(array &$states, int $frame, int $lineIndex): void
     {
         $lines = $this->renderDisplayed();
         $last  = $states === [] ? null : $states[count($states) - 1];
@@ -369,7 +369,7 @@ final class Cea608Decoder
         }
 
         $mode = $this->mode === self::MODE_TEXT ? self::MODE_POP_ON : $this->mode;
-        if ($last !== null && $this->displayChange === self::DISPLAY_DIRECT && $last["direct"] && $last["line"] === $lineIdx
+        if ($last !== null && $this->displayChange === self::DISPLAY_DIRECT && $last["direct"] && $last["line"] === $lineIndex
             && $last["lines"] !== [] && $lines !== []) {
             $states[count($states) - 1]["lines"] = $lines;
             $states[count($states) - 1]["mode"]  = $mode;
@@ -377,7 +377,7 @@ final class Cea608Decoder
             return;
         }
 
-        $states[] = ["frame" => $frame, "line" => $lineIdx, "lines" => $lines, "mode" => $mode, "direct" => $this->displayChange === self::DISPLAY_DIRECT];
+        $states[] = ["frame" => $frame, "line" => $lineIndex, "lines" => $lines, "mode" => $mode, "direct" => $this->displayChange === self::DISPLAY_DIRECT];
     }
 
 

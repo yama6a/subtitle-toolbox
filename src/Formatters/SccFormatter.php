@@ -44,8 +44,8 @@ final class SccFormatter extends SubtitleFormatter
         $timeline     = [];
         $nextFree     = 0;
         $previousEnd  = null;
-        foreach ($cues as $idx => $cue) {
-            $load = $this->loadWords($cue, $idx);
+        foreach ($cues as $index => $cue) {
+            $load = $this->loadWords($cue, $index);
             if ($load === []) {
                 continue;
             }
@@ -104,7 +104,7 @@ final class SccFormatter extends SubtitleFormatter
      *
      * @return list<int>
      */
-    private function loadWords(SubtitleCue $cue, int|string $idx): array
+    private function loadWords(SubtitleCue $cue, int|string $index): array
     {
         $lines = [];
         foreach ($cue->getLines() as $line) {
@@ -118,17 +118,17 @@ final class SccFormatter extends SubtitleFormatter
         }
 
         if (count($lines) > Cea608::MAX_LINES) {
-            throw new UnwritableContentException("Cue #$idx at {$cue->getStart()} s has " . count($lines) . " lines, " .
+            throw new UnwritableContentException("Cue #$index at {$cue->getStart()} s has " . count($lines) . " lines, " .
                                                  "but SCC allows " . Cea608::MAX_LINES . ". " . $this->fitHint($cue));
         }
         foreach ($lines as $characters) {
             if (count($characters) > Cea608::COLUMNS) {
-                throw new UnwritableContentException("Cue #$idx at {$cue->getStart()} s has a line with " . count($characters) .
+                throw new UnwritableContentException("Cue #$index at {$cue->getStart()} s has a line with " . count($characters) .
                                                      " characters, but SCC allows " . Cea608::COLUMNS . ". " . $this->fitHint($cue));
             }
             foreach ($characters as $character) {
                 if (Cea608::encodeCharacter($character["char"]) === null) {
-                    throw new UnwritableContentException("Cue #$idx at {$cue->getStart()} s has the character \"{$character["char"]}\", " .
+                    throw new UnwritableContentException("Cue #$index at {$cue->getStart()} s has the character \"{$character["char"]}\", " .
                                                          "which CEA-608 cannot show.");
                 }
             }
@@ -137,8 +137,8 @@ final class SccFormatter extends SubtitleFormatter
         $cells     = array_map(Cea608Encoder::cells(...), $lines);
         $positions = $this->positions($cue, $cells);
         $words     = [...$this->commandTwice(Cea608::ERASE_NON_DISPLAYED), ...$this->commandTwice(Cea608::RESUME_CAPTION_LOADING)];
-        foreach ($cells as $lineIdx => $lineCells) {
-            array_push($words, ...Cea608Encoder::rowWords($positions[$lineIdx][0], $positions[$lineIdx][1], $lineCells));
+        foreach ($cells as $lineIndex => $lineCells) {
+            array_push($words, ...Cea608Encoder::rowWords($positions[$lineIndex][0], $positions[$lineIndex][1], $lineCells));
         }
 
         return $words;
@@ -178,9 +178,9 @@ final class SccFormatter extends SubtitleFormatter
         $storedOk  = is_array($rows) && is_array($columns) && count($rows) === $count && count($columns) === $count
                      && array_is_list($rows) && array_is_list($columns)
                      && (($rows[0] ?? 0) <= Cea608::MAX_LINES) === in_array($alignment, [7, 8, 9], true);
-        for ($idx = 0; $storedOk && $idx < $count; $idx++) {
-            $storedOk = is_int($rows[$idx]) && is_int($columns[$idx]) && $rows[$idx] >= 1 && $rows[$idx] <= Cea608::ROWS
-                        && ($idx === 0 || $rows[$idx] > $rows[$idx - 1]);
+        for ($index = 0; $storedOk && $index < $count; $index++) {
+            $storedOk = is_int($rows[$index]) && is_int($columns[$index]) && $rows[$index] >= 1 && $rows[$index] <= Cea608::ROWS
+                        && ($index === 0 || $rows[$index] > $rows[$index - 1]);
         }
 
         $firstRow = match (true) {
@@ -190,10 +190,10 @@ final class SccFormatter extends SubtitleFormatter
         };
 
         $positions = [];
-        foreach ($cells as $idx => $lineCells) {
+        foreach ($cells as $index => $lineCells) {
             $width = count($lineCells) - Cea608Encoder::leadingMidRowCount($lineCells);
             if ($storedOk) {
-                $positions[] = [$rows[$idx], max(0, min($columns[$idx], Cea608::COLUMNS - $width))];
+                $positions[] = [$rows[$index], max(0, min($columns[$index], Cea608::COLUMNS - $width))];
                 continue;
             }
 
@@ -202,7 +202,7 @@ final class SccFormatter extends SubtitleFormatter
                 in_array($alignment, [3, 6, 9], true) => Cea608::COLUMNS - $width,
                 default                               => intdiv(Cea608::COLUMNS - $width, 2),
             };
-            $positions[] = [$firstRow + $idx, $column];
+            $positions[] = [$firstRow + $index, $column];
         }
 
         return $positions;

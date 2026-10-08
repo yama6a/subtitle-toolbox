@@ -76,8 +76,8 @@ final class TtmlHead
         }
 
         $candidate = $prefix;
-        for ($idx = 2; isset($namespaces[$candidate]); $idx++) {
-            $candidate = $prefix . $idx;
+        for ($index = 2; isset($namespaces[$candidate]); $index++) {
+            $candidate = $prefix . $index;
         }
         $namespaces[$candidate] = $uris[$preferred];
 
@@ -159,8 +159,8 @@ final class TtmlHead
     public static function unusedId(TtmlContext $context, string $id): string
     {
         $candidate = $id;
-        for ($idx = 2; isset($context->usedIds[$candidate]); $idx++) {
-            $candidate = $id . "_" . $idx;
+        for ($index = 2; isset($context->usedIds[$candidate]); $index++) {
+            $candidate = $id . "_" . $index;
         }
         $context->usedIds[$candidate] = true;
 

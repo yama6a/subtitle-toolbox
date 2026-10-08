@@ -164,9 +164,9 @@ final class WebVttFormatter extends SubtitleFormatter
     private function keepVttTags(string $text): string
     {
         $parts = preg_split(self::INLINE_TIMESTAMP_PATTERN, $text, -1, PREG_SPLIT_DELIM_CAPTURE);
-        foreach ($parts as $idx => $part) {
-            if ($idx % 2 === 0) {
-                $parts[$idx] = Markup::keepTags($part, $this->spanTagNamesWithClasses($part));
+        foreach ($parts as $index => $part) {
+            if ($index % 2 === 0) {
+                $parts[$index] = Markup::keepTags($part, $this->spanTagNamesWithClasses($part));
             }
         }
 
