@@ -30,29 +30,12 @@ final class Cea608Encoder
      */
     public static function characters(string $line): array
     {
-        $italic     = 0;
-        $underline  = 0;
-        $colors     = [];
+        $style      = ["italic" => 0, "underline" => 0, "colors" => []];
         $characters = [];
         foreach (Markup::splitTags($line) as $index => $part) {
             $isTag = $index % 2 === 1;
             if ($isTag && preg_match("/^<\s*(\/?)\s*([a-z]+)\b([^>]*)>$/i", $part, $tag)) {
-                $closing = $tag[1] === "/";
-                switch (strtolower($tag[2])) {
-                    case "i":
-                        $italic = max(0, $italic + ($closing ? -1 : 1));
-                        break;
-                    case "u":
-                        $underline = max(0, $underline + ($closing ? -1 : 1));
-                        break;
-                    case "font":
-                        if ($closing) {
-                            array_pop($colors);
-                        } else {
-                            $colors[] = self::fontColor($tag[3]) ?? end($colors) ?: Cea608::WHITE;
-                        }
-                        break;
-                }
+                self::applyTag($style, strtolower($tag[2]), $tag[1] === "/", $tag[3]);
                 continue;
             }
             if ($isTag || $part === "") {
@@ -63,9 +46,9 @@ final class Cea608Encoder
             foreach (Markup::characters($text) as $character) {
                 $characters[] = [
                     "char"      => $character,
-                    "color"     => end($colors) ?: Cea608::WHITE,
-                    "italic"    => $italic > 0,
-                    "underline" => $underline > 0,
+                    "color"     => end($style["colors"]) ?: Cea608::WHITE,
+                    "italic"    => $style["italic"] > 0,
+                    "underline" => $style["underline"] > 0,
                 ];
             }
         }
@@ -78,6 +61,31 @@ final class Cea608Encoder
         }
 
         return $characters;
+    }
+
+
+    /**
+     * Counts the open i and u tags and keeps the stack of font colors.
+     *
+     * @param array{italic: int, underline: int, colors: list<int>} $style
+     */
+    private static function applyTag(array &$style, string $name, bool $closing, string $attributes): void
+    {
+        switch ($name) {
+            case "i":
+                $style["italic"] = max(0, $style["italic"] + ($closing ? -1 : 1));
+                break;
+            case "u":
+                $style["underline"] = max(0, $style["underline"] + ($closing ? -1 : 1));
+                break;
+            case "font":
+                if ($closing) {
+                    array_pop($style["colors"]);
+                } else {
+                    $style["colors"][] = self::fontColor($attributes) ?? end($style["colors"]) ?: Cea608::WHITE;
+                }
+                break;
+        }
     }
 
 
