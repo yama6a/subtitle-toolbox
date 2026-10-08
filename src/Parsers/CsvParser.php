@@ -17,15 +17,10 @@ use SubtitleToolbox\Timecode;
 
 final class CsvParser extends SubtitleParser
 {
+    protected const FORMAT_OPTIONS = CsvReadOptions::class;
     public const FORMAT_DATA_KEY = Format::Csv->value;
 
     private CsvColumns $columns;
-
-
-    protected static function formatOptionsClass(): string
-    {
-        return CsvReadOptions::class;
-    }
 
 
     protected function read(string $rawSubtitle): Subtitle

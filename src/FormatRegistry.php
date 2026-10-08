@@ -156,8 +156,7 @@ final class FormatRegistry
     {
         $parser = self::parserClass($format);
 
-        // formatOptionsClass() is protected, so the closure runs in the scope of the parser class.
-        return $parser === null ? null : \Closure::bind(static fn (): ?string => static::formatOptionsClass(), null, $parser)();
+        return $parser === null ? null : (new \ReflectionClassConstant($parser, "FORMAT_OPTIONS"))->getValue();
     }
 
 

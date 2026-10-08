@@ -19,17 +19,12 @@ use SubtitleToolbox\XmlLoader;
 
 final class SamiParser extends SubtitleParser
 {
+    protected const FORMAT_OPTIONS = SamiReadOptions::class;
     public const FORMAT_DATA_KEY = Format::Sami->value;
 
     private const STYLE_TAGS = ["b" => "b", "i" => "i", "u" => "u", "s" => "s", "strike" => "s"];
 
     private const NBSP = "\u{00A0}";
-
-
-    protected static function formatOptionsClass(): string
-    {
-        return SamiReadOptions::class;
-    }
 
 
     protected function read(string $rawSubtitle): Subtitle

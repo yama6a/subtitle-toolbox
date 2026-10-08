@@ -23,15 +23,10 @@ use SubtitleToolbox\Timecode;
  */
 final class EbuStlParser extends SubtitleParser
 {
+    protected const FORMAT_OPTIONS = EbuStlReadOptions::class;
     public const FORMAT_DATA_KEY = Format::EbuStl->value;
 
     protected const BINARY = true;
-
-
-    protected static function formatOptionsClass(): string
-    {
-        return EbuStlReadOptions::class;
-    }
 
 
     protected function read(string $rawSubtitle): Subtitle

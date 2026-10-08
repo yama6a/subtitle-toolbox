@@ -21,6 +21,7 @@ use SubtitleToolbox\SubtitleCue;
  */
 final class SccParser extends SubtitleParser
 {
+    protected const FORMAT_OPTIONS = SccReadOptions::class;
     public const FORMAT_DATA_KEY = Format::Scc->value;
 
     /** @internal */
@@ -64,12 +65,6 @@ final class SccParser extends SubtitleParser
 
     // "direct" for a change by paint-on or roll-up data, "replace" for EOC and EDM, or null for no change.
     private ?string $displayChange = null;
-
-
-    protected static function formatOptionsClass(): string
-    {
-        return SccReadOptions::class;
-    }
 
 
     protected function read(string $rawSubtitle): Subtitle

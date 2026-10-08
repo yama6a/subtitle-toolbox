@@ -15,6 +15,7 @@ use SubtitleToolbox\SubtitleCue;
 // Spec: https://ffmpeg.org/ffmpeg-formats.html#Metadata-1. The section reading follows libavformat/ffmetadec.c.
 final class FfMetadataChaptersParser extends SubtitleParser
 {
+    protected const FORMAT_OPTIONS = ChapterReadOptions::class;
     public const FORMAT_DATA_KEY = Format::FfMetadataChapters->value;
 
     /** @internal */
@@ -25,12 +26,6 @@ final class FfMetadataChaptersParser extends SubtitleParser
 
     // ffmetadec.c reads START and END without a TIMEBASE line in nanoseconds.
     private const DEFAULT_TIME_BASE = "1/1000000000";
-
-
-    protected static function formatOptionsClass(): string
-    {
-        return ChapterReadOptions::class;
-    }
 
 
     protected function read(string $rawSubtitle): Subtitle

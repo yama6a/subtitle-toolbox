@@ -23,6 +23,7 @@ use SubtitleToolbox\Timecode;
  */
 final class VobSubParser extends SubtitleParser
 {
+    protected const FORMAT_OPTIONS = VobSubReadOptions::class;
     protected const BINARY = true;
 
     // SP_DCSQ_STM delays count in units of 1024 ticks of the 90 kHz clock.
@@ -48,12 +49,6 @@ final class VobSubParser extends SubtitleParser
 
     /** @var list<array{time: float, filepos: int}> */
     private array $entries = [];
-
-
-    protected static function formatOptionsClass(): string
-    {
-        return VobSubReadOptions::class;
-    }
 
 
     /**
