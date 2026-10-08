@@ -265,10 +265,6 @@ final class WebVttParser extends SubtitleParser
             $identifier = $rawLines[0];
             $rawLines   = array_slice($rawLines, 1);
         }
-        if (count($rawLines) < 2) {
-            throw new ParsingException("Block #$index has no text lines.", $lineNumber);
-        }
-
         $times = explode("-->", $rawLines[0], 2);
         $end   = trim($times[1]);
         if (!preg_match("/^(" . self::TIMESTAMP_PATTERN . ")([ \t]+(.*))?$/", $end, $matches)) {

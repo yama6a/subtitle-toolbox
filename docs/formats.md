@@ -362,8 +362,8 @@ $subtitle->findFormatData('sami');                                              
 ## SBV
 SBV is the YouTube caption format `0:00:01.500,0:00:04.000`.
 
-- **Parser**: accepts any number of hour digits. A file that holds only whitespace or a BOM gives 0 cues.
-- **Formatter**: writes one hour digit below 10 hours, and no UTF-8 BOM. It strips all tags and decodes HTML entities. Text with `<`, `>` and `&` round-trips.
+- **Parser**: accepts any number of hour digits. A file that holds only whitespace or a BOM gives 0 cues. A timing line without text gives a cue with no lines.
+- **Formatter**: writes one hour digit below 10 hours, and no UTF-8 BOM. It strips all tags and decodes HTML entities. Text with `<`, `>` and `&` round-trips. It skips a cue with no lines.
 
 ## SCC
 SCC (Scenarist Closed Captions) is the closed caption format of US broadcast. Many streaming services also take it. Each line of an SCC file is a time code and CEA-608 byte pairs, one pair per frame at 29.97 fps.
@@ -405,6 +405,7 @@ $subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dr
 | `{\b1}`, `{\i1}`, `{\u1}`, `{\s1}` and their `0` forms | `<b>`, `<i>`, `<u>`, `<s>` and their closing tags. An open tag closes at the end of the cue. | the HTML-like tags |
 
 - A file that holds only whitespace or a BOM gives 0 cues.
+- A timing line without text gives a cue with no lines. The formatter writes such a cue as its number and its timing line.
 - Other override tags such as `{\pos(10,20)}` stay in the cue text.
 - The formatter keeps `<b>`, `<i>`, `<u>`, `<s>` and `<font>`, and strips all other tags.
 
@@ -471,5 +472,6 @@ $subtitle->toString(Format::Ttml);
 
 - **Alignment from cue settings**: `line:0` is the top row, and `line:50%,center` is the middle row. No `line`, `line:-1` and `line:100%,end` are the bottom row. `align:left`, `center` and `right` set the column. Other values, `align:start`, `align:end` and `vertical` give no alignment.
 - **Cue settings from alignment**: a cue without `vtt` format data gets settings from its alignment. Alignment 8 becomes `line:0`, 7 becomes `line:0 align:left`. The `vtt` format data wins over the alignment.
+- **Cues without text**: a timing line without text gives a cue with no lines. The formatter writes such a cue as its identifier and its timing line.
 - **Output**: the formatter writes the header, comments, styles, regions and cue settings back. It numbers cues without an identifier and always writes hours. It writes `REGION` blocks before `STYLE` blocks, and both before the comments that come before the first cue.
 - **Markup**: the formatter keeps `<b>`, `<i>`, `<u>`, `<v>`, `<lang>`, `<c>`, `<ruby>`, `<rt>` and word timestamps. It keeps classes such as `<c.yellow>` and strips all other tags.

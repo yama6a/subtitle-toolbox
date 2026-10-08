@@ -138,7 +138,7 @@ final class WebVttFormatter extends SubtitleFormatter
             ? Markup::stripAllTags($lines)
             : $this->keepVttTags($lines);
 
-        return $timeStamps . LineEnding::Lf->value . $lines;
+        return $lines === "" ? $timeStamps : $timeStamps . LineEnding::Lf->value . $lines;
     }
 
 

@@ -17,3 +17,4 @@
 | `webvttpy_comments.vtt` | Written for this repository in the shape of https://github.com/glut23/webvtt-py/blob/6a92fd3fb428dd2367c9d06e7a406d0aa9c0655b/tests/samples/comments.vtt | MIT |
 | `webvttpy_netflix.vtt` | Written for this repository in the shape of https://github.com/glut23/webvtt-py/blob/fdbf129c514328ab1344565174ffb46162c8535d/tests/samples/netflix_chicas_del_cable.vtt, first 30 cues | MIT |
 | `webvttpy_youtube.vtt` | Written for this repository in the shape of https://github.com/glut23/webvtt-py/blob/fdbf129c514328ab1344565174ffb46162c8535d/tests/samples/youtube_dl.vtt | MIT |
+| `own_empty_cues.vtt` | Written for this repository. Cue 2 has an identifier and no text, as in a user report of a naver.com file. Cue 4 has `align:middle line:90%` settings, no text and two empty lines after it, as in user reports of vendor files. | MIT |

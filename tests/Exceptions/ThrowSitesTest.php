@@ -487,7 +487,6 @@ class ThrowSitesTest extends TestCase
             "Parsers/SamiParser.php: unknown class"         => [fn () => (new SamiParser())->parse(
                 "<SAMI><BODY><SYNC Start=0><P Class=ENCC>text</BODY></SAMI>", new ReadOptions(format: new SamiReadOptions("FRCC"))), ...$parsing],
             "Parsers/SbvParser.php: no timestamps"          => [fn () => (new SbvParser())->parse("text\nmore", new ReadOptions()), ...$parsing],
-            "Parsers/SbvParser.php: no text lines"          => [fn () => (new SbvParser())->parse("0:00:01.000,0:00:02.000", new ReadOptions()), ...$parsing],
             "Parsers/SbvParser.php: invalid time"           => [fn () => (new SbvParser())->parse("soon,0:00:02.000\ntext", new ReadOptions()), ...$parsing],
             "Parsers/SccParser.php: other header"           => [fn () => (new SccParser())->parse("Scenarist_SCC V2.0\n", new ReadOptions()), ...$parsing],
             "Parsers/SccParser.php: no time code"           => [fn () => (new SccParser())->parse(SccParser::HEADER . "\n\n942c\n", new ReadOptions()), ...$parsing],
@@ -498,8 +497,6 @@ class ThrowSitesTest extends TestCase
                                                                 ...$parsing],
             "Parsers/SubRipParser.php: no timestamps"       => [fn () => (new SubRipParser())->parse("1\ntext\nmore", new ReadOptions()), ...$parsing],
             "Parsers/Options/SccReadOptions.php: channel 3"         => [fn () => new SccReadOptions(3), ...$invalid],
-            "Parsers/SubRipParser.php: no text lines"       => [fn () => (new SubRipParser())->parse("1\n00:00:01,000 --> 00:00:02,000", new ReadOptions()),
-                                                                ...$parsing],
             "Parsers/SubRipParser.php: invalid time"        => [fn () => (new SubRipParser())->parse("1\nsoon --> 00:00:02,000\ntext", new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/SubViewerParser.php: version 1 header" => [fn () => (new SubViewerParser())->parse("text\n" . SubViewerParser::START_SCRIPT . "\n", new ReadOptions()), ...$parsing],
@@ -552,8 +549,6 @@ class ThrowSitesTest extends TestCase
             "Parsers/WebVttParser.php: unknown block"       => [fn () => (new WebVttParser())->parse("WEBVTT\n\ntext\nmore", new ReadOptions()), ...$parsing],
             "Parsers/WebVttParser.php: no empty header line" => [fn () => (new WebVttParser())->parse(
                 "WEBVTT\n00:00:01.000 --> 00:00:02.000\ntext", new ReadOptions()), ...$parsing],
-            "Parsers/WebVttParser.php: no text lines"       => [fn () => (new WebVttParser())->parse("WEBVTT\n\n00:00:01.000 --> 00:00:02.000", new ReadOptions()),
-                                                                ...$parsing],
             "Parsers/WebVttParser.php: invalid end time"    => [fn () => (new WebVttParser())->parse("WEBVTT\n\n00:00:01.000 --> soon\ntext", new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/WebVttParser.php: invalid start time"  => [fn () => (new WebVttParser())->parse("WEBVTT\n\nsoon --> 00:00:02.000\ntext", new ReadOptions()),

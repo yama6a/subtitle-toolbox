@@ -10,3 +10,4 @@
 | `own_cr_cr_lf.srt` | Written for this repository. Copies the CR CR LF line endings of a subtitle in the FFmpeg FATE suite. | MIT |
 | `own_escaping.srt` | Written for this repository. Holds `<`, `>` and `&` as plain text next to SubRip tags. | MIT |
 | `own_timestamp_without_millis.srt` | Written for this repository in the shape of https://github.com/asticode/go-astisub/blob/b6b18718ddb6ee0da08772d8ab310c9c3d2d0459/testdata/example-in.srt | MIT |
+| `own_empty_cues.srt` | Written for this repository. Cue 2 has no text and one empty line after it, as in a user report of a naver.com file. Cue 4 has no text and two empty lines after it. | MIT |

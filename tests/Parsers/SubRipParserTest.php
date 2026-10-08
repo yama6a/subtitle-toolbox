@@ -64,11 +64,11 @@ class SubRipParserTest extends TestCase
     }
 
 
-    public function testMissingTextThrowsException()
+    public function testCueWithoutTextHasNoLines(): void
     {
-        $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("has no text lines");
-        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/missing_text.srt"), Format::SubRip);
+        $cues = Subtitle::fromString("1\n00:00:01,000 --> 00:00:02,000", Format::SubRip)->getCues();
+
+        $this->assertSame([1.0, 2.0, []], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getLines()]);
     }
 
 

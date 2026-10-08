@@ -31,6 +31,7 @@ class WebVttRealFileTest extends TestCase
             "w3c_voices"              => ["w3c_voices.vtt", 13, 11.0, 13.0, "<v Anna Berg>We are at the train station", 35.5, 38.0, "<v Anna Berg>You know the rain is so heavy my umbrella is leaking here."],
             "webvttpy_comments"       => ["webvttpy_comments.vtt", 3, 135.0, 140.0, "- Det regnar i dag.\n- Det är kallt ute.", 145.0, 150.0, "- Ta ett paraply"],
             "webvttpy_netflix"        => ["webvttpy_netflix.vtt", 30, 7.96, 9.48, "[Rosa] <i>En 1928,</i>", 107.76, 108.8, "Rápido."],
+            "own_empty_cues"          => ["own_empty_cues.vtt", 5, 20.105, 23.292, "The ferry to the island leaves at noon.", 36.1, 39.0, "The last boat comes back at six."],
             "webvttpy_youtube"        => ["webvttpy_youtube.vtt", 4, 286.07, 286.47, "okay", 305.069, 305.4, "the train<c.colorE5E5E5> leaves</c><c.colorCCCCCC> at ten today\n</c>"],
         ];
     }
@@ -76,6 +77,16 @@ class WebVttRealFileTest extends TestCase
         $this->assertSame(["fred", "bill"], array_column($subtitle->findFormatData("vtt")["regions"], "id"));
         $this->assertSame(["region" => "bill", "align" => "right"], $cue->findFormatData("vtt"));
         $this->assertSame(3, $cue->getAlignment());
+    }
+
+
+    public function testCueWithoutTextIsKeptWithoutLines(): void
+    {
+        $cues = Subtitle::fromString(file_get_contents(self::DIR . "own_empty_cues.vtt"), Format::WebVtt)->getCues();
+
+        $this->assertSame(["2", 23.292, 28.898, []], [$cues[1]->getIdentifier(), $cues[1]->getStart(), $cues[1]->getEnd(), $cues[1]->getLines()]);
+        $this->assertSame([32.0, 36.1, [], ["align" => "middle", "line" => "90%"]],
+                          [$cues[3]->getStart(), $cues[3]->getEnd(), $cues[3]->getLines(), $cues[3]->findFormatData("vtt")]);
     }
 
 

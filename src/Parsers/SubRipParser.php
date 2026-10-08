@@ -109,10 +109,6 @@ final class SubRipParser extends SubtitleParser
             throw new ParsingException("Block #$index has no timing line on its second line.", $lineNumber);
         }
 
-        if (count($rawLines) < 3) {
-            throw new ParsingException("Block #$index has no text lines.", $lineNumber);
-        }
-
         $times       = explode('-->', $rawLines[1]);
         $coordinates = $this->extractCoordinates($times[1]);
         $cue         = new SubtitleCue(

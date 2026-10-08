@@ -19,11 +19,13 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | Damage | SubRip | WebVTT | SBV |
 |:--- |:--- |:--- |:--- |
 | cue without a cue number | repaired | not an error | not an error |
-| bad timestamp, `->` arrow, cue without text | skipped | skipped | skipped |
+| bad timestamp, `->` arrow | skipped | skipped | skipped |
 | no empty line between two cues | repaired | split as the spec says, no warning | repaired |
 | no empty line after the `WEBVTT` header | not an error | repaired | not an error |
 | text before the first cue | skipped | skipped | skipped |
 | truncated last cue | skipped | skipped | skipped |
+
+- **Cue without text**: a timing line without text lines gives a cue with no lines, in strict and lenient mode. WebVTT allows an empty cue. To drop these cues, call `$subtitle->removeCuesWhere(fn (SubtitleCue $cue): bool => $cue->getLines() === [])`.
 
 ## Other formats
 | Parser | Skipped with a warning | `blockIndex` counts |

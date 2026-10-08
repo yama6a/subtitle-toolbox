@@ -90,13 +90,13 @@ class LenientParsingTest extends TestCase
             "SubRip with a truncated last cue" => [
                 "truncated_last_cue.srt",
                 SubRipParser::class,
-                "Block #2 has no text lines.",
+                "The time \"00:00:0\" is not valid.",
                 [
                     [1, 3, "The next stop is the station."],
                     [4, 6, "Please mind the gap."],
                 ],
                 [
-                    [9, 2, self::SKIPPED, "Block #2 has no text lines."],
+                    [9, 2, self::SKIPPED, "The time \"00:00:0\" is not valid."],
                 ],
             ],
             "SubRip with mixed line endings" => [
@@ -152,13 +152,13 @@ class LenientParsingTest extends TestCase
             "WebVTT with a truncated last cue" => [
                 "truncated_last_cue.vtt",
                 WebVttParser::class,
-                "Block #3 has no text lines.",
+                "The time \"00:00:0\" is not valid.",
                 [
                     [1, 3, "The next stop is the station."],
                     [4, 6, "Please mind the gap."],
                 ],
                 [
-                    [9, 3, self::SKIPPED, "Block #3 has no text lines."],
+                    [9, 3, self::SKIPPED, "The time \"00:00:0\" is not valid."],
                 ],
             ],
             "WebVTT with mixed line endings" => [
@@ -200,25 +200,25 @@ class LenientParsingTest extends TestCase
             "SBV with text before the first cue" => [
                 "text_before_first_cue.sbv",
                 SbvParser::class,
-                "Block #0 has no text lines.",
+                "The time \"Auto-generated\" is not valid.",
                 [
                     [1, 3, "Clouds move in from the west."],
                     [4, 6, "Sun again by Friday."],
                 ],
                 [
-                    [1, 0, self::SKIPPED, "Block #0 has no text lines."],
+                    [1, 0, self::SKIPPED, "The time \"Auto-generated\" is not valid."],
                 ],
             ],
             "SBV with a truncated last cue" => [
                 "truncated_last_cue.sbv",
                 SbvParser::class,
-                "Block #2 has no text lines.",
+                "The time \"0:00:0\" is not valid.",
                 [
                     [1, 3, "The next stop is the station."],
                     [4, 6, "Please mind the gap."],
                 ],
                 [
-                    [7, 2, self::SKIPPED, "Block #2 has no text lines."],
+                    [7, 2, self::SKIPPED, "The time \"0:00:0\" is not valid."],
                 ],
             ],
             "SBV with mixed line endings" => [
