@@ -37,10 +37,9 @@ final class ParseWarning
      */
     public static function skipped(ParsingException $exception, ?int $lineNumber, ?int $blockIndex, array $block): self
     {
-        $message = preg_replace('/^ParsingException \(Error #\d+\): /', "", $exception->getMessage());
-        $suffix  = " (line {$exception->getLineNumber()})";
-        if ($lineNumber !== null && $exception->getLineNumber() !== null && str_ends_with($message, $suffix)) {
-            $message = substr($message, 0, -strlen($suffix));
+        $message = $exception->getRawMessage();
+        if ($lineNumber === null && $exception->getLineNumber() !== null) {
+            $message .= " (line {$exception->getLineNumber()})";
         }
 
         return new self($message, $lineNumber, $blockIndex, $block, ParseWarningAction::Skipped);
