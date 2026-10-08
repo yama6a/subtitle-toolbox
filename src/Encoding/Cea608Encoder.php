@@ -176,26 +176,7 @@ final class Cea608Encoder
      */
     public static function rowWords(int $row, int $column, array $cells): array
     {
-        $leading = self::leadingMidRowCount($cells);
-        $start   = $column - $leading;
-        if ($start < 0) {
-            $attributes = self::DEFAULT_ATTRIBUTES;
-            for ($idx = 0; $idx < $leading; $idx++) {
-                $midRow     = Cea608::decodeMidRow($cells[$idx]["midRow"]);
-                $attributes = ["color" => $midRow["color"] ?? $attributes["color"], "italic" => $midRow["italic"], "underline" => $midRow["underline"]];
-            }
-
-            $cells = array_slice($cells, $leading);
-            if ($attributes["italic"] && $attributes["color"] !== Cea608::WHITE) {
-                array_unshift($cells, ["midRow" => Cea608::encodeMidRow(null, $attributes["underline"])]);
-                $pac = Cea608::encodePac($row, 0, $attributes["color"]);
-            } else {
-                $pac = Cea608::encodePac($row, 0, $attributes["color"], $attributes["italic"], $attributes["underline"]);
-            }
-            $start = 0;
-        } else {
-            $pac = Cea608::encodePac($row, intdiv($start, Cea608::PAC_INDENT_STEP) * Cea608::PAC_INDENT_STEP);
-        }
+        [$pac, $start, $cells] = self::pac($row, $column, $cells);
 
         $words = [self::word(...$pac), self::word(...$pac)];
         if ($start % Cea608::PAC_INDENT_STEP > 0) {
@@ -203,6 +184,49 @@ final class Cea608Encoder
             $words = [...$words, $tab, $tab];
         }
 
+        return [...$words, ...self::cellWords($cells)];
+    }
+
+
+    /**
+     * Returns the PAC bytes, the column that the PAC and the tab offset reach, and the cells after the PAC. When the
+     * leading mid-row codes do not fit before $column, the PAC takes over their style at column 0.
+     *
+     * @return array{array{int, int}, int, array}
+     */
+    private static function pac(int $row, int $column, array $cells): array
+    {
+        $leading = self::leadingMidRowCount($cells);
+        $start   = $column - $leading;
+        if ($start >= 0) {
+            return [Cea608::encodePac($row, intdiv($start, Cea608::PAC_INDENT_STEP) * Cea608::PAC_INDENT_STEP), $start, $cells];
+        }
+
+        $attributes = self::DEFAULT_ATTRIBUTES;
+        for ($idx = 0; $idx < $leading; $idx++) {
+            $midRow     = Cea608::decodeMidRow($cells[$idx]["midRow"]);
+            $attributes = ["color" => $midRow["color"] ?? $attributes["color"], "italic" => $midRow["italic"], "underline" => $midRow["underline"]];
+        }
+
+        $cells = array_slice($cells, $leading);
+        if ($attributes["italic"] && $attributes["color"] !== Cea608::WHITE) {
+            array_unshift($cells, ["midRow" => Cea608::encodeMidRow(null, $attributes["underline"])]);
+
+            return [Cea608::encodePac($row, 0, $attributes["color"]), 0, $cells];
+        }
+
+        return [Cea608::encodePac($row, 0, $attributes["color"], $attributes["italic"], $attributes["underline"]), 0, $cells];
+    }
+
+
+    /**
+     * Returns the words of the mid-row codes and the characters. Two standard characters share a word.
+     *
+     * @return list<int>
+     */
+    private static function cellWords(array $cells): array
+    {
+        $words   = [];
         $pending = null;
         foreach ($cells as $cell) {
             $code = isset($cell["midRow"]) ? ["pair" => [Cea608::FIRST_BYTE_MID_ROW, $cell["midRow"]]] : Cea608::encodeCharacter($cell["char"]);
@@ -219,8 +243,8 @@ final class Cea608Encoder
                     $words[] = self::word($pending, 0x00);
                     $pending = null;
                 }
-                $pair    = self::word(...$code["pair"]);
-                $words   = [...$words, $pair, $pair];
+                $pair  = self::word(...$code["pair"]);
+                $words = [...$words, $pair, $pair];
             }
         }
         if ($pending !== null) {
