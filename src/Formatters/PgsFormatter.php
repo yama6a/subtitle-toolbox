@@ -226,26 +226,55 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
                       (int) round(self::CHROMA_CENTER + ($target[0] - $y) / (2 * (1 - $kr)) * self::CHROMA_RANGE / 255),
                       (int) round(self::CHROMA_CENTER + ($target[2] - $y) / (2 * (1 - $kb)) * self::CHROMA_RANGE / 255)];
 
+        return $context->ycrcb[$key] = $this->bestCandidate($center, $target, $kr, $kb);
+    }
+
+
+    /**
+     * Returns the color near $center whose RGB value has the smallest squared error to $target. The first one wins a tie.
+     *
+     * @param array{int, int, int} $center
+     * @param array{int, int, int} $target
+     * @return array{int, int, int}
+     */
+    private function bestCandidate(array $center, array $target, float $kr, float $kb): array
+    {
         $best      = $center;
         $bestError = PHP_INT_MAX;
+        foreach (self::searchSteps() as [$lumaStep, $redStep, $blueStep]) {
+            $candidate = [max(self::LUMA_MIN, min(self::LUMA_MAX, $center[0] + $lumaStep)),
+                          max(self::CHROMA_MIN, min(self::CHROMA_MAX, $center[1] + $redStep)),
+                          max(self::CHROMA_MIN, min(self::CHROMA_MAX, $center[2] + $blueStep))];
+            $error     = 0;
+            foreach ($this->toRgb($candidate, $kr, $kb) as $channel => $value) {
+                $error += ($value - $target[$channel]) ** 2;
+            }
+            if ($error < $bestError) {
+                [$best, $bestError] = [$candidate, $error];
+            }
+        }
+
+        return $best;
+    }
+
+
+    /**
+     * Returns each combination of a luma, a red and a blue step, with the luma step outermost.
+     *
+     * @return list<array{int, int, int}>
+     */
+    private static function searchSteps(): array
+    {
+        $steps = [];
         foreach (self::SEARCH_STEPS as $lumaStep) {
             foreach (self::SEARCH_STEPS as $redStep) {
                 foreach (self::SEARCH_STEPS as $blueStep) {
-                    $candidate = [max(self::LUMA_MIN, min(self::LUMA_MAX, $center[0] + $lumaStep)),
-                                  max(self::CHROMA_MIN, min(self::CHROMA_MAX, $center[1] + $redStep)),
-                                  max(self::CHROMA_MIN, min(self::CHROMA_MAX, $center[2] + $blueStep))];
-                    $error     = 0;
-                    foreach ($this->toRgb($candidate, $kr, $kb) as $channel => $value) {
-                        $error += ($value - $target[$channel]) ** 2;
-                    }
-                    if ($error < $bestError) {
-                        [$best, $bestError] = [$candidate, $error];
-                    }
+                    $steps[] = [$lumaStep, $redStep, $blueStep];
                 }
             }
         }
 
-        return $context->ycrcb[$key] = $best;
+        return $steps;
     }
 
 
