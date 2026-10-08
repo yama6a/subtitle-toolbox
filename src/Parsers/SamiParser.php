@@ -11,6 +11,7 @@ use DOMText;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\Parsers\Options\SamiReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -38,7 +39,7 @@ final class SamiParser extends SubtitleParser
         [$formatData, $classes] = $this->readHead($content, $subtitle);
 
         $syncs = $this->readSyncs($content);
-        $class = $this->chooseClass($classes, $syncs);
+        $class = $this->chooseClass($classes, $syncs, $content);
         if ($class !== null) {
             $formatData["class"] = $class;
             $language            = $classes[strtolower($class)]["lang"] ?? null;
@@ -314,7 +315,7 @@ final class SamiParser extends SubtitleParser
     /**
      * @param array<string, array{name: string, lang: ?string}> $classes
      */
-    private function chooseClass(array $classes, array $syncs): ?string
+    private function chooseClass(array $classes, array $syncs, string $content): ?string
     {
         $used = [];
         foreach ($syncs as $sync) {
@@ -336,8 +337,31 @@ final class SamiParser extends SubtitleParser
         }
 
         $first = reset($classes);
+        if ($first === false) {
+            return reset($used) ?: null;
+        }
+        if ($used === [] || array_intersect_key($used, $classes) !== []) {
+            return $first["name"];
+        }
 
-        return $first === false ? (reset($used) ?: null) : $first["name"];
+        $class = reset($used);
+        if ($this->options->lenient) {
+            $lineNumber = null;
+            $block      = [];
+            if (preg_match('/^.*\bClass\s*=\s*["\']?' . preg_quote($class, "/") . '\b.*$/im', $content, $match, PREG_OFFSET_CAPTURE, self::bodyStart($content)) === 1) {
+                $lineNumber = 1 + substr_count($content, "\n", 0, $match[0][1]);
+                $block      = [trim($match[0][0])];
+            }
+            $this->warn(
+                "No <P> class matches a class of the STYLE block. The parser read the class $class.",
+                $lineNumber,
+                null,
+                $block,
+                ParseWarningAction::Repaired
+            );
+        }
+
+        return $class;
     }
 
 
