@@ -29,7 +29,7 @@ final class Cea608Encoder
      *
      * @return list<array{char: string, color: int, italic: bool, underline: bool}>
      */
-    public static function characters(string $line): array
+    public static function styledCharacters(string $line): array
     {
         $style      = ["italic" => 0, "underline" => 0, "colors" => []];
         $characters = [];

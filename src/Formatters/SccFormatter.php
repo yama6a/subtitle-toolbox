@@ -108,7 +108,7 @@ final class SccFormatter extends SubtitleFormatter
     {
         $lines = [];
         foreach ($cue->getLines() as $line) {
-            $characters = Cea608Encoder::characters($line);
+            $characters = Cea608Encoder::styledCharacters($line);
             if ($characters !== []) {
                 $lines[] = $characters;
             }
