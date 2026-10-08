@@ -476,6 +476,7 @@ $subtitle->toString(Format::Ttml);
 
 - **Alignment from cue settings**: `line:0` is the top row, and `line:50%,center` is the middle row. No `line`, `line:-1` and `line:100%,end` are the bottom row. `align:left`, `center` and `right` set the column. Other values, `align:start`, `align:end` and `vertical` give no alignment.
 - **Cue settings from alignment**: a cue without `vtt` format data gets settings from its alignment. Alignment 8 becomes `line:0`, 7 becomes `line:0 align:left`. The `vtt` format data wins over the alignment.
+- **Hours**: the parser reads hours with any number of digits, such as `0:00:00.800` and `0010:00:40.750`, as the spec allows. A time without hours has exactly 2 minute digits. The formatter writes at least 2 hour digits, so `0010` becomes `10`.
 - **Lines of white space**: only an empty line ends a cue. A line with only spaces or tabs inside a cue is an empty text line, and the parser drops it. YouTube automatic captions have such a line in each cue.
 - **Cues without text**: a timing line without text gives a cue with no lines. The formatter writes such a cue as its identifier and its timing line.
 - **Output**: the formatter writes the header, comments, styles, regions and cue settings back. It numbers cues without an identifier and always writes hours. It writes `REGION` blocks before `STYLE` blocks, and both before the comments that come before the first cue.

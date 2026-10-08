@@ -33,6 +33,7 @@ class WebVttRealFileTest extends TestCase
             "webvttpy_comments"       => ["webvttpy_comments.vtt", 3, 135.0, 140.0, "- Det regnar i dag.\n- Det är kallt ute.", 145.0, 150.0, "- Ta ett paraply"],
             "webvttpy_netflix"        => ["webvttpy_netflix.vtt", 30, 7.96, 9.48, "[Rosa] <i>En 1928,</i>", 107.76, 108.8, "Rápido."],
             "own_empty_cues"          => ["own_empty_cues.vtt", 5, 20.105, 23.292, "The ferry to the island leaves at noon.", 36.1, 39.0, "The last boat comes back at six."],
+            "own_hour_digits"         => ["own_hour_digits.vtt", 7, 0.8, 2.933, "The first train leaves at six.", 3600022.86, 3600025.56, "The station closes for the night."],
             "own_ytdlp_auto_captions" => ["own_ytdlp_auto_captions.vtt", 4, 0.0, 2.31, "the<00:00:00.480><c> ferry</c><00:00:00.960><c> leaves</c>", 5.0, 5.01, "at noon"],
             "webvttpy_youtube"        => ["webvttpy_youtube.vtt", 4, 286.07, 286.47, "okay", 305.069, 305.4, "the train<c.colorE5E5E5> leaves</c><c.colorCCCCCC> at ten today\n</c>"],
         ];
@@ -89,6 +90,19 @@ class WebVttRealFileTest extends TestCase
         $this->assertSame(["2", 23.292, 28.898, []], [$cues[1]->getIdentifier(), $cues[1]->getStart(), $cues[1]->getEnd(), $cues[1]->getLines()]);
         $this->assertSame([32.0, 36.1, [], ["align" => "middle", "line" => "90%"]],
                           [$cues[3]->getStart(), $cues[3]->getEnd(), $cues[3]->getLines(), $cues[3]->findFormatData("vtt")]);
+    }
+
+
+    public function testHoursWithAnyNumberOfDigitsParseAndAreWrittenWithoutLeadingZeros(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "own_hour_digits.vtt"), Format::WebVtt);
+
+        $this->assertSame(
+            [0.8, 36010.94, 36030.94, 36040.94, 360010.75, 360030.75, 3600022.86],
+            array_map(fn (SubtitleCue $cue): float => $cue->getStart(), $subtitle->getCues())
+        );
+        $this->assertStringContainsString("\n10:00:30.940 --> 10:00:40.750\n", $subtitle->toString(Format::WebVtt));
+        $this->assertStringContainsString("\n00:00:00.800 --> 00:00:02.933\n", $subtitle->toString(Format::WebVtt));
     }
 
 

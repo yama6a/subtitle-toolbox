@@ -63,11 +63,11 @@ class WebVttParserTest extends TestCase
     }
 
 
-    public function testExceededHoursThrowsException()
+    public function testFourDigitHoursParse(): void
     {
-        $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("is not valid");
-        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/exceeded_hours.vtt"), Format::WebVtt);
+        $cue = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/exceeded_hours.vtt"), Format::WebVtt)->getCues()[0];
+
+        $this->assertSame([0.123, 4442400.456], [$cue->getStart(), $cue->getEnd()]);
     }
 
 
