@@ -12,14 +12,19 @@ namespace SubtitleToolbox\Cli;
  */
 final class OutputFiles
 {
-    /** @var (\Closure(string): void)|null a test hook that runs before each create, with the path of the file */
-    public static ?\Closure $beforeCreate = null;
-
     /** @var list<string> */
     private array $files = [];
 
     /** @var list<string> */
     private array $directories = [];
+
+
+    /**
+     * @param (\Closure(string): void)|null $beforeCreate a test hook that runs before each create, with the path of the file
+     */
+    public function __construct(private readonly ?\Closure $beforeCreate = null)
+    {
+    }
 
 
     /**
@@ -36,8 +41,8 @@ final class OutputFiles
         // The checks of the run test this path, and mkdir("new/..") fails while new/ is missing.
         $real = FileCommand::realTarget($path);
         $this->createDirectory(dirname($real));
-        if (self::$beforeCreate !== null) {
-            (self::$beforeCreate)($path);
+        if ($this->beforeCreate !== null) {
+            ($this->beforeCreate)($path);
         }
 
         // Mode "x" is O_CREAT|O_EXCL: the create fails when the file appeared after the check of the run.
