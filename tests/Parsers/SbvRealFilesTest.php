@@ -79,6 +79,15 @@ class SbvRealFilesTest extends TestCase
     }
 
 
+    public function testCueWithoutTextIsKeptWithoutLines(): void
+    {
+        $cues = $this->parseFile("own_empty_cue.sbv")->getCues();
+
+        $this->assertCount(3, $cues);
+        $this->assertSame([23.292, 28.898, []], [$cues[1]->getStart(), $cues[1]->getEnd(), $cues[1]->getLines()]);
+    }
+
+
     #[DataProvider("realFiles")]
     public function testRealFileFormatsToItsOwnTextWithLfEndings(string $fileName): void
     {

@@ -74,6 +74,12 @@ class SubRipRealFilesTest extends TestCase
                 [1.0, 3.5, "I &lt;3 bread &amp; jam"],
                 [12.5, 15.0, "<font color=\"#ffcc00\">Rain &amp; wind &gt;&gt; 40 km/h</font>"],
             ],
+            "Own empty cues" => [
+                "own_empty_cues.srt",
+                5,
+                [20.105, 23.292, "The ferry to the island leaves at noon."],
+                [36.1, 39.0, "The last boat comes back at six."],
+            ],
         ];
     }
 
@@ -141,6 +147,19 @@ class SubRipRealFilesTest extends TestCase
         $formatted = $this->parseFile("own_timestamp_without_millis.srt")->toString(Format::SubRip);
 
         $this->assertStringStartsWith("\u{feff}1\n00:01:39,000 --> 00:01:41,040\n(train brakes squeal)\n", $formatted);
+    }
+
+
+    public function testCueWithoutTextIsKeptWithoutLines(): void
+    {
+        $cues = $this->parseFile("own_empty_cues.srt")->getCues();
+
+        $this->assertSame([[23.292, 28.898], [32.0, 36.1]], [[$cues[1]->getStart(), $cues[1]->getEnd()], [$cues[3]->getStart(), $cues[3]->getEnd()]]);
+        $this->assertSame([[], []], [$cues[1]->getLines(), $cues[3]->getLines()]);
+        $this->assertStringContainsString(
+            "\n\n2\n00:00:23,292 --> 00:00:28,898\n\n3\n",
+            $this->parseFile("own_empty_cues.srt")->toString(Format::SubRip)
+        );
     }
 
 

@@ -136,11 +136,11 @@ class SbvParserTest extends TestCase
     }
 
 
-    public function testMissingTextThrowsException(): void
+    public function testLastCueWithoutTextHasNoLines(): void
     {
-        $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Block #1 has no text lines");
-        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sbv/missing_text.sbv"), Format::Sbv);
+        $cues = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sbv/missing_text.sbv"), Format::Sbv)->getCues();
+
+        $this->assertSame([5.0, 7.25, []], [$cues[1]->getStart(), $cues[1]->getEnd(), $cues[1]->getLines()]);
     }
 
 

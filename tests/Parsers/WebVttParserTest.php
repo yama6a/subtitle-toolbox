@@ -103,14 +103,6 @@ class WebVttParserTest extends TestCase
     }
 
 
-    public function testMissingTextThrowsException()
-    {
-        $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("has no text lines");
-        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/vtt/missing_text.vtt"), Format::WebVtt);
-    }
-
-
     public function testMissingTimestampsThrowsException()
     {
         $this->expectException(ParsingException::class);
@@ -138,11 +130,11 @@ class WebVttParserTest extends TestCase
     }
 
 
-    public function testCueWithOnlyATimestampThrowsException(): void
+    public function testCueWithOnlyATimestampHasNoLines(): void
     {
-        $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Block #1 has no text lines");
-        Subtitle::fromString("WEBVTT\n\n00:01.000 --> 00:02.000", Format::WebVtt);
+        $cues = Subtitle::fromString("WEBVTT\n\n00:01.000 --> 00:02.000", Format::WebVtt)->getCues();
+
+        $this->assertSame([1.0, 2.0, []], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getLines()]);
     }
 
 

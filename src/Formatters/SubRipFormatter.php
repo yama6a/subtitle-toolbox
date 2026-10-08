@@ -80,8 +80,7 @@ final class SubRipFormatter extends SubtitleFormatter
             $lines = "{\\an{$cue->getAlignment()}}" . $lines;
         }
 
-
-        return $time . LineEnding::Lf->value . $lines;
+        return $lines === "" ? $time : $time . LineEnding::Lf->value . $lines;
     }
 
 

@@ -34,10 +34,6 @@ final class SbvParser extends SubtitleParser
             throw new ParsingException("Block #$index has no timing line on its first line.", $lineNumber);
         }
 
-        if (count($rawLines) < 2) {
-            throw new ParsingException("Block #$index has no text lines.", $lineNumber);
-        }
-
         $times = explode(",", $rawLines[0]);
 
         return new SubtitleCue(
