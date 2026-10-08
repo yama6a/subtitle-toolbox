@@ -216,37 +216,8 @@ final class SpeakerLabels
         $result  = [];
         $speaker = null;
         $open    = [];
-        $split   = false;
         foreach ($lines as $line) {
-            $current = "";
-            foreach (Markup::splitTags($line) as $index => $token) {
-                if ($index % 2 === 0) {
-                    $current .= $split && Markup::visibleText($current) === "" ? ltrim($token) : $token;
-                    continue;
-                }
-
-                $isVoice = preg_match(self::VOICE, $token, $voice) === 1;
-                if (!$isVoice && preg_match(self::VOICE_END, $token) !== 1) {
-                    $open     = self::trackStyle($open, $token);
-                    $current .= $token;
-                    continue;
-                }
-
-                $name = $isVoice ? Markup::decodeEntities(trim($voice[2] ?? "")) : "";
-                $name = $name === "" ? null : $name;
-                if ($name === $speaker) {
-                    continue;
-                }
-                if (Markup::visibleText($current) !== "") {
-                    $closing  = implode("", array_map(fn (array $tag): string => "</$tag[0]>", array_reverse($open)));
-                    $result[] = [$speaker, rtrim($current) . $closing];
-                    $current  = implode("", array_column($open, 1));
-                    $split    = true;
-                }
-                $speaker = $name;
-            }
-            $result[] = [$speaker, $current];
-            $split    = false;
+            self::splitLine($line, $speaker, $open, $result);
         }
 
         $previous = null;
@@ -259,6 +230,46 @@ final class SpeakerLabels
         }
 
         return $result;
+    }
+
+
+    /**
+     * Adds the parts of one line to $result, a new part at each change of the speaker.
+     *
+     * @param list<array{string, string}>  $open
+     * @param list<array{?string, string}> $result
+     */
+    private static function splitLine(string $line, ?string &$speaker, array &$open, array &$result): void
+    {
+        $current = "";
+        $split   = false;
+        foreach (Markup::splitTags($line) as $index => $token) {
+            if ($index % 2 === 0) {
+                $current .= $split && Markup::visibleText($current) === "" ? ltrim($token) : $token;
+                continue;
+            }
+
+            $isVoice = preg_match(self::VOICE, $token, $voice) === 1;
+            if (!$isVoice && preg_match(self::VOICE_END, $token) !== 1) {
+                $open     = self::trackStyle($open, $token);
+                $current .= $token;
+                continue;
+            }
+
+            $name = $isVoice ? Markup::decodeEntities(trim($voice[2] ?? "")) : "";
+            $name = $name === "" ? null : $name;
+            if ($name === $speaker) {
+                continue;
+            }
+            if (Markup::visibleText($current) !== "") {
+                $closing  = implode("", array_map(fn (array $tag): string => "</$tag[0]>", array_reverse($open)));
+                $result[] = [$speaker, rtrim($current) . $closing];
+                $current  = implode("", array_column($open, 1));
+                $split    = true;
+            }
+            $speaker = $name;
+        }
+        $result[] = [$speaker, $current];
     }
 
 
