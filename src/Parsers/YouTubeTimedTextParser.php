@@ -198,24 +198,8 @@ final class YouTubeTimedTextParser extends SubtitleParser
 
     private function readSrv3(DOMElement $root, DOMElement $body): array
     {
-        $fileData = ["format" => "srv3"];
-        $pens     = [];
-        $anchors  = [];
-        foreach ($this->children($root) as $section) {
-            if ($section->nodeName !== "head") {
-                continue;
-            }
-            foreach ($this->children($section) as $definition) {
-                $attributes                        = $this->attributes($definition);
-                $fileData[$definition->nodeName][] = $attributes;
-                $id                                = $attributes["id"] ?? "";
-                if ($definition->nodeName === "pen") {
-                    $pens[$id] = $this->xmlPenStyle($attributes);
-                } elseif ($definition->nodeName === "wp" && ctype_digit($attributes["ap"] ?? "")) {
-                    $anchors[$id] = (int) $attributes["ap"];
-                }
-            }
-        }
+        $fileData         = ["format" => "srv3"];
+        [$pens, $anchors] = $this->readSrv3Head($root, $fileData);
 
         $captions = [];
         foreach ($this->children($body) as $index => $paragraph) {
@@ -229,17 +213,9 @@ final class YouTubeTimedTextParser extends SubtitleParser
             }
 
             try {
-                $start    = $this->time($paragraph, "t") / 1000;
-                $end      = $start + $this->time($paragraph, "d", "0") / 1000;
-                $segments = [];
-                $extras   = [];
-                foreach ($paragraph->childNodes as $node) {
-                    $span       = $node instanceof DOMElement ? $node : null;
-                    $offset     = $span?->hasAttribute("t") ? $this->time($span, "t") / 1000 : null;
-                    $pen        = $pens[$span?->getAttribute("p") ?: $paragraph->getAttribute("p")] ?? [];
-                    $segments[] = [Markup::decodeEntities($node->textContent), $offset, $pen];
-                    $extras[]   = $span === null ? [] : array_diff_key($this->attributes($span), ["t" => true]);
-                }
+                $start               = $this->time($paragraph, "t") / 1000;
+                $end                 = $start + $this->time($paragraph, "d", "0") / 1000;
+                [$segments, $extras] = $this->srv3Segments($paragraph, $pens);
             } catch (ParsingException $exception) {
                 $this->fail($exception, $paragraph->getLineNo(), $index, [$paragraph->ownerDocument->saveXML($paragraph)]);
                 continue;
@@ -261,6 +237,57 @@ final class YouTubeTimedTextParser extends SubtitleParser
         }
 
         return [$fileData, $captions];
+    }
+
+
+    /**
+     * Adds the definitions of the head to $fileData, and returns the pen styles and the anchor points by ID.
+     *
+     * @return array{array<string, array>, array<string, int>}
+     */
+    private function readSrv3Head(DOMElement $root, array &$fileData): array
+    {
+        $pens    = [];
+        $anchors = [];
+        foreach ($this->children($root) as $section) {
+            if ($section->nodeName !== "head") {
+                continue;
+            }
+            foreach ($this->children($section) as $definition) {
+                $attributes                        = $this->attributes($definition);
+                $fileData[$definition->nodeName][] = $attributes;
+                $id                                = $attributes["id"] ?? "";
+                if ($definition->nodeName === "pen") {
+                    $pens[$id] = $this->xmlPenStyle($attributes);
+                } elseif ($definition->nodeName === "wp" && ctype_digit($attributes["ap"] ?? "")) {
+                    $anchors[$id] = (int) $attributes["ap"];
+                }
+            }
+        }
+
+        return [$pens, $anchors];
+    }
+
+
+    /**
+     * Returns the text segments of a paragraph and the extra attributes of each span.
+     *
+     * @param array<string, array> $pens
+     * @return array{list<array{string, ?float, array}>, list<array<string, string>>}
+     */
+    private function srv3Segments(DOMElement $paragraph, array $pens): array
+    {
+        $segments = [];
+        $extras   = [];
+        foreach ($paragraph->childNodes as $node) {
+            $span       = $node instanceof DOMElement ? $node : null;
+            $offset     = $span?->hasAttribute("t") ? $this->time($span, "t") / 1000 : null;
+            $pen        = $pens[$span?->getAttribute("p") ?: $paragraph->getAttribute("p")] ?? [];
+            $segments[] = [Markup::decodeEntities($node->textContent), $offset, $pen];
+            $extras[]   = $span === null ? [] : array_diff_key($this->attributes($span), ["t" => true]);
+        }
+
+        return [$segments, $extras];
     }
 
 
