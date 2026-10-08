@@ -108,6 +108,12 @@ class TtmlParserTest extends TestCase
     }
 
 
+    public function testInvalidSpanTimeKeepsTheText(): void
+    {
+        $this->assertSame([1.0, 2.0, "A B"], $this->parseParagraph("<p begin=\"1s\" end=\"2s\">A <span begin=\"x\">B</span></p>"));
+    }
+
+
     public function testInvalidTimeExpressionThrows(): void
     {
         $this->expectException(ParsingException::class);

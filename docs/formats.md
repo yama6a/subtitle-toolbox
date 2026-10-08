@@ -447,7 +447,8 @@ $subtitle->toString(Format::Ttml);
 ```
 
 - **Time expressions**: `00:00:01.500`, `00:00:01:12` with frames, and `1.5s`, `1500ms`, `36f`, `15000000t`. Frames use `ttp:frameRate` and `ttp:frameRateMultiplier`, 30 fps by default. Ticks use `ttp:tickRate`. The parser adds the `begin` of the parent `body` and `div` elements. The formatter writes `00:00:01.500`.
-- **End times**: a paragraph without `end` or `dur` ends with its parent. Without any end, the parser throws `ParsingException`.
+- **End times**: a paragraph without `end` or `dur` ends with its parent. Without a parent end, the cue runs from the first timed `<span>` to the last end of a timed `<span>`. Without any end, the parser throws `ParsingException`.
+- **Timed spans**: the parser writes a word timestamp before each `<span>` with `begin`, `end` or `dur` that starts inside the cue, for example `One <00:00:02.000>Two`.
 - **Styles**: the parser resolves the `style` references and the inline `tts:` attributes. Styles inherit in the order region, `<body>`, `<div>`, `<p>`, `<span>`. Bold, italic, oblique, underline, line-through and the text color become core markup. White text gives no `<font>` tag. The formatter writes each tag as a `<span>` with an inline style.
 - **Inherited styles in output**: the formatter keeps the stored styles of the region, `<body>`, `<div>` and `<p>`. Core markup cannot turn an inherited style off. So the formatter wraps text without that style in a `<span>` with the default value, such as `tts:color="white"` or `tts:fontStyle="normal"`.
 - **Speakers**: `ttm:agent` becomes `<v Name>`, with the name from the `ttm:name` of the agent. The formatter adds a `ttm:agent` element to the head for a new name.
@@ -455,7 +456,7 @@ $subtitle->toString(Format::Ttml);
 - **Regions from alignment**: a cue without a stored `region` gets a region such as `topCenter` that matches its alignment. A subtitle from another format gets `bottomCenter` for cues without alignment. The stored `region` wins over the alignment.
 - **Metadata**: `xml:lang` of `<tt>` is the `language` and the first `ttm:title` is the `title`. The formatter writes the title as the first child of `<head>`.
 - **Kept as is**: the `<head>`, the namespace and the attributes of `<tt>`, `<body>`, `<div>` and `<p>`. So a DFXP file stays DFXP. The formatter drops `ttp:timeBase`, `ttp:clockMode`, `ttp:dropMode` and `ttp:markerMode`, because it writes media times.
-- **Limits**: the parser reads `seq` time containers as `par` and ignores the timing of `<span>` elements. The formatter strips word timestamps. A cue identifier that is not a valid `xml:id` is not written.
+- **Limits**: the parser reads `seq` time containers as `par`. The formatter strips word timestamps. A cue identifier that is not a valid `xml:id` is not written.
 - **Unique IDs**: two cues with the ID `c1` come out as `c1` and `c1_2`. Each `xml:id` value occurs once in the output. A cue ID that a region or a style already uses also gets the next free suffix. The IDs in `<head>` keep their value. The IDs of `<tt>`, `<body>`, `<div>` and `<p>` follow in output order.
 - **Security**: the parser loads no external entity or DTD and makes no network access.
 - **Forced cues**: see [subtitle.md](subtitle.md#forced-cues).
