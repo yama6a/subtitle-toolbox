@@ -172,7 +172,7 @@ final class CsvParser extends SubtitleParser
     /**
      * Reads seconds, hh:mm:ss.mmm, hh:mm:ss,mmm or hh:mm:ss:ff. Frames need a frame rate.
      */
-    private static function parseTime(string $time, ?FrameRate $frameRate, ?int $lineNumber = null): float
+    private static function parseTime(string $time, ?FrameRate $frameRate, int $lineNumber): float
     {
         if (preg_match('/^\d+(?:\.\d+)?$/', $time)) {
             return (float) $time;
