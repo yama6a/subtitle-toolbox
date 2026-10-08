@@ -229,6 +229,21 @@ class CloudSpeechParsersTest extends TestCase
     }
 
 
+    public function testDeepgramCountsTheSentencesOfEachParagraphFromZero(): void
+    {
+        $json = '{"results": {"channels": [{"alternatives": [{"words": [], "paragraphs": {"paragraphs": [' .
+                '{"sentences": [{"text": "Hi.", "start": 0}, {"text": "Bye.", "start": 1, "end": 2}]},' .
+                '{"sentences": [{"text": "Hi again.", "start": 3}]}]}}]}]}}';
+        $path = "The field results.channels[0].alternatives[0].paragraphs.paragraphs";
+
+        $subtitle = (new DeepgramParser())->parse($json, new ReadOptions(lenient: true));
+
+        $this->assertSame([[1.0, 2.0, "Bye."]], self::cues($subtitle));
+        $this->assertSame([["{$path}[0].sentences[0].end must be a time.", 0], ["{$path}[1].sentences[0].end must be a time.", 0]],
+                          array_map(fn ($warning): array => [$warning->message, $warning->blockIndex], $subtitle->getParseWarnings()));
+    }
+
+
     public function testDetectionDoesNotTakeWhisperJson(): void
     {
         foreach (glob(__DIR__ . "/../files/whisper/real/*.json") as $path) {
