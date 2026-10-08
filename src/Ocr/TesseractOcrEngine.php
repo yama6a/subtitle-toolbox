@@ -19,6 +19,22 @@ final class TesseractOcrEngine implements OcrEngine
     // Tesseract finds no text that touches the image edge, so the image gets a white border.
     private const BORDER = 10;
 
+    // The columns of the TSV output of tesseract, and the level of a row with one word.
+    private const COLUMN_LEVEL      = 0;
+    private const COLUMN_BLOCK      = 2;
+    private const COLUMN_PARAGRAPH  = 3;
+    private const COLUMN_LINE       = 4;
+    private const COLUMN_CONFIDENCE = 10;
+    private const COLUMN_TEXT       = 11;
+    private const LEVEL_WORD        = "5";
+
+    // The red, green and blue weights of luma in ITU-R BT.601.
+    private const LUMA_WEIGHTS = [0.299, 0.587, 0.114];
+
+    // The default scale is 2 on screens below 720 lines, which gave the fewest errors on the test files.
+    private const SD_MAX_HEIGHT = 720;
+    private const SD_SCALE      = 2.0;
+
     /** @var array<string, list<string>> the installed languages by program */
     private static array $languages = [];
 
@@ -77,12 +93,13 @@ final class TesseractOcrEngine implements OcrEngine
         $confidences = [];
         foreach (array_slice(explode("\n", $tsv), 1) as $row) {
             $columns = explode("\t", rtrim($row, "\r"));
-            if (count($columns) < 12 || $columns[0] !== "5" || trim($columns[11]) === "") {
+            if (count($columns) <= self::COLUMN_TEXT || $columns[self::COLUMN_LEVEL] !== self::LEVEL_WORD
+                || trim($columns[self::COLUMN_TEXT]) === "") {
                 continue;
             }
-            $key           = "$columns[2]/$columns[3]/$columns[4]";
-            $lines[$key][] = Markup::escapeText(trim($columns[11]));
-            $confidences[] = max(0.0, min(100.0, (float)$columns[10])) / 100;
+            $key           = $columns[self::COLUMN_BLOCK] . "/" . $columns[self::COLUMN_PARAGRAPH] . "/" . $columns[self::COLUMN_LINE];
+            $lines[$key][] = Markup::escapeText(trim($columns[self::COLUMN_TEXT]));
+            $confidences[] = max(0.0, min(100.0, (float)$columns[self::COLUMN_CONFIDENCE])) / 100;
         }
 
         return new RecognizedText(array_values(array_map(fn (array $words): string => implode(" ", $words), $lines)),
@@ -139,12 +156,13 @@ final class TesseractOcrEngine implements OcrEngine
         $grey = [];
         foreach ($pixels as $pixel) {
             $alpha  = ($pixel & 0xFF) / 255;
-            $luma   = 0.299 * ($pixel >> 24 & 0xFF) + 0.587 * ($pixel >> 16 & 0xFF) + 0.114 * ($pixel >> 8 & 0xFF);
+            $luma   = self::LUMA_WEIGHTS[0] * ($pixel >> 24 & 0xFF) + self::LUMA_WEIGHTS[1] * ($pixel >> 16 & 0xFF)
+                      + self::LUMA_WEIGHTS[2] * ($pixel >> 8 & 0xFF);
             $value  = $luma * $alpha;
             $grey[] = $this->options->invert ? 255 - $value : $value;
         }
 
-        $scale     = $this->options->scale ?? ($image->screenHeight < 720 ? 2.0 : 1.0);
+        $scale     = $this->options->scale ?? ($image->screenHeight < self::SD_MAX_HEIGHT ? self::SD_SCALE : 1.0);
         $outWidth  = (int)round($width * $scale);
         $outHeight = (int)round($height * $scale);
         $border    = str_repeat("\xFF", $outWidth + 2 * self::BORDER);

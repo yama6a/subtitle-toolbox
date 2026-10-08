@@ -95,6 +95,22 @@ final class MatroskaReader
     private const ALGO_ZLIB               = 0;
     private const ALGO_HEADER_STRIPPING   = 3;
 
+    // A block header holds the track number as a vint of up to 8 bytes, then a 16-bit relative timestamp and 1 flag byte.
+    private const MAX_BLOCK_HEADER  = 11;
+    private const BLOCK_HEADER_TAIL = 3;
+    private const LACING_MASK       = 0x06;
+
+    // The relative timestamp is a signed 16-bit integer.
+    private const INT16_SIGN  = 0x8000;
+    private const INT16_RANGE = 0x10000;
+
+    // PGS time stamps count ticks of a 90 kHz clock: 9 ticks in 100,000 ns.
+    private const PTS_TICKS       = 9;
+    private const PTS_NANOSECONDS = 100000;
+
+    // A PGS segment starts with a type byte and a 16-bit size.
+    private const PGS_SEGMENT_HEADER = 3;
+
     // The WebVTT BlockAdditional of a cue has the BlockAddID 1, the default value.
     private const WEBVTT_ADD_ID = 1;
 
@@ -102,6 +118,9 @@ final class MatroskaReader
         "layer" => 1, "marked" => 1, "style" => 2, "name" => 3, "actor" => 3,
         "marginl" => 4, "marginr" => 5, "marginv" => 6, "effect" => 7, "text" => 8,
     ];
+
+    // An ASS block holds ReadOrder and the 8 fields of ASS_FIELDS.
+    private const ASS_BLOCK_FIELDS = 9;
 
     /** @var resource */
     private $stream;
@@ -531,9 +550,9 @@ final class MatroskaReader
      */
     private function readBlock(array $block, int $trackNumber): ?array
     {
-        $header = $this->ebml->readBytes(min($block["size"], 11));
+        $header = $this->ebml->readBytes(min($block["size"], self::MAX_BLOCK_HEADER));
         $track  = EbmlReader::readVint($header, 0, false);
-        if ($track === null || strlen($header) < $track[1] + 3) {
+        if ($track === null || strlen($header) < $track[1] + self::BLOCK_HEADER_TAIL) {
             $offset = $block["offset"];
             throw new ParsingException("The block header at byte $offset is not valid.");
         }
@@ -542,16 +561,16 @@ final class MatroskaReader
         }
 
         ["time" => $time, "flags" => $flags] = unpack("ntime/Cflags", $header, $track[1]);
-        if (($flags & 0x06) !== 0) {
+        if (($flags & self::LACING_MASK) !== 0) {
             throw new ParsingException("A block of track $trackNumber uses lacing, which subtitle tracks do not use.");
         }
 
-        $this->ebml->seek($block["offset"] + $track[1] + 3);
+        $this->ebml->seek($block["offset"] + $track[1] + self::BLOCK_HEADER_TAIL);
 
         return [
-            "start"      => $time >= 0x8000 ? $time - 0x10000 : $time,
+            "start"      => $time >= self::INT16_SIGN ? $time - self::INT16_RANGE : $time,
             "duration"   => null,
-            "data"       => $this->ebml->readBytes($block["size"] - $track[1] - 3),
+            "data"       => $this->ebml->readBytes($block["size"] - $track[1] - self::BLOCK_HEADER_TAIL),
             "additional" => null,
         ];
     }
@@ -638,7 +657,7 @@ final class MatroskaReader
 
         $events = [];
         foreach ($cues as $cue) {
-            $fields = array_pad(explode(",", $cue["data"], 9), 9, "");
+            $fields = array_pad(explode(",", $cue["data"], self::ASS_BLOCK_FIELDS), self::ASS_BLOCK_FIELDS, "");
             $values = [];
             foreach ($format as $name) {
                 $key      = strtolower($name);
@@ -646,7 +665,7 @@ final class MatroskaReader
                     "start"  => $this->time($cue["start"], ".", false),
                     "end"    => $this->time($cue["end"], ".", false),
                     "marked" => str_starts_with($fields[1], "Marked=") ? $fields[1] : "Marked=" . ($fields[1] === "" ? "0" : $fields[1]),
-                    "text"   => str_replace("\n", "\\N", StringHelpers::normalizeEOLs($fields[8])),
+                    "text"   => str_replace("\n", "\\N", StringHelpers::normalizeEOLs($fields[self::ASS_FIELDS["text"]])),
                     default  => $fields[self::ASS_FIELDS[$key] ?? -1] ?? "",
                 };
             }
@@ -696,13 +715,13 @@ final class MatroskaReader
     {
         $stream = "";
         foreach ($blocks as $block) {
-            $pts    = intdiv($block["start"] * $this->timestampScale * 9, 100000) & 0xFFFFFFFF;
+            $pts    = intdiv($block["start"] * $this->timestampScale * self::PTS_TICKS, self::PTS_NANOSECONDS) & 0xFFFFFFFF;
             $data   = $block["data"];
             $offset = 0;
             while ($offset < strlen($data)) {
-                $size    = strlen($data) - $offset >= 3 ? unpack("n", $data, $offset + 1)[1] : 0;
-                $stream .= "PG" . pack("NN", $pts, 0) . substr($data, $offset, 3 + $size);
-                $offset += 3 + $size;
+                $size    = strlen($data) - $offset >= self::PGS_SEGMENT_HEADER ? unpack("n", $data, $offset + 1)[1] : 0;
+                $stream .= "PG" . pack("NN", $pts, 0) . substr($data, $offset, self::PGS_SEGMENT_HEADER + $size);
+                $offset += self::PGS_SEGMENT_HEADER + $size;
             }
         }
 
