@@ -364,14 +364,7 @@ final class TtmlParser extends SubtitleParser
     {
         foreach ($node->childNodes as $child) {
             if ($child->nodeType === XML_TEXT_NODE || $child->nodeType === XML_CDATA_SECTION_NODE) {
-                $text  = str_replace(["\r\n", "\r"], "\n", $child->nodeValue);
-                $parts = $preserveSpace ? explode("\n", $text) : [$text];
-                foreach ($parts as $idx => $part) {
-                    if ($idx > 0) {
-                        $runs[] = ["text" => null];
-                    }
-                    $runs[] = ["text" => preg_replace("/[ \t\n]+/", " ", $part), "style" => $style, "agent" => $agent];
-                }
+                self::addTextRuns($runs, $child->nodeValue, $style, $agent, $preserveSpace);
             } elseif ($this->isTtElement($child, "br")) {
                 $runs[] = ["text" => null];
             } elseif ($this->isTtElement($child, "span")) {
@@ -383,6 +376,22 @@ final class TtmlParser extends SubtitleParser
                     $runs
                 );
             }
+        }
+    }
+
+
+    /**
+     * Adds the runs of a text node. With xml:space="preserve", each line feed becomes a line break.
+     */
+    private static function addTextRuns(array &$runs, string $text, array $style, ?string $agent, bool $preserveSpace): void
+    {
+        $text  = str_replace(["\r\n", "\r"], "\n", $text);
+        $parts = $preserveSpace ? explode("\n", $text) : [$text];
+        foreach ($parts as $idx => $part) {
+            if ($idx > 0) {
+                $runs[] = ["text" => null];
+            }
+            $runs[] = ["text" => preg_replace("/[ \t\n]+/", " ", $part), "style" => $style, "agent" => $agent];
         }
     }
 
