@@ -20,7 +20,7 @@ final readonly class TesseractOcrOptions
 
     /**
      * @param OcrLanguage|string $language             an OcrLanguage case, or Tesseract model names such as
-     *                                                 "deu+eng", for the cues where recognizeText() passes no language
+     *                                                 "deu+eng", for the cues where recognize() gets no language
      * @param int                $pageSegmentationMode the --psm value of tesseract, from 0 to 13. 6 reads the image as
      *                                                 one block of text
      * @param string             $program              the path or name of the tesseract program

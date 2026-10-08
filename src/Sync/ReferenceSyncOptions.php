@@ -20,8 +20,12 @@ final class ReferenceSyncOptions
     public const MAX_SPLITS = 10;
 
     /**
-     * Creates the search settings: the reference whose cue times the target gets, the offset range in seconds, the
-     * frame-rate scale search, and the split search.
+     * @param Subtitle $reference    the subtitle whose cue times the target gets
+     * @param float    $minOffset    the lowest offset in seconds that the search tries
+     * @param float    $maxOffset    the highest offset in seconds that the search tries
+     * @param bool     $searchScale  try the frame-rate factors, or keep the scale at 1 when false
+     * @param int      $maxSplits    the most points where the offset jumps. 0 turns the split search off
+     * @param float    $splitPenalty the score that a split must add to stay
      */
     public function __construct(
         public readonly Subtitle $reference,

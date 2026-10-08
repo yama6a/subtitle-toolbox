@@ -117,8 +117,8 @@ final class TesseractOcrEngine implements OcrEngine
 
 
     /**
-     * Throws when the program or the language data of $language is missing. A null $language checks the language of
-     * the options. The CLI calls it before the first file.
+     * Throws when the program or the language data of $language is missing.
+     * A null $language checks the language of the options.
      *
      * @internal
      */
