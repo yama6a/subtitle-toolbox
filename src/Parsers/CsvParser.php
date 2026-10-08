@@ -52,13 +52,7 @@ final class CsvParser extends SubtitleParser
             $timeFormat ??= self::timeFormatOf($cell("start"));
 
             $cue = new SubtitleCue($start, $end ?? $start, $this->textLines($cells[$roles["text"]] ?? "", $cell("speaker")));
-            if ($cell("identifier") !== "") {
-                $cue->setIdentifier($cell("identifier"));
-            }
-            $others = self::otherColumns($cells, $roles, $header);
-            if ($others !== []) {
-                $cue->setFormatData(self::FORMAT_DATA_KEY, ["columns" => $others]);
-            }
+            self::addCellData($cue, $cell, $cells, $roles, $header);
             if ($end === null) {
                 $openEnds[] = $cue;
             }
@@ -100,21 +94,26 @@ final class CsvParser extends SubtitleParser
 
 
     /**
-     * Returns the cells without a role, keyed by their header name or else by their column index.
+     * Sets the identifier of $cue, and keeps the cells without a role as format data. The format data keys them by
+     * their header name or else by their column index.
      *
-     * @param list<string>       $cells
-     * @param array<string, int> $roles
-     * @param list<string>|null  $header
-     * @return array<int|string, string>
+     * @param \Closure(string): string $cell
+     * @param list<string>             $cells
+     * @param array<string, int>       $roles
+     * @param list<string>|null        $header
      */
-    private static function otherColumns(array $cells, array $roles, ?array $header): array
+    private static function addCellData(SubtitleCue $cue, \Closure $cell, array $cells, array $roles, ?array $header): void
     {
+        if ($cell("identifier") !== "") {
+            $cue->setIdentifier($cell("identifier"));
+        }
         $named = [];
         foreach (array_diff_key($cells + array_fill(0, count($header ?? $cells), ""), array_flip($roles)) as $index => $value) {
             $named[$header[$index] ?? $index] = $value;
         }
-
-        return $named;
+        if ($named !== []) {
+            $cue->setFormatData(self::FORMAT_DATA_KEY, ["columns" => $named]);
+        }
     }
 
 
