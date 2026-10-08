@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Fixing;
 
 use SubtitleToolbox\DialogueDash;
+use SubtitleToolbox\DialogueDashStyle;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -103,22 +104,27 @@ final class CommonErrorFixer
             CommonErrorRule::OcrPipe         => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrPipe($text, $language)),
             CommonErrorRule::OcrZeroInWords  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => self::ocrZero($text, $first)),
             CommonErrorRule::OcrLowercaseL   => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrLowercaseL($text, $language)),
-            CommonErrorRule::Ellipsis        => Markup::mapTextRuns($lines, fn (string $text): string => self::replace(
-                '/\.(?: ?\.){2,}' . ($options->unicodeEllipsis ? '|\x{2026}' : '') . '/u',
-                $options->unicodeEllipsis ? "\u{2026}" : "...",
-                $text
-            )),
+            CommonErrorRule::Ellipsis        => Markup::mapTextRuns($lines, fn (string $text): string => self::ellipsis($text, $options->unicodeEllipsis)),
             CommonErrorRule::DoubleSpaces    => self::doubleSpaces($lines),
             CommonErrorRule::SpaceBeforePunctuation       => Markup::mapTextRuns($lines, fn (string $text): string =>
                 self::spaceBeforePunctuation($text, $language)),
             CommonErrorRule::MissingSpaceAfterPunctuation => Markup::mapTextRuns($lines, fn (string $text): string =>
                 self::missingSpaceAfterPunctuation($text)),
-            CommonErrorRule::DialogueDashes  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => !$first ? $text : self::replace(
-                DialogueDash::REGEX,
-                $options->dialogueDashStyle->value,
-                $text
-            )),
+            CommonErrorRule::DialogueDashes  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string =>
+                $first ? self::dialogueDash($text, $options->dialogueDashStyle) : $text),
         };
+    }
+
+
+    private static function ellipsis(string $text, bool $unicode): string
+    {
+        return self::replace('/\.(?: ?\.){2,}' . ($unicode ? '|\x{2026}' : '') . '/u', $unicode ? "\u{2026}" : "...", $text);
+    }
+
+
+    private static function dialogueDash(string $text, DialogueDashStyle $style): string
+    {
+        return self::replace(DialogueDash::REGEX, $style->value, $text);
     }
 
 
