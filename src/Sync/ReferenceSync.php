@@ -117,13 +117,12 @@ final class ReferenceSync
                 $best = new ReferenceSyncReport(Timecode::roundToMilliseconds($offset), $scale, min(1, max(0, $score)));
             }
 
-            if ($options->maxSplits > 0) {
-                foreach (self::splitCandidates($targetSpans, $scaled, $referenceSpans, $options) as [$parts, $partsOverlap]) {
-                    $partsScore = $partsOverlap / ($targetTime * $scale + $referenceTime - $partsOverlap);
-                    $value      = $partsScore - (count($parts) - 1) * $options->splitPenalty;
-                    if ($bestSplit === null || $value > $bestSplit[0] + Timecode::EPSILON) {
-                        $bestSplit = [$value, new ReferenceSyncReport($parts[0]["offset"], $scale, min(1, max(0, $partsScore)), $parts)];
-                    }
+            $candidates = $options->maxSplits > 0 ? self::splitCandidates($targetSpans, $scaled, $referenceSpans, $options) : [];
+            foreach ($candidates as [$parts, $partsOverlap]) {
+                $partsScore = $partsOverlap / ($targetTime * $scale + $referenceTime - $partsOverlap);
+                $value      = $partsScore - (count($parts) - 1) * $options->splitPenalty;
+                if ($bestSplit === null || $value > $bestSplit[0] + Timecode::EPSILON) {
+                    $bestSplit = [$value, new ReferenceSyncReport($parts[0]["offset"], $scale, min(1, max(0, $partsScore)), $parts)];
                 }
             }
         }
