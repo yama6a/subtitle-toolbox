@@ -50,9 +50,9 @@
     "yama6a/php-glyph-ocr": "^0.3"
   },
   "suggest": {
-    "ext-curl": "*, for DeepLEngine, GoogleTranslateEngine and the translate command",
-    "ext-mbstring": "*, for full Unicode upper and lower case. Without it, only A to Z change case",
-    "ext-zlib": "*, to decode PNG images, which PgsFormatter needs, to compress PNG images and to read zlib-compressed MKV tracks",
+    "ext-curl": "for DeepLEngine, GoogleTranslateEngine and the translate command",
+    "ext-mbstring": "for full Unicode upper and lower case. Without it, only A to Z change case",
+    "ext-zlib": "to decode PNG images, which PgsFormatter needs, to compress PNG images and to read zlib-compressed MKV tracks",
     "yama6a/php-glyph-ocr": "^0.3, for GlyphOcrEngine, the pure PHP OCR of PGS and VobSub image cues where Tesseract is not installed"
   },
   "conflict": {
