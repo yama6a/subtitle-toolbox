@@ -6,9 +6,7 @@ namespace SubtitleToolbox\Karaoke;
 
 final class WordHighlightReport
 {
-    /**
-     * @internal WordHighlight::apply() creates the report.
-     */
+    /** @internal */
     public function __construct(
         public readonly int $cuesBefore,
         public readonly int $cuesAfter,

@@ -17,10 +17,8 @@ final class HlsSegmentOptions
 
 
     /**
-     * Creates the segment settings, for example new HlsSegmentOptions(segmentDuration: 6, mpegts: 900000).
-     *
      * @param float  $segmentDuration seconds per segment, Apple recommends 6
-     * @param int    $mpegts          90 kHz MPEG-2 timestamp at which subtitle time 0 plays
+     * @param int    $mpegts          90 kHz MPEG-2 timestamp at which cue time $local plays
      * @param float  $local           WebVTT cue time in seconds that maps to $mpegts
      * @param string $fileNamePattern sprintf() pattern with one %d for the 0-based segment number
      * @param ?float $mediaDuration   seconds the playlist covers, null for the end of the last cue

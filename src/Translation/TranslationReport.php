@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Translation;
 final class TranslationReport
 {
     /**
-     * @internal TranslationRunner::translate() creates the report.
+     * @internal
      *
      * @param list<TranslationWarning> $warnings the problems of the translation, ordered by cue index
      */

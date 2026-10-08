@@ -12,7 +12,10 @@ use SubtitleToolbox\SubtitleCue;
 final class DualSubtitleOptions
 {
     /**
-     * Creates the options for DualSubtitle::fromPair(), for example new DualSubtitleOptions(secondaryStyle: "i").
+     * @param DualSubtitleMode $mode               how the secondary cues join the primary cues
+     * @param float            $snapTolerance      the seconds within which a secondary time moves to the closest primary time in TopBottom mode
+     * @param ?string          $secondaryStyle     a core markup tag around each secondary line, for example "i" or "font color=\"#ffff00\""
+     * @param int              $secondaryAlignment the numpad alignment of the secondary cues in TopBottom mode
      */
     public function __construct(
         public readonly DualSubtitleMode $mode = DualSubtitleMode::Stack,

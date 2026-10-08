@@ -284,8 +284,8 @@ final class TranslationRunner
 
 
     /**
-     * Cuts the tokens into one piece per weight, in proportion to the weights, at a space or between two characters of a
-     * script without spaces, such as Chinese.
+     * Cuts the tokens into one piece per weight, in proportion to the weights.
+     * A cut falls at a space, or between two characters of a script without spaces such as Chinese.
      * Each piece closes the tags that are open at its end, and the next piece opens them again.
      *
      * @param list<array{0: string, 1: int|string}> $tokens

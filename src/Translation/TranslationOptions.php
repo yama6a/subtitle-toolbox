@@ -9,8 +9,9 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 final class TranslationOptions
 {
     /**
-     * Creates the translation settings: whether cues of one sentence go out as one text, how many cues one text
-     * holds at most, and the most characters that one engine request holds.
+     * @param bool $joinSentences           send the cues of one sentence to the engine as one text
+     * @param int  $maxCuesPerSentence      the most cues that one text holds
+     * @param int  $maxCharactersPerRequest the most characters that one engine request holds. A longer text goes out alone
      */
     public function __construct(
         public readonly bool $joinSentences = true,

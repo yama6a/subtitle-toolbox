@@ -9,7 +9,7 @@ final class TranslationWarning
     /**
      * Holds one problem with the translation of the cue at $cueIndex and what the runner did about it.
      *
-     * @internal TranslationRunner::translate() creates the warnings.
+     * @internal
      */
     public function __construct(
         public readonly int $cueIndex,
