@@ -81,22 +81,35 @@ final class OcrReplaceList
                 if (!$entry instanceof DOMElement) {
                     continue;
                 }
-                if ($section->tagName === "RegularExpressions" && $entry->hasAttribute("replaceWith")) {
-                    $converted = self::convertRegex($entry->getAttribute("find"), $entry->getAttribute("replaceWith"));
-                    if ($converted !== null) {
-                        $regex[$converted[0]] ??= $converted[1];
-                    }
-                } elseif (isset(self::SECTIONS[$section->tagName]) && $entry->hasAttribute("to")) {
-                    $from = $entry->getAttribute("from");
-                    $to   = $entry->getAttribute("to");
-                    if ($from !== "" && $from !== $to) {
-                        $lists[self::SECTIONS[$section->tagName]][$from] ??= $to;
-                    }
-                }
+                self::readEntry($section->tagName, $entry, $lists, $regex);
             }
         }
 
         return new self(...$lists, regularExpressions: $regex);
+    }
+
+
+    /**
+     * Adds one entry of a section to $lists, or to $regex for the RegularExpressions section. The first entry for a
+     * search text wins.
+     *
+     * @param array<string, array<string, string>> $lists
+     * @param array<string, string>                $regex
+     */
+    private static function readEntry(string $section, DOMElement $entry, array &$lists, array &$regex): void
+    {
+        if ($section === "RegularExpressions" && $entry->hasAttribute("replaceWith")) {
+            $converted = self::convertRegex($entry->getAttribute("find"), $entry->getAttribute("replaceWith"));
+            if ($converted !== null) {
+                $regex[$converted[0]] ??= $converted[1];
+            }
+        } elseif (isset(self::SECTIONS[$section]) && $entry->hasAttribute("to")) {
+            $from = $entry->getAttribute("from");
+            $to   = $entry->getAttribute("to");
+            if ($from !== "" && $from !== $to) {
+                $lists[self::SECTIONS[$section]][$from] ??= $to;
+            }
+        }
     }
 
 
