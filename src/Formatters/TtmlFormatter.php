@@ -180,7 +180,7 @@ final class TtmlFormatter extends SubtitleFormatter
         }
         $attributes .= $this->formatAttributes($context, $stored, ["xml:id", "begin", "end", "dur"]);
         if (!isset($stored["region"]) && ($cue->getAlignment() !== null || $isForeignSubtitle)) {
-            $attributes .= $this->formatAttribute("region", $this->regionId($context, $cue->getAlignment() ?? 2));
+            $attributes .= $this->formatAttribute("region", $this->regionId($context, $cue->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT));
         }
         if ($forced !== $cue->isForced() && $forcedName === null) {
             $attributes .= $this->formatAttribute($this->ittsPrefix($context) . ":forcedDisplay", $cue->isForced() ? "true" : "false");

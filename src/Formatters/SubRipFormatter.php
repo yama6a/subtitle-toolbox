@@ -73,7 +73,7 @@ final class SubRipFormatter extends SubtitleFormatter
         $lines = explode(LineEnding::Lf->value, $lines);
         $lines = implode(LineEnding::Lf->value, array_filter($lines, fn(string $line) => trim($line) !== ""));
 
-        if ($cue->getAlignment() !== null && $cue->getAlignment() !== 2) {
+        if ($cue->getAlignment() !== null && $cue->getAlignment() !== SubtitleCue::DEFAULT_ALIGNMENT) {
             $lines = "{\\an{$cue->getAlignment()}}" . $lines;
         }
 

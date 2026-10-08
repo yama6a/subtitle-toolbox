@@ -299,7 +299,7 @@ final class SccFormatter extends SubtitleFormatter
     private function positions(SubtitleCue $cue, array $cells): array
     {
         $count     = count($cells);
-        $alignment = $cue->getAlignment() ?? 2;
+        $alignment = $cue->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT;
         $stored    = $cue->findFormatData(SccParser::FORMAT_DATA_KEY);
         $rows      = $stored["rows"] ?? null;
         $columns   = $stored["columns"] ?? null;

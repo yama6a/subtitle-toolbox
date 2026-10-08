@@ -130,7 +130,7 @@ final class EbuStlFormatter extends SubtitleFormatter
     private function cueBlocks(EbuStlContext $context, SubtitleCue $cue): array
     {
         $stored    = $cue->findFormatData(EbuStlParser::FORMAT_DATA_KEY);
-        $alignment = $cue->getAlignment() ?? 2;
+        $alignment = $cue->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT;
         $timeIn    = $this->smpteBytes($context, $cue->getStart());
         $timeOut   = $this->smpteBytes($context, $cue->getEnd());
 
