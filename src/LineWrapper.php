@@ -29,7 +29,7 @@ final class LineWrapper
                 continue;
             }
 
-            $startsWithDash = preg_match('/^(?:\s|' . Markup::TAG . ')*[-\x{2010}\x{2013}\x{2014}]/u', $line) === 1;
+            $startsWithDash = preg_match('/^(?:\s|' . Markup::TAG . ')*[' . DialogueDash::CHARACTERS . ']/u', $line) === 1;
             if ($segments === [] || $startsWithDash) {
                 $segments[] = $words;
             } else {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Fixing;
 
+use SubtitleToolbox\DialogueDash;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
@@ -16,7 +17,6 @@ use SubtitleToolbox\SubtitleCue;
  */
 final class CommonErrorFixer
 {
-    private const DASHES       = '\-\x{2010}\x{2013}\x{2014}';
     private const NOT_IN_WORD  = '(?<![\p{L}\p{N}\'\x{2019}])';
     private const WORD_ENDS    = '(?![\p{L}\p{N}\'\x{2019}])';
     private const SPACES       = '[ \t\x{00A0}]';
@@ -114,7 +114,7 @@ final class CommonErrorFixer
             CommonErrorRule::MissingSpaceAfterPunctuation => Markup::mapTextRuns($lines, fn (string $text): string =>
                 self::missingSpaceAfterPunctuation($text)),
             CommonErrorRule::DialogueDashes  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => !$first ? $text : self::replace(
-                '/^[' . self::DASHES . '](?![' . self::DASHES . '])' . self::SPACES . '*(?=[^\s\p{N}])/u',
+                DialogueDash::REGEX,
                 $options->dialogueDashStyle->value,
                 $text
             )),
@@ -167,7 +167,7 @@ final class CommonErrorFixer
                 preg_match('/\p{L}$/u', $before) === 1,
                 preg_match('/^\p{L}/u', $after) === 1                     => "I",
                 preg_match('/^[\'\x{2019}]\p{L}/u', $after) === 1         => ["en" => "I", "fr" => "l"][$language ?? ""] ?? "|",
-                $language === "en" && preg_match('/(?:^|[\s"\'(' . self::DASHES . '])$/u', $before) === 1
+                $language === "en" && preg_match('/(?:^|[\s"\'(' . DialogueDash::CHARACTERS . '])$/u', $before) === 1
                     && preg_match('/^(?:$|[\s.,!?;:"])/u', $after) === 1  => "I",
                 default                                                    => "|",
             };
@@ -190,7 +190,7 @@ final class CommonErrorFixer
             }
 
             $before        = substr($text, 0, $offset);
-            $opening       = '[\s"\'\x{00BF}\x{00A1}' . self::DASHES . ']*$';
+            $opening       = '[\s"\'\x{00BF}\x{00A1}' . DialogueDash::CHARACTERS . ']*$';
             $sentenceStart = ($startsLine && preg_match("/^$opening/u", $before) === 1)
                              || preg_match("/[.!?]\\s+$opening/u", $before) === 1;
             $result        = str_replace("0", preg_match('/\p{Ll}/u', $word) === 1 ? "o" : "O", $word);
@@ -346,7 +346,7 @@ final class CommonErrorFixer
      */
     private static function replaceBeginLines(string $text, array $beginLines): string
     {
-        preg_match('/^[ "\'\[(\x{00B6}' . self::DASHES . ']*/u', $text, $prefix);
+        preg_match('/^[ "\'\[(\x{00B6}' . DialogueDash::CHARACTERS . ']*/u', $text, $prefix);
         $prefix = $prefix[0] ?? "";
         $rest   = substr($text, strlen($prefix));
         foreach ($beginLines as $from => $to) {
