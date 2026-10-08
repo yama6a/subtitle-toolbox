@@ -6,7 +6,6 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Comment;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;

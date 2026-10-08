@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
-use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;

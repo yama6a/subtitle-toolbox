@@ -9,7 +9,6 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Comment;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
-use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;

@@ -6,7 +6,6 @@ namespace SubtitleToolbox;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Diff\CueDifference;
 use SubtitleToolbox\Diff\CueDifferenceKind;
 use SubtitleToolbox\Diff\SubtitleDiff;
 use SubtitleToolbox\Exceptions\ParsingException;

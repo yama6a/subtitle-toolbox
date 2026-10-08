@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Translation;
 
 use PHPUnit\Framework\TestCase;
-use SubtitleToolbox\Comment;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;

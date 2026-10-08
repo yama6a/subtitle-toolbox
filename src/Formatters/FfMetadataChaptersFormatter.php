@@ -7,7 +7,6 @@ namespace SubtitleToolbox\Formatters;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\FfMetadataChaptersParser;
-use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
 
