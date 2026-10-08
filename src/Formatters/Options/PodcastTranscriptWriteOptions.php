@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters\Options;
 
-
 final class PodcastTranscriptWriteOptions implements FormatWriteOptions
 {
     public function __construct(
