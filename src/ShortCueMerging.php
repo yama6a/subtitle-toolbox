@@ -66,10 +66,7 @@ trait ShortCueMerging
     private static function shortCueMergingJoinLines(SubtitleCue $first, SubtitleCue $second, MergeShortCuesOptions $options): ?array
     {
         $speakers = CueList::speakers($first);
-        if (CueImage::isImageCue($first) || CueImage::isImageCue($second)
-            || ($first->getAlignment() ?? 2) !== ($second->getAlignment() ?? 2)
-            || $first->isForced() !== $second->isForced()
-            || $speakers !== CueList::speakers($second)
+        if (CueImage::isImageCue($first) || CueImage::isImageCue($second) || !CueList::canJoin($first, $second)
             || ($options->mergeSameSpeakerAnyDuration && $speakers === [])) {
             return null;
         }

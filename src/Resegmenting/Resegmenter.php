@@ -79,7 +79,7 @@ final class Resegmenter
 
             foreach ($words as $word) {
                 $last = end($group) ?: null;
-                if ($last !== null && (!self::sameSource($last["cue"], $cue)
+                if ($last !== null && ($last["cue"] !== $cue && !CueList::canJoin($last["cue"], $cue)
                     || round($word["start"] - $last["end"], 3) >= round($options->maxWordGap, 3)
                     || !self::groupFits([...$group, $word], $options))) {
                     $result = [...$result, ...self::flush($group, $newCues, $options)];
@@ -454,15 +454,6 @@ final class Resegmenter
         }
 
         return $words;
-    }
-
-
-    private static function sameSource(SubtitleCue $first, SubtitleCue $second): bool
-    {
-        return $first === $second
-            || (($first->getAlignment() ?? 2) === ($second->getAlignment() ?? 2)
-                && $first->isForced() === $second->isForced()
-                && CueList::speakers($first) === CueList::speakers($second));
     }
 
 
