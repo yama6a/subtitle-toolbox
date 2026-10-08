@@ -80,28 +80,29 @@ final class WebVttStreamReader implements CueStreamReader
 
     /**
      * Drops the whitespace around the file like WebVttParser does, and joins runs of empty lines into one.
+     * A line of white space inside the file stays, because WebVttParser decides whether it ends a block.
      */
     private function trimmedLines($stream): Generator
     {
-        $held     = null;
-        $heldKey  = 0;
-        $gapAfter = false;
+        $held    = null;
+        $heldKey = 0;
+        $pending = [];
         foreach (Streams::lines($stream) as $key => $line) {
             if (trim($line) === "") {
-                $gapAfter = $held !== null;
+                if ($held !== null && ($line !== "" || end($pending) !== "")) {
+                    $pending[$key] = $line;
+                }
                 continue;
             }
             if ($held === null) {
                 $line = ltrim($line);
             } else {
                 yield $heldKey => $held;
-                if ($gapAfter) {
-                    yield $heldKey + 1 => "";
-                }
+                yield from $pending;
             }
             $held     = $line;
             $heldKey  = $key;
-            $gapAfter = false;
+            $pending  = [];
         }
 
         if ($held !== null) {

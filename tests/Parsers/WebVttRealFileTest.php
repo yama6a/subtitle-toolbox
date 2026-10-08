@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Streaming\WebVttStreamReader;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -32,6 +33,7 @@ class WebVttRealFileTest extends TestCase
             "webvttpy_comments"       => ["webvttpy_comments.vtt", 3, 135.0, 140.0, "- Det regnar i dag.\n- Det är kallt ute.", 145.0, 150.0, "- Ta ett paraply"],
             "webvttpy_netflix"        => ["webvttpy_netflix.vtt", 30, 7.96, 9.48, "[Rosa] <i>En 1928,</i>", 107.76, 108.8, "Rápido."],
             "own_empty_cues"          => ["own_empty_cues.vtt", 5, 20.105, 23.292, "The ferry to the island leaves at noon.", 36.1, 39.0, "The last boat comes back at six."],
+            "own_ytdlp_auto_captions" => ["own_ytdlp_auto_captions.vtt", 4, 0.0, 2.31, "the<00:00:00.480><c> ferry</c><00:00:00.960><c> leaves</c>", 5.0, 5.01, "at noon"],
             "webvttpy_youtube"        => ["webvttpy_youtube.vtt", 4, 286.07, 286.47, "okay", 305.069, 305.4, "the train<c.colorE5E5E5> leaves</c><c.colorCCCCCC> at ten today\n</c>"],
         ];
     }
@@ -87,6 +89,24 @@ class WebVttRealFileTest extends TestCase
         $this->assertSame(["2", 23.292, 28.898, []], [$cues[1]->getIdentifier(), $cues[1]->getStart(), $cues[1]->getEnd(), $cues[1]->getLines()]);
         $this->assertSame([32.0, 36.1, [], ["align" => "middle", "line" => "90%"]],
                           [$cues[3]->getStart(), $cues[3]->getEnd(), $cues[3]->getLines(), $cues[3]->findFormatData("vtt")]);
+    }
+
+
+    public function testLineOfWhiteSpaceInsideACueDoesNotEndIt(): void
+    {
+        $expected = [
+            ["the<00:00:00.480><c> ferry</c><00:00:00.960><c> leaves</c>"],
+            ["the ferry leaves"],
+            ["the ferry leaves", "at<00:00:02.800><c> noon</c>"],
+            ["at noon"],
+        ];
+        $lines = fn (SubtitleCue $cue): array => $cue->getLines();
+
+        $parsed = Subtitle::fromString(file_get_contents(self::DIR . "own_ytdlp_auto_captions.vtt"), Format::WebVtt);
+        $stream = (new WebVttStreamReader())->read(fopen(self::DIR . "own_ytdlp_auto_captions.vtt", "r"));
+
+        $this->assertSame($expected, array_map($lines, $parsed->getCues()));
+        $this->assertSame($expected, array_map($lines, iterator_to_array($stream, false)));
     }
 
 
