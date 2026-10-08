@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use DOMElement;
-use DOMText;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;

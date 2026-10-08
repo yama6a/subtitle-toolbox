@@ -9,7 +9,6 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\SubtitleCue;
 
 class HtmlTranscriptRealFilesTest extends TestCase
 {

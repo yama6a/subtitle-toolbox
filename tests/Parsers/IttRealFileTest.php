@@ -8,7 +8,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\SubtitleCue;
 
 class IttRealFileTest extends TestCase
 {

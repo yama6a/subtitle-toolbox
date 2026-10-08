@@ -6,7 +6,6 @@ namespace SubtitleToolbox\Cli\Edits;
 
 use SubtitleToolbox\CaseMode;
 use SubtitleToolbox\Cli\Arguments;
-use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
 use SubtitleToolbox\Speakers\SpeakerLabelOptions;
