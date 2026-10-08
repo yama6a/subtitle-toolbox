@@ -139,12 +139,8 @@ final class TtmlFormatter extends SubtitleFormatter
 
     private function loadHead(string $headXml): void
     {
-        $declarations = "";
-        foreach ($this->namespaces as $prefix => $uri) {
-            $declarations .= $this->formatAttribute($prefix === "" ? "xmlns" : "xmlns:$prefix", $uri);
-        }
-
-        $document = XmlLoader::xml("<tt$declarations>$headXml</tt>");
+        $declarations = $this->formatNamespaceDeclarations();
+        $document     = XmlLoader::xml("<tt$declarations>$headXml</tt>");
         $head     = $document?->documentElement->firstChild;
         if (!$head instanceof DOMElement || $head->localName !== "head") {
             throw new UnwritableContentException("The stored TTML head is not a well-formed <head> element!");
@@ -175,14 +171,11 @@ final class TtmlFormatter extends SubtitleFormatter
 
     private function formatRootAttributes(Subtitle $subtitle, array $attributes): string
     {
-        $output = "";
-        foreach ($this->namespaces as $prefix => $uri) {
-            $output .= $this->formatAttribute($prefix === "" ? "xmlns" : "xmlns:$prefix", $uri);
-        }
+        $output  = $this->formatNamespaceDeclarations();
         $output .= $this->formatAttribute("xml:lang", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE) ?? "");
 
         foreach ($attributes as $name => $value) {
-            [$prefix, $localName] = str_contains($name, ":") ? explode(":", $name, 2) : ["", $name];
+            [$prefix, $localName] = $this->splitName($name);
             $isParameter = in_array($this->namespaces[$prefix] ?? null, TtmlNamespaces::PARAMETER, true);
             if ($this->isWritable($name) && !($isParameter && in_array($localName, self::SKIPPED_ROOT_PARAMETERS, true))) {
                 $output .= $this->formatAttribute($name, $name === "xml:id" ? $this->unusedId($value) : $value);
@@ -246,7 +239,7 @@ final class TtmlFormatter extends SubtitleFormatter
     private function forcedDisplayName(array $attributes): ?string
     {
         foreach (array_keys($attributes) as $name) {
-            [$prefix, $localName] = str_contains($name, ":") ? explode(":", $name, 2) : ["", $name];
+            [$prefix, $localName] = $this->splitName($name);
             if ($localName === "forcedDisplay" && $prefix !== ""
                 && ($this->namespaces[$prefix] ?? null) === TtmlNamespaces::IMSC_STYLING) {
                 return $name;
@@ -528,9 +521,29 @@ final class TtmlFormatter extends SubtitleFormatter
         if (!str_contains($name, ":")) {
             return true;
         }
-        $prefix = explode(":", $name, 2)[0];
+        [$prefix] = $this->splitName($name);
 
         return $prefix === "xml" || ($prefix !== "" && isset($this->namespaces[$prefix]));
+    }
+
+
+    private function formatNamespaceDeclarations(): string
+    {
+        $output = "";
+        foreach ($this->namespaces as $prefix => $uri) {
+            $output .= $this->formatAttribute($prefix === "" ? "xmlns" : "xmlns:$prefix", $uri);
+        }
+
+        return $output;
+    }
+
+
+    /**
+     * @return array{string, string} the prefix, "" for none, and the local name
+     */
+    private function splitName(string $name): array
+    {
+        return str_contains($name, ":") ? explode(":", $name, 2) : ["", $name];
     }
 
 
