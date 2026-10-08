@@ -59,6 +59,7 @@ final class StringHelpers
 
     /**
      * Converts $str to UTF-8 from the encoding that its BOM names, or else from $sourceEncoding when it is not null.
+     * Without a BOM, $str stays unchanged when it is valid UTF-8 and holds no zero bytes.
      *
      * @param TextEncoding|string|null $sourceEncoding A TextEncoding case, or any other name that iconv accepts, for example "CP1125".
      */
@@ -77,6 +78,13 @@ final class StringHelpers
         }
 
         if ($sourceEncoding === null || in_array(strtoupper($sourceEncoding), ["UTF-8", "UTF8"], true)) {
+            return $str;
+        }
+
+        // Zero bytes mark UTF-16 or UTF-32 without a BOM, whose ASCII text is also valid UTF-8.
+        if (self::isValidUtf8($str) && !str_contains($str, "\0")) {
+            self::iconvToUtf8("", $sourceEncoding);
+
             return $str;
         }
 

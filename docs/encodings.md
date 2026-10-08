@@ -16,6 +16,9 @@ StringHelpers::isValidUtf8(file_get_contents('movie.srt'));   // false for a Win
 ```
 
 - **BOM**: the library converts UTF-16 and UTF-32 with a BOM to UTF-8 without being asked. A BOM wins over `ReadOptions::$encoding`.
+- **Valid UTF-8**: content without a BOM that is valid UTF-8 and holds no zero byte stays as it is. `ReadOptions::$encoding` applies only to other content. So `subtitle-toolbox convert season1/ --encoding Windows-1256` reads both the UTF-8 and the Windows-1256 files of the folder correctly.
+- **Zero bytes**: UTF-16 or UTF-32 without a BOM holds zero bytes, also when its text is plain ASCII. Such content is converted from `ReadOptions::$encoding`, for example `UTF-16LE`.
+- **Legacy text that looks like UTF-8**: a few legacy files are valid UTF-8 by chance. For example, the Windows-1252 text `Ã©` is the bytes `C3 A9`, which are `é` in UTF-8. The library reads such a file as UTF-8.
 - **No BOM, no encoding**: the parsers read the bytes as UTF-8 and keep invalid bytes. SAMI throws `ParsingException` for text that is not UTF-8.
 - **JSON formats**: the JSON parsers read each invalid UTF-8 byte as U+FFFD, the replacement character. For example, the bytes `42 FF 64` in a text field give `B`, U+FFFD and `d`.
 - **Parsers called directly**: only the `Subtitle` functions convert. Before `(new SamiParser())->parse($content, new ReadOptions())`, call `StringHelpers::convertToUtf8($content, TextEncoding::Cp949)`.

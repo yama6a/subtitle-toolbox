@@ -103,7 +103,7 @@ php subtitle-toolbox.phar --version
 - **Option names**: `--no-X` always turns X off, for example `--no-bom`. A time option is in seconds, unless its name ends in `-frames`.
 - **Defaults**: `subtitle-toolbox help COMMAND` prints the default of each option after `Default:`. This page does not repeat the values. Without the option, the tool passes no value, so the library default applies.
 - **Choice values**: a value from a fixed list ignores case. `--line-ending CRLF`, `--mode Top-Bottom` and `--preset BBC` work.
-- **Encoding**: `--encoding` names the encoding of the input, for example `Windows-1252`. See [encodings.md](encodings.md).
+- **Encoding**: `--encoding` names the encoding of input that is not UTF-8, for example `Windows-1252`. Valid UTF-8 files stay as they are. See [encodings.md](encodings.md).
 - **Output bytes**: `--line-ending lf|crlf`, `--bom` and `--no-bom`.
 - **Broken files**: `--lenient` skips or repairs broken cues and prints one warning for each broken cue. It applies to each file that a command reads, also a second file or a `--reference`. See [lenient-parsing.md](lenient-parsing.md).
 - **Frame rate**: see [Frame rates](#frame-rates).

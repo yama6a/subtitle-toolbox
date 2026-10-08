@@ -9,3 +9,5 @@ All files are written for this repository. Each one started as a UTF-8 file with
 | `japanese-shift_jis.srt` | Written for this repository. Shift_JIS, CR LF, no BOM. `ソ` and `表` have 0x5C as their second byte | MIT |
 | `korean-cp949.smi` | Written for this repository in the shape of Korean SAMI files: a `KRCC` class and `<P>` without end tags. CP949, CR LF, no BOM. `똠` exists in CP949 but not in EUC-KR | MIT |
 | `notepad-utf-16le.vtt` | Written for this repository in the shape that Windows Notepad saves as "UTF-16 LE": the BOM `FF FE` and CR LF | MIT |
+| `arabic-utf-8.srt` | Written for this repository. UTF-8, CR LF, no BOM. Same cues as `arabic-windows-1256.srt` | MIT |
+| `arabic-windows-1256.srt` | Written for this repository. Windows-1256, CR LF, no BOM | MIT |
