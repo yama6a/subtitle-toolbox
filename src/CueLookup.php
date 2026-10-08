@@ -41,7 +41,7 @@ trait CueLookup
      */
     public function findCuesAt(float $time): array
     {
-        return $this->findCuesOverlapping($time, $time, true);
+        return $this->cueLookupFindOverlapping($time, $time, true);
     }
 
 
@@ -65,7 +65,7 @@ trait CueLookup
             throw new InvalidArgumentException("The range start $from must not be after the range end $to.");
         }
 
-        return $this->findCuesOverlapping($from, $to, false);
+        return $this->cueLookupFindOverlapping($from, $to, false);
     }
 
 
@@ -102,9 +102,9 @@ trait CueLookup
     /**
      * @return array<int, SubtitleCue>
      */
-    private function findCuesOverlapping(float $from, float $to, bool $includeTo): array
+    private function cueLookupFindOverlapping(float $from, float $to, bool $includeTo): array
     {
-        $index = $this->getCueLookupIndex();
+        $index = $this->cueLookupCurrentIndex();
         if ($index["maxEnds"] === null) {
             return array_filter($this->cues, fn (SubtitleCue $cue): bool => $cue->getEnd() > $from &&
                 ($includeTo ? $cue->getStart() <= $to : $cue->getStart() < $to));
@@ -143,7 +143,7 @@ trait CueLookup
      *
      * @return CueLookupIndex
      */
-    private function getCueLookupIndex(): array
+    private function cueLookupCurrentIndex(): array
     {
         $timeEdits = SubtitleCue::timeEditCount();
         $index     = $this->cueLookupIndex;
