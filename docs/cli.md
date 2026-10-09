@@ -125,6 +125,18 @@ php subtitle-toolbox.phar --version
 - **Output default**: without `--output-fps`, the frame rate of the output comes from the input, see [Load and save](formats.md#load-and-save).
 - **Formats**: `--from` and `--to` always name formats. `retime` changes the frame rate with `--from-fps` and `--to-fps`.
 
+## Times
+The options `--shift`, `--shift-after`, `--timing-min-duration` and `--timing-min-gap` take a time in one of these shapes:
+
+| Shape | Example | Seconds |
+|:--- |:--- |:--- |
+| seconds | `2.5`, `-2.5` | 2.5, -2.5 |
+| `h:mm:ss` with an optional fraction | `01:02:03.456`, `00:00:02,500` | 3723.456, 2.5 |
+| `m:ss` with an optional fraction | `01:02.5` | 62.5 |
+
+- **Timecodes**: the shapes are those of [`Timecode::parse()`](subtitle.md#cues-from-timecode-strings). A minus sign before a timecode makes it negative, for example `--shift=-00:00:02,500` or `--shift -00:00:02,500`.
+- **Errors**: another value, such as `1:2:3:4:5`, is a usage error, exit code 2. The message quotes the value.
+
 ## Formats and file extensions
 Run `subtitle-toolbox formats` for the list. For an extension that two formats share, see [Shared extensions](formats.md#the-format-enum).
 
@@ -171,8 +183,8 @@ vendor/bin/subtitle-toolbox retime movie.sub --from-fps 25 --to-fps 23.976 --inp
 
 | Option | Calls |
 |:--- |:--- |
-| `--shift SECONDS` | [`shift()`](editing.md#retiming) with the seconds to add to every time. A negative value shows the cues earlier |
-| `--shift-after SECONDS` | `shift()` with `$fromTime`, so only the cues from this time move. Needs `--shift` |
+| `--shift SECONDS` | [`shift()`](editing.md#retiming) with the [time](#times) to add to every time. A negative value shows the cues earlier |
+| `--shift-after SECONDS` | `shift()` with the [time](#times) `$fromTime`, so only the cues from this time move. Needs `--shift` |
 | `--scale FACTOR` | `scale()`. `--scale 1.001` fixes a subtitle that drifts 3.6 s per hour |
 | `--from-fps RATE`, `--to-fps RATE` | `convertFrameRate()`. `--from-fps 25 --to-fps 23.976` fits a subtitle for a 25 fps release to a 23.976 fps video |
 
@@ -279,8 +291,8 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 | `--snap-min-duration-frames FRAMES` | `minDurationFrames` |
 | `--no-snap-chain` | `chain: false`, see [Closing gaps](editing.md#closing-gaps) |
 | `--timing-fix-overlaps` | `fixOverlaps()` with `--timing-min-gap` seconds |
-| `--timing-min-duration SECONDS` | `extendShortCues()` with `--timing-min-gap` |
-| `--timing-min-gap SECONDS` | the gap of `--timing-fix-overlaps` and `--timing-min-duration` |
+| `--timing-min-duration SECONDS` | `extendShortCues()` with this [time](#times) and `--timing-min-gap` |
+| `--timing-min-gap SECONDS` | the gap of `--timing-fix-overlaps` and `--timing-min-duration`, a [time](#times) |
 
 ```sh
 ffmpeg -i movie.mp4 -vf "select='gt(scene,0.3)',showinfo" -f null - 2> scenes.log

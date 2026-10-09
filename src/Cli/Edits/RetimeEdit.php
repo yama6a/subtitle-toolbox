@@ -40,7 +40,7 @@ final class RetimeEdit extends Edit
     public static function options(): array
     {
         return [
-            Option::value("shift", "SECONDS", "Seconds to add to every time, for example 2.5, or -2.5 to show the cues earlier."),
+            Option::value("shift", "SECONDS", "Time to add to every time, for example 2.5 or 00:00:02.500, or -2.5 to show the cues earlier."),
             Option::value("shift-after", "SECONDS", "Shift only the cues that start at this time or later."),
             Option::value("scale", "FACTOR", "Multiply every time by this factor. Must be greater than 0."),
             Option::value("from-fps", "RATE", "Frame rate of the video that the subtitle fits now. Needs --to-fps."),
@@ -53,8 +53,8 @@ final class RetimeEdit extends Edit
     {
         self::needs($arguments, "shift", ["shift-after"]);
         $edit = new self(
-            $arguments->float("shift"),
-            $arguments->float("shift-after"),
+            $arguments->seconds("shift"),
+            $arguments->seconds("shift-after"),
             $arguments->positiveFloat("scale"),
             $arguments->positiveFloat("from-fps"),
             $arguments->positiveFloat("to-fps"),

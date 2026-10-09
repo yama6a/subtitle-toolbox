@@ -66,6 +66,17 @@ class ArgumentsTest extends TestCase
     }
 
 
+    public function testSecondsTakeNumbersAndTimecodes(): void
+    {
+        foreach (["2.5" => 2.5, "-2.5" => -2.5, "-00:00:02,500" => -2.5, "01:02:03.456" => 3723.456, "01:02.5" => 62.5] as $value => $seconds) {
+            $this->assertSame($seconds, Arguments::parse(["--by", (string) $value], self::spec())->seconds("by"));
+        }
+        $this->assertSame(1.2, Arguments::parse(["--by=00:00:01.2"], self::spec())->positiveSeconds("by"));
+        $this->assertSame(0.0, Arguments::parse(["--by", "00:00"], self::spec())->nonNegativeSeconds("by"));
+        $this->assertNull(Arguments::parse([], self::spec())->seconds("by"));
+    }
+
+
     public function testChoiceIgnoresCaseAndReturnsTheAllowedSpelling(): void
     {
         $arguments = Arguments::parse(["--by", "Top-BOTTOM"], self::spec());
@@ -132,6 +143,13 @@ class ArgumentsTest extends TestCase
             "zero for int"       => ["positiveInt", "0", "The option --by needs a whole number greater than 0, got \"0\"."],
             "negative"           => ["nonNegativeFloat", "-0.5", "The option --by must not be negative."],
             "infinite non-neg"   => ["nonNegativeFloat", "1e999", "The option --by needs a finite number, got \"1e999\"."],
+            "five fields"        => ["seconds", "1:2:3:4:5", "The option --by needs seconds or a timecode such as 00:01:02.500, got \"1:2:3:4:5\"."],
+            "frames"             => ["seconds", "00:00:01:12", "The option --by needs seconds or a timecode such as 00:01:02.500, got \"00:00:01:12\"."],
+            "lone minus"         => ["seconds", "-", "The option --by needs seconds or a timecode such as 00:01:02.500, got \"-\"."],
+            "two minus signs"    => ["seconds", "--00:01", "The option --by needs seconds or a timecode such as 00:01:02.500, got \"--00:01\"."],
+            "infinite seconds"   => ["seconds", "1e999", "The option --by needs a finite number, got \"1e999\"."],
+            "zero timecode"      => ["positiveSeconds", "00:00", "The option --by must be greater than 0."],
+            "negative timecode"  => ["nonNegativeSeconds", "-00:00:00.5", "The option --by must not be negative."],
         ];
     }
 
