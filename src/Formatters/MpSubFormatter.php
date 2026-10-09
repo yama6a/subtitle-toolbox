@@ -42,7 +42,7 @@ final class MpSubFormatter extends SubtitleFormatter
                 $duration = $frameRate->secondsToFrames($end) - $frameRate->secondsToFrames($start);
             }
             $output .= "$wait $duration" . LineEnding::Lf->value;
-            $output .= Markup::plainText(implode(LineEnding::Lf->value, $cue->getLines()));
+            $output .= Markup::plainText(Markup::rubyAsText(implode(LineEnding::Lf->value, $cue->getLines())));
             $output .= LineEnding::Lf->value;
 
             $previousEnd = $end;

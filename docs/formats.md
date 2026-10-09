@@ -102,7 +102,7 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWrite
 - **Line endings**: every formatter writes LF by default.
 - **BOM**: ASS, CSV, TSV, LRC, MPSub, SubRip and WebVTT write a UTF-8 BOM by default. The other formatters do not.
 - **Strip all tags**: ASS, EBU STL, iTT, MicroDVD, SAMI, SubRip, TTML and WebVTT read `stripTags`.
-- **Ruby**: WebVTT keeps ruby. ASS, EBU STL, MicroDVD, MPL2, plain text, SAMI, SBV, SCC, SubRip, SubViewer, TMPlayer and TTML write `<ruby>漢<rt>kan</rt></ruby>` as `漢 (kan)`, with or without `stripTags`.
+- **Ruby**: WebVTT keeps ruby. JSON keeps the text as it is. Every other text formatter writes `<ruby>漢<rt>kan</rt></ruby>` as `漢 (kan)`, with or without `stripTags`.
 - **Image cues**: see [ocr.md](ocr.md#image-cues).
 - **Negative times**: `new SubtitleCue(-0.5, 1)` and `setStart(-0.5)` keep a negative time. Every formatter except JSON writes it as 0.
 - **Precedence**: a field that you set wins over the format data of the subtitle. For example, `IttWriteOptions(frameRate: 25)` wins over the frame rate that `IttParser` stored. A field left at `null` takes the stored value, for example `MicroDvdWriteOptions(writeFrameRateLine: true)` with a MicroDVD input.

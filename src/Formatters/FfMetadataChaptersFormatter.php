@@ -28,7 +28,7 @@ final class FfMetadataChaptersFormatter extends SubtitleFormatter
             $data     = $cue->findFormatData(FfMetadataChaptersParser::FORMAT_DATA_KEY);
             $timeBase = $data["timeBase"] ?? self::DEFAULT_TIME_BASE;
             [$numerator, $denominator] = array_map("intval", explode("/", $timeBase));
-            $title    = implode(LineEnding::Lf->value, Markup::plainLines($cue->getLines()));
+            $title    = implode(LineEnding::Lf->value, Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines())));
 
             $output .= "[CHAPTER]" . LineEnding::Lf->value . "TIMEBASE=$timeBase" . LineEnding::Lf->value .
                        "START=" . $this->ticks($cue->getStart(), $numerator, $denominator) . LineEnding::Lf->value .

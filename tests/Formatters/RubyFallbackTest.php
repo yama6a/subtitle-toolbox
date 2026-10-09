@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Formatters;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -53,10 +54,21 @@ class RubyFallbackTest extends TestCase
     public static function textFormatProvider(): array
     {
         return [
-            "MicroDVD"  => [Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25))],
-            "MPL2"      => [Format::Mpl2, new WriteOptions()],
-            "TMPlayer"  => [Format::TmPlayer, new WriteOptions()],
-            "SubViewer" => [Format::SubViewer, new WriteOptions()],
+            "MicroDVD"            => [Format::MicroDvd, new WriteOptions(format: new MicroDvdWriteOptions(frameRate: 25))],
+            "MPL2"                => [Format::Mpl2, new WriteOptions()],
+            "TMPlayer"            => [Format::TmPlayer, new WriteOptions()],
+            "SubViewer"           => [Format::SubViewer, new WriteOptions()],
+            "CSV"                 => [Format::Csv, new WriteOptions()],
+            "TSV"                 => [Format::Tsv, new WriteOptions()],
+            "MPSub"               => [Format::MpSub, new WriteOptions()],
+            "LRC"                 => [Format::Lyrics, new WriteOptions()],
+            "iTT"                 => [Format::Itt, new WriteOptions(format: new IttWriteOptions(frameRate: 25))],
+            "HTML transcript"     => [Format::HtmlTranscript, new WriteOptions()],
+            "Podcast transcript"  => [Format::PodcastTranscript, new WriteOptions()],
+            "FFmetadata chapters" => [Format::FfMetadataChapters, new WriteOptions()],
+            "OGM chapters"        => [Format::OgmChapters, new WriteOptions()],
+            "Podcast chapters"    => [Format::PodcastChapters, new WriteOptions()],
+            "YouTube chapters"    => [Format::YouTubeChapters, new WriteOptions()],
         ];
     }
 
@@ -80,5 +92,23 @@ class RubyFallbackTest extends TestCase
             "SAMI"    => [Format::Sami],
             "TTML"    => [Format::Ttml],
         ];
+    }
+
+
+    public function testEveryWritableTextFormatIsCovered(): void
+    {
+        $covered = array_map(
+            fn (array $row): Format => $row[0],
+            [...self::goldenFileProvider(), ...self::textFormatProvider(), ...self::readBackFormatProvider()]
+        );
+        $writable = array_filter(
+            Format::cases(),
+            fn (Format $format): bool => $format->canWrite() && !in_array($format, [Format::Json, Format::Pgs], true)
+        );
+
+        $this->assertEqualsCanonicalizing(
+            array_map(fn (Format $format): string => $format->value, array_values($writable)),
+            array_map(fn (Format $format): string => $format->value, $covered)
+        );
     }
 }
