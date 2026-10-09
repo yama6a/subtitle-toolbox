@@ -1036,6 +1036,53 @@ class LenientParsingTest extends TestCase
     }
 
 
+    #[DataProvider("looseTtmlTimes")]
+    public function testLenientModeReadsLooseTtmlTimeExpressions(string $begin, float $seconds): void
+    {
+        $content  = "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div>\n<p begin=\"$begin\" end=\"00:00:30.000\">Text</p></div></body></tt>";
+        $subtitle = (new TtmlParser())->parse($content, new ReadOptions(lenient: true));
+
+        $this->assertSame([[$seconds, 30.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
+        $this->assertSame(
+            [[2, 0, self::REPAIRED, "The time expression \"$begin\" is not valid. The parser read it as {$seconds}s."]],
+            $this->warningRows($subtitle->getParseWarnings())
+        );
+    }
+
+
+    #[DataProvider("looseTtmlTimes")]
+    public function testStrictModeRejectsLooseTtmlTimeExpressions(string $begin): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The time expression \"$begin\" is not valid.");
+        (new TtmlParser())->parse("<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div><p begin=\"$begin\" end=\"00:00:30.000\">Text</p></div></body></tt>", new ReadOptions());
+    }
+
+
+    public static function looseTtmlTimes(): array
+    {
+        return [
+            "one-digit seconds"         => ["00:00:7.250", 7.25],
+            "one-digit hours"           => ["0:01:02.500", 62.5],
+            "minutes and seconds"       => ["02:15.500", 135.5],
+            "milliseconds without unit" => ["4200", 4.2],
+            "frames with three digits"  => ["00:00:02:250", 2.25],
+        ];
+    }
+
+
+    public function testLenientModeWarnsForALooseTtmlTimeOnADivWithoutAParagraphIndex(): void
+    {
+        $subtitle = (new TtmlParser())->parse(
+            "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body>\n<div begin=\"1000\"><p begin=\"1s\" end=\"2s\">Text</p></div></body></tt>",
+            new ReadOptions(lenient: true)
+        );
+
+        $this->assertSame([[2.0, 3.0]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
+        $this->assertSame([[2, null, self::REPAIRED, "The time expression \"1000\" is not valid. The parser read it as 1s."]], $this->warningRows($subtitle->getParseWarnings()));
+    }
+
+
     public function testIttParserInheritsLenientMode(): void
     {
         $subtitle = (new IttParser())->parse(file_get_contents(self::DIR . "bad_begin.ttml"), new ReadOptions(lenient: true));
