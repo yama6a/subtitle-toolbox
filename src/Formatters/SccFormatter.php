@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
-use InvalidArgumentException;
 use SubtitleToolbox\Encoding\Cea608;
 use SubtitleToolbox\Encoding\Cea608Encoder;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
