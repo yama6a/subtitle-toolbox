@@ -46,7 +46,7 @@ final class TextEdit extends Edit
             Option::value("speakers", "MODE", "Convert <v> speaker tags: prefix (ANNA: Hi), dashes, colors, or from-prefix (ANNA: to <v Anna>)."),
             Option::value("case", "MODE", "Change the case of the text between tags: upper, lower or sentence."),
             Option::flag("strip-tags", "Remove all formatting tags, such as <i> and <font>, from the cue text."),
-            Option::value("rtl", "MODE", "Right-to-left text: fix wraps each Arabic or Hebrew line in Unicode embedding marks."),
+            Option::value("rtl", "MODE", "Right-to-left text: fix wraps each Arabic or Hebrew line in Unicode embedding marks, clean removes all bidi controls."),
         ];
     }
 
@@ -55,7 +55,7 @@ final class TextEdit extends Edit
     {
         $case     = $arguments->choice("case", array_column(CaseMode::cases(), "value"));
         $speakers = $arguments->choice("speakers", array_keys(self::speakerModes()));
-        $rtl      = $arguments->choice("rtl", ["fix"]);
+        $rtl      = $arguments->choice("rtl", ["fix", "clean"]);
         if (!$arguments->has("strip-tags") && $case === null && $speakers === null && $rtl === null) {
             return null;
         }
@@ -92,6 +92,8 @@ final class TextEdit extends Edit
         }
         if ($this->rtl === "fix") {
             $subtitle->fixRightToLeft();
+        } elseif ($this->rtl === "clean") {
+            $subtitle->removeBidiControls();
         }
 
         return $subtitle;

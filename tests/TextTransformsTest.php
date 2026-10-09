@@ -318,6 +318,38 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    #[DataProvider("bidiControlProvider")]
+    public function testRemoveBidiControls(string $input, string $expected): void
+    {
+        $this->assertSame([$expected], TestSubtitles::texts(TestSubtitles::fromTexts([$input])->removeBidiControls()));
+    }
+
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function bidiControlProvider(): array
+    {
+        return [
+            "embedding"         => ["\u{202B}مرحبا؟\u{202C}", "مرحبا؟"],
+            "marks inside tags" => ["<i>\u{200F}שלום\u{200E}</i>", "<i>שלום</i>"],
+            "override"          => ["Hello \u{202E}dlrow", "Hello dlrow"],
+            "isolates"          => ["\u{2066}a\u{2069} \u{2067}b\u{2069} \u{2068}c\u{2069}\nd\u{202A}e\u{202D}", "a b c\nde"],
+            "no-break space"    => ["a\u{00A0}b", "a\u{00A0}b"],
+            "invalid UTF-8"     => ["\xFF\u{200F}a", "\xFFa"],
+        ];
+    }
+
+
+    public function testRemoveBidiControlsUndoesFixRightToLeft(): void
+    {
+        $original = Subtitle::load(self::FILES . "own_rtl.srt", Format::SubRip);
+        $fixed    = Subtitle::load(self::FILES . "own_rtl_fixed.srt", Format::SubRip);
+
+        $this->assertSame($original->toString(Format::SubRip), $fixed->removeBidiControls()->toString(Format::SubRip));
+    }
+
+
     public function testGermanKeepsALoneLowerCaseI(): void
     {
         $this->assertSame(["Ich bin da, i."], TestSubtitles::texts(TestSubtitles::fromTexts(["ICH BIN DA, I."])->changeCase(CaseMode::Sentence, "de")));

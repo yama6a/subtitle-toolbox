@@ -16,6 +16,10 @@ trait TextTransforms
     /** Abbreviations whose period ends no sentence when a comma or a lower case word follows. */
     private const TEXT_TRANSFORMS_ABBREVIATIONS = ["i.e", "e.g", "etc", "vs"];
 
+    private const TEXT_TRANSFORMS_BIDI_CONTROLS = [
+        "\u{200E}", "\u{200F}", "\u{202A}", "\u{202B}", "\u{202C}", "\u{202D}", "\u{202E}", "\u{2066}", "\u{2067}", "\u{2068}", "\u{2069}",
+    ];
+
 
     /**
      * Calls $fn for each text run between tags, with entities decoded as Markup::mapTextRuns() does.
@@ -134,6 +138,15 @@ trait TextTransforms
     public function fixRightToLeft(): self
     {
         return $this->textTransformsMapCues(fn (SubtitleCue $cue): array => array_map(self::textTransformsFixRightToLeft(...), $cue->getLines()));
+    }
+
+
+    /**
+     * Removes the bidi controls U+200E, U+200F, U+202A to U+202E and U+2066 to U+2069 from the text between tags.
+     */
+    public function removeBidiControls(): self
+    {
+        return $this->textTransformsMapRuns(fn (string $text): string => str_replace(self::TEXT_TRANSFORMS_BIDI_CONTROLS, "", $text));
     }
 
 
