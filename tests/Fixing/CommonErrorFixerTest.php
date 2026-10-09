@@ -113,6 +113,14 @@ class CommonErrorFixerTest extends TestCase
             "dialogue already on two lines"      => ["dialogueOnOneLine", "en", ["- Hi.", "- Hello."], ["- Hi.", "- Hello."]],
             "three speakers stay"                => ["dialogueOnOneLine", "en", ["- Hi. - Hello. - Hey."], ["- Hi. - Hello. - Hey."]],
             "negative number after a sentence"   => ["dialogueOnOneLine", "en", ["It's cold. -5 degrees."], ["It's cold. -5 degrees."]],
+            "lone i"                             => ["loneLowercaseI", "en", ["i think i can."], ["I think I can."]],
+            "lone i in a tag"                    => ["loneLowercaseI", "en", ["<i>i</i> know"], ["<i>I</i> know"]],
+            "lone i with contractions"           => ["loneLowercaseI", "en", ["i'm sure, i\u{2019}ll go, i'd and i've"],
+                                                     ["I'm sure, I\u{2019}ll go, I'd and I've"]],
+            "i in words and abbreviations"       => ["loneLowercaseI", "en", ["see i.e. here, www.i.com, iPhone, w<b>i</b>th"],
+                                                     ["see i.e. here, www.i.com, iPhone, w<b>i</b>th"]],
+            "lone i in German"                   => ["loneLowercaseI", "de", ["i think"], ["i think"]],
+            "lone i without a language"          => ["loneLowercaseI", null, ["i think"], ["i think"]],
         ];
     }
 
@@ -182,7 +190,7 @@ class CommonErrorFixerTest extends TestCase
 
         CommonErrorFixer::apply($subtitle, $options);
 
-        $this->assertSame(["dialogueOnOneLine"], array_values($optional));
+        $this->assertSame(["loneLowercaseI", "dialogueOnOneLine"], array_values($optional));
         $this->assertStringEqualsFile(self::FILES . "fixing/optional-rules.fixed.srt", $subtitle->toString(Format::SubRip));
         $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "fixing/optional-rules.fixed.srt")),
                                                       $options)->fixes);
@@ -275,6 +283,12 @@ class CommonErrorFixerTest extends TestCase
         $this->assertSame(["- Hi. - Hello."], self::fixLines(["- Hi. - Hello."])[0]);
         $this->assertSame(["\u{2013} Hi.", "\u{2013} Hello."],
                           self::fixLines(["Hi. - Hello."], new CommonErrorOptions(dialogueDashStyle: DialogueDashStyle::EnDashSpace, dialogueOnOneLine: true))[0]);
+    }
+
+
+    public function testLoneLowercaseIIsOffByDefault(): void
+    {
+        $this->assertSame(["i think"], self::fixLines(["i think"], new CommonErrorOptions(language: "en"))[0]);
     }
 
 

@@ -26,6 +26,7 @@ final class CommonErrorOptions
      * @param bool              $ocrZeroInWords               read an OCR "0" in a word as "O" or "o", as in "D0N'T"
      * @param ?OcrReplaceList   $replaceList                  the words to replace, or null for no replace list
      * @param bool              $dialogueOnOneLine            split "- Hi. - Hello." into 2 dialogue lines. Off by default
+     * @param bool              $loneLowercaseI               write the English pronoun "i" as "I", as in "i think". Off by default
      */
     public function __construct(
         public readonly ?string $language = null,
@@ -43,6 +44,7 @@ final class CommonErrorOptions
         public readonly bool $ocrZeroInWords = true,
         public readonly ?OcrReplaceList $replaceList = null,
         public readonly bool $dialogueOnOneLine = false,
+        public readonly bool $loneLowercaseI = false,
     ) {
     }
 }

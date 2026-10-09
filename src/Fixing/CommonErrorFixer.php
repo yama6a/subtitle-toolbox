@@ -101,6 +101,7 @@ final class CommonErrorFixer
             CommonErrorRule::OcrPipe                      => $options->ocrPipe,
             CommonErrorRule::OcrZeroInWords               => $options->ocrZeroInWords,
             CommonErrorRule::OcrLowercaseL                => $options->ocrLowercaseL,
+            CommonErrorRule::LoneLowercaseI               => $options->loneLowercaseI && $language === "en",
             CommonErrorRule::Ellipsis                     => $options->ellipsis,
             CommonErrorRule::DoubleSpaces                 => $options->doubleSpaces,
             CommonErrorRule::SpaceBeforePunctuation       => $options->spaceBeforePunctuation,
@@ -120,6 +121,7 @@ final class CommonErrorFixer
             CommonErrorRule::OcrPipe         => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrPipe($text, $language)),
             CommonErrorRule::OcrZeroInWords  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => self::ocrZero($text, $first)),
             CommonErrorRule::OcrLowercaseL   => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrLowercaseL($text, $language)),
+            CommonErrorRule::LoneLowercaseI  => array_map(self::loneLowercaseI(...), $lines),
             CommonErrorRule::Ellipsis        => Markup::mapTextRuns($lines, fn (string $text): string => self::ellipsis($text, $options->unicodeEllipsis)),
             CommonErrorRule::DoubleSpaces    => self::doubleSpaces($lines),
             CommonErrorRule::SpaceBeforePunctuation       => Markup::mapTextRuns($lines, fn (string $text): string =>
@@ -281,6 +283,34 @@ final class CommonErrorFixer
         }
 
         return self::replace('/' . $start . 'l(?=[' . self::L_CONSONANTS[$language] . '])/u', "I", $text);
+    }
+
+
+    /**
+     * Writes the pronoun "i" and "i'm", "i'll", "i've" and "i'd" in upper case. The letters around it may be in other text runs.
+     */
+    private static function loneLowercaseI(string $line): string
+    {
+        $tokens = Markup::splitTags($line);
+        $runs   = array_filter($tokens, fn (int $index): bool => $index % 2 === 0, ARRAY_FILTER_USE_KEY);
+        $text   = implode("", $runs);
+        if (preg_match_all('/(?<![\p{L}\p{N}\'\x{2019}]|\p{L}\.)i(?=(?:[\'\x{2019}](?:m|ll|ve|d))?(?![\p{L}\p{N}\'\x{2019}]|\.\p{L}))/u',
+                           $text, $matches, PREG_OFFSET_CAPTURE) < 1) {
+            return $line;
+        }
+
+        $start = 0;
+        $found = array_column($matches[0], 1);
+        foreach ($runs as $index => $run) {
+            foreach ($found as $offset) {
+                if ($offset >= $start && $offset < $start + strlen($run)) {
+                    $tokens[$index][$offset - $start] = "I";
+                }
+            }
+            $start += strlen($run);
+        }
+
+        return implode("", $tokens);
     }
 
 
