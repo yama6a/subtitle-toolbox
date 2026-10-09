@@ -126,7 +126,7 @@ php subtitle-toolbox.phar --version
 - **Formats**: `--from` and `--to` always name formats. `retime` changes the frame rate with `--from-fps` and `--to-fps`.
 
 ## Times
-The options `--shift`, `--shift-after`, `--shift-before`, `--timing-min-duration`, `--timing-min-gap` and `--sync` take a time in one of these shapes:
+Every option with the value `SECONDS` takes a time, in every command. `--sync` takes times too. A time has one of these shapes:
 
 | Shape | Example | Seconds |
 |:--- |:--- |:--- |
@@ -258,7 +258,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --to srt --output-dir fixed/ -
 | `--mask STYLE` | `stars`, `first-letter`, `remove`, or `none`. `none` keeps the text and only finds the times for `--mute-edl` and `--mute-filter` |
 | `--mute-edl FILE` | writes the times of the matches to an EDL (edit decision list) file with [`MuteRange::toEdl()`](text.md#profanity-filter), for Kodi and MPlayer |
 | `--mute-filter FILE` | writes the FFmpeg volume filter of `MuteRange::toFfmpegVolumeFilter()` |
-| `--mute-padding SECONDS` | widens each time range on both sides |
+| `--mute-padding SECONDS` | widens each time range on both sides. The value is a [time](#times) |
 
 ```sh
 vendor/bin/subtitle-toolbox convert movie.srt --to srt -o clean.srt --mask-words words.txt --mute-filter mute.txt --mute-padding 0.1
@@ -274,7 +274,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 
 | Option | Calls |
 |:--- |:--- |
-| `--structure-resegment` | `Resegmenter::apply()` with `ResegmentMode::ByWords`. `--structure-max-word-gap` sets `maxWordGap`. It turns on `--word-timestamps` |
+| `--structure-resegment` | `Resegmenter::apply()` with `ResegmentMode::ByWords`. `--structure-max-word-gap` sets `maxWordGap` as a [time](#times). It turns on `--word-timestamps` |
 | `--structure-unwrap` | `unwrapLines()`. Each dialogue dash line starts a line of its own |
 | `--structure-merge-short` | `mergeShortCues()` with the default options |
 | `--structure-split-long` | `Resegmenter::apply()` with `ResegmentMode::SplitLong` and the default options |
@@ -344,8 +344,8 @@ vendor/bin/subtitle-toolbox convert movie.srt --to srt -o movie.timed.srt --vide
 | Option | Rule |
 |:--- |:--- |
 | `--max-cps`, `--max-cpl`, `--max-lines` | `maxCharactersPerSecond`, `maxCharactersPerLine`, `maxLinesPerCue` |
-| `--min-duration`, `--max-duration`, `--min-gap` | `minDuration`, `maxDuration`, `minGap` |
-| `--max-wpm`, `--min-seconds-per-word` | `maxWordsPerMinute`, `minSecondsPerWord` |
+| `--min-duration`, `--max-duration`, `--min-gap` | `minDuration`, `maxDuration`, `minGap`. Each value is a [time](#times) |
+| `--max-wpm`, `--min-seconds-per-word` | `maxWordsPerMinute`, `minSecondsPerWord`. `--min-seconds-per-word` is a [time](#times) |
 | `--max-speakers`, `--dialogue-dash STYLE`, `--allowed-characters LIST` | `maxSpeakersPerCue`, `dialogueDashStyle`, `allowedCharacters` |
 | `--check-overlaps`, `--check-empty-cues`, `--check-double-spaces` | `noOverlap`, `noEmptyCues`, `noDoubleSpaces` |
 | `--check-leading-or-trailing-spaces`, `--check-unbalanced-tags`, `--check-all-caps-lines` | `noLeadingOrTrailingSpaces`, `noUnbalancedTags`, `noAllCapsLines` |
@@ -371,8 +371,8 @@ movie.de.srt: scale 1.04271, offset -2.3 s, score 0.89
 | Option | Sets |
 |:--- |:--- |
 | `--reference FILE` | the subtitle in sync with the video, in any format that the tool reads. A Whisper JSON transcript of the audio also works |
-| `--silence-log FILE`, `--media-duration SECONDS` | the speech in an FFmpeg `silencedetect` log as the reference, with [`SpeechReference`](sync.md#sync-to-speech) |
-| `--min-offset SECONDS`, `--max-offset SECONDS` | `minOffset` and `maxOffset`, see [sync.md](sync.md#sync-to-a-reference-subtitle) for their limits |
+| `--silence-log FILE`, `--media-duration SECONDS` | the speech in an FFmpeg `silencedetect` log as the reference, with [`SpeechReference`](sync.md#sync-to-speech). The value is a [time](#times) |
+| `--min-offset SECONDS`, `--max-offset SECONDS` | `minOffset` and `maxOffset`, see [sync.md](sync.md#sync-to-a-reference-subtitle) for their limits. Each value is a [time](#times) |
 | `--no-scale` | `searchScale: false` |
 | `--max-splits SPLITS`, `--split-penalty SCORE` | `maxSplits` and `splitPenalty` |
 
@@ -389,7 +389,7 @@ vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-format
 
 | Option | Sets |
 |:--- |:--- |
-| `--time-tolerance SECONDS` | `timeTolerance` |
+| `--time-tolerance SECONDS` | `timeTolerance`. The value is a [time](#times) |
 | `--ignore-formatting`, `--ignore-whitespace`, `--text-only` | `ignoreFormatting`, `ignoreWhitespace`, `textOnly` |
 | `--from2 FORMAT`, `--track2 NUMBER` | the format and the MKV or WebM track of the new file. `--from` and `--track` apply to the old file |
 | `--json` | prints JSON, see [JSON output](#json-output) |
@@ -442,7 +442,7 @@ vendor/bin/subtitle-toolbox dual --primary movie.en.srt --secondary movie.de.srt
 | `--mode MODE` | `stack` or `top-bottom` |
 | `--secondary-style TAG` | `secondaryStyle`, for example `i` or `'font color="#ffff00"'` |
 | `--secondary-alignment 1-9` | `secondaryAlignment` for `top-bottom` |
-| `--snap-tolerance SECONDS` | `snapTolerance` for `top-bottom` |
+| `--snap-tolerance SECONDS` | `snapTolerance` for `top-bottom`. The value is a [time](#times) |
 | `--primary-from FORMAT`, `--primary-track NUMBER` | the format and the MKV or WebM track of the primary file. `dual` has no `--from` and `--track` |
 | `--secondary-from FORMAT`, `--secondary-track NUMBER` | the format and the MKV or WebM track of the secondary file |
 
@@ -461,12 +461,12 @@ This writes `hls/sub0.vtt` to `hls/sub899.vtt` and `hls/subs.m3u8`.
 | Option | Sets |
 |:--- |:--- |
 | `--output-dir DIR` | the directory of the segments and the playlist. Required |
-| `--segment SECONDS` | `segmentDuration` |
+| `--segment SECONDS` | `segmentDuration`. The value is a [time](#times) |
 | `--playlist NAME` | the file name of the playlist |
 | `--pattern PATTERN` | `fileNamePattern`. `%d` is the segment number from 0 |
 | `--mpegts TICKS` | `mpegts`, the 90 kHz MPEG-2 timestamp at which subtitle time 0 plays. A whole number of 0 or more |
-| `--local SECONDS` | `local`, the WebVTT cue time that maps to `--mpegts` |
-| `--media-duration SECONDS` | `mediaDuration`. Set it to the video duration, so the playlist covers the whole video. Without it, the playlist ends with the last cue |
+| `--local SECONDS` | `local`, the WebVTT cue time that maps to `--mpegts`. The value is a [time](#times) |
+| `--media-duration SECONDS` | `mediaDuration`. Set it to the video duration, so the playlist covers the whole video. Without it, the playlist ends with the last cue. The value is a [time](#times) |
 
 - **Overwrite**: `hls` fails with exit code 2 before it reads the input when the playlist exists. It also fails when a file in `--output-dir` matches `--pattern`. The playlist can be outside `--output-dir`, so `--output-dir new --playlist ../keep.txt` fails when `keep.txt` exists. The segment count is known only after the read, so `hls/sub950.vtt` blocks a run that writes 900 segments.
 - **Names**: `hls` fails with exit code 2 before it writes a file when `--playlist` matches `--pattern`, for example `--playlist sub0.vtt`. It also fails when the playlist or a segment would overwrite the input.

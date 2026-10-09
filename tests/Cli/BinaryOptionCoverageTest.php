@@ -98,9 +98,9 @@ class BinaryOptionCoverageTest extends BinaryTestCase
 
         foreach ([
             "--max-lines"        => [["--max-lines", "1"], new ValidationRules(maxLinesPerCue: 1)],
-            "--min-duration"     => [["--min-duration", "1.5"], new ValidationRules(minDuration: 1.5)],
-            "--max-duration"     => [["--max-duration", "2"], new ValidationRules(maxDuration: 2)],
-            "--min-gap"          => [["--min-gap", "0.5"], new ValidationRules(minGap: 0.5)],
+            "--min-duration"     => [["--min-duration", "00:00:01.5"], new ValidationRules(minDuration: 1.5)],
+            "--max-duration"     => [["--max-duration", "0:00:02"], new ValidationRules(maxDuration: 2)],
+            "--min-gap"          => [["--min-gap", "00:00.5"], new ValidationRules(minGap: 0.5)],
             "--check-empty-cues" => [["--check-empty-cues"], new ValidationRules(noEmptyCues: true)],
         ] as $option => [$options, $rules]) {
             $expected = array_map(fn (ValidationViolation $violation): array => [$violation->rule->value, $violation->cueIndex],

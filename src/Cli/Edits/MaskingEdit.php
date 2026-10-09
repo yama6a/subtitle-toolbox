@@ -89,7 +89,7 @@ final class MaskingEdit extends Edit
         return new self(
             $words,
             $mask === null ? null : self::MASKS[$mask],
-            $arguments->nonNegativeFloat("mute-padding"),
+            $arguments->nonNegativeSeconds("mute-padding"),
             $arguments->value("mute-edl"),
             $arguments->value("mute-filter"),
         );

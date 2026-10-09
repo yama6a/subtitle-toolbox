@@ -140,7 +140,7 @@ final class DualCommand extends WriteCommand
         $mode              = $arguments->choice("mode", array_keys(self::MODES));
         $this->dualOptions = new DualSubtitleOptions(...self::given([
             "mode"               => $mode === null ? null : self::MODES[$mode],
-            "snapTolerance"      => $arguments->nonNegativeFloat("snap-tolerance"),
+            "snapTolerance"      => $arguments->nonNegativeSeconds("snap-tolerance"),
             "secondaryStyle"     => $arguments->value("secondary-style"),
             "secondaryAlignment" => $arguments->int("secondary-alignment", 1, 9),
         ]));

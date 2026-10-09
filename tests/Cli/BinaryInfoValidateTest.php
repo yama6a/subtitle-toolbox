@@ -155,7 +155,7 @@ class BinaryInfoValidateTest extends BinaryTestCase
         ], $this->runBinary(["validate", "trip.srt", "--preset", "bbc"]));
         $this->assertSame(
             [1, "trip.srt: cue 2: maxCharactersPerLine 57, limit 37\n", ""],
-            $this->runBinary(["validate", "trip.srt", "--preset", "bbc", "--max-wpm", "500", "--min-seconds-per-word", "0.1"])
+            $this->runBinary(["validate", "trip.srt", "--preset", "bbc", "--max-wpm", "500", "--min-seconds-per-word", "00:00.1"])
         );
     }
 

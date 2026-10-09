@@ -83,8 +83,8 @@ final class SyncCommand extends WriteCommand
         // The reference loads after the checks of the inputs. Until then, an empty subtitle stands in for it.
         $this->syncOptions = new ReferenceSyncOptions(...self::given([
             "reference"    => new Subtitle(),
-            "minOffset"    => $arguments->float("min-offset"),
-            "maxOffset"    => $arguments->float("max-offset"),
+            "minOffset"    => $arguments->seconds("min-offset"),
+            "maxOffset"    => $arguments->seconds("max-offset"),
             "searchScale"  => !$arguments->has("no-scale"),
             "maxSplits"    => $arguments->int("max-splits", 0, ReferenceSyncOptions::MAX_SPLITS),
             "splitPenalty" => $arguments->nonNegativeFloat("split-penalty"),
@@ -100,7 +100,7 @@ final class SyncCommand extends WriteCommand
         if ($arguments->has("silence-log") !== $arguments->has("media-duration")) {
             self::fail("Pass --media-duration with --silence-log.");
         }
-        $this->mediaDuration = $arguments->positiveFloat("media-duration");
+        $this->mediaDuration = $arguments->positiveSeconds("media-duration");
     }
 
 

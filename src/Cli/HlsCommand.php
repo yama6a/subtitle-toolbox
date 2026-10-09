@@ -71,11 +71,11 @@ final class HlsCommand extends FileCommand
         self::checkOutputDirectory($this->directory);
 
         $this->segmentOptions = new HlsSegmentOptions(...self::given([
-            "segmentDuration" => $arguments->positiveFloat("segment"),
+            "segmentDuration" => $arguments->positiveSeconds("segment"),
             "mpegts"          => $arguments->int("mpegts", 0),
-            "local"           => $arguments->nonNegativeFloat("local"),
+            "local"           => $arguments->nonNegativeSeconds("local"),
             "fileNamePattern" => $arguments->value("pattern"),
-            "mediaDuration"   => $arguments->positiveFloat("media-duration"),
+            "mediaDuration"   => $arguments->positiveSeconds("media-duration"),
         ]));
     }
 

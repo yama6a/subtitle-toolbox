@@ -179,7 +179,7 @@ class BinaryEditTest extends BinaryTestCase
         $ranges   = ProfanityFilter::apply($subtitle, new ProfanityOptions(["damn*", "hell"], ProfanityMask::None, 0.1))->muteRanges;
 
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "radio.vtt", "--to", "vtt", "-o", "out.vtt", "--mask-words", "words.txt", "--mask", "none",
-                                                      "--mute-edl", "radio.edl", "--mute-filter", "radio.af", "--mute-padding", "0.1"]);
+                                                      "--mute-edl", "radio.edl", "--mute-filter", "radio.af", "--mute-padding", "00:00:00,1"]);
         $this->assertSame([0, "radio.vtt -> out.vtt\nradio.vtt -> radio.edl\nradio.vtt -> radio.af\n", ""], [$code, $stdout, $stderr]);
         $this->assertSame($subtitle->toString(Format::WebVtt), $this->file("out.vtt"));
         $this->assertSame(MuteRange::toEdl($ranges), $this->file("radio.edl"));
@@ -410,7 +410,7 @@ class BinaryEditTest extends BinaryTestCase
         Resegmenter::apply($resegmented, new ResegmentOptions(ResegmentMode::ByWords, limits: new CueLimits(maxCharactersPerLine: 30, maxLinesPerCue: 1), maxWordGap: 0.3));
         $this->assertSame(
             [0, $resegmented->toString(Format::SubRip), ""],
-            $this->runBinary(["convert", "lecture.json", "--structure-resegment", "--structure-max-cpl", "30", "--structure-max-lines", "1", "--structure-max-word-gap", "0.3",
+            $this->runBinary(["convert", "lecture.json", "--structure-resegment", "--structure-max-cpl", "30", "--structure-max-lines", "1", "--structure-max-word-gap", "00:00:00.3",
                                    "--to", "srt", "-o", "-"])
         );
 
