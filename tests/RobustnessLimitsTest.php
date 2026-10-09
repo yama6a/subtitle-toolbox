@@ -6,7 +6,8 @@ namespace SubtitleToolbox;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Cli\Application;
-use SubtitleToolbox\Container\Matroska\MatroskaTrack;
+use SubtitleToolbox\Container\ContainerFormat;
+use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Hls\HlsWebVttSegmenter;
@@ -81,7 +82,7 @@ class RobustnessLimitsTest extends TestCase
 
     public function testTrackNameThatIsNotUtf8KeepsItsValidCharacters(): void
     {
-        $track = new MatroskaTrack(3, "S_TEXT/UTF8", "fr", "Fran\xE7ais", true, false);
+        $track = new SubtitleTrack(ContainerFormat::Matroska, 3, "S_TEXT/UTF8", Format::SubRip, "fr", "Fran\xE7ais", true, false);
 
         $this->assertSame("S_TEXT/UTF8, fr, \"Fran\u{FFFD}ais\", default", $track->describe());
     }

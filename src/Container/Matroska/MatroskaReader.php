@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Container\Matroska;
 
 use Generator;
+use SubtitleToolbox\Container\ContainerFormat;
+use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Dependency;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
@@ -119,7 +121,7 @@ final class MatroskaReader
 
     private int $timestampScale = self::DEFAULT_TIMESTAMP_SCALE;
 
-    /** @var array<int, MatroskaTrack> */
+    /** @var array<int, SubtitleTrack> */
     private array $tracks = [];
 
     /** @var array<int, array{codecPrivate: string, defaultDuration: ?int, encodings: list<array{scope: int, type: int, algo: int, settings: string}>}> */
@@ -163,7 +165,7 @@ final class MatroskaReader
 
 
     /**
-     * @return list<MatroskaTrack>
+     * @return list<SubtitleTrack>
      */
     public function getSubtitleTracks(): array
     {
@@ -178,7 +180,7 @@ final class MatroskaReader
      */
     public function trackFormat(int $trackNumber): ?Format
     {
-        return self::FORMATS[$this->subtitleTrack($trackNumber)->codecId] ?? null;
+        return $this->subtitleTrack($trackNumber)->format;
     }
 
 
@@ -190,7 +192,7 @@ final class MatroskaReader
     {
         $options ??= new ReadOptions();
         $track  = $this->subtitleTrack($trackNumber);
-        $format = self::FORMATS[$track->codecId] ?? null;
+        $format = $track->format;
         if ($format === null) {
             throw new ParsingException("Track $trackNumber has the codec $track->codecId. The reader extracts only " .
                                        implode(", ", self::CODECS) . ".");
@@ -222,7 +224,7 @@ final class MatroskaReader
     }
 
 
-    private function subtitleTrack(int $trackNumber): MatroskaTrack
+    private function subtitleTrack(int $trackNumber): SubtitleTrack
     {
         return $this->tracks[$trackNumber]
             ?? throw new InvalidArgumentException("The file has no subtitle track with the number $trackNumber.");
@@ -379,9 +381,12 @@ final class MatroskaReader
             }
 
             $number                   = $fields["number"];
-            $this->tracks[$number]    = new MatroskaTrack(
+            $codecId                  = $fields["codecId"] ?? "";
+            $this->tracks[$number]    = new SubtitleTrack(
+                ContainerFormat::Matroska,
                 $number,
-                $fields["codecId"] ?? "",
+                $codecId,
+                self::FORMATS[$codecId] ?? null,
                 $fields["bcp47"] ?? $fields["language"] ?? "eng",
                 $fields["name"] ?? null,
                 $fields["default"],

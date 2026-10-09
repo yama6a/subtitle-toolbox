@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
-use SubtitleToolbox\Container\Matroska\MatroskaTrack;
+use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\CueNotFoundException;
 use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
@@ -142,7 +142,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     /**
      * Returns the subtitle tracks of an MKV or WebM file.
      *
-     * @return list<MatroskaTrack>
+     * @return list<SubtitleTrack>
      */
     public static function tracks(string $path): array
     {
@@ -237,7 +237,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
         if (count($tracks) !== 1) {
             throw new InvalidParserException($tracks === [] ? "The MKV or WebM file has no subtitle track." :
                 "The MKV or WebM file has " . count($tracks) . " subtitle tracks. Call loadTrack() with one of them:\n" .
-                implode("\n", array_map(fn (MatroskaTrack $track): string => "  $track->number: " . $track->describe(), $tracks)));
+                implode("\n", array_map(fn (SubtitleTrack $track): string => "  $track->number: " . $track->describe(), $tracks)));
         }
 
         return self::readTrack($reader, $tracks[0]->number, $options);

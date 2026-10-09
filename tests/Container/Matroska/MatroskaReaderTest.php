@@ -6,6 +6,8 @@ namespace SubtitleToolbox\Container\Matroska;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Container\ContainerFormat;
+use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
@@ -42,14 +44,15 @@ class MatroskaReaderTest extends TestCase
 
         $this->assertSame(
             [
-                [3, "S_TEXT/UTF8", "de", "Deutsch (Forced)", false, true],
-                [4, "S_TEXT/ASS", "eng", "English", true, false],
-                [5, "S_TEXT/WEBVTT", "fre", "Français", false, false],
-                [6, "S_TEXT/SSA", "spa", null, false, false],
-                [7, "S_VOBSUB", "ita", null, false, false],
-                [8, "S_TEXT/UTF8", "eng", null, false, false],
+                [ContainerFormat::Matroska, 3, "S_TEXT/UTF8", Format::SubRip, "de", "Deutsch (Forced)", false, true],
+                [ContainerFormat::Matroska, 4, "S_TEXT/ASS", Format::Ass, "eng", "English", true, false],
+                [ContainerFormat::Matroska, 5, "S_TEXT/WEBVTT", Format::WebVtt, "fre", "Français", false, false],
+                [ContainerFormat::Matroska, 6, "S_TEXT/SSA", Format::Ass, "spa", null, false, false],
+                [ContainerFormat::Matroska, 7, "S_VOBSUB", null, "ita", null, false, false],
+                [ContainerFormat::Matroska, 8, "S_TEXT/UTF8", Format::SubRip, "eng", null, false, false],
             ],
-            array_map(fn (MatroskaTrack $t): array => [$t->number, $t->codecId, $t->language, $t->name, $t->default, $t->forced], $tracks),
+            array_map(fn (SubtitleTrack $t): array => [$t->container, $t->number, $t->codecId, $t->format, $t->language, $t->name, $t->default, $t->forced],
+                      $tracks),
         );
     }
 

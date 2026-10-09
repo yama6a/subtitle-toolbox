@@ -7,7 +7,7 @@ namespace SubtitleToolbox;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
-use SubtitleToolbox\Container\Matroska\MatroskaTrack;
+use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
 use SubtitleToolbox\Exceptions\UnknownFormatException;
@@ -128,7 +128,7 @@ class LoadSaveTest extends TestCase
     {
         $mkv = self::FILES . "mkv/text_tracks.mkv";
 
-        $this->assertSame([3, 4, 5, 6, 7, 8], array_map(fn (MatroskaTrack $track): int => $track->number, Subtitle::tracks($mkv)));
+        $this->assertSame([3, 4, 5, 6, 7, 8], array_map(fn (SubtitleTrack $track): int => $track->number, Subtitle::tracks($mkv)));
 
         $german = Subtitle::loadTrack($mkv, 3);
         $this->assertSame(Format::SubRip, $german->getFormat());

@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\Container\Matroska\MatroskaTrack;
+use SubtitleToolbox\Container\ContainerFormat;
+use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
@@ -60,14 +61,16 @@ final class InfoCommand extends ReportCommand
             return false;
         }
 
-        $text = self::label($input) . "\n  Container: matroska\n";
+        // Subtitle::tracks() reads only Matroska, so a file without subtitle tracks is a Matroska file.
+        $container = $tracks[0]->container ?? ContainerFormat::Matroska;
+        $text      = self::label($input) . "\n  Container: $container->value\n";
         foreach ($tracks as $track) {
             $text .= "  Track $track->number: " . $track->describe() . "\n";
         }
         $this->emit($console, ($this->succeeded > 0 ? "\n" : "") . $text, [
             "file"      => $input,
-            "container" => "matroska",
-            "tracks"    => array_map(fn (MatroskaTrack $track): array => [
+            "container" => $container->value,
+            "tracks"    => array_map(fn (SubtitleTrack $track): array => [
                 "number"   => $track->number,
                 "codecId"  => $track->codecId,
                 "language" => $track->language,

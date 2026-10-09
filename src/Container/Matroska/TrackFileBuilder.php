@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Container\Matroska;
 
+use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Parsers\AssFormatLines;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Timecode;
@@ -48,7 +49,7 @@ final class TrackFileBuilder
      * The fields are ReadOrder, Layer, Style, Name, MarginL, MarginR, MarginV, Effect and Text.
      * Each Dialogue line takes its fields in the order of the Format line of the header.
      */
-    public static function assFile(MatroskaTrack $track, string $codecPrivate, array $cues): string
+    public static function assFile(SubtitleTrack $track, string $codecPrivate, array $cues): string
     {
         $header = rtrim(StringHelpers::normalizeEOLs(StringHelpers::removeUtf8Bom($codecPrivate))) . "\n";
         $format = $track->codecId === MatroskaReader::CODEC_SSA ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT;

@@ -21,7 +21,19 @@ Subtitle::loadAutoDetectFormat('/media/one-track.webm');       // reads the only
 | `S_TEXT/WEBVTT` | a WebVTT subtitle with its header, cue settings, identifiers and comments |
 | `S_HDMV/PGS` | image cues from `PgsParser`, see [ocr.md](ocr.md#pgs) |
 
-- **Tracks**: `Subtitle::tracks()` lists only tracks of type subtitle. `MatroskaTrack`, in the same namespace, has `number`, `codecId`, `language`, `name`, `default` and `forced`.
+- **Tracks**: `Subtitle::tracks()` lists only tracks of type subtitle. It returns `SubtitleTrack` objects from the namespace `SubtitleToolbox\Container`. Other containers return the same type.
+
+| Property | Type | MKV value |
+|:--- |:--- |:--- |
+| `container` | `ContainerFormat` | `ContainerFormat::Matroska` |
+| `number` | `int` | `TrackNumber` |
+| `codecId` | `string` | `CodecID`, for example `S_TEXT/UTF8` |
+| `format` | `?Format` | the format of the codec in the table above, null for a codec that the reader does not extract |
+| `language` | `string` | see **Language** below |
+| `name` | `?string` | `Name` |
+| `default` | `bool` | `FlagDefault` |
+| `forced` | `bool` | `FlagForced` |
+
 - **Format**: `getFormat()` of the subtitle is the format of the codec in the table.
 - **Detection**: `loadAutoDetectFormat()` and `fromStringAutoDetectFormat()` know an MKV or WebM file by its first 4 bytes, not by its extension.
 - **Language**: the reader takes `LanguageBCP47`. Without it, the reader takes `Language`. Without either, the language is `eng`, as the spec defines. `loadTrack()` puts it into the `language` metadata.
