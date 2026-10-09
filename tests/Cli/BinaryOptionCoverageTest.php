@@ -196,13 +196,16 @@ class BinaryOptionCoverageTest extends BinaryTestCase
             "retime --encoding"         => ["retime", ["--encoding", "UTF-16LE"]],
             "retime --lenient"          => ["retime", ["--lenient"]],
             "retime --word-timestamps"  => ["retime", ["--word-timestamps"]],
+            "retime --scc-roll-up" => ["retime", ["--scc-roll-up", "screen"]],
             "retime --track"            => ["retime", ["--track", "3"]],
             "info --encoding"           => ["info", ["--encoding", "UTF-16LE"]],
             "info --fps"                => ["info", ["--fps", "25"]],
             "info --word-timestamps"    => ["info", ["--word-timestamps"]],
+            "info --scc-roll-up" => ["info", ["--scc-roll-up", "screen"]],
             "validate --encoding"       => ["validate", ["--encoding", "UTF-16LE"]],
             "validate --input-fps"      => ["validate", ["--input-fps", "25"]],
             "validate --word-timestamps" => ["validate", ["--word-timestamps"]],
+            "validate --scc-roll-up" => ["validate", ["--scc-roll-up", "screen"]],
             "validate --track"          => ["validate", ["--track", "3"]],
             "sync --from"               => ["sync", ["--from", "srt"]],
             "sync --encoding"           => ["sync", ["--encoding", "UTF-16LE"]],
@@ -210,27 +213,32 @@ class BinaryOptionCoverageTest extends BinaryTestCase
             "sync --input-fps"          => ["sync", ["--input-fps", "25"]],
             "sync --fps"                => ["sync", ["--fps", "25"]],
             "sync --word-timestamps"    => ["sync", ["--word-timestamps"]],
+            "sync --scc-roll-up" => ["sync", ["--scc-roll-up", "screen"]],
             "sync --track"              => ["sync", ["--track", "3"]],
             "diff --from"               => ["diff", ["--from", "srt"]],
             "diff --encoding"           => ["diff", ["--encoding", "UTF-16LE"]],
             "diff --fps"                => ["diff", ["--fps", "25"]],
             "diff --word-timestamps"    => ["diff", ["--word-timestamps"]],
+            "diff --scc-roll-up" => ["diff", ["--scc-roll-up", "screen"]],
             "translate --from"          => ["translate", ["--from", "srt"]],
             "translate --lenient"       => ["translate", ["--lenient"]],
             "translate --input-fps"     => ["translate", ["--input-fps", "25"]],
             "translate --fps"           => ["translate", ["--fps", "25"]],
             "translate --word-timestamps" => ["translate", ["--word-timestamps"]],
+            "translate --scc-roll-up" => ["translate", ["--scc-roll-up", "screen"]],
             "translate --track"         => ["translate", ["--track", "3"]],
             "dual --encoding"           => ["dual", ["--encoding", "UTF-16LE"]],
             "dual --lenient"            => ["dual", ["--lenient"]],
             "dual --fps"                => ["dual", ["--fps", "25"]],
             "dual --word-timestamps"    => ["dual", ["--word-timestamps"]],
+            "dual --scc-roll-up" => ["dual", ["--scc-roll-up", "screen"]],
             "hls --from"                => ["hls", ["--from", "srt"]],
             "hls --encoding"            => ["hls", ["--encoding", "UTF-16LE"]],
             "hls --lenient"             => ["hls", ["--lenient"]],
             "hls --input-fps"           => ["hls", ["--input-fps", "25"]],
             "hls --fps"                 => ["hls", ["--fps", "25"]],
             "hls --word-timestamps"     => ["hls", ["--word-timestamps"]],
+            "hls --scc-roll-up" => ["hls", ["--scc-roll-up", "screen"]],
             "hls --track"               => ["hls", ["--track", "3"]],
         ];
     }
@@ -238,7 +246,7 @@ class BinaryOptionCoverageTest extends BinaryTestCase
 
     /**
      * Runs the command with the option on input that needs it, and without the option on the plain input. Both runs
-     * must give the same result. --from and --word-timestamps run on the plain input.
+     * must give the same result. --from, --word-timestamps and --scc-roll-up run on the plain input.
      *
      * @param list<string> $options
      */
@@ -295,7 +303,7 @@ class BinaryOptionCoverageTest extends BinaryTestCase
         }
         if ($options[0] === "--from") {
             $this->assertSame(3, $this->runBinary([...self::call($command, $input), "--from", "microdvd"])[0]);
-        } elseif ($options[0] !== "--word-timestamps") {
+        } elseif (!in_array($options[0], ["--word-timestamps", "--scc-roll-up"], true)) {
             $this->assertSame(3, $this->runBinary(self::call($command, $variantInput, $extension))[0]);
         }
         $this->takeDirectory("hls");

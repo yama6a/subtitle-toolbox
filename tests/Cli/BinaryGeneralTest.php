@@ -13,6 +13,7 @@ use SubtitleToolbox\Formatters\Options\AssWriteOptions;
 use SubtitleToolbox\Hls\HlsSegmentOptions;
 use SubtitleToolbox\Karaoke\WordHighlightOptions;
 use SubtitleToolbox\Ocr\TesseractOcrOptions;
+use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\Profanity\ProfanityOptions;
 use SubtitleToolbox\Resegmenting\ResegmentOptions;
 use SubtitleToolbox\Subtitle;
@@ -55,6 +56,7 @@ class BinaryGeneralTest extends BinaryTestCase
         "ass-karaoke-tag"          => [AssWriteOptions::class, "__construct", "karaokeTag"],
         "line-ending"              => [WriteOptions::class, "__construct", "lineEnding"],
         "ocr-language"             => [TesseractOcrOptions::class, "__construct", "language"],
+        "scc-roll-up"              => [SccReadOptions::class, "__construct", "rollUp"],
     ];
 
     /** Option => a default that only the CLI has. */
