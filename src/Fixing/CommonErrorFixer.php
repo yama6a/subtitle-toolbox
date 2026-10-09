@@ -105,6 +105,7 @@ final class CommonErrorFixer
             CommonErrorRule::ReplaceList                  => $options->replaceList !== null,
             CommonErrorRule::UnbalancedTags               => $options->unbalancedTags,
             CommonErrorRule::EmptyTags                    => $options->emptyTags,
+            CommonErrorRule::DoubleApostrophes            => $options->doubleApostrophes,
             CommonErrorRule::OcrPipe                      => $options->ocrPipe,
             CommonErrorRule::OcrZeroInWords               => $options->ocrZeroInWords,
             CommonErrorRule::OcrLowercaseL                => $options->ocrLowercaseL,
@@ -127,6 +128,8 @@ final class CommonErrorFixer
             CommonErrorRule::UnbalancedTags  => self::unbalancedTags($lines),
             CommonErrorRule::EmptyTags       => array_map(fn (string $line): string =>
                 Markup::removeEmptyTagPairs($line, ignoreCase: true, withSpaces: true), $lines),
+            CommonErrorRule::DoubleApostrophes => Markup::mapTextRuns($lines, fn (string $text): string =>
+                self::replace("/''|\\x{2019}\\x{2019}/u", '"', $text)),
             CommonErrorRule::OcrPipe         => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrPipe($text, $language)),
             CommonErrorRule::OcrZeroInWords  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => self::ocrZero($text, $first)),
             CommonErrorRule::OcrLowercaseL   => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrLowercaseL($text, $language)),

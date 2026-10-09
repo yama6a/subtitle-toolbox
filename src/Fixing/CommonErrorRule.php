@@ -12,6 +12,7 @@ enum CommonErrorRule: string
     case ReplaceList                  = "replaceList";
     case UnbalancedTags               = "unbalancedTags";
     case EmptyTags                    = "emptyTags";
+    case DoubleApostrophes            = "doubleApostrophes";
     case OcrPipe                      = "ocrPipe";
     case OcrZeroInWords               = "ocrZeroInWords";
     case OcrLowercaseL                = "ocrLowercaseL";
