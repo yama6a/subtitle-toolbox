@@ -53,11 +53,11 @@ class VersionTest extends TestCase
     }
 
 
-    public function testConflictsWithThePackageUnderItsOldName(): void
+    public function testDoesNotConflictWithOrReplaceThePackageUnderItsOldName(): void
     {
         $composer = json_decode((string) file_get_contents(__DIR__ . "/../../composer.json"), true, flags: JSON_THROW_ON_ERROR);
 
-        $this->assertSame("*", $composer["conflict"]["ymakhloufi/subtitle-toolbox"] ?? null);
+        $this->assertArrayNotHasKey("ymakhloufi/subtitle-toolbox", $composer["conflict"] ?? []);
         $this->assertArrayNotHasKey("replace", $composer);
     }
 }
