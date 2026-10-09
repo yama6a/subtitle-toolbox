@@ -265,6 +265,15 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testEnglishPronounIIsDecidedOnTheWholeLine(): void
+    {
+        $subtitle = TestSubtitles::fromTexts(["WE &amp; I'LL GO\nI.E., NOW.", "W<b>I</b>NDOW AND I", "<i>I</i> <b>AM</b> H<i>I</i>"]);
+
+        $this->assertSame(["We &amp; I'll go\ni.e., now.", "W<b>i</b>ndow and I", "<i>I</i> <b>am</b> h<i>i</i>"],
+                          TestSubtitles::texts($subtitle->changeCase(CaseMode::Sentence)));
+    }
+
+
     public function testGermanKeepsALoneLowerCaseI(): void
     {
         $this->assertSame(["Ich bin da, i."], TestSubtitles::texts(TestSubtitles::fromTexts(["ICH BIN DA, I."])->changeCase(CaseMode::Sentence, "de")));
