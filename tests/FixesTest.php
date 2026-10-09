@@ -278,6 +278,49 @@ class FixesTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testWrapLinesKeepsEachDialogueTurnOnLinesOfItsOwn(): void
+    {
+        $this->assertSame(["- Are you coming with", "us to the coast tonight?", "- Yes."],
+                          $this->wrap("- Are you coming with us to the coast tonight?\n- Yes.", 42));
+        $this->assertSame(["- Are you coming?", "- Yes.", "- Me too."], $this->wrap("- Are you coming?\n- Yes.\n- Me too.", 42));
+        $this->assertSame(["Are you coming?", "- Yes, in a minute,", "I promise you."],
+                          $this->wrap("Are you coming?\n- Yes, in a minute, I promise you.", 20));
+    }
+
+
+    public function testWrapLinesSplitsDialogueTurnsWithinALine(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue(new SubtitleCue(1, 2, "- Are you coming?\n- Yes, in a minute, I promise you."));
+
+        $subtitle->unwrapLines()->wrapLines(42);
+
+        $this->assertSame(["- Are you coming?", "- Yes, in a minute, I promise you."], $subtitle->getCues()[0]->getLines());
+        $this->assertSame(["<i>- Are you coming?</i>", "<i>- Yes, in a minute, I promise you.</i>"],
+                          $this->wrap("<i>- Are you coming? - Yes, in a minute, I promise you.</i>", 42));
+    }
+
+
+    public function testWrapLinesDoesNotStartATurnAtAMinusSignOrWithinASentence(): void
+    {
+        $this->assertSame(["- It is very cold outside tonight.", "-20 degrees, they said on the radio."],
+                          $this->wrap("- It is very cold outside tonight.\n-20 degrees, they said on the radio.", 42));
+        $this->assertSame(["- We walked along the coast - all the", "way to the old harbour lighthouse."],
+                          $this->wrap("- We walked along the coast - all the way to the old harbour lighthouse.", 42));
+    }
+
+
+    public function testWrapLinesKeepsDialogueTurnsOfARealFileApart(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/files/fixes/own_dialogue_dashes.srt"), Format::SubRip);
+
+        $subtitle->wrapLines(42);
+
+        $this->assertSame(file_get_contents(__DIR__ . "/files/fixes/own_dialogue_dashes_wrapped.srt"),
+                          $subtitle->toString(Format::SubRip));
+    }
+
+
     public function testUnwrapLines(): void
     {
         $subtitle = new Subtitle();

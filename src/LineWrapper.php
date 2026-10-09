@@ -46,6 +46,48 @@ final class LineWrapper
 
 
     /**
+     * Wraps each dialogue turn on lines of its own, with at most $maxLinesPerCue lines per turn.
+     * A turn starts at a line with a dialogue dash, or at a dialogue dash after a sentence end within a line.
+     * With fewer than 2 turns, it wraps as wrap() does.
+     *
+     * @param list<string> $lines
+     *
+     * @return list<string>
+     */
+    public static function wrapTurns(array $lines, int $maxCharactersPerLine, int $maxLinesPerCue): array
+    {
+        $words      = [];
+        $turnStarts = [];
+        foreach ($lines as $line) {
+            $lineWords = self::measuredWords($line);
+            foreach ($lineWords as $index => $word) {
+                $startsTurn = $index === 0
+                    ? $words === [] || preg_match(DialogueDash::REGEX, Markup::visibleText($line)) === 1
+                    : self::startsInlineTurn($lineWords[$index - 1], $word, $lineWords[$index + 1] ?? null);
+                if ($startsTurn) {
+                    $turnStarts[] = count($words);
+                }
+                $words[] = $word;
+            }
+        }
+
+        if (count($turnStarts) < 2) {
+            return self::wrap($lines, $maxCharactersPerLine, $maxLinesPerCue);
+        }
+
+        $lineStarts = [];
+        foreach ($turnStarts as $turn => $start) {
+            $turnWords = array_slice($words, $start, ($turnStarts[$turn + 1] ?? count($words)) - $start);
+            foreach (self::findBreaks($turnWords, $maxCharactersPerLine, $maxLinesPerCue) as $break) {
+                $lineStarts[] = $start + $break;
+            }
+        }
+
+        return self::joinLines($words, $lineStarts);
+    }
+
+
+    /**
      * Returns wrap() with $keepDialogueLines, or null when the result breaks a limit.
      *
      * @param list<string> $lines
@@ -173,6 +215,18 @@ final class LineWrapper
     public static function length(array $words): int
     {
         return array_sum(array_column($words, "length")) + max(0, count($words) - 1);
+    }
+
+
+    /**
+     * @param array{text: string, length: int}  $previous
+     * @param array{text: string, length: int}  $word
+     * @param ?array{text: string, length: int} $next
+     */
+    private static function startsInlineTurn(array $previous, array $word, ?array $next): bool
+    {
+        return preg_match('/[.?!\x{2026}]$/u', Markup::visibleText($previous["text"])) === 1
+            && preg_match(DialogueDash::REGEX, Markup::visibleText($word["text"] . " " . ($next["text"] ?? ""))) === 1;
     }
 
 
