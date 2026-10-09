@@ -6,8 +6,10 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -101,6 +103,45 @@ class TtmlRealFileTest extends TestCase
         );
         $this->assertSame($subtitle->getAllMetadata(), $reparsed->getAllMetadata());
         $this->assertSame($output, $reparsed->toString(Format::Ttml));
+    }
+
+
+    public function testAParagraphThatBeginsAfterItsTimedDivEndsThrowsInStrictMode(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The paragraph begins at 3.887s, but its parent ends at 2.423s. (line 12)");
+        $this->parseFile("mantas_multiple_divs.ttml");
+    }
+
+
+    public function testLenientModeReadsTheTimesOfAParagraphThatBeginsAfterItsTimedDivEndsAsAbsolute(): void
+    {
+        $subtitle = $this->parseFile("mantas_multiple_divs.ttml", new ReadOptions(lenient: true));
+
+        $this->assertSame(
+            [[1.464, 2.423], [2.423, 5.432], [10.886, 10.928]],
+            array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues())
+        );
+        $warnings = $subtitle->getParseWarnings();
+        $this->assertCount(1, $warnings);
+        $this->assertSame(
+            "The paragraph begins at 3.887s, but its parent ends at 2.423s. The parser read its times as absolute: 2.423s to 5.432s.",
+            $warnings[0]->message
+        );
+        $this->assertSame([12, 1, ParseWarningAction::Repaired], [$warnings[0]->lineNumber, $warnings[0]->blockIndex, $warnings[0]->action]);
+    }
+
+
+    public function testLenientModeSkipsAParagraphAfterItsTimedDivWithoutOwnTimes(): void
+    {
+        $subtitle = Subtitle::fromString(
+            "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div begin=\"5s\" end=\"6s\">\n<p begin=\"2s\">Late</p>\n<p>On time</p></div></body></tt>",
+            Format::Ttml,
+            new ReadOptions(lenient: true)
+        );
+
+        $this->assertSame([[5.0, 6.0, "On time"]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $subtitle->getCues()));
+        $this->assertSame(["The paragraph begins at 7s, but its parent ends at 6s."], array_map(fn ($warning): string => $warning->message, $subtitle->getParseWarnings()));
     }
 
 
