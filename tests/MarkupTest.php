@@ -351,4 +351,12 @@ class MarkupTest extends TestCase
         $this->assertSame("font", Markup::tagName(' FONT color="yellow"'));
         $this->assertSame("c.yellow", Markup::tagName("c.yellow"));
     }
+
+
+    public function testNamedTagRegexMatchesOpeningAndClosingTagsOfTheNamesOnly(): void
+    {
+        preg_match_all(Markup::namedTagRegex(["b", "c"]), "<B>a</b> <c.yellow>b</c> <br> <bold>c</bold>", $tags, PREG_SET_ORDER);
+
+        $this->assertSame([["<B>", "", "B"], ["</b>", "/", "b"], ["<c.yellow>", "", "c"], ["</c>", "/", "c"]], $tags);
+    }
 }
