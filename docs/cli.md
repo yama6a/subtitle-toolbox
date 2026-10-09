@@ -253,7 +253,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 | Option | Calls |
 |:--- |:--- |
 | `--structure-resegment` | `Resegmenter::apply()` with `ResegmentMode::ByWords`. `--structure-max-word-gap` sets `maxWordGap`. It turns on `--word-timestamps` |
-| `--structure-unwrap` | `unwrapLines()` |
+| `--structure-unwrap` | `unwrapLines()`. Each dialogue dash line starts a line of its own |
 | `--structure-merge-short` | `mergeShortCues()` with the default options |
 | `--structure-split-long` | `Resegmenter::apply()` with `ResegmentMode::SplitLong` and the default options |
 | `--structure-wrap` | `wrapLines()` with `--structure-max-cpl` and `--structure-max-lines` |

@@ -6,3 +6,5 @@
 | `own_overlaps_and_short_cues_fixed.srt` | Written for this repository. Expected `SubRipFormatter` output for `own_overlaps_and_short_cues.srt` after `fixOverlaps(0.083)`, `extendShortCues(0.833, 0.083)` and `wrapLines(42)`. | MIT |
 | `own_dialogue_dashes.srt` | Written for this repository in the shape of a SubRip file from a subtitle editor: CR LF, italic tags, and cues with two or three dialogue turns, one of them on a single line. | MIT |
 | `own_dialogue_dashes_wrapped.srt` | Written for this repository. Expected `SubRipFormatter` output for `own_dialogue_dashes.srt` after `wrapLines(42)`. | MIT |
+| `own_dialogue_turns_wrapped.srt` | Written for this repository in the shape of a SubRip file from a subtitle editor: CR LF, italic tags, dialogue turns wrapped over 2 lines, a line that starts with a minus sign and a first line without a dash. | MIT |
+| `own_dialogue_turns_unwrapped.srt` | Written for this repository. Expected `SubRipFormatter` output for `own_dialogue_turns_wrapped.srt` after `unwrapLines()`, without BOM. | MIT |

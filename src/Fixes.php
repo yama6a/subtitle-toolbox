@@ -88,12 +88,12 @@ trait Fixes
 
 
     /**
-     * Joins all lines of each cue into one line, with a space between them.
+     * Joins the lines of each cue with a space. Each dialogue turn that starts with a dash line keeps a line of its own.
      */
     public function unwrapLines(): self
     {
         foreach ($this->getCues() as $cue) {
-            $cue->setLines([implode(" ", $cue->getLines())]);
+            $cue->setLines(LineWrapper::unwrapTurns($cue->getLines()));
         }
 
         return $this;

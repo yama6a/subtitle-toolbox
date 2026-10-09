@@ -47,12 +47,13 @@ $gap = (new FrameRate(24))->framesToSeconds(2);   // about 0.083 s
 $subtitle->fixOverlaps($gap);                     // end each cue at least $gap before the next cue starts
 $subtitle->extendShortCues(0.833, $gap);          // show each cue for at least 0.833 s where the next cue allows it
 $subtitle->wrapLines(42);                         // at most 42 characters per line, at most 2 lines
-$subtitle->unwrapLines();                         // join the lines of each cue with a space
+$subtitle->unwrapLines();                         // join the lines of each dialogue turn with a space
 ```
 
 - **Start times**: these fixes move only end times. `fixOverlaps()` ends a cue at its own start when the gap does not fit. Cues with the same start, such as a sign and a line of dialogue, end before the next cue with a later start. `extendShortCues()` never creates an overlap and never makes a cue shorter.
 - **Line breaks**: `wrapLines()` changes only cues with a longer line or with more lines than allowed. It uses the fewest lines that fit and makes them about equal in length. When the text does not fit, the lines get longer than the limit.
 - **Dialogue**: each dialogue turn keeps lines of its own. A turn starts at a line with a dialogue dash, such as `- Yes.`. It also starts at a dash after a sentence end within a line, so `- Are you coming? - Yes.` becomes 2 lines. A sentence end is `.`, `?`, `!` or an ellipsis character. A dash before a digit, as in `-20 degrees`, starts no turn. A long turn wraps within itself, with up to the maximum lines per turn. So a cue with 2 or more turns can have more lines than the maximum.
+- **Unwrapping**: `unwrapLines()` joins the lines of each turn with a space. A turn starts at the first line and at each line with a dialogue dash. For example, the lines `- Are you coming?`, `- Yes, in a minute,` and `I promise you.` become 2 lines: `- Are you coming?` and `- Yes, in a minute, I promise you.` A cue without dash lines becomes 1 line. A dash after a sentence end within a line stays on that line.
 - **Characters**: tags count 0 characters, and an entity such as `&amp;` counts 1. `wrapLines()` breaks only at spaces outside tags. It closes the open core markup tags at a break and opens them again on the next line.
 - **Text without spaces**: Chinese or Japanese text has no break points, so `wrapLines()` keeps such a line long.
 
