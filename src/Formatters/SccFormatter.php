@@ -31,13 +31,32 @@ final class SccFormatter extends SubtitleFormatter
     private const FRAMES_PER_SECOND = 30000 / 1001;
 
 
+    /** @var list<SccFitChange> */
+    private array $changes = [];
+
+
     /**
-     * @throws InvalidArgumentException for a cue with more than 4 lines, a line longer than 32 characters or a character that CEA-608 lacks.
+     * @throws UnwritableContentException for a cue with more than 4 lines, a line longer than 32 characters or a character that CEA-608 lacks.
+     *         With SccWriteOptions::$fit, only for text that does not wrap into 4 lines of 32 characters or a character without a replacement.
      */
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
-        $options ??= new WriteOptions();
-        $dropFrame = $this->formatOptions($options)->dropFrame ?? $subtitle->findFormatData(SccParser::FORMAT_DATA_KEY)["dropFrame"] ?? true;
+        return $this->formatWithReport($subtitle, $options)->content;
+    }
+
+
+    /**
+     * Writes the subtitle as format() does, and returns the output with each change that SccWriteOptions::$fit made.
+     *
+     * @throws UnwritableContentException as format() does.
+     */
+    public function formatWithReport(Subtitle $subtitle, ?WriteOptions $options = null): SccWriteReport
+    {
+        $options     ??= new WriteOptions();
+        $formatOptions = $this->formatOptions($options);
+        $dropFrame     = $formatOptions->dropFrame ?? $subtitle->findFormatData(SccParser::FORMAT_DATA_KEY)["dropFrame"] ?? true;
+        $fit           = $formatOptions->fit;
+        $this->changes = [];
 
         $cues = $subtitle->getCues();
         uasort($cues, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());
@@ -46,12 +65,23 @@ final class SccFormatter extends SubtitleFormatter
         $nextFree     = 0;
         $previousEnd  = null;
         foreach ($cues as $index => $cue) {
-            $load = $this->loadWords($cue, $index);
+            $load = $this->loadWords($cue, $index, $fit);
             if ($load === []) {
                 continue;
             }
 
-            [$eoc, $edm] = $this->schedule(count($load), $this->secondsToFrame($cue->getStart()), $nextFree, $previousEnd);
+            $start       = $this->secondsToFrame($cue->getStart());
+            [$eoc, $edm] = $this->schedule(count($load), $start, $nextFree, $previousEnd);
+            if ($fit && $eoc > $start) {
+                $end = $this->secondsToFrame($cue->getEnd());
+                if ($eoc >= $end) {
+                    $this->change($index, SccFitAction::Dropped, "Cue #$index at {$cue->getStart()} s is left out. " .
+                                  "Its caption data needs the frames up to " . $this->frameToSeconds($eoc) . " s, but the cue ends at {$cue->getEnd()} s.");
+                    continue;
+                }
+                $this->change($index, SccFitAction::Delayed, "Cue #$index at {$cue->getStart()} s shows at " . $this->frameToSeconds($eoc) . " s. " .
+                              "The frames before its start cannot hold its caption data.");
+            }
             if ($edm !== null) {
                 [$timeline[$edm], $timeline[$edm + 1]] = $this->commandTwice(Cea608::ERASE_DISPLAYED_MEMORY);
             }
@@ -72,7 +102,13 @@ final class SccFormatter extends SubtitleFormatter
             [$timeline[$edm], $timeline[$edm + 1]] = $this->commandTwice(Cea608::ERASE_DISPLAYED_MEMORY);
         }
 
-        return $this->applyOutputOptions($this->writeLines($timeline, $dropFrame), $options);
+        return new SccWriteReport($this->applyOutputOptions($this->writeLines($timeline, $dropFrame), $options), $this->changes);
+    }
+
+
+    private function change(int $cueIndex, SccFitAction $action, string $message): void
+    {
+        $this->changes[] = new SccFitChange($cueIndex, $action, $message);
     }
 
 
@@ -105,10 +141,14 @@ final class SccFormatter extends SubtitleFormatter
      *
      * @return list<int>
      */
-    private function loadWords(SubtitleCue $cue, int|string $index): array
+    private function loadWords(SubtitleCue $cue, int $index, bool $fit): array
     {
+        $text = array_map(Markup::rubyAsText(...), $cue->getLines());
+        if ($fit) {
+            $text = $this->fitText($text, $cue, $index);
+        }
         $lines = [];
-        foreach (array_map(Markup::rubyAsText(...), $cue->getLines()) as $line) {
+        foreach ($text as $line) {
             $characters = Cea608Encoder::styledCharacters($line);
             if ($characters !== []) {
                 $lines[] = $characters;
@@ -143,6 +183,58 @@ final class SccFormatter extends SubtitleFormatter
         }
 
         return $words;
+    }
+
+
+    /**
+     * Replaces the characters that CEA-608 lacks, then wraps the lines again when they break the limits of SCC.
+     *
+     * @param list<string> $lines
+     *
+     * @return list<string>
+     */
+    private function fitText(array $lines, SubtitleCue $cue, int $index): array
+    {
+        $replaced = [];
+        foreach ($lines as $lineIndex => $line) {
+            $parts = Markup::splitTags($line);
+            foreach ($parts as $partIndex => $part) {
+                if ($partIndex % 2 === 1) {
+                    continue;
+                }
+                $characters = Markup::characters($part);
+                foreach ($characters as $characterIndex => $character) {
+                    $replacement = Cea608::encodeCharacter($character) === null ? Cea608::transliterate($character) : null;
+                    if ($replacement !== null) {
+                        $characters[$characterIndex] = $replacement;
+                        $replaced[$character]        = "\"$character\" with \"$replacement\"";
+                    }
+                }
+                $parts[$partIndex] = implode("", $characters);
+            }
+            $lines[$lineIndex] = implode("", $parts);
+        }
+        if ($replaced !== []) {
+            $this->change($index, SccFitAction::Transliterated, "Cue #$index at {$cue->getStart()} s: replaced " . implode(", ", $replaced) . ".");
+        }
+
+        $lengths = array_map(fn (string $line): int => count(Cea608Encoder::styledCharacters($line)), $lines);
+        $lengths = array_values(array_filter($lengths));
+        if (count($lengths) <= Cea608::MAX_LINES && max([0, ...$lengths]) <= Cea608::COLUMNS) {
+            return $lines;
+        }
+
+        $wrapped = LineWrapper::wrapToFit($lines, Cea608::COLUMNS, Cea608::MAX_LINES);
+        if ($wrapped === null) {
+            $wrapped = LineWrapper::wrap($lines, Cea608::COLUMNS, Cea608::MAX_LINES);
+            if (!LineWrapper::fits($wrapped, Cea608::COLUMNS, Cea608::MAX_LINES)) {
+                return $lines;
+            }
+        }
+        $this->change($index, SccFitAction::Wrapped, "Cue #$index at {$cue->getStart()} s: wrapped the text into " . count($wrapped) .
+                      " lines of at most " . Cea608::COLUMNS . " characters.");
+
+        return $wrapped;
     }
 
 
@@ -218,6 +310,12 @@ final class SccFormatter extends SubtitleFormatter
         $word = Cea608Encoder::word(Cea608::FIRST_BYTE_CONTROL, $command);
 
         return [$word, $word];
+    }
+
+
+    private function frameToSeconds(int $frame): float
+    {
+        return round((new FrameRate(self::FRAMES_PER_SECOND))->framesToSeconds($frame), 3);
     }
 
 

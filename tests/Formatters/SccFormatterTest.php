@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\CueLimits;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\LineEnding;
@@ -22,6 +23,8 @@ use SubtitleToolbox\WriteOptions;
 class SccFormatterTest extends TestCase
 {
     private const HEADER = "Scenarist_SCC V1.0\n\n";
+
+    private const FIT_FILES = __DIR__ . "/../files/scc/fit/";
 
 
     private function subtitle(SubtitleCue ...$cues): Subtitle
@@ -269,6 +272,74 @@ class SccFormatterTest extends TestCase
         $this->expectExceptionMessage("Cue #0 at 1 s has the character \"\u{65E5}\", which CEA-608 cannot show.");
 
         $this->subtitle(new SubtitleCue(1.0, 2.0, "\u{65E5}"))->toString(Format::Scc);
+    }
+
+
+    public function testFitChangesWhatSccCannotHoldAndReportsEachChange(): void
+    {
+        $subtitle = Subtitle::load(self::FIT_FILES . "own_ferry.srt", Format::SubRip);
+        $options  = new WriteOptions(format: new SccWriteOptions(fit: true));
+        $report   = (new SccFormatter())->formatWithReport($subtitle, $options);
+
+        $this->assertSame(file_get_contents(self::FIT_FILES . "own_ferry.scc"), $report->content);
+        $this->assertSame($report->content, $subtitle->toString(Format::Scc, $options));
+        $this->assertSame([
+            [0, SccFitAction::Transliterated, "Cue #0 at 1 s: replaced \"\u{160}\" with \"S\", \"\u{2026}\" with \"...\"."],
+            [0, SccFitAction::Wrapped, "Cue #0 at 1 s: wrapped the text into 3 lines of at most 32 characters."],
+            [0, SccFitAction::Delayed, "Cue #0 at 1 s shows at 1.969 s. The frames before its start cannot hold its caption data."],
+            [2, SccFitAction::Transliterated, "Cue #2 at 4.3 s: replaced \"\u{2013}\" with \"-\"."],
+            [2, SccFitAction::Wrapped, "Cue #2 at 4.3 s: wrapped the text into 2 lines of at most 32 characters."],
+            [2, SccFitAction::Delayed, "Cue #2 at 4.3 s shows at 5.172 s. The frames before its start cannot hold its caption data."],
+            [3, SccFitAction::Dropped, "Cue #3 at 5 s is left out. Its caption data needs the frames up to 5.839 s, but the cue ends at 5.4 s."],
+        ], array_map(fn (SccFitChange $change): array => [$change->cueIndex, $change->action, $change->message], $report->changes));
+
+        $cues = Subtitle::fromString($report->content, Format::Scc)->getCues();
+        $this->assertSame([
+            [1.969, 4.004, ["The ferry to Split leaves", "from the old harbour at nine.", "Sibenik is the second stop..."]],
+            [4.004, 4.304, ["Wait!"]],
+            [5.172, 6.006, ["Tickets cost twelve", "euros - cash only."]],
+        ], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], $cues));
+    }
+
+
+    public function testWithoutFitTheWriterStillThrowsAndReportsNothing(): void
+    {
+        $subtitle = Subtitle::load(self::FIT_FILES . "own_ferry.srt", Format::SubRip);
+        $fitting  = $this->subtitle(new SubtitleCue(1.0, 3.0, "Hello!"), new SubtitleCue(3.0, 3.1, "The bus was late again today."));
+        $report   = (new SccFormatter())->formatWithReport($fitting);
+
+        $this->assertSame([$fitting->toString(Format::Scc), []], [$report->content, $report->changes]);
+        $this->expectException(UnwritableContentException::class);
+        $this->expectExceptionMessage("Cue #0 at 1 s has a line with 46 characters, but SCC allows 32.");
+        $subtitle->toString(Format::Scc);
+    }
+
+
+    public function testFitThrowsForTextThatDoesNotFitAndACharacterWithoutReplacement(): void
+    {
+        $options = new WriteOptions(format: new SccWriteOptions(fit: true));
+        try {
+            $this->subtitle(new SubtitleCue(1.0, 8.0, implode(" ", array_fill(0, 20, "bakery"))))->toString(Format::Scc, $options);
+            $this->fail("No exception");
+        } catch (UnwritableContentException $exception) {
+            $this->assertStringContainsString("has a line with 139 characters", $exception->getMessage());
+        }
+
+        $this->expectException(UnwritableContentException::class);
+        $this->expectExceptionMessage("Cue #0 at 1 s has the character \"\u{65E5}\", which CEA-608 cannot show.");
+        $this->subtitle(new SubtitleCue(1.0, 2.0, "\u{160}\u{65E5}"))->toString(Format::Scc, $options);
+    }
+
+
+    public function testFitKeepsTagsAndTextThatSccHolds(): void
+    {
+        $subtitle = $this->subtitle(new SubtitleCue(1.0, 3.0, ["<i>Caf\u{E9} \u{201C}Zagreb\u{201D}</i>", "<font color=\"red\">&lt;\u{160}&gt;</font>"]));
+        $options  = new WriteOptions(format: new SccWriteOptions(fit: true));
+        $report   = (new SccFormatter())->formatWithReport($subtitle, $options);
+
+        $this->assertSame(["Cue #0 at 1 s: replaced \"\u{160}\" with \"S\"."], array_column($report->changes, "message"));
+        $this->assertSame(["<i>Caf\u{E9} \u{201C}Zagreb\u{201D}</i>", "<font color=\"#ff0000\">&lt;S&gt;</font>"],
+                          Subtitle::fromString($report->content, Format::Scc)->getCues()[0]->getLines());
     }
 
 

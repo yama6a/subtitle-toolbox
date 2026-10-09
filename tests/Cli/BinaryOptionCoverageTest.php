@@ -10,6 +10,9 @@ use SubtitleToolbox\Diff\SubtitleDiff;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
+use SubtitleToolbox\Formatters\Options\SccWriteOptions;
+use SubtitleToolbox\Formatters\SccFitChange;
+use SubtitleToolbox\Formatters\SccFormatter;
 use SubtitleToolbox\HearingImpaired\HearingImpairedOptions;
 use SubtitleToolbox\HearingImpaired\HearingImpairedRemover;
 use SubtitleToolbox\Http\LocalServer;
@@ -322,21 +325,25 @@ class BinaryOptionCoverageTest extends BinaryTestCase
             "retime --bom"             => ["retime", ["--bom"]],
             "retime --no-bom"          => ["retime", ["--no-bom"]],
             "retime --skip-image-cues" => ["retime", ["--skip-image-cues"]],
+            "retime --scc-fit"          => ["retime", ["--scc-fit"]],
             "sync --output-fps"        => ["sync", ["--output-fps", "25"]],
             "sync --line-ending"       => ["sync", ["--line-ending", "crlf"]],
             "sync --bom"               => ["sync", ["--bom"]],
             "sync --no-bom"            => ["sync", ["--no-bom"]],
             "sync --skip-image-cues"   => ["sync", ["--skip-image-cues"]],
+            "sync --scc-fit"          => ["sync", ["--scc-fit"]],
             "translate --output-fps"   => ["translate", ["--output-fps", "25"]],
             "translate --line-ending"  => ["translate", ["--line-ending", "crlf"]],
             "translate --bom"          => ["translate", ["--bom"]],
             "translate --no-bom"       => ["translate", ["--no-bom"]],
             "translate --skip-image-cues" => ["translate", ["--skip-image-cues"]],
+            "translate --scc-fit"          => ["translate", ["--scc-fit"]],
             "dual --output-fps"        => ["dual", ["--output-fps", "25"]],
             "dual --line-ending"       => ["dual", ["--line-ending", "crlf"]],
             "dual --bom"               => ["dual", ["--bom"]],
             "dual --no-bom"            => ["dual", ["--no-bom"]],
             "dual --skip-image-cues"   => ["dual", ["--skip-image-cues"]],
+            "dual --scc-fit"          => ["dual", ["--scc-fit"]],
         ];
     }
 
@@ -375,6 +382,21 @@ class BinaryOptionCoverageTest extends BinaryTestCase
                 [, $json] = $this->runBinary(self::call($command, "station.srt", to: "json"));
                 $this->assertStringStartsWith("{", $json);
                 $this->assertSame([0, self::BOM . $json], array_slice($this->runBinary([...self::call($command, "station.srt", to: "json"), ...$options]), 0, 2));
+                break;
+            case "--scc-fit":
+                file_put_contents("$this->dir/fit.srt", str_replace("Basel", "\u{160}ibenik", $station));
+                [, $fitSrt] = $this->runBinary(self::call($command, "fit.srt", "srt"));
+                $report     = (new SccFormatter())->formatWithReport(Subtitle::fromString($fitSrt, Format::SubRip),
+                                                                     new WriteOptions(format: new SccWriteOptions(fit: true)));
+                $changes    = implode("", array_map(fn (SccFitChange $change): string => "fit.srt: $change->message ({$change->action->value})\n", $report->changes));
+                $this->assertSame($command === "translate" ? 0 : 3, $this->runBinary(self::call($command, "fit.srt", to: "scc"))[0]);
+                [$code, $scc, $stderr] = $this->runBinary([...self::call($command, "fit.srt", to: "scc"), ...$options]);
+                $this->assertSame([0, $report->content], [$code, $scc]);
+                $this->assertTrue(str_ends_with($stderr, $changes), $stderr);
+                if ($command !== "translate") {
+                    $this->assertStringContainsString("replaced \"\u{160}\" with \"S\". (transliterated)\n", $changes);
+                }
+                $this->assertSame(0, $this->runBinary([...self::call($command, "station.srt", "srt"), ...$options])[0]);
                 break;
             case "--skip-image-cues":
                 $data  = json_decode(Subtitle::fromString($station, Format::SubRip)->toString(Format::Json), true);

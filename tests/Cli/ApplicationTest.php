@@ -199,7 +199,7 @@ class ApplicationTest extends TestCase
         preg_match_all('/^  (?:-\w, )?--([\w-]+)/m', $stdout, $matches);
         $this->assertSame([
             "shift", "shift-after", "scale", "from-fps", "to-fps", "to", "output", "output-dir", "output-fps",
-            "line-ending", "bom", "no-bom", "skip-image-cues", "from", "encoding", "lenient", "input-fps", "fps", "word-timestamps", "scc-roll-up",
+            "line-ending", "bom", "no-bom", "skip-image-cues", "scc-fit", "from", "encoding", "lenient", "input-fps", "fps", "word-timestamps", "scc-roll-up",
             "track", "keep-going", "help",
         ], $matches[1]);
         $this->assertMatchesRegularExpression('/^  --shift-after SECONDS +Shift only the cues that start at this time or later\.$/m', $stdout);

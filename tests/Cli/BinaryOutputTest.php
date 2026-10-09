@@ -7,8 +7,12 @@ namespace SubtitleToolbox\Cli;
 use PHPUnit\Framework\Attributes\DataProvider;
 use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\SccWriteOptions;
+use SubtitleToolbox\Formatters\SccFitChange;
+use SubtitleToolbox\Formatters\SccFormatter;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Tests\Support\BinaryTestCase;
+use SubtitleToolbox\WriteOptions;
 
 /**
  * Checks where the commands write: standard output, -o, --output-dir and batches.
@@ -320,6 +324,21 @@ class BinaryOutputTest extends BinaryTestCase
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "bakery.stl", "--from", "stl", "--to", "scc", "--structure-split-long", ...$wrap, "-o", "-"]);
         $this->assertSame([0, ""], [$code, $stderr]);
         $this->assertStringStartsWith("Scenarist_SCC V1.0\n", $stdout);
+    }
+
+
+    public function testSccFitPrintsEachChangeOnStandardError(): void
+    {
+        copy(self::FILES . "scc/fit/own_ferry.srt", "$this->dir/ferry.srt");
+        $report  = (new SccFormatter())->formatWithReport(Subtitle::load("$this->dir/ferry.srt", Format::SubRip),
+                                                          new WriteOptions(format: new SccWriteOptions(fit: true)));
+        $changes = implode("", array_map(fn (SccFitChange $change): string => "ferry.srt: $change->message ({$change->action->value})\n", $report->changes));
+
+        $this->assertSame(3, $this->runBinary(["convert", "ferry.srt", "--to", "scc", "-o", "-"])[0]);
+        $this->assertSame([0, file_get_contents(self::FILES . "scc/fit/own_ferry.scc"), $changes],
+                          $this->runBinary(["convert", "ferry.srt", "--to", "scc", "-o", "-", "--scc-fit"]));
+        $this->assertStringContainsString("ferry.srt: Cue #3 at 5 s is left out.", $changes);
+        $this->assertSame([0, $this->tripAs(Format::WebVtt), ""], $this->runBinary(["convert", "trip.srt", "--to", "vtt", "-o", "-", "--scc-fit"]));
     }
 
 
