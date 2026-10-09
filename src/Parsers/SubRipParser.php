@@ -17,6 +17,9 @@ final class SubRipParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::SubRip->value;
 
+    private const ATTRIBUTE_TAG_REGEX =
+        '#^</?[a-zA-Z][a-zA-Z0-9]*(?:\s+[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s"\'=<>]+))*\s*/?>$#';
+
     protected function read(string $content): Subtitle
     {
         $subtitle   = new Subtitle();
@@ -128,12 +131,20 @@ final class SubRipParser extends SubtitleParser
     {
         $parts = preg_split('#(</?[a-zA-Z][a-zA-Z0-9]*(?:\s[^<>]*)?>)#', $line, -1, PREG_SPLIT_DELIM_CAPTURE);
         foreach ($parts as $index => $part) {
-            if ($index % 2 === 0) {
+            if ($index % 2 === 0 || !$this->isTag($part)) {
                 $parts[$index] = Markup::escapeText($part);
             }
         }
 
         return implode("", $parts);
+    }
+
+
+    // A tag is a core tag or a name with only name=value attributes, so "<a sentence in brackets>" is text.
+    private function isTag(string $tag): bool
+    {
+        return in_array(Markup::tagName(trim($tag, "</>")), Markup::CORE_TAGS, true)
+            || preg_match(self::ATTRIBUTE_TAG_REGEX, $tag) === 1;
     }
 
 

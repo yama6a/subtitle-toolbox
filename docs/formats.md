@@ -410,6 +410,7 @@ $subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dr
 - A timing line without text gives a cue with no lines. The formatter writes such a cue as its number and its timing line.
 - A cue number and a timing line start a new cue, also without an empty line before them.
 - Other override tags such as `{\pos(10,20)}` stay in the cue text.
+- A tag is `<b>`, `<i>`, `<u>`, `<s>`, `<font>` or `<v>`, or a name with only `name=value` attributes, such as `<foo>` or `<span class="x">`. Other text in angle brackets, such as `<a sentence in brackets>`, is cue text.
 - The formatter keeps `<b>`, `<i>`, `<u>`, `<s>` and `<font>`, and strips all other tags.
 
 ## SubViewer

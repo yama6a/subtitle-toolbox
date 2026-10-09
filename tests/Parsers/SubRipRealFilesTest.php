@@ -149,6 +149,35 @@ class SubRipRealFilesTest extends TestCase
     }
 
 
+    public function testAngleBracketTextThatIsNoTagStaysText(): void
+    {
+        $subtitle = $this->parseFile("own_angle_bracket_text.srt");
+
+        $this->assertSame(
+            [
+                ["&lt;a sentence in angle brackets&gt;"],
+                ["<i>Mind</i> the <font color=\"#ffcc00\">gap</font> <foo>here</foo>"],
+                ["<span class=\"exit\">Exit</span> &lt;to the left&gt;"],
+            ],
+            array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $subtitle->getCues())
+        );
+        $subtitle->stripFormatting();
+        $this->assertSame(
+            ["&lt;a sentence in angle brackets&gt;", "Mind the gap here", "Exit &lt;to the left&gt;"],
+            array_map(fn (SubtitleCue $cue): string => $cue->getText(), $subtitle->getCues())
+        );
+    }
+
+
+    public function testAngleBracketTextThatIsNoTagIsWrittenAsText(): void
+    {
+        $subtitle = $this->parseFile("own_angle_bracket_text.srt");
+
+        $this->assertStringEqualsFile(__DIR__ . "/../files/sbv/real/own_angle_bracket_text_from_srt.sbv", $subtitle->toString(Format::Sbv));
+        $this->assertStringEqualsFile(__DIR__ . "/../files/vtt/real/own_angle_bracket_text_from_srt.vtt", $subtitle->toString(Format::WebVtt));
+    }
+
+
     public function testTimestampWithoutMillisecondsIsWrittenWithMilliseconds(): void
     {
         $formatted = $this->parseFile("own_timestamp_without_millis.srt")->toString(Format::SubRip);

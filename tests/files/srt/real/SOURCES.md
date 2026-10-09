@@ -12,3 +12,4 @@
 | `own_timestamp_without_millis.srt` | Written for this repository in the shape of https://github.com/asticode/go-astisub/blob/b6b18718ddb6ee0da08772d8ab310c9c3d2d0459/testdata/example-in.srt | MIT |
 | `own_empty_cues.srt` | Written for this repository. Cue 2 has no text and one empty line after it, as in a user report of a naver.com file. Cue 4 has no text and two empty lines after it. | MIT |
 | `own_missing_empty_line.srt` | Written for this repository. Cues 2 and 3 have no empty line before their cue number. | MIT |
+| `own_angle_bracket_text.srt` | Written for this repository. Holds text in angle brackets that is no tag, next to SubRip tags and unknown tags. | MIT |
