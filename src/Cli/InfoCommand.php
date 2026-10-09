@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\Container\ContainerFormat;
+use SubtitleToolbox\Container\Containers;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
@@ -40,7 +40,7 @@ final class InfoCommand extends ReportCommand
     {
         return "Times are in seconds. Character counts leave out tags. " .
                "The gap is the start of a cue minus the latest end of the earlier cues. An overlap gives a negative gap. " .
-               "For an MKV or WebM file, info lists the subtitle tracks. Pass --track for the statistics of one track.";
+               "For an MKV, WebM or MP4 file, info lists the subtitle tracks. Pass --track for the statistics of one track.";
     }
 
 
@@ -52,7 +52,8 @@ final class InfoCommand extends ReportCommand
 
     protected function listTracks(string $path, string $input, Console $console): bool
     {
-        if (Format::fromPath($input) !== null) {
+        $container = Containers::detectFile($path);
+        if (Format::fromPath($input) !== null || $container === null) {
             return false;
         }
         try {
@@ -61,8 +62,6 @@ final class InfoCommand extends ReportCommand
             return false;
         }
 
-        // Subtitle::tracks() reads only Matroska, so a file without subtitle tracks is a Matroska file.
-        $container = $tracks[0]->container ?? ContainerFormat::Matroska;
         $text      = self::label($input) . "\n  Container: $container->value\n";
         foreach ($tracks as $track) {
             $text .= "  Track $track->number: " . $track->describe() . "\n";

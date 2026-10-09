@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
-use SubtitleToolbox\Container\Matroska\MatroskaReader;
+use SubtitleToolbox\Container\ContainerFormat;
+use SubtitleToolbox\Container\ContainerReader;
+use SubtitleToolbox\Container\Containers;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Encoding\DecodedText;
 use SubtitleToolbox\Exceptions\CueNotFoundException;
@@ -82,15 +84,15 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Reads the file at $path in $format. An MKV or WebM file throws, see loadTrack().
+     * Reads the file at $path in $format. An MKV, WebM or MP4 file throws, see loadTrack().
      * For Format::VobSub, $path is the .idx or the .sub file, and the other file must lie next to it.
      * The content of the .idx file replaces VobSubReadOptions::$idx.
      */
     public static function load(string $path, Format $format, ?ReadOptions $options = null): self
     {
         $options ??= new ReadOptions();
-        if (self::isMatroskaFile($path)) {
-            throw new InvalidParserException("$path is an MKV or WebM file. Call loadTrack() with a track number.");
+        if (($container = self::containerOf($path)) !== null) {
+            throw new InvalidParserException("$path is an " . Containers::label($container) . " file. Call loadTrack() with a track number.");
         }
         if ($format !== Format::VobSub) {
             return self::fromString(self::readFile($path), $format, $options);
@@ -112,15 +114,15 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     /**
      * Reads the file at $path in the format that its content shows, else in the format of its extension.
-     * It tries only formats whose isAutoDetected() is true. An MKV or WebM file must hold exactly 1 subtitle track.
+     * It tries only formats whose isAutoDetected() is true. An MKV, WebM or MP4 file must hold exactly 1 subtitle track.
      *
      * @throws UnknownFormatException when no such format matches.
      */
     public static function loadAutoDetectFormat(string $path, ?ReadOptions $options = null): self
     {
         $options ??= new ReadOptions();
-        if (self::isMatroskaFile($path)) {
-            return self::readOnlyTrack(MatroskaReader::open($path), $options);
+        if (($container = self::containerOf($path)) !== null) {
+            return self::readOnlyTrack(Containers::open($path), $container, $options);
         }
 
         $decoded = StringHelpers::decode(self::readFile($path), $options->encoding);
@@ -131,35 +133,35 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Reads the subtitle track with the TrackNumber $trackNumber of an MKV or WebM file.
+     * Reads the subtitle track with the number $trackNumber of an MKV, WebM or MP4 file.
      * The codec of the track picks the parser. tracks() lists the track numbers.
      */
     public static function loadTrack(string $path, int $trackNumber, ?ReadOptions $options = null): self
     {
-        return self::readTrack(MatroskaReader::open(self::checkedPath($path)), $trackNumber, $options ?? new ReadOptions());
+        return self::readTrack(Containers::open(self::checkedPath($path)), $trackNumber, $options ?? new ReadOptions());
     }
 
 
     /**
-     * Returns the subtitle tracks of an MKV or WebM file.
+     * Returns the subtitle tracks of an MKV, WebM or MP4 file.
      *
      * @return list<SubtitleTrack>
      */
     public static function tracks(string $path): array
     {
-        return MatroskaReader::open(self::checkedPath($path))->getSubtitleTracks();
+        return Containers::open(self::checkedPath($path))->getSubtitleTracks();
     }
 
 
     /**
-     * Reads $content in $format. MKV and WebM content throws, see loadTrack().
+     * Reads $content in $format. MKV, WebM and MP4 content throws, see loadTrack().
      * A UTF-16 or UTF-32 BOM, or else ReadOptions::$encoding such as "Windows-1252", sets the encoding to convert from.
      * Valid UTF-8 content without zero bytes stays as is. See docs/encodings.md for UTF-16 without a BOM.
      */
     public static function fromString(string $content, Format $format, ?ReadOptions $options = null): self
     {
-        if (str_starts_with($content, MatroskaReader::EBML_MAGIC)) {
-            throw new InvalidParserException("The content is an MKV or WebM file. Call loadTrack() with a track number.");
+        if (($container = Containers::detect($content)) !== null) {
+            throw new InvalidParserException("The content is an " . Containers::label($container) . " file. Call loadTrack() with a track number.");
         }
         $options ??= new ReadOptions();
 
@@ -169,19 +171,19 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     /**
      * Reads $content in the format that Format::detect() finds. It tries only formats whose isAutoDetected() is true.
-     * MKV and WebM content must hold exactly 1 subtitle track.
+     * MKV, WebM and MP4 content must hold exactly 1 subtitle track.
      *
      * @throws UnknownFormatException when no such format matches.
      */
     public static function fromStringAutoDetectFormat(string $content, ?ReadOptions $options = null): self
     {
         $options ??= new ReadOptions();
-        if (str_starts_with($content, MatroskaReader::EBML_MAGIC)) {
+        if (($container = Containers::detect($content)) !== null) {
             $stream = fopen("php://temp", "w+b");
             fwrite($stream, $content);
             rewind($stream);
 
-            return self::readOnlyTrack(MatroskaReader::open($stream), $options);
+            return self::readOnlyTrack(Containers::open($stream), $container, $options);
         }
 
         $decoded = StringHelpers::decode($content, $options->encoding);
@@ -192,7 +194,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
 
     /**
-     * Returns the format that load(), loadAutoDetectFormat(), loadTrack(), MatroskaReader::extract() or a fromString call read.
+     * Returns the format that load(), loadAutoDetectFormat(), loadTrack(), a container reader or a fromString call read.
      * Returns null for a subtitle from new Subtitle() or fromArray(). For an MKV track, it is the format of the track codec.
      */
     public function getFormat(): ?Format
@@ -238,18 +240,19 @@ final class Subtitle implements \IteratorAggregate, \Countable
     }
 
 
-    private static function readTrack(MatroskaReader $reader, int $track, ReadOptions $options): self
+    private static function readTrack(ContainerReader $reader, int $track, ReadOptions $options): self
     {
         return $reader->extract($track, $options);
     }
 
 
-    private static function readOnlyTrack(MatroskaReader $reader, ReadOptions $options): self
+    private static function readOnlyTrack(ContainerReader $reader, ContainerFormat $container, ReadOptions $options): self
     {
         $tracks = $reader->getSubtitleTracks();
+        $label  = Containers::label($container);
         if (count($tracks) !== 1) {
-            throw new InvalidParserException($tracks === [] ? "The MKV or WebM file has no subtitle track." :
-                "The MKV or WebM file has " . count($tracks) . " subtitle tracks. Call loadTrack() with one of them:\n" .
+            throw new InvalidParserException($tracks === [] ? "The $label file has no subtitle track." :
+                "The $label file has " . count($tracks) . " subtitle tracks. Call loadTrack() with one of them:\n" .
                 implode("\n", array_map(fn (SubtitleTrack $track): string => "  $track->number: " . $track->describe(), $tracks)));
         }
 
@@ -338,9 +341,9 @@ final class Subtitle implements \IteratorAggregate, \Countable
     }
 
 
-    private static function isMatroskaFile(string $path): bool
+    private static function containerOf(string $path): ?ContainerFormat
     {
-        return self::readFile($path, strlen(MatroskaReader::EBML_MAGIC)) === MatroskaReader::EBML_MAGIC;
+        return Containers::detect(self::readFile($path, Containers::HEAD_LENGTH));
     }
 
 

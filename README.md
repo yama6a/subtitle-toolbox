@@ -57,7 +57,8 @@ The command line tool also comes as a PHAR file and as two container images. The
 | Podcasting 2.0 chapters | `PodcastChapters` | `podcast-chapters` | `.json` | yes | yes | not detected from the content |
 | FFmpeg metadata chapters | `FfMetadataChapters` | `ffmeta-chapters` | `.ffmeta` | yes | yes | not detected from the content |
 | OGM chapters | `OgmChapters` | `ogm-chapters` | `.txt` | yes | yes | not detected from the content |
-| MKV and WebM tracks | | | `.mkv`, `.webm` | yes | no | text, ASS, SSA, WebVTT and PGS tracks |
+| MKV and WebM tracks | | | `.mkv`, `.webm` | yes | no | text, ASS, SSA, WebVTT, PGS and VobSub tracks |
+| MP4 tracks | | | `.mp4`, `.m4v`, `.mov` | yes | no | `tx3g` (`mov_text`) tracks |
 
 **Case** is the case of the enum `Format`, for example `Format::SubRip`. **Name** is the format name for `--from` and `--to`. An **image cue** holds a bitmap in place of text.
 

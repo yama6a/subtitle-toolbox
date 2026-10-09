@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Container\Matroska;
 
 use Generator;
 use SubtitleToolbox\Container\ContainerFormat;
+use SubtitleToolbox\Container\ContainerReader;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Dependency;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
@@ -28,7 +29,7 @@ use SubtitleToolbox\Timecode;
  * Subtitle codecs: https://www.matroska.org/technical/subtitles.html
  * EBML: https://datatracker.ietf.org/doc/html/rfc8794
  */
-final class MatroskaReader
+final class MatroskaReader implements ContainerReader
 {
     public const CODEC_SUBRIP = "S_TEXT/UTF8";
     public const CODEC_ASS    = "S_TEXT/ASS";

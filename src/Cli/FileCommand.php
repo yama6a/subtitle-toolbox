@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\Container\Matroska\MatroskaReader;
+use SubtitleToolbox\Container\Containers;
 use SubtitleToolbox\Exceptions\SubtitleToolboxException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatRegistry;
@@ -118,7 +118,7 @@ abstract class FileCommand extends Command
             Option::value("fps", "RATE", $this->fpsDescription()),
             Option::flag("word-timestamps", "Keep the word times of speech-to-text JSON, YouTube timed text and Podcasting 2.0 transcript input."),
             Option::value("scc-roll-up", "MODE", "How SCC input reads roll-up captions: screen gives one cue per screen, lines gives one cue per row. Default: screen."),
-            Option::value("track", "NUMBER", "Subtitle track of an MKV or WebM input. Needed when the file has 2 or more subtitle tracks. \"info\" lists them."),
+            Option::value("track", "NUMBER", "Subtitle track of an MKV, WebM or MP4 input. Needed when the file has 2 or more subtitle tracks. \"info\" lists them."),
         ];
         if ($this->takesManyInputs()) {
             $options[] = Option::flag("keep-going", "Go on with the next file after a file fails. Default: stop at the first failure.");
@@ -139,7 +139,7 @@ abstract class FileCommand extends Command
 
         return [
             Option::value($names["from2"], "FORMAT", "Format of the $file file. Default: as for --$names[from]."),
-            Option::value($names["track2"], "NUMBER", "Subtitle track of an MKV or WebM $file file. Needed when the file has 2 or more subtitle tracks."),
+            Option::value($names["track2"], "NUMBER", "Subtitle track of an MKV, WebM or MP4 $file file. Needed when the file has 2 or more subtitle tracks."),
         ];
     }
 
@@ -308,7 +308,7 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Returns the subtitle and its format, or null when listTracks() handled an MKV or WebM input.
+     * Returns the subtitle and its format, or null when listTracks() handled an MKV, WebM or MP4 input.
      *
      * @return array{Subtitle, Format}|null
      */
@@ -387,7 +387,7 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Handles the MKV or WebM file at $path without --track. $input is the argument that named it.
+     * Handles the MKV, WebM or MP4 file at $path without --track. $input is the argument that named it.
      * Returns false to read its only subtitle track.
      */
     protected function listTracks(string $path, string $input, Console $console): bool
@@ -397,7 +397,7 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Returns null when listTracks() handled an MKV or WebM file.
+     * Returns null when listTracks() handled an MKV, WebM or MP4 file.
      */
     private function readPath(string $path, string $input, ?int $track, Console $console): ?Subtitle
     {
@@ -414,7 +414,7 @@ abstract class FileCommand extends Command
         if ($track !== null) {
             return Subtitle::loadTrack($path, $track, $this->readOptions);
         }
-        if ($format === null && self::isMatroska($path)) {
+        if ($format === null && Containers::detectFile($path) !== null) {
             return Subtitle::loadAutoDetectFormat($path, $this->readOptions);
         }
         $format ??= $this->formatWithOptions(fn (): string => (string) file_get_contents($path), $path);
@@ -422,19 +422,6 @@ abstract class FileCommand extends Command
         return $format === null
             ? Subtitle::loadAutoDetectFormat($path, $this->readOptions)
             : Subtitle::load($path, $format, $this->readOptionsFor($format));
-    }
-
-
-    protected static function isMatroska(string $path): bool
-    {
-        $file = is_file($path) ? @fopen($path, "rb") : false;
-        if ($file === false) {
-            return false;
-        }
-        $magic = fread($file, strlen(MatroskaReader::EBML_MAGIC));
-        fclose($file);
-
-        return $magic === MatroskaReader::EBML_MAGIC;
     }
 
 
@@ -450,7 +437,7 @@ abstract class FileCommand extends Command
             return null;
         }
         $content = $content();
-        if (str_starts_with($content, MatroskaReader::EBML_MAGIC)) {
+        if (Containers::detect($content) !== null) {
             return null;
         }
 
@@ -495,7 +482,7 @@ abstract class FileCommand extends Command
     private function readStdin(?int $track, Console $console): ?Subtitle
     {
         $content = $console->readStdin();
-        if ($track !== null || str_starts_with($content, MatroskaReader::EBML_MAGIC)) {
+        if ($track !== null || Containers::detect($content) !== null) {
             // The track list and loadTrack() need a file.
             $path = tempnam(sys_get_temp_dir(), Application::NAME . "-");
             try {

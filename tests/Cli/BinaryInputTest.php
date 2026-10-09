@@ -237,6 +237,31 @@ class BinaryInputTest extends BinaryTestCase
     }
 
 
+    public function testInfoAndConvertReadTheTracksOfAnMp4File(): void
+    {
+        copy(self::FILES . "mp4/text_tracks.mp4", "$this->dir/movie.mp4");
+        copy(self::FILES . "mp4/one_track.mp4", "$this->dir/one.mp4");
+
+        $this->assertSame(
+            [0, "movie.mp4\n  Container: mp4\n  Track 2: tx3g, eng, \"English\", default\n  Track 3: tx3g, fr-CA, forced\n" .
+                "  Track 4: c608, eng\n  Track 5: enct, deu\n", ""],
+            $this->runBinary(["info", "movie.mp4"])
+        );
+        [$code, $stdout] = $this->runBinary(["info", "-", "--json"], $this->file("one.mp4"));
+        $this->assertSame([0, "mp4", [2]], [$code, json_decode($stdout, true)[0]["container"], array_column(json_decode($stdout, true)[0]["tracks"], "number")]);
+
+        $this->assertSame([0, "movie.mp4 -> out.srt\n", ""], $this->runBinary(["convert", "movie.mp4", "--to", "srt", "--track", "2", "-o", "out.srt"]));
+        $this->assertSame(Subtitle::loadTrack(self::FILES . "mp4/text_tracks.mp4", 2)->toString(Format::SubRip), $this->file("out.srt"));
+        $this->assertSame([0, "one.mp4 -> one.vtt\n", ""], $this->runBinary(["convert", "one.mp4", "--to", "vtt", "-o", "one.vtt"]));
+
+        [$code, $stdout, $stderr] = $this->runBinary(["convert", "movie.mp4", "--track", "5", "--to", "srt", "-o", "-"]);
+        $this->assertSame([3, "", "movie.mp4: ParsingException (Error #100): Track 5 has the codec enct and is encrypted.\n"], [$code, $stdout, $stderr]);
+        [$code, , $stderr] = $this->runBinary(["convert", "movie.mp4", "--from", "srt", "--to", "vtt", "-o", "-"]);
+        $this->assertSame([3, "movie.mp4: InvalidParserException (Error #102): The input is an MP4 file. Pass --track N.\n"],
+                          [$code, $stderr]);
+    }
+
+
     public function testInfoListsTheTracksOfAnMkvFileOnStandardInput(): void
     {
         $this->assertSame(

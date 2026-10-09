@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
-use SubtitleToolbox\Container\Matroska\MatroskaReader;
+use SubtitleToolbox\Container\Containers;
 use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
 use SubtitleToolbox\Exceptions\SubtitleToolboxException;
 use SubtitleToolbox\Format;
@@ -243,8 +243,8 @@ abstract class WriteCommand extends FileCommand
             if (!is_file($input)) {
                 return null;
             }
-            if ($track !== null || self::isMatroska($input)) {
-                $reader   = MatroskaReader::open($input);
+            if ($track !== null || Containers::detectFile($input) !== null) {
+                $reader   = Containers::open($input);
                 $tracks   = $reader->getSubtitleTracks();
                 $track  ??= count($tracks) === 1 ? $tracks[0]->number : null;
 

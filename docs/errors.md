@@ -18,7 +18,7 @@ try {
 |:--- |:--- |:--- |:--- |
 | `ParsingException` | `\RuntimeException` | 100 | content that a parser or `fromArray()` cannot read, or a byte that is not valid in the source encoding |
 | `InvalidFormatterException` | `\RuntimeException` | 101 | `toString()` with a format that the library cannot write, or `save()` with an unknown extension |
-| `InvalidParserException` | `\RuntimeException` | 102 | `fromString()` with a format that the library cannot read. An MKV or WebM file in `load()` or `fromString()`. An MKV or WebM file without exactly 1 subtitle track in `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()` |
+| `InvalidParserException` | `\RuntimeException` | 102 | `fromString()` with a format that the library cannot read. An MKV, WebM or MP4 file in `load()` or `fromString()`. An MKV, WebM or MP4 file without exactly 1 subtitle track in `loadAutoDetectFormat()` or `fromStringAutoDetectFormat()` |
 | `ImageCueWithoutTextException` | `\RuntimeException` | 103 | an image cue without text in `toString()` with a text format |
 | `InvalidArgumentException` | `\InvalidArgumentException` | 104 | an invalid argument or option, see [Invalid arguments](#invalid-arguments) |
 | `CueNotFoundException` | `\RuntimeException` | 105 | `removeCue()` with an index that has no cue |

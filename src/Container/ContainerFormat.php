@@ -10,4 +10,5 @@ namespace SubtitleToolbox\Container;
 enum ContainerFormat: string
 {
     case Matroska = "matroska";
+    case Mp4      = "mp4";
 }
