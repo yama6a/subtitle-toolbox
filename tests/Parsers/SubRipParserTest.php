@@ -8,7 +8,10 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Streaming\SubRipStreamReader;
 use SubtitleToolbox\Subtitle;
 
 class SubRipParserTest extends TestCase
@@ -291,5 +294,77 @@ class SubRipParserTest extends TestCase
             $this->assertSame([], $subtitle->getCues());
             $this->assertSame([], $subtitle->getParseWarnings());
         }
+    }
+
+    /**
+     * Each case holds a timing line from 1 s to 2 s, whether strict mode reads it, and the arrow of the lenient warning.
+     */
+    public static function arrowVariants(): array
+    {
+        return [
+            "no spaces"      => ["00:00:01,000-->00:00:02,000", true, null],
+            "two spaces"     => ["00:00:01,000  -->  00:00:02,000", true, null],
+            "tabs"           => ["00:00:01,000\t-->\t00:00:02,000", true, null],
+            "short arrow"    => ["00:00:01,000 -> 00:00:02,000", false, "->"],
+            "long arrow"     => ["00:00:01,000 ---> 00:00:02,000", false, "--->"],
+            "long, no space" => ["00:00:01,000--->00:00:02,000", false, "--->"],
+        ];
+    }
+
+
+    #[DataProvider("arrowVariants")]
+    public function testStrictModeReadsOnlyTheArrowWithTwoDashes(string $timingLine, bool $strictReads): void
+    {
+        $content = "1\n$timingLine\nText\n\n2\n00:00:03,000 --> 00:00:04,000\nMore\n";
+        if (!$strictReads) {
+            $this->expectException(ParsingException::class);
+            $this->expectExceptionMessage("Block #0 has no timing line on its second line.");
+        }
+
+        $cues = (new SubRipParser())->parse($content)->getCues();
+        $this->assertSame([1.0, 2.0, ["Text"]], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getLines()]);
+        $this->assertEquals($cues, iterator_to_array((new SubRipStreamReader())->read($this->stream($content)), false));
+    }
+
+
+    #[DataProvider("arrowVariants")]
+    public function testLenientModeReadsAnyArrowAndWarnsForOtherLengths(string $timingLine, bool $strictReads, ?string $arrow): void
+    {
+        $content  = "1\n$timingLine\nText\n\n2\n00:00:03,000 --> 00:00:04,000\nMore\n";
+        $options  = new ReadOptions(lenient: true);
+        $subtitle = (new SubRipParser())->parse($content, $options);
+        $reader   = new SubRipStreamReader($options);
+
+        $cues = $subtitle->getCues();
+        $this->assertCount(2, $cues);
+        $this->assertSame([1.0, 2.0, ["Text"]], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getLines()]);
+        $warnings = $subtitle->getParseWarnings();
+        if ($arrow === null) {
+            $this->assertSame([], $warnings);
+        } else {
+            $this->assertCount(1, $warnings);
+            $this->assertSame(ParseWarningAction::Repaired, $warnings[0]->action);
+            $this->assertSame("Block #0 has the arrow \"$arrow\" in its timing line. The parser read it as \"-->\".", $warnings[0]->message);
+        }
+        $this->assertEquals($cues, iterator_to_array($reader->read($this->stream($content)), false));
+        $this->assertEquals($warnings, $reader->getWarnings());
+    }
+
+
+    public function testFormatterWritesTheArrowWithSpaces(): void
+    {
+        $subtitle = (new SubRipParser())->parse("1\n00:00:01,000 ---> 00:00:02,000\nText\n", new ReadOptions(lenient: true));
+
+        $this->assertSame("\u{FEFF}1\n00:00:01,000 --> 00:00:02,000\nText\n", $subtitle->toString(Format::SubRip));
+    }
+
+
+    private function stream(string $content)
+    {
+        $stream = fopen("php://memory", "w+b");
+        fwrite($stream, $content);
+        rewind($stream);
+
+        return $stream;
     }
 }
