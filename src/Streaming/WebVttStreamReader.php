@@ -8,6 +8,7 @@ use Generator;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\Parsers\WebVttParser;
+use SubtitleToolbox\Parsers\YouTubeRollingCues;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\SubtitleCue;
 
@@ -42,6 +43,14 @@ final class WebVttStreamReader implements CueStreamReader
 
 
     public function read($stream): Generator
+    {
+        foreach (YouTubeRollingCues::collapse($this->readCues($stream)) as $cue) {
+            yield $cue;
+        }
+    }
+
+
+    private function readCues($stream): Generator
     {
         $this->parser->useOptions($this->options);
         $this->header = [];

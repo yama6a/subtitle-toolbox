@@ -68,6 +68,9 @@ final class WebVttParser extends SubtitleParser
             }
         }
 
+        // The collapse keeps the keys, so each comment count still points at the cue that followed the comment.
+        $parsedCues = iterator_to_array(YouTubeRollingCues::collapse($parsedCues));
+
         return CommentAnchors::addParsed($subtitle, $parsedCues, $comments)->setFormatData(self::FORMAT_DATA_KEY, $fileData);
     }
 

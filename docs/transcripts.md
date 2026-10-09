@@ -66,7 +66,7 @@ $subtitle->getCues()[2]->findFormatData('deepgram')['confidence'];           // 
 - **Errors**: each parser throws `ParsingException` for JSON without the list it needs. Amazon Transcribe needs `results.items`, Deepgram `results.channels`, AssemblyAI `words` or `utterances`, and Google `results`.
 
 ## YouTube timed text
-yt-dlp and youtube-transcript-api download YouTube captions. The formats are json3, srv3 or the older transcript XML. json3 and srv3 keep the time of each word of automatic captions. WebVTT downloads lose it.
+yt-dlp and youtube-transcript-api download YouTube captions. The formats are json3, srv3 or the older transcript XML. json3 and srv3 keep the time of each word of automatic captions. The WebVTT download keeps it as `<c>` word timestamps, and the WebVTT parser [collapses its rolling cues](formats.md#webvtt).
 
 ```php
 use SubtitleToolbox\Format;
