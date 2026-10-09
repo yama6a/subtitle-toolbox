@@ -82,6 +82,8 @@ $subtitle->mergeShortCues();   // the default limits of new MergeShortCuesOption
 | `maxDuration` | 7 | seconds from the start to the end of the joined cue |
 | `maxCharactersPerSecond` | null | the reading speed of the joined cue. Null turns the rule off |
 
+The `CueLimits` constructor throws `InvalidArgumentException` when `minDuration` is greater than `maxDuration`.
+
 | Option | Default | Meaning |
 |:--- |:--- |:--- |
 | `limits` | `new CueLimits()` | the limits above |
@@ -128,7 +130,7 @@ Resegmenter::apply($subtitle, new ResegmentOptions(mode: ResegmentMode::ByWords,
 - **Limits**: a cue breaks the limits when its text does not fit `maxLinesPerCue` lines of `maxCharactersPerLine` characters, as `wrapLines()` wraps it. It also breaks them above `maxDuration` or `maxCharactersPerSecond`.
 - **Break points**: best first, a sentence end, a clause end, then the space closest to the middle. Among break points of the same kind, the one closest to the middle wins. A full stop before a word in lower case, as in "e.g. this", does not end a sentence.
 - **Splitting**: `SplitLong` splits a cue in two at the best break point. It splits each part again while the part breaks a limit. A cue stays unchanged when no break point keeps both parts at `minDuration` or longer.
-- **Checks**: with `minDuration: 8` and `maxDuration: 5`, each part of a split cue lasts 8 s or more and breaks `maxDuration`. So `SplitLong` throws `InvalidArgumentException` before it changes a cue, when `minDuration` is greater than `maxDuration` and a cue needs a split. `ByWords` does not use `minDuration`.
+- **`minDuration`**: `ByWords` does not use it.
 - **Times**: a new cue starts at the word timestamp of its first word. Without one, the time splits in proportion to the visible characters.
 - **Text without spaces**: text such as Japanese splits after CJK punctuation and at word timestamps.
 - **Regrouping**: `ByWords` ends a cue after a sentence end and before a pause of `maxWordGap` seconds. It also ends a cue before a word that would break a limit. It never joins words of cues with different `<v>` speakers, alignments or forced flags. Cues without word timestamps stay unchanged.

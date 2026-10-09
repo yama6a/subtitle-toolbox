@@ -203,24 +203,6 @@ class ResegmenterTest extends TestCase
     }
 
 
-    public function testMinDurationAboveMaxDurationThrowsBeforeASplitAndChangesNothing(): void
-    {
-        $limits   = new CueLimits(maxCharactersPerLine: 20, minDuration: 8, maxDuration: 5);
-        $subtitle = TestSubtitles::fromCues([[0, 4, "Short cue."], [10, 30, "We meet at the north gate. Then we walk to the lake."]]);
-        $before   = TestSubtitles::describe($subtitle);
-
-        try {
-            Resegmenter::apply($subtitle, new ResegmentOptions(ResegmentMode::SplitLong, limits: $limits));
-            $this->fail("Resegmenter split a cue with a minimum duration above the maximum duration.");
-        } catch (Exceptions\InvalidArgumentException $exception) {
-            $this->assertSame("Resegmenter cannot split a cue when the minimum duration is greater than the maximum duration, got 8 and 5.",
-                              $exception->getMessage());
-        }
-        $this->assertSame($before, TestSubtitles::describe($subtitle));
-        $this->assertSame([[0.0, 4.0, "Short cue."]], $this->split([[0, 4, "Short cue."]], new ResegmentOptions(ResegmentMode::SplitLong, limits: $limits)));
-    }
-
-
     public function testMaxDurationAndMaxCharactersPerSecond(): void
     {
         $text = "We meet at the north gate. Then we walk to the lake.";

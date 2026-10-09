@@ -84,9 +84,6 @@ use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
 use SubtitleToolbox\Profanity\ProfanityOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\ReplaceTextOptions;
-use SubtitleToolbox\Resegmenting\Resegmenter;
-use SubtitleToolbox\Resegmenting\ResegmentMode;
-use SubtitleToolbox\Resegmenting\ResegmentOptions;
 use SubtitleToolbox\Speakers\SpeakerLabelOptions;
 use SubtitleToolbox\Streaming\SubRipStreamReader;
 use SubtitleToolbox\Streaming\SubRipStreamWriter;
@@ -310,6 +307,7 @@ class ThrowSitesTest extends TestCase
                                                                 MkvFixtureWriter::unknownSizeElement(MkvFixtureWriter::TRACKS, "")))), ...$parsing],
             "CueLimits.php: maximum lines 0"                => [fn () => new CueLimits(maxLinesPerCue: 0), ...$invalid],
             "CueLimits.php: maximum duration 0"             => [fn () => new CueLimits(maxDuration: 0), ...$invalid],
+            "CueLimits.php: minimum above maximum duration" => [fn () => new CueLimits(minDuration: 8, maxDuration: 5), ...$invalid],
             "CueEditing.php: slice start after end"         => [fn () => self::subtitle()->withSlice(5, 1), ...$invalid],
             "CueEditing.php: split time outside the cue"    => [fn () => self::subtitle()->splitCue(0, 9, 1), ...$invalid],
             "CueEditing.php: split line out of range"       => [fn () => self::subtitle()->splitCue(0, 1.5, 5), ...$invalid],
@@ -585,10 +583,6 @@ class ThrowSitesTest extends TestCase
             "ReadOptions.php: unknown encoding"             => [fn () => new ReadOptions(encoding: "NO-SUCH-ENCODING"), ...$invalid],
             "Retiming.php: same old times"                  => [fn () => self::subtitle()->syncByTwoPoints(1, 1, 1, 2), ...$invalid],
             "Retiming.php: new times in reverse"            => [fn () => self::subtitle()->syncByTwoPoints(1, 2, 2, 1), ...$invalid],
-            "Resegmenting/Resegmenter.php: minimum above maximum duration" => [fn () => Resegmenter::apply(
-                TestSubtitles::fromCues([[0, 20, "We meet at the north gate. Then we walk to the lake."]]),
-                new ResegmentOptions(ResegmentMode::SplitLong, limits: new CueLimits(maxCharactersPerLine: 20, minDuration: 8, maxDuration: 5))
-            ), ...$invalid],
             "Speakers/SpeakerLabelOptions.php: invalid color" => [fn () => new SpeakerLabelOptions(colors: ["yellow"]), ...$invalid],
             "Streaming/Streams.php: no stream"              => [fn () => iterator_to_array((new SubRipStreamReader())->read(5)), ...$invalid],
             "Streaming/Streams.php: missing file"           => [fn () => iterator_to_array((new SubRipStreamReader())->read(__DIR__ . "/missing.srt")),
