@@ -21,23 +21,23 @@ Yes. <b>Seven minutes</b> to departure.
 
 6
 00:00:13,500 --> 00:00:13,900
-<u>The</u> train leaves
+{\an8}<b><u>The</u> train leaves</b>
 
 7
 00:00:13,900 --> 00:00:14,250
-The <u>train</u> leaves
+{\an8}<b>The <u>train</u> leaves</b>
 
 8
 00:00:14,250 --> 00:00:14,750
-train <u>leaves</u> at
+{\an8}<b>train <u>leaves</u> at</b>
 
 9
 00:00:14,750 --> 00:00:15,350
-leaves <u>at</u> noon
+{\an8}<b>leaves <u>at</u> noon</b>
 
 10
 00:00:15,350 --> 00:00:16,000
-leaves at <u>noon</u>
+{\an8}<b>leaves at <u>noon</u></b>
 
 11
 00:00:16,100 --> 00:00:18,000

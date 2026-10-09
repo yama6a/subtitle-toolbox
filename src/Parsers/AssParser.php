@@ -37,17 +37,20 @@ final class AssParser extends SubtitleParser
     /** @var list<array{0: string, 1: int}> */
     private array $comments = [];
 
+    /** @var list<array{format: list<string>, line: string, lineNumber: int, value: string, isComment: bool}> */
+    private array $events = [];
+
 
     protected function read(string $content): Subtitle
     {
         $this->cues     = [];
         $this->comments = [];
+        $this->events   = [];
 
         $subtitle = new Subtitle();
         $data     = self::EMPTY_FORMAT_DATA;
 
-        $section    = null;
-        $eventIndex = 0;
+        $section = null;
         foreach ($this->lines($content) as $lineIndex => $line) {
             $line = trim($line);
             if ($line === "") {
@@ -67,13 +70,22 @@ final class AssParser extends SubtitleParser
             match (true) {
                 strcasecmp($section, "Script Info") === 0 => $this->readScriptInfoLine($subtitle, $data, $line),
                 $this->isStylesSection($section)          => $this->readStyleLine($data, $section, $line),
-                strcasecmp($section, "Events") === 0      => $this->readEventLine($data, $line, $lineIndex + 1, $eventIndex),
+                strcasecmp($section, "Events") === 0      => $this->readEventLine($data, $line, $lineIndex + 1),
                 default                                   => $data["sections"][$section][] = $line,
             };
         }
 
         if (!in_array("events", array_map("strtolower", $data["sectionOrder"]), true)) {
             throw new ParsingException("The subtitle has no [Events] section.");
+        }
+
+        // The events are read last because a [V4+ Styles] section after [Events] still sets their styles.
+        foreach ($this->events as $eventIndex => $event) {
+            try {
+                $this->readEvent($data, $event["format"], $event["line"], $event["lineNumber"], $event["value"], $event["isComment"]);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, $event["lineNumber"], $eventIndex, [$event["line"]]);
+            }
         }
 
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, $data);
@@ -127,7 +139,7 @@ final class AssParser extends SubtitleParser
     }
 
 
-    private function readEventLine(array &$data, string $line, int $lineNumber, int &$eventIndex): void
+    private function readEventLine(array &$data, string $line, int $lineNumber): void
     {
         [$type, $value] = $this->splitDescriptor($line);
         if (strcasecmp($type, "Format") === 0) {
@@ -141,18 +153,13 @@ final class AssParser extends SubtitleParser
             return;
         }
 
-        try {
-            $this->readEvent($data, $line, $lineNumber, $value, $isComment);
-        } catch (ParsingException $exception) {
-            $this->fail($exception, $lineNumber, $eventIndex, [$line]);
-        }
-        $eventIndex++;
+        $this->events[] = ["format" => $data["eventFormat"], "line" => $line, "lineNumber" => $lineNumber, "value" => $value, "isComment" => $isComment];
     }
 
 
-    private function readEvent(array &$data, string $line, int $lineNumber, string $value, bool $isComment): void
+    private function readEvent(array &$data, array $format, string $line, int $lineNumber, string $value, bool $isComment): void
     {
-        $fields = $this->combine($data["eventFormat"], $value, false);
+        $fields = $this->combine($format, $value, false);
         if ($fields === null) {
             throw new ParsingException("The line \"$line\" has fewer fields than the Format line of the [Events] section.", $lineNumber);
         }
@@ -174,7 +181,11 @@ final class AssParser extends SubtitleParser
         $startTime = $this->secondsFromString($fields[$start], $lineNumber);
         $wrapStyle = array_change_key_case($data["scriptInfo"])["wrapstyle"] ?? "";
 
-        [$lines, $alignment] = $this->convertText($fields[$text], $startTime, $wrapStyle === "2", $lineNumber);
+        $styleField = $this->findField($fields, "Style");
+        $style      = AssStyles::forEvent($data["styles"], $styleField === null ? "" : $fields[$styleField]);
+
+        [$lines, $alignment] = $this->convertText($fields[$text], $startTime, $wrapStyle === "2", $lineNumber, $data["styles"], $style);
+        $alignment         ??= AssStyles::alignment($style, $this->hasLegacyStyles($data));
 
         $name  = $this->findField($fields, "Name");
         $lines = Markup::addSpeaker($lines, $name === null ? "" : $fields[$name]);
@@ -242,6 +253,12 @@ final class AssParser extends SubtitleParser
     }
 
 
+    private function hasLegacyStyles(array $data): bool
+    {
+        return strcasecmp($data["stylesSection"] ?? "", "V4 Styles") === 0;
+    }
+
+
     private function isSsa(array $data): bool
     {
         $scriptType = array_change_key_case($data["scriptInfo"])["scripttype"] ?? "";
@@ -262,16 +279,19 @@ final class AssParser extends SubtitleParser
 
     /**
      * Converts the Text field to core markup lines and the alignment of the first \an or \a tag.
+     * The bold, italic, underline and strikeout flags of the style open their tags at the start and after \r.
      *
+     * @param list<array<string, string>> $styles
+     * @param ?array<string, string>      $style
      * @return array{list<string>, ?int}
      */
-    private function convertText(string $text, float $start, bool $softBreakIsHard, int $lineNumber): array
+    private function convertText(string $text, float $start, bool $softBreakIsHard, int $lineNumber, array $styles, ?array $style): array
     {
         $alignment    = null;
         $openTags     = [];
         $drawing      = false;
         $karaokeStart = $start;
-        $markup       = "";
+        $markup       = $this->openStyleTags($style, $openTags);
         foreach (preg_split('/(\{[^{}]*\})/', $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY) as $part) {
             if (!str_starts_with($part, "{") || !str_ends_with($part, "}")) {
                 if (!$drawing) {
@@ -297,8 +317,9 @@ final class AssParser extends SubtitleParser
                 } elseif (preg_match('/^\\\\(?:k|K|kf|ko)(\d+(?:\.\d+)?)$/', $tag, $matches)) {
                     $markup       .= "<" . Markup::coreTimestamp($karaokeStart) . ">";
                     $karaokeStart  = self::boundedTime($karaokeStart + $matches[1] / 100, $tag, $lineNumber);
-                } elseif (preg_match('/^\\\\r/', $tag)) {
+                } elseif (preg_match('/^\\\\r(.*)$/', $tag, $matches)) {
                     $markup .= $this->closeAll($openTags);
+                    $markup .= $this->openStyleTags(trim($matches[1]) === "" ? $style : AssStyles::find($styles, $matches[1]) ?? $style, $openTags);
                 } elseif (preg_match('/^\\\\p(\d+)$/', $tag, $matches)) {
                     $drawing = (int) $matches[1] > 0;
                 }
@@ -338,6 +359,17 @@ final class AssParser extends SubtitleParser
         if ($openingTag !== null) {
             $markup     .= $openingTag;
             $openTags[] = [$tagName, $openingTag];
+        }
+
+        return $markup;
+    }
+
+
+    private function openStyleTags(?array $style, array &$openTags): string
+    {
+        $markup = "";
+        foreach (AssStyles::tags($style) as $tagName) {
+            $markup .= $this->setTag($tagName, "<$tagName>", $openTags);
         }
 
         return $markup;
