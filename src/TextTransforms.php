@@ -239,11 +239,16 @@ trait TextTransforms
 
     /**
      * Tells if $text ends a sentence, or ends with a sound description, a music note or a speaker label.
+     * Text that is not valid UTF-8 makes the Unicode regex fail, so an ASCII regex decides then.
      */
     private static function textTransformsEndsSentence(string $text): bool
     {
-        return (preg_match('/(?:[.!?\x{2026}][\p{Pe}\p{Pi}\p{Pf}"\']*|[\])\x{266A}:])$/u', $text)
-            ?: preg_match('/[.!?][)\]}"\']*$|[\]):]$|\xE2\x99\xAA$/', $text)) === 1;
+        $match = preg_match('/(?:[.!?\x{2026}][\p{Pe}\p{Pi}\p{Pf}"\']*|[\])\x{266A}:])$/u', $text);
+        if ($match === false) {
+            $match = preg_match('/[.!?][)\]}"\']*$|[\]):]$|\xE2\x99\xAA$/', $text);
+        }
+
+        return $match === 1;
     }
 
 
