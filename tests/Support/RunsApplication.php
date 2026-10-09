@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+namespace SubtitleToolbox\Tests\Support;
+
+use SubtitleToolbox\Cli\Application;
+
+trait RunsApplication
+{
+    /**
+     * @param list<string> $arguments
+     *
+     * @return array{int, string, string} exit code, standard output, standard error
+     */
+    private static function runApplication(array $arguments, string $stdin = ""): array
+    {
+        $streams = [fopen("php://memory", "w+b"), fopen("php://memory", "w+b"), fopen("php://memory", "w+b")];
+        fwrite($streams[0], $stdin);
+        rewind($streams[0]);
+
+        $code = (new Application(...$streams))->run(["subtitle-toolbox", ...$arguments]);
+
+        rewind($streams[1]);
+        rewind($streams[2]);
+
+        return [$code, stream_get_contents($streams[1]), stream_get_contents($streams[2])];
+    }
+}
