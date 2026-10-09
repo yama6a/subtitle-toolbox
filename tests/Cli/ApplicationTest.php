@@ -199,7 +199,7 @@ class ApplicationTest extends TestCase
         $stdout = BinaryTestCase::unwrapHelp($stdout);
         preg_match_all('/^  (?:-\w, )?--([\w-]+)/m', $stdout, $matches);
         $this->assertSame([
-            "shift", "shift-after", "scale", "sync", "from-fps", "to-fps", "to", "output", "output-dir", "output-fps",
+            "shift", "shift-after", "shift-before", "scale", "sync", "from-fps", "to-fps", "to", "output", "output-dir", "output-fps",
             "line-ending", "bom", "no-bom", "skip-image-cues", "scc-fit", "from", "encoding", "lenient", "input-fps", "fps", "word-timestamps", "scc-roll-up",
             "track", "keep-going", "help",
         ], $matches[1]);
