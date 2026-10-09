@@ -9,6 +9,8 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\ParseWarning;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
@@ -132,6 +134,72 @@ class MicroDvdParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The frame rate is unknown");
         Subtitle::fromString("{25}{50}Hello", Format::MicroDvd);
+    }
+
+
+    public function testStrictModeWithoutFrameRateNamesLenientMode(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The frame rate is unknown. Set MicroDvdReadOptions::\$frameRate, start the file with {1}{1}<fps>, " .
+                                      "or read the file in lenient mode for 23.976 fps.");
+        (new MicroDvdParser())->parse("{0}{25}Hello");
+    }
+
+
+    public function testLenientModeWithoutFrameRateUses23976FpsAndWarns(): void
+    {
+        $parser   = new MicroDvdParser();
+        $subtitle = $parser->parse("{0}{25}Hello", new ReadOptions(lenient: true));
+
+        $this->assertSame(1.043, $subtitle->getCues()[0]->getEnd());
+        $this->assertSame(["frameRate" => 23.976], $subtitle->findFormatData("microdvd"));
+        $this->assertEquals(
+            [new ParseWarning("The file has no {1}{1}<fps> line. The parser used 23.976 fps.", null, null, [], ParseWarningAction::Repaired)],
+            $parser->getWarnings()
+        );
+    }
+
+
+    public function testLenientModeKeepsTheFrameRateOfTheOptions(): void
+    {
+        $parser   = new MicroDvdParser();
+        $subtitle = $parser->parse("{0}{25}Hello", new ReadOptions(lenient: true, format: new MicroDvdReadOptions(25)));
+
+        $this->assertSame(1.0, $subtitle->getCues()[0]->getEnd());
+        $this->assertSame([], $parser->getWarnings());
+    }
+
+
+    public function testLenientModeKeepsTheFrameRateLine(): void
+    {
+        $parser   = new MicroDvdParser();
+        $subtitle = $parser->parse("{1}{1}25\n{0}{25}Hello", new ReadOptions(lenient: true));
+
+        $this->assertSame(1.0, $subtitle->getCues()[0]->getEnd());
+        $this->assertSame([], $parser->getWarnings());
+    }
+
+
+    public static function realFilesWithoutFrameRate(): array
+    {
+        return [
+            "mantas-done plain"  => ["sub_microdvd.sub", 2],
+            "mantas-done styles" => ["sub_microdvd_with_styles.sub", 2],
+            "subsrt sample"      => ["subsrt_sample.sub", 5],
+        ];
+    }
+
+
+    #[DataProvider("realFilesWithoutFrameRate")]
+    public function testRealFileWithoutFrameRateParsesInLenientMode(string $file, int $cueCount): void
+    {
+        $content = file_get_contents(__DIR__ . "/../files/microdvd/real/$file");
+        $lenient = Subtitle::fromStringAutoDetectFormat($content, new ReadOptions(lenient: true));
+        $at23976 = Subtitle::fromString($content, Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(23.976)));
+
+        $this->assertCount($cueCount, $lenient->getCues());
+        $this->assertEquals($at23976->getCues(), $lenient->getCues());
+        $this->assertCount(1, $lenient->getParseWarnings());
     }
 
 

@@ -47,7 +47,8 @@ final class CliMessages
             "Call fromString() with a format. Chapters and cloud speech-to-text JSON always need one, for example Format::Deepgram." => $pickFormat,
             "Set MicroDvdWriteOptions::\$frameRate."                                   => "Pass --fps or --output-fps.",
             "Set IttWriteOptions::\$frameRate."                                        => "Pass --fps or --output-fps.",
-            "Set MicroDvdReadOptions::\$frameRate or start the file with {1}{1}<fps>." => "Pass --fps or --input-fps, or start the file with {1}{1}<fps>.",
+            "Set MicroDvdReadOptions::\$frameRate, start the file with {1}{1}<fps>, or read the file in lenient mode for 23.976 fps." =>
+                "Pass --fps or --input-fps, start the file with {1}{1}<fps>, or pass --lenient for 23.976 fps.",
             "Set CsvReadOptions::\$frameRate."                                         => "Pass --fps or --input-fps.",
             "Call wrapLines(32, 4) first."                                      => "Pass --structure-wrap --structure-max-cpl 32 --structure-max-lines 4.",
             "Call Resegmenter::apply() with ResegmentMode::SplitLong and new CueLimits(32, 4), then wrapLines(32, 4)." =>

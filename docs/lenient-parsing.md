@@ -40,7 +40,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | Parser | Skipped with a warning | `blockIndex` counts |
 |:--- |:--- |:--- |
 | ASS, SSA | a `Dialogue:` or `Comment:` line with too few fields or a bad time. A file without a `Format:` line is not an error. The parser then uses the default fields. A time without a fraction, with 4 fraction digits, or with `,` or `:` before the fraction gets a `repaired` warning, for example `0:00:01`, `0:00:01.5000` or `0:00:01,50`. The parser rounds it to milliseconds | events |
-| MicroDVD | a line without `{start}{end}` frames, also before the `{1}{1}<fps>` line | non-empty lines |
+| MicroDVD | a line without `{start}{end}` frames, also before the `{1}{1}<fps>` line. A file without a frame rate gets a `repaired` warning with `lineNumber` and `blockIndex` null, and the parser uses 23.976 fps | non-empty lines |
 | MPL2 | a line without `[start][end]` | non-empty lines |
 | TMPlayer | a line without a time | non-empty lines |
 | SubViewer 1 | a bad header line | cues |
@@ -68,7 +68,6 @@ foreach ($subtitle->getParseWarnings() as $warning) {
   - A Whisper `segments` or YouTube `events` field that is an object, not a list.
   - A SAMI file that is not UTF-8.
   - An ASS file without `[Events]`.
-  - A MicroDVD file without a frame rate.
 - **Text before the XML**: the TTML, iTT and YouTube XML parsers skip white space before the XML in both modes. Other text before the XML declaration or the root element throws in strict mode. Lenient mode skips it with a `repaired` warning that has `blockIndex` null, for example for a `Subtitles by ...` line.
 - **HTML entities in TTML**: XML defines only `&amp;`, `&lt;`, `&gt;`, `&quot;` and `&apos;`. Strict mode throws for an HTML entity such as `&eacute;` or `&nbsp;`. Lenient mode reads each HTML5 named entity as its character and adds one `repaired` warning. The parser never loads a DTD or an external entity.
 - **Malformed XML in TTML**: strict mode throws. Lenient mode keeps a bare `&` and an unknown entity such as `&foo;` as text, and reads `<br>` as `<br/>`. libxml then repairs the rest, for example a missing end tag. The parser adds one `repaired` warning with the first libxml error and its line. A file that gives no `<tt>` root still throws.

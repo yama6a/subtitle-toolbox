@@ -9,6 +9,7 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
@@ -20,6 +21,9 @@ final class MicroDvdParser extends SubtitleParser
     public const FORMAT_DATA_KEY = Format::MicroDvd->value;
 
     private const STYLE_TAGS = ["b", "i", "u", "s"];
+
+    // The default of mantas-done/subtitles, pysubs2 and subtitle_it.
+    private const LENIENT_FRAME_RATE = 23.976;
 
     private const CUE_REGEX = '/^\{(\d+)\}\{(\d+)\}(.*)$/';
 
@@ -83,8 +87,14 @@ final class MicroDvdParser extends SubtitleParser
             unset($rawLines[$firstLine]);
         }
 
+        if ($frameRate === null && $this->options->lenient) {
+            $this->warn("The file has no {1}{1}<fps> line. The parser used " . self::LENIENT_FRAME_RATE . " fps.", null, null, [], ParseWarningAction::Repaired);
+
+            return self::LENIENT_FRAME_RATE;
+        }
         if ($frameRate === null) {
-            throw new ParsingException("The frame rate is unknown. Set MicroDvdReadOptions::\$frameRate or start the file with {1}{1}<fps>.");
+            throw new ParsingException("The frame rate is unknown. Set MicroDvdReadOptions::\$frameRate, start the file with {1}{1}<fps>, " .
+                                       "or read the file in lenient mode for " . self::LENIENT_FRAME_RATE . " fps.");
         }
 
         return $frameRate;
