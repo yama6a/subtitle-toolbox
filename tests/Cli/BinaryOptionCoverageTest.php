@@ -196,22 +196,22 @@ class BinaryOptionCoverageTest extends BinaryTestCase
     public static function inputOptions(): array
     {
         return [
-            "retime --encoding"         => ["retime", ["--encoding", "UTF-16LE"]],
+            "retime --encoding"         => ["retime", ["--encoding", "UTF-32LE"]],
             "retime --lenient"          => ["retime", ["--lenient"]],
             "retime --word-timestamps"  => ["retime", ["--word-timestamps"]],
             "retime --scc-roll-up" => ["retime", ["--scc-roll-up", "screen"]],
             "retime --track"            => ["retime", ["--track", "3"]],
-            "info --encoding"           => ["info", ["--encoding", "UTF-16LE"]],
+            "info --encoding"           => ["info", ["--encoding", "UTF-32LE"]],
             "info --fps"                => ["info", ["--fps", "25"]],
             "info --word-timestamps"    => ["info", ["--word-timestamps"]],
             "info --scc-roll-up" => ["info", ["--scc-roll-up", "screen"]],
-            "validate --encoding"       => ["validate", ["--encoding", "UTF-16LE"]],
+            "validate --encoding"       => ["validate", ["--encoding", "UTF-32LE"]],
             "validate --input-fps"      => ["validate", ["--input-fps", "25"]],
             "validate --word-timestamps" => ["validate", ["--word-timestamps"]],
             "validate --scc-roll-up" => ["validate", ["--scc-roll-up", "screen"]],
             "validate --track"          => ["validate", ["--track", "3"]],
             "sync --from"               => ["sync", ["--from", "srt"]],
-            "sync --encoding"           => ["sync", ["--encoding", "UTF-16LE"]],
+            "sync --encoding"           => ["sync", ["--encoding", "UTF-32LE"]],
             "sync --lenient"            => ["sync", ["--lenient"]],
             "sync --input-fps"          => ["sync", ["--input-fps", "25"]],
             "sync --fps"                => ["sync", ["--fps", "25"]],
@@ -219,7 +219,7 @@ class BinaryOptionCoverageTest extends BinaryTestCase
             "sync --scc-roll-up" => ["sync", ["--scc-roll-up", "screen"]],
             "sync --track"              => ["sync", ["--track", "3"]],
             "diff --from"               => ["diff", ["--from", "srt"]],
-            "diff --encoding"           => ["diff", ["--encoding", "UTF-16LE"]],
+            "diff --encoding"           => ["diff", ["--encoding", "UTF-32LE"]],
             "diff --fps"                => ["diff", ["--fps", "25"]],
             "diff --word-timestamps"    => ["diff", ["--word-timestamps"]],
             "diff --scc-roll-up" => ["diff", ["--scc-roll-up", "screen"]],
@@ -230,13 +230,13 @@ class BinaryOptionCoverageTest extends BinaryTestCase
             "translate --word-timestamps" => ["translate", ["--word-timestamps"]],
             "translate --scc-roll-up" => ["translate", ["--scc-roll-up", "screen"]],
             "translate --track"         => ["translate", ["--track", "3"]],
-            "dual --encoding"           => ["dual", ["--encoding", "UTF-16LE"]],
+            "dual --encoding"           => ["dual", ["--encoding", "UTF-32LE"]],
             "dual --lenient"            => ["dual", ["--lenient"]],
             "dual --fps"                => ["dual", ["--fps", "25"]],
             "dual --word-timestamps"    => ["dual", ["--word-timestamps"]],
             "dual --scc-roll-up" => ["dual", ["--scc-roll-up", "screen"]],
             "hls --from"                => ["hls", ["--from", "srt"]],
-            "hls --encoding"            => ["hls", ["--encoding", "UTF-16LE"]],
+            "hls --encoding"            => ["hls", ["--encoding", "UTF-32LE"]],
             "hls --lenient"             => ["hls", ["--lenient"]],
             "hls --input-fps"           => ["hls", ["--input-fps", "25"]],
             "hls --fps"                 => ["hls", ["--fps", "25"]],
@@ -266,7 +266,7 @@ class BinaryOptionCoverageTest extends BinaryTestCase
 
         switch ($options[0]) {
             case "--encoding":
-                $variant = fn (string $text): string => mb_convert_encoding(ltrim($text, self::BOM), "UTF-16LE", "UTF-8");
+                $variant = fn (string $text): string => mb_convert_encoding(ltrim($text, self::BOM), "UTF-32LE", "UTF-8");
                 break;
             case "--input-fps":
             case "--fps":
