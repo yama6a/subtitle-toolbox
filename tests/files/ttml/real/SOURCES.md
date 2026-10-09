@@ -5,6 +5,7 @@
 | `astisub_breaklines.ttml` | https://github.com/asticode/go-astisub/blob/7671e72e9d47287d6f8ded80a004560b63a2ead5/testdata/example-in-breaklines.ttml | go-astisub, MIT |
 | `astisub_merging_style.ttml` | https://github.com/asticode/go-astisub/blob/7671e72e9d47287d6f8ded80a004560b63a2ead5/testdata/example-in-merging-style.ttml | go-astisub, MIT |
 | `astisub_smpte.ttml` | Written for this repository in the shape of https://github.com/asticode/go-astisub/blob/7671e72e9d47287d6f8ded80a004560b63a2ead5/testdata/example-in.ttml | MIT |
+| `blank_lines_before_xml.ttml` | Written for this repository. Two empty lines and an indent come before the XML declaration, as in files that an editor saved | MIT |
 | `bbc_ebu_tt_d.ttml` | Written for this repository in the shape of the EBU-TT-D files in https://www.bbc.co.uk/accessibility/forproducts/guides/subtitles/ | MIT |
 | `flash_ttaf1_2006_04.xml` | Written for this repository in the shape of the Timed Text files of the Adobe FLVPlaybackCaptioning component, https://help.adobe.com/en_US/as3/components/WS5b3ccc516d4fbf351e63e3d118a9c65b32-7ee5.html | MIT |
 | `mantas_dfxp_br.dfxp` | https://github.com/mantas-done/subtitles/blob/959d1705b1ed12cbb9ddba517f8bcb814e1919a8/tests/files/dfxp_with_different_br.dfxp | mantas-done/subtitles, MIT |

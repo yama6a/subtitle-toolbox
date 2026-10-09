@@ -464,6 +464,7 @@ $subtitle->toString(Format::Ttml);
 - **Kept as is**: the `<head>`, the namespace and the attributes of `<tt>`, `<body>`, `<div>` and `<p>`. So a DFXP file stays DFXP. The formatter drops `ttp:timeBase`, `ttp:clockMode`, `ttp:dropMode` and `ttp:markerMode`, because it writes media times.
 - **Limits**: the parser reads `seq` time containers as `par`. The formatter strips word timestamps. A cue identifier that is not a valid `xml:id` is not written.
 - **Unique IDs**: two cues with the ID `c1` come out as `c1` and `c1_2`. Each `xml:id` value occurs once in the output. A cue ID that a region or a style already uses also gets the next free suffix. The IDs in `<head>` keep their value. The IDs of `<tt>`, `<body>`, `<div>` and `<p>` follow in output order.
+- **Text before the XML**: the parser skips white space before the XML declaration. For other text there, see [lenient-parsing.md](lenient-parsing.md#other-formats).
 - **Security**: the parser loads no external entity or DTD and makes no network access.
 - **Forced cues**: see [subtitle.md](subtitle.md#forced-cues).
 

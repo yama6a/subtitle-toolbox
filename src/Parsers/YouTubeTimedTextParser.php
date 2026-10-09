@@ -29,8 +29,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
      */
     protected function read(string $content): Subtitle
     {
-        $content = ltrim($content);
-        [$fileData, $captions] = str_starts_with($content, "{") ? $this->readJson($content) : $this->readXml($content);
+        [$fileData, $captions] = str_starts_with(ltrim($content), "{") ? $this->readJson($content) : $this->readXml($content);
 
         $subtitle   = new Subtitle();
         $parsedCues = [];
@@ -152,7 +151,12 @@ final class YouTubeTimedTextParser extends SubtitleParser
 
     private function readXml(string $content): array
     {
-        $root = XmlLoader::xml($content)?->documentElement ?? throw new ParsingException("The content is not well-formed XML.");
+        $repaired = XmlLoader::skipLeadingText($content, "(?:timedtext|transcript)", $skipped);
+        if ($skipped !== "") {
+            $this->skipTextBeforeXml($content, $skipped);
+        }
+
+        $root = XmlLoader::xml($repaired)?->documentElement ?? throw new ParsingException("The content is not well-formed XML.");
 
         return match (true) {
             $root->nodeName === "transcript"                        => [["format" => "srv1"], $this->readTexts($root, "start", "dur", 1)],

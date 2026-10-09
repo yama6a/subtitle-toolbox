@@ -37,6 +37,35 @@ final class XmlLoader
 
 
     /**
+     * Removes the text before the XML declaration, a comment, a DOCTYPE or the root element that $rootPattern matches.
+     * Line breaks replace that text after the XML declaration, so libxml still reports the line numbers of the file.
+     * $skipped receives the removed text without white space at its ends.
+     */
+    public static function skipLeadingText(string $xml, string $rootPattern, ?string &$skipped = null): string
+    {
+        $skipped = "";
+        $start   = strlen($xml) - strlen(ltrim($xml));
+        if (!str_starts_with(ltrim($xml), "<")) {
+            if (!preg_match('/<(?:\?xml\s|!--|!DOCTYPE\s|' . $rootPattern . '[\s>\/])/', $xml, $match, PREG_OFFSET_CAPTURE)) {
+                return $xml;
+            }
+            $start = $match[0][1];
+        }
+        if ($start === 0) {
+            return $xml;
+        }
+
+        $prefix     = substr($xml, 0, $start);
+        $skipped    = trim($prefix);
+        $lineBreaks = str_repeat("\n", preg_match_all('/\r\n?|\n/', $prefix));
+        $xml        = substr($xml, $start);
+        $declEnd    = str_starts_with($xml, "<?xml") ? strpos($xml, "?>") : false;
+
+        return $declEnd === false ? $lineBreaks . $xml : substr($xml, 0, $declEnd + 2) . $lineBreaks . substr($xml, $declEnd + 2);
+    }
+
+
+    /**
      * Subtitle::fromString() converts UTF-16 and UTF-32 input to UTF-8 but keeps the XML declaration.
      * Some tools also declare UTF-16 for UTF-8 files. libxml rejects both.
      * Raw UTF-16 bytes hold zero bytes, so the pattern leaves them alone.

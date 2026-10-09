@@ -43,6 +43,12 @@ class YouTubeTimedTextRealFilesTest extends TestCase
                 [0.0, 2.5, '<font color="#ffff00"><b>Chapter one</b></font>'],
                 [11.5, 14.5, "Please keep\nyour ticket."],
             ],
+            "srv3 after blank lines" => [
+                "blank-lines.en.srv3",
+                2,
+                [1.0, 3.0, "The market opens at eight."],
+                [3.5, 6.0, "Fresh bread is sold first."],
+            ],
             "srv1 transcript" => [
                 "transcript.en.srv1",
                 5,

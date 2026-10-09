@@ -137,6 +137,22 @@ abstract class SubtitleParser
 
 
     /**
+     * Throws in strict mode and warns in lenient mode for text that XmlLoader::skipLeadingText() removed.
+     */
+    protected function skipTextBeforeXml(string $content, string $skipped): void
+    {
+        $lineNumber = 1 + substr_count($content, "\n", 0, (int) strpos($content, $skipped));
+        $lines      = $this->lines($skipped);
+        $message    = "The file has text before the XML: \"$lines[0]\".";
+        if (!$this->options->lenient) {
+            throw new ParsingException($message, $lineNumber);
+        }
+
+        $this->warn("$message The parser skipped it.", $lineNumber, null, $lines, ParseWarningAction::Repaired);
+    }
+
+
+    /**
      * Returns $seconds, or throws when the time $text reaches MAX_HOURS.
      */
     protected static function boundedTime(float $seconds, string $text, ?int $lineNumber): float
