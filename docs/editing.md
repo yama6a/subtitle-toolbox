@@ -31,12 +31,14 @@ $part1->merge($part2, 3130);                    // appends part 2, 3130 s later
 $clip = $subtitle->withSlice(600, 1200, true);  // a new Subtitle with the cues from 600 s to 1200 s, moved to start at 0
 $subtitle->splitCue(4, 63.5, 1);                // cue 4 becomes two cues at 63.5 s, line 1 in the first
 $subtitle->joinCues(4, 5);                      // one cue with the lines of cue 4 and 5
-$subtitle->removeDuplicateCues();               // joins touching cues with the same text
+$subtitle->removeDuplicateCues();               // joins same-text cues that overlap or touch
+$subtitle->removeDuplicateCues(0.5);            // also joins same-text cues up to 0.5 s apart
 ```
 
 - **Merge**: the metadata and the format data of `$part1` win over those of `$part2`. The comments of both files stay before their cues. At the same place, the comments of `$part1` come first.
 - **Slice**: a cue that crosses the start or end time gets cut there. The copy keeps the metadata, the format data and the comments before the kept cues. The original stays unchanged.
 - **Split and join**: the first cue keeps its identifier. A comment before a joined cue moves before the result.
+- **Duplicates**: `removeDuplicateCues()` joins a run of adjacent cues with the same text. Two cues join when they are identical, overlap, touch, or are at most `maxGap` seconds apart. The default `maxGap` is 0. The joined cue runs from the earliest start to the latest end. Cues with other text between them stay apart. Same-text cues also stay apart when their alignment, forced flag or format data differ, such as an ASS `Glow` event on layer 0 under a `Default` event on layer 1. A negative, NAN or INF `maxGap` throws `InvalidArgumentException`.
 
 ## Overlaps, short cues and line breaks
 ```php
@@ -45,12 +47,13 @@ $gap = (new FrameRate(24))->framesToSeconds(2);   // about 0.083 s
 $subtitle->fixOverlaps($gap);                     // end each cue at least $gap before the next cue starts
 $subtitle->extendShortCues(0.833, $gap);          // show each cue for at least 0.833 s where the next cue allows it
 $subtitle->wrapLines(42);                         // at most 42 characters per line, at most 2 lines
-$subtitle->unwrapLines();                         // join the lines of each cue with a space
+$subtitle->unwrapLines();                         // join the lines of each dialogue turn with a space
 ```
 
 - **Start times**: these fixes move only end times. `fixOverlaps()` ends a cue at its own start when the gap does not fit. Cues with the same start, such as a sign and a line of dialogue, end before the next cue with a later start. `extendShortCues()` never creates an overlap and never makes a cue shorter.
 - **Line breaks**: `wrapLines()` changes only cues with a longer line or with more lines than allowed. It uses the fewest lines that fit and makes them about equal in length. When the text does not fit, the lines get longer than the limit.
 - **Dialogue**: each dialogue turn keeps lines of its own. A turn starts at a line with a dialogue dash, such as `- Yes.`. It also starts at a dash after a sentence end within a line, so `- Are you coming? - Yes.` becomes 2 lines. A sentence end is `.`, `?`, `!` or an ellipsis character. A dash before a digit, as in `-20 degrees`, starts no turn. A long turn wraps within itself, with up to the maximum lines per turn. So a cue with 2 or more turns can have more lines than the maximum.
+- **Unwrapping**: `unwrapLines()` joins the lines of each turn with a space. A turn starts at the first line and at each line with a dialogue dash. For example, the lines `- Are you coming?`, `- Yes, in a minute,` and `I promise you.` become 2 lines: `- Are you coming?` and `- Yes, in a minute, I promise you.` A cue without dash lines becomes 1 line. A dash after a sentence end within a line stays on that line.
 - **Characters**: tags count 0 characters, and an entity such as `&amp;` counts 1. `wrapLines()` breaks only at spaces outside tags. It closes the open core markup tags at a break and opens them again on the next line.
 - **Text without spaces**: Chinese or Japanese text has no break points, so `wrapLines()` keeps such a line long.
 
@@ -82,6 +85,8 @@ $subtitle->mergeShortCues();   // the default limits of new MergeShortCuesOption
 | `minDuration` | 1 | a cue shorter than this many seconds is short |
 | `maxDuration` | 7 | seconds from the start to the end of the joined cue |
 | `maxCharactersPerSecond` | null | the reading speed of the joined cue. Null turns the rule off |
+
+The `CueLimits` constructor throws `InvalidArgumentException` when `minDuration` is greater than `maxDuration`.
 
 | Option | Default | Meaning |
 |:--- |:--- |:--- |
@@ -129,7 +134,7 @@ Resegmenter::apply($subtitle, new ResegmentOptions(mode: ResegmentMode::ByWords,
 - **Limits**: a cue breaks the limits when its text does not fit `maxLinesPerCue` lines of `maxCharactersPerLine` characters, as `wrapLines()` wraps it. It also breaks them above `maxDuration` or `maxCharactersPerSecond`.
 - **Break points**: best first, a sentence end, a clause end, then the space closest to the middle. Among break points of the same kind, the one closest to the middle wins. A full stop before a word in lower case, as in "e.g. this", does not end a sentence.
 - **Splitting**: `SplitLong` splits a cue in two at the best break point. It splits each part again while the part breaks a limit. A cue stays unchanged when no break point keeps both parts at `minDuration` or longer.
-- **Checks**: with `minDuration: 8` and `maxDuration: 5`, each part of a split cue lasts 8 s or more and breaks `maxDuration`. So `SplitLong` throws `InvalidArgumentException` before it changes a cue, when `minDuration` is greater than `maxDuration` and a cue needs a split. `ByWords` does not use `minDuration`.
+- **`minDuration`**: `ByWords` does not use it.
 - **Times**: a new cue starts at the word timestamp of its first word. Without one, the time splits in proportion to the visible characters.
 - **Text without spaces**: text such as Japanese splits after CJK punctuation and at word timestamps.
 - **Regrouping**: `ByWords` ends a cue after a sentence end and before a pause of `maxWordGap` seconds. It also ends a cue before a word that would break a limit. It never joins words of cues with different `<v>` speakers, alignments or forced flags. Cues without word timestamps stay unchanged.

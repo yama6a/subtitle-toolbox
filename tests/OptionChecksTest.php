@@ -78,6 +78,7 @@ class OptionChecksTest extends TestCase
             "ValidationRules minSecondsPerWord"        => fn (float $value) => new ValidationRules(minSecondsPerWord: $value),
             "Subtitle::scale() factor"                 => fn (float $value) => (new Subtitle())->scale($value),
             "Subtitle::extendShortCues() minDuration"  => fn (float $value) => (new Subtitle())->extendShortCues($value),
+            "Subtitle::removeDuplicateCues() maxGap"   => fn (float $value) => (new Subtitle())->removeDuplicateCues($value),
             "Subtitle::fixOverlaps() minGap"           => fn (float $value) => (new Subtitle())->fixOverlaps($value),
             "SpeechReference mediaDuration"            => fn (float $value) => SpeechReference::fromFfmpegSilencedetect("", $value),
         ];
@@ -128,6 +129,8 @@ class OptionChecksTest extends TestCase
             "negative minimum duration"  => [fn () => new CueLimits(minDuration: -1), "The minimum duration must not be negative, got -1."],
             "NAN in the message"         => [fn () => new CueLimits(maxDuration: NAN), "The maximum duration and the maximum characters per second must be " .
                                                                                      "greater than 0, got NAN and null."],
+            "minimum above maximum"      => [fn () => new CueLimits(minDuration: 8, maxDuration: 5),
+                                             "The minimum duration must not be greater than the maximum duration, got 8 and 5."],
             "frame rate 0"               => [fn () => new FrameRate(0), "The frame rate must be greater than 0, got 0."],
             "MicroDVD frame rate NAN"    => [fn () => new MicroDvdWriteOptions(NAN), "The MicroDVD frame rate must be greater than 0, got NAN."],
             "MPSub frame rate INF"       => [fn () => new MpSubWriteOptions(INF), "The MPSub frame rate must be a positive integer, got INF."],
@@ -174,6 +177,14 @@ class OptionChecksTest extends TestCase
         $rules = new ValidationRules(maxCharactersPerSecond: INF, maxDuration: INF, maxWordsPerMinute: INF);
 
         $this->assertSame([INF, INF, INF], [$rules->maxCharactersPerSecond, $rules->maxDuration, $rules->maxWordsPerMinute]);
+    }
+
+
+    public function testCueLimitsAcceptEqualMinimumAndMaximumDuration(): void
+    {
+        $limits = new CueLimits(minDuration: 5, maxDuration: 5);
+
+        $this->assertSame([5.0, 5.0], [$limits->minDuration, $limits->maxDuration]);
     }
 
 

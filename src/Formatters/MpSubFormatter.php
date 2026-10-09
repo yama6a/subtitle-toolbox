@@ -20,7 +20,7 @@ final class MpSubFormatter extends SubtitleFormatter
     protected const DEFAULT_BOM = true;
 
     private const DEFAULT_TYPE = "VIDEO";
-    private const DEFAULT_NOTE = "Created with the PHP Subtitle Toolbox (https://github.com/yama6a/subtitle-toolbox)";
+    private const DEFAULT_NOTE = "Created with the PHP Subtitle Toolbox (https://github.com/yama6a/subtitle-toolbox-php)";
 
 
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string

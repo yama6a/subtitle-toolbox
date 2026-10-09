@@ -1,21 +1,19 @@
 # Subtitle Toolbox
-[![Packagist version](https://img.shields.io/packagist/v/ymakhloufi/subtitle-toolbox)](https://packagist.org/packages/ymakhloufi/subtitle-toolbox)
-[![CI](https://github.com/yama6a/subtitle-toolbox/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/yama6a/subtitle-toolbox/actions/workflows/ci.yaml)
-[![License](https://img.shields.io/packagist/l/ymakhloufi/subtitle-toolbox)](LICENSE)
+[![Packagist version](https://img.shields.io/packagist/v/yama6a/subtitle-toolbox-php)](https://packagist.org/packages/yama6a/subtitle-toolbox-php)
+[![CI](https://github.com/yama6a/subtitle-toolbox-php/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/yama6a/subtitle-toolbox-php/actions/workflows/ci.yaml)
+[![License](https://img.shields.io/packagist/l/yama6a/subtitle-toolbox-php)](LICENSE)
 
 A PHP library and command line tool that reads, edits and writes subtitles, transcripts and chapter lists in more than 30 formats.
 
-Upgrading from 1.x? See the [upgrade guide](docs/upgrade-2.0.md).
+Upgrading from 2.x? The package has a new name. See the [upgrade guide](docs/upgrade-3.0.md).
 
 ## Install
 ```sh
-composer require ymakhloufi/subtitle-toolbox
+composer require yama6a/subtitle-toolbox-php
 # Optional, for OCR of PGS and VobSub image subtitles:
 composer require yama6a/php-glyph-ocr:^0.3   # php-glyph-ocr, the pure PHP OCR engine
 apt install tesseract-ocr                    # or Tesseract on Debian and Ubuntu, for more than 100 languages
 ```
-
-From 3.0, the package continues as `yama6a/subtitle-toolbox-php`. Never install both packages together.
 
 The core package needs neither OCR engine. See [ocr.md](docs/ocr.md) for the install commands of other systems and languages.
 

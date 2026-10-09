@@ -332,4 +332,32 @@ class FixesTest extends \PHPUnit\Framework\TestCase
         $this->assertSame([["<i>Please take a seat,</i> the meeting starts."], ["One line"], []],
                           array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $subtitle->getCues()));
     }
+
+
+    public function testUnwrapLinesKeepsEachDialogueTurnOnALineOfItsOwn(): void
+    {
+        $subtitle = new Subtitle();
+        $subtitle->addCue(new SubtitleCue(1, 2, "- Are you coming?\n- Yes, in a minute,\nI promise you."));
+        $subtitle->addCue(new SubtitleCue(3, 4, "Who is there?\n- Only me."));
+        $subtitle->addCue(new SubtitleCue(5, 6, "- It is very cold tonight.\n-20 degrees, they said."));
+
+        $subtitle->unwrapLines();
+
+        $this->assertSame([
+            ["- Are you coming?", "- Yes, in a minute, I promise you."],
+            ["Who is there?", "- Only me."],
+            ["- It is very cold tonight. -20 degrees, they said."],
+        ], array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $subtitle->getCues()));
+    }
+
+
+    public function testUnwrapLinesKeepsDialogueTurnsOfARealFileApart(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/files/fixes/own_dialogue_turns_wrapped.srt"), Format::SubRip);
+
+        $subtitle->unwrapLines();
+
+        $this->assertSame(file_get_contents(__DIR__ . "/files/fixes/own_dialogue_turns_unwrapped.srt"),
+                          $subtitle->toString(Format::SubRip, new WriteOptions(bom: false)));
+    }
 }

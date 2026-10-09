@@ -187,29 +187,45 @@ trait CueEditing
 
 
     /**
-     * Joins each run of adjacent cues with the same text where one cue ends at the start time of the next.
+     * Joins each run of adjacent cues with the same text that are identical, overlap, touch, or are at most $maxGap
+     * seconds apart. The cues must also have the same alignment, forced flag and format data, such as an ASS style
+     * and layer. The joined cue runs from the earliest start to the latest end of the run.
+     *
+     * @throws InvalidArgumentException when $maxGap is negative, NAN or INF.
      */
-    public function removeDuplicateCues(): self
+    public function removeDuplicateCues(float $maxGap = 0.0): self
     {
+        OptionChecks::nonNegativeFinite($maxGap, "The maximum gap must be a finite number of 0 or more seconds, got %s.");
+        $maxGap  = Timecode::roundToMilliseconds($maxGap);
         $anchors = CommentAnchors::of($this->cues, $this->comments);
         $groups  = [];
         $group   = [];
+        $start   = 0.0;
+        $end     = 0.0;
         foreach ($this->cues as $cue) {
-            $previous = end($group) ?: null;
-            if ($previous !== null && $previous->getText() === $cue->getText()
-                && $previous->getEnd() === $cue->getStart()) {
+            if ($group !== [] && $group[0]->getText() === $cue->getText() && CueList::canJoin($group[0], $cue)
+                && $group[0]->getAllFormatData() === $cue->getAllFormatData()
+                && Timecode::roundToMilliseconds($cue->getStart() - $end) <= $maxGap
+                && Timecode::roundToMilliseconds($start - $cue->getEnd()) <= $maxGap) {
                 $group[] = $cue;
+                $start   = min($start, $cue->getStart());
+                $end     = max($end, $cue->getEnd());
                 continue;
             }
 
-            $groups[] = $group;
+            $groups[] = [$group, $start];
             $group    = [$cue];
+            $start    = $cue->getStart();
+            $end      = $cue->getEnd();
         }
-        $groups[] = $group;
+        $groups[] = [$group, $start];
 
-        foreach ($groups as $group) {
+        foreach ($groups as [$group, $start]) {
             if (count($group) > 1) {
                 [$this->cues, $anchors] = CueList::join($this->cues, $group, $anchors, false);
+                if ($start < $group[0]->getStart()) {
+                    $group[0]->setStart($start);
+                }
             }
         }
         $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);

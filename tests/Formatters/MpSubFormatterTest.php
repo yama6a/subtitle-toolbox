@@ -77,7 +77,7 @@ class MpSubFormatterTest extends TestCase
     {
         $subtitle = (new Subtitle())->setMetadata(Subtitle::METADATA_LANGUAGE, "en");
 
-        $this->assertSame("\xEF\xBB\xBFTITLE=\nAUTHOR=\nTYPE=VIDEO\nFORMAT=TIME\nNOTE=Created with the PHP Subtitle Toolbox (https://github.com/yama6a/subtitle-toolbox)\n", $subtitle->toString(Format::MpSub));
+        $this->assertSame("\xEF\xBB\xBFTITLE=\nAUTHOR=\nTYPE=VIDEO\nFORMAT=TIME\nNOTE=Created with the PHP Subtitle Toolbox (https://github.com/yama6a/subtitle-toolbox-php)\n", $subtitle->toString(Format::MpSub));
     }
 
 

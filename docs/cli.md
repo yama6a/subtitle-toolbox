@@ -18,16 +18,16 @@ Every release also ships the tool as a PHAR file and as a container image.
 
 | Form | Needs | Example |
 |:--- |:--- |:--- |
-| PHAR on the [GitHub release](https://github.com/yama6a/subtitle-toolbox/releases) | PHP 8.2 or later with `ext-dom`, `ext-iconv` and `ext-zlib`, plus `ext-curl` for `translate` | `php subtitle-toolbox.phar convert in.srt --to vtt -o out.vtt` |
-| Image `ghcr.io/yama6a/subtitle-toolbox` | Docker or another container runtime | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:2.0.0 convert in.srt --to vtt -o out.vtt` |
-| Image `ghcr.io/yama6a/subtitle-toolbox:tesseract` | the same, for OCR with Tesseract in every language | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox:2.0.0-tesseract convert in.sup --to srt -o out.srt --ocr --ocr-language deu` |
+| PHAR on the [GitHub release](https://github.com/yama6a/subtitle-toolbox-php/releases) | PHP 8.2 or later with `ext-dom`, `ext-iconv` and `ext-zlib`, plus `ext-curl` for `translate` | `php subtitle-toolbox.phar convert in.srt --to vtt -o out.vtt` |
+| Image `ghcr.io/yama6a/subtitle-toolbox-php` | Docker or another container runtime | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox-php:3.0.0 convert in.srt --to vtt -o out.vtt` |
+| Image `ghcr.io/yama6a/subtitle-toolbox-php:tesseract` | the same, for OCR with Tesseract in every language | `docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/yama6a/subtitle-toolbox-php:3.0.0-tesseract convert in.sup --to srt -o out.srt --ocr --ocr-language deu` |
 
 ```sh
-curl -fsSLO https://github.com/yama6a/subtitle-toolbox/releases/latest/download/subtitle-toolbox.phar
+curl -fsSLO https://github.com/yama6a/subtitle-toolbox-php/releases/latest/download/subtitle-toolbox.phar
 php subtitle-toolbox.phar --version
 ```
 
-- **Version**: the PHAR file, the image tag, the Git tag and the Packagist version are the same string, for example `2.0.0`. The image also has the tags `2.0`, `2` and `latest`. The Tesseract image has the tags `2.0.0-tesseract`, `2.0-tesseract`, `2-tesseract` and `tesseract`.
+- **Version**: the PHAR file, the image tag, the Git tag and the Packagist version are the same string, for example `3.0.0`. The image also has the tags `3.0`, `3` and `latest`. The Tesseract image has the tags `3.0.0-tesseract`, `3.0-tesseract`, `3-tesseract` and `tesseract`.
 - **Image**: the tool runs in `/work`, so mount your files there. `--user` makes the tool write files that you own. Without it, the tool runs as `www-data` and cannot write to most mounted folders.
 - **Platforms**: the image is for `linux/amd64` and `linux/arm64`.
 - **OCR**: `convert --ocr` works in every form with no extra steps, because all include php-glyph-ocr. The Tesseract image adds Tesseract with the `tessdata_fast` models of all its languages, see [ocr.md](ocr.md#tesseract). It is about 340 MB larger.
@@ -50,7 +50,7 @@ php subtitle-toolbox.phar --version
 - **Help**: `subtitle-toolbox help CMD` and `subtitle-toolbox CMD --help` list the options of a command. For `convert`, they list the common options and the option groups, see [Order](#order).
 - **Command list**: `subtitle-toolbox`, `subtitle-toolbox help` and `subtitle-toolbox help help` list the commands and exit with 0.
 - **Help width**: every help line fits in 80 columns.
-- **Version**: `subtitle-toolbox --version` prints the installed release, for example `2.0.0`, or `dev` in a Git checkout.
+- **Version**: `subtitle-toolbox --version` prints the installed release, for example `3.0.0`, or `dev` in a Git checkout.
 - **Exit code**: see the table. A batch with a failed file exits with 3, also when another file broke a rule.
 
 | Code | Meaning | Example |
@@ -253,11 +253,11 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 | Option | Calls |
 |:--- |:--- |
 | `--structure-resegment` | `Resegmenter::apply()` with `ResegmentMode::ByWords`. `--structure-max-word-gap` sets `maxWordGap`. It turns on `--word-timestamps` |
-| `--structure-unwrap` | `unwrapLines()` |
+| `--structure-unwrap` | `unwrapLines()`. Each dialogue dash line starts a line of its own |
 | `--structure-merge-short` | `mergeShortCues()` with the default options |
 | `--structure-split-long` | `Resegmenter::apply()` with `ResegmentMode::SplitLong` and the default options |
 | `--structure-wrap` | `wrapLines()` with `--structure-max-cpl` and `--structure-max-lines` |
-| `--structure-merge-duplicates` | `removeDuplicateCues()` |
+| `--structure-merge-duplicates` | `removeDuplicateCues()` with the default `maxGap` of 0. Joins same-text cues that overlap or touch and have the same alignment, forced flag and format data |
 | `--structure-max-cpl CHARS` | `maxCharactersPerLine` of `--structure-resegment`, `--structure-merge-short`, `--structure-split-long` and `--structure-wrap` |
 | `--structure-max-lines LINES` | `maxLinesPerCue` of `--structure-resegment`, `--structure-merge-short`, `--structure-split-long` and `--structure-wrap` |
 

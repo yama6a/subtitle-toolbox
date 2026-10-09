@@ -1,5 +1,5 @@
 {
-  "name": "ymakhloufi/subtitle-toolbox",
+  "name": "yama6a/subtitle-toolbox-php",
   "description": "A PHP library and command line tool that reads, edits and writes subtitles, transcripts and chapter lists in more than 30 formats.",
   "keywords": [
     "subtitle",
@@ -21,11 +21,11 @@
     "parser",
     "converter"
   ],
-  "homepage": "https://github.com/yama6a/subtitle-toolbox",
+  "homepage": "https://github.com/yama6a/subtitle-toolbox-php",
   "license": "MIT",
   "support": {
-    "issues": "https://github.com/yama6a/subtitle-toolbox/issues",
-    "source": "https://github.com/yama6a/subtitle-toolbox"
+    "issues": "https://github.com/yama6a/subtitle-toolbox-php/issues",
+    "source": "https://github.com/yama6a/subtitle-toolbox-php"
   },
   "autoload": {
     "psr-4": {
@@ -56,8 +56,7 @@
     "yama6a/php-glyph-ocr": "^0.3, for GlyphOcrEngine, the pure PHP OCR of PGS and VobSub image cues where Tesseract is not installed"
   },
   "conflict": {
-    "yama6a/php-glyph-ocr": "<0.3 || >=0.4",
-    "yama6a/subtitle-toolbox-php": "*"
+    "yama6a/php-glyph-ocr": "<0.3 || >=0.4"
   },
   "config": {
     "platform": {

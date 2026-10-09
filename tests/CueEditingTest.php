@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Tests\Support\TestSubtitles;
 
@@ -332,5 +333,106 @@ class CueEditingTest extends TestCase
             $this->getCommentsByCueText($subtitle)
         );
         $this->assertSame([0, 0, 1, 4], array_column($subtitle->getComments(), "beforeCueIndex"));
+    }
+
+
+    /**
+     * @return array<string, array{list<array{float|int, float|int, string}>, float, list<array{float, float, string}>}>
+     */
+    public static function duplicateCues(): array
+    {
+        return [
+            "exact"               => [[[1, 3, "Hello"], [1, 3, "Hello"]], 0.0, [[1.0, 3.0, "Hello"]]],
+            "overlapping"         => [[[2, 4, "Bye"], [2.5, 4, "Bye"]], 0.0, [[2.0, 4.0, "Bye"]]],
+            "touching"            => [[[1, 2, "Hi"], [2, 3, "Hi"]], 0.0, [[1.0, 3.0, "Hi"]]],
+            "gap within maxGap"   => [[[1, 2, "Hi"], [2.2, 3, "Hi"]], 0.5, [[1.0, 3.0, "Hi"]]],
+            "gap of exactly 0.2"  => [[[1, 2, "Hi"], [2.2, 3, "Hi"]], 0.2, [[1.0, 3.0, "Hi"]]],
+            "gap above maxGap"    => [[[1, 2, "Hi"], [2.2, 3, "Hi"]], 0.0, [[1.0, 2.0, "Hi"], [2.2, 3.0, "Hi"]]],
+            "not adjacent"        => [[[1, 2, "Hi"], [2, 3, "Yes"], [3, 4, "Hi"]], 0.0, [[1.0, 2.0, "Hi"], [2.0, 3.0, "Yes"], [3.0, 4.0, "Hi"]]],
+            "earlier start later" => [[[2, 4, "Bye"], [1, 3, "Bye"]], 0.0, [[1.0, 4.0, "Bye"]]],
+            "contained"           => [[[1, 5, "Bye"], [2, 3, "Bye"], [4.5, 6, "Bye"]], 0.0, [[1.0, 6.0, "Bye"]]],
+        ];
+    }
+
+
+    /**
+     * @param list<array{float|int, float|int, string}> $cues
+     * @param list<array{float, float, string}>         $expected
+     */
+    #[DataProvider("duplicateCues")]
+    public function testRemoveDuplicateCuesJoinsSameTextCues(array $cues, float $maxGap, array $expected): void
+    {
+        $this->assertSame($expected, TestSubtitles::describe(TestSubtitles::fromCues($cues)->removeDuplicateCues($maxGap)));
+    }
+
+
+    public function testRemoveDuplicateCuesRealSubRipFile(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "own_duplicate_cues.srt"), Format::SubRip);
+
+        $this->assertSame(
+            file_get_contents(self::DIR . "own_duplicate_cues_deduplicated.srt"),
+            $subtitle->removeDuplicateCues()->toString(Format::SubRip, new WriteOptions(bom: false))
+        );
+    }
+
+
+    public function testRemoveDuplicateCuesKeepsAssEventsWithAnotherStyleOrLayer(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "own_glow_duplicates.ass"), Format::Ass);
+
+        $this->assertSame(
+            file_get_contents(self::DIR . "own_glow_duplicates_deduplicated.ass"),
+            $subtitle->removeDuplicateCues()->toString(Format::Ass, new WriteOptions(bom: false))
+        );
+    }
+
+
+    /**
+     * @return array<string, array{SubtitleCue}>
+     */
+    public static function cuesThatCannotJoin(): array
+    {
+        return [
+            "other alignment"   => [(new SubtitleCue(1, 3, "Hello"))->setAlignment(8)],
+            "forced"            => [(new SubtitleCue(1, 3, "Hello"))->setForced(true)],
+            "other format data" => [(new SubtitleCue(1, 3, "Hello"))->setFormatData(Format::WebVtt->value, ["line" => "0"])],
+        ];
+    }
+
+
+    #[DataProvider("cuesThatCannotJoin")]
+    public function testRemoveDuplicateCuesKeepsSameTextCuesThatCannotJoin(SubtitleCue $other): void
+    {
+        $subtitle = TestSubtitles::fromCues([new SubtitleCue(1, 3, "Hello"), $other]);
+
+        $this->assertCount(2, $subtitle->removeDuplicateCues()->getCues());
+    }
+
+
+    public function testRemoveDuplicateCuesJoinsTheDefaultAlignmentWithNoAlignment(): void
+    {
+        $subtitle = TestSubtitles::fromCues([
+            new SubtitleCue(1, 3, "Hello"),
+            (new SubtitleCue(1, 3, "Hello"))->setAlignment(SubtitleCue::DEFAULT_ALIGNMENT),
+        ]);
+
+        $this->assertSame([[1.0, 3.0, "Hello"]], TestSubtitles::describe($subtitle->removeDuplicateCues()));
+    }
+
+
+    public function testRemoveDuplicateCuesRejectsANegativeMaxGap(): void
+    {
+        foreach ([-0.1, NAN, INF] as $maxGap) {
+            $subtitle = TestSubtitles::fromCues([[1, 3, "Hello"], [1, 3, "Hello"]]);
+            try {
+                $subtitle->removeDuplicateCues($maxGap);
+                $this->fail("removeDuplicateCues() accepted the maximum gap $maxGap.");
+            } catch (InvalidArgumentException $exception) {
+                $this->assertSame("The maximum gap must be a finite number of 0 or more seconds, got " . OptionChecks::text($maxGap) . ".",
+                                  $exception->getMessage());
+            }
+            $this->assertCount(2, $subtitle->getCues());
+        }
     }
 }

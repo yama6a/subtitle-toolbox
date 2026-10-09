@@ -6,7 +6,6 @@ namespace SubtitleToolbox\Resegmenting;
 
 use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\CueList;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\LineWrapper;
 use SubtitleToolbox\Markup;
@@ -44,16 +43,9 @@ final class Resegmenter
     private static function splitLong(Subtitle $subtitle, ResegmentOptions $options): void
     {
         $anchors = CommentAnchors::of($subtitle->getCues(), $subtitle->getComments());
-        $splits  = array_map(fn (SubtitleCue $cue): ?array => self::findSplit($cue, $options), $subtitle->getCues());
-        $limits  = $options->limits;
-        if ($limits->minDuration > $limits->maxDuration && array_filter($splits) !== []) {
-            throw new InvalidArgumentException("Resegmenter cannot split a cue when the minimum duration is greater " .
-                                               "than the maximum duration, got $limits->minDuration and $limits->maxDuration.");
-        }
-
-        $cues = [];
-        foreach ($subtitle->getCues() as $index => $cue) {
-            $cues = [...$cues, ...self::splitCue($cue, $splits[$index], $options)];
+        $cues    = [];
+        foreach ($subtitle->getCues() as $cue) {
+            $cues = [...$cues, ...self::splitCue($cue, self::findSplit($cue, $options), $options)];
         }
 
         $subtitle->replaceCues($cues, $anchors);

@@ -11,7 +11,7 @@ use Composer\InstalledVersions;
  */
 final class Version
 {
-    private const PACKAGE = "ymakhloufi/subtitle-toolbox";
+    private const PACKAGE = "yama6a/subtitle-toolbox-php";
 
     // Box replaces this placeholder with the release version when it builds the PHAR. See .build/build-phar.sh.
     private const BUILD_VERSION = "@package_version@";
