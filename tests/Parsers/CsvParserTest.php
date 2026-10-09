@@ -228,6 +228,51 @@ class CsvParserTest extends TestCase
     }
 
 
+    public function testFindsColumnsByHeaderSynonyms(): void
+    {
+        $subtitle = (new CsvParser())->parse("Start Time,End Time,Subtitle\n1,2.5,a\n", new ReadOptions());
+        $warnings = $subtitle->getParseWarnings();
+
+        $this->assertSame([[1.0, 2.5, ["a"]]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], array_values($subtitle->getCues())));
+        $this->assertCount(1, $warnings);
+        $this->assertSame("The parser reads the columns \"Start Time\" as start, \"End Time\" as end and \"Subtitle\" as text.", $warnings[0]->message);
+        $this->assertSame(1, $warnings[0]->lineNumber);
+        $this->assertNull($warnings[0]->blockIndex);
+        $this->assertSame(["Start Time,End Time,Subtitle"], $warnings[0]->block);
+        $this->assertSame(ParseWarningAction::Repaired, $warnings[0]->action);
+    }
+
+
+    public function testFindsTheDubbingScriptColumnsWithoutColumnOptions(): void
+    {
+        $subtitle = (new CsvParser())->parse(file_get_contents(__DIR__ . "/../files/csv/real/dubbing_script.csv"), new ReadOptions(format: new CsvReadOptions(frameRate: 25)));
+        $cue      = $subtitle->getCues()[0];
+
+        $this->assertSame(36001.48, $cue->getStart());
+        $this->assertSame(["<v NARRATOR>The weather turns cold tonight."], $cue->getLines());
+        $this->assertSame(["start" => 0, "speaker" => 1, "text" => 2], $subtitle->findFormatData("csv")["roles"]);
+        $this->assertSame(["The parser reads the columns \"Start TC\" as start and \"Character\" as speaker."], array_map(fn ($warning): string => $warning->message, $subtitle->getParseWarnings()));
+    }
+
+
+    public function testAnExactHeaderNameWinsOverASynonym(): void
+    {
+        $subtitle = (new CsvParser())->parse("Begin,Start,Text\n9,1,a\n", new ReadOptions());
+
+        $this->assertSame(1.0, $subtitle->getCues()[0]->getStart());
+        $this->assertSame([], $subtitle->getParseWarnings());
+    }
+
+
+    public function testColumnOptionsTurnOffHeaderSynonyms(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The table has no column \"start\" for start.");
+
+        (new CsvParser())->parse("Start Time,Stop,Subtitle\n1,2,a\n", new ReadOptions(format: new CsvReadOptions(new CsvColumns(end: "Stop"))));
+    }
+
+
     public function testMapsColumnsByIndexWithoutAHeader(): void
     {
         $options = new ReadOptions(format: new CsvReadOptions(new CsvColumns(start: 1, end: 2, text: 0, header: false)));

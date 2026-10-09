@@ -185,6 +185,15 @@ $csv = $english->toString(Format::Csv, new WriteOptions(format: new CsvWriteOpti
 | any other column | `findFormatData('csv')['columns']` of the cue, by header name | the same cell |
 
 - **Column mapping**: `CsvColumns` maps each role to a header name or to a 0-based column index. Header names match without case. A role without a mapping uses the header with its own name, such as `start`, when the table has one.
+- **Header synonyms**: without `CsvColumns`, a role whose name no header has takes the first header synonym that the table has. The match ignores case, spaces, underscores and hyphens. A `ParseWarning` with action `repaired` names the chosen columns, also in strict mode. With `CsvColumns`, the parser uses no synonyms.
+
+  | Role | Synonyms, in order |
+  |:--- |:--- |
+  | `start` | `begin`, `in`, `start time`, `start tc`, `timecode`, `tc in` |
+  | `end` | `out`, `stop`, `end time`, `end tc`, `tc out` |
+  | `duration` | `length` |
+  | `speaker` | `name`, `character` |
+  | `text` | `subtitle`, `caption`, `dialogue`, `transcript` |
 - **Required columns**: a table without `start` or `text` throws `ParsingException`. So does a mapped header that the table lacks. `header: false` needs a column index for each mapped role, and at least for `start` and `text`.
 - **Column limit**: a table has at most 1,000 columns. For a wider table, `CsvParser` throws `ParsingException` with the line of the first wide row, also in lenient mode.
 - **Delimiter**: `,`, `;` or a tab. Without `CsvReadOptions::$delimiter`, the parser takes the one that occurs most often in the first line that has one. A comma wins a tie.
