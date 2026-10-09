@@ -34,12 +34,12 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 ## Other formats
 | Parser | Skipped with a warning | `blockIndex` counts |
 |:--- |:--- |:--- |
-| ASS, SSA | a `Dialogue:` or `Comment:` line with too few fields or a bad time. A file without a `Format:` line is not an error. The parser then uses the default fields | events |
+| ASS, SSA | a `Dialogue:` or `Comment:` line with too few fields or a bad time. A file without a `Format:` line is not an error. The parser then uses the default fields. A time without a fraction, with 4 fraction digits, or with `,` or `:` before the fraction gets a `repaired` warning, for example `0:00:01`, `0:00:01.5000` or `0:00:01,50`. The parser rounds it to milliseconds | events |
 | MicroDVD | a line without `{start}{end}` frames, also before the `{1}{1}<fps>` line | non-empty lines |
 | MPL2 | a line without `[start][end]` | non-empty lines |
 | TMPlayer | a line without a time | non-empty lines |
 | SubViewer 1 | a bad header line | cues |
-| SubViewer 2 | a timing line with one bad time and its text, and text before the first cue | cues |
+| SubViewer 2 | a timing line with one bad time and its text, and text before the first cue. A timing line without fractions, with 4 fraction digits or with 1-digit fields gets a `repaired` warning, for example `0:0:1.50,0:0:2.0000`. The parser rounds it to milliseconds. Strict mode reads such a line as cue text | cues |
 | MPSub | a bad wait and duration pair and its text, a cue without text, a bad `FORMAT=` value. A file without `FORMAT=` gets a `repaired` warning, and the parser reads the times as seconds | cues |
 | LRC | a line with a time tag that the parser cannot read, for example `[01:2x.00]` | non-empty lines |
 | SAMI | a `<SYNC>` tag without a valid `Start`. A negative `Start` gets a `repaired` warning, and the parser reads it as 0. A file whose `<P>` classes are all missing from the STYLE block gets a `repaired` warning with `blockIndex` null | `<SYNC>` tags |

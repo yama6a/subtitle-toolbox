@@ -8,6 +8,7 @@ use SubtitleToolbox\CommentAnchors;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -39,6 +40,9 @@ final class AssParser extends SubtitleParser
 
     /** @var list<array{format: list<string>, line: string, lineNumber: int, value: string, isComment: bool}> */
     private array $events = [];
+
+    /** @var list<string> the repaired times of the event that the parser reads */
+    private array $repairedTimes = [];
 
 
     protected function read(string $content): Subtitle
@@ -81,8 +85,12 @@ final class AssParser extends SubtitleParser
 
         // The events are read last because a [V4+ Styles] section after [Events] still sets their styles.
         foreach ($this->events as $eventIndex => $event) {
+            $this->repairedTimes = [];
             try {
                 $this->readEvent($data, $event["format"], $event["line"], $event["lineNumber"], $event["value"], $event["isComment"]);
+                foreach ($this->repairedTimes as $message) {
+                    $this->warn($message, $event["lineNumber"], $eventIndex, [$event["line"]], ParseWarningAction::Repaired);
+                }
             } catch (ParsingException $exception) {
                 $this->fail($exception, $event["lineNumber"], $eventIndex, [$event["line"]]);
             }
@@ -159,7 +167,7 @@ final class AssParser extends SubtitleParser
 
     private function readEvent(array &$data, array $format, string $line, int $lineNumber, string $value, bool $isComment): void
     {
-        $fields = $this->combine($format, $value, false);
+        $fields = $this->combine($format, $this->options->lenient ? $this->joinCommaFractions($format, $value) : $value, false);
         if ($fields === null) {
             throw new ParsingException("The line \"$line\" has fewer fields than the Format line of the [Events] section.", $lineNumber);
         }
@@ -170,6 +178,8 @@ final class AssParser extends SubtitleParser
         if ($start === null || $end === null || $text === null) {
             throw new ParsingException("The Format line of the [Events] section needs the fields Start, End and Text.", $lineNumber);
         }
+        $fields[$start] = str_replace("\0", ",", $fields[$start]);
+        $fields[$end]   = str_replace("\0", ",", $fields[$end]);
 
         if ($isComment) {
             $data["commentEvents"][] = $fields;
@@ -210,6 +220,27 @@ final class AssParser extends SubtitleParser
         $parts = explode(":", $line, 2);
 
         return [trim($parts[0]), ltrim($parts[1] ?? "")];
+    }
+
+
+    /**
+     * Masks the comma in a Start or End time such as "0:00:01,50" as NUL, so that combine() keeps the time in one field.
+     */
+    private function joinCommaFractions(array $format, string $value): string
+    {
+        $values = explode(",", $value);
+        $index  = 0;
+        foreach (array_slice($format, 0, -1) as $fieldName) {
+            if (in_array(strtolower($fieldName), ["start", "end"], true)
+                && preg_match('/^\s*\d+:\d{1,2}:\d{1,2}$/', $values[$index] ?? "")
+                && preg_match('/^\d{1,4}\s*$/', $values[$index + 1] ?? "")
+                && isset($values[$index + 2])) {
+                array_splice($values, $index, 2, [$values[$index] . "\0" . $values[$index + 1]]);
+            }
+            $index++;
+        }
+
+        return implode(",", $values);
     }
 
 
@@ -267,13 +298,22 @@ final class AssParser extends SubtitleParser
     }
 
 
+    /**
+     * In lenient mode, it also reads a time without a fraction, with 4 fraction digits or with "," or ":" before the fraction.
+     */
     private function secondsFromString(string $time, int $lineNumber): float
     {
-        if (!preg_match('/^(\d+):(\d{1,2}):(\d{1,2})\.(\d{1,3})$/', trim($time), $matches)) {
-            throw new ParsingException("The time \"$time\" is not valid.", $lineNumber);
+        if (preg_match('/^(\d+):(\d{1,2}):(\d{1,2})\.(\d{1,3})$/', trim($time), $matches)) {
+            return self::boundedTime(Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]), $time, $lineNumber);
         }
 
-        return self::boundedTime(Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]), $time, $lineNumber);
+        $seconds = $this->options->lenient ? LooseTime::toSeconds(trim($time), ".,:") : null;
+        if ($seconds === null) {
+            throw new ParsingException("The time \"$time\" is not valid.", $lineNumber);
+        }
+        $this->repairedTimes[] = "The time \"$time\" is not in the form h:mm:ss.cc. The parser read it as $seconds s.";
+
+        return self::boundedTime($seconds, $time, $lineNumber);
     }
 
 

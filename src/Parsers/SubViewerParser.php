@@ -185,11 +185,13 @@ final class SubViewerParser extends SubtitleParser
                 continue;
             }
 
-            $badTime = $this->options->lenient && $this->hasOneBadTime($line);
-            if ($badTime || preg_match(self::VERSION_2_TIME_REGEX, $line, $matches)) {
+            $isTime   = preg_match(self::VERSION_2_TIME_REGEX, $line, $matches) === 1;
+            $looseCue = !$isTime && $this->options->lenient ? $this->looseVersion2Cue($line, $lineNumber, $cueIndex) : null;
+            $badTime  = !$isTime && $looseCue === null && $this->options->lenient && $this->hasOneBadTime($line);
+            if ($isTime || $looseCue !== null || $badTime) {
                 $this->addCueWithText($parsedCues, $cue);
                 $this->warnSkipped($skipped);
-                $cue     = $badTime ? null : self::version2Cue($matches);
+                $cue     = $badTime ? null : $looseCue ?? self::version2Cue($matches);
                 $skipped = $badTime ? [$lineNumber, $cueIndex, [$line]] : null;
                 $cueIndex++;
                 continue;
@@ -232,6 +234,34 @@ final class SubViewerParser extends SubtitleParser
             Timecode::toSeconds((int) $matches[5], (int) $matches[6], (int) $matches[7], $matches[8]),
             []
         );
+    }
+
+
+    /**
+     * Reads a timing line without a fraction, with 4 fraction digits or with 1-digit fields, and warns. Returns null for another line.
+     */
+    private function looseVersion2Cue(string $line, int $lineNumber, int $cueIndex): ?SubtitleCue
+    {
+        $times = explode(",", $line);
+        if (count($times) !== 2) {
+            return null;
+        }
+
+        $start = LooseTime::toSeconds($times[0], ".");
+        $end   = LooseTime::toSeconds($times[1], ".");
+        if ($start === null || $end === null) {
+            return null;
+        }
+
+        $this->warn(
+            "The timing line \"$line\" is not in the form hh:mm:ss.ff,hh:mm:ss.ff. The parser read it as $start s to $end s.",
+            $lineNumber,
+            $cueIndex,
+            [$line],
+            ParseWarningAction::Repaired
+        );
+
+        return new SubtitleCue($start, $end, []);
     }
 
 
@@ -309,7 +339,7 @@ final class SubViewerParser extends SubtitleParser
 
     private function hasOneBadTime(string $line): bool
     {
-        $time  = '\d+:\d{2}:\d{2}\.\d{1,3}';
+        $time  = '\d+:\d{1,2}:\d{1,2}(?:\.\d{1,4})?';
         $parts = explode(",", $line);
 
         return count($parts) === 2

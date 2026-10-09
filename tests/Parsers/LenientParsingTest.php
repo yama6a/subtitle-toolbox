@@ -337,6 +337,47 @@ class LenientParsingTest extends TestCase
                     [9, 1, self::SKIPPED, "The timing line \"00:00:04.00,00:00:0x.00\" has a time that is not valid."],
                 ],
             ],
+            "ASS with 4 fraction digits, no fraction, and a comma or colon before the fraction" => [
+                "loose_times.ass",
+                AssParser::class,
+                "The time \"0:00:03.5004\" is not valid.",
+                [
+                    [1, 2, "The ovens warm up at four."],
+                    [3.5, 4, "The first loaves come out at six."],
+                    [5, 6, "Rye bread sells out first."],
+                    [7.5, 8, "The shop opens at seven, not eight."],
+                    [9.25, 10, "Close the door behind you."],
+                ],
+                [
+                    [12, 1, self::REPAIRED, "The time \"0:00:03.5004\" is not in the form h:mm:ss.cc. The parser read it as 3.5 s."],
+                    [12, 1, self::REPAIRED, "The time \"0:00:04.0000\" is not in the form h:mm:ss.cc. The parser read it as 4 s."],
+                    [13, 2, self::REPAIRED, "The time \"0:00:05\" is not in the form h:mm:ss.cc. The parser read it as 5 s."],
+                    [13, 2, self::REPAIRED, "The time \"0:00:06\" is not in the form h:mm:ss.cc. The parser read it as 6 s."],
+                    [14, 3, self::REPAIRED, "The time \"0:00:07,50\" is not in the form h:mm:ss.cc. The parser read it as 7.5 s."],
+                    [14, 3, self::REPAIRED, "The time \"0:00:08,00\" is not in the form h:mm:ss.cc. The parser read it as 8 s."],
+                    [15, 4, self::REPAIRED, "The time \"0:00:09:25\" is not in the form h:mm:ss.cc. The parser read it as 9.25 s."],
+                    [15, 4, self::REPAIRED, "The time \"0:00:10:00\" is not in the form h:mm:ss.cc. The parser read it as 10 s."],
+                ],
+            ],
+            "SubViewer 2 with 4 fraction digits, no fraction and 1-digit fields" => [
+                "loose_times.sub",
+                SubViewerParser::class,
+                1,
+                [
+                    [1, 2, "The ovens warm up at four."],
+                    [3.5, 4, "The first loaves come out at six."],
+                    [5, 6, "Rye bread sells out first."],
+                    [7.5, 8, "The shop opens at seven."],
+                ],
+                [
+                    [8, 1, self::REPAIRED, "The timing line \"00:00:03.5004,00:00:04.0000\" is not in the form hh:mm:ss.ff,hh:mm:ss.ff. " .
+                                           "The parser read it as 3.5 s to 4 s."],
+                    [11, 2, self::REPAIRED, "The timing line \"00:00:05,00:00:06\" is not in the form hh:mm:ss.ff,hh:mm:ss.ff. " .
+                                            "The parser read it as 5 s to 6 s."],
+                    [14, 3, self::REPAIRED, "The timing line \"0:0:7.50,0:0:8.00\" is not in the form hh:mm:ss.ff,hh:mm:ss.ff. " .
+                                            "The parser read it as 7.5 s to 8 s."],
+                ],
+            ],
             "MPSub without a FORMAT line, with a bad timing line and a truncated last cue" => [
                 "bad_timing_line.mpsub",
                 MpSubParser::class,
@@ -811,6 +852,58 @@ class LenientParsingTest extends TestCase
         $subtitle = (new SubViewerParser())->parse("00:00:01.00,00:00:03.00\nOne\n\n00:00:04.00,00:00:0x.00\nTwo\n", new ReadOptions());
 
         $this->assertSame(["One", "00:00:04.00,00:00:0x.00", "Two"], $subtitle->getCues()[0]->getLines());
+    }
+
+
+    public static function looseAssTimes(): array
+    {
+        return [
+            "4 fraction digits" => ["0:00:01.5000", 1.5],
+            "no fraction"       => ["0:00:01", 1.0],
+            "comma"             => ["0:00:01,50", 1.5],
+            "colon"             => ["0:00:01:50", 1.5],
+        ];
+    }
+
+
+    #[DataProvider("looseAssTimes")]
+    public function testAssReadsALooseTimeOnlyInLenientMode(string $time, float $seconds): void
+    {
+        $content = "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n" .
+                   "Dialogue: 0,$time,0:00:03.00,Default,,0,0,0,,Hello\n";
+
+        $subtitle = (new AssParser())->parse($content, new ReadOptions(lenient: true));
+        $this->assertSame([[$seconds, 3.0, "Hello"]], $this->cueRows($subtitle->getCues()));
+        $this->assertSame([self::REPAIRED], array_map(fn (ParseWarning $warning) => $warning->action, $subtitle->getParseWarnings()));
+        $this->assertStringContainsString(sprintf("Dialogue: 0,0:00:%05.2f,0:00:03.00,", $seconds), $subtitle->toString(Format::Ass));
+
+        $this->expectException(ParsingException::class);
+        (new AssParser())->parse($content, new ReadOptions());
+    }
+
+
+    public static function looseSubViewerTimingLines(): array
+    {
+        return [
+            "4 fraction digits" => ["00:00:01.5000,00:00:03.0000"],
+            "no fraction"       => ["00:00:01.5,00:00:03"],
+            "1-digit fields"    => ["0:0:1.50,0:0:3.00"],
+        ];
+    }
+
+
+    #[DataProvider("looseSubViewerTimingLines")]
+    public function testSubViewerReadsALooseTimingLineOnlyInLenientMode(string $line): void
+    {
+        $content = "00:00:00.00,00:00:01.00\nFirst\n\n$line\nHello\n";
+
+        $subtitle = (new SubViewerParser())->parse($content, new ReadOptions(lenient: true));
+        $this->assertSame([[0.0, 1.0, "First"], [1.5, 3.0, "Hello"]], $this->cueRows($subtitle->getCues()));
+        $this->assertSame([self::REPAIRED], array_map(fn (ParseWarning $warning) => $warning->action, $subtitle->getParseWarnings()));
+        $this->assertStringContainsString("00:00:01.50,00:00:03.00\nHello", $subtitle->toString(Format::SubViewer));
+
+        $strict = (new SubViewerParser())->parse($content, new ReadOptions());
+        $this->assertSame(["First", $line, "Hello"], $strict->getCues()[0]->getLines());
     }
 
 
