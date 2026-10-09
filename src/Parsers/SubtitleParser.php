@@ -35,6 +35,9 @@ abstract class SubtitleParser
     // parse() strips the UTF-8 BOM of a text format only.
     protected const BINARY = false;
 
+    // Formatters split cue times into integer milliseconds, which overflow far above this bound.
+    protected const MAX_HOURS = 100000;
+
     protected ReadOptions $options;
 
     private ?FormatReadOptions $formatOptions = null;
@@ -129,6 +132,19 @@ abstract class SubtitleParser
     protected function warn(string $message, ?int $lineNumber, ?int $blockIndex, array $block, ParseWarningAction $action): void
     {
         $this->warnings[] = new ParseWarning($message, $lineNumber, $blockIndex, $block, $action);
+    }
+
+
+    /**
+     * Returns $seconds, or throws when the time $text reaches MAX_HOURS.
+     */
+    protected static function boundedTime(float $seconds, string $text, ?int $lineNumber): float
+    {
+        if ($seconds >= self::MAX_HOURS * 3600) {
+            throw new ParsingException("The time \"$text\" is not below " . self::MAX_HOURS . " hours.", $lineNumber);
+        }
+
+        return $seconds;
     }
 
 

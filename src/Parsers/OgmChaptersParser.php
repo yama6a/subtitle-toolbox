@@ -58,6 +58,6 @@ final class OgmChaptersParser extends SubtitleParser
             throw new ParsingException("The line \"$line\" has a minute or second above 59.", $lineNumber);
         }
 
-        return Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]);
+        return self::boundedTime(Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]), $line, $lineNumber);
     }
 }

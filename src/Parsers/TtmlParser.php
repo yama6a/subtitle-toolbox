@@ -97,10 +97,16 @@ final class TtmlParser extends SubtitleParser
     }
 
 
+    private function parseTimeExpression(string $expression): float
+    {
+        return self::boundedTime($this->unboundedTimeExpression($expression), trim($expression), null);
+    }
+
+
     /**
      * @see https://www.w3.org/TR/ttml2/#timing-value-time-expression
      */
-    private function parseTimeExpression(string $expression): float
+    private function unboundedTimeExpression(string $expression): float
     {
         $expression = trim($expression);
         // Some tools write a comma as decimal separator, for example 00:00:01,500.

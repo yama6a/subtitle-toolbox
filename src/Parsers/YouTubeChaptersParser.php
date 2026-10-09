@@ -37,12 +37,13 @@ final class YouTubeChaptersParser extends SubtitleParser
             } else {
                 continue;
             }
-            if ((int) $seconds > 59 || ($hours !== "" && (int) $minutes > 59)) {
+            $time = Timecode::toSeconds((int) $hours, (int) $minutes, (int) $seconds);
+            if ((int) $seconds > 59 || ($hours !== "" && (int) $minutes > 59) || $time >= self::MAX_HOURS * 3600) {
                 continue;
             }
 
             $title      = preg_replace('/^' . self::SEPARATOR . '+|' . self::SEPARATOR . '+$/', "", $title);
-            $chapters[] = new SubtitleCue(Timecode::toSeconds((int) $hours, (int) $minutes, (int) $seconds), 0, Markup::escapeText($title));
+            $chapters[] = new SubtitleCue($time, 0, Markup::escapeText($title));
         }
 
         return (new Subtitle())->addCues($this->endChapters($chapters));

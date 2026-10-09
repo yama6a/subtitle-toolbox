@@ -203,16 +203,16 @@ final class CsvParser extends SubtitleParser
     private static function parseTime(string $time, ?FrameRate $frameRate, int $lineNumber): float
     {
         if (preg_match('/^\d+(?:\.\d+)?$/', $time)) {
-            return (float) $time;
+            return self::boundedTime((float) $time, $time, $lineNumber);
         }
         if (preg_match('/^(\d+):([0-5]\d):([0-5]\d)(?:([.,:])(\d+))?$/', $time, $matches)) {
             [$hours, $minutes, $seconds] = [(int) $matches[1], (int) $matches[2], (int) $matches[3]];
             $fraction                    = $matches[5] ?? "";
             if (($matches[4] ?? "") !== ":") {
-                return Timecode::toSeconds($hours, $minutes, $seconds, $fraction);
+                return self::boundedTime(Timecode::toSeconds($hours, $minutes, $seconds, $fraction), $time, $lineNumber);
             }
             if ($frameRate !== null) {
-                return Timecode::toSecondsFromFrames($hours, $minutes, $seconds, (int) $fraction, $frameRate);
+                return self::boundedTime(Timecode::toSecondsFromFrames($hours, $minutes, $seconds, (int) $fraction, $frameRate), $time, $lineNumber);
             }
         }
 

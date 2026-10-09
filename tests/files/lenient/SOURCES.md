@@ -30,3 +30,11 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `bad_time_code.stl` | written by `generate-stl.php`. Frame 30 in a 25 fps time code out, the last TTI block cut off after 60 bytes | MIT |
 | `missing_end.json` | a cue without `end`, a cue with a number as line, a comment after the first broken cue, LF | MIT |
 | `missing_segment_end.whisper.json` | the OpenAI API shape, a segment without `end`, LF | MIT |
+| `absurd_hours.vtt` | a cue with 20 hour digits between two good cues, LF | MIT |
+| `absurd_hours.sbv` | a cue with 20 hour digits between two good cues, LF | MIT |
+| `absurd_hours.ass` | a `Dialogue` line with 20 hour digits between two good lines, LF | MIT |
+| `absurd_hours.csv` | a row with 20 hour digits between two good rows, LF | MIT |
+| `absurd_hours.ttml` | a `p` with 20 hour digits and a `p` with an `end` of 20 digits in hours, LF | MIT |
+| `absurd_hours.sub` | SubViewer 2. A timing line with 20 hour digits between two good cues, LF | MIT |
+| `absurd_hours_tmplayer.txt` | TMPlayer. A line with 20 hour digits between good lines, LF | MIT |
+| `absurd_hours.html` | an HTML transcript. A `time` with 20 hour digits between two good ones, LF | MIT |

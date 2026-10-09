@@ -256,7 +256,7 @@ final class AssParser extends SubtitleParser
             throw new ParsingException("The time \"$time\" is not valid.", $lineNumber);
         }
 
-        return Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]);
+        return self::boundedTime(Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]), $time, $lineNumber);
     }
 
 

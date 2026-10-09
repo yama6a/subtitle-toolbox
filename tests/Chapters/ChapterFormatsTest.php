@@ -156,6 +156,7 @@ class ChapterFormatsTest extends TestCase
             "name first"      => ["CHAPTER01NAME=Intro\n", "The line \"CHAPTER01NAME=Intro\" is not a CHAPTERxx= line. (line 1)"],
             "no fraction"     => ["CHAPTER01=00:00:00\n", "The line \"CHAPTER01=00:00:00\" is not a CHAPTERxx= line. (line 1)"],
             "minute 60"       => ["CHAPTER01=00:60:00.000\n", "The line \"CHAPTER01=00:60:00.000\" has a minute or second above 59. (line 1)"],
+            "100000 hours"    => ["CHAPTER01=100000:00:00.000\n", "The time \"CHAPTER01=100000:00:00.000\" is not below 100000 hours. (line 1)"],
             "two times"       => ["CHAPTER01=00:00:00.000\n\nCHAPTER02=00:01:00.000\n", "The line \"CHAPTER02=00:01:00.000\" is not a CHAPTERxxNAME= line. (line 3)"],
         ];
     }
@@ -185,7 +186,7 @@ class ChapterFormatsTest extends TestCase
     {
         $description = "Recorded live.\n0:00 Intro\n(2:48) Hearing aids\n[4:20] | Progress report\n" .
                        "Namespace \u{2014} 6:50\nThe big players: 1:31:50\n12:30pm meeting\n0:75 Bad seconds\n1:60:00 Bad minutes\n" .
-                       "75:00 Long video\n1:2:03 Short minutes\n2:00:00\nSee https://example.com/a:b\n";
+                       "75:00 Long video\n1:2:03 Short minutes\n2:00:00\n99999999999999999999:00:00 Too late\n6000000:00 Too late\nSee https://example.com/a:b\n";
 
         $this->assertSame([
             [0.0, 168.0, "Intro"],

@@ -91,6 +91,15 @@ class OutputOptionsTest extends TestCase
 
 
     #[DataProvider("textFormats")]
+    public function testTheLatestTimeThatTheParsersAcceptIsWrittenWithoutAPhpWarning(Format $format): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "vtt/real/own_max_hours.vtt"), Format::WebVtt);
+
+        $this->assertNotSame("", $subtitle->toString($format, self::options($format)));
+    }
+
+
+    #[DataProvider("textFormats")]
     public function testDefaultsKeepLfAndTheBomOfTheFormat(Format $format): void
     {
         $output = self::subtitle($format)->toString($format, self::options($format));

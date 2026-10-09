@@ -350,6 +350,103 @@ class LenientParsingTest extends TestCase
                     [null, 3, self::SKIPPED, "The field cues[3].lines[1] must be a string."],
                 ],
             ],
+            "WebVTT with 20 hour digits" => [
+                "absurd_hours.vtt",
+                WebVttParser::class,
+                "The time \"99999999999999999999:00:04.000\" is not below 100000 hours.",
+                [
+                    [1, 3, "The pool opens at seven."],
+                    [7, 9, "No running, please."],
+                ],
+                [
+                    [6, 2, self::SKIPPED, "The time \"99999999999999999999:00:04.000\" is not below 100000 hours."],
+                ],
+            ],
+            "SBV with 20 hour digits" => [
+                "absurd_hours.sbv",
+                SbvParser::class,
+                "The time \"99999999999999999999:00:04.000\" is not below 100000 hours.",
+                [
+                    [1, 3, "The pool opens at seven."],
+                    [7, 9, "No running, please."],
+                ],
+                [
+                    [4, 1, self::SKIPPED, "The time \"99999999999999999999:00:04.000\" is not below 100000 hours."],
+                ],
+            ],
+            "ASS with 20 hour digits" => [
+                "absurd_hours.ass",
+                AssParser::class,
+                "The time \"99999999999999999999:00:04.00\" is not below 100000 hours.",
+                [
+                    [1, 3, "The pool opens at seven."],
+                    [7, 9, "No running, please."],
+                ],
+                [
+                    [11, 1, self::SKIPPED, "The time \"99999999999999999999:00:04.00\" is not below 100000 hours."],
+                ],
+            ],
+            "CSV with 20 hour digits" => [
+                "absurd_hours.csv",
+                CsvParser::class,
+                "The time \"99999999999999999999:00:04.000\" is not below 100000 hours.",
+                [
+                    [1, 3, "The pool opens at seven."],
+                    [7, 9, "No running, please."],
+                ],
+                [
+                    [3, 1, self::SKIPPED, "The time \"99999999999999999999:00:04.000\" is not below 100000 hours."],
+                ],
+            ],
+            "TTML with 20 hour digits and a huge offset time" => [
+                "absurd_hours.ttml",
+                TtmlParser::class,
+                "The time \"99999999999999999999:00:04.000\" is not below 100000 hours.",
+                [
+                    [1, 3, "The pool opens at seven."],
+                    [10, 12, "The sauna is upstairs."],
+                ],
+                [
+                    [6, 1, self::SKIPPED, "The time \"99999999999999999999:00:04.000\" is not below 100000 hours."],
+                    [7, 2, self::SKIPPED, "The time \"99999999999999999999h\" is not below 100000 hours."],
+                ],
+            ],
+            "SubViewer with 20 hour digits" => [
+                "absurd_hours.sub",
+                SubViewerParser::class,
+                2,
+                [
+                    [1, 3, "The pool opens at seven."],
+                    [7, 9, "No running, please."],
+                ],
+                [
+                    [8, 1, self::SKIPPED, "The timing line \"99999999999999999999:00:04.00,99999999999999999999:00:06.00\" has a time that is not valid."],
+                ],
+            ],
+            "TMPlayer with 20 hour digits" => [
+                "absurd_hours_tmplayer.txt",
+                TmPlayerParser::class,
+                "The time \"99999999999999999999:00:04\" is not below 100000 hours.",
+                [
+                    [1, 3, "The pool opens at seven."],
+                    [7, 12, "No running, please."],
+                ],
+                [
+                    [3, 2, self::SKIPPED, "The time \"99999999999999999999:00:04\" is not below 100000 hours."],
+                ],
+            ],
+            "HTML transcript with 20 hour digits" => [
+                "absurd_hours.html",
+                HtmlTranscriptParser::class,
+                "The time \"99999999999999999999:00:04\" is not below 100000 hours.",
+                [
+                    [1, 7, "The pool opens at seven."],
+                    [7, 12, "No running, please."],
+                ],
+                [
+                    [3, 1, self::SKIPPED, "The time \"99999999999999999999:00:04\" is not below 100000 hours."],
+                ],
+            ],
             "Whisper JSON with a segment without end" => [
                 "missing_segment_end.whisper.json",
                 WhisperJsonParser::class,
