@@ -6,6 +6,7 @@ The library follows semantic versioning. A 3.x minor or patch release does not b
 | Part | What stays stable in 3.x |
 |:--- |:--- |
 | PHP API | public classes, methods, properties, constants and enums that are not `@internal` |
+| Method behaviour | the behaviour that the docs describe for a method, and the default value of each method parameter, such as `maxGap` of `removeDuplicateCues()`. Only a major release changes them |
 | Parameter names | every parameter name. Call options constructors with named arguments, for example `new WriteOptions(bom: true)` |
 | Exceptions | the exception classes, their codes and the parents that [errors.md](errors.md) lists, including the SPL parents |
 | CLI | the commands, the options, the meaning of each exit code and the `--json` shapes of the binary `subtitle-toolbox`. The CLI never overwrites a file |
@@ -17,7 +18,7 @@ The library follows semantic versioning. A 3.x minor or patch release does not b
 ## Changes a minor release can make
 - **Enum cases**: an enum such as `Format`, `ValidationRule` or `CommonErrorRule` can get a new case. Give a `match` on an enum a `default` arm.
 - **String values in JSON**: a string field of the `--json` output or the library JSON can get a new value. Examples are `kind`, `rule`, `action` and `format`.
-- **Default values**: an option can get a new default value, also a CLI default such as `hls --segment 6`. The release notes list each change. Pass the value to keep it.
+- **Option defaults**: an options constructor parameter, such as `bom` of `WriteOptions`, can get a new default value, also a CLI default such as `hls --segment 6`. The release notes list each change. Pass the value to keep it.
 - **PHP version and extensions**: a minor release can raise the minimum PHP version or need a new PHP extension. The release notes announce it.
 - **Interface methods**: implement only `OcrEngine`, `TranslationEngine` and `HttpClient`. They stay as they are. The other interfaces, such as `CueStreamReader`, can get new methods.
 - **Parameter order of options**: an options constructor can get a new parameter at any position. Pass its arguments by name.
