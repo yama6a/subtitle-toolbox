@@ -31,6 +31,7 @@ $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>
   - it is the first cue.
   - the cue before it ends with `.`, `!`, `?` or U+2026. Closing quotes and brackets may follow, as in `"STOP."`.
   - it starts 2 s or more after the end of the cue before it.
+- **Speaker changes**: a cue or line that starts with the CEA-608 speaker change `>>` or a dialogue dash always starts a new sentence. `>> TICKETS` becomes `>> Tickets`. A dash before a digit, as in `-20`, is a minus sign.
 - **English `I`**: with the language `en`, `en-*` or `null`, sentence case writes the pronoun `I` and `I'm`, `I'll`, `I've` and `I'd` in upper case. `i.e.` stays lower case. Names become lower case. Fix them after with `replaceText()`.
 
 ## Hearing-impaired annotations

@@ -167,6 +167,15 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testSpeakerChangeAndDialogueDashStartASentence(): void
+    {
+        $subtitle = TestSubtitles::fromTexts(["WAIT FOR", ">> ME AT THE", ">>>STATION", "AND\n- WHY\n\u{2013} FOR", "<i>- LUNCH</i>", "AT", "-20 DEGREES"]);
+
+        $this->assertSame(["Wait for", ">> Me at the", ">>>Station", "and\n- Why\n\u{2013} For", "<i>- Lunch</i>", "at", "-20 degrees"],
+                          TestSubtitles::texts($subtitle->changeCase(CaseMode::Sentence)));
+    }
+
+
     #[DataProvider("sentenceGapProvider")]
     public function testGapStartsASentence(float $start, string $expected): void
     {
