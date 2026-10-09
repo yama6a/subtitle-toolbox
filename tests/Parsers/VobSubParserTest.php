@@ -314,6 +314,8 @@ class VobSubParserTest extends TestCase
                                         "The .idx timestamp line \"timestamp: 00:00:01:000, filepos: 000000000\" comes before any id line."],
             "100000 hours"          => [self::IDX_HEADER . "id: en, index: 0\ntimestamp: 100000:00:00:000, filepos: 0\n", null,
                                         "The time \"timestamp: 100000:00:00:000, filepos: 0\" is not below 100000 hours."],
+            "delay past the limit"  => [self::IDX_HEADER . "id: en, index: 0\ndelay: 99999:59:59:000\ntimestamp: 00:00:01:000, filepos: 0\n", null,
+                                        "The time \"timestamp: 00:00:01:000, filepos: 0 with delay 359999999s\" is not below 100000 hours."],
             "invalid timestamp"     => [self::IDX_HEADER . "id: en, index: 0\ntimestamp: 1.5, filepos: 0\n", null,
                                         "The .idx time \"timestamp: 1.5, filepos: 0\" is not valid."],
         ];

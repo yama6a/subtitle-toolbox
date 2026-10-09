@@ -28,11 +28,18 @@ final class Mpl2Parser extends SubtitleParser
                 continue;
             }
 
-            if (preg_match(self::CUE_REGEX, $rawLine, $matches)) {
-                $parsedCues[] = new SubtitleCue((int) $matches[1] / self::DECISECONDS_PER_SECOND, (int) $matches[2] / self::DECISECONDS_PER_SECOND, $this->parseText($matches[3]));
-            } else {
-                $lineNumber = $lineIndex + 1;
-                $this->fail(new ParsingException("The line \"$rawLine\" is not an MPL2 cue.", $lineNumber), $lineNumber, $blockIndex, [$rawLine]);
+            $lineNumber = $lineIndex + 1;
+            try {
+                if (!preg_match(self::CUE_REGEX, $rawLine, $matches)) {
+                    throw new ParsingException("The line \"$rawLine\" is not an MPL2 cue.", $lineNumber);
+                }
+                $parsedCues[] = new SubtitleCue(
+                    self::boundedTime((int) $matches[1] / self::DECISECONDS_PER_SECOND, "[$matches[1]]", $lineNumber),
+                    self::boundedTime((int) $matches[2] / self::DECISECONDS_PER_SECOND, "[$matches[2]]", $lineNumber),
+                    $this->parseText($matches[3])
+                );
+            } catch (ParsingException $exception) {
+                $this->fail($exception, $lineNumber, $blockIndex, [$rawLine]);
             }
             $blockIndex++;
         }

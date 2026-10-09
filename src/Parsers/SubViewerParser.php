@@ -115,7 +115,7 @@ final class SubViewerParser extends SubtitleParser
         $cues       = [];
         $hasEndLine = [];
         $afterTime  = null;
-        foreach ($scriptLines as $line) {
+        foreach ($scriptLines as $lineIndex => $line) {
             if ($afterTime !== null) {
                 $time      = $afterTime;
                 $afterTime = null;
@@ -129,7 +129,11 @@ final class SubViewerParser extends SubtitleParser
             }
 
             if (preg_match(self::VERSION_1_TIME_REGEX, $line, $matches)) {
-                $afterTime = Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3]) + $delay;
+                try {
+                    $afterTime = self::boundedTime(Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3]) + $delay, $delay === 0 ? $line : "$line with DELAY $delay", $lineIndex + 1);
+                } catch (ParsingException $exception) {
+                    $this->fail($exception, $lineIndex + 1, count($cues), [$line]);
+                }
             }
         }
 

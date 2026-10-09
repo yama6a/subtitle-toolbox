@@ -141,8 +141,8 @@ final class MpSubParser extends SubtitleParser
             throw new ParsingException("The timing line \"$line\" has a negative duration.", $lineNumber);
         }
 
-        $start    = $position + $wait;
-        $position = $start + $duration;
+        $start    = self::boundedTime($position + $wait, $line, $lineNumber);
+        $position = self::boundedTime($start + $duration, $line, $lineNumber);
 
         return new SubtitleCue($start, $position, []);
     }

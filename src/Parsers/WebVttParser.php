@@ -286,6 +286,7 @@ final class WebVttParser extends SubtitleParser
         }
 
         $lines = str_replace(array_keys(self::ENTITIES), array_values(self::ENTITIES), array_slice($rawLines, 1));
+        self::checkWordTimestamps($lines, $lineNumber);
         $cue   = new SubtitleCue(
             $this->secondsFromString($times[0], $lineNumber),
             $this->secondsFromString($matches[1], $lineNumber),

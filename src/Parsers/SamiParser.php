@@ -203,7 +203,7 @@ final class SamiParser extends SubtitleParser
             throw new ParsingException("SYNC tag " . ($index + 1) . " has no valid Start attribute.", $lineNumber());
         }
 
-        return [((int) $start[1]) / 1000, $matches[2]];
+        return [self::boundedTime(((int) $start[1]) / 1000, $start[1], $lineNumber()), $matches[2]];
     }
 
 

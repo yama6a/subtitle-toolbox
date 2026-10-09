@@ -65,30 +65,39 @@ final class WhisperJsonParser extends SubtitleParser
         foreach ($segments as $index => $segment) {
             $path = "segments[$index]";
             try {
-                $start = $this->number($segment, "start", $path);
-                $end   = $this->number($segment, "end", $path);
+                $start = self::boundedField($this->number($segment, "start", $path), "$path.start");
+                $end   = self::boundedField($this->number($segment, "end", $path), "$path.end");
                 $text  = $this->text($segment, "text", $path);
             } catch (ParsingException $exception) {
                 $this->fail($exception, null, $index, [RawJson::encode($segment)]);
                 continue;
             }
-            $words = is_array($segment["words"] ?? null) ? $segment["words"] : [];
+            $words     = is_array($segment["words"] ?? null) ? $segment["words"] : [];
+            $wordPaths = array_map(fn (int|string $key): string => "$path.words[$key]", array_keys($words));
 
             if ($topLevelWords !== []) {
                 // The API lists the words of all segments at the top level. A word belongs to the segment that holds its middle.
                 while ($wordIndex < count($topLevelWords)
                        && ($index === $lastIndex || $this->middle($topLevelWords[$wordIndex]) <= $end)) {
-                    $words[] = $topLevelWords[$wordIndex++];
+                    $wordPaths[] = "words[$wordIndex]";
+                    $words[]     = $topLevelWords[$wordIndex++];
                 }
                 $segment["words"] = $words;
             }
 
             $timedWords = [];
-            foreach ($words as $word) {
-                $timedWords[] = [
-                    "text"  => is_string($word["word"] ?? null) ? trim($word["word"]) : "",
-                    "start" => self::isTime($word["start"] ?? null) ? Timecode::roundToMilliseconds($word["start"]) : null,
-                ];
+            try {
+                foreach (array_values($words) as $position => $word) {
+                    $timedWords[] = [
+                        "text"  => is_string($word["word"] ?? null) ? trim($word["word"]) : "",
+                        "start" => self::isTime($word["start"] ?? null)
+                            ? self::boundedField(Timecode::roundToMilliseconds($word["start"]), "$wordPaths[$position].start")
+                            : null,
+                    ];
+                }
+            } catch (ParsingException $exception) {
+                $this->fail($exception, null, $index, [RawJson::encode($segment)]);
+                continue;
             }
 
             $result[] = [$start, $end, $text, $timedWords, array_diff_key($segment, array_flip(["start", "end", "text"]))];
@@ -105,8 +114,8 @@ final class WhisperJsonParser extends SubtitleParser
             $path    = "transcription[$index]";
             $offsets = is_array($segment) ? $segment["offsets"] ?? null : null;
             try {
-                $start = Timecode::roundToMilliseconds($this->number($offsets, "from", "$path.offsets") / 1000);
-                $end   = Timecode::roundToMilliseconds($this->number($offsets, "to", "$path.offsets") / 1000);
+                $start = self::boundedField(Timecode::roundToMilliseconds($this->number($offsets, "from", "$path.offsets") / 1000), "$path.offsets.from");
+                $end   = self::boundedField(Timecode::roundToMilliseconds($this->number($offsets, "to", "$path.offsets") / 1000), "$path.offsets.to");
                 $text  = $this->text($segment, "text", $path);
             } catch (ParsingException $exception) {
                 $this->fail($exception, null, $index, [RawJson::encode($segment)]);
@@ -115,17 +124,24 @@ final class WhisperJsonParser extends SubtitleParser
 
             // A token with a leading space starts a new word, as in should_split_on_word() of whisper.cpp.
             $words = [];
-            foreach (is_array($segment["tokens"] ?? null) ? $segment["tokens"] : [] as $token) {
-                $tokenText = $token["text"] ?? null;
-                if (!is_string($tokenText) || str_starts_with($tokenText, "[_")) {
-                    continue;
-                }
+            try {
+                foreach (is_array($segment["tokens"] ?? null) ? $segment["tokens"] : [] as $tokenIndex => $token) {
+                    $tokenText = $token["text"] ?? null;
+                    if (!is_string($tokenText) || str_starts_with($tokenText, "[_")) {
+                        continue;
+                    }
 
-                if ($words === [] || str_starts_with($tokenText, " ")) {
-                    $from    = $token["offsets"]["from"] ?? null;
-                    $words[] = ["text" => "", "start" => self::isTime($from) ? Timecode::roundToMilliseconds($from / 1000) : null];
+                    if ($words === [] || str_starts_with($tokenText, " ")) {
+                        $from    = $token["offsets"]["from"] ?? null;
+                        $words[] = ["text" => "", "start" => self::isTime($from)
+                            ? self::boundedField(Timecode::roundToMilliseconds($from / 1000), "$path.tokens[$tokenIndex].offsets.from")
+                            : null];
+                    }
+                    $words[count($words) - 1]["text"] .= $tokenText;
                 }
-                $words[count($words) - 1]["text"] .= $tokenText;
+            } catch (ParsingException $exception) {
+                $this->fail($exception, null, $index, [RawJson::encode($segment)]);
+                continue;
             }
 
             $result[] = [

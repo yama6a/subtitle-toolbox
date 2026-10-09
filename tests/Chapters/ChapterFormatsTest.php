@@ -69,6 +69,8 @@ class ChapterFormatsTest extends TestCase
             "no chapters"       => ['{"version": "1.2.0"}', "The JSON has no \"chapters\" list."],
             "chapters object"   => ['{"chapters": {"a": 1}}', "The JSON has no \"chapters\" list."],
             "start as a string" => ['{"chapters": [{"startTime": 0}, {"startTime": "1:00"}]}', "The field chapters[1].startTime must be a number."],
+            "100000 hours"      => ['{"chapters": [{"startTime": 0}, {"startTime": 360000000}]}', "The field chapters[1].startTime is not below 100000 hours."],
+            "end at 1e20"       => ['{"chapters": [{"startTime": 0, "endTime": 1e20}]}', "The field chapters[0].endTime is not below 100000 hours."],
         ];
     }
 
@@ -128,6 +130,8 @@ class ChapterFormatsTest extends TestCase
         return [
             "no header"      => ["[CHAPTER]\nSTART=0\n", "The content does not start with the ;FFMETADATA header. (line 1)"],
             "zero time base" => [";FFMETADATA1\n\n[CHAPTER]\nTIMEBASE=1/0\nSTART=0\n", "The chapter time base 1/0 is not valid. (line 4)"],
+            "100000 hours"   => [";FFMETADATA1\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=360000000000\n", "The time \"START=360000000000\" is not below 100000 hours. (line 4)"],
+            "end of 1e20 ns" => [";FFMETADATA1\n[CHAPTER]\nSTART=0\nEND=100000000000000000000\n", "The time \"END=100000000000000000000\" is not below 100000 hours. (line 4)"],
         ];
     }
 

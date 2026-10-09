@@ -19,7 +19,7 @@ final class JsonParser extends SubtitleParser
         $data = $this->decodeJsonObject($content);
 
         $this->decodeFileFormatData($data);
-        $skipped = $this->decodeCueFormatData($data);
+        $skipped = $this->checkCueTimes($data, $this->decodeCueFormatData($data));
 
         $reject   = function (ParsingException $exception, string $field, int|string $key) use ($data): void {
             $entry = $data[$field][$key];
@@ -66,6 +66,37 @@ final class JsonParser extends SubtitleParser
             }
             try {
                 $data["cues"][$index]["formatData"] = $this->decodeBinary($cue["formatData"], "cues[$index].formatData");
+            } catch (ParsingException $exception) {
+                $this->fail($exception, null, $index, [RawJson::encode($cue)]);
+                $skipped[$index] = true;
+            }
+        }
+
+        return $skipped;
+    }
+
+
+    /**
+     * Returns $skipped with the indexes of the cues that have a time of MAX_HOURS or more.
+     *
+     * @param array<int, true> $skipped
+     *
+     * @return array<int, true>
+     */
+    private function checkCueTimes(array $data, array $skipped): array
+    {
+        foreach (is_array($data["cues"] ?? null) ? $data["cues"] : [] as $index => $cue) {
+            if (isset($skipped[$index]) || !is_array($cue)) {
+                continue;
+            }
+            try {
+                foreach (["start", "end"] as $key) {
+                    $time = $cue[$key] ?? null;
+                    if (is_int($time) || (is_float($time) && is_finite($time))) {
+                        self::boundedField($time, "cues[$index].$key");
+                    }
+                }
+                self::checkWordTimestamps(is_array($cue["lines"] ?? null) ? array_values(array_filter($cue["lines"], "is_string")) : [], null);
             } catch (ParsingException $exception) {
                 $this->fail($exception, null, $index, [RawJson::encode($cue)]);
                 $skipped[$index] = true;

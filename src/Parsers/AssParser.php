@@ -174,7 +174,7 @@ final class AssParser extends SubtitleParser
         $startTime = $this->secondsFromString($fields[$start], $lineNumber);
         $wrapStyle = array_change_key_case($data["scriptInfo"])["wrapstyle"] ?? "";
 
-        [$lines, $alignment] = $this->convertText($fields[$text], $startTime, $wrapStyle === "2");
+        [$lines, $alignment] = $this->convertText($fields[$text], $startTime, $wrapStyle === "2", $lineNumber);
 
         $name  = $this->findField($fields, "Name");
         $lines = Markup::addSpeaker($lines, $name === null ? "" : $fields[$name]);
@@ -265,7 +265,7 @@ final class AssParser extends SubtitleParser
      *
      * @return array{list<string>, ?int}
      */
-    private function convertText(string $text, float $start, bool $softBreakIsHard): array
+    private function convertText(string $text, float $start, bool $softBreakIsHard, int $lineNumber): array
     {
         $alignment    = null;
         $openTags     = [];
@@ -296,7 +296,7 @@ final class AssParser extends SubtitleParser
                     $markup .= $this->setTag("font", isset($matches[1]) ? $this->fontTag($matches[1]) : null, $openTags);
                 } elseif (preg_match('/^\\\\(?:k|K|kf|ko)(\d+(?:\.\d+)?)$/', $tag, $matches)) {
                     $markup       .= "<" . Markup::coreTimestamp($karaokeStart) . ">";
-                    $karaokeStart += $matches[1] / 100;
+                    $karaokeStart  = self::boundedTime($karaokeStart + $matches[1] / 100, $tag, $lineNumber);
                 } elseif (preg_match('/^\\\\r/', $tag)) {
                     $markup .= $this->closeAll($openTags);
                 } elseif (preg_match('/^\\\\p(\d+)$/', $tag, $matches)) {

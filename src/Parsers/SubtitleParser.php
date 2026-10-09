@@ -9,6 +9,7 @@ use JsonException;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\LineEnding;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\OptionChecks;
 use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 use SubtitleToolbox\ParseWarning;
@@ -145,6 +146,35 @@ abstract class SubtitleParser
         }
 
         return $seconds;
+    }
+
+
+    /**
+     * Returns $seconds, or throws when the time in the JSON field $path reaches MAX_HOURS.
+     */
+    protected static function boundedField(float $seconds, string $path): float
+    {
+        if ($seconds >= self::MAX_HOURS * 3600) {
+            throw new ParsingException("The field $path is not below " . self::MAX_HOURS . " hours.");
+        }
+
+        return $seconds;
+    }
+
+
+    /**
+     * Throws when a core word timestamp in $lines reaches MAX_HOURS.
+     *
+     * @param list<string> $lines
+     */
+    protected static function checkWordTimestamps(array $lines, ?int $lineNumber): void
+    {
+        foreach ($lines as $line) {
+            preg_match_all(Markup::WORD_TIMESTAMP_REGEX, $line, $timestamps);
+            foreach ($timestamps[1] as $timestamp) {
+                self::boundedTime(Markup::wordTimestampSeconds($timestamp), substr($timestamp, 1, -1), $lineNumber);
+            }
+        }
     }
 
 

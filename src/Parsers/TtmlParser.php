@@ -347,6 +347,14 @@ final class TtmlParser extends SubtitleParser
     }
 
 
+    private function offsetTime(float $base, DOMElement $element, string $attribute): float
+    {
+        $expression = $element->getAttribute($attribute);
+
+        return self::boundedTime($base + $this->parseTimeExpression($expression), trim($expression), $element->getLineNo());
+    }
+
+
     /**
      * @return array{float, ?float}
      */
@@ -354,15 +362,15 @@ final class TtmlParser extends SubtitleParser
     {
         $begin = $parentBegin;
         if ($element->hasAttribute("begin")) {
-            $begin += $this->parseTimeExpression($element->getAttribute("begin"));
+            $begin = $this->offsetTime($begin, $element, "begin");
         }
 
         $ends = $parentEnd === null ? [] : [$parentEnd];
         if ($element->hasAttribute("end")) {
-            $ends[] = $parentBegin + $this->parseTimeExpression($element->getAttribute("end"));
+            $ends[] = $this->offsetTime($parentBegin, $element, "end");
         }
         if ($element->hasAttribute("dur")) {
-            $ends[] = $begin + $this->parseTimeExpression($element->getAttribute("dur"));
+            $ends[] = $this->offsetTime($begin, $element, "dur");
         }
 
         return [$begin, $ends === [] ? null : min($ends)];

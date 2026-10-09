@@ -264,7 +264,7 @@ final class VobSubParser extends SubtitleParser
         }
 
         return [
-            "time"    => $this->readTime($matches[1], $line) + $delay,
+            "time"    => self::boundedTime($this->readTime($matches[1], $line) + $delay, $delay === 0.0 ? $line : "$line with delay {$delay}s", null),
             "filepos" => (int) hexdec($matches[2]),
         ];
     }

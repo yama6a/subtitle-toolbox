@@ -70,9 +70,9 @@ final class YouTubeTimedTextParser extends SubtitleParser
             }
 
             try {
-                $start               = $this->milliseconds($event, "tStartMs", $path) / 1000;
-                $end                 = $start + $this->milliseconds($event, "dDurationMs", $path, 0) / 1000;
-                [$segments, $extras] = $this->jsonSegments($event, $pens, $path);
+                $start               = self::boundedField($this->milliseconds($event, "tStartMs", $path) / 1000, "$path.tStartMs");
+                $end                 = self::boundedField($start + $this->milliseconds($event, "dDurationMs", $path, 0) / 1000, "$path.dDurationMs");
+                [$segments, $extras] = $this->jsonSegments($event, $pens, $path, $start);
             } catch (ParsingException $exception) {
                 $this->fail($exception, null, $index, [RawJson::encode($event)]);
                 continue;
@@ -102,12 +102,15 @@ final class YouTubeTimedTextParser extends SubtitleParser
      *
      * @return array{list<array{string, ?float, array}>, list<array>}
      */
-    private function jsonSegments(array $event, array $pens, string $path): array
+    private function jsonSegments(array $event, array $pens, string $path, float $start): array
     {
         $segments = [];
         $extras   = [];
         foreach (is_array($event["segs"] ?? null) ? $event["segs"] : [] as $segIndex => $seg) {
             $offset     = isset($seg["tOffsetMs"]) ? $this->milliseconds($seg, "tOffsetMs", "$path.segs[$segIndex]") / 1000 : null;
+            if ($offset !== null) {
+                self::boundedField($start + $offset, "$path.segs[$segIndex].tOffsetMs");
+            }
             $pen        = $this->entry($pens, $seg["pPenId"] ?? $event["pPenId"] ?? null);
             $segments[] = [is_string($seg["utf8"] ?? null) ? $seg["utf8"] : "", $offset, $pen === null ? [] : $this->jsonPenStyle($pen)];
             $extras[]   = is_array($seg) ? array_diff_key($seg, ["utf8" => true, "tOffsetMs" => true]) : [];
@@ -186,8 +189,10 @@ final class YouTubeTimedTextParser extends SubtitleParser
         $captions = [];
         foreach ($this->children($root) as $index => $text) {
             try {
-                $start = $this->time($text, $startName) / $unitsPerSecond;
-                $end   = $text->hasAttribute($durationName) ? $start + $this->time($text, $durationName) / $unitsPerSecond : null;
+                $start = self::boundedTime($this->time($text, $startName) / $unitsPerSecond, $text->getAttribute($startName), $text->getLineNo());
+                $end   = $text->hasAttribute($durationName)
+                    ? self::boundedTime($start + $this->time($text, $durationName) / $unitsPerSecond, $text->getAttribute($durationName), $text->getLineNo())
+                    : null;
             } catch (ParsingException $exception) {
                 $this->fail($exception, $text->getLineNo(), $index, [$text->ownerDocument->saveXML($text)]);
                 continue;
@@ -225,9 +230,11 @@ final class YouTubeTimedTextParser extends SubtitleParser
             }
 
             try {
-                $start               = $this->time($paragraph, "t") / 1000;
-                $end                 = $paragraph->hasAttribute("d") ? $start + $this->time($paragraph, "d") / 1000 : null;
-                [$segments, $extras] = $this->srv3Segments($paragraph, $pens);
+                $start               = self::boundedTime($this->time($paragraph, "t") / 1000, $paragraph->getAttribute("t"), $paragraph->getLineNo());
+                $end                 = $paragraph->hasAttribute("d")
+                    ? self::boundedTime($start + $this->time($paragraph, "d") / 1000, $paragraph->getAttribute("d"), $paragraph->getLineNo())
+                    : null;
+                [$segments, $extras] = $this->srv3Segments($paragraph, $pens, $start);
             } catch (ParsingException $exception) {
                 $this->fail($exception, $paragraph->getLineNo(), $index, [$paragraph->ownerDocument->saveXML($paragraph)]);
                 continue;
@@ -287,13 +294,16 @@ final class YouTubeTimedTextParser extends SubtitleParser
      * @param array<string, array> $pens
      * @return array{list<array{string, ?float, array}>, list<array<string, string>>}
      */
-    private function srv3Segments(DOMElement $paragraph, array $pens): array
+    private function srv3Segments(DOMElement $paragraph, array $pens, float $start): array
     {
         $segments = [];
         $extras   = [];
         foreach ($paragraph->childNodes as $node) {
             $span       = $node instanceof DOMElement ? $node : null;
             $offset     = $span?->hasAttribute("t") ? $this->time($span, "t") / 1000 : null;
+            if ($offset !== null) {
+                self::boundedTime($start + $offset, $span->getAttribute("t"), $span->getLineNo());
+            }
             $pen        = $pens[$span?->getAttribute("p") ?: $paragraph->getAttribute("p")] ?? [];
             $segments[] = [Markup::decodeEntities($node->textContent), $offset, $pen];
             $extras[]   = $span === null ? [] : array_diff_key($this->attributes($span), ["t" => true]);
