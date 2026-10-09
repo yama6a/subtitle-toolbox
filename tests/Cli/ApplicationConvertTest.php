@@ -75,6 +75,7 @@ class ApplicationConvertTest extends TestCase
                                 "--video-fps", "24"], "shot-changes/own_garden_24fps_timed.srt"],
             "timing fixes"  => ["fixes/own_overlaps_and_short_cues.srt", ["--timing-fix-overlaps", "--timing-min-duration", "0.833", "--timing-min-gap", "0.083",
                                 "--structure-wrap", "--structure-max-cpl", "42"], "fixes/own_overlaps_and_short_cues_fixed.srt"],
+            "same time"     => ["editing/own_same_time_speakers.ass", ["--structure-merge-same-time", "--no-bom"], "editing/own_same_time_speakers_merged.srt"],
         ];
     }
 

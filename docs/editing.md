@@ -44,12 +44,19 @@ $subtitle->splitCue(4, 63.5, 1);                // cue 4 becomes two cues at 63.
 $subtitle->joinCues(4, 5);                      // one cue with the lines of cue 4 and 5
 $subtitle->removeDuplicateCues();               // joins same-text cues that overlap or touch
 $subtitle->removeDuplicateCues(0.5);            // also joins same-text cues up to 0.5 s apart
+$subtitle->mergeSameTimeCues();                 // joins cues with the same start and end into one cue
 ```
 
 - **Merge**: the metadata and the format data of `$part1` win over those of `$part2`. The comments of both files stay before their cues. At the same place, the comments of `$part1` come first.
 - **Slice**: a cue that crosses the start or end time gets cut there. The copy keeps the metadata, the format data and the comments before the kept cues. The original stays unchanged.
 - **Split and join**: the first cue keeps its identifier. A comment before a joined cue moves before the result.
 - **Duplicates**: `removeDuplicateCues()` joins a run of adjacent cues with the same text. Two cues join when they are identical, overlap, touch, or are at most `maxGap` seconds apart. The default `maxGap` is 0. The joined cue runs from the earliest start to the latest end. Cues with other text between them stay apart. Same-text cues also stay apart when their alignment, forced flag or format data differ, such as an ASS `Glow` event on layer 0 under a `Default` event on layer 1. A negative, NAN or INF `maxGap` throws `InvalidArgumentException`.
+- **Same times**: `mergeSameTimeCues()` joins a run of adjacent cues whose start and end both differ by at most `tolerance` seconds from the first cue of the run. The default `tolerance` is 0. Example: ASS gives `- Where are you going?` and `- Home.` at 1.0 to 3.0 s as 2 events, one per speaker. Many TVs show only one of them. After the join, one cue holds both lines.
+  - The joined cue keeps the start, identifier and format data of the first cue. It runs to the latest end of the run.
+  - The lines keep the input order. A cue text that is already in the joined cue is not added again.
+  - Cues with another alignment or forced flag stay apart, so a sign at the top keeps its place. Other format data, such as the ASS style, does not stop a join.
+  - The method adds no dialogue dash. `CommonErrorFixer` can add them.
+  - A negative, NAN or INF `tolerance` throws `InvalidArgumentException`.
 
 ## Overlaps, short cues and line breaks
 ```php

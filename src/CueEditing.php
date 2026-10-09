@@ -235,6 +235,48 @@ trait CueEditing
 
 
     /**
+     * Joins each run of adjacent cues whose start and end both differ by at most $tolerance seconds from the first
+     * cue of the run. The cues must also have the same alignment and forced flag. The joined cue holds the lines of
+     * the run in input order, without a repeated cue text, and runs to the latest end of the run.
+     *
+     * @throws InvalidArgumentException when $tolerance is negative, NAN or INF.
+     */
+    public function mergeSameTimeCues(float $tolerance = 0.0): self
+    {
+        OptionChecks::nonNegativeFinite($tolerance, "The tolerance must be a finite number of 0 or more seconds, got %s.");
+        $tolerance = Timecode::roundToMilliseconds($tolerance);
+        $anchors   = CommentAnchors::of($this->cues, $this->comments);
+        $groups    = [];
+        foreach ($this->cues as $cue) {
+            $last  = array_key_last($groups);
+            $first = $last === null ? null : $groups[$last][0];
+            if ($first !== null && $first->isForced() === $cue->isForced()
+                && ($first->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT) === ($cue->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT)
+                && abs(Timecode::roundToMilliseconds($cue->getStart() - $first->getStart())) <= $tolerance
+                && abs(Timecode::roundToMilliseconds($cue->getEnd() - $first->getEnd())) <= $tolerance) {
+                $groups[$last][] = $cue;
+                continue;
+            }
+            $groups[] = [$cue];
+        }
+
+        foreach ($groups as $group) {
+            if (count($group) > 1) {
+                $lines = [];
+                foreach ($group as $cue) {
+                    $lines[$cue->getText()] ??= $cue->getLines();
+                }
+                [$this->cues, $anchors] = CueList::join($this->cues, $group, $anchors, false);
+                $group[0]->setLines(array_merge(...array_values($lines)));
+            }
+        }
+        $this->comments = CommentAnchors::comments($this->cues, $this->comments, $anchors);
+
+        return $this;
+    }
+
+
+    /**
      * Sets the cue list to $cues. Each comment moves to the cue that $anchors holds at its position.
      * A null anchor puts the comment after the last cue. CommentAnchors::of() returns the anchors.
      *

@@ -20,7 +20,7 @@ use SubtitleToolbox\Subtitle;
  */
 final class StructureEdit extends Edit
 {
-    private const EDITS = ["structure-resegment", "structure-unwrap", "structure-merge-short", "structure-split-long", "structure-wrap", "structure-merge-duplicates"];
+    private const EDITS = ["structure-resegment", "structure-unwrap", "structure-merge-short", "structure-split-long", "structure-wrap", "structure-merge-duplicates", "structure-merge-same-time"];
 
     // The edits that read --structure-max-cpl and --structure-max-lines.
     private const LIMITED_EDITS = ["structure-wrap", "structure-resegment", "structure-merge-short", "structure-split-long"];
@@ -64,6 +64,7 @@ final class StructureEdit extends Edit
             Option::value("structure-max-cpl", "CHARS", "Maximum characters per line for --structure-wrap, --structure-resegment, --structure-merge-short and --structure-split-long. Default: 42."),
             Option::value("structure-max-lines", "LINES", "Maximum number of lines per cue for --structure-wrap, --structure-resegment, --structure-merge-short and --structure-split-long. Default: 2."),
             Option::flag("structure-merge-duplicates", "Join same-text cues that overlap or touch."),
+            Option::flag("structure-merge-same-time", "Join cues with the same start and end into one cue with the lines of all of them."),
         ];
     }
 
@@ -107,6 +108,9 @@ final class StructureEdit extends Edit
         }
         if (isset($this->edits["structure-unwrap"])) {
             $subtitle->unwrapLines();
+        }
+        if (isset($this->edits["structure-merge-same-time"])) {
+            $subtitle->mergeSameTimeCues();
         }
         if (isset($this->edits["structure-merge-short"])) {
             $subtitle->mergeShortCues(new MergeShortCuesOptions($limits));

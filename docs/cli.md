@@ -215,7 +215,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --to srt --output-dir fixed/ -
 | 2. Forced | `forced` | `--forced-only` | OCR then reads only the cues that stay |
 | 3. OCR | `ocr` | `--ocr` | the later steps need text |
 | 4. Text | `errors`, `sdh`, `replace`, `text` | `--errors-fix`, `--sdh`, `--replace`, `--speakers`, `--case`, `--strip-tags`, `--rtl` | the removal of hearing-impaired annotations changes the line lengths, so it runs before wrapping |
-| 5. Structure | `structure` | `--structure-resegment`, `--structure-unwrap`, `--structure-merge-short`, `--structure-split-long`, `--structure-wrap`, `--structure-merge-duplicates` | |
+| 5. Structure | `structure` | `--structure-resegment`, `--structure-unwrap`, `--structure-merge-same-time`, `--structure-merge-short`, `--structure-split-long`, `--structure-wrap`, `--structure-merge-duplicates` | |
 | 6. Timing | `retime`, `snap`, `timing` | `--shift`, `--scale`, `--from-fps` and `--to-fps`, `--snap-shot-changes`, `--timing-fix-overlaps`, `--timing-min-duration` | splits in step 5 create new cues |
 | 7. Masking | `masking` | `--mask-words` | the mute ranges of `--mute-edl` and `--mute-filter` need the final times |
 | 8. Karaoke | `karaoke` | `--karaoke` | it multiplies the cues |
@@ -276,6 +276,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 |:--- |:--- |
 | `--structure-resegment` | `Resegmenter::apply()` with `ResegmentMode::ByWords`. `--structure-max-word-gap` sets `maxWordGap` as a [time](#times). It turns on `--word-timestamps` |
 | `--structure-unwrap` | `unwrapLines()`. Each dialogue dash line starts a line of its own |
+| `--structure-merge-same-time` | `mergeSameTimeCues()` with the default `tolerance` of 0. It runs after `--structure-unwrap`, so the lines of each joined cue stay apart |
 | `--structure-merge-short` | `mergeShortCues()` with the default options |
 | `--structure-split-long` | `Resegmenter::apply()` with `ResegmentMode::SplitLong` and the default options |
 | `--structure-wrap` | `wrapLines()` with `--structure-max-cpl` and `--structure-max-lines` |
