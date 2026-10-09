@@ -6,6 +6,7 @@ namespace SubtitleToolbox;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
@@ -177,5 +178,108 @@ class TimecodeTest extends TestCase
                 $this->assertEqualsWithDelta($end, $parsed[$index]->getEnd(), $unit, $output);
             }
         }
+    }
+
+
+    /**
+     * @return array<string, array{string, Format, string, ?float}>
+     */
+    public static function fixtureStartTimes(): array
+    {
+        return [
+            "SubRip h:mm:ss,mmm"      => ["srt/valid.srt", Format::SubRip, '/^(\S+) --> /m', null],
+            "WebVTT mm:ss.mmm"        => ["vtt/missing_hours.vtt", Format::WebVtt, '/^(\S+) --> /m', null],
+            "SBV h:mm:ss.mmm"         => ["sbv/from_srt.sbv", Format::Sbv, '/^([\d:.]+),/m', null],
+            "ASS h:mm:ss.cc"          => ["ass/real/own_aegisub.ass", Format::Ass, '/^Dialogue: \d+,([^,]+),/m', null],
+            "SubViewer hh:mm:ss.cc"   => ["subviewer/real/subviewer2_crlf.sub", Format::SubViewer, '/^([\d:.]+),[\d:.]+\r?$/m', null],
+            "LRC mm:ss.f"             => ["lrc/one_digit_fraction.lrc", Format::Lyrics, '/^\[([\d:.]+)\]/m', null],
+            "TTML hh:mm:ss.ff"        => ["ttml/real/bbc_ebu_tt_d.ttml", Format::Ttml, '/<p [^>]*begin="([^"]+)"/', null],
+            "YouTube chapters mm:ss"  => ["chapters/youtube/real/long_stream_chapters.txt", Format::YouTubeChapters, '/^([\d:]+) /m', null],
+            "CSV hh:mm:ss:ff, 25 fps" => ["csv/own_frame_times.csv", Format::Csv, '/^([\d:]+),/m', 25.0],
+        ];
+    }
+
+
+    #[DataProvider("fixtureStartTimes")]
+    public function testParseReadsEachStartTimeOfAFixtureAsItsParserDoes(string $file, Format $format, string $startRegex, ?float $framesPerSecond): void
+    {
+        $path        = __DIR__ . "/files/$file";
+        $readOptions = $framesPerSecond === null ? null : new ReadOptions(format: new CsvReadOptions(frameRate: $framesPerSecond));
+        $starts      = array_map(fn (SubtitleCue $cue): float => $cue->getStart(), array_values(Subtitle::load($path, $format, $readOptions)->getCues()));
+        preg_match_all($startRegex, file_get_contents($path), $matches);
+        $frameRate = $framesPerSecond === null ? null : new FrameRate($framesPerSecond);
+
+        $this->assertNotEmpty($starts);
+        $this->assertEquals($starts, array_map(fn (string $time): float => Timecode::parse($time, $frameRate), $matches[1]));
+    }
+
+
+    /**
+     * @return array<string, array{string, ?float, float}>
+     */
+    public static function validTimecodes(): array
+    {
+        return [
+            "comma milliseconds"         => ["00:01:02,500", null, 62.5],
+            "period milliseconds"        => ["00:01:02.500", null, 62.5],
+            "one hour digit"             => ["1:01:02.5", null, 3662.5],
+            "three hour digits"          => ["100:00:00", null, 360000.0],
+            "no fraction"                => ["00:01:02", null, 62.0],
+            "long fraction"              => ["00:00:01.0000005", null, 1.0000005],
+            "minutes and seconds"        => ["01:02.5", null, 62.5],
+            "one minute digit"           => ["1:02", null, 62.0],
+            "minutes from 60"            => ["75:00,25", null, 4500.25],
+            "frames at 25 fps"           => ["00:01:02:12", 25.0, 62.48],
+            "frames at 23.976 fps"       => ["00:00:01:23", 24000 / 1001, 1 + 23 * 1001 / 24000],
+            "last hour below the limit"  => ["99999:59:59.999", null, 359999999.999],
+        ];
+    }
+
+
+    #[DataProvider("validTimecodes")]
+    public function testParseReturnsSeconds(string $timecode, ?float $framesPerSecond, float $expected): void
+    {
+        $frameRate = $framesPerSecond === null ? null : new FrameRate($framesPerSecond);
+
+        $this->assertEqualsWithDelta($expected, Timecode::parse($timecode, $frameRate), 1e-9);
+    }
+
+
+    /**
+     * @return array<string, array{string, ?float, string}>
+     */
+    public static function invalidTimecodes(): array
+    {
+        $shape = "is not h:mm:ss.mmm, m:ss.mmm or h:mm:ss:ff";
+
+        return [
+            "empty"                => ["", null, $shape],
+            "seconds only"         => ["62.5", null, $shape],
+            "five parts"           => ["1:2:3:4:5", null, $shape],
+            "one-digit seconds"    => ["0:01:2.5", null, $shape],
+            "one-digit minutes"    => ["0:1:02.5", null, $shape],
+            "60 minutes"           => ["00:60:00", null, $shape],
+            "60 seconds"           => ["00:00:60", null, $shape],
+            "negative"             => ["-00:00:02,500", null, $shape],
+            "space"                => [" 00:00:02,500", null, $shape],
+            "empty fraction"       => ["00:00:02.", null, $shape],
+            "drop-frame"           => ["00:00:02;12", 30000 / 1001, $shape],
+            "colon milliseconds"   => ["00:00:02:500", 25.0, "has a frame number that is not below 25"],
+            "frames without rate"  => ["00:01:02:12", null, "counts frames and needs a frame rate"],
+            "100000 hours"         => ["100000:00:00", null, "is not below 100000 hours"],
+            "huge minutes"         => ["6000000:00", null, "is not below 100000 hours"],
+            "huge hour digits"     => [str_repeat("9", 40) . ":00:00", null, "is not below 100000 hours"],
+            "frames at 100000 h"   => ["100000:00:00:00", 25.0, "is not below 100000 hours"],
+        ];
+    }
+
+
+    #[DataProvider("invalidTimecodes")]
+    public function testParseRejectsAnInvalidTimecodeAndQuotesIt(string $timecode, ?float $framesPerSecond, string $problem): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("The timecode \"$timecode\" $problem.");
+
+        Timecode::parse($timecode, $framesPerSecond === null ? null : new FrameRate($framesPerSecond));
     }
 }

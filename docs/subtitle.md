@@ -49,6 +49,32 @@ $subtitle->findFormatData('ass');                       // [] when not set
 - **Format data**: the data of a format that has no shared field, for example ASS styles. Only the formatter of the same format reads it. The key is the value of the `Format` case, for example `ass` for `Format::Ass` and `microdvd` for `Format::MicroDvd`. CSV and TSV share the key `csv`. Image cues use the key `image`. [formats.md](formats.md) lists the fields of each format.
 - **Checks**: `setFormatData()` checks the fields that a formatter reads, as `fromArray()` does. A field of the wrong type, or a value outside its allowed set, throws `InvalidArgumentException` with its path, for example `The field formatData.scc.dropFrame must be a boolean.` Other fields pass as they are.
 
+## Cues from timecode strings
+`SubtitleCue` takes seconds. `Timecode::parse()` turns a timecode string into seconds.
+
+```php
+use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\Timecode;
+
+Timecode::parse('00:01:02,500');                       // 62.5
+Timecode::parse('01:02.5');                            // 62.5
+Timecode::parse('00:01:02:12', new FrameRate(25));     // 62.48, frame 12 of second 62
+
+$subtitle->addCue(new SubtitleCue(Timecode::parse('00:01:02,500'), Timecode::parse('00:01:05,000'), 'Good morning.'));
+```
+
+| Shape | Examples | Notes |
+|:--- |:--- |:--- |
+| `h:mm:ss` with an optional fraction | `00:01:02,500`, `0:01:02.5`, `100:00:00` | 1 or more hour digits |
+| `m:ss` with an optional fraction | `01:02.500`, `75:00` | the minutes can be 60 or more |
+| `h:mm:ss:ff` | `00:01:02:12` | `ff` counts frames after the last whole second. It needs a frame rate |
+
+- **Fraction**: a period or a comma, then 1 or more digits. `02.5` and `02,500` are both 2.5 s.
+- **Strict digits**: minutes and seconds after a colon have 2 digits from 00 to 59. So `0:1:02` is invalid.
+- **Frames**: the frame number must be below the frame rate rounded to a whole number, so below 24 at 23.976 fps. Drop-frame timecodes with `;` are invalid.
+- **Invalid input**: a sign, a space, bare seconds such as `62.5`, or a time from 100000 hours throws `InvalidArgumentException`. The message quotes the input.
+
 ## Finding cues
 ```php
 use SubtitleToolbox\SubtitleCue;

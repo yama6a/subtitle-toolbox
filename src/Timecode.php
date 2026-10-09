@@ -7,18 +7,24 @@ namespace SubtitleToolbox;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 
 /**
- * Splits seconds into hours, minutes, seconds and one smaller unit, and turns such parts back into seconds.
- * Each split method rounds the total to its unit first.
- * So 1.996 s becomes 2 s and 0 centiseconds, never 1 s and 100 centiseconds.
- *
- * @internal
+ * Turns timecode strings into seconds. The other members are internal helpers of the library.
  */
 final class Timecode
 {
-    // Comparisons of computed seconds and scores add this margin, so that float rounding errors do not change the result.
+    /**
+     * Comparisons of computed seconds and scores add this margin, so that float rounding errors do not change the result.
+     *
+     * @internal
+     */
     public const EPSILON = 1e-9;
 
     private const SECONDS_PER_MINUTE = 60;
+
+    // The parsers reject a time from this many hours, so parse() does too.
+    private const MAX_HOURS = 100000;
+
+    private const CLOCK_REGEX  = '/^(?:(\d+):([0-5]\d)|(\d+)):([0-5]\d)(?:[.,](\d+))?$/';
+    private const FRAMES_REGEX = '/^(\d+):([0-5]\d):([0-5]\d):(\d{2,})$/';
 
     // Drop-frame time code keeps every label in each tenth minute and drops labels in the other 9 minutes.
     private const DROP_CYCLE_MINUTES = 10;
@@ -28,7 +34,44 @@ final class Timecode
     private const LABELS_PER_DROPPED_LABEL = 15;
 
     /**
+     * Returns the seconds of a timecode string. It accepts 3 shapes:
+     * - h:mm:ss with an optional fraction after a period or a comma, for example 00:01:02,500 or 0:01:02.5.
+     * - m:ss with an optional fraction, for example 01:02.5. The minutes can be 60 or more.
+     * - h:mm:ss:ff, where ff counts frames after the last whole second. This shape needs $frameRate.
+     * Minutes and seconds after a colon have 2 digits from 00 to 59. Signs, spaces and drop-frame timecodes are invalid.
+     *
+     * @throws InvalidArgumentException when $timecode has another shape, reaches 100000 hours, or counts frames without $frameRate.
+     */
+    public static function parse(string $timecode, ?FrameRate $frameRate = null): float
+    {
+        $problem = null;
+        if (preg_match(self::CLOCK_REGEX, $timecode, $matches)) {
+            $hours   = $matches[1] === "" ? "0" : $matches[1];
+            $minutes = $matches[1] === "" ? $matches[3] : $matches[2];
+            if ((float) $hours * 3600 + (float) $minutes * 60 < self::MAX_HOURS * 3600) {
+                return self::toSeconds((int) $hours, (int) $minutes, (int) $matches[4], $matches[5] ?? "");
+            }
+            $problem = "is not below " . self::MAX_HOURS . " hours";
+        } elseif (preg_match(self::FRAMES_REGEX, $timecode, $matches)) {
+            $labels  = $frameRate === null ? null : self::labels($frameRate);
+            $problem = match (true) {
+                $labels === null                               => "counts frames and needs a frame rate",
+                (float) $matches[1] >= self::MAX_HOURS         => "is not below " . self::MAX_HOURS . " hours",
+                (float) $matches[4] >= $labels                 => "has a frame number that is not below $labels",
+                default                                        => null,
+            };
+            if ($problem === null) {
+                return self::toSecondsFromFrames((int) $matches[1], (int) $matches[2], (int) $matches[3], (int) $matches[4], $frameRate);
+            }
+        }
+
+        throw new InvalidArgumentException("The timecode \"$timecode\" " . ($problem ?? "is not h:mm:ss.mmm, m:ss.mmm or h:mm:ss:ff") . ".");
+    }
+
+
+    /**
      * @return array{int, int, int} hours, minutes, seconds
+     * @internal
      */
     public static function seconds(float $seconds): array
     {
@@ -38,6 +81,7 @@ final class Timecode
 
     /**
      * @return array{int, int, int, int} hours, minutes, seconds, centiseconds
+     * @internal
      */
     public static function centiseconds(float $seconds): array
     {
@@ -47,6 +91,7 @@ final class Timecode
 
     /**
      * @return array{int, int, int, int} hours, minutes, seconds, milliseconds
+     * @internal
      */
     public static function milliseconds(float $seconds): array
     {
@@ -56,6 +101,8 @@ final class Timecode
 
     /**
      * Rounds seconds to whole milliseconds, the precision of cue times. For example 0.8333 becomes 0.833.
+     *
+     * @internal
      */
     public static function roundToMilliseconds(float $seconds): float
     {
@@ -63,6 +110,9 @@ final class Timecode
     }
 
 
+    /**
+     * @internal
+     */
     public static function totalMilliseconds(float $seconds): int
     {
         return (int) round($seconds * 1000);
@@ -74,6 +124,7 @@ final class Timecode
      *
      * @return array{int, int, int, int} hours, minutes, seconds, frames
      * @throws InvalidArgumentException when $dropFrame is true and the frame rate is not about 29.97 or 59.94 fps.
+     * @internal
      */
     public static function frames(float $seconds, FrameRate $frameRate, bool $dropFrame = false): array
     {
@@ -89,6 +140,7 @@ final class Timecode
      *
      * @return array{int, int, int, int} hours, minutes, seconds, frames
      * @throws InvalidArgumentException when $dropFrame is true and the frame rate is not about 29.97 or 59.94 fps.
+     * @internal
      */
     public static function frameNumber(int $frame, FrameRate $frameRate, bool $dropFrame = false): array
     {
@@ -115,6 +167,7 @@ final class Timecode
      * The frame count restarts at each clock second. At a whole frame rate the result equals frames().
      *
      * @return array{int, int, int, int} hours, minutes, seconds, frames
+     * @internal
      */
     public static function clockSecondsAndFrames(float $seconds, FrameRate $frameRate): array
     {
