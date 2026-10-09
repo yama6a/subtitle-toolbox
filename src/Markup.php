@@ -346,22 +346,20 @@ final class Markup
     /**
      * Finds the tags of $tagNames that do not pair up, case-insensitively.
      * A closing tag closes the last open tag of its name.
-     * With $closeInner, it also closes the tags that opened after that tag, such as <i> in "<b><i>Hi</b>".
      *
      * @param list<string> $lines
      * @param list<string> $tagNames lowercase tag names, for example ["b", "i"]
-     * @return array{stray: list<array{int, int, int}>, inner: list<string>, open: list<string>} "stray" holds the line
-     *         index, offset and length of each closing tag without an open tag. "inner" holds the tag names that
-     *         $closeInner closed. "open" holds the tag names that are still open after the last line.
+     * @return array{stray: list<array{int, int, int}>, open: list<string>} "stray" holds the line index, offset and
+     *         length of each closing tag without an open tag. "open" holds the tag names that are still open after
+     *         the last line.
      *
      * @internal
      */
-    public static function unbalancedTags(array $lines, array $tagNames, bool $closeInner = false): array
+    public static function unbalancedTags(array $lines, array $tagNames): array
     {
         $pattern = '/<(\/?)(' . implode("|", $tagNames) . ')(?=[\s.>])[^<>]*>/i';
         $open    = [];
         $stray   = [];
-        $inner   = [];
         foreach ($lines as $lineIndex => $line) {
             preg_match_all($pattern, $line, $tags, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
             foreach ($tags as $tag) {
@@ -374,16 +372,13 @@ final class Markup
                 $match = array_search($name, array_reverse($open, true), true);
                 if ($match === false) {
                     $stray[] = [$lineIndex, $tag[0][1], strlen($tag[0][0])];
-                } elseif ($closeInner) {
-                    $inner = [...$inner, ...array_slice($open, $match + 1)];
-                    $open  = array_slice($open, 0, $match);
                 } else {
                     unset($open[$match]);
                 }
             }
         }
 
-        return ["stray" => $stray, "inner" => $inner, "open" => array_values($open)];
+        return ["stray" => $stray, "open" => array_values($open)];
     }
 
 

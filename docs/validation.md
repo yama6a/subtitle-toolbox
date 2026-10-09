@@ -32,7 +32,7 @@ The value of a `ValidationRule` case is the name of its field in `ValidationRule
 | `noEmptyCues` | `true` to check, violation limit `null` | 0 |
 | `noDoubleSpaces` | `true` to check, violation limit `null` | runs of two or more spaces between words. A non-breaking space counts as a space |
 | `noLeadingOrTrailingSpaces` | `true` to check, violation limit `null` | lines that start or end with a space or a non-breaking space |
-| `noUnbalancedTags` | `true` to check, violation limit `null` | `<b>`, `<i>`, `<u>`, `<s>` and `<font>` tags without a partner tag, across all lines of the cue. An open `<v>` needs no `</v>` |
+| `noUnbalancedTags` | `true` to check, violation limit `null` | `<b>`, `<i>`, `<u>`, `<s>`, `<font>`, `<v>`, `<c>`, `<lang>`, `<ruby>` and `<rt>` tags without a partner tag, across all lines of the cue, plus each `<rt>` outside `<ruby>`. An open `<v>` needs no `</v>`. An open `<rt>` needs no `</rt>` before `</ruby>` or the next `<rt>` |
 | `dialogueDashStyle` | a `DialogueDashStyle` case, such as `HyphenSpace` for `'- '` or `EnDash` for an en dash without a space. Violation limit `null` | lines with a dialogue dash in another style |
 | `maxSpeakersPerCue` | speakers | the lines with a dialogue dash or the different `<v>` names, the larger count |
 | `maxWordsPerMinute` | words per minute | words divided by the duration. `INF` for a cue with words and no duration |

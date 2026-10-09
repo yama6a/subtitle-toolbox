@@ -163,13 +163,53 @@ final class TextChecks
 
 
     /**
-     * Counts closing tags without an opening tag and opening tags without a closing tag. An open <v> needs no </v>.
+     * Counts closing tags without an opening tag, opening tags without a closing tag and <rt> tags outside <ruby>.
+     * An open <v> needs no </v>. </ruby> and the next <rt> close an open <rt>, as WebVTT allows.
      */
     private static function unbalancedTags(string $text): int
     {
-        $tags = Markup::unbalancedTags([$text], Markup::CORE_TAGS, true);
+        $tagNames = [...Markup::CORE_TAGS, "c", "lang", "ruby", "rt"];
+        preg_match_all('/<(\/?)(' . implode("|", $tagNames) . ')(?=[\s.>])[^<>]*>/i', $text, $tags, PREG_SET_ORDER);
 
-        return count($tags["stray"]) + count(array_filter([...$tags["inner"], ...$tags["open"]], fn (string $tag): bool => $tag !== "v"));
+        $open  = [];
+        $count = 0;
+        foreach ($tags as [, $slash, $name]) {
+            $name = strtolower($name);
+            if ($slash === "" && $name === "rt") {
+                if (end($open) === "rt") {
+                    array_pop($open);
+                }
+                $count += in_array("ruby", $open, true) ? 0 : 1;
+            }
+            if ($slash === "") {
+                $open[] = $name;
+                continue;
+            }
+
+            $match = array_search($name, array_reverse($open, true), true);
+            if ($match === false) {
+                $count++;
+                continue;
+            }
+
+            $inner = array_slice($open, $match + 1);
+            if ($name === "ruby" && ($inner[0] ?? null) === "rt") {
+                array_shift($inner);
+            }
+            $count += self::unclosedTags($inner);
+            $open   = array_slice($open, 0, $match);
+        }
+
+        return $count + self::unclosedTags($open);
+    }
+
+
+    /**
+     * @param list<string> $tagNames
+     */
+    private static function unclosedTags(array $tagNames): int
+    {
+        return count(array_filter($tagNames, fn (string $tag): bool => $tag !== "v"));
     }
 
 

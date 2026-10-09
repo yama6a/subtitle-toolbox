@@ -355,6 +355,38 @@ class ValidationTest extends TestCase
     }
 
 
+    public function testUnbalancedWebVttTagsOnOwnFile(): void
+    {
+        $subtitle = TestFiles::parse("validation/own_webvtt_tags.vtt", Format::WebVtt);
+
+        $this->assertCount(9, $subtitle->getCues());
+        $this->assertSame([
+            [0, ValidationRule::NoUnbalancedTags, 1, null],
+            [1, ValidationRule::NoUnbalancedTags, 1, null],
+            [3, ValidationRule::NoUnbalancedTags, 1, null],
+            [5, ValidationRule::NoUnbalancedTags, 1, null],
+            [8, ValidationRule::NoUnbalancedTags, 1, null],
+        ], $this->toArrays($subtitle->validate(new ValidationRules(noUnbalancedTags: true))));
+    }
+
+
+    public function testUnbalancedRubyTextTags(): void
+    {
+        $subtitle = TestSubtitles::fromCues([
+            [0, 1, ["<ruby>a<rt>b<rt>c"]],
+            [1, 2, ["<ruby>a<rt><i>b</ruby>"]],
+            [2, 3, ["<b>a<rt>b</rt></b>", "<rt>c"]],
+            [3, 4, ["<ruby>a", "<rt>b</rt></ruby>"]],
+        ]);
+
+        $this->assertSame([
+            [0, ValidationRule::NoUnbalancedTags, 2, null],
+            [1, ValidationRule::NoUnbalancedTags, 1, null],
+            [2, ValidationRule::NoUnbalancedTags, 3, null],
+        ], $this->toArrays($subtitle->validate(new ValidationRules(noUnbalancedTags: true))));
+    }
+
+
     public function testSpacesInsideTagsAndNonBreakingSpaces(): void
     {
         $subtitle = TestSubtitles::fromCues([
