@@ -188,7 +188,8 @@ trait CueEditing
 
     /**
      * Joins each run of adjacent cues with the same text that are identical, overlap, touch, or are at most $maxGap
-     * seconds apart. The joined cue runs from the earliest start to the latest end of the run.
+     * seconds apart. The cues must also have the same alignment, forced flag and format data, such as an ASS style
+     * and layer. The joined cue runs from the earliest start to the latest end of the run.
      *
      * @throws InvalidArgumentException when $maxGap is negative, NAN or INF.
      */
@@ -202,7 +203,8 @@ trait CueEditing
         $start   = 0.0;
         $end     = 0.0;
         foreach ($this->cues as $cue) {
-            if ($group !== [] && $group[0]->getText() === $cue->getText()
+            if ($group !== [] && $group[0]->getText() === $cue->getText() && CueList::canJoin($group[0], $cue)
+                && $group[0]->getAllFormatData() === $cue->getAllFormatData()
                 && Timecode::roundToMilliseconds($cue->getStart() - $end) <= $maxGap
                 && Timecode::roundToMilliseconds($start - $cue->getEnd()) <= $maxGap) {
                 $group[] = $cue;

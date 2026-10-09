@@ -12,3 +12,5 @@
 | `harbour_tour_slice.vtt` | Written for this repository. Expected `WebVttFormatter` output after `withSlice(6, 16, true)`. | MIT |
 | `own_duplicate_cues.srt` | Written for this repository. SubRip with an exact duplicate, an overlapping duplicate, a touching duplicate and a same-text cue 0.5 s later. | MIT |
 | `own_duplicate_cues_deduplicated.srt` | Written for this repository. Expected `SubRipFormatter` output for `own_duplicate_cues.srt` after `removeDuplicateCues()`. | MIT |
+| `own_glow_duplicates.ass` | Written for this repository. ASS with a `Glow` event on layer 0 under a `Default` event on layer 1 with the same text and times, and 2 touching `Default` events with the same text. | MIT |
+| `own_glow_duplicates_deduplicated.ass` | Written for this repository. Expected `AssFormatter` output for `own_glow_duplicates.ass` after `removeDuplicateCues()`. | MIT |
