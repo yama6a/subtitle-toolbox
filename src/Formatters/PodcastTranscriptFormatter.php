@@ -66,7 +66,7 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
     private function segment(array $piece): array
     {
         return ($piece["speaker"] === null ? [] : ["speaker" => $piece["speaker"]]) +
-               ["startTime" => $piece["start"], "endTime" => $piece["end"], "body" => $piece["body"]];
+               ["startTime" => max(0.0, $piece["start"]), "endTime" => max(0.0, $piece["end"]), "body" => $piece["body"]];
     }
 
 

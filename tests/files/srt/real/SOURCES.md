@@ -13,3 +13,4 @@
 | `own_empty_cues.srt` | Written for this repository. Cue 2 has no text and one empty line after it, as in a user report of a naver.com file. Cue 4 has no text and two empty lines after it. | MIT |
 | `own_missing_empty_line.srt` | Written for this repository. Cues 2 and 3 have no empty line before their cue number. | MIT |
 | `own_angle_bracket_text.srt` | Written for this repository. Holds text in angle brackets that is no tag, next to SubRip tags and unknown tags. | MIT |
+| `own_negative_start.srt` | Written for this repository. The output for a cue from -0.5 s to 1 s, set through the API. | MIT |

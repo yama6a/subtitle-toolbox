@@ -40,11 +40,11 @@ final class SamiFormatter extends SubtitleFormatter
 
         $cues = array_values($subtitle->getCues());
         foreach ($cues as $index => $cue) {
-            $end    = Timecode::totalMilliseconds($cue->getEnd());
-            $output .= "<SYNC Start=" . Timecode::totalMilliseconds($cue->getStart()) . ">" . $this->formatParagraphs($cue, $class, $stripTags) . LineEnding::Lf->value;
+            $end    = Timecode::totalMilliseconds(max(0.0, $cue->getEnd()));
+            $output .= "<SYNC Start=" . Timecode::totalMilliseconds(max(0.0, $cue->getStart())) . ">" . $this->formatParagraphs($cue, $class, $stripTags) . LineEnding::Lf->value;
 
             $next = $cues[$index + 1] ?? null;
-            if ($next === null || Timecode::totalMilliseconds($next->getStart()) > $end) {
+            if ($next === null || Timecode::totalMilliseconds(max(0.0, $next->getStart())) > $end) {
                 $output .= "<SYNC Start=$end>" . $this->openParagraph($class, []) . "&nbsp;" . LineEnding::Lf->value;
             }
         }

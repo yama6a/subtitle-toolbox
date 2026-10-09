@@ -118,7 +118,7 @@ final class Timecode
      */
     public static function clockSecondsAndFrames(float $seconds, FrameRate $frameRate): array
     {
-        $milliseconds = self::totalMilliseconds($seconds);
+        $milliseconds = max(0, self::totalMilliseconds($seconds));
         $whole        = intdiv($milliseconds, 1000);
         $frame        = $frameRate->secondsToFrames($milliseconds % 1000 / 1000);
         if ($frame >= self::labels($frameRate)) {
@@ -184,6 +184,8 @@ final class Timecode
      */
     private static function split(int $total, int $perSecond): array
     {
+        // SubtitleCue accepts a negative time, but a time code has no sign, so it starts at 0.
+        $total   = max(0, $total);
         $seconds = intdiv($total, $perSecond);
 
         return [intdiv($seconds, 3600), intdiv($seconds, 60) % 60, $seconds % 60, $total % $perSecond];

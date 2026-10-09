@@ -30,8 +30,8 @@ final class PodcastChaptersFormatter extends SubtitleFormatter
         $data["chapters"] = [];
         foreach ($cues as $index => $cue) {
             $chapter     = ["startTime" => $this->number($cue->getStart())];
-            $implicitEnd = isset($cues[$index + 1]) ? $cues[$index + 1]->getStart() : $cue->getStart();
-            if ($cue->getEnd() !== $implicitEnd) {
+            $implicitEnd = $this->number(isset($cues[$index + 1]) ? $cues[$index + 1]->getStart() : $cue->getStart());
+            if ($this->number($cue->getEnd()) !== $implicitEnd) {
                 $chapter["endTime"] = $this->number($cue->getEnd());
             }
             $title = implode(" ", Markup::plainLines($cue->getLines()));
@@ -49,6 +49,8 @@ final class PodcastChaptersFormatter extends SubtitleFormatter
 
     private function number(float $seconds): int|float
     {
+        $seconds = max(0.0, $seconds);
+
         return floor($seconds) === $seconds ? (int) $seconds : $seconds;
     }
 }
