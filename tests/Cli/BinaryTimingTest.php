@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
@@ -70,6 +71,74 @@ class BinaryTimingTest extends BinaryTestCase
         );
         $this->assertSame(2, $this->runBinary(["convert", "trip.srt", "--to", "srt", "--timing-min-duration", "-00:00:01"])[0]);
         $this->assertSame(2, $this->runBinary(["convert", "trip.srt", "--to", "srt", "--timing-fix-overlaps", "--timing-min-gap", "00:00:01:12"])[0]);
+    }
+
+
+    public function testRetimeSyncFirstAndLastEqualsSyncByTwoPoints(): void
+    {
+        copy(self::FILES . "editing/own_ferry_drift.vtt", "$this->dir/ferry.vtt");
+        $expected = Subtitle::load(self::FILES . "editing/own_ferry_drift.vtt", Format::WebVtt)->syncByTwoPoints(5, 12.5, 1500, 6065)->toString(Format::WebVtt);
+
+        $this->assertSame([0, $expected, ""], $this->runBinary(["retime", "ferry.vtt", "--sync", "first=00:00:12.5", "--sync", "last=01:41:05"]));
+        $this->assertSame([0, $expected, ""], $this->runBinary(["retime", "ferry.vtt", "--sync=#1=12.5", "--sync", "#5=6065"]));
+    }
+
+
+    public function testRetimeSyncWithOneAndThreePoints(): void
+    {
+        copy(self::FILES . "editing/own_ferry_drift.vtt", "$this->dir/ferry.vtt");
+        $ferry = Subtitle::load(self::FILES . "editing/own_ferry_drift.vtt", Format::WebVtt);
+
+        $this->assertSame([0, (clone $ferry)->shift(2)->toString(Format::WebVtt), ""], $this->runBinary(["retime", "ferry.vtt", "--sync", "10=12"]));
+        $this->assertSame(
+            [0, (string)file_get_contents(self::FILES . "editing/own_ferry_drift_synced.vtt"), ""],
+            $this->runBinary(["retime", "ferry.vtt", "--sync", "#2=00:12", "--sync", "00:10:00=610", "--sync", "1200=00:20:05,000"])
+        );
+    }
+
+
+    /**
+     * @return array<string, array{list<string>, string}>
+     */
+    public static function invalidSyncOptions(): array
+    {
+        return [
+            "with shift"    => [["--sync", "10=12", "--shift", "2"], "Pass --sync without --shift and --scale."],
+            "with scale"    => [["--sync", "10=12", "--scale", "2"], "Pass --sync without --shift and --scale."],
+            "no equals"     => [["--sync", "10"], "The option --sync needs OLD=NEW, got \"10\"."],
+            "bad old"       => [["--sync", "soon=12"], "The option --sync needs seconds or a timecode such as 00:01:02.500, got \"soon\"."],
+            "bad new"       => [["--sync", "first=1:2:3:4:5"], "The option --sync needs seconds or a timecode such as 00:01:02.500, got \"1:2:3:4:5\"."],
+            "cue 0"         => [["--sync", "#0=12"], "The option --sync needs a cue number from 1 after #, got \"#0=12\"."],
+            "same old"      => [["--sync", "10=12", "--sync", "10=15"], "The --sync points must increase in both times, got \"10=12\" before \"10=15\"."],
+            "old reverse"   => [["--sync", "600=610", "--sync", "10=12"], "The --sync points must increase in both times, got \"600=610\" before \"10=12\"."],
+            "new reverse"   => [["--sync", "10=20", "--sync", "first=5", "--sync", "30=15"], "The --sync points must increase in both times, got \"10=20\" before \"30=15\"."],
+        ];
+    }
+
+
+    /**
+     * @param list<string> $options
+     */
+    #[DataProvider("invalidSyncOptions")]
+    public function testInvalidRetimeSyncIsAUsageError(array $options, string $message): void
+    {
+        $this->assertSame(
+            [2, "", "Error: $message\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            $this->runBinary(["retime", "trip.srt", ...$options])
+        );
+    }
+
+
+    public function testRetimeSyncPointsThatDoNotFitTheFileFailTheFile(): void
+    {
+        $this->assertSame(
+            [3, "", "trip.srt: The --sync point \"#4=12\" names cue 4, but the subtitle has 3 cues.\n"],
+            $this->runBinary(["retime", "trip.srt", "--sync", "#4=12"])
+        );
+        $this->assertSame(
+            [3, "", "trip.srt: The --sync points must increase in both times, got \"10=12\" before \"last=20\".\n"],
+            $this->runBinary(["retime", "trip.srt", "--sync", "10=12", "--sync", "last=20"])
+        );
     }
 
 

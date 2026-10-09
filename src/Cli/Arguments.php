@@ -163,8 +163,22 @@ final class Arguments
     public function seconds(string $name): ?float
     {
         $value = $this->value($name);
-        if ($value === null || is_numeric($value)) {
-            return $this->float($name);
+
+        return $value === null ? null : self::time($name, $value);
+    }
+
+
+    /**
+     * Returns the seconds of $value, a number or a timecode as seconds() takes it. A usage error names the option $name.
+     */
+    public static function time(string $name, string $value): float
+    {
+        if (is_numeric($value)) {
+            if (!is_finite((float)$value)) {
+                Command::fail("The option --$name needs a finite number, got \"$value\".");
+            }
+
+            return (float)$value;
         }
         $timecode = str_starts_with($value, "-") ? substr($value, 1) : $value;
         try {
