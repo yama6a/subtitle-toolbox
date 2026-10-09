@@ -13,6 +13,9 @@ trait TextTransforms
 {
     private const TEXT_TRANSFORMS_SENTENCE_GAP = 2.0;
 
+    /** Abbreviations whose period ends no sentence when a comma or a lower case word follows. */
+    private const TEXT_TRANSFORMS_ABBREVIATIONS = ["i.e", "e.g", "etc", "vs"];
+
 
     /**
      * Calls $fn for each text run between tags, with entities decoded as Markup::mapTextRuns() does.
@@ -161,23 +164,58 @@ trait TextTransforms
      */
     private static function textTransformsSentenceCaseRun(string $text, bool $turkic, bool &$capitalizeNext, bool &$afterPunctuation): string
     {
-        $result = "";
-        foreach (Markup::characters(self::textTransformsLower($text, $turkic)) as $char) {
+        $chars        = Markup::characters(self::textTransformsLower($text, $turkic));
+        $original     = Markup::characters($text);
+        $word         = "";
+        $abbreviation = false;
+        $result       = "";
+        foreach ($chars as $index => $char) {
             if (preg_match('/^[\p{L}\p{N}]$/u', $char) === 1 || (strlen($char) === 1 && ctype_alnum($char))) {
                 if ($capitalizeNext) {
                     $char = self::textTransformsTitle($char, $turkic);
                 }
                 $capitalizeNext   = false;
                 $afterPunctuation = false;
+                $word            .= $char;
             } elseif (in_array($char, [".", "!", "?", "\u{2026}"], true)) {
                 $afterPunctuation = true;
-            } elseif ($afterPunctuation && ctype_space($char)) {
-                $capitalizeNext = true;
+                $abbreviation     = $char === "." && in_array(strtolower($word), self::TEXT_TRANSFORMS_ABBREVIATIONS, true);
+                $word             = $char === "." && $word !== "" ? "$word." : "";
+            } else {
+                $word = "";
+                if ($afterPunctuation && $char === ",") {
+                    $afterPunctuation = false;
+                } elseif ($afterPunctuation && ctype_space($char)) {
+                    // Lowering İ adds a combining dot, so the original case is known only when the counts match.
+                    $lowerCaseFollows = count($chars) === count($original) && self::textTransformsLowerCaseFollows($original, $index);
+                    $afterPunctuation = !($abbreviation && $lowerCaseFollows);
+                    $capitalizeNext   = $capitalizeNext || $afterPunctuation;
+                }
             }
             $result .= $char;
         }
 
         return $result;
+    }
+
+
+    /**
+     * Tells if the first letter after $index in $chars is a lower case letter.
+     *
+     * @param list<string> $chars
+     */
+    private static function textTransformsLowerCaseFollows(array $chars, int $index): bool
+    {
+        foreach (array_slice($chars, $index + 1) as $char) {
+            if (preg_match('/^\p{L}$/u', $char) === 1) {
+                return preg_match('/^\p{Ll}$/u', $char) === 1;
+            }
+            if (!ctype_space($char)) {
+                return false;
+            }
+        }
+
+        return false;
     }
 
 
