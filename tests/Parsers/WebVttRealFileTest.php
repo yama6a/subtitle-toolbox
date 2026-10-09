@@ -35,7 +35,8 @@ class WebVttRealFileTest extends TestCase
             "own_empty_cues"          => ["own_empty_cues.vtt", 5, 20.105, 23.292, "The ferry to the island leaves at noon.", 36.1, 39.0, "The last boat comes back at six."],
             "own_hour_digits"         => ["own_hour_digits.vtt", 7, 0.8, 2.933, "The first train leaves at six.", 3600022.86, 3600025.56, "The station closes for the night."],
             "own_settings_no_space"   => ["own_settings_without_space.vtt", 2, 0.0, 1.0, "The gate opens at eight.", 2.0, 3.5, "Boarding starts at half past."],
-            "own_ytdlp_auto_captions" => ["own_ytdlp_auto_captions.vtt", 4, 0.0, 2.31, "the<00:00:00.480><c> ferry</c><00:00:00.960><c> leaves</c>", 5.0, 5.01, "at noon"],
+            "own_ytdlp_auto_captions" => ["own_ytdlp_auto_captions.vtt", 2, 0.0, 2.31, "the<00:00:00.480><c> ferry</c><00:00:00.960><c> leaves</c>", 2.31, 5.0, "at<00:00:02.800><c> noon</c>"],
+            "own_ytdlp_rolling"       => ["own_ytdlp_rolling.vtt", 4, 0.16, 2.389, "welcome<00:00:00.400><c> back</c><00:00:00.800><c> to</c><00:00:01.120><c> the</c><00:00:01.440><c> garden</c>", 6.15, 8.43, "dig<00:00:06.640><c> a</c><00:00:06.800><c> small</c><00:00:07.200><c> hole</c>"],
             "webvttpy_youtube"        => ["webvttpy_youtube.vtt", 4, 286.07, 286.47, "okay", 305.069, 305.4, "the train<c.colorE5E5E5> leaves</c><c.colorCCCCCC> at ten today\n</c>"],
         ];
     }
@@ -121,9 +122,7 @@ class WebVttRealFileTest extends TestCase
     {
         $expected = [
             ["the<00:00:00.480><c> ferry</c><00:00:00.960><c> leaves</c>"],
-            ["the ferry leaves"],
-            ["the ferry leaves", "at<00:00:02.800><c> noon</c>"],
-            ["at noon"],
+            ["at<00:00:02.800><c> noon</c>"],
         ];
         $lines = fn (SubtitleCue $cue): array => $cue->getLines();
 
@@ -132,6 +131,46 @@ class WebVttRealFileTest extends TestCase
 
         $this->assertSame($expected, array_map($lines, $parsed->getCues()));
         $this->assertSame($expected, array_map($lines, iterator_to_array($stream, false)));
+    }
+
+
+    public function testYouTubeRollingCuesCollapseToOneCuePerLine(): void
+    {
+        $expected = [
+            [0.16, 2.389, "welcome<00:00:00.400><c> back</c><00:00:00.800><c> to</c><00:00:01.120><c> the</c><00:00:01.440><c> garden</c>"],
+            [2.389, 4.87, "today<00:00:02.880><c> we</c><00:00:03.200><c> plant</c><00:00:03.600><c> tomatoes</c>"],
+            [4.87, 6.15, "first"],
+            [6.15, 8.43, "dig<00:00:06.640><c> a</c><00:00:06.800><c> small</c><00:00:07.200><c> hole</c>"],
+        ];
+        $cue = fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()];
+
+        $parsed = Subtitle::fromString(file_get_contents(self::DIR . "own_ytdlp_rolling.vtt"), Format::WebVtt);
+        $stream = (new WebVttStreamReader())->read(fopen(self::DIR . "own_ytdlp_rolling.vtt", "r"));
+
+        $this->assertSame($expected, array_map($cue, $parsed->getCues()));
+        $this->assertSame($expected, array_map($cue, iterator_to_array($stream, false)));
+        $this->assertSame(["align" => "start", "position" => "0%"], $parsed->getCues()[1]->findFormatData("vtt"));
+    }
+
+
+    public function testShortRepeatCuesWithoutWordTimestampsStay(): void
+    {
+        $content = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nthe ferry leaves\n\n" .
+                   "00:00:02.000 --> 00:00:02.010\nthe ferry leaves\n\n00:00:02.010 --> 00:00:03.000\nthe ferry leaves\nat noon\n";
+
+        $this->assertCount(3, Subtitle::fromString($content, Format::WebVtt)->getCues());
+    }
+
+
+    public function testCommentsKeepTheirCueWhenRollingCuesCollapse(): void
+    {
+        $content = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nthe<00:00:01.500><c> ferry</c>\n\n" .
+                   "00:00:02.000 --> 00:00:02.010\nthe ferry\n\nNOTE second line\n\n" .
+                   "00:00:02.010 --> 00:00:03.000\nthe ferry\nleaves<00:00:02.500><c> now</c>\n";
+        $subtitle = Subtitle::fromString($content, Format::WebVtt);
+
+        $this->assertCount(2, $subtitle->getCues());
+        $this->assertSame(1, $subtitle->getComments()[0]->beforeCueIndex);
     }
 
 

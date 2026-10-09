@@ -43,7 +43,7 @@ final class CommentAnchors
     /**
      * Adds the parsed cues, then puts each comment before the cue that followed it in the file.
      *
-     * @param list<SubtitleCue>              $cues     in file order
+     * @param array<int, SubtitleCue>        $cues     in file order, keyed by the count of cues before them in the file
      * @param list<array{0: string, 1: int}> $comments the text and the count of cues before it in the file
      */
     public static function addParsed(Subtitle $subtitle, array $cues, array $comments): Subtitle
