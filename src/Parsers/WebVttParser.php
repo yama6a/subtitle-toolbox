@@ -308,7 +308,7 @@ final class WebVttParser extends SubtitleParser
             throw new ParsingException("The time \"$timeString\" is not valid.", $lineNumber);
         }
 
-        return Timecode::toSeconds((int) $matches[2], (int) $matches[3], (int) $matches[4], $matches[5]);
+        return self::boundedTime(Timecode::toSeconds((int) $matches[2], (int) $matches[3], (int) $matches[4], $matches[5]), $timeString, $lineNumber);
     }
 
 

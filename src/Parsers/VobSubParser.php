@@ -289,7 +289,7 @@ final class VobSubParser extends SubtitleParser
         if (!preg_match('/^([+-]?)(\d+):(\d{1,2}):(\d{1,2})[:.,](\d{1,3})$/', trim($value), $matches)) {
             throw new ParsingException("The .idx time \"$line\" is not valid.");
         }
-        $seconds = Timecode::toSeconds((int) $matches[2], (int) $matches[3], (int) $matches[4], str_pad($matches[5], 3, "0", STR_PAD_LEFT));
+        $seconds = self::boundedTime(Timecode::toSeconds((int) $matches[2], (int) $matches[3], (int) $matches[4], str_pad($matches[5], 3, "0", STR_PAD_LEFT)), $line, null);
 
         return $matches[1] === "-" ? -$seconds : $seconds;
     }

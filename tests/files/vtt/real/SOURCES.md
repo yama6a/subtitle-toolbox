@@ -23,3 +23,4 @@
 | `own_hour_digits.vtt` | Written for this repository. One cue with 1 hour digit, then the times of https://github.com/captioning/captioning/blob/27d0e86693f4d9bc2046102f74aa54febcd902dc/tests/Fixtures/Webvtt/long-hours.vtt with hours of 2 to 4 digits and leading zeros | MIT |
 | `own_settings_without_space.vtt` | Written for this repository in the shape of the vtt.js test file `file-layout/no-space-cue-times-cue-settings.vtt`, https://github.com/hartman/vtt-vivid/tree/1b9a9c1c1072cea68dec1c7e136e32c90578592a/tests/integration/data/file-layout. Cue settings directly after the end time | MIT |
 | `own_angle_bracket_text_from_srt.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `srt/real/own_angle_bracket_text.srt`. | MIT |
+| `own_max_hours.vtt` | Written for this repository. The last cue ends at 99999:59:59.999, the latest time that the parsers accept | MIT |

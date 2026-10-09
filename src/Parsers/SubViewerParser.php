@@ -25,8 +25,9 @@ final class SubViewerParser extends SubtitleParser
         "AUTHOR" => Subtitle::METADATA_AUTHOR,
     ];
 
-    private const VERSION_1_TIME_REGEX = '/^\[(\d+):(\d{2}):(\d{2})\]$/';
-    private const VERSION_2_TIME_REGEX = '/^(\d+):(\d{2}):(\d{2})\.(\d{1,3}),(\d+):(\d{2}):(\d{2})\.(\d{1,3})$/';
+    // Five hour digits keep a time below SubtitleParser::MAX_HOURS.
+    private const VERSION_1_TIME_REGEX = '/^\[(0*\d{1,5}):(\d{2}):(\d{2})\]$/';
+    private const VERSION_2_TIME_REGEX = '/^(0*\d{1,5}):(\d{2}):(\d{2})\.(\d{1,3}),(0*\d{1,5}):(\d{2}):(\d{2})\.(\d{1,3})$/';
     private const TAG_REGEX            = '/^\[([^\]]+)\](.*)$/';
     private const STYLE_TAGS           = ["[COLF]", "[SIZE]", "[FONT]", "[STYLE]"];
     private const VERSION_2_BLOCK_TAGS = ["INFORMATION", "END INFORMATION", "SUBTITLE"];

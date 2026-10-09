@@ -29,6 +29,7 @@ Format::FfMetadataChapters->isAutoDetected(); // false
 
 - **Shared extensions**: when two formats share an extension, the earlier case owns it. So `fromPath()` returns `Format::MicroDvd` for `.sub`, `Format::Json` for `.json` and `Format::PlainText` for `.txt`.
 - **Parser and formatter classes**: the classes in `Parsers` and `Formatters` are public. `ReadOptions` holds the format-neutral read settings, for example `new ReadOptions(lenient: true)`. A class in `Parsers\Options` holds the settings of one format, for example `new MicroDvdReadOptions(frameRate: 23.976)`. See [read-options.md](read-options.md).
+- **Time limit**: the parsers reject a cue time of 100,000 hours or more, such as `99999999999999999999:00:04.000`. Strict mode throws `ParsingException`, and lenient mode skips the cue with a warning. In strict mode, SubViewer reads such a timing line as cue text. The YouTube chapter parser skips such a line.
 
 ## Load and save
 ```php
@@ -366,7 +367,7 @@ $subtitle->findFormatData('sami');                                              
 ## SBV
 SBV is the YouTube caption format `0:00:01.500,0:00:04.000`.
 
-- **Parser**: accepts any number of hour digits. A file that holds only whitespace or a BOM gives 0 cues. A timing line without text gives a cue with no lines. A timing line starts a new cue, also without an empty line before it.
+- **Parser**: accepts any number of hour digits below the [time limit](#the-format-enum). A file that holds only whitespace or a BOM gives 0 cues. A timing line without text gives a cue with no lines. A timing line starts a new cue, also without an empty line before it.
 - **Formatter**: writes one hour digit below 10 hours, and no UTF-8 BOM. It strips all tags and decodes HTML entities. Text with `<`, `>` and `&` round-trips. It skips a cue with no lines.
 
 ## SCC
@@ -480,7 +481,7 @@ $subtitle->toString(Format::Ttml);
 - **Alignment from cue settings**: `line:0` is the top row, and `line:50%,center` is the middle row. No `line`, `line:-1` and `line:100%,end` are the bottom row. `align:left`, `center` and `right` set the column. Other values, `align:start`, `align:end` and `vertical` give no alignment.
 - **Cue settings from alignment**: a cue without `vtt` format data gets settings from its alignment. Alignment 8 becomes `line:0`, 7 becomes `line:0 align:left`. The `vtt` format data wins over the alignment.
 - **Cue settings without a space**: the parser also reads settings that follow the end time directly, as in `00:01.000line:40%`. The formatter writes a space before them.
-- **Hours**: the parser reads hours with any number of digits, such as `0:00:00.800` and `0010:00:40.750`, as the spec allows. A time without hours has exactly 2 minute digits. The formatter writes at least 2 hour digits, so `0010` becomes `10`.
+- **Hours**: the parser reads hours with any number of digits, such as `0:00:00.800` and `0010:00:40.750`, as the spec allows. The [time limit](#the-format-enum) applies. A time without hours has exactly 2 minute digits. The formatter writes at least 2 hour digits, so `0010` becomes `10`.
 - **Lines of white space**: only an empty line ends a cue. A line with only spaces or tabs inside a cue is an empty text line, and the parser drops it. YouTube automatic captions have such a line in each cue.
 - **Cues without text**: a timing line without text gives a cue with no lines. The formatter writes such a cue as its identifier and its timing line.
 - **Output**: the formatter writes the header, comments, styles, regions and cue settings back. It numbers cues without an identifier and always writes hours. It writes `REGION` blocks before `STYLE` blocks, and both before the comments that come before the first cue.

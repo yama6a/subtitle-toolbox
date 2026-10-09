@@ -100,7 +100,7 @@ final class HtmlTranscriptParser extends SubtitleParser
             throw new ParsingException("The time \"$time\" is not valid.", $line);
         }
 
-        return Timecode::roundToMilliseconds(Timecode::toSeconds((int) $parts[1], (int) $parts[2], (int) $parts[3], $parts[4] ?? ""));
+        return self::boundedTime(Timecode::roundToMilliseconds(Timecode::toSeconds((int) $parts[1], (int) $parts[2], (int) $parts[3], $parts[4] ?? "")), $time, $line);
     }
 
 

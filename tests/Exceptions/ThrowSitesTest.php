@@ -76,6 +76,7 @@ use SubtitleToolbox\Parsers\SubViewerParser;
 use SubtitleToolbox\Parsers\TtmlParser;
 use SubtitleToolbox\Parsers\VobSubParser;
 use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
+use SubtitleToolbox\Parsers\TmPlayerParser;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Parsers\WhisperJsonParser;
 use SubtitleToolbox\Parsers\YouTubeTimedTextParser;
@@ -508,6 +509,9 @@ class ThrowSitesTest extends TestCase
             "Parsers/SubtitleParser.php: JSON root no object" => [fn () => (new PodcastTranscriptParser())->parse("[1]", new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: options of another format" => [fn () => (new SubRipParser())->parse("", new ReadOptions(format: new CsvReadOptions())),
                                                                 ...$invalid],
+            "Parsers/SubtitleParser.php: 100000 hours"      => [fn () => (new WebVttParser())->parse("WEBVTT\n\n100000:00:00.000 --> 100000:00:01.000\ntext\n", new ReadOptions()),
+                                                                ...$parsing],
+            "Parsers/TmPlayerParser.php: no TMPlayer line"  => [fn () => (new TmPlayerParser())->parse("text\n", new ReadOptions()), ...$parsing],
             "Parsers/TtmlParser.php: no tt root"            => [fn () => (new TtmlParser())->parse("<html/>", new ReadOptions()), ...$parsing],
             "Parsers/TtmlParser.php: invalid time"          => [fn () => (new TtmlParser())->parse(sprintf(self::TTML,
                 '<p begin="soon" end="2s">text</p>'), new ReadOptions()), ...$parsing],

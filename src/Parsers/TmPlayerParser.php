@@ -26,13 +26,17 @@ final class TmPlayerParser extends SubtitleParser
             }
 
             $blockIndex++;
-            if (!preg_match(self::LINE_REGEX, $rawLine, $matches)) {
-                $lineNumber = $lineIndex + 1;
-                $this->fail(new ParsingException("The line \"$rawLine\" is not a TMPlayer line.", $lineNumber), $lineNumber, $blockIndex, [$rawLine]);
+            $lineNumber = $lineIndex + 1;
+            try {
+                if (!preg_match(self::LINE_REGEX, $rawLine, $matches)) {
+                    throw new ParsingException("The line \"$rawLine\" is not a TMPlayer line.", $lineNumber);
+                }
+                $time = self::boundedTime(Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3]), "$matches[1]:$matches[2]:$matches[3]", $lineNumber);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, $lineNumber, $blockIndex, [$rawLine]);
                 continue;
             }
 
-            $time  = Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3]);
             $lines = $this->parseText($matches[5]);
             $last  = array_key_last($entries);
             // TMPlayer+ writes each line of a cue as its own entry, with the line number after a comma.
