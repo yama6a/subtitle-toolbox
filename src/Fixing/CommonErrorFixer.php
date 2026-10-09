@@ -115,6 +115,7 @@ final class CommonErrorFixer
             CommonErrorRule::MissingSpaceAfterPunctuation => $options->missingSpaceAfterPunctuation,
             CommonErrorRule::DialogueOnOneLine            => $options->dialogueOnOneLine,
             CommonErrorRule::DialogueDashes               => $options->dialogueDashes,
+            CommonErrorRule::MusicNotes                   => $options->musicNotes,
             CommonErrorRule::SentenceStartCase            => $options->sentenceStartCase,
         };
         if (!$enabled) {
@@ -139,6 +140,7 @@ final class CommonErrorFixer
             CommonErrorRule::DialogueOnOneLine => self::dialogueOnOneLine($lines, $options->dialogueDashStyle),
             CommonErrorRule::DialogueDashes  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string =>
                 $first ? self::dialogueDash($text, $options->dialogueDashStyle) : $text),
+            CommonErrorRule::MusicNotes      => array_map(self::musicNotes(...), $lines),
             CommonErrorRule::SentenceStartCase => self::sentenceStartCase($lines, $starts, $turkic),
         };
     }
@@ -189,6 +191,20 @@ final class CommonErrorFixer
 
         return Markup::mapTextRuns($split, fn (string $text, bool $isFirst): string =>
             $isFirst && preg_match("/^\s*$dash/u", $text) !== 1 ? $style->value . ltrim($text) : $text);
+    }
+
+
+    /**
+     * Replaces a "#" or "*" at the start or the end of the line text with U+266A. Tags, spaces and a dialogue dash may
+     * stand between the sign and the line edge. A space or the line edge must follow a sign at the start and precede a
+     * sign at the end, so "*sigh*" and "Room #5" stay.
+     */
+    private static function musicNotes(string $line): string
+    {
+        $edge = '(?:' . Markup::TAG . '|\s)*';
+        $line = self::replace('/^(' . $edge . '(?:[' . DialogueDash::CHARACTERS . ']\s*)?)[#*](?=\s|' . $edge . '$)/u', "\$1\u{266A}", $line);
+
+        return self::replace('/(?<=\s)[#*](' . $edge . ')$/u', "\u{266A}\$1", $line);
     }
 
 

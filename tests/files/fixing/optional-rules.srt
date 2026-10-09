@@ -22,3 +22,7 @@ i think i'm ready, but i.e. not today.
 6
 00:00:16,000 --> 00:00:18,000
 <i>so we stay.</i> Fine.
+
+7
+00:00:19,000 --> 00:00:21,000
+# we sail out at noon #

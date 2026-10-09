@@ -28,6 +28,7 @@ final class CommonErrorOptions
      * @param bool              $dialogueOnOneLine            split "- Hi. - Hello." into 2 dialogue lines. Off by default
      * @param bool              $loneLowercaseI               write the English pronoun "i" as "I", as in "i think". Off by default
      * @param bool              $sentenceStartCase            start a cue or line after a sentence end with a capital letter. Off by default
+     * @param bool              $musicNotes                   write a "#" or "*" at the start or end of a line as U+266A, as in "# la la #". Off by default
      */
     public function __construct(
         public readonly ?string $language = null,
@@ -47,6 +48,7 @@ final class CommonErrorOptions
         public readonly bool $dialogueOnOneLine = false,
         public readonly bool $loneLowercaseI = false,
         public readonly bool $sentenceStartCase = false,
+        public readonly bool $musicNotes = false,
     ) {
     }
 }

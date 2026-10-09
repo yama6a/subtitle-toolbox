@@ -129,6 +129,13 @@ class CommonErrorFixerTest extends TestCase
             "music note and a dash before"       => ["sentenceStartCase", "en", ["\u{266A} la la!", "- \u{00E9}t\u{00E9}."],
                                                      ["\u{266A} La la!", "- \u{00C9}t\u{00E9}."]],
             "Turkish dotted i"                   => ["sentenceStartCase", "tr", ["iyi."], ["\u{0130}yi."]],
+            "hash music signs"                   => ["musicNotes", "en", ["# Happy birthday #"], ["\u{266A} Happy birthday \u{266A}"]],
+            "star music signs"                   => ["musicNotes", "en", ["* Happy birthday *"], ["\u{266A} Happy birthday \u{266A}"]],
+            "music sign in a tag"                => ["musicNotes", "en", ["<i># la la la</i>"], ["<i>\u{266A} la la la</i>"]],
+            "music sign after a dash"            => ["musicNotes", "en", ["- # la la", "- * oh *"], ["- \u{266A} la la", "- \u{266A} oh \u{266A}"]],
+            "music sign as the whole line"       => ["musicNotes", "en", ["#"], ["\u{266A}"]],
+            "signs that are no music"            => ["musicNotes", "en", ["Room #5, *sigh*", "C# code", "#1 fan"],
+                                                     ["Room #5, *sigh*", "C# code", "#1 fan"]],
             "text without case"                  => ["sentenceStartCase", "ja", ["\u{3053}\u{3093}\u{306B}\u{3061}\u{306F}\u{3002}"],
                                                      ["\u{3053}\u{3093}\u{306B}\u{3061}\u{306F}\u{3002}"]],
         ];
@@ -200,7 +207,7 @@ class CommonErrorFixerTest extends TestCase
 
         CommonErrorFixer::apply($subtitle, $options);
 
-        $this->assertSame(["loneLowercaseI", "dialogueOnOneLine", "sentenceStartCase"], array_values($optional));
+        $this->assertSame(["loneLowercaseI", "dialogueOnOneLine", "musicNotes", "sentenceStartCase"], array_values($optional));
         $this->assertStringEqualsFile(self::FILES . "fixing/optional-rules.fixed.srt", $subtitle->toString(Format::SubRip));
         $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "fixing/optional-rules.fixed.srt")),
                                                       $options)->fixes);
@@ -335,6 +342,12 @@ class CommonErrorFixerTest extends TestCase
     public function testSentenceStartCaseIsOffByDefault(): void
     {
         $this->assertSame(["hello."], self::fixLines(["hello."], new CommonErrorOptions(language: "en"))[0]);
+    }
+
+
+    public function testMusicNotesIsOffByDefault(): void
+    {
+        $this->assertSame(["# La la #"], self::fixLines(["# La la #"], new CommonErrorOptions(language: "en"))[0]);
     }
 
 
