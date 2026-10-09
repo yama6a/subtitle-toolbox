@@ -16,6 +16,8 @@ use SubtitleToolbox\Translation\DeepLEngine;
 use SubtitleToolbox\Translation\DeepLOptions;
 use SubtitleToolbox\Translation\GoogleTranslateEngine;
 use SubtitleToolbox\Translation\GoogleTranslateOptions;
+use SubtitleToolbox\Translation\OpenAiCompatibleEngine;
+use SubtitleToolbox\Translation\OpenAiCompatibleOptions;
 use SubtitleToolbox\Translation\TranslationEngine;
 use SubtitleToolbox\Translation\TranslationRunner;
 
@@ -31,7 +33,8 @@ class ApplicationTranslateTest extends TestCase
 
     private const TRANSLATION = __DIR__ . "/../files/translation/";
 
-    private const TRANSLATE_VARIABLES = ["DEEPL_API_KEY", "GOOGLE_TRANSLATE_API_KEY", "SUBTITLE_TOOLBOX_TRANSLATE_URL"];
+    private const TRANSLATE_VARIABLES = ["DEEPL_API_KEY", "GOOGLE_TRANSLATE_API_KEY", "OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_MODEL",
+                                         "SUBTITLE_TOOLBOX_TRANSLATE_URL"];
 
     private ?LocalServer $server = null;
 
@@ -77,7 +80,7 @@ class ApplicationTranslateTest extends TestCase
 
 
     /**
-     * Starts the fake DeepL and Google server, points translate at it and sets the environment variables of $keys.
+     * Starts the fake translation server, points translate at it and sets the environment variables of $keys.
      *
      * @param array<string, string> $keys
      */
@@ -154,6 +157,38 @@ class ApplicationTranslateTest extends TestCase
 
 
     #[RequiresPhpExtension("curl")]
+    public function testTranslateWithOpenAiSendsNoKeyWithoutOneAndReadsTheModelOfTheEnvironment(): void
+    {
+        $this->startTranslateServer(["OPENAI_MODEL" => "llama3", "OPENAI_BASE_URL" => "https://llm.example.com/v1", "DEEPL_API_KEY" => "deepl-key"]);
+
+        [$code, $stdout, $stderr] = self::runApplication(["translate", self::TRANSLATION . "own_station.srt", "--engine", "openai",
+                                                          "--source-language", "en", "--target-language", "de"]);
+
+        $client   = new FakeHttpClient([[200, file_get_contents(self::TRANSLATION . "openai_de.json")]]);
+        $expected = self::recordedTranslation(new OpenAiCompatibleEngine(new OpenAiCompatibleOptions("http://localhost/v1", "llama3", httpClient: $client)),
+                                              "en", "de", Format::SubRip);
+        $this->assertSame([0, $expected, ""], [$code, $stdout, $stderr]);
+        $this->assertSame([["/v1/chat/completions", "", "llama3", $client->requests[0]["body"]["messages"]]],
+                          array_map(fn (array $request): array => [$request["path"], $request["key"], $request["body"]["model"],
+                                                                   $request["body"]["messages"]], $this->serverRequests()));
+    }
+
+
+    #[RequiresPhpExtension("curl")]
+    public function testTranslateWithOpenAiSendsTheKeyOfTheEnvironmentAndFailsOnAnHttpError(): void
+    {
+        $this->startTranslateServer(["OPENAI_MODEL" => "gpt-9", "OPENAI_API_KEY" => "bad-request"]);
+
+        $this->assertSame(
+            [3, "", "stdin: TranslationException (Error #109): The OpenAI-compatible service answered with HTTP 400. " .
+                    "The model `gpt-9` does not exist or you do not have access to it.\n"],
+            self::runApplication(["translate", "-", "--engine", "openai", "--target-language", "de"], "1\n00:00:01,000 --> 00:00:02,000\nHello\n")
+        );
+        $this->assertSame("bad-request", $this->serverRequests()[0]["key"]);
+    }
+
+
+    #[RequiresPhpExtension("curl")]
     public function testTranslateFailsTheFileOnAnHttpErrorWithExitCode3WithoutPrintingTheKey(): void
     {
         $this->startTranslateServer();
@@ -189,9 +224,9 @@ class ApplicationTranslateTest extends TestCase
         putenv("GOOGLE_TRANSLATE_API_KEY=google-key");
         $usage = "\nRun \"subtitle-toolbox help translate\" for the usage.\n";
 
-        $this->assertSame([2, "", "Error: Pass --engine deepl or --engine google.$usage"],
+        $this->assertSame([2, "", "Error: Pass --engine deepl, google or openai.$usage"],
                           self::runApplication(["translate", "-", "--target-language", "de"]));
-        $this->assertSame([2, "", "Error: The option --engine must be deepl or google, got \"bing\".$usage"],
+        $this->assertSame([2, "", "Error: The option --engine must be deepl, google or openai, got \"bing\".$usage"],
                           self::runApplication(["translate", "-", "--engine", "bing", "--target-language", "de"]));
         $this->assertSame([2, "", "Error: Pass --api-key or set the environment variable DEEPL_API_KEY.$usage"],
                           self::runApplication(["translate", "-", "--engine", "deepl", "--target-language", "de"]));
@@ -207,6 +242,18 @@ class ApplicationTranslateTest extends TestCase
         $this->assertSame([2, "", "Error: 2 input files need --output-dir DIR. One input file goes to standard output or to -o FILE.$usage"],
                           self::runApplication(["translate", self::TRANSLATION . "own_station.srt", self::FILES . "cli/latin1.srt",
                                                 "--engine", "google", "--target-language", "fr"]));
+        $this->assertSame([2, "", "Error: Set the environment variable OPENAI_MODEL, for example OPENAI_MODEL=gpt-4o-mini.$usage"],
+                          self::runApplication(["translate", "-", "--engine", "openai", "--target-language", "de"]));
+        putenv("OPENAI_MODEL= ");
+        $this->assertSame([2, "", "Error: The environment variable OPENAI_MODEL is empty. Set it to a model name, for example gpt-4o-mini.$usage"],
+                          self::runApplication(["translate", "-", "--engine", "openai", "--target-language", "de"]));
+        putenv("OPENAI_MODEL=llama3");
+        putenv("OPENAI_BASE_URL=localhost:11434/v1");
+        putenv("SUBTITLE_TOOLBOX_TRANSLATE_URL");
+        $this->assertSame([2, "", "Error: The environment variable OPENAI_BASE_URL must start with http:// or https://, got \"localhost:11434/v1\".$usage"],
+                          self::runApplication(["translate", "-", "--engine", "openai", "--target-language", "de"]));
+        $this->assertSame([2, "", "Error: The API key is empty. Pass --api-key or set OPENAI_API_KEY.$usage"],
+                          self::runApplication(["translate", "-", "--engine", "openai", "--api-key", "", "--target-language", "de"]));
     }
 
 
@@ -238,7 +285,7 @@ class ApplicationTranslateTest extends TestCase
         [$code, $stdout, $stderr] = self::runApplication(["translate", "--help"]);
 
         $this->assertSame([0, ""], [$code, $stderr]);
-        $this->assertStringStartsWith("Usage: subtitle-toolbox translate <input>... --engine deepl|google\n" .
+        $this->assertStringStartsWith("Usage: subtitle-toolbox translate <input>... --engine deepl|google|openai\n" .
                                       "                                  --target-language CODE\n" .
                                       "                                  [--source-language CODE] [--api-key KEY]\n" .
                                       "                                  [options]\n", $stdout);

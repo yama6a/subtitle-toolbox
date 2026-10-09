@@ -25,6 +25,7 @@ use SubtitleToolbox\Sync\ReferenceSyncOptions;
 use SubtitleToolbox\Timing\ShotChangeOptions;
 use SubtitleToolbox\Translation\DeepLOptions;
 use SubtitleToolbox\Translation\GoogleTranslateOptions;
+use SubtitleToolbox\Translation\OpenAiCompatibleOptions;
 use SubtitleToolbox\Validation\ValidationRules;
 
 class OptionsCopyTest extends TestCase
@@ -86,6 +87,7 @@ class OptionsCopyTest extends TestCase
             ProfanityOptions::class       => [["heck"]],
             GoogleTranslateOptions::class => ["key"],
             DeepLOptions::class           => ["key"],
+            OpenAiCompatibleOptions::class => ["http://localhost/v1", "llama3"],
             ReferenceSyncOptions::class   => [new Subtitle()],
         ];
 

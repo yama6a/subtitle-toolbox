@@ -2,7 +2,8 @@
 
 declare(strict_types=1);
 
-// Router script for "php -S" that plays DeepL on /v2/translate and Google Cloud Translation on /language/translate/v2.
+// Router script for "php -S" that plays DeepL on /v2/translate, Google Cloud Translation on /language/translate/v2 and an
+// OpenAI-compatible service on /v1/chat/completions. A request to /v1/chat/completions without a key has the key "".
 // The keys "forbidden", "busy" and "quota" give HTTP 403, 429 and 456. "bad-request" gives the recorded error of each service.
 // Any other path echoes the method, the headers and the body as JSON, with the status of the query parameter "status".
 // With FAKE_SERVER_LOG set, each request appends one JSON line with its path, key and body to that file.
@@ -12,6 +13,7 @@ $body = file_get_contents("php://input");
 $key  = match ($path) {
     "/v2/translate"           => preg_replace('/^DeepL-Auth-Key /', "", $_SERVER["HTTP_AUTHORIZATION"] ?? ""),
     "/language/translate/v2"  => $_SERVER["HTTP_X_GOOG_API_KEY"] ?? "",
+    "/v1/chat/completions"    => preg_replace('/^Bearer /', "", $_SERVER["HTTP_AUTHORIZATION"] ?? ""),
     default                   => null,
 };
 
@@ -27,13 +29,13 @@ if ($key === null) {
     return;
 }
 
-$deepL = $path === "/v2/translate";
+$file  = ["/v2/translate" => "deepl", "/language/translate/v2" => "google", "/v1/chat/completions" => "openai"][$path];
 $error = ["forbidden" => 403, "busy" => 429, "quota" => 456, "bad-request" => 400][$key] ?? null;
 if ($error !== null) {
     http_response_code($error);
-    echo $key === "bad-request" ? file_get_contents(__DIR__ . ($deepL ? "/deepl_error.json" : "/google_error.json")) : '{"message": "error"}';
+    echo $key === "bad-request" ? file_get_contents(__DIR__ . "/{$file}_error.json") : '{"message": "error"}';
 
     return;
 }
 
-echo file_get_contents(__DIR__ . ($deepL ? "/deepl_de.json" : "/google_fr.json"));
+echo file_get_contents(__DIR__ . ($file === "google" ? "/google_fr.json" : "/{$file}_de.json"));
