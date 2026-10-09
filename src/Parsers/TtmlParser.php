@@ -56,10 +56,14 @@ final class TtmlParser extends SubtitleParser
 
     private int $paragraphIndex = 0;
 
+    /** @var list<array{int, SubtitleCue, int, int, list<string>}> the cue key, cue, line, paragraph index and lines of each paragraph without an end */
+    private array $openParagraphs = [];
+
 
     protected function read(string $content): Subtitle
     {
         $this->paragraphIndex = 0;
+        $this->openParagraphs = [];
         $document             = $this->loadDocument($content);
         $this->root           = $document->documentElement;
         $this->namespace      = $this->root->namespaceURI;
@@ -97,6 +101,10 @@ final class TtmlParser extends SubtitleParser
         $cues = [];
         if ($body !== null) {
             $this->readContainer($cues, $body, new TtmlScope(), []);
+        }
+        foreach ($this->openParagraphs as [$key, $cue, $line, $index, $lines]) {
+            unset($cues[$key]);
+            $this->fail(new ParsingException("The paragraph that begins at {$cue->getStart()}s has no end time."), $line, $index, $lines);
         }
 
         return $subtitle->addCues($cues);
@@ -306,7 +314,7 @@ final class TtmlParser extends SubtitleParser
                 $this->readContainer($cues, $child, $scope, $divAttributes);
             } elseif ($this->isTtElement($child, "p")) {
                 try {
-                    $cue = $this->readParagraph($child, $scope);
+                    $cue = $this->readParagraph($child, $scope, $open);
                 } catch (ParsingException $exception) {
                     $this->fail($exception, $child->getLineNo(), $this->paragraphIndex++, $this->xmlLines($child));
                     continue;
@@ -314,6 +322,10 @@ final class TtmlParser extends SubtitleParser
                 $this->paragraphIndex++;
                 if ($divAttributes !== []) {
                     $cue->setFormatData(self::FORMAT_DATA_KEY, [...$cue->findFormatData(self::FORMAT_DATA_KEY), "div" => $divAttributes]);
+                }
+                $this->endOpenParagraphs($cue->getStart());
+                if ($open) {
+                    $this->openParagraphs[] = [count($cues), $cue, $child->getLineNo(), $this->paragraphIndex - 1, $this->xmlLines($child)];
                 }
                 $cues[] = $cue;
             }
@@ -332,8 +344,12 @@ final class TtmlParser extends SubtitleParser
     }
 
 
-    private function readParagraph(DOMElement $paragraph, TtmlScope $scope): SubtitleCue
+    /**
+     * In lenient mode, a paragraph without an end gets its begin as end, and $open becomes true.
+     */
+    private function readParagraph(DOMElement $paragraph, TtmlScope $scope, ?bool &$open = null): SubtitleCue
     {
+        $open = false;
         [$begin, $end] = $this->interval($paragraph, $scope->begin, $scope->end);
         if ($scope->end !== null && $begin >= $scope->end) {
             [$begin, $end] = $this->absoluteInterval($paragraph, $begin, $scope->end);
@@ -349,12 +365,13 @@ final class TtmlParser extends SubtitleParser
         $runs  = [];
         $this->collectRuns($paragraph, $style, $agent, $this->preservesSpace($paragraph, $scope->preserveSpace), [$begin, $end], $runs);
         if ($end === null) {
-            [$begin, $end] = $this->timedSpansInterval($runs)
-                ?? throw new ParsingException("The paragraph that begins at {$begin}s has no end time.");
+            $spans = $this->timedSpansInterval($runs);
+            $open  = $spans === null && $this->options->lenient;
+            [$begin, $end] = $spans ?? ($open ? [$begin, $begin] : throw new ParsingException("The paragraph that begins at {$begin}s has no end time.", $paragraph->getLineNo()));
         }
         $runs = array_values(array_filter(
             $runs,
-            fn (array $run): bool => !isset($run["begin"]) || $run["begin"] > $begin && $run["begin"] < $end
+            fn (array $run): bool => !isset($run["begin"]) || $run["begin"] > $begin && ($open || $run["begin"] < $end)
         ));
 
         $cue = new SubtitleCue($begin, $end, $this->runsToLines($runs));
@@ -374,6 +391,27 @@ final class TtmlParser extends SubtitleParser
         $cue->setForced($forced || $this->hasForcedSpan($paragraph, $forced));
 
         return $cue;
+    }
+
+
+    /**
+     * Ends each paragraph without an end that begins before $begin.
+     */
+    private function endOpenParagraphs(float $begin): void
+    {
+        foreach ($this->openParagraphs as $key => [, $cue, $line, $index, $lines]) {
+            if ($cue->getStart() < $begin) {
+                $cue->setEnd($begin);
+                $this->warn(
+                    "The paragraph that begins at {$cue->getStart()}s has no end time. The parser ended it at the next paragraph at {$begin}s.",
+                    $line,
+                    $index,
+                    $lines,
+                    ParseWarningAction::Repaired
+                );
+                unset($this->openParagraphs[$key]);
+            }
+        }
     }
 
 
@@ -480,10 +518,10 @@ final class TtmlParser extends SubtitleParser
         }
 
         $ends = $parentEnd === null ? [] : [$parentEnd];
-        if ($element->hasAttribute("end")) {
+        if (trim($element->getAttribute("end")) !== "") {
             $ends[] = $this->offsetTime($parentBegin, $element, "end");
         }
-        if ($element->hasAttribute("dur")) {
+        if (trim($element->getAttribute("dur")) !== "") {
             $ends[] = $this->offsetTime($begin, $element, "dur");
         }
 
