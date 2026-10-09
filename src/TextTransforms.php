@@ -11,6 +11,9 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
  */
 trait TextTransforms
 {
+    private const TEXT_TRANSFORMS_SENTENCE_GAP = 2.0;
+
+
     /**
      * Calls $fn for each text run between tags, with entities decoded as Markup::mapTextRuns() does.
      *
@@ -99,12 +102,13 @@ trait TextTransforms
      */
     public function changeCase(CaseMode $mode, ?string $language = null): self
     {
-        $turkic = in_array(StringHelpers::primaryLanguage($language), ["tr", "az"], true);
+        $primary = StringHelpers::primaryLanguage($language);
+        $turkic  = in_array($primary, ["tr", "az"], true);
 
         return match ($mode) {
             CaseMode::Upper    => $this->textTransformsMapRuns(fn (string $text): string => self::textTransformsUpper($text, $turkic)),
             CaseMode::Lower    => $this->textTransformsMapRuns(fn (string $text): string => self::textTransformsLower($text, $turkic)),
-            CaseMode::Sentence => $this->textTransformsSentenceCase($turkic),
+            CaseMode::Sentence => $this->textTransformsSentenceCase($turkic, $primary === "en" || $language === null),
         };
     }
 
@@ -120,32 +124,39 @@ trait TextTransforms
     }
 
 
-    private function textTransformsSentenceCase(bool $turkic): self
+    private function textTransformsSentenceCase(bool $turkic, bool $english): self
     {
         $currentCue       = null;
+        $previousEnd      = null;
+        $endsSentence     = true;
         $capitalizeNext   = true;
         $afterPunctuation = false;
 
         return $this->textTransformsMapRuns(
             function (string $text, SubtitleCue $cue, bool $startsLine)
-                use (&$currentCue, &$capitalizeNext, &$afterPunctuation, $turkic): string {
+                use (&$currentCue, &$previousEnd, &$endsSentence, &$capitalizeNext, &$afterPunctuation, $turkic, $english): string {
                 if ($cue !== $currentCue) {
                     $currentCue       = $cue;
-                    $capitalizeNext   = true;
+                    $capitalizeNext   = $endsSentence || ($previousEnd !== null
+                        && $cue->getStart() - $previousEnd >= self::TEXT_TRANSFORMS_SENTENCE_GAP - Timecode::EPSILON);
                     $afterPunctuation = false;
+                    $previousEnd      = $cue->getEnd();
+                    $endsSentence     = self::textTransformsEndsSentence(Markup::visibleText(implode("\n", $cue->getLines())));
                 }
                 if ($startsLine && $afterPunctuation) {
                     $capitalizeNext = true;
                 }
 
-                return self::textTransformsSentenceCaseRun($text, $turkic, $capitalizeNext, $afterPunctuation);
+                $text = self::textTransformsSentenceCaseRun($text, $turkic, $capitalizeNext, $afterPunctuation);
+
+                return $english ? self::textTransformsEnglishI($text) : $text;
             }
         );
     }
 
 
     /**
-     * Lowers a text run and capitalizes its first letter or digit after the start of a cue or a sentence.
+     * Lowers a text run and capitalizes its first letter or digit after the start of a sentence.
      */
     private static function textTransformsSentenceCaseRun(string $text, bool $turkic, bool &$capitalizeNext, bool &$afterPunctuation): string
     {
@@ -157,7 +168,7 @@ trait TextTransforms
                 }
                 $capitalizeNext   = false;
                 $afterPunctuation = false;
-            } elseif (in_array($char, [".", "!", "?"], true)) {
+            } elseif (in_array($char, [".", "!", "?", "\u{2026}"], true)) {
                 $afterPunctuation = true;
             } elseif ($afterPunctuation && ctype_space($char)) {
                 $capitalizeNext = true;
@@ -166,6 +177,23 @@ trait TextTransforms
         }
 
         return $result;
+    }
+
+
+    private static function textTransformsEndsSentence(string $text): bool
+    {
+        return (preg_match('/[.!?\x{2026}][\p{Pe}\p{Pi}\p{Pf}"\']*$/u', $text)
+            ?: preg_match('/[.!?][)\]}"\']*$/', $text)) === 1;
+    }
+
+
+    /**
+     * Writes the English pronoun "i" and its contractions such as "i'm" in upper case. "i.e." stays lower case.
+     */
+    private static function textTransformsEnglishI(string $text): string
+    {
+        return preg_replace('/(?<![\p{L}\p{N}\'\x{2019}]|\p{L}\.)i(?=(?:[\'\x{2019}](?:m|ll|ve|d))?(?![\p{L}\p{N}\'\x{2019}]|\.\p{L}))/u', "I", $text)
+            ?? preg_replace('/(?<![A-Za-z0-9\']|[A-Za-z]\.)i(?=(?:\'(?:m|ll|ve|d))?(?![A-Za-z0-9\']|\.[A-Za-z]))/', "I", $text);
     }
 
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use SubtitleToolbox\Tests\Support\TestSubtitles;
 use SubtitleToolbox\Validation\ValidationRules;
 
@@ -52,6 +53,15 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testRealRunOnCaptionsContinueSentencesAcrossCues(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "own_cea608_run_on.vtt"), Format::WebVtt);
+
+        $this->assertSame(file_get_contents(self::FILES . "own_cea608_run_on_sentence.vtt"),
+                          $subtitle->changeCase(CaseMode::Sentence)->toString(Format::WebVtt));
+    }
+
+
     public function testRealCaptionFileCleanedUp(): void
     {
         $subtitle = $this->parseCaptions()
@@ -94,7 +104,7 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     {
         $this->assertSame([
             "<b>Οδος σταθμου 4</b>",
-            "Große bäckereı. Öffnet um 6 uhr!",
+            "große bäckereı. Öffnet um 6 uhr!",
             "<font color=\"#ffff00\">İstasyon kapısı ışıklı.</font>",
             "<i>Raın &lt;3 &amp; snow</i>",
         ], TestSubtitles::texts($this->parseMultilingual()->changeCase(CaseMode::Sentence, "tr-TR")));
@@ -134,17 +144,85 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     {
         $subtitle = TestSubtitles::fromTexts([
             "WHERE ARE YOU GOING? HOME.",
-            "<i>WAIT...</i> <b>WHAT?!</b> \"NO.\" OK",
+            "<i>WAIT...</i> <b>WHAT?!</b> \"NO.\" OK.",
             "- READ WWW.EXAMPLE.COM.\n- 3.5 KM, THEN STOP!",
             "STRASSE. ßAD",
         ]);
 
         $this->assertSame([
             "Where are you going? Home.",
-            "<i>Wait...</i> <b>What?!</b> \"No.\" Ok",
+            "<i>Wait...</i> <b>What?!</b> \"No.\" Ok.",
             "- Read www.example.com.\n- 3.5 km, then stop!",
             "Strasse. Ssad",
         ], TestSubtitles::texts($subtitle->changeCase(CaseMode::Sentence)));
+    }
+
+
+    public function testSentenceContinuesInTheNextCue(): void
+    {
+        $subtitle = TestSubtitles::fromTexts(["WE WENT TO THE", "STORE ON MONDAY, AND I THINK I SAW JOHN.", "THEN \"BYE.\"", "<i>SO…</i>", "OK"]);
+
+        $this->assertSame(["We went to the", "store on monday, and I think I saw john.", "Then \"bye.\"", "<i>So…</i>", "Ok"],
+                          TestSubtitles::texts($subtitle->changeCase(CaseMode::Sentence)));
+    }
+
+
+    #[DataProvider("sentenceGapProvider")]
+    public function testGapStartsASentence(float $start, string $expected): void
+    {
+        $subtitle = (new Subtitle())->addCues([new SubtitleCue(0.0, 1.0, "WAIT FOR"), new SubtitleCue($start, $start + 1, "ME")]);
+
+        $this->assertSame(["Wait for", $expected], TestSubtitles::texts($subtitle->changeCase(CaseMode::Sentence)));
+    }
+
+
+    /**
+     * @return array<string, array{float, string}>
+     */
+    public static function sentenceGapProvider(): array
+    {
+        return [
+            "1.999 s" => [2.999, "me"],
+            "2 s"     => [3.0, "Me"],
+            "5 s"     => [6.0, "Me"],
+        ];
+    }
+
+
+    #[DataProvider("englishIProvider")]
+    public function testEnglishPronounIInUpperCase(?string $language, string $expected): void
+    {
+        $subtitle = TestSubtitles::fromTexts(["WELL, I'M HERE AND I'LL STAY. I\u{2019}VE, I'D, I-I, HI, PI, 3I, I'S, I.E."]);
+
+        $this->assertSame([$expected], TestSubtitles::texts($subtitle->changeCase(CaseMode::Sentence, $language)));
+    }
+
+
+    /**
+     * @return array<string, array{?string, string}>
+     */
+    public static function englishIProvider(): array
+    {
+        $english = "Well, I'm here and I'll stay. I\u{2019}ve, I'd, I-I, hi, pi, 3i, i's, i.e.";
+
+        return [
+            "no language" => [null, $english],
+            "en"          => ["en", $english],
+            "en-GB"       => ["en-GB", $english],
+            "de"          => ["de", "Well, i'm here and i'll stay. I\u{2019}ve, i'd, i-i, hi, pi, 3i, i's, i.e."],
+        ];
+    }
+
+
+    public function testGermanKeepsALoneLowerCaseI(): void
+    {
+        $this->assertSame(["Ich bin da, i."], TestSubtitles::texts(TestSubtitles::fromTexts(["ICH BIN DA, I."])->changeCase(CaseMode::Sentence, "de")));
+    }
+
+
+    public function testLowerCaseKeepsTheEnglishPronounI(): void
+    {
+        $this->assertSame(["i think"], TestSubtitles::texts(TestSubtitles::fromTexts(["I THINK"])->changeCase(CaseMode::Lower)));
     }
 
 
