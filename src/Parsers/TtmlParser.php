@@ -54,6 +54,9 @@ final class TtmlParser extends SubtitleParser
 
     private float $tickRate;
 
+    /** True when lenient mode reads the last field of hh:mm:ss:ff as hundredths of a second. */
+    private bool $hundredths = false;
+
     private int $paragraphIndex = 0;
 
     /** @var list<array{int, SubtitleCue, int, int, list<string>}> the cue key, cue, line, paragraph index and lines of each paragraph without an end */
@@ -128,6 +131,9 @@ final class TtmlParser extends SubtitleParser
             $seconds = Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4] ?? "");
             if (($matches[4] ?? "") !== "") {
                 return $seconds;
+            }
+            if ($this->hundredths && ($matches[5] ?? "") !== "") {
+                return $seconds + (int) $matches[5] / 100;
             }
             $frames = ($matches[5] ?? "") === "" ? 0 : (int) $matches[5];
             $frames += ($matches[6] ?? "") === "" ? 0 : (int) $matches[6] / $this->subFrameRate;
@@ -272,7 +278,8 @@ final class TtmlParser extends SubtitleParser
             $multiplier = [1, 1];
         }
 
-        $this->smpteFrameRate = (float) ($frameRate ?? 30) ?: 30;
+        $this->hundredths     = false;
+        $this->smpteFrameRate = (float) ($frameRate ?? $this->guessFrameRate()) ?: 30;
         $this->frameRate      = $this->smpteFrameRate * (float) $multiplier[0] / (float) $multiplier[1];
         $this->smpteTimeBase  = trim($this->attribute($this->root, "ttp", "timeBase") ?? "") === "smpte";
         $this->dropMode       = trim($this->attribute($this->root, "ttp", "dropMode") ?? "nonDrop");
@@ -281,6 +288,46 @@ final class TtmlParser extends SubtitleParser
         $this->tickRate       = $tickRate !== null && (float) $tickRate > 0
             ? (float) $tickRate
             : ($frameRate !== null ? $this->frameRate : 1);
+    }
+
+
+    /**
+     * Returns the default of 30 fps, or 50 or 60 fps in lenient mode when a frame label in the file is 30 or more.
+     * No frame rate fits a label of 60 or more, so lenient mode then reads the last field as hundredths of a second.
+     *
+     * @see https://www.w3.org/TR/ttml2/#parameter-attribute-frameRate
+     */
+    private function guessFrameRate(): float
+    {
+        $highest = null;
+        foreach ((new DOMXPath($this->root->ownerDocument))->query("//@begin | //@end | //@dur") as $attribute) {
+            if (preg_match("/^\d{2,}:\d{2}:\d{2}:(\d{2})(?:\.\d+)?$/", trim($attribute->value), $matches)
+                && (int) $matches[1] >= 30 && (int) $matches[1] > (int) ($highest[1] ?? 0)) {
+                $highest = [$attribute, (int) $matches[1]];
+            }
+        }
+        if ($highest === null) {
+            return 30;
+        }
+
+        [$attribute, $label] = $highest;
+        $expression = trim($attribute->value);
+        $line       = $attribute->parentNode->getLineNo();
+        $message    = "The frame label $label in \"$expression\" is not below the default frame rate of 30, and the file has no ttp:frameRate.";
+        if (!$this->options->lenient) {
+            throw new ParsingException($message, $line);
+        }
+        if ($label >= 60) {
+            $this->hundredths = true;
+            $this->warn("$message The parser read the last field as hundredths of a second.", $line, null, [], ParseWarningAction::Repaired);
+
+            return 30;
+        }
+
+        $guess = $label < 50 ? 50 : 60;
+        $this->warn("$message The parser read the frames at $guess fps.", $line, null, [], ParseWarningAction::Repaired);
+
+        return $guess;
     }
 
 

@@ -1083,6 +1083,71 @@ class LenientParsingTest extends TestCase
     }
 
 
+    #[DataProvider("highTtmlFrameLabels")]
+    public function testLenientModeGuessesTheFrameRateOfTtmlWithHighFrameLabels(string $begin, string $end, float $start, float $stop, int $label, int $fps): void
+    {
+        $subtitle = (new TtmlParser())->parse(
+            "<tt xmlns=\"http://www.w3.org/ns/ttml\">\n<body><div><p begin=\"$begin\" end=\"$end\">Text</p></div></body></tt>",
+            new ReadOptions(lenient: true)
+        );
+
+        $this->assertSame([[$start, $stop]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
+        $this->assertSame([[2, null, self::REPAIRED,
+            "The frame label $label in \"" . ($label === (int) substr($begin, -2) ? $begin : $end) . "\" is not below the default frame rate of 30, and the file has no ttp:frameRate. The parser read the frames at $fps fps."]],
+            $this->warningRows($subtitle->getParseWarnings()));
+    }
+
+
+    public static function highTtmlFrameLabels(): array
+    {
+        return [
+            "50 fps" => ["00:00:01:45", "00:00:02:10", 1.9, 2.2, 45, 50],
+            "60 fps" => ["00:00:01:30", "00:00:02:55", 1.5, 2.917, 55, 60],
+        ];
+    }
+
+
+    public function testStrictModeRejectsTtmlFrameLabelsAboveTheDefaultFrameRate(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The frame label 45 in \"00:00:01:45\" is not below the default frame rate of 30, and the file has no ttp:frameRate. (line 2)");
+        (new TtmlParser())->parse("<tt xmlns=\"http://www.w3.org/ns/ttml\">\n<body><div><p begin=\"00:00:01:45\" end=\"00:00:02:10\">Text</p></div></body></tt>", new ReadOptions());
+    }
+
+
+    public function testLenientModeReadsTtmlFrameLabelsOfSixtyOrMoreAsHundredths(): void
+    {
+        $subtitle = (new TtmlParser())->parse(
+            "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div>\n<p begin=\"00:00:01:75\" end=\"00:00:03:20\">Text</p>\n<p begin=\"00:00:04:05\" end=\"00:00:05.500\">More</p></div></body></tt>",
+            new ReadOptions(lenient: true)
+        );
+
+        $this->assertSame([[1.75, 3.2], [4.05, 5.5]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
+        $this->assertSame([[2, null, self::REPAIRED,
+            "The frame label 75 in \"00:00:01:75\" is not below the default frame rate of 30, and the file has no ttp:frameRate. The parser read the last field as hundredths of a second."]],
+            $this->warningRows($subtitle->getParseWarnings()));
+    }
+
+
+    public function testStrictModeRejectsTtmlFrameLabelsOfSixtyOrMore(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The frame label 75 in \"00:00:01:75\" is not below the default frame rate of 30, and the file has no ttp:frameRate.");
+        (new TtmlParser())->parse("<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div><p begin=\"00:00:01:75\" end=\"00:00:03:00\">Text</p></div></body></tt>", new ReadOptions());
+    }
+
+
+    public function testTtmlFrameLabelsBelowThirtyKeepTheDefaultFrameRate(): void
+    {
+        $subtitle = (new TtmlParser())->parse(
+            "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div><p begin=\"00:00:01:15\" end=\"00:00:02:29\">Text</p></div></body></tt>",
+            new ReadOptions()
+        );
+
+        $this->assertSame([1.5, 2.967], [$subtitle->getCues()[0]->getStart(), $subtitle->getCues()[0]->getEnd()]);
+    }
+
+
     public function testIttParserInheritsLenientMode(): void
     {
         $subtitle = (new IttParser())->parse(file_get_contents(self::DIR . "bad_begin.ttml"), new ReadOptions(lenient: true));
