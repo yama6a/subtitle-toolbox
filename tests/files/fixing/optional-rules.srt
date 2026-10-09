@@ -18,3 +18,7 @@ A slow - and cold - crossing.
 5
 00:00:13,000 --> 00:00:15,000
 i think i'm ready, but i.e. not today.
+
+6
+00:00:16,000 --> 00:00:18,000
+<i>so we stay.</i> Fine.

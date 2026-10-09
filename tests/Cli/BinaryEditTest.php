@@ -364,7 +364,7 @@ class BinaryEditTest extends BinaryTestCase
     public function testErrorsEnableTurnsOnRulesThatAreOffByDefault(): void
     {
         copy(self::FILES . "fixing/optional-rules.srt", "$this->dir/optional.srt");
-        $names  = ["loneLowercaseI", "dialogueOnOneLine"];
+        $names  = ["loneLowercaseI", "dialogueOnOneLine", "sentenceStartCase"];
         $enable = implode(",", $names);
 
         $this->assertSame([0, file_get_contents(self::FILES . "fixing/optional-rules.fixed.srt"), ""],
