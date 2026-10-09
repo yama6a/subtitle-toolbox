@@ -56,7 +56,8 @@
     "yama6a/php-glyph-ocr": "^0.3, for GlyphOcrEngine, the pure PHP OCR of PGS and VobSub image cues where Tesseract is not installed"
   },
   "conflict": {
-    "yama6a/php-glyph-ocr": "<0.3 || >=0.4"
+    "yama6a/php-glyph-ocr": "<0.3 || >=0.4",
+    "yama6a/subtitle-toolbox-php": "*"
   },
   "config": {
     "platform": {

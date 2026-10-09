@@ -38,4 +38,12 @@ class VersionTest extends TestCase
     {
         $this->assertMatchesRegularExpression('/^(dev|\d+\.\d+\.\d+\S*)$/', Version::get());
     }
+
+
+    public function testConflictsWithThePackageUnderItsNewName(): void
+    {
+        $composer = json_decode((string) file_get_contents(__DIR__ . "/../../composer.json"), true, flags: JSON_THROW_ON_ERROR);
+
+        $this->assertSame("*", $composer["conflict"]["yama6a/subtitle-toolbox-php"] ?? null);
+    }
 }
