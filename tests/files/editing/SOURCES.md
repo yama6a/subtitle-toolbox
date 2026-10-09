@@ -16,3 +16,4 @@
 | `own_glow_duplicates_deduplicated.ass` | Written for this repository. Expected `AssFormatter` output for `own_glow_duplicates.ass` after `removeDuplicateCues()`. | MIT |
 | `own_ferry_drift.vtt` | Written for this repository. WebVTT with a cue before, at, across and after 3 sync points, and word timestamps in the cue across 600 s. | MIT |
 | `own_ferry_drift_synced.vtt` | Written for this repository. Expected `WebVttFormatter` output for `own_ferry_drift.vtt` after `syncByPoints()` with 10 s to 12 s, 600 s to 610 s and 1200 s to 1205 s. | MIT |
+| `own_ferry_drift_shifted.vtt` | Written for this repository. Expected `WebVttFormatter` output for `own_ferry_drift.vtt` after `shift()` by 2 s from 6 s to 600 s. | MIT |

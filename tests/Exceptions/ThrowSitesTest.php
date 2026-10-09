@@ -589,6 +589,7 @@ class ThrowSitesTest extends TestCase
             "Profanity/ProfanityOptions.php: star in a word" => [fn () => new ProfanityOptions(["f*ck"]), ...$invalid],
             "Profanity/ProfanityOptions.php: no words"      => [fn () => new ProfanityOptions([]), ...$invalid],
             "ReadOptions.php: unknown encoding"             => [fn () => new ReadOptions(encoding: "NO-SUCH-ENCODING"), ...$invalid],
+            "Retiming.php: shift range in reverse"          => [fn () => self::subtitle()->shift(1, 2, 1), ...$invalid],
             "Retiming.php: same old times"                  => [fn () => self::subtitle()->syncByTwoPoints(1, 1, 1, 2), ...$invalid],
             "Retiming.php: new times in reverse"            => [fn () => self::subtitle()->syncByTwoPoints(1, 2, 2, 1), ...$invalid],
             "Retiming.php: no sync points"                  => [fn () => self::subtitle()->syncByPoints([]), ...$invalid],

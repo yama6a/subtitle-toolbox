@@ -115,6 +115,40 @@ class RetimingTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testShiftWithARangeMovesTheCuesThatStartInIt(): void
+    {
+        $subtitle = Subtitle::load(self::EDITING . "own_ferry_drift.vtt", Format::WebVtt);
+
+        $this->assertSame($subtitle, $subtitle->shift(2, fromTime: 6, toTime: 600));
+        $this->assertStringEqualsFile(self::EDITING . "own_ferry_drift_shifted.vtt", $subtitle->toString(Format::WebVtt));
+    }
+
+
+    public function testShiftWithOnlyAnEndTimeMovesTheCuesThatStartBeforeIt(): void
+    {
+        $subtitle = TestSubtitles::fromTimes([[10, 12.5], [20, 22], [30, 31]]);
+
+        $subtitle->shift(-1, toTime: 20);
+
+        $this->assertSame([[9.0, 11.5], [20.0, 22.0], [30.0, 31.0]], TestSubtitles::times($subtitle));
+    }
+
+
+    public function testShiftRejectsAnEndTimeThatIsNotAfterTheStartTime(): void
+    {
+        foreach ([[600, 600], [900, 600]] as [$from, $to]) {
+            $subtitle = TestSubtitles::fromTimes([[1, 2]]);
+            try {
+                $subtitle->shift(2, $from, $to);
+                $this->fail("No exception.");
+            } catch (InvalidArgumentException $exception) {
+                $this->assertSame("The end time of the shift must be after its start time, got $from to $to.", $exception->getMessage());
+            }
+            $this->assertSame([[1.0, 2.0]], TestSubtitles::times($subtitle));
+        }
+    }
+
+
     public function testSyncByPointsMapsEachSegmentLinearlyAndMovesWordTimestamps(): void
     {
         $subtitle = Subtitle::load(self::EDITING . "own_ferry_drift.vtt", Format::WebVtt);

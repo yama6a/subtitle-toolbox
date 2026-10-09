@@ -12,12 +12,19 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 trait Retiming
 {
     /**
-     * Shifts the cues that start at or after $fromTime by $seconds, or all cues when $fromTime is null.
+     * Shifts the cues that start at or after $fromTime and before $toTime by $seconds. A null bound has no limit.
+     * The start time of a cue decides, so a cue across $toTime moves as a whole.
      * The word timestamps in the cue text move with the cue. A time that becomes negative becomes 0, and the cue stays.
+     *
+     * @throws InvalidArgumentException when $toTime is not after $fromTime.
      */
-    public function shift(float $seconds, ?float $fromTime = null): self
+    public function shift(float $seconds, ?float $fromTime = null, ?float $toTime = null): self
     {
-        return $this->retimingApplyLinearCorrection(1, $seconds, $fromTime);
+        if ($fromTime !== null && $toTime !== null && !($toTime > $fromTime)) {
+            throw new InvalidArgumentException("The end time of the shift must be after its start time, got $fromTime to $toTime.");
+        }
+
+        return $this->retimingApplyLinearCorrection(1, $seconds, $fromTime, $toTime);
     }
 
 
@@ -116,10 +123,10 @@ trait Retiming
     }
 
 
-    private function retimingApplyLinearCorrection(float $factor, float $offset, ?float $fromTime = null): self
+    private function retimingApplyLinearCorrection(float $factor, float $offset, ?float $fromTime = null, ?float $toTime = null): self
     {
         foreach ($this->getCues() as $cue) {
-            if ($fromTime !== null && $cue->getStart() < $fromTime) {
+            if (($fromTime !== null && $cue->getStart() < $fromTime) || ($toTime !== null && $cue->getStart() >= $toTime)) {
                 continue;
             }
 
