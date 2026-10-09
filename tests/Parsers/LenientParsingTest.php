@@ -430,6 +430,19 @@ class LenientParsingTest extends TestCase
                     [7, 2, self::SKIPPED, "The paragraph that begins at 7s has no end time."],
                 ],
             ],
+            "TTML with a paragraph that begins after its timed div ends" => [
+                "mantas_multiple_divs.ttml",
+                TtmlParser::class,
+                "The paragraph begins at 3.887s, but its parent ends at 2.423s. (line 12)",
+                [
+                    [1.464, 2.423, "The train to the coast\nleaves from platform four."],
+                    [2.423, 5.432, "Please mind the gap."],
+                    [10.886, 10.928, "BAKERY OPEN"],
+                ],
+                [
+                    [12, 1, self::REPAIRED, "The paragraph begins at 3.887s, but its parent ends at 2.423s. The parser read its times as absolute: 2.423s to 5.432s."],
+                ],
+            ],
             "TTML with a credit line before the XML declaration" => [
                 "credit_before_xml.ttml",
                 TtmlParser::class,
@@ -990,6 +1003,18 @@ class LenientParsingTest extends TestCase
             "an HTML root"    => ["<html><body><p>Hello<br></body></html>"],
             "no root element" => ["<?xml version=\"1.0\"?>\n<!-- empty -->"],
         ];
+    }
+
+
+    public function testLenientModeSkipsAParagraphAfterItsTimedDivWithoutOwnEnd(): void
+    {
+        $subtitle = (new TtmlParser())->parse(
+            "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div begin=\"5s\" end=\"6s\">\n<p begin=\"2s\">Late</p>\n<p>On time</p></div></body></tt>",
+            new ReadOptions(lenient: true)
+        );
+
+        $this->assertEquals([[5, 6, "On time"]], $this->cueRows($subtitle->getCues()));
+        $this->assertSame([[2, 0, self::SKIPPED, "The paragraph begins at 7s, but its parent ends at 6s."]], $this->warningRows($subtitle->getParseWarnings()));
     }
 
 

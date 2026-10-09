@@ -487,6 +487,10 @@
         "fromPath": null,
         "detect": null
     },
+    "lenient/mantas_multiple_divs.ttml": {
+        "fromPath": "ttml",
+        "detect": "ttml"
+    },
     "lenient/missing_cue_numbers.srt": {
         "fromPath": "srt",
         "detect": "srt"
@@ -1200,10 +1204,6 @@
         "detect": "ttml"
     },
     "ttml/real/mantas_fps_multiplier.ttml": {
-        "fromPath": "ttml",
-        "detect": "ttml"
-    },
-    "ttml/real/mantas_multiple_divs.ttml": {
         "fromPath": "ttml",
         "detect": "ttml"
     },

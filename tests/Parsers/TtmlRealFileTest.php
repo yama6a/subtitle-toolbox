@@ -45,7 +45,6 @@ class TtmlRealFileTest extends TestCase
             "mantas_dfxp_br"             => ["mantas_dfxp_br.dfxp", 1, 0.0, 1.0, "one\ntwo\nthree", 2, 0.0, 1.0, "one\ntwo\nthree", 2],
             "mantas_duplicated_ids"      => ["mantas_duplicated_ids.ttml", 3, 0.0, 1.0, "First line.", null, 2.0, 3.0, "Third line.", null],
             "mantas_fps_multiplier"      => ["mantas_fps_multiplier.ttml", 1, 15.015, 17.684, "First line.", null, 15.015, 17.684, "First line.", null],
-            "mantas_multiple_divs"       => ["mantas_multiple_divs.ttml", 3, 1.464, 2.423, "The train to the coast\nleaves from platform four.", null, 10.886, 10.928, "BAKERY OPEN", null],
             "mantas_netflix_ticks"       => ["mantas_netflix_ticks.dfxp", 2, 137.4, 140.4, "The bakery's first bread\nis ready at six o'clock.", null, 3740.5, 3742.5, "The last train leaves at midnight.", null],
             "mantas_ttml2"               => ["mantas_ttml2.ttml", 5, 0.0, 2.0, "Hello I am your first line.", null, 8.0, 10.0, "<font color=\"#ff0000\">I am the last caption displayed in red and centered.</font>", 8],
             "pysubs2_regions"            => ["pysubs2_regions.ttml", 10, 1.375, 5.75, "TOP SAMPLE TEXT", 8, 45.325, 50.041, "for the weekend market.", 2],
