@@ -42,7 +42,7 @@ php subtitle-toolbox.phar --version
 | `validate` | prints each broken rule, as text or with `--json`, see [Validate](#validate) |
 | `sync` | retimes a subtitle to a reference subtitle or to the speech, see [Sync](#sync) |
 | `diff` | lists the added, removed and changed cues of two files, see [Diff](#diff) |
-| `translate` | translates the cue text with DeepL or Google Cloud Translation, see [Translate](#translate) |
+| `translate` | translates the cue text with DeepL, Google Cloud Translation or an OpenAI-compatible service, see [Translate](#translate) |
 | `dual` | merges two languages into one file, see [Dual](#dual) |
 | `hls` | cuts a subtitle into WebVTT segments and writes an HLS playlist, see [HLS](#hls) |
 | `formats` | lists the format names and extensions for `--from` and `--to` |
@@ -375,28 +375,31 @@ vendor/bin/subtitle-toolbox diff episode1_v1.srt episode1_v2.srt --ignore-format
 - **New file**: a new file that is missing or does not parse fails with exit code 3. The message names only the new file, for example `episode1_v2.srt: The file does not exist.`
 
 ## Translate
-`translate` translates the cue text with [`TranslationRunner`](translation.md) and the built-in engine `DeepLEngine` or `GoogleTranslateEngine`. It needs the PHP extension curl.
+`translate` translates the cue text with [`TranslationRunner`](translation.md) and the built-in engine `DeepLEngine`, `GoogleTranslateEngine` or `OpenAiCompatibleEngine`. It needs the PHP extension curl.
 
 ```sh
 vendor/bin/subtitle-toolbox translate movie.de.srt --engine deepl --source-language de --target-language en-US -o movie.en.srt
 DEEPL_API_KEY=... vendor/bin/subtitle-toolbox translate movie.de.srt --engine deepl --target-language en-US
 GOOGLE_TRANSLATE_API_KEY=... vendor/bin/subtitle-toolbox translate season1/ --engine google --target-language fr --to vtt --output-dir fr/
+OPENAI_BASE_URL=http://localhost:11434/v1 OPENAI_MODEL=llama3 vendor/bin/subtitle-toolbox translate movie.de.srt --engine openai --target-language en
 ```
 
 | Option | Sets |
 |:--- |:--- |
-| `--engine deepl\|google` | the engine, `DeepLEngine` or `GoogleTranslateEngine`. Required |
-| `--api-key KEY` | `apiKey` of `DeepLOptions` or `GoogleTranslateOptions`. Default: `DEEPL_API_KEY` for `deepl`, `GOOGLE_TRANSLATE_API_KEY` for `google` |
+| `--engine deepl\|google\|openai` | the engine, `DeepLEngine`, `GoogleTranslateEngine` or `OpenAiCompatibleEngine`. Required |
+| `--api-key KEY` | `apiKey` of the engine options. Default: `DEEPL_API_KEY` for `deepl`, `GOOGLE_TRANSLATE_API_KEY` for `google`, `OPENAI_API_KEY` for `openai` |
 | `--source-language CODE` | the language of the input, for example `de`. Default: the engine detects it |
 | `--target-language CODE` | the language of the output, for example `en-US` for DeepL or `fr` for Google. Required |
 | `--fps`, `--input-fps`, `--output-fps` | `frameRate` of the MicroDVD, CSV and iTT read and write options, see [Frame rates](#frame-rates) |
 
 - **Key**: the tool reads only the variable of the chosen engine. With `--engine deepl`, a set `GOOGLE_TRANSLATE_API_KEY` does not help. The key never appears in the output or in error messages.
+- **openai**: the tool reads the model from `OPENAI_MODEL`, which is required. It reads the base URL from `OPENAI_BASE_URL`, default `https://api.openai.com/v1`. The key is optional, because a local service such as Ollama needs none.
 - **Shared machine**: other users can read the arguments of a process, for example with `ps`, and the shell history keeps them. On a shared machine, set the variable in place of `--api-key`.
 - **Language codes**: the tool passes the codes to the service as they are and does not check them. The service rejects an unknown code, and the file fails.
 - **Usage errors**: the tool stops with exit code 2 before it reads a file in these cases:
   - A missing or unknown `--engine`.
-  - A missing key.
+  - A missing key for `deepl` or `google`.
+  - A missing `OPENAI_MODEL`, or an `OPENAI_BASE_URL` without `http://` or `https://`, for `openai`.
   - A missing `--target-language`.
 - **Service errors**: an error of the service fails the file with exit code 3. The message names the cause, for example a wrong key (HTTP 403), too many requests (HTTP 429), a used-up DeepL quota (HTTP 456) or no response. `--keep-going` goes on with the next file.
 - **Warnings**: when the service drops a placeholder tag, the tool prints `movie.srt: cue 4: ...` to standard error and writes the cue without tags.

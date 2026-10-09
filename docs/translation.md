@@ -31,7 +31,7 @@ $english->save('movie.en.srt');
 - **Engine errors**: `translate()` throws `InvalidArgumentException` when the engine does not return one string per text. Exceptions of the engine pass through. The subtitle changes only after the last engine call succeeds.
 
 ## Engines
-The library ships 2 engines. Both send plain HTTP requests through the PHP extension curl. No vendor SDK is needed.
+The library ships 3 engines. All send plain HTTP requests through the PHP extension curl. No vendor SDK is needed.
 
 ```php
 use SubtitleToolbox\Format;
@@ -75,6 +75,30 @@ $french->save('movie.fr.srt');
 - **Retries**: the engines send a request again after HTTP 429, 500, 502, 503 or 504. They wait 1, 2 and 4 seconds before the 3 retries. The 4th failed answer throws `TranslationException`. The waits are fixed, because `HttpClient::post()` returns no headers such as `Retry-After`. A request that gets no response does not get a retry.
 - **No curl**: without `ext-curl` and without an `httpClient`, the engine constructor throws `InvalidArgumentException` with a message that names the extension. Check `extension_loaded('curl')` before you create an engine. Composer lists `ext-curl` under `suggest` only, because the rest of the library runs without it.
 - **Google v3**: the engine uses v2. v3 needs an OAuth access token and a project ID in place of an API key.
+
+### OpenAI-compatible services
+`OpenAiCompatibleEngine` sends the texts to a large language model through the chat completions API. OpenAI, Ollama, LM Studio, the llama.cpp server and vLLM offer this API.
+
+```php
+use SubtitleToolbox\Translation\OpenAiCompatibleEngine;
+use SubtitleToolbox\Translation\OpenAiCompatibleOptions;
+
+$openAi = new OpenAiCompatibleEngine(new OpenAiCompatibleOptions('https://api.openai.com/v1', 'gpt-4o-mini', apiKey: $openAiKey));
+$ollama = new OpenAiCompatibleEngine(new OpenAiCompatibleOptions('http://localhost:11434/v1', 'llama3'));
+```
+
+| Option | Default | Sets |
+|:--- |:--- |:--- |
+| `baseUrl` | required | the URL in front of `/chat/completions`. It must start with `http://` or `https://` |
+| `model` | required | the model name that the service knows, for example `gpt-4o-mini` or `llama3` |
+| `apiKey` | null, no `Authorization` header | the key for the header `Authorization: Bearer`. The rules of `apiKey` above apply |
+| `prompt` | null, the built-in prompt | the system prompt. `{source}` and `{target}` in it become the language codes. An empty source becomes "the language of the text" |
+| `httpClient` | null, a client that uses `ext-curl` | the `HttpClient` that sends the requests |
+
+- **Request**: the engine sends all texts of one call as a JSON array in the user message. The built-in prompt asks for a JSON array of the same length, with the `<xN>` tags and the entities `&lt;`, `&gt;` and `&amp;` kept.
+- **Answer**: the engine reads the first JSON array in `choices[0].message.content`. Text around it, a code block and a `<think>` block do not matter.
+- **Fallback**: an answer without a JSON array, or with another number of strings, makes the engine send each text in a request of its own. When such an answer has no array with 1 string, the engine throws `TranslationException`.
+- **Quality**: a model can change the meaning or drop a placeholder. A dropped placeholder gives a `TranslationWarning`, as with the other engines.
 
 ## Your own HTTP client
 Implement `HttpClient` to send the requests with another HTTP library, or to log them. Its method `post()` returns the status code and the body of the response:

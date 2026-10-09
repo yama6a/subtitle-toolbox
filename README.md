@@ -21,7 +21,7 @@ The library needs PHP 8.2 or later with `ext-dom` and `ext-iconv`. These extensi
 
 - `ext-mbstring` for Unicode upper and lower case
 - `ext-zlib` for PGS output and compressed MKV tracks
-- `ext-curl` for the DeepL and Google translation engines
+- `ext-curl` for the translation engines
 
 The command line tool also comes as a PHAR file and as two container images. The `-tesseract` image includes Tesseract for OCR. See [Install without Composer](docs/cli.md#install-without-composer) for the commands.
 

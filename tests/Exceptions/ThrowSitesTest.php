@@ -101,6 +101,8 @@ use SubtitleToolbox\Translation\DeepLEngine;
 use SubtitleToolbox\Translation\DeepLOptions;
 use SubtitleToolbox\Translation\GoogleTranslateEngine;
 use SubtitleToolbox\Translation\GoogleTranslateOptions;
+use SubtitleToolbox\Translation\OpenAiCompatibleEngine;
+use SubtitleToolbox\Translation\OpenAiCompatibleOptions;
 use SubtitleToolbox\Translation\TranslationEngine;
 use SubtitleToolbox\Translation\TranslationOptions;
 use SubtitleToolbox\Translation\TranslationRunner;
@@ -663,6 +665,19 @@ class ThrowSitesTest extends TestCase
             "Translation/GoogleTranslateOptions.php: empty key" => [fn () => new GoogleTranslateOptions(""), ...$invalid],
             "Translation/GoogleTranslateOptions.php: key with a space" => [fn () => new GoogleTranslateOptions(" key"), ...$invalid],
             "Translation/GoogleTranslateOptions.php: base URL without scheme" => [fn () => new GoogleTranslateOptions("key", "ftp://example.com"),
+                                                                ...$invalid],
+            "Translation/OpenAiCompatibleEngine.php: HTTP 401" => [fn () => (new OpenAiCompatibleEngine(new OpenAiCompatibleOptions("http://localhost/v1",
+                                                                "llama3", httpClient: new FakeHttpClient([[401, ""]]))))->translate(["a"], "en", "de"),
+                                                                ...$translation],
+            "Translation/OpenAiCompatibleEngine.php: no JSON array" => [fn () => (new OpenAiCompatibleEngine(new OpenAiCompatibleOptions(
+                                                                "http://localhost/v1", "llama3", httpClient: new FakeHttpClient([[200, "{}"], [200, "{}"]]))))
+                                                                ->translate(["a"], "en", "de"), ...$translation],
+            "Translation/OpenAiCompatibleOptions.php: base URL without scheme" => [fn () => new OpenAiCompatibleOptions("localhost:11434/v1", "llama3"),
+                                                                ...$invalid],
+            "Translation/OpenAiCompatibleOptions.php: empty model" => [fn () => new OpenAiCompatibleOptions("http://localhost/v1", " "), ...$invalid],
+            "Translation/OpenAiCompatibleOptions.php: key with a line break" => [fn () => new OpenAiCompatibleOptions("http://localhost/v1", "llama3", "sk\n"),
+                                                                ...$invalid],
+            "Translation/OpenAiCompatibleOptions.php: empty prompt" => [fn () => new OpenAiCompatibleOptions("http://localhost/v1", "llama3", prompt: ""),
                                                                 ...$invalid],
             "Translation/TranslationOptions.php: cue limit 0" => [fn () => new TranslationOptions(maxCuesPerSentence: 0), ...$invalid],
             "Translation/TranslationOptions.php: character limit 0" => [fn () => new TranslationOptions(maxCharactersPerRequest: 0), ...$invalid],

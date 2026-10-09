@@ -8,4 +8,6 @@
 | `deepl_error.json` | Written for this repository in the shape of a DeepL HTTP 400 error body. | MIT |
 | `google_fr.json` | Written for this repository in the shape of a Cloud Translation v2 `translate` response to the sentences of `own_station.srt`. | MIT |
 | `google_error.json` | Written for this repository in the shape of a Cloud Translation v2 HTTP 400 error body. | MIT |
-| `fake-server.php` | Written for this repository. A `php -S` router script that plays DeepL and Google in the tests. | MIT |
+| `openai_de.json` | Written for this repository in the shape of an OpenAI `/v1/chat/completions` response to the sentences of `own_station.srt`. | MIT |
+| `openai_error.json` | Written for this repository in the shape of an OpenAI chat completions error body. | MIT |
+| `fake-server.php` | Written for this repository. A `php -S` router script that plays DeepL, Google and an OpenAI-compatible service in the tests. | MIT |
