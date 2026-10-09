@@ -31,7 +31,7 @@ final class SamiFormatter extends SubtitleFormatter
 
         $output = "<SAMI>" . LineEnding::Lf->value . "<HEAD>" . LineEnding::Lf->value;
         if ($title !== null) {
-            $output .= "<TITLE>" . htmlspecialchars($title, ENT_NOQUOTES, "UTF-8") . "</TITLE>" . LineEnding::Lf->value;
+            $output .= "<TITLE>" . htmlspecialchars(XmlOutput::requireUtf8($title), ENT_NOQUOTES, "UTF-8") . "</TITLE>" . LineEnding::Lf->value;
         }
         if (isset($data["samiParam"])) {
             $output .= "<SAMIParam>{$data["samiParam"]}</SAMIParam>" . LineEnding::Lf->value;
@@ -49,7 +49,7 @@ final class SamiFormatter extends SubtitleFormatter
             }
         }
 
-        return $this->applyOutputOptions($output . "</BODY>" . LineEnding::Lf->value . "</SAMI>" . LineEnding::Lf->value, $options);
+        return $this->applyOutputOptions(XmlOutput::requireUtf8($output . "</BODY>" . LineEnding::Lf->value . "</SAMI>" . LineEnding::Lf->value), $options);
     }
 
 
@@ -80,7 +80,7 @@ final class SamiFormatter extends SubtitleFormatter
         $tag = "<P" . ($class === null ? "" : " Class=$class");
         foreach ($attributes as $name => $value) {
             $tag .= " " . strtoupper($name) . "=" .
-                    (preg_match('/^[\w.-]+$/', $value) ? $value : "\"" . htmlspecialchars($value, ENT_QUOTES, "UTF-8") . "\"");
+                    (preg_match('/^[\w.-]+$/', $value) ? $value : "\"" . htmlspecialchars(XmlOutput::requireUtf8($value), ENT_QUOTES, "UTF-8") . "\"");
         }
 
         return "$tag>";

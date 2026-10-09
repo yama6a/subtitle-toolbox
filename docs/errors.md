@@ -51,6 +51,7 @@ try {
 - A cue without an image in PGS.
 - A subtitle number over 65535 in EBU STL.
 - Text that is not UTF-8 in a JSON format.
+- Text that is not UTF-8 in TTML, iTT or SAMI output.
 - A stored TTML head that is not valid XML.
 
 ## Translation errors

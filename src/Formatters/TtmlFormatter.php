@@ -65,7 +65,7 @@ final class TtmlFormatter extends SubtitleFormatter
             $output .= "    </div>" . LineEnding::Lf->value;
         }
 
-        return $this->applyOutputOptions($output . "  </body>" . LineEnding::Lf->value . "</tt>" . LineEnding::Lf->value, $options);
+        return $this->applyOutputOptions(XmlOutput::requireUtf8($output . "  </body>" . LineEnding::Lf->value . "</tt>" . LineEnding::Lf->value), $options);
     }
 
 
@@ -378,7 +378,7 @@ final class TtmlFormatter extends SubtitleFormatter
 
     private function formatText(string $text): string
     {
-        $text = htmlspecialchars(Markup::decodeEntities($text), ENT_XML1 | ENT_NOQUOTES, "UTF-8");
+        $text = htmlspecialchars(XmlOutput::requireUtf8(Markup::decodeEntities($text)), ENT_XML1 | ENT_NOQUOTES, "UTF-8");
 
         return str_replace(LineEnding::Lf->value, "<br/>", $text);
     }
