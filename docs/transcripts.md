@@ -26,6 +26,7 @@ $subtitle->getCues()[0]->findFormatData('whisper')['avg_logprob'];           // 
 | whisper.cpp | `-oj`: `transcription` with `offsets` in milliseconds. `-ojf` adds `tokens` | [`cli.cpp`](https://github.com/ggml-org/whisper.cpp/blob/60c0be6ac8fa71b1a2ae2dd938a31a34a508e774/examples/cli/cli.cpp) |
 
 - **Cues**: one cue per segment. The parser trims the text and skips segments without text. A long segment stays one cue. [`Resegmenter`](editing.md#long-cues) breaks it up.
+- **No duration**: in srv1 and srv2, a `<text>` without `dur` or `d` ends at the next later start. The last one lasts [`ReadOptions::$lastCueDuration`](read-options.md). A `dur="0"` stays 0 s long.
 - **Word timestamps**: off by default. With `TranscriptReadOptions::$wordTimestamps`, each word that has a start time and occurs in the segment text gets a word timestamp before it. The parser skips the other words. The OpenAI API lists the words at the top level. A word then goes to the segment that holds the middle of the word.
 - **Speakers**: off by default. `TranscriptReadOptions::$speakerVoices` writes the segment `speaker` as a `<v>` tag. See [text.md](text.md#speakers).
 - **Language**: the `language` metadata. A name such as `english` becomes `en`. A code such as `en` stays.
@@ -56,6 +57,7 @@ $subtitle->getCues()[2]->findFormatData('deepgram')['confidence'];           // 
 
 - **Word grouping**: a cue ends after a word that ends a sentence with `.`, `?`, `!` or their CJK forms. It also ends before a pause of 1 s or more and where the speaker changes. A cue also ends before a word that makes it longer than 84 characters.
 - **Long cues**: an audio segment, utterance or result stays one cue. [`Resegmenter`](editing.md#long-cues) breaks it up. With `TranscriptReadOptions::$wordTimestamps`, `ResegmentMode::ByWords` regroups the words with other limits.
+- **No duration**: in srv1 and srv2, a `<text>` without `dur` or `d` ends at the next later start. The last one lasts [`ReadOptions::$lastCueDuration`](read-options.md). A `dur="0"` stays 0 s long.
 - **Word timestamps**: off by default. With `TranscriptReadOptions::$wordTimestamps`, each word gets a word timestamp before it.
 - **Speakers**: off by default. `TranscriptReadOptions::$speakerVoices` writes the speaker label of the service as a `<v>` tag, for example `<v spk_0>`, `<v 0>`, `<v A>` or `<v 1>`. The `rename` option of [`SpeakerLabels::apply()`](text.md#speakers) gives them names.
 - **Amazon Transcribe**: the language comes from `results.language_code`.
@@ -88,6 +90,7 @@ $subtitle->findFormatData('youtube')['format'];                              // 
 | srv1 and transcript XML | `<transcript><text start="1.2" dur="2.3">Hello world</text></transcript>` |
 
 - **Automatic captions**: the parser skips the events that only add a line break. A cue in a window ends where the next cue of the same window starts, so the rolling cues do not stack.
+- **No duration**: in srv1 and srv2, a `<text>` without `dur` or `d` ends at the next later start. The last one lasts [`ReadOptions::$lastCueDuration`](read-options.md). A `dur="0"` stays 0 s long.
 - **Word timestamps**: off by default. With `TranscriptReadOptions::$wordTimestamps`, each segment of a cue gets a word timestamp. This needs at least one segment of the cue with a time. srv1 and srv2 have no word times.
 - **Alignment**: from the anchor point of the window position of a cue. Anchor point 0 is top left and becomes alignment 7. A cue without its own window position, such as an automatic caption, has no alignment.
 - **Pens**: the pen color becomes `<font color>`. Bold, italic and underline become `<b>`, `<i>` and `<u>`.
