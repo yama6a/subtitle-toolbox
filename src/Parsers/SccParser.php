@@ -9,6 +9,7 @@ use SubtitleToolbox\Encoding\Cea608Decoder;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
+use SubtitleToolbox\Parsers\Options\SccRollUp;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -36,7 +37,9 @@ final class SccParser extends SubtitleParser
     protected function read(string $content): Subtitle
     {
         $codeLines = $this->readCodeLines($this->lines($content), $dropFrame);
-        $states    = (new Cea608Decoder($this->formatOptions()->channel))->decode($codeLines);
+        $decoder   = new Cea608Decoder($this->formatOptions()->channel);
+        $states    = $decoder->decode($codeLines);
+        $byLine    = $this->formatOptions()->rollUp === SccRollUp::Lines;
 
         $subtitle   = new Subtitle();
         $parsedCues = [];
@@ -45,6 +48,10 @@ final class SccParser extends SubtitleParser
         }
         foreach ($states as $index => $state) {
             if ($state["lines"] === []) {
+                continue;
+            }
+
+            if ($byLine && $state["mode"] === Cea608Decoder::MODE_ROLL_UP) {
                 continue;
             }
 
@@ -58,17 +65,37 @@ final class SccParser extends SubtitleParser
                 }
             }
 
-            $cue = new SubtitleCue($start, $end, array_column($state["lines"], "text"));
-            $cue->setAlignment($state["lines"][0]["row"] <= Cea608::MAX_LINES ? SubtitleCue::TOP_CENTER_ALIGNMENT : null);
-            $cue->setFormatData(self::FORMAT_DATA_KEY, [
-                "mode"    => $state["mode"],
-                "rows"    => array_column($state["lines"], "row"),
-                "columns" => array_column($state["lines"], "column"),
-            ]);
-            $parsedCues[] = $cue;
+            $parsedCues[] = self::cue($start, $end, $state["lines"], $state["mode"]);
+        }
+        if ($byLine) {
+            foreach ($decoder->rollUpLines() as $line) {
+                $start = $this->frameToSeconds($line["start"]);
+                $end   = $line["end"] === null ? $start + $this->options->lastCueDuration : $this->frameToSeconds($line["end"]);
+                if ($end > $start) {
+                    $parsedCues[] = self::cue($start, $end, [$line], Cea608Decoder::MODE_ROLL_UP);
+                }
+            }
+            usort($parsedCues, fn (SubtitleCue $a, SubtitleCue $b): int => $a->getStart() <=> $b->getStart());
         }
 
         return $subtitle->addCues($parsedCues);
+    }
+
+
+    /**
+     * @param list<array{row: int, column: int, text: string}> $lines
+     */
+    private static function cue(float $start, float $end, array $lines, string $mode): SubtitleCue
+    {
+        $cue = new SubtitleCue($start, $end, array_column($lines, "text"));
+        $cue->setAlignment($lines[0]["row"] <= Cea608::MAX_LINES ? SubtitleCue::TOP_CENTER_ALIGNMENT : null);
+        $cue->setFormatData(self::FORMAT_DATA_KEY, [
+            "mode"    => $mode,
+            "rows"    => array_column($lines, "row"),
+            "columns" => array_column($lines, "column"),
+        ]);
+
+        return $cue;
     }
 
 

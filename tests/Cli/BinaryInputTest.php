@@ -8,6 +8,8 @@ use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Matroska\MkvFixtureWriter;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
+use SubtitleToolbox\Parsers\Options\SccReadOptions;
+use SubtitleToolbox\Parsers\Options\SccRollUp;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\Tests\Support\BinaryTestCase;
@@ -194,6 +196,21 @@ class BinaryInputTest extends BinaryTestCase
         $this->assertSame([0, $expected->toString(Format::SubRip), ""], $this->runBinary(["convert", "frames.csv", "--to", "srt", "-o", "-", "--input-fps", "25"]));
         $this->assertSame([0, str_replace("\r\n", "\n", $this->file("frames.csv")), ""],
                           $this->runBinary(["convert", "frames.csv", "--to", "csv", "-o", "-", "--fps", "25", "--no-bom"]));
+    }
+
+
+    public function testSccRollUpLinesReadsEachRowOnce(): void
+    {
+        copy(self::FILES . "scc/real/rollup_news_ndf.scc", "$this->dir/news.scc");
+        $lines  = Subtitle::fromString($this->file("news.scc"), Format::Scc, new ReadOptions(format: new SccReadOptions(rollUp: SccRollUp::Lines)));
+        $screen = Subtitle::fromString($this->file("news.scc"), Format::Scc);
+
+        $this->assertSame([0, $lines->toString(Format::SubRip), ""], $this->runBinary(["convert", "news.scc", "--to", "srt", "-o", "-", "--scc-roll-up", "Lines"]));
+        $this->assertSame([0, $lines->toString(Format::SubRip), ""], $this->runBinary(["convert", "-", "--to", "srt", "-o", "-", "--scc-roll-up", "lines"], $this->file("news.scc")));
+        $this->assertSame([0, $screen->toString(Format::SubRip), ""], $this->runBinary(["convert", "news.scc", "--to", "srt", "-o", "-", "--scc-roll-up", "screen"]));
+        $this->assertSame([0, $this->tripAs(Format::WebVtt), ""], $this->runBinary(["convert", "trip.srt", "--to", "vtt", "-o", "-", "--scc-roll-up", "lines"]));
+        $this->assertSame([2, "", "Error: The option --scc-roll-up must be screen or lines, got \"rows\".\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+                          $this->runBinary(["convert", "news.scc", "--to", "srt", "-o", "-", "--scc-roll-up", "rows"]));
     }
 
 

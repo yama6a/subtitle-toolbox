@@ -377,6 +377,7 @@ SCC (Scenarist Closed Captions) is the closed caption format of US broadcast. Ma
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
+use SubtitleToolbox\Parsers\Options\SccRollUp;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\WriteOptions;
@@ -385,12 +386,14 @@ $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents('show.scc'));
 $subtitle->findFormatData('scc');                                                 // ['dropFrame' => true]
 $subtitle->getCues()[0]->findFormatData('scc');                                   // ['mode' => 'pop-on', 'rows' => [14, 15], 'columns' => [4, 8]]
 Subtitle::fromString($content, Format::Scc, new ReadOptions(format: new SccReadOptions(channel: 2)));   // CC2 or CC4
+Subtitle::fromString($content, Format::Scc, new ReadOptions(format: new SccReadOptions(rollUp: SccRollUp::Lines)));   // one cue per row
 
 $subtitle->wrapLines(32, 4)->toString(Format::Scc);
 $subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dropFrame: false)));
 ```
 
 - **Reads**: pop-on, roll-up and paint-on captions, as the screen model of [47 CFR 15.119](https://www.govinfo.gov/content/pkg/CFR-2010-title47-vol1/xml/CFR-2010-title47-vol1-sec15-119.xml) defines them. Each change of the displayed captions starts a new cue. So a roll-up file gives one cue per screen, and a row shows in each cue until it rolls off.
+- **Roll-up by row**: with `SccReadOptions(rollUp: SccRollUp::Lines)` or the CLI option `--scc-roll-up lines`, each row of roll-up captions gives one cue. The cue starts at the first character of the row. It ends when the row rolls up, or when an EDM or EOC clears the screen. A row that is still on the screen at the end of the file lasts [`ReadOptions::$lastCueDuration`](read-options.md). So a transcript of a live roll-up file holds each line once. Pop-on and paint-on captions give the same cues as without the option.
 - **Writes**: pop-on captions on data channel 1, with drop-frame time codes by default.
 - **Times**: a semicolon before the frames marks drop-frame time code, a colon marks non-drop time code. A caption that no command erases lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **Damaged data**: the parser ignores the second copy of a doubled control code and drops a byte with a parity error. It skips data channel 2, XDS packets and text mode.

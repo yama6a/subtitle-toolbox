@@ -8,6 +8,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\Parsers\Options\SccReadOptions;
+use SubtitleToolbox\Parsers\Options\SccRollUp;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 
@@ -147,6 +150,22 @@ class SccRealFileTest extends TestCase
         $this->assertSame(["&gt;&gt; GOOD MORNING. HERE IS THE"], $lines[1]);
         $this->assertSame(["WEATHER FOR TODAY.", "CLOUDS IN THE MORNING,", "SUN IN THE AFTERNOON."], $lines[4]);
         $this->assertSame(["roll-up", [13, 14, 15]], [$cues[4]->findFormatData(SccParser::FORMAT_DATA_KEY)["mode"], $cues[4]->findFormatData(SccParser::FORMAT_DATA_KEY)["rows"]]);
+    }
+
+
+    public function testRollUpFileReadByLinesGivesEachSpokenLineOnce(): void
+    {
+        $options = new ReadOptions(format: new SccReadOptions(rollUp: SccRollUp::Lines));
+        $cues    = Subtitle::fromString(file_get_contents(self::DIR . "rollup_news_ndf.scc"), Format::Scc, $options)->getCues();
+
+        $this->assertSame([
+            [0.2, 2.069, ["&gt;&gt; GOOD MORNING. HERE IS THE"]],
+            [2.202, 3.57, ["WEATHER FOR TODAY."]],
+            [3.704, 5.072, ["CLOUDS IN THE MORNING,"]],
+            [5.205, 6.74, ["SUN IN THE AFTERNOON."]],
+            [6.874, 8.075, ["&gt;&gt; NOW THE TRAFFIC."]],
+            [8.208, 10.01, ["THE BRIDGE IS OPEN."]],
+        ], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], $cues));
     }
 
 

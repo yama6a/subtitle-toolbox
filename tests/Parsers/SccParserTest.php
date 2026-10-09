@@ -10,6 +10,7 @@ use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
+use SubtitleToolbox\Parsers\Options\SccRollUp;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -47,6 +48,33 @@ class SccParserTest extends TestCase
     private function cues(string ...$lines): array
     {
         return array_values(Subtitle::fromString("Scenarist_SCC V1.0\n\n" . implode("\n\n", $lines) . "\n", Format::Scc)->getCues());
+    }
+
+
+    /**
+     * @return list<SubtitleCue>
+     */
+    private function lineCues(string ...$lines): array
+    {
+        $options = new ReadOptions(format: new SccReadOptions(rollUp: SccRollUp::Lines));
+
+        return array_values(Subtitle::fromString("Scenarist_SCC V1.0\n\n" . implode("\n\n", $lines) . "\n", Format::Scc, $options)->getCues());
+    }
+
+
+    /**
+     * @param list<SubtitleCue> $cues
+     * @return list<array{float, float, list<string>}>
+     */
+    private static function describe(array $cues): array
+    {
+        return array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], $cues);
+    }
+
+
+    private static function seconds(int $frame): float
+    {
+        return round($frame * 1001 / 30000, 3);
     }
 
 
@@ -278,6 +306,69 @@ class SccParserTest extends TestCase
         $this->assertSame(round(36 * 1001 / 30000, 3), $cues[0]->getStart());
         $this->assertSame(["roll-up", [14, 15]], [$cues[3]->findFormatData(SccParser::FORMAT_DATA_KEY)["mode"], $cues[3]->findFormatData(SccParser::FORMAT_DATA_KEY)["rows"]]);
         $this->assertSame(round(150 * 1001 / 30000, 3), $cues[3]->getEnd());
+    }
+
+
+    public function testRollUpLinesGivesOneCuePerRowUntilItRollsUp(): void
+    {
+        $cues = $this->lineCues(
+            "00:00:01:00\t9425 9425 94ad 94ad 9470 9470 " . self::text("ONE"),
+            "00:00:02:00\t" . self::text(" TWO"),
+            "00:00:03:00\t9425 9425 94ad 94ad 9470 9470 " . self::text("THREE"),
+            "00:00:04:00\t9425 9425 94ad 94ad 9470 9470 " . self::text("FOUR"),
+            "00:00:05:00\t942c 942c"
+        );
+
+        $this->assertSame([
+            [self::seconds(36), self::seconds(92), ["ONE TWO"]],
+            [self::seconds(96), self::seconds(122), ["THREE"]],
+            [self::seconds(126), self::seconds(150), ["FOUR"]],
+        ], self::describe($cues));
+        $this->assertSame(["mode" => "roll-up", "rows" => [15], "columns" => [0]], $cues[0]->findFormatData(SccParser::FORMAT_DATA_KEY));
+    }
+
+
+    public function testRollUpLinesFollowsTheWindowToTheRowOfANewPac(): void
+    {
+        $cues = $this->lineCues(
+            "00:00:01:00\t9426 9426 94ad 94ad 9470 9470 " . self::text("ONE"),
+            "00:00:02:00\t1370 1370",
+            "00:00:03:00\t9426 9426 94ad 94ad 1370 1370 " . self::text("THREE"),
+            "00:00:04:00\t942c 942c"
+        );
+
+        $this->assertSame([["ONE"], ["THREE"]], array_map(fn (SubtitleCue $cue): array => $cue->getLines(), $cues));
+        $this->assertSame([13, 13], array_map(fn (SubtitleCue $cue): int => $cue->findFormatData(SccParser::FORMAT_DATA_KEY)["rows"][0], $cues));
+        $this->assertSame(self::seconds(92), $cues[0]->getEnd());
+    }
+
+
+    public function testRollUpLinesKeepsPopOnCaptionsAndEndsARowAtEndOfCaption(): void
+    {
+        $content = [
+            "00:00:01:00\t9420 9420 9470 9470 " . self::text("POP") . " 942f 942f",
+            "00:00:03:00\t9425 9425 94ad 94ad 9470 9470 " . self::text("ROLL"),
+            "00:00:05:00\t9420 9420 9470 9470 " . self::text("NEXT") . " 942f 942f",
+            "00:00:07:00\t942c 942c",
+        ];
+
+        $screen = $this->cues(...$content);
+        $lines  = $this->lineCues(...$content);
+
+        $this->assertEquals([$screen[0], $screen[2]], [$lines[0], $lines[2]]);
+        $this->assertSame([self::seconds(96), self::seconds(156), ["ROLL"]], self::describe($lines)[1]);
+        $this->assertCount(3, $lines);
+    }
+
+
+    public function testRollUpLinesRowOnTheScreenAtTheEndOfTheDataLastsTheLastCueDuration(): void
+    {
+        $cues = $this->lineCues(
+            "00:00:01:00\t9425 9425 94ad 94ad 9470 9470 " . self::text("ONE"),
+            "00:00:02:00\t9425 9425 94ad 94ad 9470 9470 " . self::text("TWO")
+        );
+
+        $this->assertSame([[self::seconds(36), self::seconds(62), ["ONE"]], [self::seconds(66), round(self::seconds(66) + 5, 3), ["TWO"]]], self::describe($cues));
     }
 
 

@@ -12,6 +12,8 @@ use SubtitleToolbox\OptionsCopy;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\Options\FormatReadOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
+use SubtitleToolbox\Parsers\Options\SccReadOptions;
+use SubtitleToolbox\Parsers\Options\SccRollUp;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ReadOptions;
@@ -38,6 +40,8 @@ abstract class FileCommand extends Command
     private ?int $secondTrack = null;
 
     protected bool $wordTimestamps = false;
+
+    private ?SccRollUp $sccRollUp = null;
 
     protected int $succeeded = 0;
 
@@ -113,6 +117,7 @@ abstract class FileCommand extends Command
             Option::value("input-fps", "RATE", "Frame rate of a MicroDVD input without a {1}{1}<fps> first line, and of CSV or TSV times in hh:mm:ss:ff."),
             Option::value("fps", "RATE", $this->fpsDescription()),
             Option::flag("word-timestamps", "Keep the word times of speech-to-text JSON, YouTube timed text and Podcasting 2.0 transcript input."),
+            Option::value("scc-roll-up", "MODE", "How SCC input reads roll-up captions: screen gives one cue per screen, lines gives one cue per row. Default: screen."),
             Option::value("track", "NUMBER", "Subtitle track of an MKV or WebM input. Needed when the file has 2 or more subtitle tracks. \"info\" lists them."),
         ];
         if ($this->takesManyInputs()) {
@@ -146,6 +151,8 @@ abstract class FileCommand extends Command
         $this->outputFiles    = new OutputFiles();
         $this->inputFps       = $arguments->rate("input-fps");
         $this->wordTimestamps = $this->needsWordTimestamps($arguments);
+        $sccRollUp            = $arguments->choice("scc-roll-up", array_column(SccRollUp::cases(), "value"));
+        $this->sccRollUp      = $sccRollUp === null ? null : SccRollUp::from($sccRollUp);
         $names                = $this->fileOptionNames();
         $this->inputTrack     = $arguments->positiveInt($names["track"]);
         $this->secondTrack    = $arguments->positiveInt($names["track2"]);
@@ -432,14 +439,14 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Returns the format of an input without --from when --input-fps or word timestamps apply to it.
+     * Returns the format of an input without --from when --input-fps, word timestamps or --scc-roll-up apply to it.
      * Returns null for format detection otherwise. The read then passes them in the read options of that format.
      *
      * @param callable(): string $content
      */
     private function formatWithOptions(callable $content, ?string $path): ?Format
     {
-        if ($this->inputFps === null && !$this->wordTimestamps) {
+        if ($this->inputFps === null && !$this->wordTimestamps && $this->sccRollUp === null) {
             return null;
         }
         $content = $content();
@@ -469,7 +476,7 @@ abstract class FileCommand extends Command
 
 
     /**
-     * Returns --input-fps for the formats that read a frame rate, and the word timestamps for the transcript formats.
+     * Returns --input-fps for the formats that read a frame rate, the word timestamps for the transcript formats and --scc-roll-up for SCC.
      */
     private function formatOptions(Format $format): ?FormatReadOptions
     {
@@ -479,6 +486,7 @@ abstract class FileCommand extends Command
             $this->inputFps !== null && $class === MicroDvdReadOptions::class => new MicroDvdReadOptions($this->inputFps),
             $this->inputFps !== null && $class === CsvReadOptions::class      => new CsvReadOptions(frameRate: $this->inputFps),
             $this->wordTimestamps && $class === TranscriptReadOptions::class  => new TranscriptReadOptions(wordTimestamps: true),
+            $this->sccRollUp !== null && $class === SccReadOptions::class     => new SccReadOptions(rollUp: $this->sccRollUp),
             default                                                           => null,
         };
     }
