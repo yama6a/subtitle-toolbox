@@ -128,11 +128,12 @@ class SbvParserTest extends TestCase
     }
 
 
-    public function testMissingTimestampsThrowsException(): void
+    public function testTextWithoutTimingLineAfterAnEmptyLineStaysInTheCueBefore(): void
     {
-        $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Block #1 has no timing line on its first line");
-        Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sbv/missing_timestamps.sbv"), Format::Sbv);
+        $cues = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/sbv/missing_timestamps.sbv"), Format::Sbv)->getCues();
+
+        $this->assertCount(1, $cues);
+        $this->assertSame(["Hello world", "Second cue", "on two lines"], $cues[0]->getLines());
     }
 
 
