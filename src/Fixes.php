@@ -68,6 +68,7 @@ trait Fixes
 
     /**
      * Breaks the lines of each cue that has a line longer than $maxCharactersPerLine or more than $maxLinesPerCue lines.
+     * Each dialogue turn keeps lines of its own.
      */
     public function wrapLines(int $maxCharactersPerLine, int $maxLinesPerCue = 2): self
     {
@@ -78,7 +79,7 @@ trait Fixes
 
         foreach ($this->getCues() as $cue) {
             if (!LineWrapper::fits($cue->getLines(), $maxCharactersPerLine, $maxLinesPerCue)) {
-                $cue->setLines(LineWrapper::wrap($cue->getLines(), $maxCharactersPerLine, $maxLinesPerCue));
+                $cue->setLines(LineWrapper::wrapTurns($cue->getLines(), $maxCharactersPerLine, $maxLinesPerCue));
             }
         }
 

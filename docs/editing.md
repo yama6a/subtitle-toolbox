@@ -50,6 +50,7 @@ $subtitle->unwrapLines();                         // join the lines of each cue 
 
 - **Start times**: these fixes move only end times. `fixOverlaps()` ends a cue at its own start when the gap does not fit. Cues with the same start, such as a sign and a line of dialogue, end before the next cue with a later start. `extendShortCues()` never creates an overlap and never makes a cue shorter.
 - **Line breaks**: `wrapLines()` changes only cues with a longer line or with more lines than allowed. It uses the fewest lines that fit and makes them about equal in length. When the text does not fit, the lines get longer than the limit.
+- **Dialogue**: each dialogue turn keeps lines of its own. A turn starts at a line with a dialogue dash, such as `- Yes.`. It also starts at a dash after a sentence end within a line, so `- Are you coming? - Yes.` becomes 2 lines. A sentence end is `.`, `?`, `!` or an ellipsis character. A dash before a digit, as in `-20 degrees`, starts no turn. A long turn wraps within itself, with up to the maximum lines per turn. So a cue with 2 or more turns can have more lines than the maximum.
 - **Characters**: tags count 0 characters, and an entity such as `&amp;` counts 1. `wrapLines()` breaks only at spaces outside tags. It closes the open core markup tags at a break and opens them again on the next line.
 - **Text without spaces**: Chinese or Japanese text has no break points, so `wrapLines()` keeps such a line long.
 
