@@ -61,8 +61,8 @@ class RubyFallbackTest extends TestCase
     }
 
 
-    #[DataProvider("captionCodeFormatProvider")]
-    public function testCaptionCodeFormatsWriteBaseAndAnnotation(Format $format): void
+    #[DataProvider("readBackFormatProvider")]
+    public function testFormatsReadBackBaseAndAnnotation(Format $format): void
     {
         $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "<ruby>AB<rt>ab</rt>C<rt>c</rt></ruby> end"));
 
@@ -72,11 +72,13 @@ class RubyFallbackTest extends TestCase
     }
 
 
-    public static function captionCodeFormatProvider(): array
+    public static function readBackFormatProvider(): array
     {
         return [
             "SCC"     => [Format::Scc],
             "EBU STL" => [Format::EbuStl],
+            "SAMI"    => [Format::Sami],
+            "TTML"    => [Format::Ttml],
         ];
     }
 }

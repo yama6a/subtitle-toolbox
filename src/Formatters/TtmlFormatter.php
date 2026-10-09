@@ -129,7 +129,7 @@ final class TtmlFormatter extends SubtitleFormatter
             $attributes .= $this->formatAttribute($this->ittsPrefix($context) . ":forcedDisplay", $cue->isForced() ? "true" : "false");
         }
 
-        $text = implode(LineEnding::Lf->value, $cue->getLines());
+        $text = Markup::rubyAsText(implode(LineEnding::Lf->value, $cue->getLines()));
         if ($options->stripTags) {
             return "$attributes>" . $this->formatText(Markup::stripAllTags($text)) . "</p>";
         }
