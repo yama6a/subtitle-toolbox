@@ -35,7 +35,7 @@ Other content goes to the signatures of the text and binary formats. Detection c
 | 4 | `Ass` | `[Script Info]`, for ASS and SSA |
 | 5 | `MpSub` | a first line such as `TITLE=`, and a `FORMAT=` line |
 | 6 | `MicroDvd` | `{24}{72}` |
-| 7 | `SubRip` | `1`, then `00:00:01,000 -->` |
+| 7 | `SubRip` | `1`, then `00:00:01,000 -->`. The cue number can come after at most 5 lines of other text. A first line such as `00:00:01,000 -->` matches without a cue number. |
 | 8 | `Sbv` | `0:00:01.500,0:00:04.000` |
 | 9 | `SubViewer` | `******** START SCRIPT ********`, `[INFORMATION]` or `00:00:01.50,00:00:04.00` |
 | 10 | `Lyrics` | `[ti:Title]` or `[00:12.00]`, and at least one timestamp line |
@@ -48,6 +48,7 @@ Other content goes to the signatures of the text and binary formats. Detection c
 | 17 | `HtmlTranscript` | a tag at the start, and a `<cite>` and a `<time>` element |
 
 - **Order**: a format with a more specific signature comes first. A WebVTT file without its `WEBVTT` line but with cue numbers looks like SubRip, so it detects as SubRip.
+- **SubRip without cue numbers**: read such a file in lenient mode. Strict mode throws `ParsingException` for a missing cue number and for text before the first cue. A timing line with a dot, such as `00:00:01.000 -->`, needs a cue number in the first line.
 - **`.sub` files**: SBV has three digits after the dot, SubViewer 2 has two.
 - **MicroDVD**: detection does not find the frame rate. `fromStringAutoDetectFormat()` throws `ParsingException` for a MicroDVD file without a `{1}{1}<fps>` first line. Then pass the frame rate: `Subtitle::fromString($content, Format::MicroDvd, new ReadOptions(format: new MicroDvdReadOptions(frameRate: 23.976)))`.
 - **iTT**: an iTT file detects as `Format::Ttml`. Pass `Format::Itt` to keep the iTT format data.

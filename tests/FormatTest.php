@@ -11,6 +11,11 @@ class FormatTest extends TestCase
 {
     private const FILES = __DIR__ . "/files/";
 
+    // Fixtures that version 1 did not detect and that detect now.
+    private const DETECTED_SINCE_VERSION_1 = [
+        "lenient/text_before_first_cue.srt" => "srt",
+    ];
+
     private const NOT_AUTO_DETECTED = [
         Format::YouTubeChapters, Format::PodcastChapters, Format::FfMetadataChapters, Format::OgmChapters,
         Format::AwsTranscribe, Format::Deepgram, Format::AssemblyAi, Format::GoogleSpeech,
@@ -149,7 +154,7 @@ class FormatTest extends TestCase
     {
         $fixtures = [];
         foreach (json_decode(file_get_contents(self::FILES . "format/fixture-formats.json"), true) as $path => $formats) {
-            $fixtures[$path] = [$path, $formats["fromPath"], $formats["detect"]];
+            $fixtures[$path] = [$path, $formats["fromPath"], self::DETECTED_SINCE_VERSION_1[$path] ?? $formats["detect"]];
         }
 
         return $fixtures;
