@@ -6,8 +6,10 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -45,7 +47,6 @@ class TtmlRealFileTest extends TestCase
             "mantas_dfxp_br"             => ["mantas_dfxp_br.dfxp", 1, 0.0, 1.0, "one\ntwo\nthree", 2, 0.0, 1.0, "one\ntwo\nthree", 2],
             "mantas_duplicated_ids"      => ["mantas_duplicated_ids.ttml", 3, 0.0, 1.0, "First line.", null, 2.0, 3.0, "Third line.", null],
             "mantas_fps_multiplier"      => ["mantas_fps_multiplier.ttml", 1, 15.015, 17.684, "First line.", null, 15.015, 17.684, "First line.", null],
-            "mantas_multiple_divs"       => ["mantas_multiple_divs.ttml", 3, 1.464, 2.423, "The train to the coast\nleaves from platform four.", null, 10.886, 10.928, "BAKERY OPEN", null],
             "mantas_netflix_ticks"       => ["mantas_netflix_ticks.dfxp", 2, 137.4, 140.4, "The bakery's first bread\nis ready at six o'clock.", null, 3740.5, 3742.5, "The last train leaves at midnight.", null],
             "mantas_ttml2"               => ["mantas_ttml2.ttml", 5, 0.0, 2.0, "Hello I am your first line.", null, 8.0, 10.0, "<font color=\"#ff0000\">I am the last caption displayed in red and centered.</font>", 8],
             "pysubs2_regions"            => ["pysubs2_regions.ttml", 10, 1.375, 5.75, "TOP SAMPLE TEXT", 8, 45.325, 50.041, "for the weekend market.", 2],
@@ -102,6 +103,45 @@ class TtmlRealFileTest extends TestCase
         );
         $this->assertSame($subtitle->getAllMetadata(), $reparsed->getAllMetadata());
         $this->assertSame($output, $reparsed->toString(Format::Ttml));
+    }
+
+
+    public function testAParagraphThatBeginsAfterItsTimedDivEndsThrowsInStrictMode(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The paragraph begins at 3.887s, but its parent ends at 2.423s. (line 12)");
+        $this->parseFile("mantas_multiple_divs.ttml");
+    }
+
+
+    public function testLenientModeReadsTheTimesOfAParagraphThatBeginsAfterItsTimedDivEndsAsAbsolute(): void
+    {
+        $subtitle = $this->parseFile("mantas_multiple_divs.ttml", new ReadOptions(lenient: true));
+
+        $this->assertSame(
+            [[1.464, 2.423], [2.423, 5.432], [10.886, 10.928]],
+            array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues())
+        );
+        $warnings = $subtitle->getParseWarnings();
+        $this->assertCount(1, $warnings);
+        $this->assertSame(
+            "The paragraph begins at 3.887s, but its parent ends at 2.423s. The parser read its times as absolute: 2.423s to 5.432s.",
+            $warnings[0]->message
+        );
+        $this->assertSame([12, 1, ParseWarningAction::Repaired], [$warnings[0]->lineNumber, $warnings[0]->blockIndex, $warnings[0]->action]);
+    }
+
+
+    public function testLenientModeSkipsAParagraphAfterItsTimedDivWithoutOwnTimes(): void
+    {
+        $subtitle = Subtitle::fromString(
+            "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div begin=\"5s\" end=\"6s\">\n<p begin=\"2s\">Late</p>\n<p>On time</p></div></body></tt>",
+            Format::Ttml,
+            new ReadOptions(lenient: true)
+        );
+
+        $this->assertSame([[5.0, 6.0, "On time"]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $subtitle->getCues()));
+        $this->assertSame(["The paragraph begins at 7s, but its parent ends at 6s."], array_map(fn ($warning): string => $warning->message, $subtitle->getParseWarnings()));
     }
 
 

@@ -335,6 +335,9 @@ final class TtmlParser extends SubtitleParser
     private function readParagraph(DOMElement $paragraph, TtmlScope $scope): SubtitleCue
     {
         [$begin, $end] = $this->interval($paragraph, $scope->begin, $scope->end);
+        if ($scope->end !== null && $begin >= $scope->end) {
+            [$begin, $end] = $this->absoluteInterval($paragraph, $begin, $scope->end);
+        }
 
         $region = $paragraph->hasAttribute("region") ? $paragraph->getAttribute("region") : $scope->region;
         $style  = TtmlStyles::DEFAULT_STYLE;
@@ -430,6 +433,31 @@ final class TtmlParser extends SubtitleParser
         }
 
         return false;
+    }
+
+
+    /**
+     * Some files give the times of a paragraph in a timed div as absolute times, so the paragraph begins after the div ends.
+     *
+     * @return array{float, float}
+     */
+    private function absoluteInterval(DOMElement $paragraph, float $begin, float $parentEnd): array
+    {
+        $message  = sprintf("The paragraph begins at %ss, but its parent ends at %ss.", round($begin, 3), round($parentEnd, 3));
+        $absolute = $paragraph->hasAttribute("begin") ? $this->interval($paragraph, 0.0, null) : [0.0, null];
+        if (!$this->options->lenient || $absolute[1] === null || $absolute[1] <= $absolute[0]) {
+            throw new ParsingException($message, $paragraph->getLineNo());
+        }
+
+        $this->warn(
+            sprintf("%s The parser read its times as absolute: %ss to %ss.", $message, round($absolute[0], 3), round($absolute[1], 3)),
+            $paragraph->getLineNo(),
+            $this->paragraphIndex,
+            $this->xmlLines($paragraph),
+            ParseWarningAction::Repaired
+        );
+
+        return $absolute;
     }
 
 
