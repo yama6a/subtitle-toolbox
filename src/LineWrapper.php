@@ -88,6 +88,28 @@ final class LineWrapper
 
 
     /**
+     * Joins the lines of each dialogue turn with a space. A turn starts at the first line and at each line with a dialogue dash.
+     *
+     * @param list<string> $lines
+     *
+     * @return list<string>
+     */
+    public static function unwrapTurns(array $lines): array
+    {
+        $turns = [];
+        foreach ($lines as $line) {
+            if ($turns !== [] && preg_match(DialogueDash::REGEX, Markup::visibleText($line)) !== 1) {
+                $turns[count($turns) - 1] .= " $line";
+            } else {
+                $turns[] = $line;
+            }
+        }
+
+        return $turns;
+    }
+
+
+    /**
      * Returns wrap() with $keepDialogueLines, or null when the result breaks a limit.
      *
      * @param list<string> $lines
