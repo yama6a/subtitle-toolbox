@@ -1,9 +1,9 @@
 # Backward compatibility
 
-The library follows semantic versioning. A 2.x minor or patch release does not break code that uses the parts below as this page describes. A break needs 3.0.
+The library follows semantic versioning. A 3.x minor or patch release does not break code that uses the parts below as this page describes. A break needs 4.0.
 
 ## Covered
-| Part | What stays stable in 2.x |
+| Part | What stays stable in 3.x |
 |:--- |:--- |
 | PHP API | public classes, methods, properties, constants and enums that are not `@internal` |
 | Parameter names | every parameter name. Call options constructors with named arguments, for example `new WriteOptions(bom: true)` |
@@ -12,6 +12,7 @@ The library follows semantic versioning. A 2.x minor or patch release does not b
 
 ## Changes a minor or patch release can make
 - **Bug fixes and new formats**: a bug fix or a new format can change the written bytes, the parsed cues and the detection result of a file. The release notes list each change.
+- **Strict mode**: strict mode, the default without `new ReadOptions(lenient: true)`, can start to reject bad input that it read before. That is a bug fix, not a break. See [lenient-parsing.md](lenient-parsing.md).
 
 ## Changes a minor release can make
 - **Enum cases**: an enum such as `Format`, `ValidationRule` or `CommonErrorRule` can get a new case. Give a `match` on an enum a `default` arm.
@@ -28,16 +29,16 @@ The library follows semantic versioning. A 2.x minor or patch release does not b
 ## Text fixes and presets
 - **Existing rules**: a patch release can change a rule so that it stops changing text that it should keep. This applies to `CommonErrorFixer`, `HearingImpairedRemover`, `ProfanityFilter` and `SpeakerLabels`.
 - **New rules**: a new rule is off by default. Turn it on with its option.
-- **Presets**: `ValidationRules::netflixEnglish()`, `ValidationRules::bbc()` and the CLI `validate --preset` never get a new rule in 2.x.
+- **Presets**: `ValidationRules::netflixEnglish()`, `ValidationRules::bbc()` and the CLI `validate --preset` never get a new rule in 3.x.
 
 ## Deprecation
-Before 3.0 removes a class, method, option or command, at least one 2.x minor release marks it `@deprecated`. The CLI prints a warning when you use a deprecated command or option.
+Before 4.0 removes a class, method, option or command, at least one 3.x minor release marks it `@deprecated`. The CLI prints a warning when you use a deprecated command or option.
 
 ## Not covered
 - **`@internal`**: a class, method or constant marked `@internal` can change in any release. An example is `ImageFormatter`.
 - **Constructors of reports and results**: only the library creates reports and results. Read their fields, but do not create them. `RecognizedText` and `Comment` are the 2 exceptions with a public constructor, because an `OcrEngine` returns `RecognizedText`. These constructors are `@internal`:
   - Reports: `CommonErrorReport`, `HearingImpairedReport`, `OcrReport`, `ProfanityReport`, `ReferenceSyncReport`, `ResegmentReport`, `ShotChangeReport`, `SpeakerLabelReport`, `TranslationReport` and `WordHighlightReport`.
-  - Results: `AppliedFix`, `CueDifference`, `ValidationViolation`, `TranslationWarning`, `MuteRange`, `MatroskaTrack` and `HlsWebVttRendition`.
+  - Results: `AppliedFix`, `CueDifference`, `ValidationViolation`, `TranslationWarning`, `MuteRange`, `SubtitleTrack` and `HlsWebVttRendition`.
   - `ParseWarning`, also `ParseWarning::skipped()`.
 - **Parsers and formatters as base classes**: do not extend `SubtitleParser` or `SubtitleFormatter`. Their protected members can change in any release. Call a parser or formatter from your own class.
 - **Exceptions as base classes**: do not extend an exception class. `InvalidArgumentException` and `InvalidParserException` are not `final`, because a library class extends each of them. Their protected `CODE` constant is not API. `GenericException` is not API, also as a parent.
