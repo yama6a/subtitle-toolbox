@@ -9,3 +9,4 @@
 | `subsrt_sample.smi` | Written for this repository in the shape of https://github.com/papnkukn/subsrt/blob/478e54390b74859b3643b80ff988113557ff80d8/test/fixtures/sample.smi | MIT |
 | `undefined_class.smi` | Written for this repository in the shape of the SAMI example in issue #355. Its `<P>` classes `ENCC` and `FRCC` are not in the STYLE block | MIT |
 | `negative_start_bare_nbsp.smi` | Written for this repository in the shape of the SAMI example in issue #397. It has a negative `Start` and `&nbsp` without a semicolon | MIT |
+| `unused_first_class.smi` | Written for this repository in the shape of the SAMI example in issue #508. The STYLE block defines `FRFRCC` before `ENUSCC`, and every `<P>` uses `ENUSCC` | MIT |

@@ -44,7 +44,7 @@ $table = Subtitle::fromString(file_get_contents('lines.csv'), Format::Csv,
 | | | `keepSegments` | one cue per segment, also for a segment with one word. Podcasting 2.0 only |
 | `ChapterReadOptions` | YouTube, Podcasting 2.0, FFmpeg and OGM chapters | `mediaDuration` | seconds, 0 or more, where a last chapter without its own end ends. An FFmpeg `END` or a Podcasting 2.0 `endTime` wins. A last chapter that starts after it, or null, ends at its own start |
 | `MicroDvdReadOptions` | MicroDVD | `frameRate` | frames per second. It wins over a `{1}{1}<fps>` first line |
-| `SamiReadOptions` | SAMI | `languageClass` | the SAMI class to read, such as `FRCC`. Null reads the first class of the STYLE block |
+| `SamiReadOptions` | SAMI | `languageClass` | the SAMI class to read, such as `FRCC`. Null reads the first class of the STYLE block that a `<P>` uses |
 | `VobSubReadOptions` | VobSub | `idx` | the content of the `.idx` file. The parser reads the `.sub` content. `Subtitle::load()` fills it from the `.idx` file |
 | | | `track` | the track with this `index:` |
 | | | `language` | the track with this `id:`. Without `track` and `language`, the parser reads the first track |

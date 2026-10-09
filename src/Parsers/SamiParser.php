@@ -357,8 +357,12 @@ final class SamiParser extends SubtitleParser
         if ($first === false) {
             return reset($used) ?: null;
         }
-        if ($used === [] || array_intersect_key($used, $classes) !== []) {
+        if ($used === []) {
             return $first["name"];
+        }
+        $usedStyleClasses = array_intersect_key($classes, $used);
+        if ($usedStyleClasses !== []) {
+            return reset($usedStyleClasses)["name"];
         }
 
         $class = reset($used);
