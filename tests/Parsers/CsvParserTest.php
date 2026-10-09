@@ -229,6 +229,26 @@ class CsvParserTest extends TestCase
     }
 
 
+    public function testATableWithMoreThan1000ColumnsThrowsAParsingException(): void
+    {
+        $columns = array_map(fn (int $index): string => "c$index", range(1, 997));
+        $csv     = "start,end,text," . implode(",", $columns) . "\n1,2,a\n3,4,b," . implode(",", $columns) . ",extra\n";
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The table has 1001 columns. The limit is 1000. (line 3)");
+
+        (new CsvParser())->parse($csv, new ReadOptions(lenient: true));
+    }
+
+
+    public function testATableWith1000ColumnsParses(): void
+    {
+        $csv = "start,end,text" . str_repeat(",", 997) . "\n1,2,a\n";
+
+        $this->assertSame(1000, (new CsvParser())->parse($csv, new ReadOptions())->findFormatData("csv")["width"]);
+    }
+
+
     public function testRejectsAnUnknownDelimiter(): void
     {
         $this->expectException(InvalidArgumentException::class);

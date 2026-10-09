@@ -44,7 +44,7 @@ final class FormatDataSchema
 {
     private const STRINGS = ["list", "string"];
 
-    private const CSV_MAX_COLUMNS = 1000;
+    public const CSV_MAX_COLUMNS = 1000;
 
     private const CSV_TIME_FORMATS = [
         CsvTimeFormat::Seconds->value,

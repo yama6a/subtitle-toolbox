@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\FormatDataSchema;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
@@ -31,6 +32,7 @@ final class CsvParser extends SubtitleParser
             self::records($content, $delimiter),
             fn (array $record): bool => array_filter($record[1], fn (string $cell): bool => trim($cell) !== "") !== []
         );
+        self::checkWidth($records);
 
         $header = $this->columns->header && $records !== [] ? array_shift($records)[1] : null;
         $roles  = $this->resolveRoles($header);
@@ -113,6 +115,19 @@ final class CsvParser extends SubtitleParser
         }
         if ($named !== []) {
             $cue->setFormatData(self::FORMAT_DATA_KEY, ["columns" => $named]);
+        }
+    }
+
+
+    /**
+     * @param array<int, array{int, list<string>}> $records
+     */
+    private static function checkWidth(array $records): void
+    {
+        foreach ($records as [$lineNumber, $cells]) {
+            if (count($cells) > FormatDataSchema::CSV_MAX_COLUMNS) {
+                throw new ParsingException("The table has " . count($cells) . " columns. The limit is " . FormatDataSchema::CSV_MAX_COLUMNS . ".", $lineNumber);
+            }
         }
     }
 
