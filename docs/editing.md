@@ -10,17 +10,26 @@ $copy->shift(2);                                     // $subtitle keeps its time
 ## Retiming
 ```php
 use SubtitleToolbox\FrameRate;
+use SubtitleToolbox\SyncPoint;
 
 $subtitle->shift(-2.5);                              // all cues 2.5 s earlier
 $subtitle->shift(3, 600);                            // only cues that start at 600 s or later
 $subtitle->scale(1.001);                             // multiply all times by 1.001
 $subtitle->convertFrameRate(25, 23.976);             // subtitle for a 25 fps video, video is 23.976 fps
 $subtitle->syncByTwoPoints(10, 12, 6260, 6005);      // 10 s becomes 12 s, 6260 s becomes 6005 s
+$subtitle->syncByPoints([                            // 10 s becomes 12 s, 600 s becomes 610 s, 1200 s becomes 1205 s
+    new SyncPoint(oldSeconds: 10, newSeconds: 12),
+    new SyncPoint(oldSeconds: 600, newSeconds: 610),
+    new SyncPoint(oldSeconds: 1200, newSeconds: 1205),
+]);
 (new FrameRate(23.976))->framesToSeconds(1000);      // about 41.708
 ```
 
 - **Negative times**: a start or end time that becomes negative becomes 0. The cue stays in the subtitle.
-- **Word timestamps**: these 4 methods also move the word timestamps in the cue text, such as `<00:00:02.000>`. `merge()` with an offset and `withSlice()` with `$moveToZero` move them too. A word timestamp that becomes negative becomes 0.
+- **Sync by points**: `syncByPoints()` moves each old time to its new time. Between 2 points it corrects the times linearly. Before the first point and after the last point it continues the correction of the nearest 2 points. 1 point shifts all cues. 2 points give the same result as `syncByTwoPoints()`.
+- **Point order**: the old and new times must both increase from point to point. Else `syncByPoints()` throws `InvalidArgumentException`. `syncByTwoPoints()` takes its 2 points in either order.
+- **Cue across a point**: each start, end and word timestamp moves by the segment that holds it. So a cue across a point keeps its times in step with the speech.
+- **Word timestamps**: these 5 methods also move the word timestamps in the cue text, such as `<00:00:02.000>`. `merge()` with an offset and `withSlice()` with `$moveToZero` move them too. A word timestamp that becomes negative becomes 0.
 - **Cue boundaries**: some methods move a start or end time without moving the speech. So the word timestamps keep their times. These are `fixOverlaps()`, `extendShortCues()`, the [shot change timing](#shot-changes-and-gaps) and the snap of `DualSubtitle`.
 - **Speech-to-text format data**: the format data of Whisper, Deepgram, AssemblyAI, AWS Transcribe and Google input is a copy of the source file. It keeps the times of the source file. Read the word times from the word timestamps in the cue text.
 - **Other ways to sync**: [sync.md](sync.md) finds the offset and scale from a reference subtitle or the speech in the audio.
