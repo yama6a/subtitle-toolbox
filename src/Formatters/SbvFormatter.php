@@ -20,7 +20,7 @@ final class SbvFormatter extends SubtitleFormatter
         $options ??= new WriteOptions();
         $blocks = [];
         foreach ($subtitle->getCues() as $cue) {
-            $lines = Markup::plainLines($cue->getLines());
+            $lines = Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines()));
 
             // An empty line ends an SBV cue, so a cue without text cannot be written.
             if ($lines === []) {

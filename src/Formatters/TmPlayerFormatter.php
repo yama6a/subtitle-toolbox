@@ -20,7 +20,7 @@ final class TmPlayerFormatter extends SubtitleFormatter
         $options ??= new WriteOptions();
         $cues = [];
         foreach ($subtitle->getCues() as $cue) {
-            $lines = Markup::plainLines($cue->getLines());
+            $lines = Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines()));
             // A line without text would end the cue before it.
             if ($lines !== []) {
                 $cues[] = [$cue, $lines];

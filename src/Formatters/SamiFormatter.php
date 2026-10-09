@@ -65,7 +65,7 @@ final class SamiFormatter extends SubtitleFormatter
 
         $lines = array_map(
             fn (string $line): string => $this->writeNbsp($stripTags ? Markup::stripAllTags($line) : Markup::keepTags($line, Markup::STYLE_TAGS)),
-            $cue->getLines()
+            array_map(Markup::rubyAsText(...), $cue->getLines())
         );
 
         return $this->openParagraph($class, []) . ($lines === [] ? "&nbsp;" : implode("<br>", $lines));

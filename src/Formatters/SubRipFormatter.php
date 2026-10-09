@@ -65,7 +65,7 @@ final class SubRipFormatter extends SubtitleFormatter
         $time  = sprintf(self::TIME_PATTERN, ...Timecode::milliseconds($cue->getStart())) . " --> "
                  . sprintf(self::TIME_PATTERN, ...Timecode::milliseconds($cue->getEnd()));
         $time .= $this->formatCoordinates($cue);
-        $lines = implode(LineEnding::Lf->value, $cue->getLines());
+        $lines = Markup::rubyAsText(implode(LineEnding::Lf->value, $cue->getLines()));
 
         $lines = $options->stripTags
             ? Markup::stripAllTags($lines)

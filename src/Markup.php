@@ -78,6 +78,31 @@ final class Markup
     }
 
 
+    /**
+     * Writes ruby as "base (annotation)" for formats without ruby: "<ruby>漢<rt>kan</rt></ruby>" becomes "漢 (kan)".
+     * It drops <rp> elements, because the written parentheses take their place.
+     *
+     * @internal
+     */
+    public static function rubyAsText(string $text): string
+    {
+        if (stripos($text, "<ruby") === false) {
+            return $text;
+        }
+
+        return preg_replace_callback('/<ruby\b[^>]*>(.*?)(?:<\/ruby\s*>|$)/is', function (array $ruby): string {
+            $parts = preg_split('/<rt\b[^>]*>/i', preg_replace('/<rp\b[^>]*>.*?<\/rp\s*>/is', "", $ruby[1]));
+            $text  = array_shift($parts);
+            foreach ($parts as $part) {
+                [$annotation, $base] = array_pad(preg_split('/<\/rt\s*>/i', $part, 2), 2, "");
+                $text = trim($annotation) === "" ? $text . $base : rtrim($text) . " (" . trim($annotation) . ")" . $base;
+            }
+
+            return $text;
+        }, $text) ?? $text;
+    }
+
+
     public static function stripAllTags(string $text): string
     {
         return self::keepTags($text, []);

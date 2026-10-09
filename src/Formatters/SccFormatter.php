@@ -11,6 +11,7 @@ use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\LineWrapper;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\SccParser;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -107,7 +108,7 @@ final class SccFormatter extends SubtitleFormatter
     private function loadWords(SubtitleCue $cue, int|string $index): array
     {
         $lines = [];
-        foreach ($cue->getLines() as $line) {
+        foreach (array_map(Markup::rubyAsText(...), $cue->getLines()) as $line) {
             $characters = Cea608Encoder::styledCharacters($line);
             if ($characters !== []) {
                 $lines[] = $characters;

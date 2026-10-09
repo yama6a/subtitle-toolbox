@@ -49,7 +49,7 @@ final class SubViewerFormatter extends SubtitleFormatter
         $output .= SubViewerParser::START_SCRIPT . LineEnding::Lf->value;
 
         foreach ($subtitle->getCues() as $cue) {
-            $lines = Markup::plainLines($cue->getLines());
+            $lines = Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines()));
             // An empty line after a time ends a SubViewer 1 cue, so a cue without text cannot be written.
             if ($lines === []) {
                 continue;
@@ -80,7 +80,7 @@ final class SubViewerFormatter extends SubtitleFormatter
 
         $blocks = [];
         foreach ($subtitle->getCues() as $cue) {
-            $lines = Markup::plainLines($cue->getLines());
+            $lines = Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines()));
             // An empty line after the timing line would leave the cue without text.
             if ($lines === []) {
                 continue;

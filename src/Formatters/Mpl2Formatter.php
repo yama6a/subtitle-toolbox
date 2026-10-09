@@ -18,7 +18,7 @@ final class Mpl2Formatter extends SubtitleFormatter
         $output = "";
         foreach ($subtitle->getCues() as $cue) {
             $output .= "[" . (int) round($cue->getStart() * Mpl2Parser::DECISECONDS_PER_SECOND) . "][" . (int) round($cue->getEnd() * Mpl2Parser::DECISECONDS_PER_SECOND) . "]" .
-                       implode("|", $this->linesWithItalics($cue->getLines())) .
+                       implode("|", $this->linesWithItalics(array_map(Markup::rubyAsText(...), $cue->getLines()))) .
                        LineEnding::Lf->value;
         }
 

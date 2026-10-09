@@ -4,10 +4,32 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 class MarkupTest extends TestCase
 {
+    #[DataProvider("rubyProvider")]
+    public function testRubyAsTextWritesBaseAndAnnotation(string $text, string $expected): void
+    {
+        $this->assertSame($expected, Markup::rubyAsText($text));
+    }
+
+
+    public static function rubyProvider(): array
+    {
+        return [
+            "one annotation"          => ["<ruby>漢<rt>kan</rt></ruby>", "漢 (kan)"],
+            "two annotations"         => ["<ruby>漢<rt>kan</rt>字<rt>ji</rt></ruby>", "漢 (kan)字 (ji)"],
+            "rp elements are dropped" => ["<ruby>漢<rp>(</rp><rt>kan</rt><rp>)</rp></ruby>", "漢 (kan)"],
+            "rt end tag left out"     => ["<ruby>漢<rt>kan</ruby> end", "漢 (kan) end"],
+            "class and space in base" => ["<ruby.big>ruby <rt>rubyText</rt></ruby>text", "ruby (rubyText)text"],
+            "empty annotation"        => ["<ruby>漢<rt></rt></ruby>", "漢"],
+            "no ruby"                 => ["<i>a</i> &lt;ruby&gt;", "<i>a</i> &lt;ruby&gt;"],
+        ];
+    }
+
+
     public function testStripAllTagsRemovesEveryTag(): void
     {
         $this->assertSame(
