@@ -32,3 +32,7 @@ I think I'm ready, but i.e. not today.
 8
 00:00:22,000 --> 00:00:24,000
 He said "tomorrow" twice.
+
+9
+00:00:25,000 --> 00:00:27,000
+Twice? Are you sure?...

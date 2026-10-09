@@ -256,6 +256,7 @@ CommonErrorFixer::apply($subtitle);                                            /
 | `loneLowercaseI` | `i think i'm`, `<i>i</i> know` | `I think I'm`, `<i>I</i> know`. Only for English. Off by default |
 | `dialogueOnOneLine` | `- Hi. - Hello.`, `Hi. - Hello.` | `- Hi.` and `- Hello.` on 2 lines. Off by default |
 | `doubleApostrophes` | `''Hi,'' she said.` | `"Hi," she said.`. Also 2 U+2019. Not inside tags. Off by default |
+| `unneededPeriods` | `Really?.`, `Stop!.` | `Really?`, `Stop!`. `What?...` and `Really?…` stay. Off by default |
 | `musicNotes` | `# Happy birthday #`, `* la la *` | `♪ Happy birthday ♪`, `♪ la la ♪`. Off by default |
 | `sentenceStartCase` | `I'm home.` and then `where are you?` | `Where are you?`. Off by default |
 

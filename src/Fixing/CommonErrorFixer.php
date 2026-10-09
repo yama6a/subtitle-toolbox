@@ -111,6 +111,7 @@ final class CommonErrorFixer
             CommonErrorRule::OcrLowercaseL                => $options->ocrLowercaseL,
             CommonErrorRule::LoneLowercaseI               => $options->loneLowercaseI && $language === "en",
             CommonErrorRule::Ellipsis                     => $options->ellipsis,
+            CommonErrorRule::UnneededPeriods              => $options->unneededPeriods,
             CommonErrorRule::DoubleSpaces                 => $options->doubleSpaces,
             CommonErrorRule::SpaceBeforePunctuation       => $options->spaceBeforePunctuation,
             CommonErrorRule::MissingSpaceAfterPunctuation => $options->missingSpaceAfterPunctuation,
@@ -135,6 +136,8 @@ final class CommonErrorFixer
             CommonErrorRule::OcrLowercaseL   => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrLowercaseL($text, $language)),
             CommonErrorRule::LoneLowercaseI  => array_map(self::loneLowercaseI(...), $lines),
             CommonErrorRule::Ellipsis        => Markup::mapTextRuns($lines, fn (string $text): string => self::ellipsis($text, $options->unicodeEllipsis)),
+            CommonErrorRule::UnneededPeriods => Markup::mapTextRuns($lines, fn (string $text): string =>
+                self::replace('/(?<=[?!])\\.(?![.\\x{2026}])/u', "", $text)),
             CommonErrorRule::DoubleSpaces    => self::doubleSpaces($lines),
             CommonErrorRule::SpaceBeforePunctuation       => Markup::mapTextRuns($lines, fn (string $text): string =>
                 self::spaceBeforePunctuation($text, $language)),
