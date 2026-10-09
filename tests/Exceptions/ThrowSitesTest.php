@@ -93,6 +93,7 @@ use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
 use SubtitleToolbox\Sync\SpeechReference;
+use SubtitleToolbox\SyncPoint;
 use SubtitleToolbox\Tests\Support\TestSubtitles;
 use SubtitleToolbox\Timecode;
 use SubtitleToolbox\Timing\ShotChangeOptions;
@@ -588,8 +589,12 @@ class ThrowSitesTest extends TestCase
             "Profanity/ProfanityOptions.php: star in a word" => [fn () => new ProfanityOptions(["f*ck"]), ...$invalid],
             "Profanity/ProfanityOptions.php: no words"      => [fn () => new ProfanityOptions([]), ...$invalid],
             "ReadOptions.php: unknown encoding"             => [fn () => new ReadOptions(encoding: "NO-SUCH-ENCODING"), ...$invalid],
+            "Retiming.php: shift range in reverse"          => [fn () => self::subtitle()->shift(1, 2, 1), ...$invalid],
             "Retiming.php: same old times"                  => [fn () => self::subtitle()->syncByTwoPoints(1, 1, 1, 2), ...$invalid],
             "Retiming.php: new times in reverse"            => [fn () => self::subtitle()->syncByTwoPoints(1, 2, 2, 1), ...$invalid],
+            "Retiming.php: no sync points"                  => [fn () => self::subtitle()->syncByPoints([]), ...$invalid],
+            "Retiming.php: sync point of another type"      => [fn () => self::subtitle()->syncByPoints([[1, 2]]), ...$invalid],
+            "Retiming.php: sync points out of order"        => [fn () => self::subtitle()->syncByPoints([new SyncPoint(2, 2), new SyncPoint(1, 3)]), ...$invalid],
             "Speakers/SpeakerLabelOptions.php: invalid color" => [fn () => new SpeakerLabelOptions(colors: ["yellow"]), ...$invalid],
             "Streaming/Streams.php: no stream"              => [fn () => iterator_to_array((new SubRipStreamReader())->read(5)), ...$invalid],
             "Streaming/Streams.php: missing file"           => [fn () => iterator_to_array((new SubRipStreamReader())->read(__DIR__ . "/missing.srt")),
