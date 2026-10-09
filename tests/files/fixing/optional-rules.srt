@@ -26,3 +26,7 @@ i think i'm ready, but i.e. not today.
 7
 00:00:19,000 --> 00:00:21,000
 # we sail out at noon #
+
+8
+00:00:22,000 --> 00:00:24,000
+He said ''tomorrow'' twice.
