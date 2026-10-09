@@ -558,6 +558,7 @@ class ThrowSitesTest extends TestCase
                 self::vobSubPacket("\0\x15\0\4\0\0\0\4\x05\0\0\1\0\0\1\x06\0\x15\0\x15\xFF"), new ReadOptions(format: new VobSubReadOptions(self::IDX_WITH_TRACK))), ...$parsing],
             "Parsers/Options/VobSubReadOptions.php: negative track" => [fn () => new VobSubReadOptions(track: -1), ...$invalid],
             "Parsers/WebVttParser.php: no WEBVTT"           => [fn () => (new WebVttParser())->parse("text", new ReadOptions()), ...$parsing],
+            "Parsers/WebVttParser.php: no WEBVTT, lenient"  => [fn () => (new WebVttParser())->parse("text", new ReadOptions(lenient: true)), ...$parsing],
             "Parsers/WebVttParser.php: unknown block"       => [fn () => (new WebVttParser())->parse("WEBVTT\n\ntext\nmore", new ReadOptions()), ...$parsing],
             "Parsers/WebVttParser.php: no empty header line" => [fn () => (new WebVttParser())->parse(
                 "WEBVTT\n00:00:01.000 --> 00:00:02.000\ntext", new ReadOptions()), ...$parsing],
