@@ -46,6 +46,33 @@ class BinaryTimingTest extends BinaryTestCase
     }
 
 
+    public function testRetimeTakesTimecodes(): void
+    {
+        $trip = Subtitle::fromString($this->file("trip.srt"), Format::SubRip);
+
+        $this->assertSame([0, (clone $trip)->shift(-2.5)->toString(Format::SubRip), ""], $this->runBinary(["retime", "trip.srt", "--shift=-00:00:02,500"]));
+        $this->assertSame([0, (clone $trip)->shift(-2.5)->toString(Format::SubRip), ""], $this->runBinary(["retime", "trip.srt", "--shift", "-00:00:02,500"]));
+        $this->assertSame([0, (clone $trip)->shift(2.5)->toString(Format::SubRip), ""], $this->runBinary(["retime", "trip.srt", "--shift", "2.5"]));
+        $this->assertSame([0, (clone $trip)->shift(1, 3723.456)->toString(Format::SubRip), ""],
+                          $this->runBinary(["retime", "trip.srt", "--shift", "1", "--shift-after", "01:02:03.456"]));
+        $this->assertSame([0, (clone $trip)->shift(1, 3)->toString(Format::SubRip), ""],
+                          $this->runBinary(["retime", "trip.srt", "--shift", "1", "--shift-after", "00:03"]));
+        $this->assertSame([0, (clone $trip)->extendShortCues(1.2)->toString(Format::SubRip), ""],
+                          $this->runBinary(["convert", "trip.srt", "--to", "srt", "--timing-min-duration", "00:00:01.2"]));
+    }
+
+
+    public function testInvalidTimeIsAUsageErrorThatQuotesTheValue(): void
+    {
+        $this->assertSame(
+            [2, "", "Error: The option --shift needs seconds or a timecode such as 00:01:02.500, got \"1:2:3:4:5\".\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            $this->runBinary(["retime", "trip.srt", "--shift", "1:2:3:4:5"])
+        );
+        $this->assertSame(2, $this->runBinary(["convert", "trip.srt", "--to", "srt", "--timing-min-duration", "-00:00:01"])[0]);
+        $this->assertSame(2, $this->runBinary(["convert", "trip.srt", "--to", "srt", "--timing-fix-overlaps", "--timing-min-gap", "00:00:01:12"])[0]);
+    }
+
+
     public function testRetimeScale(): void
     {
         [$code, $stdout] = $this->runBinary(["retime", "shop.vtt", "--scale", "2"]);

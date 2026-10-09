@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Timecode;
+
 /**
  * @internal
  */
@@ -146,6 +149,48 @@ final class Arguments
     public function nonNegativeFloat(string $name): ?float
     {
         $value = $this->float($name);
+        if ($value !== null && $value < 0) {
+            Command::fail("The option --$name must not be negative.");
+        }
+
+        return $value;
+    }
+
+
+    /**
+     * Returns the time of the option $name. It takes a number of seconds, or a timecode of Timecode::parse() with an optional minus sign.
+     */
+    public function seconds(string $name): ?float
+    {
+        $value = $this->value($name);
+        if ($value === null || is_numeric($value)) {
+            return $this->float($name);
+        }
+        $timecode = str_starts_with($value, "-") ? substr($value, 1) : $value;
+        try {
+            $seconds = Timecode::parse($timecode);
+        } catch (InvalidArgumentException) {
+            return Command::fail("The option --$name needs seconds or a timecode such as 00:01:02.500, got \"$value\".");
+        }
+
+        return $timecode === $value ? $seconds : -$seconds;
+    }
+
+
+    public function positiveSeconds(string $name): ?float
+    {
+        $value = $this->seconds($name);
+        if ($value !== null && $value <= 0) {
+            Command::fail("The option --$name must be greater than 0.");
+        }
+
+        return $value;
+    }
+
+
+    public function nonNegativeSeconds(string $name): ?float
+    {
+        $value = $this->seconds($name);
         if ($value !== null && $value < 0) {
             Command::fail("The option --$name must not be negative.");
         }
