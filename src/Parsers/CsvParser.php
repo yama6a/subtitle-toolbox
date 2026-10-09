@@ -12,6 +12,7 @@ use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\CsvColumns;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -28,11 +29,14 @@ final class CsvParser extends SubtitleParser
     {
         $this->columns = $this->formatOptions()->columns ?? new CsvColumns();
         $delimiter     = $this->formatOptions()->delimiter ?? self::detectDelimiter($content);
-        $records       = array_filter(
-            self::records($content, $delimiter),
+        $records       = array_values(array_filter(
+            $this->records($content, $delimiter),
             fn (array $record): bool => array_filter($record[1], fn (string $cell): bool => trim($cell) !== "") !== []
-        );
+        ));
         self::checkWidth($records);
+        if ($this->columns->header && $this->options->lenient) {
+            $records = $this->skipRowsBeforeHeader($records, $delimiter);
+        }
 
         $header = $this->columns->header && $records !== [] ? array_shift($records)[1] : null;
         $roles  = $this->resolveRoles($header);
@@ -133,7 +137,7 @@ final class CsvParser extends SubtitleParser
 
 
     /**
-     * Returns the delimiter that occurs most often in the first record, outside quotes. A comma wins a tie.
+     * Returns the delimiter that occurs most often in the first line that has one, outside quotes. A comma wins a tie.
      */
     private static function detectDelimiter(string $content): string
     {
@@ -144,7 +148,7 @@ final class CsvParser extends SubtitleParser
             $char = $content[$i];
             if ($char === '"') {
                 $quoted = !$quoted;
-            } elseif (!$quoted && ($char === "\n" || $char === "\r")) {
+            } elseif (!$quoted && ($char === "\n" || $char === "\r") && max($counts) > 0) {
                 break;
             } elseif (!$quoted && isset($counts[$char])) {
                 $counts[$char]++;
@@ -158,10 +162,11 @@ final class CsvParser extends SubtitleParser
     /**
      * Splits RFC 4180 content into records of cells, keyed by order, each with the 1-based line number of its start.
      * Line breaks inside quotes become LF. A quote inside an unquoted cell stays text.
+     * In lenient mode, a quote without a closing quote ends at the end of its line.
      *
      * @return list<array{int, list<string>}>
      */
-    private static function records(string $content, string $delimiter): array
+    private function records(string $content, string $delimiter): array
     {
         $records = [];
         $cells   = [];
@@ -169,43 +174,94 @@ final class CsvParser extends SubtitleParser
         $line    = 1;
         $start   = 1;
         $quoted  = false;
+        $quoteAt = 0;
         $length  = strlen($content);
-        for ($i = 0; $i < $length; $i++) {
-            $char = $content[$i];
-            if ($quoted) {
-                if ($char === '"' && ($content[$i + 1] ?? "") === '"') {
-                    $cell .= '"';
-                    $i++;
-                } elseif ($char === '"') {
-                    $quoted = false;
+        for ($i = 0; ; $i = $lineEnd) {
+            for (; $i < $length; $i++) {
+                $char = $content[$i];
+                if ($quoted) {
+                    if ($char === '"' && ($content[$i + 1] ?? "") === '"') {
+                        $cell .= '"';
+                        $i++;
+                    } elseif ($char === '"') {
+                        $quoted = false;
+                    } elseif ($char === "\r" || $char === "\n") {
+                        $i    += $char === "\r" && ($content[$i + 1] ?? "") === "\n" ? 1 : 0;
+                        $cell .= "\n";
+                        $line++;
+                    } else {
+                        $cell .= $char;
+                    }
+                } elseif ($char === '"' && $cell === "") {
+                    [$quoted, $quoteAt, $quoteLine] = [true, $i, $line];
+                } elseif ($char === $delimiter) {
+                    $cells[] = $cell;
+                    $cell    = "";
                 } elseif ($char === "\r" || $char === "\n") {
-                    $i    += $char === "\r" && ($content[$i + 1] ?? "") === "\n" ? 1 : 0;
-                    $cell .= "\n";
-                    $line++;
+                    $i        += $char === "\r" && ($content[$i + 1] ?? "") === "\n" ? 1 : 0;
+                    $cells[]   = $cell;
+                    $records[] = [$start, $cells];
+                    $cells     = [];
+                    $cell      = "";
+                    $start     = ++$line;
                 } else {
                     $cell .= $char;
                 }
-            } elseif ($char === '"' && $cell === "") {
-                $quoted = true;
-            } elseif ($char === $delimiter) {
-                $cells[] = $cell;
-                $cell    = "";
-            } elseif ($char === "\r" || $char === "\n") {
-                $i        += $char === "\r" && ($content[$i + 1] ?? "") === "\n" ? 1 : 0;
-                $cells[]   = $cell;
-                $records[] = [$start, $cells];
-                $cells     = [];
-                $cell      = "";
-                $start     = ++$line;
-            } else {
-                $cell .= $char;
             }
-        }
-        if ($quoted) {
-            throw new ParsingException("A quoted CSV cell has no closing quote.", $start);
+            if (!$quoted) {
+                break;
+            }
+            if (!$this->options->lenient) {
+                throw new ParsingException("A quoted CSV cell has no closing quote.", $start);
+            }
+            $lineStart = $quoteAt - strcspn(strrev(substr($content, 0, $quoteAt)), "\r\n");
+            $lineEnd   = $quoteAt + 1 + strcspn($content, "\r\n", $quoteAt + 1);
+            $cell      = substr($content, $quoteAt + 1, $lineEnd - $quoteAt - 1);
+            $quoted    = false;
+            $line      = $quoteLine;
+            $this->warn(
+                "A quoted CSV cell has no closing quote. The cell ends at the end of the line.",
+                $line,
+                null,
+                [substr($content, $lineStart, $lineEnd - $lineStart)],
+                ParseWarningAction::Repaired
+            );
         }
         if ($cell !== "" || $cells !== []) {
             $records[] = [$start, [...$cells, $cell]];
+        }
+
+        return $records;
+    }
+
+
+    /**
+     * Drops the rows before the first row that has the columns of the header, and warns once for them.
+     * Without such a row, it keeps all rows, so that resolveRoles() names the missing column.
+     *
+     * @param list<array{int, list<string>}> $records
+     *
+     * @return list<array{int, list<string>}>
+     */
+    private function skipRowsBeforeHeader(array $records, string $delimiter): array
+    {
+        foreach ($records as $index => [, $cells]) {
+            try {
+                $this->resolveRoles($cells);
+            } catch (ParsingException) {
+                continue;
+            }
+            if ($index > 0) {
+                $this->warn(
+                    "The table has " . ($index === 1 ? "1 row" : "$index rows") . " before the header row.",
+                    $records[0][0],
+                    null,
+                    array_map(fn (array $record): string => implode($delimiter, $record[1]), array_slice($records, 0, $index)),
+                    ParseWarningAction::Skipped
+                );
+            }
+
+            return array_slice($records, $index);
         }
 
         return $records;
