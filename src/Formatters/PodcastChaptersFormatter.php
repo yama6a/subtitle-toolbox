@@ -34,7 +34,7 @@ final class PodcastChaptersFormatter extends SubtitleFormatter
             if ($this->number($cue->getEnd()) !== $implicitEnd) {
                 $chapter["endTime"] = $this->number($cue->getEnd());
             }
-            $title = implode(" ", Markup::plainLines($cue->getLines()));
+            $title = implode(" ", Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines())));
             if ($title !== "") {
                 $chapter["title"] = $title;
             }

@@ -18,7 +18,7 @@ final class YouTubeChaptersFormatter extends SubtitleFormatter
         $output = "";
         foreach ($subtitle->getCues() as $cue) {
             $start   = Timecode::shortClock($cue->getStart());
-            $output .= rtrim($start . " " . implode(" ", Markup::plainLines($cue->getLines()))) . LineEnding::Lf->value;
+            $output .= rtrim($start . " " . implode(" ", Markup::plainLines(array_map(Markup::rubyAsText(...), $cue->getLines())))) . LineEnding::Lf->value;
         }
 
         return $this->applyOutputOptions($output, $options);

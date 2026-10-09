@@ -133,7 +133,7 @@ final class CsvFormatter extends SubtitleFormatter
      */
     private function splitSpeaker(SubtitleCue $cue): array
     {
-        $lines   = $cue->getLines();
+        $lines   = array_map(Markup::rubyAsText(...), $cue->getLines());
         $speaker = "";
         if ($lines !== [] && preg_match(self::SPEAKER_REGEX, $lines[0], $matches)) {
             $speaker  = Markup::speaker($matches[0]);
@@ -171,7 +171,7 @@ final class CsvFormatter extends SubtitleFormatter
                 continue;
             }
             $used[$best] = true;
-            $texts[]     = implode(LineEnding::Lf->value, Markup::plainLines($secondCues[$best]->getLines()));
+            $texts[]     = implode(LineEnding::Lf->value, Markup::plainLines(array_map(Markup::rubyAsText(...), $secondCues[$best]->getLines())));
         }
 
         return $texts;

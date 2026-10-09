@@ -83,7 +83,7 @@ final class PodcastTranscriptFormatter extends SubtitleFormatter
             $speaker   = null;
             $start     = $cue->getStart();
             $text      = "";
-            $tokens    = Markup::splitTags(implode(" ", $cue->getLines()));
+            $tokens    = Markup::splitTags(Markup::rubyAsText(implode(" ", $cue->getLines())));
             foreach ($tokens as $position => $token) {
                 if ($position % 2 === 0) {
                     $text .= $token;
