@@ -53,6 +53,7 @@ try {
 - Text that is not UTF-8 in a JSON format.
 - Text that is not UTF-8 in TTML, iTT or SAMI output.
 - A stored TTML head that is not valid XML.
+- An `AssWriteOptions::$style` field that the `Format:` line of the styles lacks.
 
 ## Translation errors
 `TranslationException` covers these cases:
