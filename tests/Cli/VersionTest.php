@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Cli;
 
+use Composer\InstalledVersions;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use ReflectionClassConstant;
 
 class VersionTest extends TestCase
 {
@@ -37,5 +39,25 @@ class VersionTest extends TestCase
     public function testGetReturnsAReleaseVersionOrDev(): void
     {
         $this->assertMatchesRegularExpression('/^(dev|\d+\.\d+\.\d+\S*)$/', Version::get());
+    }
+
+
+    public function testLooksUpTheVersionOfThisPackage(): void
+    {
+        $package  = (new ReflectionClassConstant(Version::class, "PACKAGE"))->getValue();
+        $composer = json_decode((string) file_get_contents(__DIR__ . "/../../composer.json"), true, flags: JSON_THROW_ON_ERROR);
+
+        $this->assertSame("yama6a/subtitle-toolbox-php", $package);
+        $this->assertSame($package, $composer["name"]);
+        $this->assertTrue(InstalledVersions::isInstalled($package));
+    }
+
+
+    public function testConflictsWithThePackageUnderItsOldName(): void
+    {
+        $composer = json_decode((string) file_get_contents(__DIR__ . "/../../composer.json"), true, flags: JSON_THROW_ON_ERROR);
+
+        $this->assertSame("*", $composer["conflict"]["ymakhloufi/subtitle-toolbox"] ?? null);
+        $this->assertArrayNotHasKey("replace", $composer);
     }
 }
