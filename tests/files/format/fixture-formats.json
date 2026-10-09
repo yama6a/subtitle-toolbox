@@ -1047,6 +1047,14 @@
         "fromPath": "srt",
         "detect": "srt"
     },
+    "srt/real/own_vtt_cue_settings.srt": {
+        "fromPath": "srt",
+        "detect": "srt"
+    },
+    "srt/real/own_vtt_cue_settings_converted.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
     "srt/strip_xml.srt": {
         "fromPath": "srt",
         "detect": "srt"

@@ -359,6 +359,61 @@ class SubRipParserTest extends TestCase
     }
 
 
+    /**
+     * Each case holds the text after the end time and the WebVTT cue settings the parser keeps.
+     */
+    public static function cueSettings(): array
+    {
+        return [
+            "two settings"  => [" align:start position:0%", ["align" => "start", "position" => "0%"]],
+            "two spaces"    => ["  align:start", ["align" => "start"]],
+            "every setting" => [" vertical:rl line:0 position:10% size:80% align:end", ["vertical" => "rl", "line" => "0", "position" => "10%", "size" => "80%", "align" => "end"]],
+        ];
+    }
+
+
+    #[DataProvider("cueSettings")]
+    public function testStrictModeKeepsWebVttCueSettingsAfterTheEndTime(string $rest, array $settings): void
+    {
+        $content  = "1\n00:00:01,000 --> 00:00:03,500$rest\nText\n";
+        $subtitle = (new SubRipParser())->parse($content);
+
+        $cues = $subtitle->getCues();
+        $this->assertSame([1.0, 3.5, ["Text"]], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getLines()]);
+        $this->assertSame($settings, $cues[0]->findFormatData(Format::WebVtt->value));
+        $this->assertSame([], $subtitle->getParseWarnings());
+        $this->assertEquals($cues, iterator_to_array((new SubRipStreamReader())->read($this->stream($content)), false));
+    }
+
+
+    public function testStrictModeRejectsUnknownTextAfterTheEndTime(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The text \"region:top\" after the end time is not valid.");
+
+        (new SubRipParser())->parse("1\n00:00:01,000 --> 00:00:03,500 align:start region:top\nText\n");
+    }
+
+
+    public function testLenientModeIgnoresUnknownTextAfterTheEndTimeAndWarns(): void
+    {
+        $content  = "1\n00:00:01,000 --> 00:00:03,500 align:start foo bar\nText\n\n2\n00:00:04,000 --> 00:00:05,000\nMore\n";
+        $options  = new ReadOptions(lenient: true);
+        $subtitle = (new SubRipParser())->parse($content, $options);
+        $reader   = new SubRipStreamReader($options);
+
+        $cues     = $subtitle->getCues();
+        $warnings = $subtitle->getParseWarnings();
+        $this->assertCount(2, $cues);
+        $this->assertSame([1.0, 3.5, ["align" => "start"]], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->findFormatData(Format::WebVtt->value)]);
+        $this->assertCount(1, $warnings);
+        $this->assertSame(ParseWarningAction::Repaired, $warnings[0]->action);
+        $this->assertSame("Block #0 has the unknown text \"foo bar\" after the end time. The parser ignored it.", $warnings[0]->message);
+        $this->assertEquals($cues, iterator_to_array($reader->read($this->stream($content)), false));
+        $this->assertEquals($warnings, $reader->getWarnings());
+    }
+
+
     private function stream(string $content)
     {
         $stream = fopen("php://memory", "w+b");

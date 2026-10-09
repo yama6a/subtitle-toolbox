@@ -17,6 +17,9 @@ final class SubRipParser extends SubtitleParser
 {
     public const FORMAT_DATA_KEY = Format::SubRip->value;
 
+    // A SubRip file has no regions, so "region" is no setting here.
+    private const CUE_SETTINGS = ["vertical", "line", "position", "size", "align"];
+
     private const ATTRIBUTE_TAG_REGEX =
         '#^</?[a-zA-Z][a-zA-Z0-9]*(?:\s+[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s"\'=<>]+))*\s*/?>$#';
 
@@ -117,16 +120,34 @@ final class SubRipParser extends SubtitleParser
             throw new ParsingException("Block #$index has no timing line on its second line.", $lineNumber);
         }
 
-        [, $startTime, $arrow, $endTime] = $times;
-        $coordinates = $this->extractCoordinates($endTime);
-        $cue         = new SubtitleCue(
+        [, $startTime, $arrow, $endPart] = $times;
+        [$endTime, $rest] = array_pad(preg_split('/\s+/', $endPart, 2), 2, "");
+        $cue = new SubtitleCue(
             $this->secondsFromString($startTime, $lineNumber),
             $this->secondsFromString($endTime, $lineNumber),
             array_map($this->escapeText(...), array_slice($rawLines, 2))
         );
         $this->convertOverrideTags($cue);
+        $coordinates = $this->coordinates($rest);
         if ($coordinates !== null) {
             $cue->setFormatData(self::FORMAT_DATA_KEY, ["coordinates" => $coordinates]);
+        } else {
+            [$settings, $unknown] = $this->cueSettings($rest);
+            if ($unknown !== [] && !$this->options->lenient) {
+                throw new ParsingException("The text \"" . implode(" ", $unknown) . "\" after the end time is not valid.", $lineNumber);
+            }
+            if ($settings !== []) {
+                $cue->setFormatData(WebVttParser::FORMAT_DATA_KEY, $settings);
+            }
+            if ($unknown !== []) {
+                $this->warn(
+                    "Block #$index has the unknown text \"" . implode(" ", $unknown) . "\" after the end time. The parser ignored it.",
+                    $lineNumber,
+                    $index,
+                    $rawLines,
+                    ParseWarningAction::Repaired
+                );
+            }
         }
         if ($arrow !== "-->") {
             $this->warn(
@@ -178,21 +199,35 @@ final class SubRipParser extends SubtitleParser
     /**
      * @return array{x1: int, x2: int, y1: int, y2: int}|null
      */
-    private function extractCoordinates(string &$endTimeString): ?array
+    private function coordinates(string $rest): ?array
     {
-        $pattern = "/^(.*?)\s+X1:(\d+)\s+X2:(\d+)\s+Y1:(\d+)\s+Y2:(\d+)\s*$/";
-        if (!preg_match($pattern, $endTimeString, $matches)) {
+        if (!preg_match("/^X1:(\d+)\s+X2:(\d+)\s+Y1:(\d+)\s+Y2:(\d+)$/", $rest, $matches)) {
             return null;
         }
 
-        $endTimeString = $matches[1];
+        return ["x1" => (int) $matches[1], "x2" => (int) $matches[2], "y1" => (int) $matches[3], "y2" => (int) $matches[4]];
+    }
 
-        return [
-            "x1" => (int) $matches[2],
-            "x2" => (int) $matches[3],
-            "y1" => (int) $matches[4],
-            "y2" => (int) $matches[5],
-        ];
+
+    /**
+     * Splits the text after the end time into the WebVTT cue settings and the unknown tokens.
+     * Converters such as yt-dlp copy the settings of a WebVTT cue into its SubRip timing line.
+     *
+     * @return array{array<string, string>, list<string>}
+     */
+    private function cueSettings(string $rest): array
+    {
+        $settings = [];
+        $unknown  = [];
+        foreach (preg_split('/\s+/', $rest, -1, PREG_SPLIT_NO_EMPTY) as $token) {
+            if (preg_match('/^(' . implode("|", self::CUE_SETTINGS) . '):(\S+)$/', $token, $matches)) {
+                $settings[$matches[1]] = $matches[2];
+            } else {
+                $unknown[] = $token;
+            }
+        }
+
+        return [$settings, $unknown];
     }
 
 

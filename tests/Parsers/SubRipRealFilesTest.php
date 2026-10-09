@@ -87,6 +87,12 @@ class SubRipRealFilesTest extends TestCase
                 [20.105, 23.292, "The ferry to the island leaves at noon."],
                 [36.1, 39.0, "The last boat comes back at six."],
             ],
+            "Own WebVTT cue settings" => [
+                "own_vtt_cue_settings.srt",
+                4,
+                [1.0, 3.5, "the tram to the old town"],
+                [8.2, 10.0, "every ten minutes"],
+            ],
         ];
     }
 
@@ -212,6 +218,19 @@ class SubRipRealFilesTest extends TestCase
             "\n\n2\n00:00:23,292 --> 00:00:28,898\n\n3\n",
             $this->parseFile("own_empty_cues.srt")->toString(Format::SubRip)
         );
+    }
+
+
+    public function testWebVttCueSettingsAfterTheEndTimeSurviveAConversionToWebVtt(): void
+    {
+        $subtitle = $this->parseFile("own_vtt_cue_settings.srt");
+        $stream   = fopen(__DIR__ . "/../files/srt/real/own_vtt_cue_settings.srt", "r");
+
+        $this->assertSame([], $subtitle->getParseWarnings());
+        $this->assertSame(["align" => "start", "position" => "0%"], $subtitle->getCues()[0]->findFormatData(Format::WebVtt->value));
+        $this->assertSame(["align" => "start"], $subtitle->getCues()[2]->findFormatData(Format::WebVtt->value));
+        $this->assertSame(file_get_contents(__DIR__ . "/../files/srt/real/own_vtt_cue_settings_converted.vtt"), $subtitle->toString(Format::WebVtt));
+        $this->assertEquals($subtitle->getCues(), iterator_to_array((new SubRipStreamReader())->read($stream), false));
     }
 
 
