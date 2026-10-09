@@ -22,6 +22,15 @@ final class CsvParser extends SubtitleParser
     protected const FORMAT_OPTIONS = CsvReadOptions::class;
     public const FORMAT_DATA_KEY = Format::Csv->value;
 
+    /** Header names, without case, spaces, underscores and hyphens, that stand for a role when no header has the role name. */
+    private const SYNONYMS = [
+        "start"    => ["begin", "in", "starttime", "starttc", "timecode", "tcin"],
+        "end"      => ["out", "stop", "endtime", "endtc", "tcout"],
+        "duration" => ["length"],
+        "speaker"  => ["name", "character"],
+        "text"     => ["subtitle", "caption", "dialogue", "transcript"],
+    ];
+
     private CsvColumns $columns;
 
 
@@ -38,8 +47,9 @@ final class CsvParser extends SubtitleParser
             $records = $this->skipRowsBeforeHeader($records, $delimiter);
         }
 
-        $header = $this->columns->header && $records !== [] ? array_shift($records)[1] : null;
-        $roles  = $this->resolveRoles($header);
+        [$headerLine, $header] = $this->columns->header && $records !== [] ? array_shift($records) : [null, null];
+        $roles                 = $this->resolveRoles($header);
+        $this->warnSynonymColumns($header, $roles, $headerLine, $delimiter);
 
         $subtitle   = new Subtitle();
         $parsedCues = [];
@@ -308,6 +318,56 @@ final class CsvParser extends SubtitleParser
 
 
     /**
+     * Returns the index of the first header name that is a synonym of $role, or false.
+     * The match ignores case, spaces, underscores and hyphens. An earlier synonym in SYNONYMS wins.
+     *
+     * @param list<string> $header
+     */
+    private static function findSynonymColumn(string $role, array $header): int|false
+    {
+        $names = array_map(fn (string $name): string => (string) preg_replace('/[\s_-]+/', "", strtolower($name)), $header);
+        foreach (self::SYNONYMS[$role] ?? [] as $synonym) {
+            $index = array_search($synonym, $names, true);
+            if ($index !== false) {
+                return $index;
+            }
+        }
+
+        return false;
+    }
+
+
+    /**
+     * Records a ParseWarning that names the columns that resolveRoles() found by a synonym.
+     *
+     * @param list<string>|null  $header
+     * @param array<string, int> $roles
+     */
+    private function warnSynonymColumns(?array $header, array $roles, ?int $headerLine, string $delimiter): void
+    {
+        if ($header === null || $this->formatOptions()->columns !== null) {
+            return;
+        }
+        $found = [];
+        foreach ($roles as $role => $index) {
+            if (strtolower(trim($header[$index])) !== $role) {
+                $found[] = "\"" . trim($header[$index]) . "\" as $role";
+            }
+        }
+        if ($found !== []) {
+            $last = array_pop($found);
+            $this->warn(
+                "The parser reads the " . ($found === [] ? "column $last" : "columns " . implode(", ", $found) . " and $last") . ".",
+                $headerLine,
+                null,
+                [implode($delimiter, $header)],
+                ParseWarningAction::Repaired
+            );
+        }
+    }
+
+
+    /**
      * Returns the 0-based column index of each role that the table has.
      *
      * @param list<string>|null $header
@@ -325,6 +385,9 @@ final class CsvParser extends SubtitleParser
                 is_string($column) => array_search(strtolower(trim($column)), $names, true),
                 default            => array_search($role, $names, true),
             };
+            if ($index === false && $this->formatOptions()->columns === null) {
+                $index = self::findSynonymColumn($role, $header ?? []);
+            }
             if ($index !== false && ($header === null || $index < count($header))) {
                 $roles[$role] = $index;
             } elseif ($column !== null || $role === "start" || $role === "text") {
