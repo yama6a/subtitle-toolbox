@@ -9,6 +9,7 @@ use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\AssFormatLines;
 use SubtitleToolbox\Parsers\AssParser;
+use SubtitleToolbox\Parsers\AssStyles;
 use SubtitleToolbox\Parsers\SsaOverrideTags;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -36,7 +37,13 @@ final class AssFormatter extends SubtitleFormatter
     {
         $options ??= new WriteOptions();
         $data    = $subtitle->findFormatData(AssParser::FORMAT_DATA_KEY) + $this->defaultData();
-        $context = new AssContext($this->isSsa($data), $options->stripTags, $this->formatOptions($options)->karaokeTag);
+        $context = new AssContext(
+            $this->isSsa($data),
+            $options->stripTags,
+            $this->formatOptions($options)->karaokeTag,
+            $data["styles"] ?? [],
+            strcasecmp($data["stylesSection"] ?? "", "V4 Styles") === 0,
+        );
 
         $order = $data["sectionOrder"];
         if (!in_array("script info", array_map("strtolower", $order), true)) {
@@ -170,7 +177,7 @@ final class AssFormatter extends SubtitleFormatter
                      ($stored["alignment"] ?? null) === $cue->getAlignment();
         [$text, $name] = $unchanged
             ? [$stored["text"], $this->fieldValue($fields, "Name") ?? ""]
-            : $this->convertLines($cue, $context);
+            : $this->convertLines($cue, $context, AssStyles::forEvent($context->styles, $this->fieldValue($fields, "Style") ?? "Default"));
 
         $values = [];
         foreach ($format as $field) {
@@ -189,21 +196,30 @@ final class AssFormatter extends SubtitleFormatter
 
     /**
      * Converts the core markup of the cue lines to the Text field and returns it together with the speaker name.
+     * Tags that the style of the event already implies are not written.
      *
+     * @param ?array<string, string> $style
      * @return array{string, string}
      */
-    private function convertLines(SubtitleCue $cue, AssContext $context): array
+    private function convertLines(SubtitleCue $cue, AssContext $context, ?array $style): array
     {
         $text = Markup::rubyAsText(implode(LineEnding::Lf->value, $cue->getLines()));
         $name = str_replace(",", "", Markup::speaker($text) ?? "");
 
-        $parts = [];
-        if ($cue->getAlignment() !== null) {
-            $parts[] = ["tag", $context->isSsa ? "\\a" . array_flip(SsaOverrideTags::SSA_ALIGNMENTS)[$cue->getAlignment()] : "\\an" . $cue->getAlignment()];
+        $parts     = [];
+        $alignment = $cue->getAlignment();
+        if ($alignment !== AssStyles::alignment($style, $context->legacyStyles)) {
+            $alignment ??= 2;
+            $parts[]     = ["tag", $context->isSsa ? "\\a" . array_flip(SsaOverrideTags::SSA_ALIGNMENTS)[$alignment] : "\\an" . $alignment];
         }
 
         $tokens = $context->stripTags ? [Markup::stripAllTags($text)] : Markup::splitTags($text);
-        $parts  = [...$parts, ...$this->convertTokens($tokens, $cue, $context)];
+        if (!$context->stripTags) {
+            foreach ($this->removeStyleTags($tokens, AssStyles::tags($style)) as $tagName) {
+                $parts[] = ["tag", "\\" . $tagName . "0"];
+            }
+        }
+        $parts = [...$parts, ...$this->convertTokens($tokens, $cue, $context)];
 
         $output = "";
         $block  = [];
@@ -221,6 +237,87 @@ final class AssFormatter extends SubtitleFormatter
         }
 
         return [$output, $name];
+    }
+
+
+    /**
+     * Removes the outer tag pairs that the style implies, such as <i> around all text of an italic style.
+     * Returns the style tag names that do not wrap all text. Their tags are turned off at the start.
+     *
+     * @param list<string> $tokens text runs at the even indexes and core markup tags at the odd indexes
+     * @param list<string> $styleTags
+     * @return list<string>
+     */
+    private function removeStyleTags(array &$tokens, array $styleTags): array
+    {
+        $remaining = $styleTags;
+        while (($index = $this->outerStyleTag($tokens, $remaining)) !== null) {
+            $remaining = array_values(array_diff($remaining, [$tokens[$index][1]]));
+            $tokens[$this->closingIndex($tokens, $index)] = "";
+            $tokens[$index] = "";
+        }
+
+        return $remaining;
+    }
+
+
+    /**
+     * Returns the index of a first b, i, u or s tag of $tagNames whose pair wraps all text, or null.
+     *
+     * @param list<string> $tokens
+     * @param list<string> $tagNames
+     */
+    private function outerStyleTag(array $tokens, array $tagNames): ?int
+    {
+        foreach ($tokens as $index => $token) {
+            if ($index % 2 === 0) {
+                if ($token !== "") {
+                    return null;
+                }
+                continue;
+            }
+            if (!preg_match('/^<([bius])>$/', $token, $matches)) {
+                continue;
+            }
+            if (!in_array($matches[1], $tagNames, true)) {
+                return null;
+            }
+            $closing = $this->closingIndex($tokens, $index);
+            if ($closing === null) {
+                return null;
+            }
+            foreach (array_slice($tokens, $closing + 1, null, true) as $after => $rest) {
+                if ($after % 2 === 0 && $rest !== "") {
+                    return null;
+                }
+            }
+
+            return $index;
+        }
+
+        return null;
+    }
+
+
+    /**
+     * @param list<string> $tokens
+     */
+    private function closingIndex(array $tokens, int $openingIndex): ?int
+    {
+        $tagName = substr($tokens[$openingIndex], 1, -1);
+        $depth   = 0;
+        for ($index = $openingIndex; $index < count($tokens); $index += 2) {
+            $depth += match ($tokens[$index]) {
+                "<$tagName>"  => 1,
+                "</$tagName>" => -1,
+                default       => 0,
+            };
+            if ($depth === 0) {
+                return $index;
+            }
+        }
+
+        return null;
     }
 
 

@@ -51,3 +51,5 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `absurd_frames_microdvd.sub` | MicroDVD at 25 fps. A cue with frame numbers of 13 digits between two good cues, LF | MIT |
 | `absurd_word_timestamp.vtt` | a cue with a word timestamp of 20 hour digits between two good cues, LF | MIT |
 | `absurd_delay_subviewer.sub` | SubViewer 1 with a `[DELAY]` of 359999990 seconds. The third cue starts past 100,000 hours, LF | MIT |
+| `loose_times.ass` | Start and End times with 4 fraction digits, without a fraction, with `,` before the fraction and with `:` before the fraction, LF | MIT |
+| `loose_times.sub` | SubViewer 2 timing lines with 4 fraction digits, without a fraction and with 1-digit fields, CR LF | MIT |

@@ -53,6 +53,7 @@ class AssFormatterTest extends TestCase
             ["own_ffmpeg.ass"],
             ["own_signs_crlf.ass"],
             ["own_ssa_v4.ssa"],
+            ["own_style_flags.ass"],
         ];
     }
 
@@ -85,6 +86,7 @@ class AssFormatterTest extends TestCase
             ["own_aegisub.ass"],
             ["own_ffmpeg.ass"],
             ["own_ssa_v4.ssa"],
+            ["own_style_flags.ass"],
         ];
     }
 
@@ -210,6 +212,28 @@ class AssFormatterTest extends TestCase
     }
 
 
+    public function testChangedCueOmitsTheTagsThatItsStyleImplies(): void
+    {
+        $subtitle = $this->parseFile("own_style_flags.ass");
+        $cues     = $subtitle->getCues();
+        $cues[1]->setLines(["<i>I should have taken the night bus.</i>"]);
+        $cues[2]->setLines(["Upright now"]);
+        $cues[3]->setAlignment(null);
+        $cues[5]->setLines(["<i>Left</i> again"]);
+
+        $formatted = $subtitle->toString(Format::Ass);
+
+        $this->assertStringContainsString(",Thoughts,,0,0,0,,I should have taken the night bus.\n", $formatted);
+        $this->assertStringContainsString(",Thoughts,,0,0,0,,{\\an2\\i0}Upright now\n", $formatted);
+        $this->assertStringContainsString(",Sign,,0,0,0,,{\\an2}Depot closed for repairs\n", $formatted);
+        $this->assertStringContainsString(",Thoughts,,0,0,0,,{\\i1}Left{\\i0} again\n", $formatted);
+        $this->assertSame(
+            [["<i>I should have taken the night bus.</i>"], ["Upright now"], ["<b><u><s>Depot closed for repairs</s></u></b>"], ["<i>Left</i> again"]],
+            array_map(fn (int $index): array => Subtitle::fromString($formatted, Format::Ass)->getCues()[$index]->getLines(), [1, 2, 3, 5])
+        );
+    }
+
+
     public function testSsaUsesLegacyAlignmentAndKeepsMarkedColumn(): void
     {
         $subtitle = $this->parseFile("own_ssa_v4.ssa");
@@ -222,14 +246,14 @@ class AssFormatterTest extends TestCase
     }
 
 
-    public function testStripAllTagsKeepsAlignmentAndSpeaker(): void
+    public function testStripAllTagsKeepsSpeaker(): void
     {
         $subtitle = $this->parseFile("own_aegisub.ass");
 
         $formatted = $subtitle->toString(Format::Ass, new WriteOptions(stripTags: true));
 
         $this->assertStringContainsString("Dialogue: 0,0:00:06.30,0:00:08.00,Default,Passenger,0,0,0,,Is it on time today?\n", $formatted);
-        $this->assertStringContainsString("Dialogue: 0,0:00:08.10,0:00:10.90,Top,,0,0,0,,{\\an8}Platform 4: Coast Express\n", $formatted);
+        $this->assertStringContainsString("Dialogue: 0,0:00:08.10,0:00:10.90,Top,,0,0,0,,Platform 4: Coast Express\n", $formatted);
     }
 
 

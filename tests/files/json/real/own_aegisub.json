@@ -344,10 +344,10 @@
             "start": 13.5,
             "end": 16.0,
             "lines": [
-                "<00:00:13.500>The <00:00:13.900>train <00:00:14.250>leaves <00:00:14.750>at <00:00:15.350>noon"
+                "<b><00:00:13.500>The <00:00:13.900>train <00:00:14.250>leaves <00:00:14.750>at <00:00:15.350>noon</b>"
             ],
             "identifier": null,
-            "alignment": null,
+            "alignment": 8,
             "formatData": {
                 "ass": {
                     "fields": {
@@ -361,9 +361,9 @@
                     },
                     "text": "{\\k40}The {\\k35}train {\\k50}leaves {\\kf60}at {\\ko45}noon",
                     "lines": [
-                        "<00:00:13.500>The <00:00:13.900>train <00:00:14.250>leaves <00:00:14.750>at <00:00:15.350>noon"
+                        "<b><00:00:13.500>The <00:00:13.900>train <00:00:14.250>leaves <00:00:14.750>at <00:00:15.350>noon</b>"
                     ],
-                    "alignment": null
+                    "alignment": 8
                 }
             }
         },
