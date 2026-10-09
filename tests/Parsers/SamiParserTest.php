@@ -213,6 +213,20 @@ class SamiParserTest extends TestCase
     }
 
 
+    public function testFirstStyleClassThatAParagraphUsesIsRead(): void
+    {
+        $subtitle = (new SamiParser())->parse(file_get_contents(self::DIR . "unused_first_class.smi"));
+
+        $this->assertSame(
+            [[1.0, 3.5, ["The museum opens at nine."]], [4.0, 6.0, ["Tickets are sold at the door."]]],
+            array_map(fn ($cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], $subtitle->getCues())
+        );
+        $this->assertSame("ENUSCC", $subtitle->findFormatData("sami")["class"]);
+        $this->assertSame("en-US", $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE));
+        $this->assertSame([], $subtitle->getParseWarnings());
+    }
+
+
     public function testNegativeStartIsReadAsZeroAndBareNbspEndsTheCue(): void
     {
         $content  = file_get_contents(self::DIR . "negative_start_bare_nbsp.smi");

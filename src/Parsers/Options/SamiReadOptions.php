@@ -9,7 +9,7 @@ use SubtitleToolbox\OptionChecks;
 final class SamiReadOptions implements FormatReadOptions
 {
     /**
-     * @param ?string $languageClass The SAMI class to read, such as "ENUSCC". Null reads the first class of the STYLE block.
+     * @param ?string $languageClass The SAMI class to read, such as "ENUSCC". Null reads the first class of the STYLE block that a <P> uses.
      */
     public function __construct(public readonly ?string $languageClass = null)
     {
