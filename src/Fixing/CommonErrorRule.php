@@ -15,10 +15,12 @@ enum CommonErrorRule: string
     case OcrPipe                      = "ocrPipe";
     case OcrZeroInWords               = "ocrZeroInWords";
     case OcrLowercaseL                = "ocrLowercaseL";
+    case LoneLowercaseI               = "loneLowercaseI";
     case Ellipsis                     = "ellipsis";
     case DoubleSpaces                 = "doubleSpaces";
     case SpaceBeforePunctuation       = "spaceBeforePunctuation";
     case MissingSpaceAfterPunctuation = "missingSpaceAfterPunctuation";
     case DialogueOnOneLine            = "dialogueOnOneLine";
     case DialogueDashes               = "dialogueDashes";
+    case SentenceStartCase            = "sentenceStartCase";
 }

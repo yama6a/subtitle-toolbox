@@ -113,6 +113,24 @@ class CommonErrorFixerTest extends TestCase
             "dialogue already on two lines"      => ["dialogueOnOneLine", "en", ["- Hi.", "- Hello."], ["- Hi.", "- Hello."]],
             "three speakers stay"                => ["dialogueOnOneLine", "en", ["- Hi. - Hello. - Hey."], ["- Hi. - Hello. - Hey."]],
             "negative number after a sentence"   => ["dialogueOnOneLine", "en", ["It's cold. -5 degrees."], ["It's cold. -5 degrees."]],
+            "lone i"                             => ["loneLowercaseI", "en", ["i think i can."], ["I think I can."]],
+            "lone i in a tag"                    => ["loneLowercaseI", "en", ["<i>i</i> know"], ["<i>I</i> know"]],
+            "lone i with contractions"           => ["loneLowercaseI", "en", ["i'm sure, i\u{2019}ll go, i'd and i've"],
+                                                     ["I'm sure, I\u{2019}ll go, I'd and I've"]],
+            "i in words and abbreviations"       => ["loneLowercaseI", "en", ["see i.e. here, www.i.com, iPhone, w<b>i</b>th"],
+                                                     ["see i.e. here, www.i.com, iPhone, w<b>i</b>th"]],
+            "lone i in German"                   => ["loneLowercaseI", "de", ["i think"], ["i think"]],
+            "lone i without a language"          => ["loneLowercaseI", null, ["i think"], ["i think"]],
+            "first cue starts a sentence"        => ["sentenceStartCase", "en", ["hello."], ["Hello."]],
+            "line after a sentence end"          => ["sentenceStartCase", "en", ["- Hello.", "- <i>\"where</i> are you?"],
+                                                     ["- Hello.", "- <i>\"Where</i> are you?"]],
+            "line after a comma"                 => ["sentenceStartCase", "en", ["So I said,", "no way."], ["So I said,", "no way."]],
+            "word with an inner capital"         => ["sentenceStartCase", "en", ["iPhone is here."], ["iPhone is here."]],
+            "music note and a dash before"       => ["sentenceStartCase", "en", ["\u{266A} la la!", "- \u{00E9}t\u{00E9}."],
+                                                     ["\u{266A} La la!", "- \u{00C9}t\u{00E9}."]],
+            "Turkish dotted i"                   => ["sentenceStartCase", "tr", ["iyi."], ["\u{0130}yi."]],
+            "text without case"                  => ["sentenceStartCase", "ja", ["\u{3053}\u{3093}\u{306B}\u{3061}\u{306F}\u{3002}"],
+                                                     ["\u{3053}\u{3093}\u{306B}\u{3061}\u{306F}\u{3002}"]],
         ];
     }
 
@@ -182,7 +200,7 @@ class CommonErrorFixerTest extends TestCase
 
         CommonErrorFixer::apply($subtitle, $options);
 
-        $this->assertSame(["dialogueOnOneLine"], array_values($optional));
+        $this->assertSame(["loneLowercaseI", "dialogueOnOneLine", "sentenceStartCase"], array_values($optional));
         $this->assertStringEqualsFile(self::FILES . "fixing/optional-rules.fixed.srt", $subtitle->toString(Format::SubRip));
         $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "fixing/optional-rules.fixed.srt")),
                                                       $options)->fixes);
@@ -275,6 +293,48 @@ class CommonErrorFixerTest extends TestCase
         $this->assertSame(["- Hi. - Hello."], self::fixLines(["- Hi. - Hello."])[0]);
         $this->assertSame(["\u{2013} Hi.", "\u{2013} Hello."],
                           self::fixLines(["Hi. - Hello."], new CommonErrorOptions(dialogueDashStyle: DialogueDashStyle::EnDashSpace, dialogueOnOneLine: true))[0]);
+    }
+
+
+    public function testLoneLowercaseIIsOffByDefault(): void
+    {
+        $this->assertSame(["i think"], self::fixLines(["i think"], new CommonErrorOptions(language: "en"))[0]);
+    }
+
+
+    /**
+     * Each case: the text of the cue before, the cue and the cue after the fix.
+     *
+     * @return array<string, array{string, string, string}>
+     */
+    public static function sentenceStartCases(): array
+    {
+        return [
+            "after a full stop"    => ["I'm home.", "where are you?", "Where are you?"],
+            "after a question"     => ["Really?", "<i>yes.</i>", "<i>Yes.</i>"],
+            "after a quote"        => ["\"Stop!\"", "fine.", "Fine."],
+            "after an ellipsis"    => ["I was going to...", "stay home.", "stay home."],
+            "after U+2026"         => ["I was going to\u{2026}", "stay home.", "stay home."],
+            "after a comma"        => ["So I said,", "no way.", "no way."],
+            "inner capital"        => ["Done.", "eBay is here.", "eBay is here."],
+        ];
+    }
+
+
+    #[DataProvider("sentenceStartCases")]
+    public function testSentenceStartCaseLooksAtTheCueBefore(string $previous, string $text, string $after): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, $previous))->addCue(new SubtitleCue(3, 4, $text));
+
+        CommonErrorFixer::apply($subtitle, new CommonErrorOptions("en", ...[...self::ALL_OFF, "sentenceStartCase" => true]));
+
+        $this->assertSame([$previous, $after], array_map(fn (SubtitleCue $cue): string => $cue->getText(), $subtitle->getCues()));
+    }
+
+
+    public function testSentenceStartCaseIsOffByDefault(): void
+    {
+        $this->assertSame(["hello."], self::fixLines(["hello."], new CommonErrorOptions(language: "en"))[0]);
     }
 
 

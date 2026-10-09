@@ -364,13 +364,14 @@ class BinaryEditTest extends BinaryTestCase
     public function testErrorsEnableTurnsOnRulesThatAreOffByDefault(): void
     {
         copy(self::FILES . "fixing/optional-rules.srt", "$this->dir/optional.srt");
-        $enable = "dialogueOnOneLine";
+        $names  = ["loneLowercaseI", "dialogueOnOneLine", "sentenceStartCase"];
+        $enable = implode(",", $names);
 
         $this->assertSame([0, file_get_contents(self::FILES . "fixing/optional-rules.fixed.srt"), ""],
                           $this->runBinary(["convert", "optional.srt", "--to", "srt", "-o", "-", "--errors-fix", "--language", "en", "--errors-enable", $enable]));
         $this->assertSame([0, file_get_contents(self::FILES . "fixing/optional-rules.srt"), ""],
                           $this->runBinary(["convert", "optional.srt", "--to", "srt", "-o", "-", "--errors-fix", "--language", "en", "--no-bom"]));
-        $this->assertSame([2, "", "Error: Unknown rule \"dialogOnOneLine\" in --errors-enable. The valid names are $enable.\n" .
+        $this->assertSame([2, "", "Error: Unknown rule \"dialogOnOneLine\" in --errors-enable. The valid names are " . implode(", ", $names) . ".\n" .
                                   "Run \"subtitle-toolbox help convert\" for the usage.\n"],
                           $this->runBinary(["convert", "optional.srt", "--to", "srt", "-o", "-", "--errors-fix", "--errors-enable", "$enable,dialogOnOneLine"]));
         $this->assertSame([2, "", "Error: Pass --errors-fix with --errors-enable.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],

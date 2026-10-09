@@ -24,6 +24,7 @@ final class CommonErrorFixer
     private const NOT_IN_WORD  = '(?<![\p{L}\p{N}\'\x{2019}])';
     private const WORD_ENDS    = '(?![\p{L}\p{N}\'\x{2019}])';
     private const SPACES       = '[ \t\x{00A0}]';
+    private const SENTENCE_END = '/(?:(?<!\.)\.|[?!])[\p{Pe}\p{Pf}"\']*$/u';
     private const BOUNDARY     = '/^[\p{P}\s<>`\x{00B4}\x{266A}]$/u';
     private const L_CONSONANTS = [
         "en" => "bcdfghjkmnpqrstvwxz",
@@ -60,8 +61,13 @@ final class CommonErrorFixer
         $indexes   = array_keys($cues);
         $positions = array_flip($indexes);
         $fixes     = [];
+        $turkic    = in_array(StringHelpers::primaryLanguage($options->language ?? $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE)),
+                              ["tr", "az"], true);
+        $ends      = $options->sentenceStartCase ? array_map(fn (SubtitleCue $cue): bool =>
+            preg_match(self::SENTENCE_END, Markup::visibleText(implode("\n", $cue->getLines()))) === 1, $cues) : [];
 
-        $fixCue = function (SubtitleCue $cue, int $index) use ($cues, $indexes, $positions, $options, $language, $change, &$fixes): ?array {
+        $fixCue = function (SubtitleCue $cue, int $index)
+            use ($cues, $indexes, $positions, $ends, $options, $language, $turkic, $change, &$fixes): ?array {
             $lines = array_values($cue->getLines());
             if ($lines === []) {
                 return null;
@@ -70,9 +76,10 @@ final class CommonErrorFixer
             $next      = $cues[$indexes[$positions[$index] + 1] ?? -1] ?? null;
             $continues = $next !== null && $next->getStart() - $cue->getEnd() <= self::CONTINUATION_GAP
                          && preg_match('/^\p{Ll}/u', implode("\n", Markup::plainLines($next->getLines()))) === 1;
+            $starts    = $positions[$index] === 0 || ($ends[$indexes[$positions[$index] - 1]] ?? false);
             $original  = $lines;
             foreach (CommonErrorRule::cases() as $rule) {
-                $fixed = self::applyRule($rule, $lines, $options, $language, $continues);
+                $fixed = self::applyRule($rule, $lines, $options, $language, $continues, $starts, $turkic);
                 if ($fixed !== $lines) {
                     $fixes[] = new AppliedFix($index, $rule, implode("\n", $lines), implode("\n", $fixed));
                     $lines   = $fixed;
@@ -92,7 +99,7 @@ final class CommonErrorFixer
      * @return list<string>
      */
     private static function applyRule(CommonErrorRule $rule, array $lines, CommonErrorOptions $options, ?string $language,
-                                      bool $continues): array
+                                      bool $continues, bool $starts, bool $turkic): array
     {
         $enabled = match ($rule) {
             CommonErrorRule::ReplaceList                  => $options->replaceList !== null,
@@ -101,12 +108,14 @@ final class CommonErrorFixer
             CommonErrorRule::OcrPipe                      => $options->ocrPipe,
             CommonErrorRule::OcrZeroInWords               => $options->ocrZeroInWords,
             CommonErrorRule::OcrLowercaseL                => $options->ocrLowercaseL,
+            CommonErrorRule::LoneLowercaseI               => $options->loneLowercaseI && $language === "en",
             CommonErrorRule::Ellipsis                     => $options->ellipsis,
             CommonErrorRule::DoubleSpaces                 => $options->doubleSpaces,
             CommonErrorRule::SpaceBeforePunctuation       => $options->spaceBeforePunctuation,
             CommonErrorRule::MissingSpaceAfterPunctuation => $options->missingSpaceAfterPunctuation,
             CommonErrorRule::DialogueOnOneLine            => $options->dialogueOnOneLine,
             CommonErrorRule::DialogueDashes               => $options->dialogueDashes,
+            CommonErrorRule::SentenceStartCase            => $options->sentenceStartCase,
         };
         if (!$enabled) {
             return $lines;
@@ -120,6 +129,7 @@ final class CommonErrorFixer
             CommonErrorRule::OcrPipe         => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrPipe($text, $language)),
             CommonErrorRule::OcrZeroInWords  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string => self::ocrZero($text, $first)),
             CommonErrorRule::OcrLowercaseL   => Markup::mapTextRuns($lines, fn (string $text): string => self::ocrLowercaseL($text, $language)),
+            CommonErrorRule::LoneLowercaseI  => array_map(self::loneLowercaseI(...), $lines),
             CommonErrorRule::Ellipsis        => Markup::mapTextRuns($lines, fn (string $text): string => self::ellipsis($text, $options->unicodeEllipsis)),
             CommonErrorRule::DoubleSpaces    => self::doubleSpaces($lines),
             CommonErrorRule::SpaceBeforePunctuation       => Markup::mapTextRuns($lines, fn (string $text): string =>
@@ -129,6 +139,7 @@ final class CommonErrorFixer
             CommonErrorRule::DialogueOnOneLine => self::dialogueOnOneLine($lines, $options->dialogueDashStyle),
             CommonErrorRule::DialogueDashes  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string =>
                 $first ? self::dialogueDash($text, $options->dialogueDashStyle) : $text),
+            CommonErrorRule::SentenceStartCase => self::sentenceStartCase($lines, $starts, $turkic),
         };
     }
 
@@ -178,6 +189,54 @@ final class CommonErrorFixer
 
         return Markup::mapTextRuns($split, fn (string $text, bool $isFirst): string =>
             $isFirst && preg_match("/^\s*$dash/u", $text) !== 1 ? $style->value . ltrim($text) : $text);
+    }
+
+
+    /**
+     * Writes the first letter of each line that starts a sentence in upper case. A line starts a sentence when it is the
+     * first line and $startsSentence is true, or when the line before it ends a sentence.
+     *
+     * @param list<string> $lines
+     * @return list<string>
+     */
+    private static function sentenceStartCase(array $lines, bool $startsSentence, bool $turkic): array
+    {
+        foreach ($lines as $lineIndex => $line) {
+            $starts = $lineIndex === 0 ? $startsSentence
+                                       : preg_match(self::SENTENCE_END, Markup::visibleText($lines[$lineIndex - 1])) === 1;
+            if ($starts) {
+                $lines[$lineIndex] = self::capitalizeLine($line, $turkic);
+            }
+        }
+
+        return $lines;
+    }
+
+
+    /**
+     * Writes the first letter of $line in upper case. Dashes, quotes, music notes and tags before it stay. A word with an
+     * upper case letter after the first, such as "iPhone", stays.
+     */
+    private static function capitalizeLine(string $line, bool $turkic): string
+    {
+        $opening = '[\s"\'\x{2018}\x{201C}\x{00AB}\x{00BF}\x{00A1}\x{266A}' . DialogueDash::CHARACTERS . ']*';
+        $done    = false;
+
+        return Markup::mapTextRuns([$line], function (string $text) use ($opening, $turkic, &$done): string {
+            if ($done || preg_match("/^$opening$/u", $text) === 1) {
+                return $text;
+            }
+
+            $done = true;
+            if (preg_match("/^($opening)(\\p{Ll})([\\p{L}\\p{M}\\p{N}'\\x{2019}]*)/u", $text, $match) !== 1
+                || preg_match('/\p{Lu}/u', $match[3]) === 1) {
+                return $text;
+            }
+
+            $upper = $turkic && $match[2] === "i" ? "\u{0130}" : Subtitle::toUpperOrLower($match[2], true);
+
+            return $match[1] . $upper . substr($text, strlen($match[1]) + strlen($match[2]));
+        })[0];
     }
 
 
@@ -281,6 +340,34 @@ final class CommonErrorFixer
         }
 
         return self::replace('/' . $start . 'l(?=[' . self::L_CONSONANTS[$language] . '])/u', "I", $text);
+    }
+
+
+    /**
+     * Writes the pronoun "i" and "i'm", "i'll", "i've" and "i'd" in upper case. The letters around it may be in other text runs.
+     */
+    private static function loneLowercaseI(string $line): string
+    {
+        $tokens = Markup::splitTags($line);
+        $runs   = array_filter($tokens, fn (int $index): bool => $index % 2 === 0, ARRAY_FILTER_USE_KEY);
+        $text   = implode("", $runs);
+        if (preg_match_all('/(?<![\p{L}\p{N}\'\x{2019}]|\p{L}\.)i(?=(?:[\'\x{2019}](?:m|ll|ve|d))?(?![\p{L}\p{N}\'\x{2019}]|\.\p{L}))/u',
+                           $text, $matches, PREG_OFFSET_CAPTURE) < 1) {
+            return $line;
+        }
+
+        $start = 0;
+        $found = array_column($matches[0], 1);
+        foreach ($runs as $index => $run) {
+            foreach ($found as $offset) {
+                if ($offset >= $start && $offset < $start + strlen($run)) {
+                    $tokens[$index][$offset - $start] = "I";
+                }
+            }
+            $start += strlen($run);
+        }
+
+        return implode("", $tokens);
     }
 
 
