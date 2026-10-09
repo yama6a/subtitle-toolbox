@@ -1159,6 +1159,14 @@
         "fromPath": "vtt",
         "detect": "vtt"
     },
+    "transforms/own_cea608_run_on.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
+    "transforms/own_cea608_run_on_sentence.vtt": {
+        "fromPath": "vtt",
+        "detect": "vtt"
+    },
     "transforms/own_multilingual_caps.srt": {
         "fromPath": "srt",
         "detect": "srt"
