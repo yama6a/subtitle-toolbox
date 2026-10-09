@@ -265,7 +265,7 @@ class BinaryOptionCoverageTest extends BinaryTestCase
                 $input   = "station.sub";
                 break;
             case "--lenient":
-                $variant = fn (string $text): string => rtrim($text) . "\n\n99\n00:01:00,000 -> 00:01:02,000\nBroken\n";
+                $variant = fn (string $text): string => rtrim($text) . "\n\n99\n00:01:00,000 => 00:01:02,000\nBroken\n";
                 break;
             case "--track":
                 file_put_contents("$this->dir/station.mkv", self::mkv($station));
