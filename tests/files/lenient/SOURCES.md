@@ -31,6 +31,8 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `broken_time_tag.lrc` | a letter in the seconds of a time tag, CR LF | MIT |
 | `bad_sync_start.smi` | a `SYNC` tag with an empty `Start` attribute, CR LF | MIT |
 | `bad_begin.ttml` | a letter in a `begin` time, a `p` without `end` or `dur`, LF | MIT |
+| `credit_before_xml.ttml` | a credit line before the XML declaration, a letter in a `begin` time, CR LF | MIT |
+| `credit_before_xml.srv3` | YouTube srv3 XML with a credit line before the XML declaration, LF | MIT |
 | `bad_time_code.stl` | written by `generate-stl.php`. Frame 30 in a 25 fps time code out, the last TTI block cut off after 60 bytes | MIT |
 | `missing_end.json` | a cue without `end`, a cue with a number as line, a comment after the first broken cue, LF | MIT |
 | `missing_segment_end.whisper.json` | the OpenAI API shape, a segment without `end`, LF | MIT |

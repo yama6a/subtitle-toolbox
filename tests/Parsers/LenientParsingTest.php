@@ -372,6 +372,31 @@ class LenientParsingTest extends TestCase
                     [7, 2, self::SKIPPED, "The paragraph that begins at 7s has no end time."],
                 ],
             ],
+            "TTML with a credit line before the XML declaration" => [
+                "credit_before_xml.ttml",
+                TtmlParser::class,
+                "The file has text before the XML: \"Subtitles by the harbour film club\".",
+                [
+                    [1, 3, "The boat leaves at noon."],
+                    [7, 9, "Enjoy the trip."],
+                ],
+                [
+                    [1, null, self::REPAIRED, "The file has text before the XML: \"Subtitles by the harbour film club\". The parser skipped it."],
+                    [7, 1, self::SKIPPED, "The time expression \"00:00:0x.000\" is not valid."],
+                ],
+            ],
+            "YouTube srv3 with a credit line before the XML declaration" => [
+                "credit_before_xml.srv3",
+                YouTubeTimedTextParser::class,
+                "The file has text before the XML: \"Captions by the harbour film club\".",
+                [
+                    [1, 3, "The boat leaves at noon."],
+                    [4, 6, "Enjoy the trip."],
+                ],
+                [
+                    [1, null, self::REPAIRED, "The file has text before the XML: \"Captions by the harbour film club\". The parser skipped it."],
+                ],
+            ],
             "EBU STL with a bad time code and a cut-off last block" => [
                 "bad_time_code.stl",
                 EbuStlParser::class,

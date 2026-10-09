@@ -40,6 +40,7 @@ class TtmlRealFileTest extends TestCase
             "astisub_merging_style"      => ["astisub_merging_style.ttml", 4, 0.0, 60.0, "<font color=\"#ffff00\">text1.0 </font>text1.1", 8, 120.0, 180.0, "text3", 8],
             "astisub_smpte"              => ["astisub_smpte.ttml", 6, 99.0, 101.04, "(light rain)", 8, 151.4, 153.44, "<font color=\"#ffff00\"><i>(music for the</i></font>\ntraffic news)", null],
             "bbc_ebu_tt_d"               => ["bbc_ebu_tt_d.ttml", 20, 10.0, 13.0, "<v Anna>Good morning from the harbour.", 2, 76.12, 79.52, "<i>(music)</i>", 8],
+            "blank_lines_before_xml"     => ["blank_lines_before_xml.ttml", 2, 1.0, 3.0, "The market opens at eight.", null, 3.5, 6.0, "<i>Fresh bread</i> is sold first.", null],
             "flash_ttaf1_2006_04"        => ["flash_ttaf1_2006_04.xml", 4, 0.5, 3.0, "Welcome to the second lesson.", null, 8.4, 11.0, "<b>Save</b> your work before you go on.", null],
             "mantas_dfxp_br"             => ["mantas_dfxp_br.dfxp", 1, 0.0, 1.0, "one\ntwo\nthree", 2, 0.0, 1.0, "one\ntwo\nthree", 2],
             "mantas_duplicated_ids"      => ["mantas_duplicated_ids.ttml", 3, 0.0, 1.0, "First line.", null, 2.0, 3.0, "Third line.", null],

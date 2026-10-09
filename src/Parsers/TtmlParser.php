@@ -23,6 +23,8 @@ final class TtmlParser extends SubtitleParser
 
     private const TIMING_ATTRIBUTES = ["begin", "end", "dur"];
 
+    private const ROOT_PATTERN = '(?:[A-Za-z_][\w.-]*:)?tt';
+
     // Styles can refer to each other in a loop, so the parser follows at most 20 references.
     private const MAX_STYLE_DEPTH = 20;
 
@@ -163,7 +165,12 @@ final class TtmlParser extends SubtitleParser
             throw new ParsingException("The file is empty.");
         }
 
-        return XmlLoader::xml($xml) ?? throw new ParsingException("The file is not well-formed XML.");
+        $repaired = XmlLoader::skipLeadingText($xml, self::ROOT_PATTERN, $skipped);
+        if ($skipped !== "") {
+            $this->skipTextBeforeXml($xml, $skipped);
+        }
+
+        return XmlLoader::xml($repaired) ?? throw new ParsingException("The file is not well-formed XML.");
     }
 
 

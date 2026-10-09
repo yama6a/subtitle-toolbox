@@ -63,6 +63,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
   - A SAMI file that is not UTF-8.
   - An ASS file without `[Events]`.
   - A MicroDVD file without a frame rate.
+- **Text before the XML**: the TTML, iTT and YouTube XML parsers skip white space before the XML in both modes. Other text before the XML declaration or the root element throws in strict mode. Lenient mode skips it with a `repaired` warning that has `blockIndex` null, for example for a `Subtitles by ...` line.
 - **Strict mode without an exception**: the LRC parser drops a line with a bad time tag. The EBU STL parser reads a time code out of range as it is. In lenient mode, both record a warning, and the EBU STL parser also skips the subtitle.
 - **Stream readers**: `SubRipStreamReader` and `WebVttStreamReader` take `ReadOptions(lenient: true)` in the constructor and have `getWarnings()`. They give the same cues and warnings as a lenient `Subtitle::fromString()`.
 - **Command line tool**: `--lenient` turns on lenient mode and prints each warning to standard error.
