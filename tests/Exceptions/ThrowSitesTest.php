@@ -509,6 +509,8 @@ class ThrowSitesTest extends TestCase
             "Parsers/Options/SccReadOptions.php: channel 3"         => [fn () => new SccReadOptions(3), ...$invalid],
             "Parsers/SubRipParser.php: invalid time"        => [fn () => (new SubRipParser())->parse("1\nsoon --> 00:00:02,000\ntext", new ReadOptions()),
                                                                 ...$parsing],
+            "Parsers/SubRipParser.php: text after end time" => [fn () => (new SubRipParser())->parse("1\n00:00:01,000 --> 00:00:02,000 x\ntext", new ReadOptions()),
+                                                                ...$parsing],
             "Parsers/SubViewerParser.php: version 1 header" => [fn () => (new SubViewerParser())->parse("text\n" . SubViewerParser::START_SCRIPT . "\n", new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: no JSON"           => [fn () => (new JsonParser())->parse("{", new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: JSON root no object" => [fn () => (new PodcastTranscriptParser())->parse("[1]", new ReadOptions()), ...$parsing],
