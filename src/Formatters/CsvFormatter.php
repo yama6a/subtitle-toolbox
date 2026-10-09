@@ -11,7 +11,6 @@ use SubtitleToolbox\FrameRate;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\CsvParser;
-use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
@@ -28,8 +27,6 @@ final class CsvFormatter extends SubtitleFormatter
 
     /**
      * Writes one row per cue. A subtitle from CsvParser keeps its columns, header names, delimiter and time format.
-     * The stored delimiter must be ",", ";" or a tab, else this method throws.
-     * A stored time format that is not a CsvTimeFormat value, such as "hh:mm:ss;fff", writes the CsvTimeFormat::Dot form.
      */
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
@@ -37,10 +34,9 @@ final class CsvFormatter extends SubtitleFormatter
         $formatOptions = $this->formatOptions($options);
         $data          = $subtitle->findFormatData(CsvParser::FORMAT_DATA_KEY);
         $delimiter     = $formatOptions->delimiter ?? $data["delimiter"] ?? ",";
-        CsvReadOptions::checkDelimiter($delimiter);
-        $timeFormat = $formatOptions->timeFormat ?? CsvTimeFormat::tryFrom($data["timeFormat"] ?? "") ?? CsvTimeFormat::Dot;
-        $fps        = $formatOptions->frameRate ?? $data["frameRate"] ?? null;
-        $frameRate  = $fps === null ? null : new FrameRate($fps);
+        $timeFormat    = $formatOptions->timeFormat ?? CsvTimeFormat::from($data["timeFormat"] ?? CsvTimeFormat::Dot->value);
+        $fps           = $formatOptions->frameRate ?? $data["frameRate"] ?? null;
+        $frameRate     = $fps === null ? null : new FrameRate($fps);
         if ($timeFormat === CsvTimeFormat::Frames && $frameRate === null) {
             throw new InvalidArgumentException("The time format " . CsvTimeFormat::Frames->value . " needs a frame rate. Set CsvWriteOptions::\$frameRate.");
         }
