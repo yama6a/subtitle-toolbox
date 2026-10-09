@@ -27,7 +27,7 @@ curl -fsSLO https://github.com/yama6a/subtitle-toolbox-php/releases/latest/downl
 php subtitle-toolbox.phar --version
 ```
 
-- **Version**: the PHAR file, the image tag, the Git tag and the Packagist version are the same string, for example `2.0.0`. The image also has the tags `2.0`, `2` and `latest`. The Tesseract image has the tags `2.0.0-tesseract`, `2.0-tesseract`, `2-tesseract` and `tesseract`.
+- **Version**: the PHAR file, the image tag, the Git tag and the Packagist version are the same string, for example `3.0.0`. The image also has the tags `3.0`, `3` and `latest`. The Tesseract image has the tags `3.0.0-tesseract`, `3.0-tesseract`, `3-tesseract` and `tesseract`.
 - **Image**: the tool runs in `/work`, so mount your files there. `--user` makes the tool write files that you own. Without it, the tool runs as `www-data` and cannot write to most mounted folders.
 - **Platforms**: the image is for `linux/amd64` and `linux/arm64`.
 - **OCR**: `convert --ocr` works in every form with no extra steps, because all include php-glyph-ocr. The Tesseract image adds Tesseract with the `tessdata_fast` models of all its languages, see [ocr.md](ocr.md#tesseract). It is about 340 MB larger.
@@ -50,7 +50,7 @@ php subtitle-toolbox.phar --version
 - **Help**: `subtitle-toolbox help CMD` and `subtitle-toolbox CMD --help` list the options of a command. For `convert`, they list the common options and the option groups, see [Order](#order).
 - **Command list**: `subtitle-toolbox`, `subtitle-toolbox help` and `subtitle-toolbox help help` list the commands and exit with 0.
 - **Help width**: every help line fits in 80 columns.
-- **Version**: `subtitle-toolbox --version` prints the installed release, for example `2.0.0`, or `dev` in a Git checkout.
+- **Version**: `subtitle-toolbox --version` prints the installed release, for example `3.0.0`, or `dev` in a Git checkout.
 - **Exit code**: see the table. A batch with a failed file exits with 3, also when another file broke a rule.
 
 | Code | Meaning | Example |

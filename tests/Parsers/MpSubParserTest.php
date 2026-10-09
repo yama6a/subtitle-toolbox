@@ -119,7 +119,7 @@ class MpSubParserTest extends TestCase
 
         $expected = "\xEF\xBB\xBF" . str_replace(
             "FORMAT=25\n",
-            "FORMAT=25\nNOTE=Created with the PHP Subtitle Toolbox (https://github.com/yama6a/subtitle-toolbox)\n",
+            "FORMAT=25\nNOTE=Created with the PHP Subtitle Toolbox (https://github.com/yama6a/subtitle-toolbox-php)\n",
             $raw
         );
         $this->assertSame($expected, $subtitle->toString(Format::MpSub, new WriteOptions(format: new MpSubWriteOptions(frameRate: 25))));
