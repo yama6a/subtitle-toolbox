@@ -137,6 +137,54 @@ class LenientParsingTest extends TestCase
                                            "The parser split the header block at line 4."],
                 ],
             ],
+            "WebVTT without the WEBVTT line" => [
+                "missing_signature.vtt",
+                WebVttParser::class,
+                "The file does not start with WEBVTT.",
+                [
+                    [1, 3, "The kettle is on."],
+                    [4, 6, "Tea in five minutes."],
+                ],
+                [
+                    [1, 0, self::REPAIRED, "The file does not start with WEBVTT. The parser read the cues without it."],
+                ],
+            ],
+            "WebVTT after two BOMs" => [
+                "two_boms.vtt",
+                WebVttParser::class,
+                "The file does not start with WEBVTT.",
+                [
+                    [1, 3, "The bus is late again."],
+                    [4, 6, "We can walk instead."],
+                ],
+                [
+                    [1, 0, self::REPAIRED, "The file does not start with WEBVTT. The parser skipped the lines before line 3."],
+                ],
+            ],
+            "WebVTT with text before the WEBVTT line" => [
+                "text_before_signature.vtt",
+                WebVttParser::class,
+                "The file does not start with WEBVTT.",
+                [
+                    [1, 3, "The garden needs water."],
+                    [4, 6, "The hose is in the shed."],
+                ],
+                [
+                    [1, 0, self::REPAIRED, "The file does not start with WEBVTT. The parser skipped the lines before line 4."],
+                ],
+            ],
+            "WebVTT with a damaged WEBVTT line" => [
+                "damaged_signature.vtt",
+                WebVttParser::class,
+                "The file does not start with WEBVTT.",
+                [
+                    [1, 3, "The library opens at ten."],
+                    [4, 6, "It closes at six."],
+                ],
+                [
+                    [1, 0, self::REPAIRED, "The file does not start with WEBVTT. The parser skipped the lines before line 4."],
+                ],
+            ],
             "WebVTT with text before the first cue" => [
                 "text_before_first_cue.vtt",
                 WebVttParser::class,
@@ -637,11 +685,37 @@ class LenientParsingTest extends TestCase
     }
 
 
-    public function testWebVttWithoutTheSignatureStillThrows(): void
+    public function testWebVttWithoutTheSignatureAndWithASubRipTimingLineStillThrows(): void
     {
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The file does not start with WEBVTT.");
-        (new WebVttParser())->parse("00:00:01.000 --> 00:00:02.000\ntext\n", new ReadOptions(lenient: true));
+        (new WebVttParser())->parse("1\n00:00:01,000 --> 00:00:02,000\ntext\n", new ReadOptions(lenient: true));
+    }
+
+
+    public function testWebVttWithoutTheSignatureAndWithoutCuesStillThrows(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The file does not start with WEBVTT.");
+        (new WebVttParser())->parse("Hello\n\nWorld\n", new ReadOptions(lenient: true));
+    }
+
+
+    public function testWebVttWithADamagedSignatureKeepsTheSkippedLinesInTheWarning(): void
+    {
+        $subtitle = (new WebVttParser())->parse(file_get_contents(self::DIR . "damaged_signature.vtt"), new ReadOptions(lenient: true));
+
+        $this->assertSame(["WEBVTS", "Kind: captions"], $subtitle->getParseWarnings()[0]->block);
+        $this->assertEquals([new Comment("closing time", 1)], $subtitle->getComments());
+        $this->assertSame(["line" => "0"], $subtitle->getCues()[0]->findFormatData("vtt"));
+    }
+
+
+    public function testWebVttWithoutTheSignatureKeepsTheCueIdentifiers(): void
+    {
+        $subtitle = (new WebVttParser())->parse(file_get_contents(self::DIR . "missing_signature.vtt"), new ReadOptions(lenient: true));
+
+        $this->assertSame(["1", "2"], array_map(fn (SubtitleCue $cue): ?string => $cue->getIdentifier(), $subtitle->getCues()));
     }
 
 

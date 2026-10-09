@@ -22,10 +22,12 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | bad timestamp, `->` arrow | skipped | skipped | skipped |
 | no empty line between two cues | repaired | split as the spec says, no warning | repaired |
 | no empty line after the `WEBVTT` header | not an error | repaired | not an error |
+| no `WEBVTT` line, a damaged one, or text before it | not an error | repaired | not an error |
 | text before the first cue | skipped | skipped | skipped |
 | truncated last cue | skipped | skipped | skipped |
 
 - **No empty line between two cues**: SubRip and SBV split the block before each timing line in strict mode too, without a warning. A SubRip cue without a cue number still throws in strict mode.
+- **No `WEBVTT` line**: in lenient mode, the WebVTT parser skips the lines before the first line that starts with `WEBVTT`. Without such a line before the first cue, it skips the lines before the first cue. The skipped lines go into the `block` of the warning. A damaged `WEBVTT` line also loses the header text and `STYLE` and `REGION` blocks before the first cue.
 - **Cue without text**: a timing line without text lines gives a cue with no lines, in strict and lenient mode. WebVTT allows an empty cue. To drop these cues, call `$subtitle->removeCuesWhere(fn (SubtitleCue $cue): bool => $cue->getLines() === [])`.
 
 ## Other formats
@@ -54,7 +56,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 - **`ParseWarning`**: see [ParseWarning fields](#parsewarning-fields). A skipped block reports its first line. A repair reports the line where the parser split or read the cue.
 - **No line numbers**: binary EBU STL and the JSON formats have no line numbers, so their warnings have `lineNumber` null. The YouTube XML formats report the line of the XML element.
 - **Warnings**: `Subtitle::getParseWarnings()` returns the warnings of the read that made the subtitle.
-- **Not the format**: lenient mode still throws for a WebVTT file without `WEBVTT`. SubRip and SBV have no signature, so a file without one readable cue gives no cues and warnings.
+- **Not the format**: lenient mode still throws for a WebVTT file without `WEBVTT` when the first timing line is not a WebVTT timing line, for example `00:00:01,000 --> 00:00:02,000`. Autodetection still needs the `WEBVTT` line. SubRip and SBV have no signature, so a file without one readable cue gives no cues and warnings.
 - **Whole-file errors**: lenient mode still throws for a problem outside one cue. Examples:
   - Invalid XML in TTML, or invalid JSON.
   - A Whisper `segments` or YouTube `events` field that is an object, not a list.

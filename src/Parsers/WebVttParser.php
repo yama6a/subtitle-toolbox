@@ -38,11 +38,14 @@ final class WebVttParser extends SubtitleParser
         $leadingLines = substr_count(substr($content, 0, strlen($content) - strlen(ltrim($content))), "\n");
         $content      = trim($content);
 
+        $lines = array_merge(array_fill(0, $leadingLines, ""), $this->lines($content));
         if (!str_starts_with($content, self::SIGNATURE)) {
-            throw new ParsingException("The file does not start with WEBVTT.", $leadingLines + 1);
+            if (!$this->options->lenient) {
+                throw new ParsingException("The file does not start with WEBVTT.", $leadingLines + 1);
+            }
+            $lines = $this->repairSignature($lines);
         }
 
-        $lines      = array_merge(array_fill(0, $leadingLines, ""), $this->lines($content));
         $subtitle   = new Subtitle();
         $parsedCues = [];
         $comments   = [];
@@ -66,6 +69,70 @@ final class WebVttParser extends SubtitleParser
         }
 
         return CommentAnchors::addParsed($subtitle, $parsedCues, $comments)->setFormatData(self::FORMAT_DATA_KEY, $fileData);
+    }
+
+
+    /**
+     * Yields the lines from the first line that starts with WEBVTT, if it comes before the first timing line.
+     * Otherwise yields a WEBVTT line and an empty line, then the lines from the first cue.
+     * Warns once. Throws when the first timing line is not a WebVTT timing line.
+     *
+     * @param iterable<int, string> $lines keyed by the 0-based line number
+     *
+     * @return Generator<int, string>
+     *
+     * @internal
+     */
+    public function repairSignature(iterable $lines): Generator
+    {
+        $lines     = (fn (): Generator => yield from $lines)();
+        $skipped   = [];
+        $firstLine = null;
+        $repaired  = false;
+        foreach ($lines as $key => $line) {
+            $firstLine ??= trim($line) !== "" ? $key + 1 : null;
+            if (str_starts_with($line, self::SIGNATURE)) {
+                $this->warnMissingSignature($skipped, (int) $firstLine, $key + 1);
+                $repaired = true;
+                break;
+            }
+            if (str_contains($line, "-->")) {
+                if (!preg_match("/^" . self::TIMESTAMP_PATTERN . "[ \t]*-->[ \t]*" . self::TIMESTAMP_PATTERN . "(?!\d)/", trim($line))) {
+                    break;
+                }
+                $identifier = trim((string) end($skipped)) !== "" ? [array_key_last($skipped) => array_pop($skipped)] : [];
+                $cueStart   = array_key_first($identifier) ?? $key;
+                $this->warnMissingSignature($skipped, (int) $firstLine, $cueStart + 1);
+                yield $cueStart - 2 => self::SIGNATURE;
+                yield $cueStart - 1 => "";
+                yield from $identifier;
+                $repaired = true;
+                break;
+            }
+            $skipped[$key] = $line;
+        }
+        if (!$repaired) {
+            throw new ParsingException("The file does not start with WEBVTT.", $firstLine ?? 1);
+        }
+
+        while ($lines->valid()) {
+            yield $lines->key() => $lines->current();
+            $lines->next();
+        }
+    }
+
+
+    private function warnMissingSignature(array $skipped, int $firstLine, int $readFrom): void
+    {
+        $skipped = array_values(array_filter(array_map("trim", $skipped), fn (string $line): bool => $line !== ""));
+        $this->warn(
+            "The file does not start with WEBVTT. " .
+            ($skipped === [] ? "The parser read the cues without it." : "The parser skipped the lines before line $readFrom."),
+            $firstLine,
+            0,
+            $skipped,
+            ParseWarningAction::Repaired
+        );
     }
 
 
