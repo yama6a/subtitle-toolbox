@@ -194,6 +194,30 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    #[DataProvider("abbreviationProvider")]
+    public function testAbbreviationPeriodEndsNoSentenceBeforeACommaOrALowerCaseWord(string $input, string $expected): void
+    {
+        $this->assertSame([$expected], TestSubtitles::texts(TestSubtitles::fromTexts([$input])->changeCase(CaseMode::Sentence)));
+    }
+
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function abbreviationProvider(): array
+    {
+        return [
+            "i.e. and comma"          => ["it fits, i.e., now or never", "It fits, i.e., now or never"],
+            "e.g. and comma"          => ["TAKE ONE, E.G., SOON.", "Take one, e.g., soon."],
+            "e.g. before lower case"  => ["Fruit, e.g. apples.", "Fruit, e.g. apples."],
+            "vs. before lower case"   => ["Red vs. blue", "Red vs. blue"],
+            "etc. before upper case"  => ["Apples, pears, etc. Then we left.", "Apples, pears, etc. Then we left."],
+            "etc. in upper case text" => ["APPLES, ETC. THEN WE LEFT.", "Apples, etc. Then we left."],
+            "comma after a question"  => ["\"WHY?,\" HE ASKED.", "\"Why?,\" he asked."],
+        ];
+    }
+
+
     #[DataProvider("sentenceGapProvider")]
     public function testGapStartsASentence(float $start, string $expected): void
     {
