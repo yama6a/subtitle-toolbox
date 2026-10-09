@@ -40,13 +40,16 @@ class BinaryEditTest extends BinaryTestCase
     }
 
 
-    public function testRtlFix(): void
+    public function testRtl(): void
     {
         copy(self::FILES . "transforms/own_rtl.srt", "$this->dir/rtl.srt");
 
         $this->assertSame([0, file_get_contents(self::FILES . "transforms/own_rtl_fixed.srt"), ""],
                           $this->runBinary(["convert", "rtl.srt", "--to", "srt", "-o", "-", "--rtl", "fix"]));
-        $this->assertSame([2, "", "Error: The option --rtl must be fix, got \"left\".\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+        copy(self::FILES . "transforms/own_rtl_fixed.srt", "$this->dir/fixed.srt");
+        $this->assertSame([0, file_get_contents(self::FILES . "transforms/own_rtl.srt"), ""],
+                          $this->runBinary(["convert", "fixed.srt", "--to", "srt", "-o", "-", "--no-bom", "--rtl", "clean"]));
+        $this->assertSame([2, "", "Error: The option --rtl must be fix or clean, got \"left\".\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
                           $this->runBinary(["convert", "rtl.srt", "--to", "srt", "-o", "-", "--rtl", "left"]));
     }
 
