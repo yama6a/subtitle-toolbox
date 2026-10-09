@@ -8,6 +8,7 @@ use DOMDocument;
 use DOMElement;
 use DOMNode;
 use DOMXPath;
+use LibXMLError;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
@@ -23,6 +24,8 @@ final class TtmlParser extends SubtitleParser
     public const FORMAT_DATA_KEY = Format::Ttml->value;
 
     private const TIMING_ATTRIBUTES = ["begin", "end", "dur"];
+
+    private const XML_ENTITIES = ["amp", "lt", "gt", "quot", "apos"];
 
     private const ROOT_PATTERN = '(?:[A-Za-z_][\w.-]*:)?tt';
 
@@ -171,27 +174,44 @@ final class TtmlParser extends SubtitleParser
             $this->skipTextBeforeXml($xml, $skipped);
         }
 
-        $document = XmlLoader::xml($repaired);
-        if ($document === null && $this->options->lenient) {
-            $document = $this->loadWithHtmlEntities($repaired);
+        $document = XmlLoader::xml($repaired, firstError: $error);
+        if ($document !== null) {
+            return $document;
+        }
+        if (!$this->options->lenient) {
+            throw new ParsingException("The file is not well-formed XML.");
         }
 
-        return $document ?? throw new ParsingException("The file is not well-formed XML.");
+        [$replaced, $firstEntity] = $this->replaceHtmlEntities($repaired);
+        if ($firstEntity !== null) {
+            $this->warn(
+                "The file has HTML entities that XML does not define, such as \"$firstEntity\". The parser read them as characters.",
+                1 + substr_count($repaired, "\n", 0, (int) strpos($repaired, $firstEntity)),
+                null,
+                [],
+                ParseWarningAction::Repaired
+            );
+            $document = XmlLoader::xml($replaced, firstError: $error);
+        }
+
+        return $document ?? $this->recoverDocument($replaced, $error);
     }
 
 
     /**
-     * Replaces the HTML named entities that XML does not define with character references, and loads the result.
+     * Replaces the HTML named entities that XML does not define with character references.
      * The parser never loads a DTD, so no file can define these entities itself.
+     *
+     * @return array{string, ?string} the new XML, and the first entity that was replaced
      */
-    private function loadWithHtmlEntities(string $xml): ?DOMDocument
+    private function replaceHtmlEntities(string $xml): array
     {
         $characters = array_flip(get_html_translation_table(HTML_ENTITIES, ENT_HTML5 | ENT_QUOTES));
         $first      = null;
         $replaced   = preg_replace_callback(
             "/&([A-Za-z][A-Za-z0-9]*);/",
             function (array $match) use ($characters, &$first): string {
-                if (in_array($match[1], ["amp", "lt", "gt", "quot", "apos"], true) || !isset($characters[$match[0]])) {
+                if (in_array($match[1], self::XML_ENTITIES, true) || !isset($characters[$match[0]])) {
                     return $match[0];
                 }
                 $first ??= $match[0];
@@ -202,16 +222,32 @@ final class TtmlParser extends SubtitleParser
             },
             $xml
         );
-        $document = $first === null ? null : XmlLoader::xml($replaced);
-        if ($document !== null) {
-            $this->warn(
-                "The file has HTML entities that XML does not define, such as \"$first\". The parser read them as characters.",
-                1 + substr_count($xml, "\n", 0, strpos($xml, $first)),
-                null,
-                [],
-                ParseWarningAction::Repaired
-            );
-        }
+
+        return [$replaced, $first];
+    }
+
+
+    /**
+     * Escapes each & that starts no XML entity or character reference, closes each <br>, and lets libxml repair the rest.
+     * libxml alone drops a bare & and puts the text after an open <br> inside it.
+     */
+    private function recoverDocument(string $xml, ?LibXMLError $error): DOMDocument
+    {
+        $repaired = preg_replace(
+            ['/&(?!(?:' . implode("|", self::XML_ENTITIES) . '|#[0-9]+|#x[0-9A-Fa-f]+);)/', '/<((?:[A-Za-z_][\w.-]*:)?br)(\s[^<>]*)?(?<!\/)>/i'],
+            ["&amp;", "<\$1\$2/>"],
+            $xml
+        );
+        $document = XmlLoader::xml($repaired, recover: true) ?? throw new ParsingException("The file is not well-formed XML.");
+
+        $message = $error === null ? "" : " " . rtrim($error->message, ". \n") . ".";
+        $this->warn(
+            "The file is not well-formed XML.$message The parser repaired it.",
+            $error?->line ?: null,
+            null,
+            [],
+            ParseWarningAction::Repaired
+        );
 
         return $document;
     }

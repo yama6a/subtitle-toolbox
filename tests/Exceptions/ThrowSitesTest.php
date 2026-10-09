@@ -525,6 +525,7 @@ class ThrowSitesTest extends TestCase
                 '<p begin="soon" end="2s">text</p>'), new ReadOptions()), ...$parsing],
             "Parsers/TtmlParser.php: empty file"            => [fn () => (new TtmlParser())->parse("", new ReadOptions()), ...$parsing],
             "Parsers/TtmlParser.php: not well-formed"       => [fn () => (new TtmlParser())->parse("<tt", new ReadOptions()), ...$parsing],
+            "Parsers/TtmlParser.php: not repairable"        => [fn () => (new TtmlParser())->parse("<!-- no root -->", new ReadOptions(lenient: true)), ...$parsing],
             "Parsers/TtmlParser.php: no end time"           => [fn () => (new TtmlParser())->parse(sprintf(self::TTML,
                 '<p begin="1s">text</p>'), new ReadOptions()), ...$parsing],
             "Parsers/VobSubParser.php: no VobSubReadOptions" => [fn () => (new VobSubParser())->parse("", new ReadOptions()), ...$invalid],

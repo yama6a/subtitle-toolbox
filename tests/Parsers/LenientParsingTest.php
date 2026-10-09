@@ -840,21 +840,63 @@ class LenientParsingTest extends TestCase
     }
 
 
-    public function testTtmlWithInvalidXmlStillThrows(): void
+    public function testTtmlWithMalformedXmlIsRepaired(): void
     {
-        $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("The file is not well-formed XML.");
-        (new TtmlParser())->parse("<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><p begin=\"1s\" end=\"2s\">text</body></tt>", new ReadOptions(lenient: true));
+        $subtitle = (new TtmlParser())->parse(file_get_contents(self::DIR . "malformed.ttml"), new ReadOptions(lenient: true));
+
+        $this->assertEquals([
+            [1, 3, "Salt &amp; pepper are on the table."],
+            [4, 6, "Turn left\nat the bakery."],
+            [7, 9, "Tickets cost 5 &amp;cur; at the door."],
+            [10, 12, "The last bus leaves at ten."],
+        ], $this->cueRows($subtitle->getCues()));
+
+        // The text of the libxml error differs between libxml versions.
+        $warnings = $subtitle->getParseWarnings();
+        $this->assertCount(1, $warnings);
+        $this->assertSame(5, $warnings[0]->lineNumber);
+        $this->assertNull($warnings[0]->blockIndex);
+        $this->assertSame(ParseWarningAction::Repaired, $warnings[0]->action);
+        $this->assertStringStartsWith("The file is not well-formed XML. ", $warnings[0]->message);
+        $this->assertStringEndsWith(". The parser repaired it.", $warnings[0]->message);
     }
 
 
-    public function testTtmlWithAnUnknownEntityStillThrows(): void
+    public function testTtmlWithMalformedXmlStillThrowsInStrictMode(): void
     {
         $this->expectException(ParsingException::class);
-        (new TtmlParser())->parse(
-            "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div><p begin=\"1s\" end=\"2s\">&eacute;&foo;</p></div></body></tt>",
+        $this->expectExceptionMessage("The file is not well-formed XML.");
+        (new TtmlParser())->parse(file_get_contents(self::DIR . "malformed.ttml"), new ReadOptions());
+    }
+
+
+    public function testTtmlWithHtmlEntitiesAndMalformedXmlGetsTwoWarnings(): void
+    {
+        $subtitle = (new TtmlParser())->parse(
+            "<tt xmlns=\"http://www.w3.org/ns/ttml\">\n<body><div><p begin=\"1s\" end=\"2s\">Caf&eacute;&nbsp;ok</p>\n<p begin=\"3s\" end=\"4s\">A & B</p></div></body></tt>",
             new ReadOptions(lenient: true)
         );
+
+        $this->assertEquals([[1, 2, "Caf\u{e9}\u{a0}ok"], [3, 4, "A &amp; B"]], $this->cueRows($subtitle->getCues()));
+        $this->assertSame([2, 3], array_map(fn (ParseWarning $warning): ?int => $warning->lineNumber, $subtitle->getParseWarnings()));
+    }
+
+
+    #[DataProvider("unrecoverableTtml")]
+    public function testTtmlThatLibxmlCannotRepairToATtRootStillThrows(string $content): void
+    {
+        $this->expectException(ParsingException::class);
+        (new TtmlParser())->parse($content, new ReadOptions(lenient: true));
+    }
+
+
+    public static function unrecoverableTtml(): array
+    {
+        return [
+            "no markup"       => ["Subtitles & captions"],
+            "an HTML root"    => ["<html><body><p>Hello<br></body></html>"],
+            "no root element" => ["<?xml version=\"1.0\"?>\n<!-- empty -->"],
+        ];
     }
 
 
