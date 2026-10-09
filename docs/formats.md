@@ -440,7 +440,7 @@ $subtitle->toString(Format::SubViewer, new WriteOptions(format: new SubViewerWri
 - **Output**: times in centiseconds for version 2 and in seconds for version 1. The formatter strips all tags and decodes HTML entities. It skips cues without text, because an empty line ends a cue.
 
 ## TTML
-TTML covers TTML 1, TTML 2, IMSC and DFXP files.
+TTML covers TTML 1, TTML 2, IMSC and DFXP files. The parser reads the TTML namespace, a `<tt>` without a namespace and two DFXP namespaces. These are `http://www.w3.org/2006/10/ttaf1` and the older `http://www.w3.org/2006/04/ttaf1` of Flash caption files.
 
 ```php
 use SubtitleToolbox\Format;

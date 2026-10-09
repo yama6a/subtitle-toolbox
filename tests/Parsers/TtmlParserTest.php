@@ -310,6 +310,17 @@ class TtmlParserTest extends TestCase
     }
 
 
+    public function test2006NamespaceIsReadAndDetected(): void
+    {
+        $content = "<tt xmlns=\"http://www.w3.org/2006/04/ttaf1\" xmlns:tts=\"http://www.w3.org/2006/04/ttaf1#styling\" xml:lang=\"en\">\n"
+                   . "  <body><div><p begin=\"00:00:01.00\" end=\"00:00:03.00\" tts:fontStyle=\"italic\">Hello</p></div></body></tt>";
+        $cue     = Subtitle::fromString($content, Format::Ttml)->getCues()[0];
+
+        $this->assertSame([1.0, 3.0, "<i>Hello</i>"], [$cue->getStart(), $cue->getEnd(), $cue->getText()]);
+        $this->assertSame(Format::Ttml, Subtitle::detectFormat($content));
+    }
+
+
     public function testExternalEntityIsNotLoaded(): void
     {
         $subtitle = Subtitle::fromString(

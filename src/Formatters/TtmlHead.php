@@ -34,9 +34,13 @@ final class TtmlHead
             }
         }
 
-        $isDfxp = $namespace === TtmlNamespaces::DFXP;
-        $tts    = self::bindPrefix($namespaces, "tts", TtmlNamespaces::STYLING, $isDfxp ? 1 : 0);
-        $ttm    = self::bindPrefix($namespaces, "ttm", TtmlNamespaces::METADATA, $isDfxp ? 1 : 0);
+        [$styling, $metadata] = match ($namespace) {
+            TtmlNamespaces::DFXP         => [1, 1],
+            TtmlNamespaces::DFXP_2006_04 => [3, 2],
+            default                      => [0, 0],
+        };
+        $tts = self::bindPrefix($namespaces, "tts", TtmlNamespaces::STYLING, $styling);
+        $ttm = self::bindPrefix($namespaces, "ttm", TtmlNamespaces::METADATA, $metadata);
         ksort($namespaces);
 
         $declarations = self::namespaceDeclarations($namespaces);

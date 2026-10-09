@@ -58,7 +58,7 @@ final class TtmlParser extends SubtitleParser
         $this->root           = $document->documentElement;
         $this->namespace      = $this->root->namespaceURI;
         if ($this->root->localName !== "tt"
-            || !in_array($this->namespace, [TtmlNamespaces::TTML, TtmlNamespaces::DFXP, null], true)) {
+            || !in_array($this->namespace, [TtmlNamespaces::TTML, TtmlNamespaces::DFXP, TtmlNamespaces::DFXP_2006_04, null], true)) {
             throw new ParsingException("The root element is not a TTML <tt> element.");
         }
 

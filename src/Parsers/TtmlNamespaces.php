@@ -13,6 +13,8 @@ final class TtmlNamespaces
 {
     public const TTML = "http://www.w3.org/ns/ttml";
     public const DFXP = "http://www.w3.org/2006/10/ttaf1";
+    /** The DFXP working draft namespace, which Flash caption files use. */
+    public const DFXP_2006_04 = "http://www.w3.org/2006/04/ttaf1";
     public const XML  = "http://www.w3.org/XML/1998/namespace";
 
     public const IMSC_STYLING = "http://www.w3.org/ns/ttml/profile/imsc1#styling";
@@ -21,7 +23,17 @@ final class TtmlNamespaces
         "http://www.w3.org/ns/ttml#styling",
         "http://www.w3.org/2006/10/ttaf1#style",
         "http://www.w3.org/2006/10/ttaf1#styling",
+        "http://www.w3.org/2006/04/ttaf1#styling",
+        "http://www.w3.org/2006/04/ttaf1#style",
     ];
-    public const PARAMETER = ["http://www.w3.org/ns/ttml#parameter", "http://www.w3.org/2006/10/ttaf1#parameter"];
-    public const METADATA  = ["http://www.w3.org/ns/ttml#metadata", "http://www.w3.org/2006/10/ttaf1#metadata"];
+    public const PARAMETER = [
+        "http://www.w3.org/ns/ttml#parameter",
+        "http://www.w3.org/2006/10/ttaf1#parameter",
+        "http://www.w3.org/2006/04/ttaf1#parameter",
+    ];
+    public const METADATA  = [
+        "http://www.w3.org/ns/ttml#metadata",
+        "http://www.w3.org/2006/10/ttaf1#metadata",
+        "http://www.w3.org/2006/04/ttaf1#metadata",
+    ];
 }
