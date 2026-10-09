@@ -8,7 +8,6 @@ use SubtitleToolbox\Cli\Arguments;
 use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\Console;
 use SubtitleToolbox\Cli\Option;
-use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SyncPoint;
 
@@ -97,7 +96,7 @@ final class RetimeEdit extends Edit
                 default                           => Arguments::time("sync", $old),
             }, Arguments::time("sync", $new)];
         }
-        self::checkOrder($points, fn (array $point): ?float => is_float($point[1]) ? $point[1] : null, Command::fail(...));
+        self::checkOrder($points, fn (array $point): ?float => is_float($point[1]) ? $point[1] : null);
 
         return $points;
     }
@@ -119,15 +118,14 @@ final class RetimeEdit extends Edit
      *
      * @param list<array{string, float|int|string, float}> $points
      * @param \Closure(array{string, float|int|string, float}): ?float $oldTime
-     * @param \Closure(string): never $fail
      */
-    private static function checkOrder(array $points, \Closure $oldTime, \Closure $fail): void
+    private static function checkOrder(array $points, \Closure $oldTime): void
     {
         $known = array_values(array_filter($points, fn (array $point): bool => $oldTime($point) !== null));
         for ($index = 1; $index < count($known); $index++) {
             [$previous, $point] = [$known[$index - 1], $known[$index]];
             if (!($oldTime($point) > $oldTime($previous) && $point[2] > $previous[2])) {
-                $fail("The --sync points must increase in both times, got \"$previous[0]\" before \"$point[0]\".");
+                Command::fail("The --sync points must increase in both times, got \"$previous[0]\" before \"$point[0]\".");
             }
         }
     }
@@ -158,20 +156,20 @@ final class RetimeEdit extends Edit
     private function resolveSync(Subtitle $subtitle): array
     {
         $starts = array_map(fn ($cue): float => $cue->getStart(), $subtitle->getCues());
-        $fail   = fn (string $message): never => throw new InvalidArgumentException($message);
         if ($starts === []) {
-            $fail("The --sync points need a subtitle with cues.");
+            Command::fail("The --sync points need a subtitle with cues.");
         }
         $resolved = [];
         foreach ($this->sync as [$text, $old, $new]) {
             $resolved[] = [$text, match (true) {
                 $old === "first" => min($starts),
                 $old === "last"  => max($starts),
-                is_int($old)     => $starts[$old - 1] ?? $fail("The --sync point \"$text\" names cue $old, but the subtitle has " . count($starts) . " cues."),
+                is_int($old)     => $starts[$old - 1] ?? Command::fail("The --sync point \"$text\" names cue $old, but the subtitle has " . count($starts) . " cues."),
                 default          => (float)$old,
             }, $new];
         }
-        self::checkOrder($resolved, fn (array $point): float => (float)$point[1], $fail);
+        // Inside apply(), the command reports the failure for this file only, so the exit code is 3.
+        self::checkOrder($resolved, fn (array $point): float => (float)$point[1]);
 
         return array_map(fn (array $point): SyncPoint => new SyncPoint((float)$point[1], $point[2]), $resolved);
     }

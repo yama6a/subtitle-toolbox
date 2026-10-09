@@ -90,6 +90,7 @@ class BinaryTimingTest extends BinaryTestCase
         $ferry = Subtitle::load(self::FILES . "editing/own_ferry_drift.vtt", Format::WebVtt);
 
         $this->assertSame([0, (clone $ferry)->shift(2)->toString(Format::WebVtt), ""], $this->runBinary(["retime", "ferry.vtt", "--sync", "10=12"]));
+        $this->assertSame([0, (clone $ferry)->shift(2)->toString(Format::WebVtt), ""], $this->runBinary(["convert", "ferry.vtt", "--to", "vtt", "--sync", "10=12"]));
         $this->assertSame(
             [0, (string)file_get_contents(self::FILES . "editing/own_ferry_drift_synced.vtt"), ""],
             $this->runBinary(["retime", "ferry.vtt", "--sync", "#2=00:12", "--sync", "00:10:00=610", "--sync", "1200=00:20:05,000"])
