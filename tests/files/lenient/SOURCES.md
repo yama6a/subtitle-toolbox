@@ -37,6 +37,7 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `credit_before_xml.srv3` | YouTube srv3 XML with a credit line before the XML declaration, LF | MIT |
 | `html_entities.ttml` | the HTML entities `&eacute;`, `&nbsp;`, `&agrave;`, `&ndash;`, `&euro;`, `&laquo;` and `&raquo;`, which XML does not define, LF | MIT |
 | `malformed.ttml` | a bare `&`, a `<br>` without `/`, the unknown entity `&cur;`, a `span` without its end tag, LF | MIT |
+| `open_paragraphs.ttml` | three `p` elements without `end`, one of them with an empty `dur`, and a last `p` without `end`, LF | MIT |
 | `bad_time_code.stl` | written by `generate-stl.php`. Frame 30 in a 25 fps time code out, the last TTI block cut off after 60 bytes | MIT |
 | `missing_end.json` | a cue without `end`, a cue with a number as line, a comment after the first broken cue, LF | MIT |
 | `missing_segment_end.whisper.json` | the OpenAI API shape, a segment without `end`, LF | MIT |

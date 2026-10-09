@@ -423,11 +423,29 @@ class LenientParsingTest extends TestCase
                 "The time expression \"00:00:0x.000\" is not valid.",
                 [
                     [1, 3, "The library opens at nine."],
+                    [7, 10, "Quiet, please."],
                     [10, 12, "<i>The reading room</i> is upstairs."],
                 ],
                 [
                     [6, 1, self::SKIPPED, "The time expression \"00:00:0x.000\" is not valid."],
-                    [7, 2, self::SKIPPED, "The paragraph that begins at 7s has no end time."],
+                    [7, 2, self::REPAIRED, "The paragraph that begins at 7s has no end time. The parser ended it at the next paragraph at 10s."],
+                ],
+            ],
+            "TTML with paragraphs without an end" => [
+                "open_paragraphs.ttml",
+                TtmlParser::class,
+                "The paragraph that begins at 1s has no end time. (line 5)",
+                [
+                    [1, 3, "The ferry is late today."],
+                    [3, 5, "It should arrive at noon."],
+                    [5, 7, "Please wait inside."],
+                    [7, 8, "Thank you."],
+                ],
+                [
+                    [5, 0, self::REPAIRED, "The paragraph that begins at 1s has no end time. The parser ended it at the next paragraph at 3s."],
+                    [6, 1, self::REPAIRED, "The paragraph that begins at 3s has no end time. The parser ended it at the next paragraph at 5s."],
+                    [7, 2, self::REPAIRED, "The paragraph that begins at 5s has no end time. The parser ended it at the next paragraph at 7s."],
+                    [9, 4, self::SKIPPED, "The paragraph that begins at 9s has no end time."],
                 ],
             ],
             "TTML with a paragraph that begins after its timed div ends" => [
@@ -1022,7 +1040,7 @@ class LenientParsingTest extends TestCase
     {
         $subtitle = (new IttParser())->parse(file_get_contents(self::DIR . "bad_begin.ttml"), new ReadOptions(lenient: true));
 
-        $this->assertCount(2, $subtitle->getCues());
+        $this->assertCount(3, $subtitle->getCues());
         $this->assertCount(2, $subtitle->getParseWarnings());
     }
 
