@@ -57,7 +57,8 @@ final class GoogleTranslateEngine implements TranslationEngine
             $body["source"] = $sourceLanguage;
         }
 
-        [$status, $response] = $this->client->post(
+        [$status, $response] = HttpRetry::post(
+            $this->client,
             $this->url,
             ["X-goog-api-key: $this->apiKey", "Content-Type: application/json"],
             json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE)

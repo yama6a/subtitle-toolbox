@@ -60,7 +60,8 @@ final class DeepLEngine implements TranslationEngine
             $body["source_lang"] = strtoupper(explode("-", $sourceLanguage)[0]);
         }
 
-        [$status, $response] = $this->client->post(
+        [$status, $response] = HttpRetry::post(
+            $this->client,
             $this->url,
             ["Authorization: DeepL-Auth-Key $this->apiKey", "Content-Type: application/json"],
             json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE)
