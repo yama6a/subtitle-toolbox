@@ -129,6 +129,15 @@ trait TextTransforms
 
     private function textTransformsSentenceCase(bool $turkic, bool $english): self
     {
+        $this->textTransformsSentenceCaseRuns($turkic);
+
+        return $english ? $this->textTransformsMapCues(fn (SubtitleCue $cue): array =>
+            array_map(self::textTransformsEnglishI(...), $cue->getLines())) : $this;
+    }
+
+
+    private function textTransformsSentenceCaseRuns(bool $turkic): self
+    {
         $currentCue       = null;
         $previousEnd      = null;
         $endsSentence     = true;
@@ -137,7 +146,7 @@ trait TextTransforms
 
         return $this->textTransformsMapRuns(
             function (string $text, SubtitleCue $cue, bool $startsLine)
-                use (&$currentCue, &$previousEnd, &$endsSentence, &$capitalizeNext, &$afterPunctuation, $turkic, $english): string {
+                use (&$currentCue, &$previousEnd, &$endsSentence, &$capitalizeNext, &$afterPunctuation, $turkic): string {
                 if ($cue !== $currentCue) {
                     $currentCue       = $cue;
                     $visible          = Markup::visibleText(implode("\n", $cue->getLines()));
@@ -151,9 +160,7 @@ trait TextTransforms
                     $capitalizeNext = true;
                 }
 
-                $text = self::textTransformsSentenceCaseRun($text, $turkic, $capitalizeNext, $afterPunctuation);
-
-                return $english ? self::textTransformsEnglishI($text) : $text;
+                return self::textTransformsSentenceCaseRun($text, $turkic, $capitalizeNext, $afterPunctuation);
             }
         );
     }
@@ -253,11 +260,37 @@ trait TextTransforms
 
     /**
      * Writes the English pronoun "i" and its contractions such as "i'm" in upper case. "i.e." stays lower case.
+     * Decides on the text of the whole line, so an "i" between tags inside a word stays lower case.
      */
-    private static function textTransformsEnglishI(string $text): string
+    private static function textTransformsEnglishI(string $line): string
     {
-        return preg_replace('/(?<![\p{L}\p{N}\'\x{2019}]|\p{L}\.)i(?=(?:[\'\x{2019}](?:m|ll|ve|d))?(?![\p{L}\p{N}\'\x{2019}]|\.\p{L}))/u', "I", $text)
-            ?? preg_replace('/(?<![A-Za-z0-9\']|[A-Za-z]\.)i(?=(?:\'(?:m|ll|ve|d))?(?![A-Za-z0-9\']|\.[A-Za-z]))/', "I", $text);
+        $visible = "";
+        Markup::mapTextRuns([$line], function (string $text) use (&$visible): string {
+            $visible .= $text;
+
+            return $text;
+        });
+        $count = preg_match_all('/(?<![\p{L}\p{N}\'\x{2019}]|\p{L}\.)i(?=(?:[\'\x{2019}](?:m|ll|ve|d))?(?![\p{L}\p{N}\'\x{2019}]|\.\p{L}))/u', $visible, $matches, PREG_OFFSET_CAPTURE);
+        if ($count === false) {
+            $count = preg_match_all('/(?<![A-Za-z0-9\']|[A-Za-z]\.)i(?=(?:\'(?:m|ll|ve|d))?(?![A-Za-z0-9\']|\.[A-Za-z]))/', $visible, $matches, PREG_OFFSET_CAPTURE);
+        }
+        if ($count === 0) {
+            return $line;
+        }
+
+        $offsets = array_column($matches[0], 1);
+        $start   = 0;
+
+        return Markup::mapTextRuns([$line], function (string $text) use ($offsets, &$start): string {
+            foreach ($offsets as $offset) {
+                if ($offset >= $start && $offset < $start + strlen($text)) {
+                    $text[$offset - $start] = "I";
+                }
+            }
+            $start += strlen($text);
+
+            return $text;
+        })[0];
     }
 
 
