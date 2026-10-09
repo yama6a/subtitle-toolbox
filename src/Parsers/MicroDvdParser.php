@@ -43,17 +43,19 @@ final class MicroDvdParser extends SubtitleParser
         $parsedCues = [];
         $subtitle->setFormatData(self::FORMAT_DATA_KEY, ["frameRate" => $frameRate]);
         foreach ($rawLines as $lineIndex => $rawLine) {
-            if (!preg_match(self::CUE_REGEX, $rawLine, $matches)) {
-                $lineNumber = $lineIndex + 1;
-                $this->fail(new ParsingException("The line \"$rawLine\" is not a MicroDVD cue.", $lineNumber), $lineNumber, $blockIndexes[$lineIndex], [$rawLine]);
+            $lineNumber = $lineIndex + 1;
+            try {
+                if (!preg_match(self::CUE_REGEX, $rawLine, $matches)) {
+                    throw new ParsingException("The line \"$rawLine\" is not a MicroDVD cue.", $lineNumber);
+                }
+                $start = self::boundedTime($frames->framesToSeconds((int) $matches[1]), "{{$matches[1]}}", $lineNumber);
+                $end   = self::boundedTime($frames->framesToSeconds((int) $matches[2]), "{{$matches[2]}}", $lineNumber);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, $lineNumber, $blockIndexes[$lineIndex], [$rawLine]);
                 continue;
             }
 
-            $parsedCues[] = $this->parseCue(
-                $frames->framesToSeconds((int) $matches[1]),
-                $frames->framesToSeconds((int) $matches[2]),
-                $matches[3]
-            );
+            $parsedCues[] = $this->parseCue($start, $end, $matches[3]);
         }
 
         return $subtitle->addCues($parsedCues);

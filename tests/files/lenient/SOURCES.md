@@ -38,3 +38,7 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `absurd_hours.sub` | SubViewer 2. A timing line with 20 hour digits between two good cues, LF | MIT |
 | `absurd_hours_tmplayer.txt` | TMPlayer. A line with 20 hour digits between good lines, LF | MIT |
 | `absurd_hours.html` | an HTML transcript. A `time` with 20 hour digits between two good ones, LF | MIT |
+| `absurd_seconds.json` | the library JSON. A cue with a start of `1e20` seconds between two good cues, LF | MIT |
+| `absurd_frames_microdvd.sub` | MicroDVD at 25 fps. A cue with frame numbers of 13 digits between two good cues, LF | MIT |
+| `absurd_word_timestamp.vtt` | a cue with a word timestamp of 20 hour digits between two good cues, LF | MIT |
+| `absurd_delay_subviewer.sub` | SubViewer 1 with a `[DELAY]` of 359999990 seconds. The third cue starts past 100,000 hours, LF | MIT |

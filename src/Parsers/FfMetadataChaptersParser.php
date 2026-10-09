@@ -104,13 +104,13 @@ final class FfMetadataChaptersParser extends SubtitleParser
 
         $start = $previousEnd;
         if (preg_match('/^START=(-?\d+)/', $next[1], $matches) === 1) {
-            $start = (int) $matches[1] * $numerator / $denominator;
+            $start = self::boundedTime((int) $matches[1] * $numerator / $denominator, $matches[0], $next[0]);
             $next  = $lines[++$i + 1] ?? [0, ""];
         }
 
         $end = null;
         if (preg_match('/^END=(-?\d+)/', $next[1], $matches) === 1) {
-            $end = (int) $matches[1] * $numerator / $denominator;
+            $end = self::boundedTime((int) $matches[1] * $numerator / $denominator, $matches[0], $next[0]);
             $i++;
         }
 

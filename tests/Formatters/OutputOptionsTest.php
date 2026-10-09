@@ -90,10 +90,31 @@ class OutputOptionsTest extends TestCase
     }
 
 
-    #[DataProvider("textFormats")]
-    public function testTheLatestTimeThatTheParsersAcceptIsWrittenWithoutAPhpWarning(Format $format): void
+    public static function latestTimes(): array
     {
-        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "vtt/real/own_max_hours.vtt"), Format::WebVtt);
+        $inputs = [
+            "hours"           => ["vtt/real/own_max_hours.vtt", Format::WebVtt],
+            "word timestamp"  => ["vtt/real/own_max_word_timestamp.vtt", Format::WebVtt],
+            "JSON seconds"    => ["json/real/own_max_seconds.json", Format::Json],
+            "MicroDVD frames" => ["microdvd/real/own_max_frames.sub", Format::MicroDvd],
+            "SubViewer DELAY" => ["subviewer/real/own_max_delay.sub", Format::SubViewer],
+        ];
+
+        $cases = [];
+        foreach (self::textFormats() as $name => [$format]) {
+            foreach ($inputs as $input => [$file, $inputFormat]) {
+                $cases["$input to $name"] = [$format, $file, $inputFormat];
+            }
+        }
+
+        return $cases;
+    }
+
+
+    #[DataProvider("latestTimes")]
+    public function testTheLatestTimeThatTheParsersAcceptIsWrittenWithoutAPhpWarning(Format $format, string $file, Format $inputFormat): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . $file), $inputFormat);
 
         $this->assertNotSame("", $subtitle->toString($format, self::options($format)));
     }

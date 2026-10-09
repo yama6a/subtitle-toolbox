@@ -61,6 +61,7 @@ use SubtitleToolbox\Parsers\GoogleSpeechParser;
 use SubtitleToolbox\Parsers\HtmlTranscriptParser;
 use SubtitleToolbox\Parsers\JsonParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
+use SubtitleToolbox\Parsers\Mpl2Parser;
 use SubtitleToolbox\Parsers\MpSubParser;
 use SubtitleToolbox\Parsers\OgmChaptersParser;
 use SubtitleToolbox\Parsers\PgsParser;
@@ -450,6 +451,8 @@ class ThrowSitesTest extends TestCase
                 '{"version": 1, "cues": [], "formatData": {"stl": {"base64": "!"}}}', new ReadOptions()), ...$parsing],
             "Parsers/MicroDvdParser.php: no frame rate"     => [fn () => (new MicroDvdParser())->parse("{0}{25}text", new ReadOptions()), ...$parsing],
             "Parsers/MicroDvdParser.php: frame rate 0"      => [fn () => (new MicroDvdParser())->parse("{1}{1}0\n{0}{25}text", new ReadOptions()), ...$parsing],
+            "Parsers/MicroDvdParser.php: no MicroDVD cue"   => [fn () => (new MicroDvdParser())->parse("{1}{1}25\ntext", new ReadOptions()), ...$parsing],
+            "Parsers/Mpl2Parser.php: no MPL2 cue"           => [fn () => (new Mpl2Parser())->parse("text\n", new ReadOptions()), ...$parsing],
             "Parsers/MpSubParser.php: no timing line"       => [fn () => (new MpSubParser())->parse("FORMAT=TIME\ntext\n", new ReadOptions()), ...$parsing],
             "Parsers/MpSubParser.php: negative duration"    => [fn () => (new MpSubParser())->parse("FORMAT=TIME\n0 -1\ntext\n", new ReadOptions()), ...$parsing],
             "Parsers/MpSubParser.php: unknown FORMAT"       => [fn () => (new MpSubParser())->parse("FORMAT=FAST\n", new ReadOptions()), ...$parsing],
@@ -509,6 +512,8 @@ class ThrowSitesTest extends TestCase
             "Parsers/SubtitleParser.php: JSON root no object" => [fn () => (new PodcastTranscriptParser())->parse("[1]", new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: options of another format" => [fn () => (new SubRipParser())->parse("", new ReadOptions(format: new CsvReadOptions())),
                                                                 ...$invalid],
+            "Parsers/SubtitleParser.php: JSON field of 100000 hours" => [fn () => (new JsonParser())->parse('{"version": 1, "cues": [{"start": 360000000, "end": 360000001, "lines": []}]}', new ReadOptions()),
+                                                                ...$parsing],
             "Parsers/SubtitleParser.php: 100000 hours"      => [fn () => (new WebVttParser())->parse("WEBVTT\n\n100000:00:00.000 --> 100000:00:01.000\ntext\n", new ReadOptions()),
                                                                 ...$parsing],
             "Parsers/TmPlayerParser.php: no TMPlayer line"  => [fn () => (new TmPlayerParser())->parse("text\n", new ReadOptions()), ...$parsing],

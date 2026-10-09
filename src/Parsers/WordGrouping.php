@@ -142,7 +142,7 @@ trait WordGrouping
             throw new ParsingException("The field $path must be a time.");
         }
 
-        return Timecode::roundToMilliseconds($seconds);
+        return self::boundedField(Timecode::roundToMilliseconds($seconds), $path);
     }
 
 

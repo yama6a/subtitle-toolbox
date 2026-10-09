@@ -38,12 +38,14 @@ final class PodcastChaptersParser extends SubtitleParser
             if ($end !== null && !self::isTime($end)) {
                 throw new ParsingException("The field chapters[$index].endTime must be a number.");
             }
+            $start = self::boundedField($start, "chapters[$index].startTime");
+            $end   = $end === null ? null : self::boundedField($end, "chapters[$index].endTime");
             $title = $chapter["title"] ?? null;
 
             $cue = new SubtitleCue($start, $start, is_string($title) ? Markup::escapeText($title) : "");
             $cue->setFormatData(self::FORMAT_DATA_KEY, array_diff_key($chapter, array_flip(["startTime", "endTime", "title"])));
             $chapters[] = $cue;
-            $ends[]     = $end === null ? null : (float) $end;
+            $ends[]     = $end;
         }
 
         $subtitle = (new Subtitle())->addCues($this->endChapters($chapters, $ends));

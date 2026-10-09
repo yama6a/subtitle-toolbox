@@ -8,7 +8,6 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\Subtitle;
-use SubtitleToolbox\Timecode;
 
 final class GoogleSpeechParser extends SubtitleParser
 {
@@ -74,11 +73,12 @@ final class GoogleSpeechParser extends SubtitleParser
                 $end         = $words === [] ? $this->seconds($resultEnd, "$path.resultEndTime") : $words[count($words) - 1]["end"];
                 $start       = $words === [] ? $previousEnd : $words[0]["start"];
                 $text        = is_array($alternative) ? $this->text($alternative, "transcript", "$path.alternatives[0]") : "";
+                $resultEnd   = self::isTime($resultEnd) ? $this->seconds($resultEnd, "$path.resultEndTime") : $end;
             } catch (ParsingException $exception) {
                 $this->fail($exception, null, $index, [RawJson::encode($result)]);
                 continue;
             }
-            $previousEnd = self::isTime($resultEnd) ? Timecode::roundToMilliseconds($resultEnd) : $end;
+            $previousEnd = $resultEnd;
 
             $formatData = array_diff_key($result, ["alternatives" => true]) + array_diff_key($alternative ?? [], ["transcript" => true]);
             $cue        = $this->cue($start, $end, $text, $words, null, $formatData);

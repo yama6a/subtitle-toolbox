@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\CommentAnchors;
+use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\ParseWarningAction;
@@ -58,7 +59,11 @@ final class LyricsParser extends SubtitleParser
                 if (trim($text) === "" && $this->isPlainTextLine($lines[$index + 1] ?? null)) {
                     $text = $lines[++$index];
                 }
-                $this->readTimedLine($matches[1], $text, $offset, $parsedCues, $timeline);
+                try {
+                    $this->readTimedLine($matches[1], $text, $offset, $parsedCues, $timeline);
+                } catch (ParsingException $exception) {
+                    $this->fail($exception, null, $index, [$currentLine]);
+                }
                 continue;
             }
 
@@ -87,9 +92,9 @@ final class LyricsParser extends SubtitleParser
         $text = $this->convertWordTimestamps($text, $offset);
 
         preg_match_all("/" . self::TIME_TAG_PATTERN . "/", $timeTags, $timestamps, PREG_SET_ORDER);
-        foreach ($timestamps as $timestamp) {
-            $start = $this->toSeconds($timestamp, $offset);
-            $cue   = $text === "" ? null : new SubtitleCue($start, $start, $text);
+        $starts = array_map(fn (array $timestamp): float => $this->toSeconds($timestamp, $offset), $timestamps);
+        foreach ($starts as $start) {
+            $cue = $text === "" ? null : new SubtitleCue($start, $start, $text);
             if ($cue !== null) {
                 $parsedCues[] = $cue;
             }
@@ -208,7 +213,7 @@ final class LyricsParser extends SubtitleParser
 
 
     /**
-     * @param array<int, string> $matches optional hours, minutes, seconds and an optional fraction in groups 1 to 4
+     * @param array<int, string> $matches the time tag, then optional hours, minutes, seconds and an optional fraction in groups 1 to 4
      */
     private function toSeconds(array $matches, float $offset): float
     {
@@ -221,6 +226,6 @@ final class LyricsParser extends SubtitleParser
             default => $whole + Timecode::roundToMilliseconds($fraction / 1000),
         };
 
-        return $offset === 0.0 ? (float) $seconds : max(0.0, Timecode::roundToMilliseconds($seconds - $offset));
+        return self::boundedTime($offset === 0.0 ? (float) $seconds : max(0.0, Timecode::roundToMilliseconds($seconds - $offset)), $matches[0], null);
     }
 }
