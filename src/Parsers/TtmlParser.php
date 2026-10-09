@@ -124,7 +124,7 @@ final class TtmlParser extends SubtitleParser
     {
         $expression = trim($expression);
         // Some tools write a comma as decimal separator, for example 00:00:01,500.
-        if (preg_match("/^(\d{2,}):(\d{2}):(\d{2})(?:[.,](\d+)|:(\d{2,})(?:\.(\d+))?)?$/", $expression, $matches)) {
+        if (preg_match("/^(\d{2,}):(\d{2}):(\d{2})(?:[.,](\d+)|:(\d{2})(?:\.(\d+))?)?$/", $expression, $matches)) {
             $seconds = Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4] ?? "");
             if (($matches[4] ?? "") !== "") {
                 return $seconds;
@@ -501,9 +501,59 @@ final class TtmlParser extends SubtitleParser
 
     private function offsetTime(float $base, DOMElement $element, string $attribute): float
     {
-        $expression = $element->getAttribute($attribute);
+        $expression = trim($element->getAttribute($attribute));
+        try {
+            $seconds = $this->parseTimeExpression($expression);
+        } catch (ParsingException $exception) {
+            $seconds = $this->options->lenient ? self::looseTimeExpression($expression) : null;
+            if ($seconds === null) {
+                throw $exception;
+            }
+            $time = self::boundedTime($base + $seconds, $expression, $element->getLineNo());
+            $this->warn(
+                "The time expression \"$expression\" is not valid. The parser read it as {$seconds}s.",
+                $element->getLineNo(),
+                $this->isInParagraph($element) ? $this->paragraphIndex : null,
+                [],
+                ParseWarningAction::Repaired
+            );
 
-        return self::boundedTime($base + $this->parseTimeExpression($expression), trim($expression), $element->getLineNo());
+            return $time;
+        }
+
+        return self::boundedTime($base + $seconds, $expression, $element->getLineNo());
+    }
+
+
+    /**
+     * Reads the time expressions that TTML does not allow but some tools write:
+     * one-digit clock fields, m:ss without hours, hh:mm:ss:fff with milliseconds, and a bare number of milliseconds.
+     */
+    private static function looseTimeExpression(string $expression): ?float
+    {
+        return match (true) {
+            (bool) preg_match("/^(\d+):(\d{1,2}):(\d{1,2})(?:[.,](\d+))?$/", $expression, $matches)
+                => Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4] ?? ""),
+            (bool) preg_match("/^(\d+):(\d{1,2}):(\d{1,2}):(\d{3})$/", $expression, $matches)
+                => Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4]),
+            (bool) preg_match("/^(\d{1,2}):(\d{1,2})(?:[.,](\d+))?$/", $expression, $matches)
+                => Timecode::toSeconds(0, (int) $matches[1], (int) $matches[2], $matches[3] ?? ""),
+            (bool) preg_match("/^\d{1,15}$/", $expression)
+                => (int) $expression / 1000,
+            default => null,
+        };
+    }
+
+
+    private function isInParagraph(DOMNode $node): bool
+    {
+        for (; $node instanceof DOMElement; $node = $node->parentNode) {
+            if ($this->isTtElement($node, "p")) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
 
