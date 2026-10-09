@@ -103,6 +103,16 @@ class CommonErrorFixerTest extends TestCase
             "zero in lower case words"           => ["ocrZeroInWords", "en", ["0nly the n0rth. 0nce"], ["Only the north. Once"]],
             "numbers stay"                       => ["ocrZeroInWords", "en", ["007, 2.0, 10am, 0s and 3D0"], ["007, 2.0, 10am, 0s and 3D0"]],
             "entities stay escaped"              => ["ocrLowercaseL", "en", ["&lt;lt&gt; &amp; l"], ["&lt;It&gt; &amp; I"]],
+            "dialogue on one line"               => ["dialogueOnOneLine", "en", ["- Hi. - Hello."], ["- Hi.", "- Hello."]],
+            "dialogue on one line in italics"    => ["dialogueOnOneLine", "en", ["<i>- Hi. - Hello.</i>"], ["<i>- Hi.</i>", "<i>- Hello.</i>"]],
+            "dialogue without the first dash"    => ["dialogueOnOneLine", "en", ["Hi. - Hello."], ["- Hi.", "- Hello."]],
+            "dash after a question in a tag"     => ["dialogueOnOneLine", "en", ["<font color=\"#ffff00\">Why?</font> -Because."],
+                                                     ["<font color=\"#ffff00\">- Why?</font>", "-Because."]],
+            "dialogue over two lines"            => ["dialogueOnOneLine", "en", ["Hi. - Hello,", "how are you?"], ["- Hi.", "- Hello, how are you?"]],
+            "dash inside a sentence"             => ["dialogueOnOneLine", "en", ["A well-known - and loved - song."], ["A well-known - and loved - song."]],
+            "dialogue already on two lines"      => ["dialogueOnOneLine", "en", ["- Hi.", "- Hello."], ["- Hi.", "- Hello."]],
+            "three speakers stay"                => ["dialogueOnOneLine", "en", ["- Hi. - Hello. - Hey."], ["- Hi. - Hello. - Hey."]],
+            "negative number after a sentence"   => ["dialogueOnOneLine", "en", ["It's cold. -5 degrees."], ["It's cold. -5 degrees."]],
         ];
     }
 
@@ -159,6 +169,23 @@ class CommonErrorFixerTest extends TestCase
                                       $subtitle->toString(Format::SubRip, new WriteOptions(lineEnding: LineEnding::from($lineEnd))));
         $this->assertNotEmpty($fixes);
         $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . $golden)), $options)->fixes);
+    }
+
+
+    public function testOptionalRulesFixTheFileAsTheGoldenFile(): void
+    {
+        $subtitle = Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "fixing/optional-rules.srt"));
+        $defaults = new CommonErrorOptions();
+        $optional = array_filter(array_map(fn (CommonErrorRule $rule): string => $rule->value, CommonErrorRule::cases()),
+                                 fn (string $name): bool => ($defaults->$name ?? null) === false);
+        $options  = new CommonErrorOptions("en", ...array_fill_keys($optional, true));
+
+        CommonErrorFixer::apply($subtitle, $options);
+
+        $this->assertSame(["dialogueOnOneLine"], array_values($optional));
+        $this->assertStringEqualsFile(self::FILES . "fixing/optional-rules.fixed.srt", $subtitle->toString(Format::SubRip));
+        $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "fixing/optional-rules.fixed.srt")),
+                                                      $options)->fixes);
     }
 
 
@@ -240,6 +267,14 @@ class CommonErrorFixerTest extends TestCase
 
         $this->assertSame("It is I.", $subtitle->getCues()[0]->getText());
         $this->assertSame([], self::fixLines(["lt is l."], new CommonErrorOptions(language: "nl"))[1]);
+    }
+
+
+    public function testDialogueOnOneLineIsOffByDefaultAndTakesTheDashStyle(): void
+    {
+        $this->assertSame(["- Hi. - Hello."], self::fixLines(["- Hi. - Hello."])[0]);
+        $this->assertSame(["\u{2013} Hi.", "\u{2013} Hello."],
+                          self::fixLines(["Hi. - Hello."], new CommonErrorOptions(dialogueDashStyle: DialogueDashStyle::EnDashSpace, dialogueOnOneLine: true))[0]);
     }
 
 

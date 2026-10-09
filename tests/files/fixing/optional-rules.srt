@@ -1,0 +1,16 @@
+1
+00:00:01,000 --> 00:00:03,000
+- Is the boat ready? - Almost.
+
+2
+00:00:04,000 --> 00:00:06,000
+<i>We leave at noon. - Who said so?</i>
+
+3
+00:00:07,000 --> 00:00:09,000
+The captain did. - Then we wait,
+until the wind turns.
+
+4
+00:00:10,000 --> 00:00:12,000
+A slow - and cold - crossing.

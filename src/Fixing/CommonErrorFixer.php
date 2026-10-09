@@ -105,6 +105,7 @@ final class CommonErrorFixer
             CommonErrorRule::DoubleSpaces                 => $options->doubleSpaces,
             CommonErrorRule::SpaceBeforePunctuation       => $options->spaceBeforePunctuation,
             CommonErrorRule::MissingSpaceAfterPunctuation => $options->missingSpaceAfterPunctuation,
+            CommonErrorRule::DialogueOnOneLine            => $options->dialogueOnOneLine,
             CommonErrorRule::DialogueDashes               => $options->dialogueDashes,
         };
         if (!$enabled) {
@@ -125,6 +126,7 @@ final class CommonErrorFixer
                 self::spaceBeforePunctuation($text, $language)),
             CommonErrorRule::MissingSpaceAfterPunctuation => Markup::mapTextRuns($lines, fn (string $text): string =>
                 self::missingSpaceAfterPunctuation($text)),
+            CommonErrorRule::DialogueOnOneLine => self::dialogueOnOneLine($lines, $options->dialogueDashStyle),
             CommonErrorRule::DialogueDashes  => Markup::mapTextRuns($lines, fn (string $text, bool $first): string =>
                 $first ? self::dialogueDash($text, $options->dialogueDashStyle) : $text),
         };
@@ -140,6 +142,42 @@ final class CommonErrorFixer
     private static function dialogueDash(string $text, DialogueDashStyle $style): string
     {
         return self::replace(DialogueDash::REGEX, $style->value, $text);
+    }
+
+
+    /**
+     * Splits one line, or two lines joined, at the one dialogue dash after a sentence end, as in "- Hi. - Hello.".
+     *
+     * @param list<string> $lines
+     * @return list<string>
+     */
+    private static function dialogueOnOneLine(array $lines, DialogueDashStyle $style): array
+    {
+        if (count($lines) > 2) {
+            return $lines;
+        }
+
+        $joined  = implode(" ", $lines);
+        $dash    = '[' . DialogueDash::CHARACTERS . ']';
+        $tags    = '(?:' . Markup::TAG . ')*';
+        $pattern = '/[.?!\x{2026}]["\'\x{2019}\x{201D})\]]*' . $tags . '(' . self::SPACES . '+)(?=' . $tags . $dash . '(?!' . $dash . ')'
+                   . self::SPACES . '*[^\s\p{N}])/u';
+        if (preg_match_all($pattern, $joined, $matches, PREG_OFFSET_CAPTURE) !== 1) {
+            return $lines;
+        }
+
+        [$spaces, $offset] = $matches[1][0];
+        if (count($lines) === 2 && $offset === strlen($lines[0])) {
+            return $lines;
+        }
+
+        $first   = substr($joined, 0, $offset);
+        $open    = Markup::openCoreTags($first);
+        $split   = [$first . Markup::closeCoreTags($open),
+                    implode("", array_column($open, "tag")) . substr($joined, $offset + strlen($spaces))];
+
+        return Markup::mapTextRuns($split, fn (string $text, bool $isFirst): string =>
+            $isFirst && preg_match("/^\s*$dash/u", $text) !== 1 ? $style->value . ltrim($text) : $text);
     }
 
 

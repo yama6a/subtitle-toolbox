@@ -25,6 +25,7 @@ final class CommonErrorOptions
      * @param bool              $ocrPipe                      read an OCR "|" as "I" or "l", as in "|t was"
      * @param bool              $ocrZeroInWords               read an OCR "0" in a word as "O" or "o", as in "D0N'T"
      * @param ?OcrReplaceList   $replaceList                  the words to replace, or null for no replace list
+     * @param bool              $dialogueOnOneLine            split "- Hi. - Hello." into 2 dialogue lines. Off by default
      */
     public function __construct(
         public readonly ?string $language = null,
@@ -41,6 +42,7 @@ final class CommonErrorOptions
         public readonly bool $ocrPipe = true,
         public readonly bool $ocrZeroInWords = true,
         public readonly ?OcrReplaceList $replaceList = null,
+        public readonly bool $dialogueOnOneLine = false,
     ) {
     }
 }

@@ -18,4 +18,6 @@ php tests/files/fixing/generate.php
 | `web-errors.fixed.srt`, `ocr-*.fixed.srt` | `CommonErrorFixer` output for the file of the same name, with the default options and its language | MIT |
 | `text_1080p.fixed.srt` | `CommonErrorFixer` output for `text_1080p.ocr.srt`, language `en` | MIT |
 | `text-pal.fixed.srt` | `CommonErrorFixer` output for `text-pal.ocr.srt`, language `en`, with `user_OCRFixReplaceList.xml` | MIT |
+| `optional-rules.srt` | Written for this repository: 4 cues with the errors of the `CommonErrorFixer` rules that are off by default | MIT |
+| `optional-rules.fixed.srt` | `CommonErrorFixer` output for `optional-rules.srt`, language `en`, with every rule that is off by default turned on | MIT |
 | `latin1_unclosed_italic.srt` | Written for this repository in Windows-1252: one cue with an `<i>` tag without its end tag | MIT |
