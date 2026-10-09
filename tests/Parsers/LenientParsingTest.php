@@ -52,11 +52,28 @@ class LenientParsingTest extends TestCase
                 "The time \"00:00:0G,000\" is not valid.",
                 [
                     [1, 3, "Good morning."],
+                    [7, 9, "Fresh bread every day."],
                     [10, 12, "See you tomorrow."],
                 ],
                 [
                     [5, 1, self::SKIPPED, "The time \"00:00:0G,000\" is not valid."],
-                    [9, 2, self::SKIPPED, "Block #2 has no timing line on its second line."],
+                    [9, 2, self::REPAIRED, "Block #2 has the arrow \"->\" in its timing line. The parser read it as \"-->\"."],
+                ],
+            ],
+            "SubRip with arrows of other lengths and spacing" => [
+                "arrow_variants.srt",
+                SubRipParser::class,
+                "Block #3 has no timing line on its second line.",
+                [
+                    [1, 2, "No spaces around the arrow."],
+                    [3, 4, "Two spaces around the arrow."],
+                    [5, 6, "A tab around the arrow."],
+                    [7, 8, "A short arrow."],
+                    [9, 10, "A long arrow."],
+                ],
+                [
+                    [13, 3, self::REPAIRED, "Block #3 has the arrow \"->\" in its timing line. The parser read it as \"-->\"."],
+                    [17, 4, self::REPAIRED, "Block #4 has the arrow \"--->\" in its timing line. The parser read it as \"-->\"."],
                 ],
             ],
             "SubRip without empty lines between cues" => [
@@ -654,7 +671,7 @@ class LenientParsingTest extends TestCase
     public function testTheExampleOfTheIssueKeepsCuesOneAndThree(): void
     {
         $content = "1\n00:00:01,000 --> 00:00:04,000\nHello\n\n" .
-                   "2\n00:00:05,000 -> 00:00:07,000\nBroken arrow\n\n" .
+                   "2\n00:00:05,000 => 00:00:07,000\nBroken arrow\n\n" .
                    "3\n00:00:08,000 --> 00:00:10,000\nStill fine\n";
         $subtitle = (new SubRipParser())->parse($content, new ReadOptions(lenient: true));
 
@@ -664,7 +681,7 @@ class LenientParsingTest extends TestCase
                 "Block #1 has no timing line on its second line.",
                 5,
                 1,
-                ["2", "00:00:05,000 -> 00:00:07,000", "Broken arrow"],
+                ["2", "00:00:05,000 => 00:00:07,000", "Broken arrow"],
                 ParseWarningAction::Skipped
             )],
             $subtitle->getParseWarnings()

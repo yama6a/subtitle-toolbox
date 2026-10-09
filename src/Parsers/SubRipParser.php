@@ -91,7 +91,14 @@ final class SubRipParser extends SubtitleParser
 
     private function isTimingLine(string $line): bool
     {
-        return preg_match("/^\d+:\d\d:\d\d\S* --> /", $line) === 1;
+        return preg_match("/^\d+:\d\d:\d\d\S*?\s*" . $this->arrowRegex() . "/", $line) === 1;
+    }
+
+
+    // Lenient mode also reads "->" and "--->", as srt (Ruby) and mkvmerge do.
+    private function arrowRegex(): string
+    {
+        return $this->options->lenient ? "-+>" : "-->";
     }
 
 
@@ -106,20 +113,29 @@ final class SubRipParser extends SubtitleParser
             throw new ParsingException("Block #$index has no cue number on its first line.", $lineNumber);
         }
 
-        if (!str_contains($rawLines[1] ?? "", ' --> ')) {
+        if (!preg_match("/^(.*?)(?<!-)\s*(" . $this->arrowRegex() . ")\s*(.*)$/", $rawLines[1] ?? "", $times)) {
             throw new ParsingException("Block #$index has no timing line on its second line.", $lineNumber);
         }
 
-        $times       = explode('-->', $rawLines[1]);
-        $coordinates = $this->extractCoordinates($times[1]);
+        [, $startTime, $arrow, $endTime] = $times;
+        $coordinates = $this->extractCoordinates($endTime);
         $cue         = new SubtitleCue(
-            $this->secondsFromString($times[0], $lineNumber),
-            $this->secondsFromString($times[1], $lineNumber),
+            $this->secondsFromString($startTime, $lineNumber),
+            $this->secondsFromString($endTime, $lineNumber),
             array_map($this->escapeText(...), array_slice($rawLines, 2))
         );
         $this->convertOverrideTags($cue);
         if ($coordinates !== null) {
             $cue->setFormatData(self::FORMAT_DATA_KEY, ["coordinates" => $coordinates]);
+        }
+        if ($arrow !== "-->") {
+            $this->warn(
+                "Block #$index has the arrow \"$arrow\" in its timing line. The parser read it as \"-->\".",
+                $lineNumber,
+                $index,
+                $rawLines,
+                ParseWarningAction::Repaired
+            );
         }
 
         return $cue;

@@ -405,6 +405,7 @@ $subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dr
 | Input | Parser result | Formatter output |
 |:--- |:--- |:--- |
 | `0:00:01.5` | 1.5 s. Accepts a dot, one to three hour digits and one to three millisecond digits. | `00:00:01,500` |
+| `00:00:01,000-->00:00:02,000` | 1 s to 2 s. Accepts any spaces or tabs around `-->`, or none. Lenient mode also reads an arrow with 1 or more dashes, such as `->`, and warns. | `00:00:01,000 --> 00:00:02,000` |
 | `X1:100 X2:600 Y1:40 Y2:80` after the end time | `findFormatData('srt')['coordinates']` | the same coordinates |
 | `{\an8}` anywhere in the cue | alignment 8. The first tag wins. SSA `{\a6}` also becomes 8. | `{\an8}` at the start of the first line, nothing for 2 or `null` |
 | `{\b1}`, `{\i1}`, `{\u1}`, `{\s1}` and their `0` forms | `<b>`, `<i>`, `<u>`, `<s>` and their closing tags. An open tag closes at the end of the cue. | the HTML-like tags |

@@ -19,7 +19,8 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | Damage | SubRip | WebVTT | SBV |
 |:--- |:--- |:--- |:--- |
 | cue without a cue number | repaired | not an error | not an error |
-| bad timestamp, `->` arrow | skipped | skipped | skipped |
+| bad timestamp | skipped | skipped | skipped |
+| `->` or `--->` arrow | repaired | skipped | no arrow in the format |
 | no empty line between two cues | repaired | split as the spec says, no warning | repaired |
 | no empty line after the `WEBVTT` header | not an error | repaired | not an error |
 | no `WEBVTT` line, a damaged one, or text before it | not an error | repaired | not an error |

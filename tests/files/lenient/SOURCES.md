@@ -6,6 +6,7 @@ Every file is written for this repository in the shape of broken subtitle downlo
 |:--- |:--- |:--- |
 | `missing_cue_numbers.srt` | two cues without a cue number, UTF-8 BOM, CR LF | MIT |
 | `bad_timestamp.srt` | a letter in an end time, and a `->` arrow, CR LF | MIT |
+| `arrow_variants.srt` | no spaces, two spaces and a tab around the arrow, a `->` arrow and a `--->` arrow, LF | MIT |
 | `missing_empty_line.srt` | no empty line before cue 2 and before cue 3, cue 3 without a number, LF | MIT |
 | `text_before_first_cue.srt` | a download site banner before cue 1, CR LF | MIT |
 | `truncated_last_cue.srt` | the file ends inside the time line of cue 3, LF | MIT |
