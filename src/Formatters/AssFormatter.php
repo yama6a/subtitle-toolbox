@@ -239,7 +239,7 @@ final class AssFormatter extends SubtitleFormatter
             $parts[]     = ["tag", $context->isSsa ? "\\a" . array_flip(SsaOverrideTags::SSA_ALIGNMENTS)[$alignment] : "\\an" . $alignment];
         }
 
-        $tokens = $context->stripTags ? [Markup::stripAllTags($text)] : Markup::splitTags($text);
+        $tokens = $context->stripTags ? [Markup::stripAllTags($text)] : Markup::splitTags(Markup::webVttColorsToFont($text));
         if (!$context->stripTags) {
             foreach ($this->removeStyleTags($tokens, AssStyles::tags($style)) as $tagName) {
                 $parts[] = ["tag", "\\" . $tagName . "0"];

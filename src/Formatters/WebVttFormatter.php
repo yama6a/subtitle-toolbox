@@ -23,10 +23,23 @@ final class WebVttFormatter extends SubtitleFormatter
     private const ALIGNMENT_ROWS    = [0 => "", 1 => "line:50%,center", 2 => "line:0"];
     private const ALIGNMENT_COLUMNS = [1 => "align:left", 2 => "", 3 => "align:right"];
 
+    /** @var list<WebVttDroppedColor> */
+    private array $droppedColors = [];
+
 
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
     {
+        return $this->formatWithReport($subtitle, $options)->content;
+    }
+
+
+    /**
+     * Returns the output of format() and each <font color> that no WebVTT color class has, so the output drops it.
+     */
+    public function formatWithReport(Subtitle $subtitle, ?WriteOptions $options = null): WebVttWriteReport
+    {
         $options ??= new WriteOptions();
+        $this->droppedColors = [];
         $fileData = $subtitle->findFormatData(WebVttParser::FORMAT_DATA_KEY);
         $header   = "WEBVTT";
         if (($fileData["header"] ?? "") !== "") {
@@ -61,7 +74,7 @@ final class WebVttFormatter extends SubtitleFormatter
                        . LineEnding::Lf->value;
         }
 
-        return $this->applyOutputOptions($output, $options);
+        return new WebVttWriteReport($this->applyOutputOptions($output, $options), $this->droppedColors);
     }
 
 
@@ -83,7 +96,7 @@ final class WebVttFormatter extends SubtitleFormatter
     private function formatIdentifiedCue(SubtitleCue $cue, int $cueIndex, WriteOptions $options): string
     {
         return $this->formatIdentifier($cue->getIdentifier(), $cueIndex) . LineEnding::Lf->value
-               . $this->formatCue($cue, $options);
+               . $this->formatCue($cue, $cueIndex, $options);
     }
 
 
@@ -125,7 +138,7 @@ final class WebVttFormatter extends SubtitleFormatter
     }
 
 
-    private function formatCue(SubtitleCue $cue, WriteOptions $options): string
+    private function formatCue(SubtitleCue $cue, int $cueIndex, WriteOptions $options): string
     {
         $timeStamps = Markup::coreTimestamp($cue->getStart()) . " --> " . Markup::coreTimestamp($cue->getEnd());
         $settings   = $this->formatSettings($cue);
@@ -134,9 +147,16 @@ final class WebVttFormatter extends SubtitleFormatter
         }
 
         $lines = implode(LineEnding::Lf->value, $cue->getLines());
-        $lines = $options->stripTags
-            ? Markup::stripAllTags($lines)
-            : $this->keepVttTags($lines);
+        if ($options->stripTags) {
+            $lines = Markup::stripAllTags($lines);
+        } else {
+            [$lines, $dropped] = Markup::fontToWebVttColors($lines);
+            foreach ($dropped as $color) {
+                $this->droppedColors[] = new WebVttDroppedColor($cueIndex, $color, "Cue #$cueIndex at {$cue->getStart()} s: "
+                    . "dropped the color \"$color\", because WebVTT has classes for 8 colors only.");
+            }
+            $lines = $this->keepVttTags($lines);
+        }
 
         $lines = str_replace("-->", "--&gt;", $lines);
 

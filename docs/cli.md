@@ -111,6 +111,7 @@ php subtitle-toolbox.phar --version
 - **Word timestamps**: `--word-timestamps` keeps the word times of the speech-to-text JSON formats, YouTube timed text and Podcasting 2.0 transcripts. `--structure-resegment`, `--karaoke` and `--ass-karaoke-tag` turn it on.
 - **MKV and WebM**: `--track` picks a subtitle track, see [MKV and WebM](#mkv-and-webm).
 - **Image cues**: `--skip-image-cues` leaves out image cues without text in place of failing.
+- **WebVTT output**: WebVTT has classes for 8 text colors only. The tool drops other colors and prints each one on standard error, for example `movie.srt: Cue #3 at 4 s: dropped the color "#123456", because WebVTT has classes for 8 colors only.` See [WebVTT](formats.md#webvtt).
 - **SCC output**: `--scc-fit` wraps lines, replaces characters, and delays or drops captions that SCC cannot hold, in place of failing. It prints each change on standard error. See [SCC](formats.md#scc).
 
 ## Frame rates

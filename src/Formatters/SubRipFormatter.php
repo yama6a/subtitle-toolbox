@@ -69,7 +69,7 @@ final class SubRipFormatter extends SubtitleFormatter
 
         $lines = $options->stripTags
             ? Markup::stripAllTags($lines)
-            : Markup::keepTags($lines, ["b", "u", "i", "s", "font"]);
+            : Markup::keepTags(Markup::webVttColorsToFont($lines), ["b", "u", "i", "s", "font"]);
         $lines = Markup::decodeEntities($lines);
 
         // A line that holds only a tag becomes empty, and an empty line ends the cue in SubRip.

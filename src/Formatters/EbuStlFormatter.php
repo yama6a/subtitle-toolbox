@@ -284,7 +284,7 @@ final class EbuStlFormatter extends SubtitleFormatter
             $italic = 0;
             $under  = 0;
             $colors = [];
-            foreach (Markup::splitTags($line) as $index => $token) {
+            foreach (Markup::splitTags(Markup::webVttColorsToFont($line)) as $index => $token) {
                 if ($index % 2 === 0) {
                     $bytes .= $this->encodeCharacters($context, Markup::decodeEntities($token));
                     continue;

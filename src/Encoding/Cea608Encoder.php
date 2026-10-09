@@ -33,7 +33,7 @@ final class Cea608Encoder
     {
         $style      = ["italic" => 0, "underline" => 0, "colors" => []];
         $characters = [];
-        foreach (Markup::splitTags($line) as $index => $part) {
+        foreach (Markup::splitTags(Markup::webVttColorsToFont($line)) as $index => $part) {
             $isTag = $index % 2 === 1;
             if ($isTag && preg_match("/^<\s*(\/?)\s*([a-z]+)\b([^>]*)>$/i", $part, $tag)) {
                 self::applyTag($style, strtolower($tag[2]), $tag[1] === "/", $tag[3]);
