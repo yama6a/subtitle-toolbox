@@ -38,6 +38,7 @@ The same code runs in both versions and gives another result. The CLI option in 
 |:--- |:--- |:--- |:--- |
 | `changeCase(CaseMode::Sentence)` on 2 cues `WE WENT TO THE`, `STORE AND I LEFT.`. CLI `--case sentence` | `We went to the`, `Store and i left.` | `We went to the`, `store and I left.` | no option |
 | `changeCase(CaseMode::Sentence)` on 1 cue with the lines `[BELL RINGS]`, `>> TICKETS ARE VALID` | `[Bell rings]`, `>> tickets are valid` | `[Bell rings]`, `>> Tickets are valid` | no option |
+| `changeCase(CaseMode::Sentence)` on 1 cue `WAIT… WHAT` | `Wait… what` | `Wait… What` | no option |
 | `unwrapLines()` on 1 cue with the lines `- Are you coming?`, `- Yes, in a minute,`, `I promise you.`. CLI `--structure-unwrap` | 1 line `- Are you coming? - Yes, in a minute, I promise you.` | 2 lines `- Are you coming?`, `- Yes, in a minute, I promise you.` | `foreach ($subtitle->getCues() as $cue) { $cue->setLines([implode(' ', $cue->getLines())]); }` |
 | `removeDuplicateCues()` on 2 cues `Hello`, 1 s to 3 s and 2 s to 4 s. CLI `--structure-merge-duplicates` | 2 cues | 1 cue, 1 s to 4 s | no option |
 | `HlsWebVttJoiner::join()` on a segment with the same 2 cues | 2 cues | 1 cue, 1 s to 4 s | no option |
@@ -47,8 +48,11 @@ The same code runs in both versions and gives another result. The CLI option in 
 - **Sentence case**: a cue continues the sentence of the cue before it. A cue starts a new sentence only in these cases:
   - It is the first cue.
   - The cue before it ends with `.`, `!`, `?` or the ellipsis U+2026. Closing quotes or brackets can follow.
+  - The cue before it ends with `]`, `)`, `♪` or the `:` of a speaker label such as `JOHN:`. Closing tags can follow.
+  - It starts with `[`, `(` or `♪`. Opening tags can come first.
   - It starts 2 s or more after the cue before it.
   - It starts with the speaker change `>>` or a dialogue dash. A line within a cue that starts so also starts a new sentence. A dash before a digit, as in `-20`, is a minus sign.
+- **Ellipsis**: the ellipsis U+2026 ends a sentence within a cue, as `.`, `!` and `?` do. `WAIT… WHAT` becomes `Wait… What`. 2.x gave `Wait… what`.
 - **English I**: with the language `en`, `en-*` or null, sentence case writes `I`, `I'm`, `I'll`, `I've` and `I'd` in upper case. Pass another language, such as `changeCase(CaseMode::Sentence, 'de')`, to keep a lone `i` in lower case.
 - **Unwrap**: each dialogue turn stays on a line of its own. A turn starts at the first line and at each line with a dialogue dash. A cue without dash lines still becomes 1 line.
 - **Duplicates**: `removeDuplicateCues()` joins adjacent cues with the same text that are identical, overlap or touch. 2.x joined only a cue that ends at the start of the next. The new argument `maxGap`, in seconds, also joins same-text cues up to that gap apart.

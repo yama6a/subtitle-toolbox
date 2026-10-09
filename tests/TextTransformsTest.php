@@ -62,6 +62,15 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testRealSoundCuesAndSpeakerLabelsStartSentences(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::FILES . "own_cea608_sound_cues.vtt"), Format::WebVtt);
+
+        $this->assertSame(file_get_contents(self::FILES . "own_cea608_sound_cues_sentence.vtt"),
+                          $subtitle->changeCase(CaseMode::Sentence)->toString(Format::WebVtt));
+    }
+
+
     public function testRealCaptionFileCleanedUp(): void
     {
         $subtitle = $this->parseCaptions()
@@ -172,6 +181,15 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
         $subtitle = TestSubtitles::fromTexts(["WAIT FOR", ">> ME AT THE", ">>>STATION", "AND\n- WHY\n\u{2013} FOR", "<i>- LUNCH</i>", "AT", "-20 DEGREES"]);
 
         $this->assertSame(["Wait for", ">> Me at the", ">>>Station", "and\n- Why\n\u{2013} For", "<i>- Lunch</i>", "at", "-20 degrees"],
+                          TestSubtitles::texts($subtitle->changeCase(CaseMode::Sentence)));
+    }
+
+
+    public function testAnnotationCuesStartASentenceInInvalidUtf8(): void
+    {
+        $subtitle = TestSubtitles::fromTexts(["CAF\xe9 [BELL]", "WAIT \xe9", "NO\xeb JOHN:", "GO \xe9", "(LAUGHS) \xe9", "\u{266A} LA \xe9 \u{266A}", "OK"]);
+
+        $this->assertSame(["Caf\xe9 [bell]", "Wait \xe9", "no\xeb john:", "Go \xe9", "(Laughs) \xe9", "\u{266A} La \xe9 \u{266A}", "Ok"],
                           TestSubtitles::texts($subtitle->changeCase(CaseMode::Sentence)));
     }
 

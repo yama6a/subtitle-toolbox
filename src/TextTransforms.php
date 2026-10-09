@@ -137,11 +137,12 @@ trait TextTransforms
                 use (&$currentCue, &$previousEnd, &$endsSentence, &$capitalizeNext, &$afterPunctuation, $turkic, $english): string {
                 if ($cue !== $currentCue) {
                     $currentCue       = $cue;
-                    $capitalizeNext   = $endsSentence || ($previousEnd !== null
+                    $visible          = Markup::visibleText(implode("\n", $cue->getLines()));
+                    $capitalizeNext   = $endsSentence || self::textTransformsStartsAnnotation($visible) || ($previousEnd !== null
                         && $cue->getStart() - $previousEnd >= self::TEXT_TRANSFORMS_SENTENCE_GAP - Timecode::EPSILON);
                     $afterPunctuation = false;
                     $previousEnd      = $cue->getEnd();
-                    $endsSentence     = self::textTransformsEndsSentence(Markup::visibleText(implode("\n", $cue->getLines())));
+                    $endsSentence     = self::textTransformsEndsSentence($visible);
                 }
                 if ($startsLine && ($afterPunctuation || self::textTransformsStartsTurn($text))) {
                     $capitalizeNext = true;
@@ -191,10 +192,24 @@ trait TextTransforms
     }
 
 
+    /**
+     * Tells if $text ends a sentence, or ends with a sound description, a music note or a speaker label.
+     */
     private static function textTransformsEndsSentence(string $text): bool
     {
-        return (preg_match('/[.!?\x{2026}][\p{Pe}\p{Pi}\p{Pf}"\']*$/u', $text)
-            ?: preg_match('/[.!?][)\]}"\']*$/', $text)) === 1;
+        return (preg_match('/(?:[.!?\x{2026}][\p{Pe}\p{Pi}\p{Pf}"\']*|[\])\x{266A}:])$/u', $text)
+            ?: preg_match('/[.!?][)\]}"\']*$|[\]):]$|\xE2\x99\xAA$/', $text)) === 1;
+    }
+
+
+    /**
+     * Tells if $text starts with a sound description or a music note.
+     */
+    private static function textTransformsStartsAnnotation(string $text): bool
+    {
+        $text = ltrim($text);
+
+        return str_starts_with($text, "[") || str_starts_with($text, "(") || str_starts_with($text, "\u{266A}");
     }
 
 
