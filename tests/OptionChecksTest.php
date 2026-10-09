@@ -78,6 +78,7 @@ class OptionChecksTest extends TestCase
             "ValidationRules minSecondsPerWord"        => fn (float $value) => new ValidationRules(minSecondsPerWord: $value),
             "Subtitle::scale() factor"                 => fn (float $value) => (new Subtitle())->scale($value),
             "Subtitle::extendShortCues() minDuration"  => fn (float $value) => (new Subtitle())->extendShortCues($value),
+            "Subtitle::removeDuplicateCues() maxGap"   => fn (float $value) => (new Subtitle())->removeDuplicateCues($value),
             "Subtitle::fixOverlaps() minGap"           => fn (float $value) => (new Subtitle())->fixOverlaps($value),
             "SpeechReference mediaDuration"            => fn (float $value) => SpeechReference::fromFfmpegSilencedetect("", $value),
         ];

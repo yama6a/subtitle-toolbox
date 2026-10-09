@@ -63,7 +63,7 @@ final class StructureEdit extends Edit
             Option::flag("structure-wrap", "Break lines longer than --structure-max-cpl characters."),
             Option::value("structure-max-cpl", "CHARS", "Maximum characters per line for --structure-wrap, --structure-resegment, --structure-merge-short and --structure-split-long. Default: 42."),
             Option::value("structure-max-lines", "LINES", "Maximum number of lines per cue for --structure-wrap, --structure-resegment, --structure-merge-short and --structure-split-long. Default: 2."),
-            Option::flag("structure-merge-duplicates", "Join touching cues with the same text."),
+            Option::flag("structure-merge-duplicates", "Join same-text cues that overlap or touch."),
         ];
     }
 

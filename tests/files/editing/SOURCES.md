@@ -10,3 +10,5 @@
 | `harbour_tour_split.vtt` | Written for this repository. Expected `WebVttFormatter` output after `splitCue(2, 9.5, 1)`. | MIT |
 | `harbour_tour_joined.vtt` | Written for this repository. Expected `WebVttFormatter` output after `joinCues(3, 4)`. | MIT |
 | `harbour_tour_slice.vtt` | Written for this repository. Expected `WebVttFormatter` output after `withSlice(6, 16, true)`. | MIT |
+| `own_duplicate_cues.srt` | Written for this repository. SubRip with an exact duplicate, an overlapping duplicate, a touching duplicate and a same-text cue 0.5 s later. | MIT |
+| `own_duplicate_cues_deduplicated.srt` | Written for this repository. Expected `SubRipFormatter` output for `own_duplicate_cues.srt` after `removeDuplicateCues()`. | MIT |
