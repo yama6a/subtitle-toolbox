@@ -163,6 +163,7 @@ class YouTubeTimedTextParserTest extends TestCase
         return [
             "srv1" => ["missing-dur.en.srv1"],
             "srv2" => ["missing-d.en.srv2"],
+            "srv3" => ["missing-d.en.srv3"],
         ];
     }
 
@@ -175,14 +176,6 @@ class YouTubeTimedTextParserTest extends TestCase
 
         $this->assertSame([[1.0, 3.0], [4.0, 6.5], [6.5, 6.5], [8.0, 13.0]], $describe((new YouTubeTimedTextParser())->parse($content, new ReadOptions())));
         $this->assertSame([[1.0, 3.0], [4.0, 6.5], [6.5, 6.5], [8.0, 10.5]], $describe((new YouTubeTimedTextParser())->parse($content, new ReadOptions(lastCueDuration: 2.5))));
-    }
-
-
-    public function testMissingDurationGivesAZeroLengthCue(): void
-    {
-        $cue = (new YouTubeTimedTextParser())->parse('<timedtext format="3"><body><p t="500">Hi</p></body></timedtext>', new ReadOptions())->getCues()[0];
-
-        $this->assertSame([0.5, 0.5], [$cue->getStart(), $cue->getEnd()]);
     }
 
 
