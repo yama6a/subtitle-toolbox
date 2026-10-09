@@ -204,11 +204,6 @@ final class YouTubeTimedTextParser extends SubtitleParser
             ];
         }
 
-        $starts = array_column($captions, "start");
-        foreach ($captions as $index => $caption) {
-            $captions[$index]["end"] ??= $this->endAtNextStart($starts, $index);
-        }
-
         return $captions;
     }
 
@@ -231,7 +226,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
 
             try {
                 $start               = $this->time($paragraph, "t") / 1000;
-                $end                 = $start + $this->time($paragraph, "d", "0") / 1000;
+                $end                 = $paragraph->hasAttribute("d") ? $start + $this->time($paragraph, "d") / 1000 : null;
                 [$segments, $extras] = $this->srv3Segments($paragraph, $pens);
             } catch (ParsingException $exception) {
                 $this->fail($exception, $paragraph->getLineNo(), $index, [$paragraph->ownerDocument->saveXML($paragraph)]);
@@ -354,11 +349,16 @@ final class YouTubeTimedTextParser extends SubtitleParser
 
     /**
      * Skips the append captions, which only add a line break.
+     * Ends a caption without a duration at the next later start.
      * Ends a caption where the next caption in its window starts.
      */
     private function endAtNextCaption(array $captions): array
     {
         $captions = array_values(array_filter($captions, fn (array $caption): bool => !$caption["append"]));
+        $starts   = array_column($captions, "start");
+        foreach ($captions as $index => $caption) {
+            $captions[$index]["end"] ??= $this->endAtNextStart($starts, $index);
+        }
         foreach ($captions as $index => $caption) {
             if ($caption["window"] === null) {
                 continue;
