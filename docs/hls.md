@@ -57,7 +57,7 @@ sub3.vtt
 - **Segment files**: UTF-8 without BOM, LF line endings. The header text, other header lines, `STYLE` and `REGION` blocks of the subtitle go into each segment. The segmenter replaces an old `X-TIMESTAMP-MAP` line. It does not copy comments.
 
 ## Joining
-- **Duplicates**: `join()` parses the segments in playlist order. It keeps one copy of a cue that repeats with the same times and text. Then `removeDuplicateCues()` joins a cue that a segmenter split at a boundary. That call also joins two cues with the same text in the source when they overlap or touch.
+- **Duplicates**: `join()` parses the segments in playlist order. It keeps one copy of a cue that repeats with the same times and text. Then `removeDuplicateCues()` joins a cue that a segmenter split at a boundary. That call also joins two cues with the same text and cue settings in the source when they overlap or touch.
 - **Stream start**: `join()` returns cue times from `streamStartPts`. Without it, the `MPEGTS` value of the first segment is the start. A segment without the header maps cue time 0 to `MPEGTS` 0. A cue time that becomes negative becomes 0.
 - **Header order**: `TimestampMap::fromHeader()` reads `LOCAL` and `MPEGTS` in both orders.
 - **Timestamp wrap**: MPEG-2 timestamps wrap after about 26.5 hours. `offset()` handles the wrap.

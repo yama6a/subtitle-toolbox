@@ -377,6 +377,50 @@ class CueEditingTest extends TestCase
     }
 
 
+    public function testRemoveDuplicateCuesKeepsAssEventsWithAnotherStyleOrLayer(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "own_glow_duplicates.ass"), Format::Ass);
+
+        $this->assertSame(
+            file_get_contents(self::DIR . "own_glow_duplicates_deduplicated.ass"),
+            $subtitle->removeDuplicateCues()->toString(Format::Ass, new WriteOptions(bom: false))
+        );
+    }
+
+
+    /**
+     * @return array<string, array{SubtitleCue}>
+     */
+    public static function cuesThatCannotJoin(): array
+    {
+        return [
+            "other alignment"   => [(new SubtitleCue(1, 3, "Hello"))->setAlignment(8)],
+            "forced"            => [(new SubtitleCue(1, 3, "Hello"))->setForced(true)],
+            "other format data" => [(new SubtitleCue(1, 3, "Hello"))->setFormatData(Format::WebVtt->value, ["line" => "0"])],
+        ];
+    }
+
+
+    #[DataProvider("cuesThatCannotJoin")]
+    public function testRemoveDuplicateCuesKeepsSameTextCuesThatCannotJoin(SubtitleCue $other): void
+    {
+        $subtitle = TestSubtitles::fromCues([new SubtitleCue(1, 3, "Hello"), $other]);
+
+        $this->assertCount(2, $subtitle->removeDuplicateCues()->getCues());
+    }
+
+
+    public function testRemoveDuplicateCuesJoinsTheDefaultAlignmentWithNoAlignment(): void
+    {
+        $subtitle = TestSubtitles::fromCues([
+            new SubtitleCue(1, 3, "Hello"),
+            (new SubtitleCue(1, 3, "Hello"))->setAlignment(SubtitleCue::DEFAULT_ALIGNMENT),
+        ]);
+
+        $this->assertSame([[1.0, 3.0, "Hello"]], TestSubtitles::describe($subtitle->removeDuplicateCues()));
+    }
+
+
     public function testRemoveDuplicateCuesRejectsANegativeMaxGap(): void
     {
         foreach ([-0.1, NAN, INF] as $maxGap) {
