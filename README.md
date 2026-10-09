@@ -5,7 +5,7 @@
 
 A PHP library and command line tool that reads, edits and writes subtitles, transcripts and chapter lists in more than 30 formats.
 
-Upgrading from 1.x? See the [upgrade guide](docs/upgrade-2.0.md).
+Upgrading from 2.x? The package has a new name. See the [upgrade guide](docs/upgrade-3.0.md).
 
 ## Install
 ```sh
