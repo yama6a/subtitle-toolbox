@@ -28,6 +28,24 @@ class DeepLEngineTest extends TestCase
     ];
 
 
+    /** @var list<int> */
+    private array $waits = [];
+
+
+    protected function setUp(): void
+    {
+        HttpRetry::$sleep = function (int $seconds): void {
+            $this->waits[] = $seconds;
+        };
+    }
+
+
+    protected function tearDown(): void
+    {
+        HttpRetry::$sleep = null;
+    }
+
+
     private static function recorded(): FakeHttpClient
     {
         return new FakeHttpClient([[200, file_get_contents(self::FILES . "deepl_de.json")]]);
@@ -112,7 +130,7 @@ class DeepLEngineTest extends TestCase
     public function testAnErrorStatusNamesTheCauseWithoutTheKey(int $status, string $body, string $message): void
     {
         try {
-            (new DeepLEngine(new DeepLOptions(self::KEY, httpClient: new FakeHttpClient([[$status, $body]]))))->translate(["Hello"], "en", "de");
+            (new DeepLEngine(new DeepLOptions(self::KEY, httpClient: new FakeHttpClient(respond: fn (): array => [$status, $body]))))->translate(["Hello"], "en", "de");
             $this->fail("No exception");
         } catch (TranslationException $exception) {
             $this->assertSame("TranslationException (Error #109): $message", $exception->getMessage());
@@ -180,5 +198,53 @@ class DeepLEngineTest extends TestCase
         $this->assertSame(["Write &amp;lt;i&amp;gt;Run&amp;lt;/i&amp;gt; for italics.", "Tom &amp;amp; Jerry is a cat and mouse act."],
                           $echo->requests[0]["body"]["text"]);
         $this->assertSame($original->toString(Format::SubRip), $copy->toString(Format::SubRip));
+    }
+
+
+    public function testRetriesHttp429And5xxAfter1And2Seconds(): void
+    {
+        $client = new FakeHttpClient([[429, '{"message": "busy"}'], [503, ""], [200, file_get_contents(self::FILES . "deepl_de.json")]]);
+
+        $translations = (new DeepLEngine(new DeepLOptions(self::KEY, httpClient: $client)))->translate(self::TEXTS, "en", "de");
+
+        $this->assertCount(4, $translations);
+        $this->assertCount(3, $client->requests);
+        $this->assertSame([$client->requests[0], $client->requests[0]], [$client->requests[1], $client->requests[2]]);
+        $this->assertSame([1, 2], $this->waits);
+    }
+
+
+    /**
+     * @return array<string, array{int, list<int>, int}>
+     */
+    public static function retries(): array
+    {
+        return [
+            "429 4 times" => [429, [1, 2, 4], 4],
+            "500 4 times" => [500, [1, 2, 4], 4],
+            "502 4 times" => [502, [1, 2, 4], 4],
+            "504 4 times" => [504, [1, 2, 4], 4],
+            "400 once"    => [400, [], 1],
+            "403 once"    => [403, [], 1],
+        ];
+    }
+
+
+    /**
+     * @param list<int> $waits
+     */
+    #[DataProvider("retries")]
+    public function testGivesUpAfter3RetriesAndDoesNotRetryOtherErrors(int $status, array $waits, int $requests): void
+    {
+        $client = new FakeHttpClient(respond: fn (): array => [$status, "{}"]);
+
+        try {
+            (new DeepLEngine(new DeepLOptions(self::KEY, httpClient: $client)))->translate(["Hello"], "en", "de");
+            $this->fail("No exception");
+        } catch (TranslationException $exception) {
+            $this->assertStringContainsString("HTTP $status", $exception->getMessage());
+        }
+        $this->assertSame($waits, $this->waits);
+        $this->assertCount($requests, $client->requests);
     }
 }

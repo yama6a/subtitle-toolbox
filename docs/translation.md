@@ -72,6 +72,7 @@ $french->save('movie.fr.srt');
   - An HTTP error, such as 403 for a wrong key, 429 for too many requests or 456 for a used-up DeepL quota.
   - A request that gets no response.
   - An answer that the engine cannot read.
+- **Retries**: the engines send a request again after HTTP 429, 500, 502, 503 or 504. They wait 1, 2 and 4 seconds before the 3 retries. The 4th failed answer throws `TranslationException`. The waits are fixed, because `HttpClient::post()` returns no headers such as `Retry-After`. A request that gets no response does not get a retry.
 - **No curl**: without `ext-curl` and without an `httpClient`, the engine constructor throws `InvalidArgumentException` with a message that names the extension. Check `extension_loaded('curl')` before you create an engine. Composer lists `ext-curl` under `suggest` only, because the rest of the library runs without it.
 - **Google v3**: the engine uses v2. v3 needs an OAuth access token and a project ID in place of an API key.
 
