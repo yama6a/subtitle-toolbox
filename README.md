@@ -15,6 +15,8 @@ composer require yama6a/php-glyph-ocr:^0.3   # php-glyph-ocr, the pure PHP OCR e
 apt install tesseract-ocr                    # or Tesseract on Debian and Ubuntu, for more than 100 languages
 ```
 
+From 3.0, the package continues as `yama6a/subtitle-toolbox-php`. Never install both packages together.
+
 The core package needs neither OCR engine. See [ocr.md](docs/ocr.md) for the install commands of other systems and languages.
 
 The library needs PHP 8.2 or later with `ext-dom` and `ext-iconv`. These extensions are optional:
