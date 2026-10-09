@@ -414,6 +414,19 @@ class LenientParsingTest extends TestCase
                     [1, null, self::REPAIRED, "The file has text before the XML: \"Captions by the harbour film club\". The parser skipped it."],
                 ],
             ],
+            "TTML with HTML entities" => [
+                "html_entities.ttml",
+                TtmlParser::class,
+                "The file is not well-formed XML.",
+                [
+                    [1, 3, "Le caf\u{e9}\u{a0}ouvre \u{e0} huit heures."],
+                    [4, 6, "Fish &amp; chips \u{2013} 5\u{a0}\u{20ac}"],
+                    [7, 9, "\u{ab}\u{a0}Bon voyage\u{a0}\u{bb}"],
+                ],
+                [
+                    [5, null, self::REPAIRED, "The file has HTML entities that XML does not define, such as \"&eacute;\". The parser read them as characters."],
+                ],
+            ],
             "EBU STL with a bad time code and a cut-off last block" => [
                 "bad_time_code.stl",
                 EbuStlParser::class,
@@ -832,6 +845,16 @@ class LenientParsingTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The file is not well-formed XML.");
         (new TtmlParser())->parse("<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><p begin=\"1s\" end=\"2s\">text</body></tt>", new ReadOptions(lenient: true));
+    }
+
+
+    public function testTtmlWithAnUnknownEntityStillThrows(): void
+    {
+        $this->expectException(ParsingException::class);
+        (new TtmlParser())->parse(
+            "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div><p begin=\"1s\" end=\"2s\">&eacute;&foo;</p></div></body></tt>",
+            new ReadOptions(lenient: true)
+        );
     }
 
 

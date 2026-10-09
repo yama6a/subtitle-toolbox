@@ -11,6 +11,7 @@ use DOMXPath;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\StyleRuns;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -170,7 +171,49 @@ final class TtmlParser extends SubtitleParser
             $this->skipTextBeforeXml($xml, $skipped);
         }
 
-        return XmlLoader::xml($repaired) ?? throw new ParsingException("The file is not well-formed XML.");
+        $document = XmlLoader::xml($repaired);
+        if ($document === null && $this->options->lenient) {
+            $document = $this->loadWithHtmlEntities($repaired);
+        }
+
+        return $document ?? throw new ParsingException("The file is not well-formed XML.");
+    }
+
+
+    /**
+     * Replaces the HTML named entities that XML does not define with character references, and loads the result.
+     * The parser never loads a DTD, so no file can define these entities itself.
+     */
+    private function loadWithHtmlEntities(string $xml): ?DOMDocument
+    {
+        $characters = array_flip(get_html_translation_table(HTML_ENTITIES, ENT_HTML5 | ENT_QUOTES));
+        $first      = null;
+        $replaced   = preg_replace_callback(
+            "/&([A-Za-z][A-Za-z0-9]*);/",
+            function (array $match) use ($characters, &$first): string {
+                if (in_array($match[1], ["amp", "lt", "gt", "quot", "apos"], true) || !isset($characters[$match[0]])) {
+                    return $match[0];
+                }
+                $first ??= $match[0];
+
+                $codePoints = array_map(fn (string $char): int => mb_ord($char, "UTF-8"), mb_str_split($characters[$match[0]], 1, "UTF-8"));
+
+                return implode("", array_map(fn (int $codePoint): string => "&#$codePoint;", $codePoints));
+            },
+            $xml
+        );
+        $document = $first === null ? null : XmlLoader::xml($replaced);
+        if ($document !== null) {
+            $this->warn(
+                "The file has HTML entities that XML does not define, such as \"$first\". The parser read them as characters.",
+                1 + substr_count($xml, "\n", 0, strpos($xml, $first)),
+                null,
+                [],
+                ParseWarningAction::Repaired
+            );
+        }
+
+        return $document;
     }
 
 
