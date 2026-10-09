@@ -15,4 +15,3 @@
 | `own_angle_bracket_text.srt` | Written for this repository. Holds text in angle brackets that is no tag, next to SubRip tags and unknown tags. | MIT |
 | `own_negative_start.srt` | Written for this repository. The output for a cue from -0.5 s to 1 s, set through the API. | MIT |
 | `own_vtt_cue_settings.srt` | Written for this repository in the shape that `yt-dlp --convert-subs srt` writes for YouTube automatic captions. Cues 1 to 3 have WebVTT cue settings after the end time. Cue 4 has coordinates. | MIT |
-| `own_vtt_cue_settings_converted.vtt` | Written for this repository. Expected `WebVttFormatter` output for `own_vtt_cue_settings.srt`. | MIT |

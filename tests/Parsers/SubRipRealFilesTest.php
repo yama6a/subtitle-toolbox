@@ -229,7 +229,7 @@ class SubRipRealFilesTest extends TestCase
         $this->assertSame([], $subtitle->getParseWarnings());
         $this->assertSame(["align" => "start", "position" => "0%"], $subtitle->getCues()[0]->findFormatData(Format::WebVtt->value));
         $this->assertSame(["align" => "start"], $subtitle->getCues()[2]->findFormatData(Format::WebVtt->value));
-        $this->assertSame(file_get_contents(__DIR__ . "/../files/srt/real/own_vtt_cue_settings_converted.vtt"), $subtitle->toString(Format::WebVtt));
+        $this->assertSame(file_get_contents(__DIR__ . "/../files/vtt/real/own_srt_cue_settings_converted.vtt"), $subtitle->toString(Format::WebVtt));
         $this->assertEquals($subtitle->getCues(), iterator_to_array((new SubRipStreamReader())->read($stream), false));
     }
 
