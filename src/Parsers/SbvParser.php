@@ -13,7 +13,7 @@ use SubtitleToolbox\Timecode;
 
 final class SbvParser extends SubtitleParser
 {
-    private const LOOSE_TIME = '(\d+):(\d{1,2}):(\d{1,2})[.,:](\d{1,4})';
+    private const LOOSE_TIME = '(\d+):([0-5]?\d):([0-5]?\d)[.,:](\d{1,4})';
 
     // Lenient mode reads the separators and fractions that hand-edited files use, such as "0:00:07,98.0:00:11,3".
     private const LOOSE_TIMING_LINE = '/^' . self::LOOSE_TIME . '\s*[.,]\s*' . self::LOOSE_TIME . '$/';
@@ -88,14 +88,9 @@ final class SbvParser extends SubtitleParser
     private function looseSeconds(array $fields, int $lineNumber): float
     {
         [$hours, $minutes, $seconds, $fraction] = $fields;
-        $text = "$hours:$minutes:$seconds.$fraction";
-        if ((int) $minutes > 59 || (int) $seconds > 59) {
-            throw new ParsingException("The time \"$text\" is not valid.", $lineNumber);
-        }
-
         $time = Timecode::roundToMilliseconds(Timecode::toSeconds((int) $hours, (int) $minutes, (int) $seconds, $fraction));
 
-        return self::boundedTime($time, $text, $lineNumber);
+        return self::boundedTime($time, "$hours:$minutes:$seconds.$fraction", $lineNumber);
     }
 
 
