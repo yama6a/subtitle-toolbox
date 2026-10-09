@@ -76,6 +76,20 @@ class LenientParsingTest extends TestCase
                     [17, 4, self::REPAIRED, "Block #4 has the arrow \"--->\" in its timing line. The parser read it as \"-->\"."],
                 ],
             ],
+            "SubRip with full-width delimiters in timing lines" => [
+                "full_width_delimiters.srt",
+                SubRipParser::class,
+                "The time \"00：00：03，000\" is not valid.",
+                [
+                    [1, 2, "火车三点出发。"],
+                    [3, 4, "请在二号站台等候，谢谢。"],
+                    [5, 6, "時刻：午後三時。"],
+                ],
+                [
+                    [5, 1, self::REPAIRED, "Block #1 has full-width delimiters in its timing line. The parser read them as ASCII."],
+                    [9, 2, self::REPAIRED, "Block #2 has full-width delimiters in its timing line. The parser read them as ASCII."],
+                ],
+            ],
             "SubRip without empty lines between cues" => [
                 "missing_empty_line.srt",
                 SubRipParser::class,
