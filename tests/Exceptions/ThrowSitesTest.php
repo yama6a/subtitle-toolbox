@@ -530,6 +530,8 @@ class ThrowSitesTest extends TestCase
             "Parsers/TtmlParser.php: not repairable"        => [fn () => (new TtmlParser())->parse("<!-- no root -->", new ReadOptions(lenient: true)), ...$parsing],
             "Parsers/TtmlParser.php: after the div ends"    => [fn () => (new TtmlParser())->parse(sprintf(self::TTML,
                 '<div begin="2s" end="3s"><p begin="1s">text</p></div>'), new ReadOptions()), ...$parsing],
+            "Parsers/TtmlParser.php: frame label"           => [fn () => (new TtmlParser())->parse(sprintf(self::TTML,
+                '<p begin="00:00:01:45" end="00:00:02:10">text</p>'), new ReadOptions()), ...$parsing],
             "Parsers/TtmlParser.php: no end time"           => [fn () => (new TtmlParser())->parse(sprintf(self::TTML,
                 '<p begin="1s">text</p>'), new ReadOptions()), ...$parsing],
             "Parsers/VobSubParser.php: no VobSubReadOptions" => [fn () => (new VobSubParser())->parse("", new ReadOptions()), ...$invalid],

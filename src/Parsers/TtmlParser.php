@@ -272,7 +272,7 @@ final class TtmlParser extends SubtitleParser
             $multiplier = [1, 1];
         }
 
-        $this->smpteFrameRate = (float) ($frameRate ?? 30) ?: 30;
+        $this->smpteFrameRate = (float) ($frameRate ?? $this->guessFrameRate()) ?: 30;
         $this->frameRate      = $this->smpteFrameRate * (float) $multiplier[0] / (float) $multiplier[1];
         $this->smpteTimeBase  = trim($this->attribute($this->root, "ttp", "timeBase") ?? "") === "smpte";
         $this->dropMode       = trim($this->attribute($this->root, "ttp", "dropMode") ?? "nonDrop");
@@ -281,6 +281,39 @@ final class TtmlParser extends SubtitleParser
         $this->tickRate       = $tickRate !== null && (float) $tickRate > 0
             ? (float) $tickRate
             : ($frameRate !== null ? $this->frameRate : 1);
+    }
+
+
+    /**
+     * Returns the default of 30 fps, or 50 or 60 fps in lenient mode when a frame label in the file is 30 or more.
+     *
+     * @see https://www.w3.org/TR/ttml2/#parameter-attribute-frameRate
+     */
+    private function guessFrameRate(): float
+    {
+        $highest = null;
+        foreach ((new DOMXPath($this->root->ownerDocument))->query("//@begin | //@end | //@dur") as $attribute) {
+            if (preg_match("/^\d{2,}:\d{2}:\d{2}:(\d{2})(?:\.\d+)?$/", trim($attribute->value), $matches)
+                && (int) $matches[1] >= 30 && (int) $matches[1] > (int) ($highest[1] ?? 0)) {
+                $highest = [$attribute, (int) $matches[1]];
+            }
+        }
+        if ($highest === null) {
+            return 30;
+        }
+
+        [$attribute, $label] = $highest;
+        $expression = trim($attribute->value);
+        $line       = $attribute->parentNode->getLineNo();
+        $message    = "The frame label $label in \"$expression\" is not below the default frame rate of 30, and the file has no ttp:frameRate.";
+        if (!$this->options->lenient || $label >= 60) {
+            throw new ParsingException($message, $line);
+        }
+
+        $guess = $label < 50 ? 50 : 60;
+        $this->warn("$message The parser read the frames at $guess fps.", $line, null, [], ParseWarningAction::Repaired);
+
+        return $guess;
     }
 
 
