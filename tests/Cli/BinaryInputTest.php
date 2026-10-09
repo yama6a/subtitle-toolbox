@@ -237,6 +237,15 @@ class BinaryInputTest extends BinaryTestCase
     }
 
 
+    public function testConvertWritesAnEmptyFileForAnEmptyInput(): void
+    {
+        file_put_contents("$this->dir/empty.vtt", "");
+
+        $this->assertSame([0, "empty.vtt -> empty.srt\n", ""], $this->runBinary(["convert", "empty.vtt", "--to", "srt", "--no-bom", "-o", "empty.srt"]));
+        $this->assertSame("", $this->file("empty.srt"));
+    }
+
+
     public function testInfoAndConvertReadTheTracksOfAnMp4File(): void
     {
         copy(self::FILES . "mp4/text_tracks.mp4", "$this->dir/movie.mp4");
