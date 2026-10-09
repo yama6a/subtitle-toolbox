@@ -123,6 +123,56 @@ class EncodingTest extends TestCase
     }
 
 
+    public static function utf16FilesWithoutBom(): array
+    {
+        $files = [];
+        foreach (["UTF-16LE", "UTF-16BE"] as $encoding) {
+            foreach (["srt" => Format::SubRip, "vtt" => Format::WebVtt, "sbv" => Format::Sbv, "ass" => Format::Ass,
+                         "smi" => Format::Sami, "ttml" => Format::Ttml, "sub" => Format::MicroDvd, "csv" => Format::Csv] as $extension => $format) {
+                foreach ([false, true] as $lenient) {
+                    $name         = strtolower($encoding) . "-no-bom.$extension";
+                    $mode         = $lenient ? "lenient" : "strict";
+                    $files["$name, $mode"] = [$name, $encoding, $format, $lenient];
+                }
+            }
+        }
+
+        return $files;
+    }
+
+
+    #[DataProvider("utf16FilesWithoutBom")]
+    public function testUtf16FileWithoutBomParses(string $file, string $encoding, Format $format, bool $lenient): void
+    {
+        $path    = self::DIR . "utf-16-no-bom/$file";
+        $options = new ReadOptions(lenient: $lenient);
+        $loaded  = [Subtitle::load($path, $format, $options), Subtitle::fromString(file_get_contents($path), $format, $options)];
+        $loaded[] = Subtitle::loadAutoDetectFormat($path, $options);
+        if ($format !== Format::Csv) {
+            $loaded[] = Subtitle::fromStringAutoDetectFormat(file_get_contents($path), $options);
+        }
+
+        foreach ($loaded as $subtitle) {
+            $this->assertSame($format, $subtitle->getFormat());
+            $this->assertSame(
+                [[1.0, 3.0, "The café opens at nine."], [4.0, 6.5, "Grüße from the harbor."]],
+                array_map(fn (SubtitleCue $cue) => [$cue->getStart(), $cue->getEnd(), $cue->getText()], $subtitle->getCues())
+            );
+            $warnings = array_map(fn (ParseWarning $warning) => [$warning->message, $warning->action], $subtitle->getParseWarnings());
+            $this->assertSame($lenient ? [["The content is $encoding without a BOM.", ParseWarningAction::Repaired]] : [], $warnings);
+        }
+    }
+
+
+    public function testUtf16WithoutBomKeepsAnExplicitUtf16SourceEncoding(): void
+    {
+        $raw = file_get_contents(self::DIR . "utf-16-no-bom/utf-16le-no-bom.srt");
+
+        $this->assertSame("The café opens at nine.", Subtitle::fromString($raw, Format::SubRip, new ReadOptions(encoding: "UTF-16LE"))->getCues()[0]->getText());
+        $this->assertSame("The café opens at nine.", Subtitle::fromString($raw, Format::SubRip, new ReadOptions(encoding: "Windows-1252"))->getCues()[0]->getText());
+    }
+
+
     public static function xmlFilesThatDeclareUtf16(): array
     {
         return [

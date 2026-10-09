@@ -540,6 +540,39 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
+## dagronf/SwiftSubtitles
+
+- Project: <https://github.com/dagronf/SwiftSubtitles>
+- Licence: MIT
+- Checked at: `485c6f1fc71235041198a8bb893fa22f807451a6`
+- Files written for this repository in the shape of its fixtures:
+  - `tests/files/encoding/utf-16-no-bom/utf-16le-no-bom.sbv`
+  - `tests/files/encoding/utf-16-no-bom/utf-16be-no-bom.sbv`
+
+```text
+MIT License
+
+Copyright (c) 2025 Darren Ford
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## yama6a/php-glyph-ocr
 
 - Project: <https://github.com/yama6a/php-glyph-ocr>
