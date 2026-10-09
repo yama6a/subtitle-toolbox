@@ -44,7 +44,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | SAMI | a `<SYNC>` tag without a valid `Start`. A negative `Start` gets a `repaired` warning, and the parser reads it as 0. A file whose `<P>` classes are all missing from the STYLE block gets a `repaired` warning with `blockIndex` null | `<SYNC>` tags |
 | TTML, iTT | a `<p>` with a bad time or without an end time | `<p>` elements |
 | EBU STL | a subtitle with a time code out of range, a cut-off last TTI block | TTI blocks |
-| CSV, TSV | a row with a bad time | rows after the header, without empty rows |
+| CSV, TSV | a row with a bad time. The rows before the header row, with 1 warning that has `blockIndex` null. A quoted cell without a closing quote gets a `repaired` warning, and the cell ends at the end of its line | rows after the header, without empty rows |
 | JSON | a cue with a bad field. The parser also drops a bad metadata field, a bad comment and the bad format data of one format. Their warnings have `blockIndex` null | cues |
 | Whisper JSON | a segment without `start`, `end` or `text`, or with a time that is negative or not a finite number | segments |
 | YouTube timed text | an event or element with a bad or negative time, for example `"tStartMs": -5000` | events or elements |

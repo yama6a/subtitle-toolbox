@@ -142,6 +142,70 @@ class CsvParserTest extends TestCase
     }
 
 
+    public function testLenientModeEndsAnUnclosedQuoteAtTheLineEnd(): void
+    {
+        $subtitle = (new CsvParser())->parse(file_get_contents(__DIR__ . "/../files/csv/own_unclosed_quote.csv"), new ReadOptions(lenient: true));
+        $warnings = $subtitle->getParseWarnings();
+
+        $this->assertSame([
+            [1.0, 2.5, ["The lamp is lit."]],
+            [3.0, 4.5, ["Close the shutters."]],
+            [5.0, 6.0, ["Good night."]],
+        ], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], array_values($subtitle->getCues())));
+        $this->assertCount(1, $warnings);
+        $this->assertSame("A quoted CSV cell has no closing quote. The cell ends at the end of the line.", $warnings[0]->message);
+        $this->assertSame(2, $warnings[0]->lineNumber);
+        $this->assertSame(["1.0,2.5,\"The lamp is lit."], $warnings[0]->block);
+        $this->assertSame(ParseWarningAction::Repaired, $warnings[0]->action);
+    }
+
+
+    public function testStrictModeThrowsForAnUnclosedQuoteInAFixture(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("A quoted CSV cell has no closing quote. (line 2)");
+
+        (new CsvParser())->parse(file_get_contents(__DIR__ . "/../files/csv/own_unclosed_quote.csv"), new ReadOptions());
+    }
+
+
+    public function testLenientModeSkipsRowsBeforeTheHeader(): void
+    {
+        $subtitle = (new CsvParser())->parse(file_get_contents(__DIR__ . "/../files/csv/own_junk_before_header.csv"), new ReadOptions(lenient: true));
+        $warnings = $subtitle->getParseWarnings();
+
+        $this->assertSame([
+            [1.0, 3.0, ["The ferry leaves at noon."]],
+            [4.0, 6.5, ["Then we wait, Ana; I bring the map."]],
+        ], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], array_values($subtitle->getCues())));
+        $this->assertSame(";", $subtitle->findFormatData("csv")["delimiter"]);
+        $this->assertSame(["start", "end", "text"], $subtitle->findFormatData("csv")["header"]);
+        $this->assertCount(1, $warnings);
+        $this->assertSame("The table has 2 rows before the header row.", $warnings[0]->message);
+        $this->assertSame(1, $warnings[0]->lineNumber);
+        $this->assertSame(["Exported by Subtitle Desk 4.2", "Project;Harbor Lights;Reel 2;"], $warnings[0]->block);
+        $this->assertSame(ParseWarningAction::Skipped, $warnings[0]->action);
+    }
+
+
+    public function testStrictModeThrowsForRowsBeforeTheHeader(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The table has no column \"start\" for start.");
+
+        (new CsvParser())->parse(file_get_contents(__DIR__ . "/../files/csv/own_junk_before_header.csv"), new ReadOptions());
+    }
+
+
+    public function testLenientModeKeepsTheMissingColumnErrorWithoutAHeaderRow(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The table has no column \"start\" for start. (line 1)");
+
+        (new CsvParser())->parse("note\nstart,end\n1,2\n", new ReadOptions(lenient: true));
+    }
+
+
     public function testWithoutEndACueEndsAtTheNextStart(): void
     {
         $this->assertSame([
