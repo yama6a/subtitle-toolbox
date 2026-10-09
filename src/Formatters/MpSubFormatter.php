@@ -32,18 +32,20 @@ final class MpSubFormatter extends SubtitleFormatter
         $previousEnd = 0;
         foreach ($subtitle->getCues() as $cue) {
             $output .= LineEnding::Lf->value;
+            $start   = max(0.0, $cue->getStart());
+            $end     = max(0.0, $cue->getEnd());
             if ($frameRate === null) {
-                $wait     = Timecode::totalMilliseconds($cue->getStart() - $previousEnd) / 1000;
-                $duration = Timecode::totalMilliseconds($cue->getEnd() - $cue->getStart()) / 1000;
+                $wait     = Timecode::totalMilliseconds($start - $previousEnd) / 1000;
+                $duration = Timecode::totalMilliseconds($end - $start) / 1000;
             } else {
-                $wait     = $frameRate->secondsToFrames($cue->getStart()) - $frameRate->secondsToFrames($previousEnd);
-                $duration = $frameRate->secondsToFrames($cue->getEnd()) - $frameRate->secondsToFrames($cue->getStart());
+                $wait     = $frameRate->secondsToFrames($start) - $frameRate->secondsToFrames($previousEnd);
+                $duration = $frameRate->secondsToFrames($end) - $frameRate->secondsToFrames($start);
             }
             $output .= "$wait $duration" . LineEnding::Lf->value;
             $output .= Markup::plainText(implode(LineEnding::Lf->value, $cue->getLines()));
             $output .= LineEnding::Lf->value;
 
-            $previousEnd = $cue->getEnd();
+            $previousEnd = $end;
         }
 
         return $this->applyOutputOptions($output, $options);

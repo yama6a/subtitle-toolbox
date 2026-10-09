@@ -29,7 +29,7 @@ final class TmPlayerFormatter extends SubtitleFormatter
 
         $output = "";
         foreach ($cues as $index => [$cue, $lines]) {
-            $start   = (int) round($cue->getStart());
+            $start   = (int) round(max(0.0, $cue->getStart()));
             $output .= sprintf(self::TIME_PATTERN, ...Timecode::seconds($start)) . implode("|", $lines) . LineEnding::Lf->value;
 
             if (!isset($cues[$index + 1])) {
@@ -37,7 +37,7 @@ final class TmPlayerFormatter extends SubtitleFormatter
             }
             // TMPlayer has no end times. An entry without text hides the cue before the next one starts.
             $end = max((int) round($cue->getEnd()), $start + 1);
-            if ($end < (int) round($cues[$index + 1][0]->getStart())) {
+            if ($end < (int) round(max(0.0, $cues[$index + 1][0]->getStart()))) {
                 $output .= sprintf(self::TIME_PATTERN, ...Timecode::seconds($end)) . LineEnding::Lf->value;
             }
         }

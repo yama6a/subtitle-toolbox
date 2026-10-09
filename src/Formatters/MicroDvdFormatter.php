@@ -36,8 +36,8 @@ final class MicroDvdFormatter extends SubtitleFormatter
         }
 
         foreach ($subtitle->getCues() as $cue) {
-            $output .= "{" . $frameRate->secondsToFrames($cue->getStart()) . "}" .
-                       "{" . $frameRate->secondsToFrames($cue->getEnd()) . "}" .
+            $output .= "{" . $frameRate->secondsToFrames(max(0.0, $cue->getStart())) . "}" .
+                       "{" . $frameRate->secondsToFrames(max(0.0, $cue->getEnd())) . "}" .
                        $this->formatText($cue, $stripTags) .
                        LineEnding::Lf->value;
         }

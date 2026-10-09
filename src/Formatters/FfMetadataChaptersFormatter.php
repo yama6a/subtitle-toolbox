@@ -73,6 +73,6 @@ final class FfMetadataChaptersFormatter extends SubtitleFormatter
 
     private function ticks(float $seconds, int $numerator, int $denominator): int
     {
-        return (int) round($seconds * $denominator / $numerator);
+        return (int) round(max(0.0, $seconds) * $denominator / $numerator);
     }
 }
