@@ -143,7 +143,7 @@ trait TextTransforms
                     $previousEnd      = $cue->getEnd();
                     $endsSentence     = self::textTransformsEndsSentence(Markup::visibleText(implode("\n", $cue->getLines())));
                 }
-                if ($startsLine && $afterPunctuation) {
+                if ($startsLine && ($afterPunctuation || self::textTransformsStartsTurn($text))) {
                     $capitalizeNext = true;
                 }
 
@@ -177,6 +177,17 @@ trait TextTransforms
         }
 
         return $result;
+    }
+
+
+    /**
+     * Tells if $text starts with the CEA-608 speaker change ">>" or a dialogue dash.
+     */
+    private static function textTransformsStartsTurn(string $text): bool
+    {
+        $text = ltrim($text);
+
+        return str_starts_with($text, ">>") || preg_match(DialogueDash::REGEX, $text) === 1;
     }
 
 
