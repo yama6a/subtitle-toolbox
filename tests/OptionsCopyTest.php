@@ -6,6 +6,9 @@ namespace SubtitleToolbox;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use FilesystemIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use ReflectionClass;
 use ReflectionParameter;
 use ReflectionProperty;
@@ -15,8 +18,13 @@ use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Ocr\GlyphOcrOptions;
 use SubtitleToolbox\Parsers\Options\MicroDvdReadOptions;
 use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
+use SubtitleToolbox\Profanity\ProfanityOptions;
+use SubtitleToolbox\Resegmenting\ResegmentMode;
+use SubtitleToolbox\Resegmenting\ResegmentOptions;
 use SubtitleToolbox\Sync\ReferenceSyncOptions;
 use SubtitleToolbox\Timing\ShotChangeOptions;
+use SubtitleToolbox\Translation\DeepLOptions;
+use SubtitleToolbox\Translation\GoogleTranslateOptions;
 use SubtitleToolbox\Validation\ValidationRules;
 
 class OptionsCopyTest extends TestCase
@@ -38,6 +46,52 @@ class OptionsCopyTest extends TestCase
             "MicroDvdWriteOptions" => [MicroDvdWriteOptions::class],
             "VobSubReadOptions"    => [VobSubReadOptions::class],
         ];
+    }
+
+
+    /**
+     * @return array<string, array{class-string}>
+     */
+    public static function optionsClasses(): array
+    {
+        $source  = realpath(__DIR__ . "/../src");
+        $classes = [];
+        $files   = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($source, FilesystemIterator::SKIP_DOTS));
+        foreach ($files as $file) {
+            $path = $file->getPathname();
+            if (!str_ends_with($path, "Options.php")) {
+                continue;
+            }
+
+            $relative = substr($path, strlen($source) + 1, -4);
+            $class    = "SubtitleToolbox\\" . str_replace("/", "\\", $relative);
+            if ((new ReflectionClass($class))->isInstantiable()) {
+                $classes[$relative] = [$class];
+            }
+        }
+
+        return $classes;
+    }
+
+
+    /**
+     * @param class-string $class
+     */
+    #[DataProvider("optionsClasses")]
+    public function testCopiesEveryOptionsClassWithoutChanges(string $class): void
+    {
+        $required = [
+            ShotChangeOptions::class      => [25.0],
+            ResegmentOptions::class       => [ResegmentMode::SplitLong],
+            ProfanityOptions::class       => [["heck"]],
+            GoogleTranslateOptions::class => ["key"],
+            DeepLOptions::class           => ["key"],
+            ReferenceSyncOptions::class   => [new Subtitle()],
+        ];
+
+        $options = new $class(...($required[$class] ?? []));
+
+        $this->assertEquals($options, OptionsCopy::with($options, []));
     }
 
 
