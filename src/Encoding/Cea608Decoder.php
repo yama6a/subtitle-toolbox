@@ -18,7 +18,7 @@ final class Cea608Decoder
 {
     // The values of the 3 caption modes appear as "mode" in the format data of a cue.
     private const MODE_POP_ON   = "pop-on";
-    private const MODE_ROLL_UP  = "roll-up";
+    public const MODE_ROLL_UP   = "roll-up";
     private const MODE_PAINT_ON = "paint-on";
     private const MODE_TEXT     = "text";
 
@@ -54,6 +54,16 @@ final class Cea608Decoder
 
     private ?string $displayChange = null;
 
+    private int $frame = 0;
+
+    // The frame of the first character on the base row of roll-up captions since the last carriage return.
+    private ?int $rollUpLineStart = null;
+
+    private int $rollUpLineRow = Cea608::ROWS;
+
+    /** @var list<array{start: int, end: ?int, row: int, column: int, text: string}> */
+    private array $rollUpLines = [];
+
 
     public function __construct(private readonly int $channel)
     {
@@ -68,24 +78,39 @@ final class Cea608Decoder
      */
     public function decode(array $codeLines): array
     {
-        $states = [];
-        $frame  = 0;
+        $states            = [];
+        $this->frame       = 0;
+        $this->rollUpLines = [];
         foreach ($codeLines as $lineIndex => [$startFrame, $words]) {
-            if ($startFrame > $frame) {
+            if ($startFrame > $this->frame) {
                 $this->lastControl = null;
             }
             foreach ($words as $wordIndex => $word) {
-                $frame = max($frame, $startFrame + $wordIndex);
+                $this->frame = max($this->frame, $startFrame + $wordIndex);
                 $this->decodeWord($word >> 8, $word & 0xFF);
                 if ($this->displayChange !== null) {
-                    $this->recordState($states, $frame, $lineIndex);
+                    $this->recordState($states, $this->frame, $lineIndex);
                     $this->displayChange = null;
                 }
             }
-            $frame = max($frame, $startFrame + count($words));
+            $this->frame = max($this->frame, $startFrame + count($words));
         }
+        $this->endRollUpLine(null);
 
         return $states;
+    }
+
+
+    /**
+     * Returns each row of roll-up captions that decode() saw, in time order.
+     * A row starts at its first character and ends when it rolls up or leaves the screen.
+     * The end is null for a row that is still on the screen at the end of the data.
+     *
+     * @return list<array{start: int, end: ?int, row: int, column: int, text: string}>
+     */
+    public function rollUpLines(): array
+    {
+        return $this->rollUpLines;
     }
 
 
@@ -212,10 +237,12 @@ final class Cea608Decoder
                 break;
             case Cea608::CARRIAGE_RETURN:
                 if ($this->mode === self::MODE_ROLL_UP) {
+                    $this->endRollUpLine($this->frame);
                     $this->rollUp();
                 }
                 break;
             case Cea608::ERASE_DISPLAYED_MEMORY:
+                $this->endRollUpLine($this->frame);
                 $this->displayed     = [];
                 $this->displayChange = self::DISPLAY_REPLACE;
                 break;
@@ -223,6 +250,7 @@ final class Cea608Decoder
                 $this->nonDisplayed = [];
                 break;
             case Cea608::END_OF_CAPTION:
+                $this->endRollUpLine($this->frame);
                 [$this->displayed, $this->nonDisplayed] = [$this->nonDisplayed, $this->displayed];
                 $this->mode          = self::MODE_POP_ON;
                 $this->displayChange = self::DISPLAY_REPLACE;
@@ -259,6 +287,7 @@ final class Cea608Decoder
     private function startRollUp(int $rows): void
     {
         if ($this->mode !== self::MODE_ROLL_UP) {
+            $this->endRollUpLine($this->frame);
             $this->displayed     = [];
             $this->nonDisplayed  = [];
             $this->row           = Cea608::ROWS;
@@ -305,7 +334,8 @@ final class Cea608Decoder
                     $moved[$newRow] = $cells;
                 }
             }
-            $this->displayed = $moved;
+            $this->displayed     = $moved;
+            $this->rollUpLineRow += $pac["row"] - $this->row;
             $this->markDirectChange();
         }
 
@@ -329,6 +359,10 @@ final class Cea608Decoder
 
     private function setCell(?array $cell): void
     {
+        if ($cell !== null && $this->mode === self::MODE_ROLL_UP) {
+            $this->rollUpLineStart ??= $this->frame;
+            $this->rollUpLineRow     = $this->row;
+        }
         $memory = &$this->targetMemory();
         if ($cell === null) {
             unset($memory[$this->row][$this->column]);
@@ -405,6 +439,25 @@ final class Cea608Decoder
         }
 
         return $lines;
+    }
+
+
+    /**
+     * Adds the base row of roll-up captions as a roll-up line that ends at $end, if a character went to it.
+     */
+    private function endRollUpLine(?int $end): void
+    {
+        if ($this->rollUpLineStart === null) {
+            return;
+        }
+
+        $start                 = $this->rollUpLineStart;
+        $this->rollUpLineStart = null;
+        foreach ($this->renderDisplayed() as $line) {
+            if ($line["row"] === $this->rollUpLineRow) {
+                $this->rollUpLines[] = ["start" => $start, "end" => $end] + $line;
+            }
+        }
     }
 
 

@@ -107,6 +107,7 @@ php subtitle-toolbox.phar --version
 - **Output bytes**: `--line-ending lf|crlf`, `--bom` and `--no-bom`.
 - **Broken files**: `--lenient` skips or repairs broken cues and prints one warning for each broken cue. It applies to each file that a command reads, also a second file or a `--reference`. See [lenient-parsing.md](lenient-parsing.md).
 - **Frame rate**: see [Frame rates](#frame-rates).
+- **SCC roll-up**: `--scc-roll-up lines` reads each row of SCC roll-up captions as one cue, as `SccReadOptions::$rollUp`. `screen` gives one cue per screen. See [SCC](formats.md#scc).
 - **Word timestamps**: `--word-timestamps` keeps the word times of the speech-to-text JSON formats, YouTube timed text and Podcasting 2.0 transcripts. `--structure-resegment`, `--karaoke` and `--ass-karaoke-tag` turn it on.
 - **MKV and WebM**: `--track` picks a subtitle track, see [MKV and WebM](#mkv-and-webm).
 - **Image cues**: `--skip-image-cues` leaves out image cues without text in place of failing.
