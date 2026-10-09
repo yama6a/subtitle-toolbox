@@ -99,6 +99,14 @@ class HlsWebVttJoinerTest extends TestCase
     }
 
 
+    public function testJoinJoinsOverlappingCuesWithTheSameText(): void
+    {
+        $segments = ["WEBVTT\n\n00:00:04.000 --> 00:00:06.000\nAll aboard.\n\n00:00:05.500 --> 00:00:06.500\nAll aboard.\n"];
+
+        $this->assertSame([[4.0, 6.5, "All aboard."]], $this->summarize(HlsWebVttJoiner::join($segments)));
+    }
+
+
     public function testJoinOfEmptyRealSegmentsHasNoCues(): void
     {
         $joined = HlsWebVttJoiner::join([file_get_contents(self::FILES . "shaka-vtt-071.vtt"),

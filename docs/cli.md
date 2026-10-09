@@ -257,7 +257,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 | `--structure-merge-short` | `mergeShortCues()` with the default options |
 | `--structure-split-long` | `Resegmenter::apply()` with `ResegmentMode::SplitLong` and the default options |
 | `--structure-wrap` | `wrapLines()` with `--structure-max-cpl` and `--structure-max-lines` |
-| `--structure-merge-duplicates` | `removeDuplicateCues()` |
+| `--structure-merge-duplicates` | `removeDuplicateCues()` with the default `maxGap` of 0. Joins same-text cues that overlap or touch |
 | `--structure-max-cpl CHARS` | `maxCharactersPerLine` of `--structure-resegment`, `--structure-merge-short`, `--structure-split-long` and `--structure-wrap` |
 | `--structure-max-lines LINES` | `maxLinesPerCue` of `--structure-resegment`, `--structure-merge-short`, `--structure-split-long` and `--structure-wrap` |
 

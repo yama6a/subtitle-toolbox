@@ -31,12 +31,14 @@ $part1->merge($part2, 3130);                    // appends part 2, 3130 s later
 $clip = $subtitle->withSlice(600, 1200, true);  // a new Subtitle with the cues from 600 s to 1200 s, moved to start at 0
 $subtitle->splitCue(4, 63.5, 1);                // cue 4 becomes two cues at 63.5 s, line 1 in the first
 $subtitle->joinCues(4, 5);                      // one cue with the lines of cue 4 and 5
-$subtitle->removeDuplicateCues();               // joins touching cues with the same text
+$subtitle->removeDuplicateCues();               // joins same-text cues that overlap or touch
+$subtitle->removeDuplicateCues(0.5);            // also joins same-text cues up to 0.5 s apart
 ```
 
 - **Merge**: the metadata and the format data of `$part1` win over those of `$part2`. The comments of both files stay before their cues. At the same place, the comments of `$part1` come first.
 - **Slice**: a cue that crosses the start or end time gets cut there. The copy keeps the metadata, the format data and the comments before the kept cues. The original stays unchanged.
 - **Split and join**: the first cue keeps its identifier. A comment before a joined cue moves before the result.
+- **Duplicates**: `removeDuplicateCues()` joins a run of adjacent cues with the same text. Two cues join when they are identical, overlap, touch, or are at most `maxGap` seconds apart. The default `maxGap` is 0. The joined cue runs from the earliest start to the latest end. Cues with other text between them stay apart. A negative, NAN or INF `maxGap` throws `InvalidArgumentException`.
 
 ## Overlaps, short cues and line breaks
 ```php
