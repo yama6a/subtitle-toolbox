@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
+use SubtitleToolbox\Encoding\CodePageDetector;
 use SubtitleToolbox\Encoding\DecodedText;
 use SubtitleToolbox\Exceptions\ParsingException;
 
@@ -63,6 +64,8 @@ final class StringHelpers
      * Without a BOM, $str stays unchanged when it is valid UTF-8 and holds no zero bytes.
      * Without a BOM, content with a zero byte in most even or most odd positions is read as UTF-16, unless
      * $sourceEncoding names UTF-16 or UTF-32.
+     * Without a BOM and $sourceEncoding, other content that is not UTF-8 is read in the code page that detection picks,
+     * for example Windows-1252. It stays unchanged when it holds a zero byte or when no code page fits.
      *
      * @param TextEncoding|string|null $sourceEncoding A TextEncoding case, or any other name that iconv accepts, for example "CP1125".
      */
@@ -74,10 +77,11 @@ final class StringHelpers
 
     /**
      * Converts $str to UTF-8 as convertToUtf8() does, and returns the encoding that it read.
+     * With $guess false, it reads neither UTF-16 without a BOM nor a code page by detection.
      *
      * @internal
      */
-    public static function decode(string $str, TextEncoding|string|null $sourceEncoding = null): DecodedText
+    public static function decode(string $str, TextEncoding|string|null $sourceEncoding = null, bool $guess = true): DecodedText
     {
         $sourceEncoding = $sourceEncoding instanceof TextEncoding ? $sourceEncoding->value : $sourceEncoding;
 
@@ -92,12 +96,16 @@ final class StringHelpers
         }
 
         $isWide = $sourceEncoding !== null && preg_match('/\A(?:UTF-?(?:16|32)|UCS-?[24])/i', $sourceEncoding) === 1;
-        $utf16  = $isWide ? null : self::detectUtf16($str);
+        $utf16  = $isWide || !$guess ? null : self::detectUtf16($str);
         if ($utf16 !== null) {
             return new DecodedText(self::iconvToUtf8($str, $utf16), $utf16, "The content is $utf16 without a BOM.");
         }
 
-        if ($sourceEncoding === null || in_array(strtoupper($sourceEncoding), ["UTF-8", "UTF8"], true)) {
+        if ($sourceEncoding === null) {
+            return !$guess || self::isValidUtf8($str) || str_contains($str, "\0") ? new DecodedText($str, "UTF-8") : self::detectCodePage($str);
+        }
+
+        if (in_array(strtoupper($sourceEncoding), ["UTF-8", "UTF8"], true)) {
             return new DecodedText($str, "UTF-8");
         }
 
@@ -109,6 +117,19 @@ final class StringHelpers
         }
 
         return new DecodedText(self::iconvToUtf8($str, $sourceEncoding), $sourceEncoding);
+    }
+
+
+    private static function detectCodePage(string $str): DecodedText
+    {
+        $detected = CodePageDetector::detect($str);
+        if ($detected === null) {
+            return new DecodedText($str, "UTF-8");
+        }
+
+        [$encoding, $converted] = $detected;
+
+        return new DecodedText($converted, $encoding, "The content is not UTF-8. Detection picked $encoding. Pass --encoding if that is wrong.");
     }
 
 

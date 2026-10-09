@@ -20,7 +20,7 @@ class BinaryInfoValidateTest extends BinaryTestCase
         [$code, $stdout, $stderr] = $this->runBinary(["info", "trip.srt"]);
 
         $this->assertSame(0, $code);
-        $this->assertStringStartsWith("trip.srt\n  Format:                srt\n  Cues:                  3\n", $stdout);
+        $this->assertStringStartsWith("trip.srt\n  Format:                srt\n  Encoding:              UTF-8\n  Cues:                  3\n", $stdout);
         $this->assertStringContainsString("  Gaps:                  min -0.5, average 0.25, max 1 s\n", $stdout);
         $this->assertSame("", $stderr);
     }
@@ -63,6 +63,19 @@ class BinaryInfoValidateTest extends BinaryTestCase
 
         [$code, $stdout] = $this->runBinary(["info", "broken.srt", "--json"]);
         $this->assertSame([3, "[]\n"], [$code, $stdout]);
+    }
+
+
+    public function testInfoReportsTheSourceEncoding(): void
+    {
+        $this->assertSame("UTF-8", json_decode($this->runBinary(["info", "trip.srt", "--json"])[1], true)[0]["encoding"]);
+        $this->assertSame("Windows-1252", json_decode($this->runBinary(["info", "latin1.srt", "--json"])[1], true)[0]["encoding"]);
+        $this->assertSame("Windows-1250", json_decode($this->runBinary(["info", "latin1.srt", "--json", "--encoding", "Windows-1250"])[1], true)[0]["encoding"]);
+        $this->assertMatchesRegularExpression('/^  Encoding: +Windows-1252$/m', $this->runBinary(["info", "latin1.srt"])[1]);
+
+        [$code, , $stderr] = $this->runBinary(["info", "latin1.srt", "--lenient"]);
+        $this->assertSame([0, "latin1.srt: The content is not UTF-8. Detection picked Windows-1252. Pass --encoding if that is wrong. (repaired)\n"],
+                          [$code, $stderr]);
     }
 
 

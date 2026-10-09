@@ -34,8 +34,8 @@ class XmlOutputTest extends TestCase
     #[DataProvider("xmlFormats")]
     public function testTextThatIsNotUtf8Throws(Format $format, WriteOptions $options): void
     {
-        // Read without its encoding, the file keeps Windows-1252 bytes in the title, a speaker and the text.
-        $subtitle = Subtitle::load(self::FILE, Format::Ass);
+        // Read as UTF-8, the file keeps Windows-1252 bytes in the title, a speaker and the text.
+        $subtitle = Subtitle::load(self::FILE, Format::Ass, new ReadOptions(encoding: "UTF-8"));
 
         $this->expectException(UnwritableContentException::class);
         $this->expectExceptionMessage("The output cannot hold text that is not valid UTF-8. " .

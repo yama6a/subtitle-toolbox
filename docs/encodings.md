@@ -15,14 +15,30 @@ $subtitle = Subtitle::fromString(file_get_contents('ukrainian.srt'), Format::Sub
 StringHelpers::isValidUtf8(file_get_contents('movie.srt'));   // false for a Windows-1252 file with letters such as é
 ```
 
-- **BOM**: the library converts UTF-16 and UTF-32 with a BOM to UTF-8 without being asked. A BOM wins over `ReadOptions::$encoding`.
-- **Valid UTF-8**: content without a BOM that is valid UTF-8 and holds no zero byte stays as it is. `ReadOptions::$encoding` applies only to other content. So `subtitle-toolbox convert season1/ --encoding Windows-1256` reads both the UTF-8 and the Windows-1256 files of the folder correctly.
-- **UTF-16 without a BOM**: the library finds UTF-16LE and UTF-16BE without a BOM by their zero bytes. In ASCII text, every second byte is zero. The check reads the first 1024 bytes. At least 40 % of the byte pairs must have a zero byte on one side, and at most 5 % on the other side. A UTF-8 or Windows-1252 file with a stray zero byte stays as it is.
-- **UTF-16 and `ReadOptions::$encoding`**: the UTF-16 check wins over a code page such as `Windows-1252`. A UTF-16 or UTF-32 name, such as `UTF-16LE`, wins over the check. In lenient mode, a `ParseWarning` with the action `Repaired` says "The content is UTF-16LE without a BOM."
+## Order of the checks
+
+`load()`, `loadAutoDetectFormat()`, the `fromString` functions and `StringHelpers::convertToUtf8()` take the first rule that applies:
+
+| Step | Content | Read as |
+|:--- |:--- |:--- |
+| 1 | Starts with a BOM | The encoding of the BOM: UTF-8, UTF-16 or UTF-32. It wins over `ReadOptions::$encoding` |
+| 2 | UTF-16 without a BOM | UTF-16LE or UTF-16BE, unless `ReadOptions::$encoding` names UTF-16 or UTF-32 |
+| 3 | Valid UTF-8 without a zero byte | UTF-8 |
+| 4 | `ReadOptions::$encoding` is set | That encoding. Detection does not run |
+| 5 | A code page fits | The code page that detection picks, for example `Windows-1252` |
+| 6 | Anything else | UTF-8. The parsers keep the invalid bytes |
+
+- **Mixed folders**: valid UTF-8 wins over `ReadOptions::$encoding`. So `subtitle-toolbox convert season1/ --encoding Windows-1256` reads both the UTF-8 and the Windows-1256 files of the folder correctly.
+- **UTF-16 without a BOM**: in ASCII text, every second byte is zero. The check reads the first 1024 bytes. At least 40 % of the byte pairs must have a zero byte on one side, and at most 5 % on the other side. A UTF-8 or Windows-1252 file with a stray zero byte does not pass.
 - **UTF-32 without a BOM**: such content holds zero bytes on both sides of each byte pair. It is converted only from `ReadOptions::$encoding`, for example `UTF-32LE`.
+- **Code page detection**: the detector tries Windows-1250 to Windows-1258, ISO-8859-1, -2, -5, -7 and -9, KOI8-R and KOI8-U. It decodes the lines with bytes from 0x80 in each code page. Letters of the languages that use the code page score. Other letters, symbols inside words, mixed scripts and odd letter case cost. On a tie, the Windows code page wins, so ISO-8859-1 text reads as Windows-1252, which decodes it the same.
+- **Limits of detection**: content with a zero byte is never detected. CJK encodings such as Shift_JIS, GBK or CP949 are not detected and need `ReadOptions::$encoding`. Short text can get a code page that decodes it differently, for example Latvian Windows-1257 text as Windows-1252. Pass `ReadOptions::$encoding` or `--encoding` then.
+- **Warnings**: in lenient mode, step 2 adds a `ParseWarning` with the action `Repaired`, such as "The content is UTF-16LE without a BOM." Step 5 adds "The content is not UTF-8. Detection picked Windows-1252. Pass --encoding if that is wrong."
+- **Encoding of a subtitle**: `Subtitle::findSourceEncoding()` returns the encoding of the steps above, for example `UTF-8`, `UTF-16LE`, `Windows-1252` or the value of `ReadOptions::$encoding`. It returns null for binary formats, MKV and WebM tracks and a subtitle that no parser read. The CLI `info` prints it as `Encoding`.
+- **Binary formats**: EBU STL, PGS and VobSub skip steps 2 and 5.
 - **XML declaration**: the TTML, iTT and YouTube parsers ignore `encoding="utf-16"` or `"utf-32"` in the XML declaration of UTF-8 content. This covers converted UTF-16 files and UTF-8 files that declare UTF-16.
 - **Legacy text that looks like UTF-8**: a few legacy files are valid UTF-8 by chance. For example, the Windows-1252 text `Ã©` is the bytes `C3 A9`, which are `é` in UTF-8. The library reads such a file as UTF-8.
-- **No BOM, no encoding**: the parsers read the bytes as UTF-8 and keep invalid bytes. SAMI throws `ParsingException` for text that is not UTF-8. The JSON, TTML, iTT and SAMI formatters throw `UnwritableContentException` for such text.
+- **Invalid UTF-8**: after step 6, the parsers read the bytes as UTF-8 and keep invalid bytes. SAMI throws `ParsingException` for text that is not UTF-8. The JSON, TTML, iTT and SAMI formatters throw `UnwritableContentException` for such text.
 - **JSON formats**: the JSON parsers read each invalid UTF-8 byte as U+FFFD, the replacement character. For example, the bytes `42 FF 64` in a text field give `B`, U+FFFD and `d`.
 - **Parsers called directly**: only the `Subtitle` functions convert. Before `(new SamiParser())->parse($content, new ReadOptions())`, call `StringHelpers::convertToUtf8($content, TextEncoding::Cp949)`.
 - **Source encodings**: `ReadOptions::$encoding` and `StringHelpers::convertToUtf8()` take a `TextEncoding` case or a string. The conversion uses the PHP extension iconv. A string can be any name that the iconv of the system knows, for example `CP1125`. `new ReadOptions()` throws `InvalidArgumentException` for an unknown name. A byte that is invalid in the encoding throws `ParsingException`.

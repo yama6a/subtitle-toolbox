@@ -61,6 +61,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
     /** @var list<ParseWarning> */
     private array $parseWarnings = [];
 
+    private ?string $sourceEncoding = null;
+
     private ?Format $format = null;
 
 
@@ -126,7 +128,8 @@ final class Subtitle implements \IteratorAggregate, \Countable
             return self::readOnlyTrack(Containers::open($path), $container, $options);
         }
 
-        $decoded = StringHelpers::decode(self::readFile($path), $options->encoding);
+        $content = self::readFile($path);
+        $decoded = StringHelpers::decode($content, $options->encoding, !self::isBinary(Format::detect($content)));
         if (trim(StringHelpers::removeUtf8Bom($decoded->content)) === "" && ($byPath = self::formatOfExtension($path)) !== null) {
             return (new self())->setFormat($byPath);
         }
@@ -169,7 +172,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
         }
         $options ??= new ReadOptions();
 
-        return self::parseDecoded(StringHelpers::decode($content, $options->encoding), $format, $options);
+        return self::parseDecoded(StringHelpers::decode($content, $options->encoding, !self::isBinary($format)), $format, $options);
     }
 
 
@@ -190,7 +193,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
             return self::readOnlyTrack(Containers::open($stream), $container, $options);
         }
 
-        $decoded = StringHelpers::decode($content, $options->encoding);
+        $decoded = StringHelpers::decode($content, $options->encoding, !self::isBinary(Format::detect($content)));
         $format  = self::detectFormat($decoded->content) ?? throw new UnknownFormatException(self::unknownFormatMessage("fromString()"));
 
         return self::parseDecoded($decoded, $format, $options);
@@ -204,6 +207,17 @@ final class Subtitle implements \IteratorAggregate, \Countable
     public function getFormat(): ?Format
     {
         return $this->format;
+    }
+
+
+    /**
+     * Returns the encoding that load(), loadAutoDetectFormat() or a fromString call read the text from, for example
+     * "UTF-8", "UTF-16LE" or "Windows-1252". Returns null for a binary format, an MKV or WebM track, and a subtitle
+     * that no parser read. See docs/encodings.md for the order of the checks.
+     */
+    public function findSourceEncoding(): ?string
+    {
+        return $this->sourceEncoding;
     }
 
 
@@ -222,13 +236,22 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     private static function parseDecoded(DecodedText $decoded, Format $format, ReadOptions $options): self
     {
-        $subtitle = self::parseUtf8($decoded->content, $format, $options);
+        $subtitle                 = self::parseUtf8($decoded->content, $format, $options);
+        $subtitle->sourceEncoding = self::isBinary($format) ? null : $decoded->encoding;
         if ($options->lenient && $decoded->warning !== null) {
             $warning = new ParseWarning($decoded->warning, null, null, [], ParseWarningAction::Repaired);
             $subtitle->setParseWarnings([$warning, ...$subtitle->getParseWarnings()]);
         }
 
         return $subtitle;
+    }
+
+
+    private static function isBinary(?Format $format): bool
+    {
+        $parserClass = $format === null ? null : FormatRegistry::parserClass($format);
+
+        return $parserClass !== null && $parserClass::readsBinary();
     }
 
 

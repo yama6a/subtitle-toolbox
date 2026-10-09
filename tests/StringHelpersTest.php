@@ -90,10 +90,11 @@ class StringHelpersTest extends TestCase
     }
 
 
-    public function testConvertToUtf8KeepsTheBytesWithoutBomAndSourceEncoding(): void
+    public function testConvertToUtf8DetectsTheCodePageWithoutBomAndSourceEncoding(): void
     {
-        $this->assertSame("Caf\xE9", StringHelpers::convertToUtf8("Caf\xE9"));
+        $this->assertSame("Café", StringHelpers::convertToUtf8("Caf\xE9"));
         $this->assertSame("Caf\xE9", StringHelpers::convertToUtf8("Caf\xE9", "utf-8"));
+        $this->assertSame("Caf\xE9\x00", StringHelpers::convertToUtf8("Caf\xE9\x00"));
     }
 
 

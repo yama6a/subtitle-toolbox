@@ -103,7 +103,7 @@ php subtitle-toolbox.phar --version
 - **Option names**: `--no-X` always turns X off, for example `--no-bom`. A time option is in seconds, unless its name ends in `-frames`.
 - **Defaults**: `subtitle-toolbox help COMMAND` prints the default of each option after `Default:`. This page does not repeat the values. Without the option, the tool passes no value, so the library default applies.
 - **Choice values**: a value from a fixed list ignores case. `--line-ending CRLF`, `--mode Top-Bottom` and `--preset BBC` work.
-- **Encoding**: `--encoding` names the encoding of input that is not UTF-8, for example `Windows-1252`. Valid UTF-8 files stay as they are. See [encodings.md](encodings.md).
+- **Encoding**: `--encoding` names the encoding of input that is not UTF-8, for example `Windows-1252`. It replaces code page detection. Files with a BOM, valid UTF-8 files and UTF-16 files stay as they are. See [encodings.md](encodings.md#order-of-the-checks).
 - **Output bytes**: `--line-ending lf|crlf`, `--bom` and `--no-bom`.
 - **Broken files**: `--lenient` skips or repairs broken cues and prints one warning for each broken cue. It applies to each file that a command reads, also a second file or a `--reference`. See [lenient-parsing.md](lenient-parsing.md).
 - **Frame rate**: see [Frame rates](#frame-rates).
@@ -329,7 +329,7 @@ vendor/bin/subtitle-toolbox convert movie.srt --to srt -o movie.timed.srt --vide
 
 | Command | Object |
 |:--- |:--- |
-| `info` | `file`, `format`, `metadata`, `statistics`, `imageCues` and `warnings`. `statistics` is `SubtitleStatistics::toArray()`, with `gaps` and a `mostUsedWords` list of `{"word", "count"}`. A statistic without data is null, for example `gaps` of a file with 1 cue. The text output prints `-` |
+| `info` | `file`, `format`, `encoding`, `metadata`, `statistics`, `imageCues` and `warnings`. `statistics` is `SubtitleStatistics::toArray()`, with `gaps` and a `mostUsedWords` list of `{"word", "count"}`. A statistic without data is null, for example `gaps` of a file with 1 cue. The text output prints `-`. `encoding` is `Subtitle::findSourceEncoding()`, for example `Windows-1252`, and null for a binary format |
 | `info` of an MKV, WebM or MP4 file without `--track` | `file`, `container` with the value `matroska` or `mp4`, and `tracks` |
 | `validate` | `file`, `format`, `valid`, `violations` and `warnings`. A violation has `cueIndex`, `rule`, `value`, `infinite` and `limit` |
 | `diff` | `oldFile`, `newFile`, `equal`, `differences`, `oldWarnings` and `newWarnings`. A difference has `kind`, `oldIndex`, `newIndex`, `old` and `new`. A cue has `start`, `end`, `lines` and `forced` |

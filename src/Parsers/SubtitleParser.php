@@ -66,6 +66,17 @@ abstract class SubtitleParser
 
 
     /**
+     * Returns true for a parser of a binary format, which reads bytes rather than text.
+     *
+     * @internal
+     */
+    final public static function readsBinary(): bool
+    {
+        return static::BINARY;
+    }
+
+
+    /**
      * Returns ReadOptions::$format, or the defaults of FORMAT_OPTIONS when it is null.
      * useOptions() builds the defaults once per read.
      */
