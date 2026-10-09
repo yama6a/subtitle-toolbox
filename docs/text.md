@@ -246,11 +246,13 @@ CommonErrorFixer::apply($subtitle);                                            /
 | `ocrPipe` | `\|t was`, `wi\|\|` | `It was`, `will` |
 | `ocrZeroInWords` | `D0N'T`, `n0rth` | `DON'T`, `north`. Not in `007` or `2.0` |
 | `replaceList` | the words of an `OcrReplaceList` | the replacement |
+| `dialogueOnOneLine` | `- Hi. - Hello.`, `Hi. - Hello.` | `- Hi.` and `- Hello.` on 2 lines. Off by default |
 
-- **Defaults**: every fix is on, except `replaceList` and `unicodeEllipsis`. The fixes run in the order of `CommonErrorRule::cases()`. The value of a case is the name of its option. The report holds one `AppliedFix` in `fixes` for each rule that changed a cue.
+- **Defaults**: every fix is on, except `replaceList`, `unicodeEllipsis` and the fixes marked "Off by default". The CLI turns these on with `--errors-enable`. The fixes run in the order of `CommonErrorRule::cases()`. The value of a case is the name of its option. The report holds one `AppliedFix` in `fixes` for each rule that changed a cue.
 - **Text runs**: the fixes see text runs, as `replaceText()` does. Only `unbalancedTags` and `emptyTags` change tags. `unbalancedTags` closes a tag at the end of the last line of its cue. It removes a closing tag without an opening tag.
 - **Language**: `language` takes a code such as `en`, `de-AT` or `fra`. Null takes the `language` metadata of the subtitle. English, German, French and Spanish have their own rules for I and l. Other languages get only the rules that apply to all languages, for example `lT` to `IT`.
 - **I and l**: OCR reads a capital I as l when the font draws both the same. `ocrLowercaseL` changes an `l` at the start of a word before a consonant: `lch` to `Ich`, `lsabel` to `Isabel`. French also changes `ll` to `Il`, and keeps `l'hôtel`. Spanish keeps `llega`. English also changes `l`, `l'm`, `l'll`, `l've` and `l'd`. `5 lbs` and `2 l` stay.
+- **Dialogue on one line**: `dialogueOnOneLine` splits a cue at a dash after `.`, `?`, `!` or `...` and a space. It changes a cue of 1 line, or of 2 lines with exactly one such dash. A cue already in 2 dash lines stays. A cue with 2 or more such dashes stays, and so does `A well-known - and loved - song.`. Tags close at the end of the first line and open again on the second line. The new lines get the dash of `dialogueDashStyle`.
 - **Image cues**: run the fixes after [OCR](ocr.md). Cues without text lines stay unchanged.
 - **Empty cues**: the fixer removes a cue that the replace list empties. `cueIndex` is the index before the removal.
 - **Limits**: a fix sees one text run, so it does not find `l<i>t's</i>`. A 0 that stands for another letter, such as `B0ro` for `Büro`, becomes `o`.

@@ -215,6 +215,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --to srt --output-dir fixed/ -
 | Option | Effect |
 |:--- |:--- |
 | `--errors-fix` | [`CommonErrorFixer::apply()`](text.md#fixing-common-errors) with all default fixes |
+| `--errors-enable NAME[,NAME]` | adds fixes that are off by default to `--errors-fix`, by their `CommonErrorRule` value: `dialogueOnOneLine`. An unknown name exits with code 2 and lists the valid names |
 | `--errors-replace-list FILE` | adds a Subtitle Edit OCR replace list to `--errors-fix` |
 | `--errors-list-fixes` | prints each change of `--errors-fix` to standard error, for example `movie.srt: cue 15: ocrLowercaseL: "lt's late." -> "It's late."`. A byte that is not valid UTF-8 prints as U+FFFD |
 | `--sdh` | removes everything that [`HearingImpairedRemover::apply()`](text.md#hearing-impaired-annotations) removes by default. It also removes a cue with no text left |

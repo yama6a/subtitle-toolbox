@@ -19,5 +19,6 @@ enum CommonErrorRule: string
     case DoubleSpaces                 = "doubleSpaces";
     case SpaceBeforePunctuation       = "spaceBeforePunctuation";
     case MissingSpaceAfterPunctuation = "missingSpaceAfterPunctuation";
+    case DialogueOnOneLine            = "dialogueOnOneLine";
     case DialogueDashes               = "dialogueDashes";
 }
