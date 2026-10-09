@@ -25,7 +25,7 @@ final class CurlHttpClient implements HttpClient
     public function __construct()
     {
         if (!self::isAvailable()) {
-            throw new InvalidArgumentException("PHP has no ext-curl, which the DeepL and Google engines need. " .
+            throw new InvalidArgumentException("PHP has no ext-curl, which the translation engines need. " .
                                                "Install the PHP curl extension.");
         }
     }
