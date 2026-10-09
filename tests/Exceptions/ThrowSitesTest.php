@@ -431,6 +431,7 @@ class ThrowSitesTest extends TestCase
             "Parsers/CsvParser.php: open quote"             => [fn () => (new CsvParser())->parse("start,text\n1,\"a", new ReadOptions()), ...$parsing],
             "Parsers/CsvParser.php: bad time"               => [fn () => (new CsvParser())->parse("start,text\nsoon,a", new ReadOptions()), ...$parsing],
             "Parsers/CsvParser.php: missing column"         => [fn () => (new CsvParser())->parse("start,end\n1,2", new ReadOptions()), ...$parsing],
+            "Parsers/CsvParser.php: too many columns"       => [fn () => (new CsvParser())->parse(str_repeat("a,", 1000) . "a", new ReadOptions()), ...$parsing],
             "Parsers/DeepgramParser.php: no channels"       => [fn () => (new DeepgramParser())->parse('{"metadata": {}}', new ReadOptions()), ...$parsing],
             "Parsers/EbuStlParser.php: no GSI block"        => [fn () => (new EbuStlParser())->parse("STL", new ReadOptions()), ...$parsing],
             "Parsers/EbuStlParser.php: partial TTI block"   => [fn () => (new EbuStlParser())->parse(str_repeat(" ", 1025), new ReadOptions()), ...$parsing],
