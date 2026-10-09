@@ -11,7 +11,6 @@
 | `mantas_dfxp_br.dfxp` | https://github.com/mantas-done/subtitles/blob/959d1705b1ed12cbb9ddba517f8bcb814e1919a8/tests/files/dfxp_with_different_br.dfxp | mantas-done/subtitles, MIT |
 | `mantas_duplicated_ids.ttml` | https://github.com/mantas-done/subtitles/blob/959d1705b1ed12cbb9ddba517f8bcb814e1919a8/tests/files/ttml_with_duplicated_element_ids.ttml | mantas-done/subtitles, MIT |
 | `mantas_fps_multiplier.ttml` | https://github.com/mantas-done/subtitles/blob/959d1705b1ed12cbb9ddba517f8bcb814e1919a8/tests/files/ttml_with_fps_and_multiplier_given.ttml | mantas-done/subtitles, MIT |
-| `mantas_multiple_divs.ttml` | Written for this repository in the shape of https://github.com/mantas-done/subtitles/blob/959d1705b1ed12cbb9ddba517f8bcb814e1919a8/tests/files/ttml_with_multiple_divs.ttml | MIT |
 | `mantas_netflix_ticks.dfxp` | Written for this repository in the shape of https://github.com/mantas-done/subtitles/blob/959d1705b1ed12cbb9ddba517f8bcb814e1919a8/tests/files/dfxp.dfxp | MIT |
 | `mantas_ttml2.ttml` | https://github.com/mantas-done/subtitles/blob/959d1705b1ed12cbb9ddba517f8bcb814e1919a8/tests/files/ttml2.ttml | mantas-done/subtitles, MIT |
 | `pysubs2_regions.ttml` | Written for this repository in the shape of https://github.com/tkarabela/pysubs2/blob/ae3c520a8aa13130f36d84df02ce15a843bc9bdb/tests/data/ttml_example2.ttml | MIT |
