@@ -96,7 +96,7 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWrite
 | `MpSubWriteOptions` | MPSub | `frameRate` |
 | `PlainTextWriteOptions` | plain text | `joinLines`, `joinCues`, `paragraphGap`, `withTimes` |
 | `PodcastTranscriptWriteOptions` | Podcasting 2.0 transcript | `wordSegments`, `prettyPrint` |
-| `SccWriteOptions` | SCC | `dropFrame` |
+| `SccWriteOptions` | SCC | `dropFrame`, `fit` |
 | `SubViewerWriteOptions` | SubViewer | `version` |
 
 - **Line endings**: every formatter writes LF by default.
@@ -387,6 +387,7 @@ SCC (Scenarist Closed Captions) is the closed caption format of US broadcast. Ma
 ```php
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
+use SubtitleToolbox\Formatters\SccFormatter;
 use SubtitleToolbox\Parsers\Options\SccReadOptions;
 use SubtitleToolbox\Parsers\Options\SccRollUp;
 use SubtitleToolbox\ReadOptions;
@@ -401,11 +402,26 @@ Subtitle::fromString($content, Format::Scc, new ReadOptions(format: new SccReadO
 
 $subtitle->wrapLines(32, 4)->toString(Format::Scc);
 $subtitle->toString(Format::Scc, new WriteOptions(format: new SccWriteOptions(dropFrame: false)));
+
+$report = (new SccFormatter())->formatWithReport($subtitle, new WriteOptions(format: new SccWriteOptions(fit: true)));
+$report->content;                                                                 // the SCC file
+$report->changes[0]->message;                                                     // Cue #0 at 1 s: replaced "Š" with "S".
 ```
 
 - **Reads**: pop-on, roll-up and paint-on captions, as the screen model of [47 CFR 15.119](https://www.govinfo.gov/content/pkg/CFR-2010-title47-vol1/xml/CFR-2010-title47-vol1-sec15-119.xml) defines them. Each change of the displayed captions starts a new cue. So a roll-up file gives one cue per screen, and a row shows in each cue until it rolls off.
 - **Roll-up by row**: with `SccReadOptions(rollUp: SccRollUp::Lines)` or the CLI option `--scc-roll-up lines`, each row of roll-up captions gives one cue. The cue starts at the first character of the row. It ends when the row rolls up, or when an EDM or EOC clears the screen. A row that is still on the screen at the end of the file lasts [`ReadOptions::$lastCueDuration`](read-options.md). So a transcript of a live roll-up file holds each line once. Pop-on and paint-on captions give the same cues as without the option.
-- **Writes**: pop-on captions on data channel 1, with drop-frame time codes by default.
+- **Writes**: pop-on captions on data channel 1, with drop-frame time codes by default. A cue with more than 4 lines, a line longer than 32 characters or a character that CEA-608 lacks throws `UnwritableContentException`.
+- **Late captions**: each caption needs 1 frame per 2 characters, and some frames for control codes, before it shows. When the frames before the cue start are too few, the caption shows late.
+- **Fit**: `SccWriteOptions(fit: true)` or the CLI option `--scc-fit` changes what SCC cannot hold, in place of throwing. `SccFormatter::formatWithReport()` returns the output and an `SccFitChange` for each change. The CLI prints each change on standard error. Each change has one of the `SccFitAction` cases:
+
+  | Action | Change |
+  |:--- |:--- |
+  | `Transliterated` | a character that CEA-608 lacks becomes a similar one: `Š` becomes `S`, `Œ` becomes `OE`, `…` becomes `...` and `–` becomes `-` |
+  | `Wrapped` | the text wraps again into at most 4 lines of at most 32 characters |
+  | `Delayed` | the caption shows after the cue start |
+  | `Dropped` | the output leaves out a caption that cannot show before the cue end |
+
+  Text that does not wrap into 4 lines of 32 characters, and a character without a replacement such as `日`, still throw. Split such cues first, as the exception message says.
 - **Times**: a semicolon before the frames marks drop-frame time code, a colon marks non-drop time code. A caption that no command erases lasts [`ReadOptions::$lastCueDuration`](read-options.md).
 - **Damaged data**: the parser ignores the second copy of a doubled control code and drops a byte with a parity error. It skips data channel 2, XDS packets and text mode.
 - **Position**: rows 1 to 4 give alignment 8, and all other rows give `null`. The `scc` format data keeps the row and column of each line. The formatter writes them back when they still fit the cue. Otherwise it places the lines by the alignment, at the bottom and centered by default.

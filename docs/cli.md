@@ -111,6 +111,7 @@ php subtitle-toolbox.phar --version
 - **Word timestamps**: `--word-timestamps` keeps the word times of the speech-to-text JSON formats, YouTube timed text and Podcasting 2.0 transcripts. `--structure-resegment`, `--karaoke` and `--ass-karaoke-tag` turn it on.
 - **MKV and WebM**: `--track` picks a subtitle track, see [MKV and WebM](#mkv-and-webm).
 - **Image cues**: `--skip-image-cues` leaves out image cues without text in place of failing.
+- **SCC output**: `--scc-fit` wraps lines, replaces characters, and delays or drops captions that SCC cannot hold, in place of failing. It prints each change on standard error. See [SCC](formats.md#scc).
 
 ## Frame rates
 | Option | Sets | Commands |

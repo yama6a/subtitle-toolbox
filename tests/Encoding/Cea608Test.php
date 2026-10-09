@@ -74,6 +74,27 @@ class Cea608Test extends TestCase
     }
 
 
+    public function testEveryTransliterationReplacesAMissingCharacterWithCharactersThatCea608Has(): void
+    {
+        $count = 0;
+        for ($code = 0xA0; $code <= 0x24FF; $code++) {
+            $character   = mb_chr($code);
+            $replacement = Cea608::transliterate($character);
+            if ($replacement === null) {
+                continue;
+            }
+            $count++;
+            $this->assertNull(Cea608::encodeCharacter($character), $character);
+            foreach (mb_str_split($replacement) as $part) {
+                $this->assertNotNull(Cea608::encodeCharacter($part), $part);
+            }
+        }
+        $this->assertNull(Cea608::transliterate("\u{65E5}"));
+        $this->assertSame(["S", "OE", "...", "'"], array_map(Cea608::transliterate(...), ["\u{160}", "\u{152}", "\u{2026}", "`"]));
+        $this->assertGreaterThan(100, $count);
+    }
+
+
     public function testMidRowCodes(): void
     {
         $this->assertSame(["color" => 4, "italic" => false, "underline" => true], Cea608::decodeMidRow(0x29));

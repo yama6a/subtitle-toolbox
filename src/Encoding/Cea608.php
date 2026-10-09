@@ -86,6 +86,37 @@ final class Cea608
         0x13 => "AaIIiOoOo[]//---AaOosYC/AaOo++++",
     ];
 
+    /** Replacements for characters that CEA-608 lacks: base letters without their accents, and ASCII punctuation. */
+    private const TRANSLITERATIONS = [
+        "A" => "\u{100}\u{102}\u{104}\u{1CD}", "a" => "\u{101}\u{103}\u{105}\u{1CE}",
+        "C" => "\u{106}\u{108}\u{10A}\u{10C}", "c" => "\u{107}\u{109}\u{10B}\u{10D}",
+        "D" => "\u{D0}\u{10E}\u{110}", "d" => "\u{F0}\u{10F}\u{111}",
+        "E" => "\u{112}\u{114}\u{116}\u{118}\u{11A}", "e" => "\u{113}\u{115}\u{117}\u{119}\u{11B}",
+        "G" => "\u{11C}\u{11E}\u{120}\u{122}", "g" => "\u{11D}\u{11F}\u{121}\u{123}",
+        "H" => "\u{124}\u{126}", "h" => "\u{125}\u{127}",
+        "I" => "\u{128}\u{12A}\u{12C}\u{12E}\u{130}", "i" => "\u{129}\u{12B}\u{12D}\u{12F}\u{131}",
+        "J" => "\u{134}", "j" => "\u{135}",
+        "K" => "\u{136}", "k" => "\u{137}",
+        "L" => "\u{139}\u{13B}\u{13D}\u{13F}\u{141}", "l" => "\u{13A}\u{13C}\u{13E}\u{140}\u{142}",
+        "N" => "\u{143}\u{145}\u{147}", "n" => "\u{144}\u{146}\u{148}",
+        "O" => "\u{14C}\u{14E}\u{150}", "o" => "\u{14D}\u{14F}\u{151}",
+        "R" => "\u{154}\u{156}\u{158}", "r" => "\u{155}\u{157}\u{159}",
+        "S" => "\u{15A}\u{15C}\u{15E}\u{160}\u{218}", "s" => "\u{15B}\u{15D}\u{15F}\u{161}\u{219}",
+        "T" => "\u{162}\u{164}\u{166}\u{21A}", "t" => "\u{163}\u{165}\u{167}\u{21B}",
+        "U" => "\u{168}\u{16A}\u{16C}\u{16E}\u{170}\u{172}", "u" => "\u{169}\u{16B}\u{16D}\u{16F}\u{171}\u{173}",
+        "W" => "\u{174}", "w" => "\u{175}",
+        "Y" => "\u{DD}\u{176}\u{178}", "y" => "\u{FD}\u{FF}\u{177}",
+        "Z" => "\u{179}\u{17B}\u{17D}", "z" => "\u{17A}\u{17C}\u{17E}",
+        "AE" => "\u{C6}", "ae" => "\u{E6}", "OE" => "\u{152}", "oe" => "\u{153}", "IJ" => "\u{132}", "ij" => "\u{133}",
+        "TH" => "\u{DE}", "th" => "\u{FE}",
+        "-" => "\u{2010}\u{2011}\u{2012}\u{2013}\u{2015}\u{2212}",
+        "'" => "`\u{B4}\u{201A}\u{2032}", "\"" => "\u{201E}\u{2033}",
+        "<" => "\u{2039}", ">" => "\u{203A}", "..." => "\u{2026}", "." => "\u{B7}", "x" => "\u{D7}", "EUR" => "\u{20AC}",
+    ];
+
+    /** @var ?array<string, string> */
+    private static ?array $transliterations = null;
+
     /** The row of a preamble address code by the low three bits of the first byte and bit 0x20 of the second byte. */
     private const PAC_ROWS = [
         0x00 => [11, null], 0x01 => [1, 2], 0x02 => [3, 4], 0x03 => [12, 13],
@@ -160,6 +191,24 @@ final class Cea608
         self::$characterCodes ??= self::buildCharacterCodes();
 
         return self::$characterCodes[$character] ?? null;
+    }
+
+
+    /**
+     * Returns the CEA-608 characters that stand in for a character that CEA-608 lacks, or null when none do.
+     */
+    public static function transliterate(string $character): ?string
+    {
+        if (self::$transliterations === null) {
+            self::$transliterations = [];
+            foreach (self::TRANSLITERATIONS as $replacement => $characters) {
+                foreach (mb_str_split($characters) as $from) {
+                    self::$transliterations[$from] = (string)$replacement;
+                }
+            }
+        }
+
+        return self::$transliterations[$character] ?? null;
     }
 
 

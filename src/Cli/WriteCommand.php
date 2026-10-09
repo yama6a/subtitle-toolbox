@@ -11,6 +11,8 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\FormatWriteOptions;
 use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
+use SubtitleToolbox\Formatters\Options\SccWriteOptions;
+use SubtitleToolbox\Formatters\SccFormatter;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\OptionsCopy;
 use SubtitleToolbox\StringHelpers;
@@ -46,6 +48,8 @@ abstract class WriteCommand extends FileCommand
     protected ?float $outputFps = null;
 
     private WriteOptions $writeOptions;
+
+    private bool $sccFit = false;
 
 
     public function options(): array
@@ -89,6 +93,7 @@ abstract class WriteCommand extends FileCommand
             Option::flag("bom", "Start the output with a UTF-8 BOM."),
             Option::flag("no-bom", "Write no UTF-8 BOM. Default: the BOM rule of the output format."),
             Option::flag("skip-image-cues", "Leave out image cues without text, for example from PGS or VobSub, in place of failing."),
+            Option::flag("scc-fit", "Wrap, replace characters and delay or drop captions that SCC output cannot hold, in place of failing. Prints each change."),
         ];
     }
 
@@ -126,6 +131,7 @@ abstract class WriteCommand extends FileCommand
             self::fail("Pass only one of --bom and --no-bom.");
         }
 
+        $this->sccFit       = $arguments->has("scc-fit");
         $lineEnding         = $arguments->choice("line-ending", array_keys(self::LINE_ENDINGS));
         $this->writeOptions = new WriteOptions(...self::given([
             "lineEnding"    => $lineEnding === null ? null : self::LINE_ENDINGS[$lineEnding],
@@ -331,6 +337,13 @@ abstract class WriteCommand extends FileCommand
         } catch (ImageCueWithoutTextException) {
             self::fail("The file holds image cues without text. Run OCR on them first, or pass --skip-image-cues.");
         }
+        if ($outputFormat === Format::Scc && $this->sccFit) {
+            $report = (new SccFormatter())->formatWithReport($subtitle, $this->formatterOptions($outputFormat, $arguments));
+            $content = $report->content;
+            foreach ($report->changes as $change) {
+                $console->err(self::label($input) . ": $change->message ({$change->action->value})\n");
+            }
+        }
 
         if ($target === self::DASH) {
             $console->out($content);
@@ -401,6 +414,7 @@ abstract class WriteCommand extends FileCommand
         $format = match (true) {
             $this->outputFps !== null && $outputFormat === Format::MicroDvd => new MicroDvdWriteOptions(frameRate: $this->outputFps),
             $this->outputFps !== null && $outputFormat === Format::Itt      => new IttWriteOptions(frameRate: $this->outputFps),
+            $this->sccFit && $outputFormat === Format::Scc                  => new SccWriteOptions(fit: true),
             default                                                         => $this->commandFormatterOptions($outputFormat, $arguments),
         };
 
