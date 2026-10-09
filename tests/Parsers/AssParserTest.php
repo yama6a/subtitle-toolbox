@@ -53,10 +53,15 @@ class AssParserTest extends TestCase
                 [14.1, 17.3, ["<v Reporter>That's all <font color=\"#0080ff\">for<b> tonight</b></font>" .
                               "<b><font color=\"#00ff00\"> from</font></b><font color=\"#00ff00\"> us.</font>"]],
             ],
+            "Aegisub named styles" => [
+                "own_style_flags.ass", 6,
+                [1.0, 3.0, ["<v Driver>Last stop is the depot."]],
+                [12.7, 15.0, ["<i><b>Left</b></i><i> again</i><b><u><s> already</s></u></b>"]],
+            ],
             "SSA v4.00" => [
                 "own_ssa_v4.ssa", 5,
-                [2.0, 5.0, ["<v Captain>The ferry leaves the harbour at nine."]],
-                [14.5, 17.0, ["<v Captain><font color=\"#ff0000\">Mind the gap</font> when you board."]],
+                [2.0, 5.0, ["<v Captain><b>The ferry leaves the harbour at nine.</b>"]],
+                [14.5, 17.0, ["<v Captain><b><font color=\"#ff0000\">Mind the gap</font> when you board.</b>"]],
             ],
         ];
     }
@@ -105,7 +110,7 @@ class AssParserTest extends TestCase
         $this->assertSame(["Platform 4: <font color=\"#ffd700\">Coast Express</font>"], $cues[3]->getLines());
         $this->assertSame(8, $cues[3]->getAlignment());
         $this->assertSame(
-            ["<00:00:13.500>The <00:00:13.900>train <00:00:14.250>leaves <00:00:14.750>at <00:00:15.350>noon"],
+            ["<b><00:00:13.500>The <00:00:13.900>train <00:00:14.250>leaves <00:00:14.750>at <00:00:15.350>noon</b>"],
             $cues[5]->getLines()
         );
         $this->assertSame(
@@ -149,6 +154,52 @@ class AssParserTest extends TestCase
         $this->assertSame("Marked=1", $cues[2]->findFormatData("ass")["fields"]["Marked"]);
         $this->assertSame("!Effect", $cues[3]->findFormatData("ass")["fields"]["Effect"]);
         $this->assertEquals([new Comment("Timetable section", 1)], $subtitle->getComments());
+    }
+
+
+    public function testStyleFlagsAndAlignmentApplyToTheCues(): void
+    {
+        $cues = $this->parseFile("own_style_flags.ass")->getCues();
+
+        $this->assertSame([
+            [["<v Driver>Last stop is the depot."], null],
+            [["<i>I should have taken the earlier bus.</i>"], 8],
+            [["<i>Maybe the driver</i> knows a shortcut."], 2],
+            [["<b><u><s>Depot closed for repairs</s></u></b>"], 7],
+            [["The bus turns left at the bridge."], null],
+            [["<i><b>Left</b></i><i> again</i><b><u><s> already</s></u></b>"], 8],
+        ], array_map(fn (SubtitleCue $cue): array => [$cue->getLines(), $cue->getAlignment()], $cues));
+    }
+
+
+    public function testStyleItalicsAndAlignmentReachSubRip(): void
+    {
+        $this->assertStringContainsString(
+            "00:00:03,200 --> 00:00:05,400\n{\\an8}<i>I should have taken the earlier bus.</i>\n",
+            $this->parseFile("own_style_flags.ass")->toString(Format::SubRip)
+        );
+    }
+
+
+    public function testStylesAfterTheEventsSectionStillApply(): void
+    {
+        $cue = $this->parseEvents(
+            self::EVENTS_HEADER . "Dialogue: 0,0:00:01.00,0:00:02.00,*Thoughts,,0,0,0,,Hmm\n\n" .
+            "[V4+ Styles]\nFormat: Name, Italic, Alignment\nStyle: Thoughts,-1,9\n"
+        )->getCues()[0];
+
+        $this->assertSame([["<i>Hmm</i>"], 9], [$cue->getLines(), $cue->getAlignment()]);
+    }
+
+
+    public function testSsaStyleUsesTheLegacyAlignmentCode(): void
+    {
+        $cue = $this->parseEvents(
+            "[V4 Styles]\nFormat: Name, Bold, Italic, Alignment\nStyle: Default,-1,0,6\n\n" .
+            "[Events]\nFormat: Marked, Start, End, Style, Text\nDialogue: Marked=0,0:00:01.00,0:00:02.00,Other,Hello\n"
+        )->getCues()[0];
+
+        $this->assertSame([["<b>Hello</b>"], 8], [$cue->getLines(), $cue->getAlignment()]);
     }
 
 

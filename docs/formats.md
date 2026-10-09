@@ -130,7 +130,8 @@ $subtitle->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(ka
 |:--- |:--- |:--- |
 | `{\b1}`, `{\i1}`, `{\u1}`, `{\s1}`, their `0` forms and `\r` | `<b>`, `<i>`, `<u>`, `<s>` and their closing tags | the same override tags |
 | `{\c&H0000FF&}` or `{\1c&H0000FF&}`, color as BGR | `<font color="#ff0000">` | `{\c&H0000FF&}`, `{\c}` at `</font>` |
-| `{\an8}`, SSA `{\a6}` | alignment 8. The first tag wins. | `{\an8}` in ASS, `{\a6}` in SSA. Nothing for `null`. |
+| `{\an8}`, SSA `{\a6}` | alignment 8. The first tag wins. | `{\an8}` in ASS, `{\a6}` in SSA. Nothing when the style has the same alignment. |
+| Style `Thoughts` with `Italic` `-1` and `Alignment` 8 | `<i>` around the text, alignment 8 | no tag for what the style already sets. `{\i0}` or `{\an2}` where the cue differs from its style. |
 | Name field `Fred` | `<v Fred>` at the start of the first line | the Name field, only the first speaker of a cue |
 | `{\k50}`, `{\kf50}`, `{\K50}`, `{\ko50}` in centiseconds | a word timestamp at the start time of each syllable | `{\k}`, or the tag of `AssWriteOptions::$karaokeTag`. The last syllable lasts until the cue end. |
 | `\N`, `\h` | a new line, U+00A0 | `\N`, `\h` |
@@ -139,9 +140,10 @@ $subtitle->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(ka
 
 - **Format data**: ASS and SSA both use the key `ass`. The subtitle keeps `[Script Info]`, the styles, the `Format:` lines, the section order, `Comment:` events and other sections such as `[Fonts]` and `[Graphics]`. Each cue keeps its event fields and its original `Text` field.
 - **Unchanged cues**: a cue can keep the lines and the alignment that the parser gave it. The formatter then writes the original `Text` field. So tags such as `\pos`, `\fad` and `\t` survive an ASS round trip and a retiming.
+- **Styles**: the `Bold`, `Italic`, `Underline` and `StrikeOut` fields of the event's style become `<b>`, `<i>`, `<u>` and `<s>` around the text, for the values `-1` and `1`. A style `Alignment` other than 2 becomes the cue alignment when the text has no `\an` or `\a` tag. Inline tags such as `{\i0}` override the style for their span. `\r` goes back to the event's style, and `\rName` switches to the style `Name`. An unknown style name falls back to `Default`, as in libass. Colors and fonts of a style do not change the core markup.
 - **Changed cues**: the formatter writes the text from the [core markup](markup.md). Other override tags are lost.
 - **Karaoke tags**: `AssKaraokeTag::Instant` writes `\k`, the default. `AssKaraokeTag::Fill` writes `\kf`, `AssKaraokeTag::Outline` writes `\ko`. `\kf` fills each syllable from left to right in Aegisub and libass. `\ko` hides the outline of a syllable until its time starts. The option applies only to cues that the formatter writes from the core markup.
-- **Limits**: other override tags, `{...}` notes and `\p1` drawings are not cue text. An event that holds only a drawing becomes a cue without lines. Style definitions do not change the core markup. Events come out in time order.
+- **Limits**: other override tags, `{...}` notes and `\p1` drawings are not cue text. An event that holds only a drawing becomes a cue without lines. Events come out in time order.
 - **Output**: times in centiseconds. A cue from another format gets style `Default`. A subtitle from another format gets the minimal header that FFmpeg writes.
 
 ## CSV and TSV

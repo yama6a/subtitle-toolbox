@@ -17,6 +17,9 @@ final readonly class AssContext
         public bool $isSsa,
         public bool $stripTags,
         public AssKaraokeTag $karaokeTag,
+        /** @var list<array<string, string>> */
+        public array $styles = [],
+        public bool $legacyStyles = false,
     ) {
     }
 }
