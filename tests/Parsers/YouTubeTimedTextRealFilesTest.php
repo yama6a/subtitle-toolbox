@@ -7,6 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
@@ -85,10 +86,9 @@ class YouTubeTimedTextRealFilesTest extends TestCase
         $subtitle = self::parse($fileName);
         $vtt      = (new WebVttParser())->parse($subtitle->toString(Format::WebVtt), new ReadOptions());
 
-        // WebVTT has no <font> tag, so its formatter drops it.
-        $withoutFont = fn (array $lines): array => preg_replace('#</?font[^>]*>#', "", $lines);
+        $asClasses = fn (array $lines): array => array_map(fn (string $line): string => Markup::fontToWebVttColors($line)[0], $lines);
         $this->assertSame(
-            array_map(fn ($cue) => [$cue->getStart(), $cue->getEnd(), $withoutFont($cue->getLines())], $subtitle->getCues()),
+            array_map(fn ($cue) => [$cue->getStart(), $cue->getEnd(), $asClasses($cue->getLines())], $subtitle->getCues()),
             array_map(fn ($cue) => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], $vtt->getCues())
         );
     }

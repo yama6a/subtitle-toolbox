@@ -6,7 +6,7 @@ The train to Hamburg leaves from platform 4.
 
 2
 00:00:01.000 --> 00:00:04.000 line:0
-Der Zug nach Hamburg fährt von Gleis 4.
+<c.yellow>Der Zug nach Hamburg fährt von Gleis 4.</c>
 
 3
 00:00:04.500 --> 00:00:07.250
@@ -14,7 +14,7 @@ It is ten minutes late today.
 
 4
 00:00:04.500 --> 00:00:07.250 line:0
-Er hat heute zehn Minuten Verspätung.
+<c.yellow>Er hat heute zehn Minuten Verspätung.</c>
 
 5
 00:00:08.000 --> 00:00:11.000
@@ -23,11 +23,11 @@ They sell fresh rolls.
 
 6
 00:00:08.000 --> 00:00:09.600 line:0
-Die Bäckerei am Bahnhof öffnet um sechs.
+<c.yellow>Die Bäckerei am Bahnhof öffnet um sechs.</c>
 
 7
 00:00:09.600 --> 00:00:11.000 line:0
-Sie verkauft frische Brötchen.
+<c.yellow>Sie verkauft frische Brötchen.</c>
 
 8
 00:00:12.000 --> 00:00:13.500
@@ -35,7 +35,7 @@ Sie verkauft frische Brötchen.
 
 9
 00:00:13.200 --> 00:00:16.600 line:0
-Morgen scheint wieder die Sonne.
+<c.yellow>Morgen scheint wieder die Sonne.</c>
 
 10
 00:00:16.000 --> 00:00:19.000
@@ -43,4 +43,4 @@ Take an umbrella with you.
 
 11
 00:00:19.000 --> 00:00:21.000 line:0
-Gute Reise!
+<c.yellow>Gute Reise!</c>
