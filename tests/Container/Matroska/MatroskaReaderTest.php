@@ -48,7 +48,7 @@ class MatroskaReaderTest extends TestCase
                 [ContainerFormat::Matroska, 4, "S_TEXT/ASS", Format::Ass, "eng", "English", true, false],
                 [ContainerFormat::Matroska, 5, "S_TEXT/WEBVTT", Format::WebVtt, "fre", "Français", false, false],
                 [ContainerFormat::Matroska, 6, "S_TEXT/SSA", Format::Ass, "spa", null, false, false],
-                [ContainerFormat::Matroska, 7, "S_VOBSUB", null, "ita", null, false, false],
+                [ContainerFormat::Matroska, 7, "S_DVBSUB", null, "ita", null, false, false],
                 [ContainerFormat::Matroska, 8, "S_TEXT/UTF8", Format::SubRip, "eng", null, false, false],
             ],
             array_map(fn (SubtitleTrack $t): array => [$t->container, $t->number, $t->codecId, $t->format, $t->language, $t->name, $t->default, $t->forced],
@@ -221,6 +221,49 @@ class MatroskaReaderTest extends TestCase
     }
 
 
+    public function testExtractsVobSubAsTheVobSubParserReadsTheIdxFile(): void
+    {
+        $mkv      = MatroskaReader::open(self::DIR . "vobsub.mkv");
+        $expected = Subtitle::load(__DIR__ . "/../../files/vobsub/two-tracks-pal.idx", Format::VobSub);
+        $toArray  = fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getAllFormatData(), $cue->isForced()];
+        $subtitle = $mkv->extract(3);
+
+        $this->assertCount(5, $expected);
+        $this->assertSame(array_map($toArray, $expected->getCues()), array_map($toArray, $subtitle->getCues()));
+        $this->assertSame([Format::VobSub, "eng"], [$subtitle->getFormat(), $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE)]);
+    }
+
+
+    public function testVobSubUnitsWithoutAStopCommandEndAtTheEndOfTheirBlock(): void
+    {
+        $mkv      = MatroskaReader::open(self::DIR . "vobsub.mkv");
+        $expected = array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getAllFormatData()],
+                              $mkv->extract(3)->getCues());
+        $expected[2][1] = 10.5;
+        $expected[4][1] = 21.5;
+
+        $this->assertSame($expected, array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getAllFormatData()],
+                                               $mkv->extract(4)->getCues()));
+    }
+
+
+    public function testThrowsForAVobSubTrackWithoutAPalette(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The .idx content has no palette line.");
+
+        $stream = fopen("php://memory", "w+b");
+        fwrite($stream, MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT, MkvFixtureWriter::element(
+            MkvFixtureWriter::TRACKS,
+            MkvFixtureWriter::trackEntry(["number" => 2, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "S_VOBSUB",
+                                          "codecPrivate" => "size: 720x576\n"]),
+        )));
+        rewind($stream);
+
+        MatroskaReader::open($stream)->extract(2);
+    }
+
+
     public function testLeavesAStreamOpen(): void
     {
         $stream = fopen(self::DIR . "seek_head.mkv", "rb");
@@ -236,7 +279,7 @@ class MatroskaReaderTest extends TestCase
     public function testThrowsForAnUnsupportedCodec(): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("Track 7 has the codec S_VOBSUB.");
+        $this->expectExceptionMessage("Track 7 has the codec S_DVBSUB.");
 
         MatroskaReader::open(self::DIR . "text_tracks.mkv")->extract(7);
     }

@@ -9,6 +9,7 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Parsers\Options\VobSubReadOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -30,6 +31,8 @@ final class VobSubParser extends SubtitleParser
     private const SECONDS_PER_DELAY_UNIT = 1024 / 90000;
 
     private const SUBSTREAM_FIRST = 0x20;
+
+    private const INDEX_FIRST_LINE = "# VobSub index file, v7 (do not modify this line!)";
 
     private const PACK_START        = 0xBA;
     private const PRIVATE_STREAM_1  = 0xBD;
@@ -58,7 +61,7 @@ final class VobSubParser extends SubtitleParser
     private ?array $customColors = null;
 
     private int $trackIndex;
-    private string $language;
+    private ?string $language = null;
 
     /** @var list<array{time: float, filepos: int}> */
     private array $entries = [];
@@ -91,9 +94,49 @@ final class VobSubParser extends SubtitleParser
             $units[]       = $unit;
         }
 
+        return $this->toSubtitle($units);
+    }
+
+
+    /**
+     * Reads the subpicture units of a Matroska S_VOBSUB track. $codecPrivate holds the .idx header lines.
+     * A unit without a stop command ends at the end of its block.
+     *
+     * @param list<array{start: float, end: float, data: string}> $blocks times in seconds
+     *
+     * @internal
+     */
+    public function parseBlocks(string $codecPrivate, array $blocks, ReadOptions $options): Subtitle
+    {
+        $this->useOptions($options);
+        $this->palette      = [];
+        $this->customColors = null;
+        $this->language     = null;
+        $header             = StringHelpers::removeUtf8Bom($codecPrivate);
+        $this->readIndex(str_contains(explode("\n", $header, 2)[0], "VobSub index file") ? $header : self::INDEX_FIRST_LINE . "\n" . $header);
+
+        $units = [];
+        foreach ($blocks as $block) {
+            $unit          = $this->decodeUnit($block["data"]);
+            $unit["start"] = $block["start"] + $unit["startDelay"];
+            $unit["stop"]  = $unit["stopDelay"] === null ? max($block["end"], $unit["start"]) : $block["start"] + $unit["stopDelay"];
+            $units[]       = $unit;
+        }
+
+        return $this->toSubtitle($units)->setParseWarnings($this->warnings);
+    }
+
+
+    /**
+     * @param list<array{start: float, stop: ?float, image: ?CueImage}> $units
+     */
+    private function toSubtitle(array $units): Subtitle
+    {
         $subtitle   = new Subtitle();
         $parsedCues = [];
-        $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $this->language);
+        if ($this->language !== null) {
+            $subtitle->setMetadata(Subtitle::METADATA_LANGUAGE, $this->language);
+        }
         foreach ($units as $index => $unit) {
             if ($unit["image"] === null) {
                 continue;
