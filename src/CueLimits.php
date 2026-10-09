@@ -16,7 +16,7 @@ final class CueLimits
     /**
      * @param int    $maxCharactersPerLine   visible characters
      * @param int    $maxLinesPerCue         lines per cue
-     * @param float  $minDuration            seconds
+     * @param float  $minDuration            seconds, at most $maxDuration
      * @param float  $maxDuration            seconds
      * @param ?float $maxCharactersPerSecond visible characters of all lines divided by the duration, null for no limit
      */
@@ -39,6 +39,11 @@ final class CueLimits
             throw new InvalidArgumentException("The maximum duration and the maximum characters per second must be " .
                                                "greater than 0, got " . OptionChecks::text($maxDuration) . " and " .
                                                ($maxCharactersPerSecond === null ? "null" : OptionChecks::text($maxCharactersPerSecond)) . ".");
+        }
+
+        if ($minDuration > $maxDuration) {
+            throw new InvalidArgumentException("The minimum duration must not be greater than the maximum duration, got " .
+                                               OptionChecks::text($minDuration) . " and " . OptionChecks::text($maxDuration) . ".");
         }
     }
 }
