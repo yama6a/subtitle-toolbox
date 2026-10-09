@@ -44,7 +44,7 @@ class JsonFormatRulesTest extends TestCase
     {
         return [
             "Whisper"            => [new WhisperJsonParser(), '{"segments": [{"start": -5, "end": 1, "text": "Hi"}, {"start": 2, "end": 3, "text": "Ok"}]}',
-                                     "The field segments[0].start must be a number."],
+                                     "The field segments[0].start must be a time of 0 or more."],
             "AssemblyAI"         => [new AssemblyAiParser(), '{"utterances": [{"start": 1000, "end": -1000, "text": "Hi"}, {"start": 2000, "end": 3000, "text": "Ok"}]}',
                                      "The field utterances[0].end must be a time."],
             "Google"             => [new GoogleSpeechParser(), '{"results": [{"alternatives": [{"transcript": "Hi"}], "resultEndTime": "-1s"}, '

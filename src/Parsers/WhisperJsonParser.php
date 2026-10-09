@@ -160,8 +160,12 @@ final class WhisperJsonParser extends SubtitleParser
     private function number(mixed $object, string $key, string $path): float
     {
         $value = is_array($object) ? $object[$key] ?? null : null;
-        if (!self::isTime($value)) {
+        if ((!is_int($value) && !is_float($value)) || !is_finite($value)) {
             throw new ParsingException("The field $path.$key must be a number.");
+        }
+
+        if (!self::isTime($value)) {
+            throw new ParsingException("The field $path.$key must be a time of 0 or more.");
         }
 
         return Timecode::roundToMilliseconds($value);

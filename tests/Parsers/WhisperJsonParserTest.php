@@ -143,6 +143,8 @@ class WhisperJsonParserTest extends TestCase
             "segment no object"   => ['{"segments": [5]}', "The field segments[0].start must be a number."],
             "no text"             => ['{"segments": [{"start": 0, "end": 1}]}', "The field segments[0].text must be a string."],
             "whisper.cpp offsets" => ['{"transcription": [{"offsets": {"from": 0}, "text": "Hi"}]}', "The field transcription[0].offsets.to must be a number."],
+            "negative start"      => ['{"segments": [{"id": 0, "start": -0.5, "end": 1.0, "text": "Hello there"}]}', "The field segments[0].start must be a time of 0 or more."],
+            "negative offsets"    => ['{"transcription": [{"offsets": {"from": -500, "to": 1000}, "text": "Hi"}]}', "The field transcription[0].offsets.from must be a time of 0 or more."],
         ];
     }
 
