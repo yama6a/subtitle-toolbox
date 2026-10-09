@@ -38,7 +38,7 @@ final class ValidationRules
      * @param bool               $noEmptyCues               check that each cue has visible text
      * @param bool               $noDoubleSpaces            check for runs of two or more spaces between words
      * @param bool               $noLeadingOrTrailingSpaces check for lines that start or end with a space
-     * @param bool               $noUnbalancedTags          check for core markup tags without a partner tag
+     * @param bool               $noUnbalancedTags          check for core and WebVTT markup tags without a partner tag
      * @param ?DialogueDashStyle $dialogueDashStyle         the only dialogue dash style that a line may use
      * @param ?int               $maxSpeakersPerCue         the most speakers in a cue
      * @param ?float             $maxWordsPerMinute         the most words per minute of a cue
