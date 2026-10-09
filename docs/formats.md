@@ -381,6 +381,7 @@ $subtitle->findFormatData('sami');                                              
 SBV is the YouTube caption format `0:00:01.500,0:00:04.000`.
 
 - **Parser**: accepts any number of hour digits below the [time limit](#the-format-enum). A file that holds only whitespace or a BOM gives 0 cues. A timing line without text gives a cue with no lines. A timing line starts a new cue, also without an empty line before it. Text after an empty line stays in the cue before it, as long as no timing line follows, see [lenient-parsing.md](lenient-parsing.md).
+- **Lenient mode**: also reads `0:00:07.980.0:00:11.300`, `0:00:07,980,0:00:11,300` and `0:00:07.98,0:00:11.3`, and warns. A time has 1 or 2 minute and second digits, `.`, `,` or `:` before the fraction, and 1 to 4 fraction digits.
 - **Formatter**: writes one hour digit below 10 hours, and no UTF-8 BOM. It strips all tags and decodes HTML entities. Text with `<`, `>` and `&` round-trips. It skips a cue with no lines.
 
 ## SCC

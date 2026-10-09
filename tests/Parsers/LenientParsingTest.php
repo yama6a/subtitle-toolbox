@@ -282,13 +282,29 @@ class LenientParsingTest extends TestCase
             "SBV with a bad timestamp" => [
                 "bad_timestamp.sbv",
                 SbvParser::class,
-                "The time \"0:00:06.00\" is not valid.",
+                "The time \"0:00:0G.000\" is not valid.",
                 [
                     [1, 3, "Good morning."],
                     [7, 9, "See you tomorrow."],
                 ],
                 [
-                    [4, 1, self::SKIPPED, "The time \"0:00:06.00\" is not valid."],
+                    [4, 1, self::SKIPPED, "The time \"0:00:0G.000\" is not valid."],
+                ],
+            ],
+            "SBV with other separators and short fractions" => [
+                "loose_timing.sbv",
+                SbvParser::class,
+                "Block #1 has no timing line on its first line.",
+                [
+                    [1, 3.5, "The ferry leaves at eight."],
+                    [4, 6, "A dot between the times."],
+                    [7, 9, "Commas before the fractions."],
+                    [10.5, 12.25, "Short fractions."],
+                ],
+                [
+                    [4, 1, self::REPAIRED, "Block #1 has a timing line with other separators or fraction digits than SBV uses. The parser read it."],
+                    [7, 2, self::REPAIRED, "Block #2 has a timing line with other separators or fraction digits than SBV uses. The parser read it."],
+                    [10, 3, self::REPAIRED, "Block #3 has a timing line with other separators or fraction digits than SBV uses. The parser read it."],
                 ],
             ],
             "SBV without an empty line between cues" => [

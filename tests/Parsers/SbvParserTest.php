@@ -177,4 +177,52 @@ class SbvParserTest extends TestCase
             $this->assertSame([], $subtitle->getParseWarnings());
         }
     }
+
+
+    /**
+     * Each case holds a timing line, its start and end, and whether strict mode reads it.
+     */
+    public static function timingLineForms(): array
+    {
+        return [
+            "SBV form"              => ["0:00:07.980,0:00:11.300", 7.98, 11.3, true],
+            "dot between the times" => ["0:00:07.980.0:00:11.300", 7.98, 11.3, false],
+            "commas everywhere"     => ["0:00:07,980,0:00:11,300", 7.98, 11.3, false],
+            "short fractions"       => ["0:00:07.98,0:00:11.3", 7.98, 11.3, false],
+        ];
+    }
+
+
+    #[DataProvider("timingLineForms")]
+    public function testStrictModeReadsOnlyTheSbvTimingLine(string $timingLine, float $start, float $end, bool $strictReads): void
+    {
+        if (!$strictReads) {
+            $this->expectException(ParsingException::class);
+        }
+
+        $cues = Subtitle::fromString("$timingLine\nText\n", Format::Sbv)->getCues();
+        $this->assertSame([$start, $end, ["Text"]], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getLines()]);
+    }
+
+
+    #[DataProvider("timingLineForms")]
+    public function testLenientModeReadsOtherSeparatorsAndFractionsAndWarns(string $timingLine, float $start, float $end, bool $strictReads): void
+    {
+        $subtitle = Subtitle::fromString("$timingLine\nText\n\n0:00:20.000,0:00:21.000\nMore\n", Format::Sbv, new ReadOptions(lenient: true));
+
+        $cues = $subtitle->getCues();
+        $this->assertCount(2, $cues);
+        $this->assertSame([$start, $end, ["Text"]], [$cues[0]->getStart(), $cues[0]->getEnd(), $cues[0]->getLines()]);
+        $this->assertCount($strictReads ? 0 : 1, $subtitle->getParseWarnings());
+        $this->assertSame("0:00:07.980,0:00:11.300\nText\n\n0:00:20.000,0:00:21.000\nMore\n", $subtitle->toString(Format::Sbv));
+    }
+
+
+    public function testLenientModeRejectsLooseTimesWithMinutesOrSecondsAbove59(): void
+    {
+        $subtitle = Subtitle::fromString("0:00:61.5,0:01:02.0\nText\n", Format::Sbv, new ReadOptions(lenient: true));
+
+        $this->assertSame([], $subtitle->getCues());
+        $this->assertSame("The time \"0:00:61.5\" is not valid.", $subtitle->getParseWarnings()[0]->message);
+    }
 }
