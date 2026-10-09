@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Formatters;
 
+use SubtitleToolbox\Comment;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\Markup;
 use SubtitleToolbox\Parsers\LyricsParser;
@@ -59,7 +60,7 @@ final class LyricsFormatter extends SubtitleFormatter
 
 
     /**
-     * @param list<array{text: string, beforeCueIndex: int}> $comments
+     * @param list<Comment> $comments
      */
     private function formatComments(array $comments, int $fromCueIndex, int $toCueIndex): string
     {
