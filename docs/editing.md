@@ -69,7 +69,7 @@ $subtitle->wrapLines(42);                         // at most 42 characters per l
 $subtitle->unwrapLines();                         // join the lines of each dialogue turn with a space
 ```
 
-- **Start times**: these fixes move only end times. `fixOverlaps()` ends a cue at its own start when the gap does not fit. Cues with the same start, such as a sign and a line of dialogue, end before the next cue with a later start. `extendShortCues()` never creates an overlap and never makes a cue shorter.
+- **Start times**: `fixOverlaps()` and `extendShortCues()` move only end times. `fixOverlaps()` ends a cue at its own start when the gap does not fit. Cues with the same start, such as a sign and a line of dialogue, end before the next cue with a later start. `extendShortCues()` never creates an overlap and never makes a cue shorter.
 - **Lead-in and lead-out**: speech-to-text cues start and end exactly on the speech, so they flash on and off. `addLeadInOut()` moves each start back by the lead-in and each end on by the lead-out. A start never goes below 0. A cue stops at least `minGap` seconds before or after a cue it did not overlap.
   - **Priority**: the lead-out comes first. So in a short gap the end of the earlier cue takes the space, and the next cue gets the lead-in that is left. For example, with `A` 1.0 to 2.0 and `B` 2.2 to 3.0, `addLeadInOut(0.3, 0.3)` gives `A` 0.7 to 2.2 and `B` 2.2 to 3.3. The end is the part of a cue that a reader most often misses.
   - **Overlaps**: a start or end inside another cue stays where it is. So `A` 1.0 to 3.0 and `B` 2.0 to 4.0 become `A` 0.8 to 3.0 and `B` 2.0 to 4.2 with 0.2 s each.
