@@ -20,6 +20,9 @@ final class SubRipParser extends SubtitleParser
     // A SubRip file has no regions, so "region" is no setting here.
     private const CUE_SETTINGS = ["vertical", "line", "position", "size", "align"];
 
+    // Chinese and Japanese tools write these full-width delimiters in timing lines.
+    private const FULL_WIDTH_DELIMITERS = ["：" => ":", "，" => ",", "．" => ".", "。" => "."];
+
     private const ATTRIBUTE_TAG_REGEX =
         '#^</?[a-zA-Z][a-zA-Z0-9]*(?:\s+[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s"\'=<>]+))*\s*/?>$#';
 
@@ -94,7 +97,13 @@ final class SubRipParser extends SubtitleParser
 
     private function isTimingLine(string $line): bool
     {
-        return preg_match("/^\d+:\d\d:\d\d\S*?\s*" . $this->arrowRegex() . "/", $line) === 1;
+        return preg_match("/^\d+:\d\d:\d\d\S*?\s*" . $this->arrowRegex() . "/", $this->replaceFullWidthDelimiters($line)) === 1;
+    }
+
+
+    private function replaceFullWidthDelimiters(string $line): string
+    {
+        return $this->options->lenient ? strtr($line, self::FULL_WIDTH_DELIMITERS) : $line;
     }
 
 
@@ -116,7 +125,8 @@ final class SubRipParser extends SubtitleParser
             throw new ParsingException("Block #$index has no cue number on its first line.", $lineNumber);
         }
 
-        if (!preg_match("/^(.*?)(?<!-)\s*(" . $this->arrowRegex() . ")\s*(.*)$/", $rawLines[1] ?? "", $times)) {
+        $timingLine = $this->replaceFullWidthDelimiters($rawLines[1] ?? "");
+        if (!preg_match("/^(.*?)(?<!-)\s*(" . $this->arrowRegex() . ")\s*(.*)$/", $timingLine, $times)) {
             throw new ParsingException("Block #$index has no timing line on its second line.", $lineNumber);
         }
 
@@ -148,6 +158,15 @@ final class SubRipParser extends SubtitleParser
                     ParseWarningAction::Repaired
                 );
             }
+        }
+        if ($timingLine !== $rawLines[1]) {
+            $this->warn(
+                "Block #$index has full-width delimiters in its timing line. The parser read them as ASCII.",
+                $lineNumber,
+                $index,
+                $rawLines,
+                ParseWarningAction::Repaired
+            );
         }
         if ($arrow !== "-->") {
             $this->warn(

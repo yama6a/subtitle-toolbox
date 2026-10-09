@@ -435,6 +435,7 @@ $report->changes[0]->message;                                                   
 | Input | Parser result | Formatter output |
 |:--- |:--- |:--- |
 | `0:00:01.5` | 1.5 s. Accepts a dot, one to three hour digits and one to three millisecond digits. | `00:00:01,500` |
+| `00：00：01，000` | 1 s in lenient mode, with a warning. Lenient mode reads the full-width `：`, `，`, `．` and `。` in a timing line as `:`, `,` and `.`. Cue text keeps them. | `00:00:01,000` |
 | `00:00:01,000-->00:00:02,000` | 1 s to 2 s. Accepts any spaces or tabs around `-->`, or none. Lenient mode also reads an arrow with 1 or more dashes, such as `->`, and warns. | `00:00:01,000 --> 00:00:02,000` |
 | `X1:100 X2:600 Y1:40 Y2:80` after the end time | `findFormatData('srt')['coordinates']` | the same coordinates |
 | `align:start position:0%` after the end time | `findFormatData('vtt')`, for the WebVTT settings `vertical`, `line`, `position`, `size` and `align`. Other text after the end time throws. Lenient mode ignores it and warns. | nothing. The WebVTT formatter writes the settings. |
