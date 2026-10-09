@@ -196,7 +196,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --to srt --output-dir fixed/ -
 | 1. Read | | input options | |
 | 2. Forced | `forced` | `--forced-only` | OCR then reads only the cues that stay |
 | 3. OCR | `ocr` | `--ocr` | the later steps need text |
-| 4. Text | `errors`, `sdh`, `replace`, `text` | `--errors-fix`, `--sdh`, `--replace`, `--speakers`, `--case`, `--strip-tags` | the removal of hearing-impaired annotations changes the line lengths, so it runs before wrapping |
+| 4. Text | `errors`, `sdh`, `replace`, `text` | `--errors-fix`, `--sdh`, `--replace`, `--speakers`, `--case`, `--strip-tags`, `--rtl` | the removal of hearing-impaired annotations changes the line lengths, so it runs before wrapping |
 | 5. Structure | `structure` | `--structure-resegment`, `--structure-unwrap`, `--structure-merge-short`, `--structure-split-long`, `--structure-wrap`, `--structure-merge-duplicates` | |
 | 6. Timing | `retime`, `snap`, `timing` | `--shift`, `--scale`, `--from-fps` and `--to-fps`, `--snap-shot-changes`, `--timing-fix-overlaps`, `--timing-min-duration` | splits in step 5 create new cues |
 | 7. Masking | `masking` | `--mask-words` | the mute ranges of `--mute-edl` and `--mute-filter` need the final times |
@@ -230,6 +230,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --to srt --output-dir fixed/ -
 | `--speakers MODE` | `prefix`, `dashes`, `colors` or `from-prefix`. Calls `SpeakerLabels::apply()` with `to: SpeakerStyle::Prefix`, `DialogueDashes` or `Colors`, or with `readPrefixes: true`, and the other options at their defaults, see [Speakers](text.md#speakers) |
 | `--case MODE` | `upper`, `lower` or `sentence`, with `changeCase()` |
 | `--strip-tags` | removes all formatting tags, such as `<i>` and `<font>` |
+| `--rtl MODE` | `fix` calls [`fixRightToLeft()`](text.md#transforms), which wraps right-to-left lines in Unicode embedding marks |
 | `--language CODE` | the language of `--case` and `--errors-fix`, for example `en`, `de-AT` or `tr`. `tr` and `az` map `i` to `İ` and `ı` to `I`. Without it, `--errors-fix` takes the `language` metadata |
 
 ### Masking

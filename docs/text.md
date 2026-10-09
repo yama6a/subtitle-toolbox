@@ -16,6 +16,7 @@ $subtitle->stripFormatting();                                                   
 $subtitle->stripFormatting(['i']);                                                      // keeps <i>, removes all other tags
 $subtitle->changeCase(CaseMode::Sentence);                                              // 'WHERE ARE YOU? HOME.' becomes 'Where are you? Home.'
 $subtitle->changeCase(CaseMode::Upper, 'tr');                                           // Turkish rules: 'istanbul' becomes 'İSTANBUL'
+$subtitle->fixRightToLeft();                                                            // wraps each Arabic or Hebrew line in U+202B and U+202C
 $subtitle->mapText(fn (string $text, SubtitleCue $cue): string => str_replace("''", '"', $text));
 $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>");
 ```
@@ -36,6 +37,10 @@ $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>
   - It starts 2 s or more after the end of the cue before it.
 - **Speaker changes**: a cue or line that starts with the CEA-608 speaker change `>>` or a dialogue dash always starts a new sentence. `>> TICKETS` becomes `>> Tickets`. A dash before a digit, as in `-20`, is a minus sign.
 - **English `I`**: with the language `en`, `en-*` or `null`, sentence case writes the pronoun `I` and `I'm`, `I'll`, `I've` and `I'd` in upper case. `i.e.` stays lower case. Sentence case reads the whole line across tags, so `W<b>I</b>NDOW` becomes `W<b>i</b>ndow`. Names become lower case. Fix them after with `replaceText()`.
+- **Right-to-left text**: players with a left-to-right base direction show `مرحبا؟` with the `؟` at the left end. `fixRightToLeft()` wraps each line with an Arabic, Hebrew, Syriac, Thaana or N'Ko letter in the embedding marks U+202B and U+202C. Then the punctuation shows at the right end.
+  - Tags and override blocks such as `{\an8}` at the start and the end of the line stay outside the marks, so `<i>שלום!</i>` becomes `<i>`U+202B`שלום!`U+202C`</i>`.
+  - The method first removes the U+202B and U+202C marks of the line, so a second call changes nothing.
+  - Lines without a right-to-left letter and ASS drawings with `{\p1}` stay unchanged.
 
 ## Hearing-impaired annotations
 ```php

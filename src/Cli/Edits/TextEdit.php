@@ -23,6 +23,7 @@ final class TextEdit extends Edit
         private readonly ?CaseMode $case,
         private readonly ?string $language,
         private readonly ?SpeakerLabelOptions $speakers,
+        private readonly ?string $rtl,
     ) {
     }
 
@@ -35,7 +36,7 @@ final class TextEdit extends Edit
 
     public static function summary(): string
     {
-        return "Convert speaker labels, change the case, remove tags.";
+        return "Convert speaker labels, change the case, remove tags, fix right-to-left text.";
     }
 
 
@@ -45,6 +46,7 @@ final class TextEdit extends Edit
             Option::value("speakers", "MODE", "Convert <v> speaker tags: prefix (ANNA: Hi), dashes, colors, or from-prefix (ANNA: to <v Anna>)."),
             Option::value("case", "MODE", "Change the case of the text between tags: upper, lower or sentence."),
             Option::flag("strip-tags", "Remove all formatting tags, such as <i> and <font>, from the cue text."),
+            Option::value("rtl", "MODE", "Right-to-left text: fix wraps each Arabic or Hebrew line in Unicode embedding marks."),
         ];
     }
 
@@ -53,12 +55,13 @@ final class TextEdit extends Edit
     {
         $case     = $arguments->choice("case", array_column(CaseMode::cases(), "value"));
         $speakers = $arguments->choice("speakers", array_keys(self::speakerModes()));
-        if (!$arguments->has("strip-tags") && $case === null && $speakers === null) {
+        $rtl      = $arguments->choice("rtl", ["fix"]);
+        if (!$arguments->has("strip-tags") && $case === null && $speakers === null && $rtl === null) {
             return null;
         }
 
         return new self($arguments->has("strip-tags"), $case === null ? null : CaseMode::from($case), $arguments->value("language"),
-                        $speakers === null ? null : self::speakerModes()[$speakers]);
+                        $speakers === null ? null : self::speakerModes()[$speakers], $rtl);
     }
 
 
@@ -86,6 +89,9 @@ final class TextEdit extends Edit
         }
         if ($this->stripTags) {
             $subtitle->stripFormatting();
+        }
+        if ($this->rtl === "fix") {
+            $subtitle->fixRightToLeft();
         }
 
         return $subtitle;

@@ -127,6 +127,30 @@ trait TextTransforms
     }
 
 
+    /**
+     * Wraps each line with right-to-left letters in the embedding marks U+202B and U+202C, inside its leading and trailing tags.
+     * Players with a left-to-right base direction then show the punctuation of Arabic or Hebrew at the right end.
+     */
+    public function fixRightToLeft(): self
+    {
+        return $this->textTransformsMapCues(fn (SubtitleCue $cue): array => array_map(self::textTransformsFixRightToLeft(...), $cue->getLines()));
+    }
+
+
+    private static function textTransformsFixRightToLeft(string $line): string
+    {
+        $tag  = Markup::TAG . '|\{\\\\[^{}]*\}';
+        $text = str_replace(["\u{202B}", "\u{202C}"], "", $line);
+        if (preg_match('/\{[^{}]*\\\\p[1-9]/', $text) === 1
+            || preg_match('/(?=\p{L})[\p{Arabic}\p{Hebrew}\p{Syriac}\p{Thaana}\p{Nko}]/u', Markup::visibleText($text)) !== 1
+            || preg_match("/^((?:$tag)*)(.*?)((?:$tag)*)\$/su", $text, $matches) !== 1) {
+            return $line;
+        }
+
+        return "$matches[1]\u{202B}$matches[2]\u{202C}$matches[3]";
+    }
+
+
     private function textTransformsSentenceCase(bool $turkic, bool $english): self
     {
         $this->textTransformsSentenceCaseRuns($turkic);

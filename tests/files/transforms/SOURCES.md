@@ -10,3 +10,5 @@
 | `own_cea608_sound_cues.vtt` | Written for this repository in the shape of `own_cea608_caps.vtt`. Sound cues in brackets and parentheses, music cues with `♪`, a speaker label cue `JOHN:`, and italic tags around some of them. | MIT |
 | `own_cea608_sound_cues_sentence.vtt` | Written for this repository. Expected `WebVttFormatter` output for `own_cea608_sound_cues.vtt` after `changeCase("sentence")`. | MIT |
 | `own_multilingual_caps.srt` | Written for this repository. SubRip with UTF-8 BOM and CR LF line endings. Upper case Greek, German and Turkish text, bold, italic and colour tags, and `<` and `&` in the text. | MIT |
+| `own_rtl.srt` | Written for this repository. SubRip with Arabic and Hebrew lines, italic and bold tags, a `{\an8}` override, an ASS drawing and a left-to-right line. | MIT |
+| `own_rtl_fixed.srt` | Written for this repository. Expected `SubRipFormatter` output for `own_rtl.srt` after `fixRightToLeft()`. | MIT |

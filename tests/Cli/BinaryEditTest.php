@@ -40,6 +40,17 @@ class BinaryEditTest extends BinaryTestCase
     }
 
 
+    public function testRtlFix(): void
+    {
+        copy(self::FILES . "transforms/own_rtl.srt", "$this->dir/rtl.srt");
+
+        $this->assertSame([0, file_get_contents(self::FILES . "transforms/own_rtl_fixed.srt"), ""],
+                          $this->runBinary(["convert", "rtl.srt", "--to", "srt", "-o", "-", "--rtl", "fix"]));
+        $this->assertSame([2, "", "Error: The option --rtl must be fix, got \"left\".\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+                          $this->runBinary(["convert", "rtl.srt", "--to", "srt", "-o", "-", "--rtl", "left"]));
+    }
+
+
     public function testForcedOnly(): void
     {
         copy(__DIR__ . "/../files/forced/forced_signs_2398.itt", "$this->dir/signs.itt");
