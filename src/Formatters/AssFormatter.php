@@ -37,10 +37,6 @@ final class AssFormatter extends SubtitleFormatter
     {
         $options ??= new WriteOptions();
         $data    = $subtitle->findFormatData(AssParser::FORMAT_DATA_KEY) + $this->defaultData();
-        $style   = $this->formatOptions($options)->style;
-        if ($style !== null) {
-            $data = $this->withDefaultStyle($data, $style);
-        }
         $context = new AssContext(
             $this->isSsa($data),
             $options->stripTags,
@@ -48,6 +44,11 @@ final class AssFormatter extends SubtitleFormatter
             $data["styles"] ?? [],
             strcasecmp($data["stylesSection"] ?? "", "V4 Styles") === 0,
         );
+        // The cue tags follow the styles before the style option, so that the option changes the look of every cue without its own tag.
+        $style = $this->formatOptions($options)->style;
+        if ($style !== null) {
+            $data = $this->withDefaultStyle($data, $style);
+        }
 
         $order = $data["sectionOrder"];
         if (!in_array("script info", array_map("strtolower", $order), true)) {

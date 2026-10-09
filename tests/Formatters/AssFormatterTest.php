@@ -146,6 +146,20 @@ class AssFormatterTest extends TestCase
     }
 
 
+    public function testStyleOptionSetsTheLookOfCuesWithoutWritingResetTags(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue(new SubtitleCue(1, 2, "Hello"))
+            ->addCue(new SubtitleCue(3, 4, "<i>Hello</i> world"));
+
+        $formatted = $subtitle->toString(Format::Ass, self::styleOptions("Italic=-1,Alignment=8"));
+
+        $this->assertStringContainsString("Style: Default,Arial,16,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,-1,0,0,100,100,0,0,1,1,0,8,", $formatted);
+        $this->assertStringContainsString("Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello\n", $formatted);
+        $this->assertStringContainsString("Dialogue: 0,0:00:03.00,0:00:04.00,Default,,0,0,0,,{\\i1}Hello{\\i0} world\n", $formatted);
+    }
+
+
     public function testStyleOptionChangesOnlyTheDefaultStyleOfAnAssFile(): void
     {
         $subtitle = $this->parseFile("own_aegisub.ass");
