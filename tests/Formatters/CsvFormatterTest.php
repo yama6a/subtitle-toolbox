@@ -84,12 +84,30 @@ class CsvFormatterTest extends TestCase
     }
 
 
-    public function testAnUnknownStoredTimeFormatWritesTheDotForm(): void
+    /**
+     * @return array<string, array{string, string, string}>
+     */
+    public static function unknownStoredValues(): array
+    {
+        return [
+            "time format" => ["timeFormat", "hh:mm:ss;fff", 'The field formatData.csv.timeFormat must be one of "seconds", "hh:mm:ss.mmm", "hh:mm:ss,mmm", "hh:mm:ss:ff".'],
+            "delimiter"   => ["delimiter", "|", 'The field formatData.csv.delimiter must be one of ",", ";", "\t".'],
+        ];
+    }
+
+
+    #[DataProvider("unknownStoredValues")]
+    public function testSetFormatDataRejectsAnUnknownStoredValue(string $field, string $value, string $message): void
     {
         $subtitle = (new CsvParser())->parse("start,end,text\n1.5,2,a\n", new ReadOptions());
-        $subtitle->setFormatData("csv", ["timeFormat" => "hh:mm:ss;fff"] + $subtitle->findFormatData("csv"));
 
-        $this->assertSame("start,end,text\n00:00:01.500,00:00:02.000,a\n", $subtitle->toString(Format::Csv, new WriteOptions(bom: false)));
+        try {
+            $subtitle->setFormatData("csv", [$field => $value] + $subtitle->findFormatData("csv"));
+            $this->fail("setFormatData() accepted the $field $value.");
+        } catch (InvalidArgumentException $exception) {
+            $this->assertSame($message, $exception->getMessage());
+        }
+        $this->assertSame("start,end,text\n1.5,2,a\n", $subtitle->toString(Format::Csv, new WriteOptions(bom: false)));
     }
 
 

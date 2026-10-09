@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\Image\CueImage;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\CsvParser;
@@ -14,6 +15,7 @@ use SubtitleToolbox\Parsers\IttParser;
 use SubtitleToolbox\Parsers\LyricsParser;
 use SubtitleToolbox\Parsers\MicroDvdParser;
 use SubtitleToolbox\Parsers\MpSubParser;
+use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\Parsers\SamiParser;
 use SubtitleToolbox\Parsers\SccParser;
 use SubtitleToolbox\Parsers\SubRipParser;
@@ -24,7 +26,7 @@ use SubtitleToolbox\Parsers\WebVttParser;
 /**
  * FormatDataSchema checks the types of the format data fields that the formatters read.
  * So setFormatData(), fromArray() and JsonParser reject a bad field with its path before a formatter fails on it.
- * Other fields pass as they are. The schema checks types only, not values.
+ * Other fields pass as they are.
  *
  * The format data of a format is an object of fields, or "strings" for an object of strings with any keys.
  * A type is one of these. A "?" in front of a type name, such as "?string" or "?list", also allows null.
@@ -33,6 +35,7 @@ use SubtitleToolbox\Parsers\WebVttParser;
  * - ["names", type]: an object whose keys are names
  * - ["object", [key => type]]: named fields. A "!" in front of a key marks a required field.
  * - ["range", min, max]: an integer in a range
+ * - ["oneOf", list of strings]: one of these strings
  * - ["keys", list of names, type]: an object with only these keys
  *
  * @internal
@@ -42,6 +45,13 @@ final class FormatDataSchema
     private const STRINGS = ["list", "string"];
 
     private const CSV_MAX_COLUMNS = 1000;
+
+    private const CSV_TIME_FORMATS = [
+        CsvTimeFormat::Seconds->value,
+        CsvTimeFormat::Dot->value,
+        CsvTimeFormat::Comma->value,
+        CsvTimeFormat::Frames->value,
+    ];
 
     private const ATTRIBUTES = ["names", "string"];
 
@@ -60,11 +70,11 @@ final class FormatDataSchema
             "sections"           => ["list", self::STRINGS],
         ],
         CsvParser::FORMAT_DATA_KEY                => [
-            "delimiter"  => "string",
+            "delimiter"  => ["oneOf", CsvReadOptions::DELIMITERS],
             "!header"    => ["?list", "string"],
             "!roles"     => ["keys", ["identifier", "start", "end", "duration", "speaker", "text"], ["range", 0, self::CSV_MAX_COLUMNS - 1]],
             "!width"     => ["range", 0, self::CSV_MAX_COLUMNS],
-            "timeFormat" => "string",
+            "timeFormat" => ["oneOf", self::CSV_TIME_FORMATS],
             "frameRate"  => "?number",
         ],
         FfMetadataChaptersParser::FORMAT_DATA_KEY => [
@@ -246,12 +256,13 @@ final class FormatDataSchema
             "ttiBlock" => is_string($value) && preg_match('/^[0-9A-Fa-f]{256}$/', $value) === 1,
             "timeBase" => is_string($value) && preg_match('/^[1-9]\d*\/[1-9]\d*$/', $value) === 1,
             "range"    => is_int($value) && $value >= $type[1] && $value <= $type[2],
+            "oneOf"    => in_array($value, $type[1], true),
             default    => is_array($value),
         };
         if (!$valid) {
             return "The field $path must be " . self::describe($type) . ".";
         }
-        if (!is_array($type) || $type[0] === "range") {
+        if (!is_array($type) || in_array($type[0], ["range", "oneOf"], true)) {
             return null;
         }
 
@@ -352,6 +363,7 @@ final class FormatDataSchema
             "ttiBlock" => "a TTI block of 256 hexadecimal digits",
             "timeBase" => "a time base such as \"1/1000\"",
             "range"    => "an integer from $type[1] to $type[2]",
+            "oneOf"    => "one of " . implode(", ", array_map(fn (string $value): string => json_encode($value, JSON_THROW_ON_ERROR), $type[1])),
             "list"     => "a list or an object",
             default    => "an object",
         };
