@@ -19,6 +19,8 @@ final class TimingFixEdit extends Edit
         private readonly bool $overlaps,
         private readonly ?float $minDuration,
         private readonly ?float $minGap,
+        private readonly ?float $leadIn,
+        private readonly ?float $leadOut,
     ) {
     }
 
@@ -31,7 +33,7 @@ final class TimingFixEdit extends Edit
 
     public static function summary(): string
     {
-        return "Fix overlaps and short cues.";
+        return "Fix overlaps and short cues, and add lead-in and lead-out.";
     }
 
 
@@ -40,21 +42,25 @@ final class TimingFixEdit extends Edit
         return [
             Option::flag("timing-fix-overlaps", "End each cue at least --timing-min-gap seconds before the next cue starts."),
             Option::value("timing-min-duration", "SECONDS", "Show each cue for at least this time where the next cue allows it."),
-            Option::value("timing-min-gap", "SECONDS", "Gap between cues for --timing-fix-overlaps and --timing-min-duration. Default: 0."),
+            Option::value("timing-lead-in", "SECONDS", "Start each cue this time earlier where the previous cue allows it."),
+            Option::value("timing-lead-out", "SECONDS", "End each cue this time later where the next cue allows it. The lead-out comes before the lead-in."),
+            Option::value("timing-min-gap", "SECONDS", "Gap between cues for --timing-fix-overlaps, --timing-min-duration and the lead options. Default: 0."),
         ];
     }
 
 
     public static function fromArguments(Arguments $arguments): ?static
     {
-        self::needsOneOf($arguments, ["timing-fix-overlaps", "timing-min-duration"], "timing-min-gap");
+        self::needsOneOf($arguments, ["timing-fix-overlaps", "timing-min-duration", "timing-lead-in", "timing-lead-out"], "timing-min-gap");
         $minDuration = $arguments->positiveSeconds("timing-min-duration");
         $minGap      = $arguments->nonNegativeSeconds("timing-min-gap");
-        if (!$arguments->has("timing-fix-overlaps") && $minDuration === null) {
+        $leadIn      = $arguments->nonNegativeSeconds("timing-lead-in");
+        $leadOut     = $arguments->nonNegativeSeconds("timing-lead-out");
+        if (!$arguments->has("timing-fix-overlaps") && $minDuration === null && $leadIn === null && $leadOut === null) {
             return null;
         }
 
-        return new self($arguments->has("timing-fix-overlaps"), $minDuration, $minGap);
+        return new self($arguments->has("timing-fix-overlaps"), $minDuration, $minGap, $leadIn, $leadOut);
     }
 
 
@@ -65,6 +71,9 @@ final class TimingFixEdit extends Edit
         }
         if ($this->minDuration !== null) {
             $subtitle->extendShortCues($this->minDuration, ...Command::given(["minGap" => $this->minGap]));
+        }
+        if ($this->leadIn !== null || $this->leadOut !== null) {
+            $subtitle->addLeadInOut($this->leadIn ?? 0, $this->leadOut ?? 0, ...Command::given(["minGap" => $this->minGap]));
         }
 
         return $subtitle;

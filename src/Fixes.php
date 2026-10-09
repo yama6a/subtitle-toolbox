@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Timing\LeadInOut;
 
 /**
  * @internal
@@ -61,6 +62,23 @@ trait Fixes
                 $cue->setEnd($end);
             }
         }
+
+        return $this;
+    }
+
+
+    /**
+     * Shows each cue $leadIn seconds earlier and $leadOut seconds longer, but at least $minGap seconds away from its neighbours.
+     * The lead-out comes first, so it takes the space between two cues before the lead-in of the next cue.
+     * A start or end inside another cue stays where it is.
+     */
+    public function addLeadInOut(float $leadIn, float $leadOut, float $minGap = 0): self
+    {
+        OptionChecks::nonNegativeFinite($leadIn, "The lead-in must not be negative, got %s.");
+        OptionChecks::nonNegativeFinite($leadOut, "The lead-out must not be negative, got %s.");
+        $this->fixesAssertGap($minGap);
+
+        LeadInOut::apply($this->cues, $leadIn, $leadOut, $minGap);
 
         return $this;
     }

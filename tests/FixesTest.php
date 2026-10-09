@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use SubtitleToolbox\Tests\Support\TestSubtitles;
 use SubtitleToolbox\Validation\ValidationRules;
 
@@ -162,6 +163,119 @@ class FixesTest extends \PHPUnit\Framework\TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage("The minimum duration must be greater than 0, got 0.");
         TestSubtitles::fromTimes([[1, 2]])->extendShortCues(0);
+    }
+
+
+    public function testAddLeadInOutOnSpeechToTextTiming(): void
+    {
+        $subtitle = Subtitle::fromString((string)file_get_contents(__DIR__ . "/files/fixes/own_asr_tight_timing.srt"), Format::SubRip);
+
+        $this->assertSame($subtitle, $subtitle->addLeadInOut(0.2, 0.3, 0.083));
+
+        $this->assertSame(file_get_contents(__DIR__ . "/files/fixes/own_asr_tight_timing_lead.srt"), $subtitle->toString(Format::SubRip));
+    }
+
+
+    /**
+     * @return array<string, array{list<array{float, float}>, array{float, float, float}, list<array{float, float}>}>
+     */
+    public static function leadInOutCases(): array
+    {
+        return [
+            "free space"           => [[[1, 2], [5, 6]], [0.2, 0.3, 0], [[0.8, 2.3], [4.8, 6.3]]],
+            "small gap"            => [[[1, 2], [2.1, 3]], [0.2, 0.3, 0.04], [[0.8, 2.06], [2.1, 3.3]]],
+            "never below 0"        => [[[0.1, 1]], [0.2, 0, 0], [[0.0, 1.0]]],
+            "overlap kept"         => [[[1, 3], [2, 4]], [0.2, 0.2, 0], [[0.8, 3.0], [2.0, 4.2]]],
+            "lead-out first"       => [[[1, 2], [2.2, 3]], [0.3, 0.3, 0], [[0.7, 2.2], [2.2, 3.3]]],
+            "gap below minimum"    => [[[1, 2], [2.02, 3]], [0.2, 0.2, 0.04], [[0.8, 2.0], [2.02, 3.2]]],
+            "same start"           => [[[1, 2], [1, 3], [5, 6]], [0.2, 0.2, 0], [[1.0, 2.0], [1.0, 3.2], [4.8, 6.2]]],
+            "inside another cue"   => [[[1, 5], [2, 3]], [0.2, 0.2, 0], [[0.8, 5.2], [2.0, 3.0]]],
+            "zero leads"           => [[[1, 2], [5, 6]], [0, 0, 0.5], [[1.0, 2.0], [5.0, 6.0]]],
+            "zero-length cue"      => [[[1, 1], [3, 4]], [0.2, 0.2, 0], [[0.8, 1.2], [2.8, 4.2]]],
+        ];
+    }
+
+
+    /**
+     * @param list<array{float, float}> $times
+     * @param array{float, float, float} $arguments
+     * @param list<array{float, float}> $expected
+     */
+    #[DataProvider("leadInOutCases")]
+    public function testAddLeadInOut(array $times, array $arguments, array $expected): void
+    {
+        $subtitle = TestSubtitles::fromTimes($times);
+
+        $subtitle->addLeadInOut(...$arguments);
+
+        $this->assertSame($expected, TestSubtitles::times($subtitle));
+    }
+
+
+    public function testAddLeadInOutUsesTheTimeOrderOfTheCues(): void
+    {
+        $subtitle = (new Subtitle())->addCues([new SubtitleCue(1, 2, "late"), new SubtitleCue(3, 4, "early")]);
+        $subtitle->getCues()[0]->setStart(5)->setEnd(6);
+        $subtitle->getCues()[1]->setStart(1)->setEnd(4.9);
+
+        $subtitle->addLeadInOut(0.2, 0.3);
+
+        $this->assertSame([[5.0, 6.3], [0.8, 5.0]], TestSubtitles::times($subtitle));
+    }
+
+
+    public function testAddLeadInOutCreatesNoOverlapAndNoNegativeStart(): void
+    {
+        mt_srand(461);
+        for ($round = 0; $round < 200; $round++) {
+            $times = [];
+            for ($index = 0; $index < 12; $index++) {
+                $start   = mt_rand(0, 6000) / 1000;
+                $times[] = [$start, $start + mt_rand(0, 1500) / 1000];
+            }
+            $subtitle = TestSubtitles::fromTimes($times);
+            $times    = TestSubtitles::times($subtitle);
+            $minGap   = mt_rand(0, 100) / 1000;
+
+            $subtitle->addLeadInOut(mt_rand(0, 500) / 1000, mt_rand(0, 500) / 1000, $minGap);
+
+            $after = TestSubtitles::times($subtitle);
+            foreach ($after as $index => [$start, $end]) {
+                $this->assertGreaterThanOrEqual(0, $start);
+                $this->assertLessThanOrEqual($times[$index][0], $start);
+                $this->assertGreaterThanOrEqual($times[$index][1], $end);
+                foreach ($after as $other => [$otherStart, $otherEnd]) {
+                    $wasApart = $times[$index][1] <= $times[$other][0];
+                    if ($other !== $index && $wasApart) {
+                        $this->assertLessThanOrEqual($otherStart, $end, "round $round, cue $index before cue $other");
+                    }
+                }
+            }
+        }
+    }
+
+
+    /**
+     * @return array<string, array{float, float, float, string}>
+     */
+    public static function invalidLeadInOut(): array
+    {
+        return [
+            "negative lead-in"  => [-0.1, 0, 0, "The lead-in must not be negative, got -0.1."],
+            "negative lead-out" => [0, -1, 0, "The lead-out must not be negative, got -1."],
+            "NAN lead-in"       => [NAN, 0, 0, "The lead-in must not be negative, got NAN."],
+            "INF lead-out"      => [0, INF, 0, "The lead-out must not be negative, got INF."],
+            "negative gap"      => [0.2, 0.2, -1, "The minimum gap must not be negative, got -1."],
+        ];
+    }
+
+
+    #[DataProvider("invalidLeadInOut")]
+    public function testAddLeadInOutWithInvalidArgumentThrowsException(float $leadIn, float $leadOut, float $minGap, string $message): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage($message);
+        TestSubtitles::fromTimes([[1, 2]])->addLeadInOut($leadIn, $leadOut, $minGap);
     }
 
 

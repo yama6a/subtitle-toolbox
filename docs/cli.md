@@ -216,7 +216,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --to srt --output-dir fixed/ -
 | 3. OCR | `ocr` | `--ocr` | the later steps need text |
 | 4. Text | `errors`, `sdh`, `replace`, `text` | `--errors-fix`, `--sdh`, `--replace`, `--speakers`, `--case`, `--strip-tags`, `--rtl` | the removal of hearing-impaired annotations changes the line lengths, so it runs before wrapping |
 | 5. Structure | `structure` | `--structure-resegment`, `--structure-unwrap`, `--structure-merge-same-time`, `--structure-merge-short`, `--structure-split-long`, `--structure-wrap`, `--structure-merge-duplicates` | |
-| 6. Timing | `retime`, `snap`, `timing` | `--shift`, `--scale`, `--from-fps` and `--to-fps`, `--snap-shot-changes`, `--timing-fix-overlaps`, `--timing-min-duration` | splits in step 5 create new cues |
+| 6. Timing | `retime`, `snap`, `timing` | `--shift`, `--scale`, `--from-fps` and `--to-fps`, `--snap-shot-changes`, `--timing-fix-overlaps`, `--timing-min-duration`, `--timing-lead-in` and `--timing-lead-out` | splits in step 5 create new cues |
 | 7. Masking | `masking` | `--mask-words` | the mute ranges of `--mute-edl` and `--mute-filter` need the final times |
 | 8. Karaoke | `karaoke` | `--karaoke` | it multiplies the cues |
 | 9. Write | `ass` | output options, `--ass-karaoke-tag`, `--ass-style` | |
@@ -299,7 +299,9 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 | `--no-snap-chain` | `chain: false`, see [Closing gaps](editing.md#closing-gaps) |
 | `--timing-fix-overlaps` | `fixOverlaps()` with `--timing-min-gap` seconds |
 | `--timing-min-duration SECONDS` | `extendShortCues()` with this [time](#times) and `--timing-min-gap` |
-| `--timing-min-gap SECONDS` | the gap of `--timing-fix-overlaps` and `--timing-min-duration`, a [time](#times) |
+| `--timing-lead-in SECONDS` | `addLeadInOut()` with this [time](#times) as the lead-in and `--timing-min-gap` |
+| `--timing-lead-out SECONDS` | `addLeadInOut()` with this [time](#times) as the lead-out and `--timing-min-gap` |
+| `--timing-min-gap SECONDS` | the gap of `--timing-fix-overlaps`, `--timing-min-duration`, `--timing-lead-in` and `--timing-lead-out`, a [time](#times) |
 
 ```sh
 ffmpeg -i movie.mp4 -vf "select='gt(scene,0.3)',showinfo" -f null - 2> scenes.log
@@ -308,6 +310,7 @@ vendor/bin/subtitle-toolbox convert movie.srt --to srt -o movie.timed.srt --vide
 
 - **Gaps only**: without `--snap-shot-changes`, a `--snap-` option such as `--snap-min-gap-frames 2` only [closes gaps](editing.md#closing-gaps).
 - **Frame rates**: `--input-fps` sets only the frame rate of the input. It does not set `--video-fps`.
+- **Timing order**: the `timing` group runs `--timing-fix-overlaps` first, then `--timing-min-duration`, then the lead-in and lead-out. One of `--timing-lead-in` and `--timing-lead-out` alone uses 0 for the other.
 
 ### Karaoke and ASS output
 | Option | Effect |
