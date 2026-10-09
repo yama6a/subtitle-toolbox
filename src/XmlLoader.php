@@ -16,17 +16,21 @@ use LibXMLError;
 final class XmlLoader
 {
     /**
-     * Returns the document, or null when $xml is empty or not well-formed. $error receives the last libxml error.
+     * Returns the document, or null when $xml is empty or not well-formed. $error receives the last libxml error and $firstError the first.
+     * With $recover, libxml repairs what it can and returns null only when no root element is left.
      */
-    public static function xml(string $xml, ?LibXMLError &$error = null): ?DOMDocument
+    public static function xml(string $xml, ?LibXMLError &$error = null, bool $recover = false, ?LibXMLError &$firstError = null): ?DOMDocument
     {
         $xml      = self::declareUtf8($xml);
         $document = new DOMDocument();
+        // PHP 8.2 and 8.3 have no LIBXML_RECOVER constant.
+        $document->recover = $recover;
         $previous = libxml_use_internal_errors(true);
         try {
             // LIBXML_NONET blocks network access. Without LIBXML_NOENT and LIBXML_DTDLOAD, libxml loads no external entity.
-            $loaded = $xml !== "" && $document->loadXML($xml, LIBXML_NONET);
-            $error  = libxml_get_last_error() ?: null;
+            $loaded     = $xml !== "" && $document->loadXML($xml, LIBXML_NONET);
+            $error      = libxml_get_last_error() ?: null;
+            $firstError = libxml_get_errors()[0] ?? null;
         } finally {
             libxml_clear_errors();
             libxml_use_internal_errors($previous);
