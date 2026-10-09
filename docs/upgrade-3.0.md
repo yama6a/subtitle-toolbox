@@ -48,6 +48,8 @@ The same code runs in both versions and gives another result. The CLI option in 
 - **Sentence case**: a cue continues the sentence of the cue before it. A cue starts a new sentence only in these cases:
   - It is the first cue.
   - The cue before it ends with `.`, `!`, `?` or the ellipsis U+2026. Closing quotes or brackets can follow.
+  - The cue before it ends with `]`, `)`, `♪` or the `:` of a speaker label such as `JOHN:`. Closing tags can follow.
+  - It starts with `[`, `(` or `♪`. Opening tags can come first.
   - It starts 2 s or more after the cue before it.
   - It starts with the speaker change `>>` or a dialogue dash. A line within a cue that starts so also starts a new sentence. A dash before a digit, as in `-20`, is a minus sign.
 - **Ellipsis**: the ellipsis U+2026 ends a sentence within a cue, as `.`, `!` and `?` do. `WAIT… WHAT` becomes `Wait… What`. 2.x gave `Wait… what`.
