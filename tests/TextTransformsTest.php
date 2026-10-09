@@ -282,6 +282,42 @@ class TextTransformsTest extends \PHPUnit\Framework\TestCase
     }
 
 
+    public function testFixRightToLeftWrapsRightToLeftLinesInsideTheirTags(): void
+    {
+        $subtitle = Subtitle::load(self::FILES . "own_rtl.srt", Format::SubRip)->fixRightToLeft();
+
+        $this->assertSame(file_get_contents(self::FILES . "own_rtl_fixed.srt"), $subtitle->toString(Format::SubRip));
+        $this->assertSame(file_get_contents(self::FILES . "own_rtl_fixed.srt"), $subtitle->fixRightToLeft()->toString(Format::SubRip));
+    }
+
+
+    #[DataProvider("rightToLeftProvider")]
+    public function testFixRightToLeft(string $input, string $expected): void
+    {
+        $this->assertSame([$expected], TestSubtitles::texts(TestSubtitles::fromTexts([$input])->fixRightToLeft()));
+    }
+
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function rightToLeftProvider(): array
+    {
+        return [
+            "Arabic"                => ["مرحبا، كيف حالك؟", "\u{202B}مرحبا، كيف حالك؟\u{202C}"],
+            "tags stay outside"     => ["<i>שלום!</i>", "<i>\u{202B}שלום!\u{202C}</i>"],
+            "override stays out"    => ["{\\an8}مرحبا.", "{\\an8}\u{202B}مرحبا.\u{202C}"],
+            "each line"             => ["שלום.\nHi.\n- مرحبا.", "\u{202B}שלום.\u{202C}\nHi.\n\u{202B}- مرحبا.\u{202C}"],
+            "already fixed"         => ["<i>\u{202B}שלום!\u{202C}</i>", "<i>\u{202B}שלום!\u{202C}</i>"],
+            "marks inside the text" => ["\u{202B}שלום\u{202C} <b>!</b>", "\u{202B}שלום <b>!\u{202C}</b>"],
+            "left to right"         => ["Hello.", "Hello."],
+            "Arabic digits only"    => ["١٢٣.", "١٢٣."],
+            "drawing"               => ["{\\p1}m 0 0 l 10 10{\\p0}", "{\\p1}m 0 0 l 10 10{\\p0}"],
+            "tags only"             => ["<i></i>", "<i></i>"],
+        ];
+    }
+
+
     public function testGermanKeepsALoneLowerCaseI(): void
     {
         $this->assertSame(["Ich bin da, i."], TestSubtitles::texts(TestSubtitles::fromTexts(["ICH BIN DA, I."])->changeCase(CaseMode::Sentence, "de")));
