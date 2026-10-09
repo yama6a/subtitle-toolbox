@@ -199,30 +199,27 @@ trait CueEditing
         $maxGap  = Timecode::roundToMilliseconds($maxGap);
         $anchors = CommentAnchors::of($this->cues, $this->comments);
         $groups  = [];
-        $group   = [];
-        $start   = 0.0;
-        $end     = 0.0;
         foreach ($this->cues as $cue) {
-            if ($group !== [] && $group[0]->getText() === $cue->getText() && CueList::canJoin($group[0], $cue)
-                && $group[0]->getAllFormatData() === $cue->getAllFormatData()
-                && Timecode::roundToMilliseconds($cue->getStart() - $end) <= $maxGap
-                && Timecode::roundToMilliseconds($start - $cue->getEnd()) <= $maxGap) {
-                $group[] = $cue;
-                $start   = min($start, $cue->getStart());
-                $end     = max($end, $cue->getEnd());
+            $last  = array_key_last($groups);
+            $group = $last === null ? null : $groups[$last];
+            $first = $group["cues"][0] ?? null;
+            if ($first !== null && $first->getText() === $cue->getText() && CueList::canJoin($first, $cue)
+                && $first->getAllFormatData() === $cue->getAllFormatData()
+                && Timecode::roundToMilliseconds($cue->getStart() - $group["end"]) <= $maxGap
+                && Timecode::roundToMilliseconds($group["start"] - $cue->getEnd()) <= $maxGap) {
+                $groups[$last]["cues"][] = $cue;
+                $groups[$last]["start"]  = min($group["start"], $cue->getStart());
+                $groups[$last]["end"]    = max($group["end"], $cue->getEnd());
                 continue;
             }
 
-            $groups[] = [$group, $start];
-            $group    = [$cue];
-            $start    = $cue->getStart();
-            $end      = $cue->getEnd();
+            $groups[] = ["cues" => [$cue], "start" => $cue->getStart(), "end" => $cue->getEnd()];
         }
-        $groups[] = [$group, $start];
 
-        foreach ($groups as [$group, $start]) {
+        foreach ($groups as ["cues" => $group, "start" => $start]) {
             if (count($group) > 1) {
                 [$this->cues, $anchors] = CueList::join($this->cues, $group, $anchors, false);
+                // A setStart() after addCue() can leave a later cue of the run with an earlier start.
                 if ($start < $group[0]->getStart()) {
                     $group[0]->setStart($start);
                 }
