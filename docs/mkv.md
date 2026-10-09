@@ -21,7 +21,7 @@ Subtitle::loadAutoDetectFormat('/media/one-track.webm');       // reads the only
 | `S_TEXT/WEBVTT` | a WebVTT subtitle with its header, cue settings, identifiers and comments |
 | `S_HDMV/PGS` | image cues from `PgsParser`, see [ocr.md](ocr.md#pgs) |
 
-- **Tracks**: `Subtitle::tracks()` lists only tracks of type subtitle. It returns `SubtitleTrack` objects from the namespace `SubtitleToolbox\Container`. Other containers return the same type.
+- **Tracks**: `Subtitle::tracks()` lists only tracks of type subtitle. It returns `SubtitleTrack` objects from the namespace `SubtitleToolbox\Container`. It reads MKV and WebM files.
 
 | Property | Type | MKV value |
 |:--- |:--- |:--- |

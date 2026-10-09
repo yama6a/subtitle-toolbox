@@ -28,11 +28,11 @@ $subtitle->mapLines(fn (string $line, SubtitleCue $cue): string => "<i>$line</i>
 - **Turkish and Azerbaijani**: pass `'tr'` or `'az'` as the second argument of `changeCase()`. Then `i` and `İ` pair, and `ı` and `I` pair. Without it, `İ` becomes `i` with a combining dot, U+0307.
 - **Sentence case**: a sentence starts at the first letter or digit after `.`, `!`, `?` or the ellipsis U+2026, and a space or line break. `www.example.com` stays lower case.
 - **Sentences across cues**: a cue continues the sentence of the cue before it, so `WE WENT TO THE` / `STORE.` becomes `We went to the` / `store.`. A cue starts a new sentence in these cases:
-  - it is the first cue.
-  - the cue before it ends with `.`, `!`, `?` or U+2026. Closing quotes and brackets may follow, as in `"STOP."`.
-  - the cue before it ends with `]`, `)`, the music note `♪` or the `:` of a speaker label. Closing tags may follow. So `[DOOR SLAMS]` / `WHAT WAS THAT?` becomes `[Door slams]` / `What was that?`.
-  - it starts with `[`, `(` or `♪`. Opening tags may come first.
-  - it starts 2 s or more after the end of the cue before it.
+  - It is the first cue.
+  - The cue before it ends with `.`, `!`, `?` or U+2026. Closing quotes and brackets may follow, as in `"STOP."`.
+  - The cue before it ends with `]`, `)`, the music note `♪` or the `:` of a speaker label. Closing tags may follow. So `[DOOR SLAMS]` / `WHAT WAS THAT?` becomes `[Door slams]` / `What was that?`.
+  - It starts with `[`, `(` or `♪`. Opening tags may come first.
+  - It starts 2 s or more after the end of the cue before it.
 - **Speaker changes**: a cue or line that starts with the CEA-608 speaker change `>>` or a dialogue dash always starts a new sentence. `>> TICKETS` becomes `>> Tickets`. A dash before a digit, as in `-20`, is a minus sign.
 - **English `I`**: with the language `en`, `en-*` or `null`, sentence case writes the pronoun `I` and `I'm`, `I'll`, `I've` and `I'd` in upper case. `i.e.` stays lower case. Names become lower case. Fix them after with `replaceText()`.
 
