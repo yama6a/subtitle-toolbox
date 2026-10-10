@@ -6,8 +6,11 @@ namespace SubtitleToolbox\Streaming;
 
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
+use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\LineEnding;
+use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\WriteOptions;
 
@@ -72,6 +75,33 @@ class StreamWriterTest extends TestCase
         $writer->close();
 
         $this->assertSame(file_get_contents(__DIR__ . "/../files/vtt/real/own_arrow_in_text.vtt"), file_get_contents($this->path));
+    }
+
+
+    public function testListsTheColorsThatTheWebVttOutputDrops(): void
+    {
+        $fixture = __DIR__ . "/../files/srt/real/own_font_colors.srt";
+        $writer  = new WebVttStreamWriter($this->path, new WriteOptions(bom: false));
+        foreach ((new SubRipStreamReader())->read($fixture) as $cue) {
+            $writer->write($cue);
+        }
+        $writer->close();
+
+        $expected = (new WebVttFormatter())->formatWithReport(Subtitle::load($fixture, Format::SubRip), new WriteOptions(bom: false));
+        $this->assertSame($expected->content, file_get_contents($this->path));
+        $this->assertEquals($expected->droppedColors, $writer->findDroppedColors());
+        $this->assertCount(1, $writer->findDroppedColors());
+        $this->assertSame("#123456", $writer->findDroppedColors()[0]->color);
+    }
+
+
+    public function testListsNoDroppedColorWhenTheWriterStripsTags(): void
+    {
+        $writer = new WebVttStreamWriter($this->path, new WriteOptions(stripTags: true));
+        $writer->write(new SubtitleCue(1, 2, "<font color=\"#123456\">Hi</font>"));
+        $writer->close();
+
+        $this->assertSame([], $writer->findDroppedColors());
     }
 
 

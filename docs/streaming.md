@@ -20,6 +20,7 @@ $writer->close();
 - **Lenient mode**: `new SubRipStreamReader(new ReadOptions(lenient: true))` skips or repairs a broken block, see [lenient-parsing.md](lenient-parsing.md). The readers use only `lenient` of `ReadOptions`. During the read, `getWarnings()` of `CueStreamReader` holds the warnings of the blocks read so far.
 - **Line endings**: a line ends at LF, CR LF or CR CR LF. A file with only CR line endings is one line for `fgets()`, so it takes memory for the whole file.
 - **WebVTT header**: `WebVttStreamReader::getHeader()` returns the header text, the header lines, and the `STYLE` and `REGION` blocks. The array is complete once the reader yields the first cue. Pass this array as the third argument of the `WebVttStreamWriter` constructor, for example `new WebVttStreamWriter($stream, header: $reader->getHeader())`.
+- **Dropped colors**: `WebVttStreamWriter` drops text colors that no WebVTT color class has, as `WebVttFormatter` does. `findDroppedColors()` returns a `WebVttDroppedColor` for each color it dropped so far. Call it after the last `write()`, see [formats.md](formats.md).
 - **Comments**: `WebVttStreamReader` skips `NOTE` blocks. `WebVttStreamWriter` writes no comments.
 - **Encoding**: the readers accept UTF-8, with or without a BOM, and keep the bytes of other 8-bit encodings. For UTF-16, add a filter: `stream_filter_append($in, 'convert.iconv.UTF-16/UTF-8')`.
 - **Closing**: `close()` flushes the stream. It closes the stream only when the writer opened it from a file path.

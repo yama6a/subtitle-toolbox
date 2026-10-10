@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Streaming;
 
+use SubtitleToolbox\Formatters\WebVttDroppedColor;
 use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\Subtitle;
@@ -23,6 +24,9 @@ final class WebVttStreamWriter implements CueStreamWriter
     private int $cueIndex = 0;
 
     private readonly WriteOptions $options;
+
+    /** @var list<WebVttDroppedColor> */
+    private array $droppedColors = [];
 
 
     /**
@@ -48,6 +52,18 @@ final class WebVttStreamWriter implements CueStreamWriter
         $block = $this->formatter->formatCueBlock($cue, $this->cueIndex++, $this->options) . $this->lineEnding;
         $this->handle->write($this->hasBlocks ? $this->lineEnding . $block : $block);
         $this->hasBlocks = true;
+        array_push($this->droppedColors, ...$this->formatter->takeDroppedColors());
+    }
+
+
+    /**
+     * Returns each <font color> that no WebVTT color class has, so the output drops it, for the cues written so far.
+     *
+     * @return list<WebVttDroppedColor>
+     */
+    public function findDroppedColors(): array
+    {
+        return $this->droppedColors;
     }
 
 
