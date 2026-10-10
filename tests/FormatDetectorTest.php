@@ -124,6 +124,8 @@ class FormatDetectorTest extends TestCase
             "MicroDVD with fps line"     => ["{1}{1}25\n{24}{72}Hello\n", Format::MicroDvd],
             "MicroDVD without end frame" => ["{24}{}Hello\n", Format::MicroDvd],
             "SubRip with dot"            => ["1\n00:00:01.000 --> 00:00:04.000\nHello\n", Format::SubRip],
+            "SubRip without cue number"  => ["00:00:01,000 --> 00:00:04,000\nHello\n", Format::SubRip],
+            "SubRip after five lines"    => ["a\nb\nc\nd\n\n 1\n00:00:01,000 --> 00:00:04,000\nHello\n", Format::SubRip],
             "SBV"                        => ["0:00:01.500,0:00:04.000\nHello\n", Format::Sbv],
             "SubViewer 2 information"    => ["[INFORMATION]\r\n[TITLE]Bakery\r\n[END INFORMATION]\r\n", Format::SubViewer],
             "SubViewer 2 timing line"    => ["00:00:01.50,00:00:04.00\nHello[br]world\n", Format::SubViewer],
@@ -210,6 +212,25 @@ class FormatDetectorTest extends TestCase
     }
 
 
+    public static function subRipWithoutLeadingCueNumber(): array
+    {
+        return [
+            "no cue numbers"            => ["no_cue_numbers.srt", 3],
+            "text before the first cue" => ["text_before_first_cue.srt", 2],
+        ];
+    }
+
+
+    #[DataProvider("subRipWithoutLeadingCueNumber")]
+    public function testDetectsSubRipWithoutALeadingCueNumber(string $file, int $cueCount): void
+    {
+        $content = file_get_contents(self::DIR . "lenient/$file");
+
+        $this->assertSame(Format::SubRip, FormatDetector::detect($content));
+        $this->assertCount($cueCount, Subtitle::fromStringAutoDetectFormat($content, new ReadOptions(lenient: true))->getCues());
+    }
+
+
     public static function unknownContent(): array
     {
         return [
@@ -225,6 +246,10 @@ class FormatDetectorTest extends TestCase
             "INI section with colon"   => ["[server:main]\nport=80\n"],
             "key value lines"          => ["TITLE=Bakery\nAUTHOR=Jane Doe\n"],
             "number without timing"    => ["1\nHello\n"],
+            "SubRip after six lines"   => ["a\nb\nc\nd\ne\nf\n1\n00:00:01,000 --> 00:00:04,000\nHello\n"],
+            "WebVTT timing without header or number" => ["00:00:01.000 --> 00:00:04.000\nHello\n"],
+            "WebVTT after text without header" => ["Converted online\n\n1\n00:00:01.000 --> 00:00:04.000\nHello\n"],
+            "SubRip timing after text without number" => ["Converted online\n\n00:00:01,000 --> 00:00:04,000\nHello\n"],
             "WEBVTT inside a word"     => ["WEBVTTX\n"],
             "EBU STL at 24 fps"        => [str_pad("850STL24.011", 1024)],
             "events without tStartMs"  => ["{\"events\": [{\"start\": 1}]}"],
