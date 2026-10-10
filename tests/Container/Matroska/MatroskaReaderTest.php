@@ -264,6 +264,51 @@ class MatroskaReaderTest extends TestCase
     }
 
 
+    public static function textTracks(): array
+    {
+        return ["S_TEXT/UTF8" => [3, 1850], "S_TEXT/ASS" => [4, 1905], "S_TEXT/WEBVTT" => [5, 2205], "S_TEXT/SSA" => [6, 2509],
+                "S_TEXT/UTF8 without duration" => [8, 2367]];
+    }
+
+
+    #[DataProvider("textTracks")]
+    public function testThrowsForAClusterTimestampThatOverflowsTheTime(int $track, int $offset): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The block of track $track at byte $offset has the time ");
+
+        MatroskaReader::open(self::DIR . "huge_timestamp.mkv")->extract($track);
+    }
+
+
+    public static function hugeTimes(): array
+    {
+        return [
+            "cluster timestamp" => [MkvFixtureWriter::cluster(1 << 40, [MkvFixtureWriter::simpleBlock(2, 0, "x")]), "S_TEXT/UTF8", "1099511627776"],
+            "block duration"    => [MkvFixtureWriter::cluster(0, [MkvFixtureWriter::blockGroup(2, 0, "x", 1 << 40)]), "S_TEXT/UTF8", "0"],
+            "PGS block"         => [MkvFixtureWriter::cluster(1 << 40, [MkvFixtureWriter::simpleBlock(2, 0, "x")]), "S_HDMV/PGS", "1099511627776"],
+        ];
+    }
+
+
+    #[DataProvider("hugeTimes")]
+    public function testThrowsForATimeOf100000HoursOrMore(string $cluster, string $codecId, string $time): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessageMatches("/^ParsingException \\(Error #100\\): The block of track 2 at byte \\d+ has the time $time at a TimestampScale " .
+                                             "of 1000000 ns\\. Times must be below 100000 hours\\.$/");
+
+        $stream = fopen("php://memory", "w+b");
+        fwrite($stream, MkvFixtureWriter::ebmlHeader() . MkvFixtureWriter::element(MkvFixtureWriter::SEGMENT, MkvFixtureWriter::element(
+            MkvFixtureWriter::TRACKS,
+            MkvFixtureWriter::trackEntry(["number" => 2, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => $codecId]),
+        ) . $cluster));
+        rewind($stream);
+
+        MatroskaReader::open($stream)->extract(2);
+    }
+
+
     public function testLeavesAStreamOpen(): void
     {
         $stream = fopen(self::DIR . "seek_head.mkv", "rb");
