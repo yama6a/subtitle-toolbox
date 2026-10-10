@@ -449,7 +449,7 @@ class BinaryGeneralTest extends BinaryTestCase
 
         $this->assertSame([3, ""], [$code, $stdout]);
         $this->assertStringStartsWith("Error: $message", $stderr);
-        $this->assertSame(1, substr_count($stderr, "\n"), $stderr);
+        $this->assertSame(1, substr_count(str_replace(FileCommand::LENIENT_HINT . "\n", "", $stderr), "\n"), $stderr);
         $this->assertDirectoryDoesNotExist("$this->dir/out");
     }
 

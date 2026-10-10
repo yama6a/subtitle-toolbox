@@ -80,6 +80,33 @@ class BinaryInputTest extends BinaryTestCase
     }
 
 
+    public function testAStrictParseFailureSuggestsLenient(): void
+    {
+        $error = "broken.srt: ParsingException (Error #100): Block #1 has no timing line on its second line. The line is \"00:00:03,000 => 00:00:04,000\". (line 6)\n";
+        $hint  = FileCommand::LENIENT_HINT . "\n";
+
+        $this->assertSame([3, "", $error . $hint], $this->runBinary(["convert", "broken.srt", "--to", "vtt", "-o", "out.vtt"]));
+        $this->assertSame([3, "", $error . $hint], $this->runBinary(["convert", "broken.srt", "--from", "srt", "--to", "vtt", "-o", "-", "--input-fps", "25"]));
+        $this->assertSame([3, "", str_replace("broken.srt", "stdin", $error) . $hint],
+                          $this->runBinary(["convert", "-", "--to", "vtt", "-o", "-"], $this->file("broken.srt")));
+        $this->assertSame(0, $this->runBinary(["convert", "broken.srt", "--to", "vtt", "-o", "lenient.vtt", "--lenient"])[0]);
+        $this->assertSame([2, "", "Error: The option --output-fps needs a number, got \"x\".\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+                          $this->runBinary(["convert", "trip.srt", "--to", "vtt", "--output-fps", "x"]));
+
+        [$code, $stdout, $stderr] = $this->runBinary(["info", "broken.srt", "--json"]);
+        $this->assertSame([3, [], $error . $hint], [$code, json_decode($stdout, true), $stderr]);
+        $this->assertSame([3, "", $error . $hint], $this->runBinary(["diff", "trip.srt", "broken.srt"]));
+        $this->assertSame([3, "", "Error: $error$hint"], $this->runBinary(["sync", "trip.srt", "--reference", "broken.srt", "-o", "-"]));
+
+        file_put_contents("$this->dir/broken.scc", "Scenarist_SCC V1.0\n\n00:00:01:00\tzz\n");
+        [$code, , $stderr] = $this->runBinary(["convert", "broken.scc", "--to", "srt", "-o", "-"]);
+        $this->assertSame(3, $code);
+        $this->assertStringContainsString("ParsingException", $stderr);
+        $this->assertStringNotContainsString("--lenient", $stderr);
+        $this->assertStringNotContainsString("--lenient", $this->runBinary(["convert", "trip.srt", "--to", "srt", "--track", "3", "-o", "-"])[2]);
+    }
+
+
     public function testLenientEncodingLineEndingAndBomOptions(): void
     {
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "broken.srt", "--to", "srt", "-o", "-", "--lenient", "--line-ending", "crlf", "--no-bom"]);
