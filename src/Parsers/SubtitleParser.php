@@ -99,7 +99,7 @@ abstract class SubtitleParser
 
 
     /**
-     * Warns in lenient mode about content that is not valid UTF-8. A parser with REPLACES_INVALID_UTF8 throws in
+     * Warns in lenient mode about content that is not valid UTF-8. A parser that replaces invalid UTF-8 throws in
      * strict mode, and reads the bad bytes as U+FFFD in lenient mode.
      */
     private function checkUtf8(string $content): string
@@ -110,7 +110,7 @@ abstract class SubtitleParser
         }
 
         $message = "The content is not valid UTF-8. The first bad byte is at offset $offset. Pass --encoding.";
-        if (!static::REPLACES_INVALID_UTF8) {
+        if (!$this->replacesInvalidUtf8($content)) {
             if ($this->options->lenient) {
                 $this->warn($message, null, null, [], ParseWarningAction::Repaired);
             }
@@ -124,6 +124,15 @@ abstract class SubtitleParser
         $this->warn("$message The parser read the bad bytes as U+FFFD.", null, null, [], ParseWarningAction::Repaired);
 
         return StringHelpers::replaceInvalidUtf8($content);
+    }
+
+
+    /**
+     * Returns REPLACES_INVALID_UTF8. A parser that reads several formats overrides it to decide by $content.
+     */
+    protected function replacesInvalidUtf8(string $content): bool
+    {
+        return static::REPLACES_INVALID_UTF8;
     }
 
 

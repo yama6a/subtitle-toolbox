@@ -44,10 +44,10 @@ StringHelpers::isValidUtf8(file_get_contents('movie.srt'));   // false for a Win
 | Format | Strict mode | Lenient mode |
 |:--- |:--- |:--- |
 | SubRip, WebVTT, SBV, ASS, SubViewer, CSV and the other text formats | keeps the bytes in the text | keeps the bytes and warns |
-| SAMI, TTML and iTT | throws `ParsingException` with the message of the warning | reads each bad byte as U+FFFD and warns |
+| SAMI, TTML, iTT and YouTube srv1, srv2 and srv3 | throws `ParsingException` with the message of the warning | reads each bad byte as U+FFFD and warns |
 
 - **Output of invalid UTF-8**: the JSON, TTML, iTT and SAMI formatters throw `UnwritableContentException` for text that is not valid UTF-8.
-- **JSON formats**: the JSON parsers read each invalid UTF-8 byte as U+FFFD, the replacement character. For example, the bytes `42 FF 64` in a text field give `B`, U+FFFD and `d`.
+- **JSON formats**: the JSON parsers, YouTube json3 among them, read each invalid UTF-8 byte as U+FFFD, the replacement character. For example, the bytes `42 FF 64` in a text field give `B`, U+FFFD and `d`.
 - **`StringHelpers::convertToUtf8()`**: it takes steps 1, 3, 4 and 6 only. It does not detect UTF-16 without a BOM or a code page. For example, `convertToUtf8("Caf\xE9")` returns the bytes unchanged.
 - **Parsers called directly**: only the `Subtitle` functions convert. Before `(new SamiParser())->parse($content, new ReadOptions())`, call `StringHelpers::convertToUtf8($content, TextEncoding::Cp949)`.
 - **Source encodings**: `ReadOptions::$encoding` and `StringHelpers::convertToUtf8()` take a `TextEncoding` case or a string. The conversion uses the PHP extension iconv. A string can be any name that the iconv of the system knows, for example `CP1125`. `new ReadOptions()` throws `InvalidArgumentException` for an unknown name. A byte that is invalid in the encoding throws `ParsingException`.

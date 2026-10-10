@@ -12,3 +12,5 @@ All files are written for this repository. Each file is UTF-8 with LF line endin
 | `one-bad-byte.csv` | Written for this repository | MIT |
 | `one-bad-byte.smi` | Written for this repository | MIT |
 | `one-bad-byte.ttml` | Written for this repository | MIT |
+| `one-bad-byte.srv1` | Written for this repository. YouTube transcript XML | MIT |
+| `one-bad-byte.json3` | Written for this repository. YouTube json3 | MIT |
