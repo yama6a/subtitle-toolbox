@@ -169,19 +169,14 @@ final class TextChecks
     private static function unbalancedTags(string $text): int
     {
         $tagNames = [...Markup::CORE_TAGS, "c", "lang", "ruby", "rt"];
-        preg_match_all('/<(\/?)(' . implode("|", $tagNames) . ')(?=[\s.>])[^<>]*>/i', $text, $tags, PREG_SET_ORDER);
+        preg_match_all(Markup::namedTagRegex($tagNames), $text, $tags, PREG_SET_ORDER);
 
         $open  = [];
         $count = 0;
         foreach ($tags as [, $slash, $name]) {
             $name = strtolower($name);
-            if ($slash === "" && $name === "rt") {
-                if (end($open) === "rt") {
-                    array_pop($open);
-                }
-                $count += in_array("ruby", $open, true) ? 0 : 1;
-            }
             if ($slash === "") {
+                $count += $name === "rt" ? self::openRt($open) : 0;
                 $open[] = $name;
                 continue;
             }
@@ -201,6 +196,21 @@ final class TextChecks
         }
 
         return $count + self::unclosedTags($open);
+    }
+
+
+    /**
+     * Closes an open <rt> before the next <rt> opens. Returns 1 when the new <rt> is outside <ruby>, else 0.
+     *
+     * @param list<string> $open
+     */
+    private static function openRt(array &$open): int
+    {
+        if (end($open) === "rt") {
+            array_pop($open);
+        }
+
+        return in_array("ruby", $open, true) ? 0 : 1;
     }
 
 

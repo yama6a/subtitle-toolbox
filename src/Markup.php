@@ -362,6 +362,20 @@ final class Markup
 
 
     /**
+     * Returns a pattern that matches an opening or closing tag of $tagNames, such as <c.yellow> or </B>, in any case.
+     * Group 1 holds "/" for a closing tag and group 2 the tag name as written.
+     *
+     * @param list<string> $tagNames lowercase tag names, for example ["b", "i"]
+     *
+     * @internal
+     */
+    public static function namedTagRegex(array $tagNames): string
+    {
+        return '/<(\/?)(' . implode("|", $tagNames) . ')(?=[\s.>])[^<>]*>/i';
+    }
+
+
+    /**
      * Finds the tags of $tagNames that do not pair up, case-insensitively.
      * A closing tag closes the last open tag of its name.
      *
@@ -375,7 +389,7 @@ final class Markup
      */
     public static function unbalancedTags(array $lines, array $tagNames): array
     {
-        $pattern = '/<(\/?)(' . implode("|", $tagNames) . ')(?=[\s.>])[^<>]*>/i';
+        $pattern = self::namedTagRegex($tagNames);
         $open    = [];
         $stray   = [];
         foreach ($lines as $lineIndex => $line) {
