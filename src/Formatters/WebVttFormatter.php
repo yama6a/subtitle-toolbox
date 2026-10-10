@@ -93,6 +93,22 @@ final class WebVttFormatter extends SubtitleFormatter
     }
 
 
+    /**
+     * Returns the colors that formatCueBlock() dropped since the last call, and forgets them.
+     *
+     * @internal
+     *
+     * @return list<WebVttDroppedColor>
+     */
+    public function takeDroppedColors(): array
+    {
+        $dropped             = $this->droppedColors;
+        $this->droppedColors = [];
+
+        return $dropped;
+    }
+
+
     private function formatIdentifiedCue(SubtitleCue $cue, int $cueIndex, WriteOptions $options): string
     {
         return $this->formatIdentifier($cue->getIdentifier(), $cueIndex) . LineEnding::Lf->value

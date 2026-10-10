@@ -531,7 +531,7 @@ $subtitle->toString(Format::Ttml);
 - **Cues without text**: a timing line without text gives a cue with no lines. The formatter writes such a cue as its identifier and its timing line.
 - **Output**: the formatter writes the header, comments, styles, regions and cue settings back. It numbers cues without an identifier and always writes hours. It writes `REGION` blocks before `STYLE` blocks, and both before the comments that come before the first cue.
 - **Markup**: the formatter keeps `<b>`, `<i>`, `<u>`, `<v>`, `<lang>`, `<c>`, `<ruby>`, `<rt>` and word timestamps. It keeps classes such as `<c.yellow>` and strips all other tags.
-- **Colors**: the formatter writes `<font color>` as a [color class](markup.md) when the color is one of the 8 WebVTT colors. `#FFFF00`, `#ff0` and `yellow` all become `<c.yellow>`. WebVTT has no class for other colors, so the formatter drops them. `WebVttFormatter::formatWithReport()` returns the output and a `WebVttDroppedColor` for each dropped color. The CLI prints each one on standard error.
+- **Colors**: the formatter writes `<font color>` as a [color class](markup.md) when the color is one of the 8 WebVTT colors. `#FFFF00`, `#ff0` and `yellow` all become `<c.yellow>`. WebVTT has no class for other colors, so the formatter drops them. `WebVttFormatter::formatWithReport()` returns the output and a `WebVttDroppedColor` for each dropped color. `WebVttStreamWriter::findDroppedColors()` returns the same list for the cues it wrote. The CLI prints each one on standard error.
 
   ```php
   $report = (new WebVttFormatter())->formatWithReport($subtitle);
