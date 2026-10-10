@@ -239,5 +239,5 @@ $dual = DualSubtitle::fromPair($english, $german, new DualSubtitleOptions(
 
 - **Stack**: each secondary cue joins the primary cue that it overlaps most. The joined cue spans from the earlier start to the later end. A cue without an overlap stays a cue of its own.
 - **Top and bottom**: a secondary start or end time moves to the closest primary start or end time within `snapTolerance`. So the two languages appear and disappear together. A cue keeps its times when both would move to the same time.
-- **Secondary style**: a core markup tag, such as `i` or `font color="#ffff00"`, around each secondary line. WebVTT has no font color, so its formatter drops the `font` tag.
+- **Secondary style**: a core markup tag, such as `i` or `font color="#ffff00"`, around each secondary line. The WebVTT formatter writes a color as a class such as `<c.yellow>`, see [WebVTT](formats.md#webvtt).
 - **Copied data**: the result is a new `Subtitle`. Metadata, comments and format data come from the primary subtitle. The secondary cues lose their identifiers and format data. The language becomes `en+de` when both subtitles have a language.

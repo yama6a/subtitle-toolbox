@@ -252,7 +252,7 @@ final class TtmlFormatter extends SubtitleFormatter
         $open = [];
         foreach ($stack as $entry) {
             if ($entry["span"] !== "") {
-                $open[$entry["tag"]] = true;
+                $open[$entry["tag"] === "c" && str_contains($entry["span"], ":color=") ? "font" : $entry["tag"]] = true;
             }
         }
 
@@ -335,6 +335,14 @@ final class TtmlFormatter extends SubtitleFormatter
             $color = Markup::decodeEntities(trim(Markup::fontColor($rest) ?? ""));
 
             return $color === "" ? "" : "<span" . $this->formatAttribute("$context->tts:color", $color) . ">";
+        }
+
+        if ($tag === "c") {
+            $colors     = Markup::webVttClassColors(preg_replace('/\s.*$/s', "", $rest));
+            $attributes = ($colors["color"] === null ? "" : $this->formatAttribute("$context->tts:color", $colors["color"]))
+                . ($colors["background"] === null ? "" : $this->formatAttribute("$context->tts:backgroundColor", $colors["background"]));
+
+            return $attributes === "" ? "" : "<span$attributes>";
         }
 
         if ($tag === "v") {

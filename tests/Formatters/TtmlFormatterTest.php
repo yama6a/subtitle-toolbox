@@ -88,7 +88,7 @@ class TtmlFormatterTest extends TestCase
 
         $this->assertSame("<v Ann>one </v><v Ben>two\n<b>bold <i>open</i></b>", $cues[0]->getText());
         $this->assertSame(4, $cues[0]->getAlignment());
-        $this->assertSame("<i>mis</i><b><i>nested</i>tags</b> &lt;3 class word", $cues[1]->getText());
+        $this->assertSame("<i>mis</i><b><i>nested</i>tags</b> &lt;3 <font color=\"#ffff00\">class</font> word", $cues[1]->getText());
         $this->assertSame(2, $cues[1]->getAlignment());
     }
 

@@ -44,7 +44,7 @@ class QuotesInTagsTest extends TestCase
             . "2\n00:00:03.500 --> 00:00:06.000\n<v O'Neil>We're out of rye bread today.\n\n"
             . "3\n00:00:06.500 --> 00:00:09.000\n<v Sam \"Ace\" Reed>Then I'll take the \"seeded\" loaf.\n\n"
             . "4\n00:00:09.500 --> 00:00:12.000\n<v Mo \"Baker>Two <i>warm</i> rolls.\n\n"
-            . "5\n00:00:12.500 --> 00:00:15.000\n<v D'Arcy>Red jam, please.\n",
+            . "5\n00:00:12.500 --> 00:00:15.000\n<v D'Arcy><c.red>Red</c> jam, please.\n",
             $this->loadAss()->toString(Format::WebVtt)
         );
     }

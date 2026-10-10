@@ -27,3 +27,5 @@
 | `own_max_hours.vtt` | Written for this repository. The last cue ends at 99999:59:59.999, the latest time that the parsers accept | MIT |
 | `own_max_word_timestamp.vtt` | Written for this repository. The last cue has a word timestamp at 99999:59:59.000 and ends at 99999:59:59.999 | MIT |
 | `own_srt_cue_settings_converted.vtt` | Written for this repository. Expected `WebVttFormatter` output for `srt/real/own_vtt_cue_settings.srt`. | MIT |
+| `own_color_classes.vtt` | Written for this repository. The 8 color classes of https://www.w3.org/TR/webvtt1/#default-text-color, a background class and a class without a color | MIT |
+| `own_font_colors_from_srt.vtt` | Generated for this repository. Expected `WebVttFormatter` output for `srt/real/own_font_colors.srt`. | MIT |

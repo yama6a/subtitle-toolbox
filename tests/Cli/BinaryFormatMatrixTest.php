@@ -95,7 +95,8 @@ class BinaryFormatMatrixTest extends BinaryTestCase
         $readbacks = [];
         foreach ($this->runParallel($converts) as $pair => [$code, $stdout, $stderr]) {
             [$input, $output] = explode(">", $pair);
-            $file = "$this->dir/$input-to-$output.out";
+            $file   = "$this->dir/$input-to-$output.out";
+            $stderr = preg_replace('/^.*: dropped the color "[^"]*", because WebVTT has classes for 8 colors only\.\n/m', "", $stderr);
             if (self::hasPhpError($stderr)) {
                 $outcomes[$pair] = "convert PHP error: $stderr";
             } elseif ($code !== 0) {

@@ -342,6 +342,18 @@ class BinaryOutputTest extends BinaryTestCase
     }
 
 
+    public function testWebVttOutputPrintsEachDroppedColorOnStandardError(): void
+    {
+        copy(self::FILES . "srt/real/own_font_colors.srt", "$this->dir/ferry.srt");
+
+        $this->assertSame(
+            [0, file_get_contents(self::FILES . "vtt/real/own_font_colors_from_srt.vtt"),
+             "ferry.srt: Cue #3 at 4 s: dropped the color \"#123456\", because WebVTT has classes for 8 colors only.\n"],
+            $this->runBinary(["convert", "ferry.srt", "--to", "vtt", "-o", "-"])
+        );
+    }
+
+
     public function testBatchStopsAtTheFirstFailureWithoutKeepGoing(): void
     {
         [$code, $stdout, $stderr] = $this->runBinary(["convert", "broken.srt", "trip.srt", "shop.vtt", "--to", "srt", "--output-dir", "out"]);

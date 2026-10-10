@@ -13,6 +13,7 @@ use SubtitleToolbox\Formatters\Options\IttWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
 use SubtitleToolbox\Formatters\Options\SccWriteOptions;
 use SubtitleToolbox\Formatters\SccFormatter;
+use SubtitleToolbox\Formatters\WebVttFormatter;
 use SubtitleToolbox\LineEnding;
 use SubtitleToolbox\OptionsCopy;
 use SubtitleToolbox\StringHelpers;
@@ -342,6 +343,12 @@ abstract class WriteCommand extends FileCommand
             $content = $report->content;
             foreach ($report->changes as $change) {
                 $console->err(self::label($input) . ": $change->message ({$change->action->value})\n");
+            }
+        }
+        if ($outputFormat === Format::WebVtt) {
+            $report = (new WebVttFormatter())->formatWithReport($subtitle, $this->formatterOptions($outputFormat, $arguments));
+            foreach ($report->droppedColors as $dropped) {
+                $console->err(self::label($input) . ": $dropped->message\n");
             }
         }
 

@@ -64,6 +64,24 @@ final class Markup
      */
     public const ENTITY = '&(?:[a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#[xX][0-9a-fA-F]+);';
 
+    /**
+     * The 8 color classes of WebVTT and their colors, in the order of the default style sheet of the spec.
+     *
+     * @see https://www.w3.org/TR/webvtt1/#default-text-color
+     *
+     * @internal
+     */
+    public const WEBVTT_COLORS = [
+        "white"   => "#ffffff",
+        "lime"    => "#00ff00",
+        "cyan"    => "#00ffff",
+        "red"     => "#ff0000",
+        "yellow"  => "#ffff00",
+        "magenta" => "#ff00ff",
+        "blue"    => "#0000ff",
+        "black"   => "#000000",
+    ];
+
     private const TAG_REGEX = '/' . self::TAG . '/';
 
 
@@ -528,6 +546,119 @@ final class Markup
         }
 
         return ($color[1] ?? "") . ($color[2] ?? "") . ($color[3] ?? "");
+    }
+
+
+    /**
+     * Returns the text color and the background color of WebVTT classes such as ".bg_black.yellow", or null for none.
+     * When several color classes apply, the last one in the default style sheet wins, as in a browser.
+     *
+     * @return array{color: ?string, background: ?string} colors as "#rrggbb"
+     *
+     * @internal
+     */
+    public static function webVttClassColors(string $classes): array
+    {
+        $names  = explode(".", $classes);
+        $colors = ["color" => null, "background" => null];
+        foreach (self::WEBVTT_COLORS as $name => $hex) {
+            if (in_array($name, $names, true)) {
+                $colors["color"] = $hex;
+            }
+            if (in_array("bg_$name", $names, true)) {
+                $colors["background"] = $hex;
+            }
+        }
+
+        return $colors;
+    }
+
+
+    /**
+     * Turns WebVTT <c> tags with a color class into <font> tags, for formats that write <font color>.
+     * For example "<c.yellow>Hi</c>" becomes "<font color=\"#ffff00\">Hi</font>". Other <c> tags stay as they are.
+     *
+     * @internal
+     */
+    public static function webVttColorsToFont(string $text): string
+    {
+        if (!str_contains($text, "<c")) {
+            return $text;
+        }
+
+        $tokens = self::splitTags($text);
+        $open   = [];
+        foreach ($tokens as $index => $token) {
+            if ($index % 2 === 0) {
+                continue;
+            }
+            if (preg_match('/^<c((?:\.[^\s.<>]*)*)(?:\s[^<>]*)?>$/', $token, $matches) === 1) {
+                $color          = self::webVttClassColors($matches[1])["color"];
+                $open[]         = $color !== null;
+                $tokens[$index] = $color === null ? $token : "<font color=\"$color\">";
+            } elseif (preg_match('/^<\/c\s*>$/', $token) === 1 && array_pop($open) === true) {
+                $tokens[$index] = "</font>";
+            }
+        }
+
+        return implode("", $tokens);
+    }
+
+
+    /**
+     * Turns <font> tags into WebVTT <c> tags, for example <font color="#ffff00"> becomes <c.yellow>.
+     * It drops a <font> tag whose color is not one of WEBVTT_COLORS, and a <font> tag without a color.
+     *
+     * @return array{string, list<string>} the text and each dropped color as written
+     *
+     * @internal
+     */
+    public static function fontToWebVttColors(string $text): array
+    {
+        if (stripos($text, "<font") === false) {
+            return [$text, []];
+        }
+
+        $tokens  = self::splitTags($text);
+        $open    = [];
+        $dropped = [];
+        foreach ($tokens as $index => $token) {
+            if ($index % 2 === 0) {
+                continue;
+            }
+            if (preg_match('/^<font\b/i', $token) === 1) {
+                $color = self::fontColor($token);
+                $class = $color === null ? null : self::webVttColorClass($color);
+                if ($class === null && $color !== null && trim($color) !== "") {
+                    $dropped[] = $color;
+                }
+                $open[]         = $class !== null;
+                $tokens[$index] = $class === null ? "" : "<c.$class>";
+            } elseif (preg_match('/^<\/font\s*>$/i', $token) === 1) {
+                $tokens[$index] = array_pop($open) === true ? "</c>" : "";
+            }
+        }
+
+        return [implode("", $tokens), $dropped];
+    }
+
+
+    /**
+     * Returns the WebVTT class of a color such as "#FFFF00", "#ff0" or "yellow", or null when no class has the color.
+     */
+    private static function webVttColorClass(string $color): ?string
+    {
+        $color = strtolower(trim(self::decodeEntities($color)));
+        if (preg_match('/^#([0-9a-f])([0-9a-f])([0-9a-f])$/', $color, $digits) === 1) {
+            $color = "#$digits[1]$digits[1]$digits[2]$digits[2]$digits[3]$digits[3]";
+        }
+        if (isset(self::WEBVTT_COLORS[$color])) {
+            return $color;
+        }
+
+        $class = array_search($color, self::WEBVTT_COLORS, true);
+
+        return $class === false ? null : $class;
     }
 
 

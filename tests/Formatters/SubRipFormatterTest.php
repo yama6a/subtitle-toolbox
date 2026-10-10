@@ -47,7 +47,7 @@ class SubRipFormatterTest extends TestCase
 
     public function testStrikethroughTagIsKept(): void
     {
-        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "<s>struck</s> <c.red>plain</c>"));
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, "<s>struck</s> <c.loud>plain</c>"));
 
         $this->assertSame(
             "\u{feff}1\n00:00:01,000 --> 00:00:02,000\n<s>struck</s> plain\n",
@@ -110,7 +110,7 @@ class SubRipFormatterTest extends TestCase
 
     public function testLineThatBecomesEmptyIsDropped(): void
     {
-        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, ["Before", "<c.red></c>", "After"]));
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2, ["Before", "<c.loud></c>", "After"]));
 
         $this->assertSame(
             "\u{feff}1\n00:00:01,000 --> 00:00:02,000\nBefore\nAfter\n",

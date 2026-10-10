@@ -213,7 +213,8 @@ class WebVttFormatterTest extends TestCase
         return [
             "unknown tag with class"     => ["<foo.bar>hello</foo> world", "hello world"],
             "longer name than a span"    => ["<bold.x>hello</bold> <cite.y>world</cite>", "hello world"],
-            "core tags without classes"  => ["<font color=\"#ff0000\">red</font> <s>gone</s> <b>bold</b>", "red gone <b>bold</b>"],
+            "core tags without classes"  => ["<font face=\"Arial\">plain</font> <s>gone</s> <b>bold</b>", "plain gone <b>bold</b>"],
+            "font color with a class"    => ["<font color=\"#ff0000\">red</font> <s>gone</s>", "<c.red>red</c> gone"],
         ];
     }
 

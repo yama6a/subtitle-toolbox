@@ -148,7 +148,7 @@ final class IttFormatter extends SubtitleFormatter
 
     private function keepSupportedMarkup(string $line): string
     {
-        $line = Markup::keepTags(Markup::rubyAsText($line), ["b", "i", "u", "font"]);
+        $line = Markup::keepTags(Markup::webVttColorsToFont(Markup::rubyAsText($line)), ["b", "i", "u", "font"]);
 
         return preg_replace_callback(
             "/<font\b([^>]*)>/i",
