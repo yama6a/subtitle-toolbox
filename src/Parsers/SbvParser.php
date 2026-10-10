@@ -6,12 +6,18 @@ namespace SubtitleToolbox\Parsers;
 
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Markup;
+use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Timecode;
 
 final class SbvParser extends SubtitleParser
 {
+    private const LOOSE_TIME = '(\d+):([0-5]?\d):([0-5]?\d)[.,:](\d{1,4})';
+
+    // Lenient mode reads the separators and fractions that hand-edited files use, such as "0:00:07,98.0:00:11,3".
+    private const LOOSE_TIMING_LINE = '/^' . self::LOOSE_TIME . '\s*[.,]\s*' . self::LOOSE_TIME . '$/';
+
     protected function read(string $content): Subtitle
     {
         $subtitle   = new Subtitle();
@@ -31,6 +37,24 @@ final class SbvParser extends SubtitleParser
 
     private function parseCueBlock(array $rawLines, int $index, int $lineNumber): SubtitleCue
     {
+        if ($this->options->lenient && !$this->isStrictTimingLine($rawLines[0])
+            && preg_match(self::LOOSE_TIMING_LINE, $rawLines[0], $matches)) {
+            $cue = new SubtitleCue(
+                $this->looseSeconds(array_slice($matches, 1, 4), $lineNumber),
+                $this->looseSeconds(array_slice($matches, 5, 4), $lineNumber),
+                array_map(Markup::escapeText(...), array_slice($rawLines, 1))
+            );
+            $this->warn(
+                "Block #$index has a timing line with other separators or fraction digits than SBV uses. The parser read it.",
+                $lineNumber,
+                $index,
+                $rawLines,
+                ParseWarningAction::Repaired
+            );
+
+            return $cue;
+        }
+
         if (substr_count($rawLines[0], ",") !== 1) {
             throw new ParsingException("Block #$index has no timing line on its first line.", $lineNumber);
         }
@@ -47,7 +71,26 @@ final class SbvParser extends SubtitleParser
 
     private function isTimingLine(string $line): bool
     {
-        return preg_match("/^\d+:\d\d:\d\d\.\d+,/", $line) === 1;
+        return preg_match("/^\d+:\d\d:\d\d\.\d+,/", $line) === 1
+            || ($this->options->lenient && preg_match(self::LOOSE_TIMING_LINE, $line) === 1);
+    }
+
+
+    private function isStrictTimingLine(string $line): bool
+    {
+        return preg_match("/^\d+:[0-5]\d:[0-5]\d\.\d{3}\s*,\s*\d+:[0-5]\d:[0-5]\d\.\d{3}$/", $line) === 1;
+    }
+
+
+    /**
+     * @param list<string> $fields hours, minutes, seconds and fraction digits
+     */
+    private function looseSeconds(array $fields, int $lineNumber): float
+    {
+        [$hours, $minutes, $seconds, $fraction] = $fields;
+        $time = Timecode::roundToMilliseconds(Timecode::toSeconds((int) $hours, (int) $minutes, (int) $seconds, $fraction));
+
+        return self::boundedTime($time, "$hours:$minutes:$seconds.$fraction", $lineNumber);
     }
 
 

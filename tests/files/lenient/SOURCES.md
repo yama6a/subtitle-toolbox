@@ -22,7 +22,8 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `damaged_signature.vtt` | `WEBVTS` as the first line, a header line, cue settings, a NOTE block, LF | MIT |
 | `truncated_last_cue.vtt` | the file ends inside the time line of the last cue, LF | MIT |
 | `mixed_line_endings.vtt` | CR LF, LF and CR CR LF in one file | MIT |
-| `bad_timestamp.sbv` | an end time with two millisecond digits, LF | MIT |
+| `bad_timestamp.sbv` | a letter in an end time, LF | MIT |
+| `loose_timing.sbv` | a dot between the start and end time, commas before the fractions, fractions with 1 and 2 digits, LF | MIT |
 | `missing_empty_line.sbv` | no empty line between cue 1 and cue 2, LF | MIT |
 | `text_before_first_cue.sbv` | a note line before cue 1, LF | MIT |
 | `truncated_last_cue.sbv` | the file ends inside the time line of cue 3, LF | MIT |

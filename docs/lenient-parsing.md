@@ -22,6 +22,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | bad timestamp | skipped | skipped | skipped |
 | `->` or `--->` arrow | repaired | skipped | no arrow in the format |
 | full-width `：`, `，`, `．` or `。` in a timing line | repaired | skipped | skipped |
+| SBV timing line with `.` between the times, `,` or `:` before the fraction, or 1, 2 or 4 fraction digits | does not apply | does not apply | repaired |
 | unknown text after the end time | repaired | dropped as the spec says, no warning | skipped |
 | no empty line between two cues | repaired | split as the spec says, no warning | repaired |
 | empty line inside the cue text, or between the timing line and the text | repaired | skipped | repaired |
