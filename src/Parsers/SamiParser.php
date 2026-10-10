@@ -53,6 +53,26 @@ final class SamiParser extends SubtitleParser
 
 
     /**
+     * A file with SYNC tags can give no cues on purpose, for example when the chosen class has no text.
+     */
+    protected function findTextLineWithoutCues(string $content): ?int
+    {
+        if (stripos($content, "<SYNC") !== false) {
+            return null;
+        }
+
+        $markup = preg_replace_callback(
+            '/<HEAD\b.*?<\/HEAD\s*>|<!--.*?-->|<[^>]*>|&nbsp;/is',
+            fn (array $match): string => str_repeat("\n", substr_count($match[0], "\n")),
+            StringHelpers::normalizeEOLs($content)
+        );
+        $text = ltrim($markup);
+
+        return $text === "" ? null : 1 + substr_count($markup, "\n", 0, strlen($markup) - strlen($text));
+    }
+
+
+    /**
      * Reads the title into $subtitle. Returns the SAMIParam and STYLE blocks as format data, and the classes.
      *
      * @return array{array<string, string>, array<string, array{name: string, lang: ?string}>}

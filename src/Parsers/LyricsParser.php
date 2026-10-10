@@ -103,6 +103,19 @@ final class LyricsParser extends SubtitleParser
     }
 
 
+    protected function findTextLineWithoutCues(string $content): ?int
+    {
+        foreach ($this->lines($content) as $index => $line) {
+            $line = trim(StringHelpers::normalizeSpaces($line));
+            if ($line !== "" && $this->isPlainTextLine($line)) {
+                return $index + 1;
+            }
+        }
+
+        return null;
+    }
+
+
     private function isPlainTextLine(?string $line): bool
     {
         return $line !== null

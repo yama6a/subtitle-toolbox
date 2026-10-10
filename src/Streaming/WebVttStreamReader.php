@@ -56,6 +56,9 @@ final class WebVttStreamReader implements CueStreamReader
         $this->header = [];
         $seenCue      = false;
         $lines        = $this->trimmedLines($stream);
+        if (!$lines->valid()) {
+            return;
+        }
         if (!str_starts_with($lines->current() ?? "", "WEBVTT")) {
             if (!$this->options->lenient) {
                 throw new ParsingException("The file does not start with WEBVTT.", ($lines->key() ?? 0) + 1);
