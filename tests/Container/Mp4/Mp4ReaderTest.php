@@ -154,6 +154,33 @@ class Mp4ReaderTest extends TestCase
     }
 
 
+    public function testThrowsForAOneByteSampleOutsideTheFile(): void
+    {
+        $file = Mp4FixtureWriter::ftyp() . Mp4FixtureWriter::moov([
+            ["id" => 1, "handler" => "sbtl", "entry" => Mp4FixtureWriter::tx3gEntry(), "chunks" => [[1 << 30, [[1000, 1]]]]],
+        ]);
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("A sample of track 1 at byte 1073741824 lies outside the file.");
+
+        Mp4Reader::open(self::stream($file))->extract(1);
+    }
+
+
+    public function testThrowsForASampleCountThatDoesNotFitIntoTheFile(): void
+    {
+        $started = hrtime(true);
+        try {
+            Mp4Reader::open(self::DIR . "huge_sample_count.mp4")->extract(2);
+            $this->fail("The reader accepted 4294967295 samples in a file of 1458 bytes.");
+        } catch (ParsingException $e) {
+            $this->assertStringContainsString("The stsz box of track 2 holds 4294967295 samples of 1 bytes, which do not fit into the file.", $e->getMessage());
+        }
+
+        $this->assertLessThan(0.5, (hrtime(true) - $started) / 1e9);
+    }
+
+
     public function testLeavesAStreamOpen(): void
     {
         $stream = fopen(self::DIR . "one_track.mp4", "rb");

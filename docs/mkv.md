@@ -75,5 +75,5 @@ Subtitle::loadTrack('/media/phone-video.mp4', 2)->save('phone-video.srt');
 - **Format**: `getFormat()` is `Format::SubRip`. The cues hold plain text, as from an `S_TEXT/UTF8` track of an MKV file.
 - **Detection**: `loadAutoDetectFormat()` and `fromStringAutoDetectFormat()` know an MP4 file by the `ftyp` box at byte 4.
 - **Memory**: the reader reads the sample tables of the wanted track and its samples only. It skips the media data with `fseek()`.
-- **Errors**: `extract()` throws `ParsingException` for a `c608` track, another codec and an encrypted track (`enct` or a `sinf` box).
+- **Errors**: `extract()` throws `ParsingException` for a `c608` track, another codec and an encrypted track (`enct` or a `sinf` box). It also throws `ParsingException` for a sample outside the file. The same applies when the `stsz` box lists more sample bytes than the file has.
 - **Spec**: ISO/IEC 14496-12 for the boxes, 3GPP TS 26.245 for timed text.
