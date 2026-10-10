@@ -474,7 +474,7 @@ class ThrowSitesTest extends TestCase
             }, ...$ocr],
             "OptionChecks.php: negative number"             => [fn () => new SubtitleDiffOptions(-1), ...$invalid],
             "OptionChecks.php: blank text"                  => [fn () => new VobSubReadOptions(language: " "), ...$invalid],
-            "Parsers/AssParser.php: no events section"      => [fn () => (new AssParser())->parse("[Script Info]\nTitle: x\n", new ReadOptions()), ...$parsing],
+            "Parsers/AssParser.php: no events section"      => [fn () => (new AssParser())->parse("[V4+ Styles]\nFormat: Name\n", new ReadOptions()), ...$parsing],
             "Parsers/AssParser.php: too few fields"         => [fn () => (new AssParser())->parse("[Events]\nFormat: Layer, Start, End, Text\n" .
                                                                                                   "Dialogue: 0,0:00:01.00\n", new ReadOptions()), ...$parsing],
             "Parsers/AssParser.php: no Start field"         => [fn () => (new AssParser())->parse("[Events]\nFormat: Layer, Text\n" .
