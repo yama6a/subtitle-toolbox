@@ -328,7 +328,7 @@ final class PgsParser extends SubtitleParser
 
 
     /**
-     * Places the parts on one transparent canvas that covers all of them.
+     * Places the parts on one transparent canvas that covers all of them. A later part is drawn over the earlier parts.
      * Returns the position, size and RGBA bytes of the canvas.
      */
     private function compose(array $parts): array
@@ -346,16 +346,57 @@ final class PgsParser extends SubtitleParser
         }
 
         $canvas = array_fill(0, $height, str_repeat("\0\0\0\0", $width));
-        foreach ($parts as $part) {
+        foreach ($parts as $index => $part) {
+            $overlaps  = array_filter(array_slice($parts, 0, $index), fn (array $earlier): bool => self::overlap($earlier, $part));
             $rowLength = $part["width"] * 4;
             for ($row = 0; $row < $part["height"]; $row++) {
-                $canvas[$part["y"] - $top + $row] = substr_replace($canvas[$part["y"] - $top + $row],
-                                                                   substr($part["rgba"], $row * $rowLength, $rowLength),
-                                                                   ($part["x"] - $left) * 4, $rowLength);
+                $source = substr($part["rgba"], $row * $rowLength, $rowLength);
+                $line   = &$canvas[$part["y"] - $top + $row];
+                if ($overlaps === []) {
+                    $line = substr_replace($line, $source, ($part["x"] - $left) * 4, $rowLength);
+                    continue;
+                }
+                for ($column = 0; $column < $part["width"]; $column++) {
+                    $offset = ($part["x"] - $left + $column) * 4;
+                    $line   = substr_replace($line, self::over(substr($source, $column * 4, 4), substr($line, $offset, 4)), $offset, 4);
+                }
             }
+            unset($line);
         }
 
         return [$left, $top, $width, $height, implode("", $canvas)];
+    }
+
+
+    private static function overlap(array $first, array $second): bool
+    {
+        return $first["x"] < $second["x"] + $second["width"] && $second["x"] < $first["x"] + $first["width"]
+            && $first["y"] < $second["y"] + $second["height"] && $second["y"] < $first["y"] + $first["height"];
+    }
+
+
+    /**
+     * Returns the RGBA pixel $source drawn over $below with the "source over" operator of straight alpha.
+     */
+    private static function over(string $source, string $below): string
+    {
+        $sourceAlpha = ord($source[3]);
+        $belowAlpha  = ord($below[3]);
+        if ($sourceAlpha === 255 || $belowAlpha === 0) {
+            return $source;
+        }
+        if ($sourceAlpha === 0) {
+            return $below;
+        }
+
+        $belowWeight = $belowAlpha * (255 - $sourceAlpha);
+        $alpha       = $sourceAlpha * 255 + $belowWeight;
+        $pixel       = "";
+        for ($channel = 0; $channel < 3; $channel++) {
+            $pixel .= chr(intdiv(2 * (ord($source[$channel]) * $sourceAlpha * 255 + ord($below[$channel]) * $belowWeight) + $alpha, 2 * $alpha));
+        }
+
+        return $pixel . chr(intdiv(2 * $alpha + 255, 2 * 255));
     }
 
 
