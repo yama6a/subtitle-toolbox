@@ -38,8 +38,8 @@ Before 4.0 removes a class, method, option or command, at least one 3.x minor re
 ## Not covered
 - **`@internal`**: a class, method or constant marked `@internal` can change in any release. An example is `ImageFormatter`.
 - **Constructors of reports and results**: only the library creates reports and results. Read their fields, but do not create them. `RecognizedText` and `Comment` are the 2 exceptions with a public constructor, because an `OcrEngine` returns `RecognizedText`. These constructors are `@internal`:
-  - Reports: `CommonErrorReport`, `HearingImpairedReport`, `OcrReport`, `ProfanityReport`, `ReferenceSyncReport`, `ResegmentReport`, `ShotChangeReport`, `SpeakerLabelReport`, `TranslationReport` and `WordHighlightReport`.
-  - Results: `AppliedFix`, `CueDifference`, `ValidationViolation`, `TranslationWarning`, `MuteRange`, `SubtitleTrack` and `HlsWebVttRendition`.
+  - Reports: `CommonErrorReport`, `HearingImpairedReport`, `OcrReport`, `ProfanityReport`, `ReferenceSyncReport`, `ResegmentReport`, `SccWriteReport`, `ShotChangeReport`, `SpeakerLabelReport`, `TranslationReport`, `WebVttWriteReport` and `WordHighlightReport`.
+  - Results: `AppliedFix`, `CueDifference`, `ValidationViolation`, `TranslationWarning`, `MuteRange`, `SccFitChange`, `SubtitleTrack`, `WebVttDroppedColor` and `HlsWebVttRendition`.
   - `ParseWarning`, also `ParseWarning::skipped()`.
 - **Parsers and formatters as base classes**: do not extend `SubtitleParser` or `SubtitleFormatter`. Their protected members can change in any release. Call a parser or formatter from your own class.
 - **Exceptions as base classes**: do not extend an exception class. `InvalidArgumentException` and `InvalidParserException` are not `final`, because a library class extends each of them. Their protected `CODE` constant is not API. `GenericException` is not API, also as a parent.
