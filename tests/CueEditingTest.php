@@ -526,4 +526,16 @@ class CueEditingTest extends TestCase
             $this->assertCount(2, $subtitle->getCues());
         }
     }
+
+
+    public function testMergeSameTimeCuesKeepsImageCuesApart(): void
+    {
+        $subtitle = Subtitle::load(__DIR__ . "/files/pgs/shapes_576p.sup", Format::Pgs);
+        [$first, $second] = $subtitle->getCues();
+        $second->setStart($first->getStart())->setEnd($first->getEnd());
+        $images = array_map(fn (SubtitleCue $cue): string => Image\CueImage::fromCue($cue)->png, $subtitle->getCues());
+
+        $this->assertSame($images, array_map(fn (SubtitleCue $cue): string => Image\CueImage::fromCue($cue)->png,
+                                             $subtitle->mergeSameTimeCues()->getCues()));
+    }
 }
