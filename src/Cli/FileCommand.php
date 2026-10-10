@@ -414,38 +414,49 @@ abstract class FileCommand extends Command
         if ($track !== null) {
             return Subtitle::loadTrack($path, $track, $this->readOptions);
         }
-        if ($format === null && Containers::detectFile($path) !== null) {
+        if ($format !== null) {
+            return Subtitle::load($path, $format, $this->readOptionsFor($format));
+        }
+        if (!$this->hasFormatOptions() || Containers::detectFile($path) !== null) {
             return Subtitle::loadAutoDetectFormat($path, $this->readOptions);
         }
-        $format ??= $this->formatWithOptions(fn (): string => (string) file_get_contents($path), $path);
 
-        return $format === null
-            ? Subtitle::loadAutoDetectFormat($path, $this->readOptions)
-            : Subtitle::load($path, $format, $this->readOptionsFor($format));
+        $content = @file_get_contents($path);
+        $format  = $content === false ? null : $this->detectFormat($content, $path);
+        if ($format === null || $format === Format::VobSub) {
+            return Subtitle::loadAutoDetectFormat($path, $this->readOptions);
+        }
+
+        return Subtitle::fromString($content, $format, $this->readOptionsFor($format));
+    }
+
+
+    private function hasFormatOptions(): bool
+    {
+        return $this->inputFps !== null || $this->wordTimestamps || $this->sccRollUp !== null;
+    }
+
+
+    private function detectFormat(string $content, ?string $path): ?Format
+    {
+        try {
+            return Subtitle::detectFormat(StringHelpers::convertToUtf8($content, $this->readOptions->encoding), $path);
+        } catch (SubtitleToolboxException) {
+            return null;
+        }
     }
 
 
     /**
-     * Returns the format of an input without --from when --input-fps, word timestamps or --scc-roll-up apply to it.
+     * Returns the format of standard input without --from when --input-fps, word timestamps or --scc-roll-up apply to it.
      * Returns null for format detection otherwise. The read then passes them in the read options of that format.
-     *
-     * @param callable(): string $content
      */
-    private function formatWithOptions(callable $content, ?string $path): ?Format
+    private function stdinFormatWithOptions(string $content): ?Format
     {
-        if ($this->inputFps === null && !$this->wordTimestamps && $this->sccRollUp === null) {
+        if (!$this->hasFormatOptions()) {
             return null;
         }
-        $content = $content();
-        if (Containers::detect($content) !== null) {
-            return null;
-        }
-
-        try {
-            $format = Subtitle::detectFormat(StringHelpers::convertToUtf8($content, $this->readOptions->encoding), $path);
-        } catch (SubtitleToolboxException) {
-            return null;
-        }
+        $format = $this->detectFormat($content, null);
 
         return $format !== null && $this->formatOptions($format) !== null ? $format : null;
     }
@@ -497,7 +508,7 @@ abstract class FileCommand extends Command
             self::fail("VobSub needs the path of the .idx file. Standard input does not work.");
         }
 
-        $format = $this->fromFormat ?? $this->formatWithOptions(fn (): string => $content, null);
+        $format = $this->fromFormat ?? $this->stdinFormatWithOptions($content);
 
         return $format === null
             ? Subtitle::fromStringAutoDetectFormat($content, $this->readOptions)
