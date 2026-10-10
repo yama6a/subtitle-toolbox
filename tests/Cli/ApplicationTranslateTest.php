@@ -304,7 +304,7 @@ class ApplicationTranslateTest extends TestCase
         $input  = self::TRANSLATION . "own_station.srt";
 
         $this->assertSame(
-            [2, "", "Error: PHP has no ext-curl, which the DeepL and Google engines need. Install the PHP curl extension.\n" .
+            [2, "", "Error: PHP has no ext-curl, which the translation engines need. Install the PHP curl extension.\n" .
                     "Run \"subtitle-toolbox help translate\" for the usage.\n"],
             WithoutCurl::run([$binary, "translate", $input, "--engine", "deepl", "--api-key", "key", "--target-language", "de"])
         );

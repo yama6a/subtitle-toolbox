@@ -64,7 +64,7 @@ class CurlHttpClientTest extends TestCase
         $exception = WithoutCurl::exception("new " . CurlHttpClient::class . "();");
 
         $this->assertInstanceOf(InvalidArgumentException::class, $exception);
-        $this->assertSame("PHP has no ext-curl, which the DeepL and Google engines need. Install the PHP curl extension.",
+        $this->assertSame("PHP has no ext-curl, which the translation engines need. Install the PHP curl extension.",
                           $exception->getMessage());
     }
 }
