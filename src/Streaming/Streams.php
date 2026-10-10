@@ -15,7 +15,7 @@ use SubtitleToolbox\StringHelpers;
 final class Streams
 {
     /**
-     * Yields the lines of a stream resource or file path without the UTF-8 BOM and without line endings.
+     * Yields the lines of a stream resource or file path without UTF-8 BOMs at their start and without line endings.
      *
      * @param resource|string $stream
      *
@@ -25,19 +25,15 @@ final class Streams
     {
         $handle = self::open($stream, "rb");
         try {
-            $first = true;
             while (($chunk = fgets($handle)) !== false) {
-                if ($first) {
-                    $chunk = StringHelpers::removeUtf8Bom($chunk);
-                    $first = false;
-                }
                 // fgets() ends at LF only, so a chunk can still hold the CR line endings of old Mac files.
                 $lines = explode(LineEnding::Lf->value, StringHelpers::normalizeEOLs($chunk));
                 if (end($lines) === "") {
                     array_pop($lines);
                 }
+                // Joined files keep the BOM of each part at the start of a line.
                 foreach ($lines as $line) {
-                    yield $line;
+                    yield StringHelpers::removeUtf8Bom($line);
                 }
             }
         } finally {

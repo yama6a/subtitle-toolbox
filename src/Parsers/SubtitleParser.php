@@ -379,7 +379,7 @@ abstract class SubtitleParser
         $block = [];
         $start = 1;
         foreach ($lines as $index => $line) {
-            $line = trim(StringHelpers::normalizeSpaces($line));
+            $line = trim(StringHelpers::normalizeSpaces(StringHelpers::removeUtf8Bom($line)));
             if ($line !== "") {
                 if ($block === []) {
                     $start = $index + 1;

@@ -38,7 +38,8 @@ final class WebVttParser extends SubtitleParser
         $leadingLines = substr_count(substr($content, 0, strlen($content) - strlen(ltrim($content))), "\n");
         $content      = trim($content);
 
-        $lines = array_merge(array_fill(0, $leadingLines, ""), $this->lines($content));
+        // Joined files keep the BOM of each part at the start of a line.
+        $lines = array_merge(array_fill(0, $leadingLines, ""), array_map(StringHelpers::removeUtf8Bom(...), $this->lines($content)));
         if (!str_starts_with($content, self::SIGNATURE)) {
             if (!$this->options->lenient) {
                 throw new ParsingException("The file does not start with WEBVTT.", $leadingLines + 1);

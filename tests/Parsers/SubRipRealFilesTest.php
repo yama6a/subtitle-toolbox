@@ -33,6 +33,12 @@ class SubRipRealFilesTest extends TestCase
     public static function realFiles(): array
     {
         return [
+            "swift-subtitle-kit BOM inside the file" => [
+                "swift_subtitle_kit_embedded_bom.srt",
+                3,
+                [0.0, 1.5, "Synthetic fixture header"],
+                [3.1, 4.5, "<i>Follow-up cue line.</i>"],
+            ],
             "Own styled" => [
                 "own_styled.srt",
                 10,
