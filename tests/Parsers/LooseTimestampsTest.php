@@ -56,7 +56,7 @@ class LooseTimestampsTest extends TestCase
         $this->assertCount($strict ? 0 : 2, $warnings);
         foreach ($warnings as $warning) {
             $this->assertSame(ParseWarningAction::Repaired, $warning->action);
-            $this->assertSame($format === Format::SubRip ? 1 : 3, $warning->lineNumber);
+            $this->assertSame($format === Format::SubRip ? 2 : 3, $warning->lineNumber);
         }
     }
 

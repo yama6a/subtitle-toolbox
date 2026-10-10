@@ -68,7 +68,7 @@ These readers set the line number:
 | Reader | Line |
 |:--- |:--- |
 | ASS and SSA, MicroDVD, MPSub, SubViewer, MPL2, TMPlayer, SCC | the line of the error |
-| SubRip, SBV and WebVTT, also the stream readers | the first line of the block, or the line of the error in the WebVTT header |
+| SubRip, SBV and WebVTT, also the stream readers | the line of the error. A message about a missing cue number or timing line quotes the line, cut to 60 characters |
 | SAMI | the line of the SYNC tag |
 | CSV and TSV | the line where the row starts, or where an unclosed quote opens |
 | YouTube XML formats, such as srv3 and transcript XML | the line of the XML element |

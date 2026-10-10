@@ -171,6 +171,15 @@ abstract class SubtitleParser
 
 
     /**
+     * Returns $text in double quotes, cut to 60 characters, for an error message.
+     */
+    protected static function quote(string $text): string
+    {
+        return '"' . (mb_strlen($text, "UTF-8") > 60 ? mb_substr($text, 0, 57, "UTF-8") . "..." : $text) . '"';
+    }
+
+
+    /**
      * @param list<string> $block
      */
     protected function warn(string $message, ?int $lineNumber, ?int $blockIndex, array $block, ParseWarningAction $action): void
@@ -464,7 +473,7 @@ abstract class SubtitleParser
             try {
                 $cues[] = $parsePart($part, $lineNumber + $offset);
             } catch (ParsingException $exception) {
-                $this->fail($exception, $lineNumber + $offset, $blockIndex, $part);
+                $this->fail($exception, $exception->getLineNumber() ?? $lineNumber + $offset, $blockIndex, $part);
             }
         }
 

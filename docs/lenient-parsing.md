@@ -12,7 +12,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
     $line = $warning->lineNumber ?? '-';   // lineNumber is null for EBU STL and JSON
     $logger->warning("line $line: $warning->message ({$warning->action->value})");
 }
-// line 5: Block #1 has no timing line on its second line. (skipped)
+// line 6: Block #1 has no timing line on its second line. The line is "00:00:05,000 => 00:00:07,000". (skipped)
 ```
 
 ## SubRip, WebVTT and SBV
@@ -63,7 +63,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | HTML transcript | a paragraph with a bad time or without a `<time>` | the paragraphs that each `<cite>` or `<time>` starts |
 
 - **Ignored**: the SCC, PGS and VobSub parsers and the chapter parsers ignore `ReadOptions::$lenient` and always throw. For example, the Podcasting 2.0 chapters parser throws for `"startTime": -5`.
-- **`ParseWarning`**: see [ParseWarning fields](#parsewarning-fields). A skipped block reports its first line. A repair reports the line where the parser split or read the cue.
+- **`ParseWarning`**: see [ParseWarning fields](#parsewarning-fields). A skipped block reports the line of the error, as `ParsingException::getLineNumber()` does in strict mode. A repair reports the line where the parser split or read the cue. SubRip and WebVTT report a repaired time or arrow on the timing line.
 - **No line numbers**: binary EBU STL and the JSON formats have no line numbers, so their warnings have `lineNumber` null. The YouTube XML formats report the line of the XML element.
 - **Warnings**: `Subtitle::getParseWarnings()` returns the warnings of the read that made the subtitle.
 - **Not the format**: lenient mode still throws for a WebVTT file without `WEBVTT` when the first timing line is not a WebVTT timing line, for example `00:00:01,000 --> 00:00:02,000`. Autodetection still needs the `WEBVTT` line. SubRip and SBV have no signature, so a file without one readable cue gives no cues and warnings.
@@ -83,7 +83,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | Field | Content |
 |:--- |:--- |
 | `message` | the message of the error |
-| `lineNumber` | the 1-based line of the block, or null |
+| `lineNumber` | the 1-based line of the problem, or null |
 | `blockIndex` | the 0-based index of the block. Null for a library JSON field outside the cues |
 | `block` | the trimmed lines of the block |
 | `action` | `ParseWarningAction::Skipped` or `ParseWarningAction::Repaired` |

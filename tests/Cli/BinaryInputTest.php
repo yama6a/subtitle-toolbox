@@ -86,7 +86,7 @@ class BinaryInputTest extends BinaryTestCase
 
         $this->assertSame(0, $code);
         $this->assertSame("1\r\n00:00:01,000 --> 00:00:02,000\r\nFirst cue.\r\n\r\n2\r\n00:00:05,000 --> 00:00:06,000\r\nLast cue.\r\n", $stdout);
-        $this->assertSame("broken.srt: line 5: Block #1 has no timing line on its second line. (skipped)\n", $stderr);
+        $this->assertSame("broken.srt: line 6: Block #1 has no timing line on its second line. The line is \"00:00:03,000 => 00:00:04,000\". (skipped)\n", $stderr);
 
         [$code, $stdout] = $this->runBinary(["convert", "latin1.srt", "--encoding", "Windows-1252", "--to", "vtt", "-o", "-"]);
         $this->assertSame(0, $code);

@@ -80,7 +80,8 @@ final class SubRipParser extends SubtitleParser
                     return $this->parseCueBlock($part, $index, $partLine);
                 }
 
-                $cue = $this->parseCueBlock(array_merge(["0"], $part), $index, $partLine);
+                // The added cue number has no line of its own, so the timing line keeps its line number.
+                $cue = $this->parseCueBlock(array_merge(["0"], $part), $index, $partLine - 1);
                 $this->warn(
                     "Block #$index has no cue number on line $partLine. The parser read the cue without it.",
                     $partLine,
@@ -124,12 +125,15 @@ final class SubRipParser extends SubtitleParser
     public function parseCueBlock(array $rawLines, int $index, ?int $lineNumber = null): SubtitleCue
     {
         if (!is_numeric($rawLines[0])) {
-            throw new ParsingException("Block #$index has no cue number on its first line.", $lineNumber);
+            throw new ParsingException("Block #$index has no cue number on its first line. The line is " . self::quote($rawLines[0]) . ".", $lineNumber);
         }
 
-        $timingLine = $this->replaceFullWidthDelimiters($rawLines[1] ?? "");
+        $secondLine = $rawLines[1] ?? null;
+        $lineNumber = $lineNumber === null || $secondLine === null ? $lineNumber : $lineNumber + 1;
+        $timingLine = $this->replaceFullWidthDelimiters($secondLine ?? "");
         if (!preg_match("/^(.*?)(?<!-)\s*(" . $this->arrowRegex() . ")\s*(.*)$/", $timingLine, $times)) {
-            throw new ParsingException("Block #$index has no timing line on its second line.", $lineNumber);
+            $quote = $secondLine === null ? "" : " The line is " . self::quote($secondLine) . ".";
+            throw new ParsingException("Block #$index has no timing line on its second line.$quote", $lineNumber);
         }
 
         [, $startTime, $arrow, $endPart] = $times;

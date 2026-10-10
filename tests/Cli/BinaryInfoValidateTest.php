@@ -86,12 +86,12 @@ class BinaryInfoValidateTest extends BinaryTestCase
         [$code, $stdout, $stderr] = $this->runBinary(["info", "broken.srt", "--json", "--lenient"]);
         $this->assertSame(0, $code);
         $this->assertSame([[
-            "lineNumber" => 5,
+            "lineNumber" => 6,
             "blockIndex" => 1,
-            "message"    => "Block #1 has no timing line on its second line.",
+            "message"    => "Block #1 has no timing line on its second line. The line is \"00:00:03,000 => 00:00:04,000\".",
             "action"     => "skipped",
         ]], json_decode($stdout, true)[0]["warnings"]);
-        $this->assertSame("broken.srt: line 5: Block #1 has no timing line on its second line. (skipped)\n", $stderr);
+        $this->assertSame("broken.srt: line 6: Block #1 has no timing line on its second line. The line is \"00:00:03,000 => 00:00:04,000\". (skipped)\n", $stderr);
 
         $this->assertMatchesRegularExpression('/^  Warnings: +1$/m', $this->runBinary(["info", "broken.srt", "--lenient"])[1]);
         $this->assertDoesNotMatchRegularExpression('/Warnings/', $this->runBinary(["info", "trip.srt"])[1]);
@@ -237,12 +237,12 @@ class BinaryInfoValidateTest extends BinaryTestCase
     public function testValidateAndDiffListTheParseWarningsOfEachFile(): void
     {
         $warning = [
-            "lineNumber" => 5,
+            "lineNumber" => 6,
             "blockIndex" => 1,
-            "message"    => "Block #1 has no timing line on its second line.",
+            "message"    => "Block #1 has no timing line on its second line. The line is \"00:00:03,000 => 00:00:04,000\".",
             "action"     => "skipped",
         ];
-        $line    = "line 5: Block #1 has no timing line on its second line. (skipped)\n";
+        $line    = "line 6: Block #1 has no timing line on its second line. The line is \"00:00:03,000 => 00:00:04,000\". (skipped)\n";
 
         [$code, $stdout, $stderr] = $this->runBinary(["validate", "broken.srt", "--max-cpl", "42", "--json", "--lenient"]);
         $this->assertSame([0, [$warning], "broken.srt: $line"], [$code, json_decode($stdout, true)[0]["warnings"], $stderr]);

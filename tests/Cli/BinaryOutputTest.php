@@ -286,7 +286,7 @@ class BinaryOutputTest extends BinaryTestCase
 
         $this->assertSame(3, $code);
         $this->assertSame("latin1.srt -> out/latin1.vtt\ntrip.srt -> out/trip.vtt\n3 files: 2 succeeded, 1 failed.\n", $stdout);
-        $this->assertSame("broken.srt: ParsingException (Error #100): Block #1 has no timing line on its second line. (line 5)\n", $stderr);
+        $this->assertSame("broken.srt: ParsingException (Error #100): Block #1 has no timing line on its second line. The line is \"00:00:03,000 => 00:00:04,000\". (line 6)\n", $stderr);
         $this->assertSame($this->tripAs(Format::WebVtt), $this->file("out/trip.vtt"));
         $this->assertFileDoesNotExist("$this->dir/out/broken.vtt");
     }

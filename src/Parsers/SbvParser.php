@@ -56,7 +56,7 @@ final class SbvParser extends SubtitleParser
         }
 
         if (substr_count($rawLines[0], ",") !== 1) {
-            throw new ParsingException("Block #$index has no timing line on its first line.", $lineNumber);
+            throw new ParsingException("Block #$index has no timing line on its first line. The line is " . self::quote($rawLines[0]) . ".", $lineNumber);
         }
 
         $times = explode(",", $rawLines[0]);

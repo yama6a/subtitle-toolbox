@@ -56,8 +56,8 @@ class LenientParsingTest extends TestCase
                     [10, 12, "See you tomorrow."],
                 ],
                 [
-                    [5, 1, self::SKIPPED, "The time \"00:00:0G,000\" is not valid."],
-                    [9, 2, self::REPAIRED, "Block #2 has the arrow \"->\" in its timing line. The parser read it as \"-->\"."],
+                    [6, 1, self::SKIPPED, "The time \"00:00:0G,000\" is not valid."],
+                    [10, 2, self::REPAIRED, "Block #2 has the arrow \"->\" in its timing line. The parser read it as \"-->\"."],
                 ],
             ],
             "SubRip with arrows of other lengths and spacing" => [
@@ -72,8 +72,8 @@ class LenientParsingTest extends TestCase
                     [9, 10, "A long arrow."],
                 ],
                 [
-                    [13, 3, self::REPAIRED, "Block #3 has the arrow \"->\" in its timing line. The parser read it as \"-->\"."],
-                    [17, 4, self::REPAIRED, "Block #4 has the arrow \"--->\" in its timing line. The parser read it as \"-->\"."],
+                    [14, 3, self::REPAIRED, "Block #3 has the arrow \"->\" in its timing line. The parser read it as \"-->\"."],
+                    [18, 4, self::REPAIRED, "Block #4 has the arrow \"--->\" in its timing line. The parser read it as \"-->\"."],
                 ],
             ],
             "SubRip with full-width delimiters in timing lines" => [
@@ -86,8 +86,8 @@ class LenientParsingTest extends TestCase
                     [5, 6, "時刻：午後三時。"],
                 ],
                 [
-                    [5, 1, self::REPAIRED, "Block #1 has full-width delimiters in its timing line. The parser read them as ASCII."],
-                    [9, 2, self::REPAIRED, "Block #2 has full-width delimiters in its timing line. The parser read them as ASCII."],
+                    [6, 1, self::REPAIRED, "Block #1 has full-width delimiters in its timing line. The parser read them as ASCII."],
+                    [10, 2, self::REPAIRED, "Block #2 has full-width delimiters in its timing line. The parser read them as ASCII."],
                 ],
             ],
             "SubRip without empty lines between cues" => [
@@ -115,7 +115,7 @@ class LenientParsingTest extends TestCase
                     [4, 6, "Sun again by Friday."],
                 ],
                 [
-                    [1, 0, self::SKIPPED, "Block #0 has no cue number on its first line."],
+                    [1, 0, self::SKIPPED, "Block #0 has no cue number on its first line. The line is \"Downloaded from www.example.org\"."],
                 ],
             ],
             "SubRip with a truncated last cue" => [
@@ -127,7 +127,7 @@ class LenientParsingTest extends TestCase
                     [4, 6, "Please mind the gap."],
                 ],
                 [
-                    [9, 2, self::SKIPPED, "The time \"00:00:0\" is not valid."],
+                    [10, 2, self::SKIPPED, "The time \"00:00:0\" is not valid."],
                 ],
             ],
             "SubRip with empty lines inside cues" => [
@@ -165,7 +165,7 @@ class LenientParsingTest extends TestCase
                     [7, 9, "See you tomorrow."],
                 ],
                 [
-                    [7, 2, self::REPAIRED, "Block #2 has the time \"00:00:06,000\", which is not in the form hh:mm:ss.mmm. The parser read it as 6 s."],
+                    [8, 2, self::REPAIRED, "Block #2 has the time \"00:00:06,000\", which is not in the form hh:mm:ss.mmm. The parser read it as 6 s."],
                 ],
             ],
             "WebVTT without empty lines after the header and between cues" => [
@@ -240,7 +240,7 @@ class LenientParsingTest extends TestCase
                     [4, 6, "Sun again by Friday."],
                 ],
                 [
-                    [3, 1, self::SKIPPED, "Block #1 is not a WebVTT cue, comment, style or region."],
+                    [3, 1, self::SKIPPED, "Block #1 is not a WebVTT cue, comment, style or region. The line is \"Downloaded from www.example.org\"."],
                 ],
             ],
             "WebVTT with a truncated last cue" => [
@@ -728,7 +728,7 @@ class LenientParsingTest extends TestCase
                     [7, 9, "No running, please."],
                 ],
                 [
-                    [6, 2, self::SKIPPED, "The time \"99999999999999999999:00:05.000\" is not below 100000 hours."],
+                    [7, 2, self::SKIPPED, "The time \"99999999999999999999:00:05.000\" is not below 100000 hours."],
                 ],
             ],
             "SubViewer 1 with a DELAY that moves a cue past the limit" => [
@@ -836,8 +836,8 @@ class LenientParsingTest extends TestCase
         $this->assertEquals([[1, 4, "Hello"], [8, 10, "Still fine"]], $this->cueRows($subtitle->getCues()));
         $this->assertEquals(
             [new ParseWarning(
-                "Block #1 has no timing line on its second line.",
-                5,
+                "Block #1 has no timing line on its second line. The line is \"00:00:05,000 => 00:00:07,000\".",
+                6,
                 1,
                 ["2", "00:00:05,000 => 00:00:07,000", "Broken arrow"],
                 ParseWarningAction::Skipped
