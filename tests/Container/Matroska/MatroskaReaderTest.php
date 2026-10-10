@@ -266,16 +266,15 @@ class MatroskaReaderTest extends TestCase
 
     public static function textTracks(): array
     {
-        return ["S_TEXT/UTF8" => [3, 1850], "S_TEXT/ASS" => [4, 1905], "S_TEXT/WEBVTT" => [5, 2205], "S_TEXT/SSA" => [6, 2509],
-                "S_TEXT/UTF8 without duration" => [8, 2367]];
+        return ["S_TEXT/UTF8" => [3], "S_TEXT/ASS" => [4], "S_TEXT/WEBVTT" => [5], "S_TEXT/SSA" => [6], "S_TEXT/UTF8 without duration" => [8]];
     }
 
 
     #[DataProvider("textTracks")]
-    public function testThrowsForAClusterTimestampThatOverflowsTheTime(int $track, int $offset): void
+    public function testThrowsForAClusterTimestampOfMoreThan8Bytes(int $track): void
     {
         $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("The block of track $track at byte $offset has the time ");
+        $this->expectExceptionMessage("The unsigned integer of the element 0xE7 at byte 1562 is longer than 8 bytes or not below 2^63.");
 
         MatroskaReader::open(self::DIR . "huge_timestamp.mkv")->extract($track);
     }
