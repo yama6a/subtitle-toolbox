@@ -212,7 +212,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
 
     /**
      * Returns the encoding that load(), loadAutoDetectFormat() or a fromString call read the text from, for example
-     * "UTF-8", "UTF-16LE" or "Windows-1252". Returns null for a binary format, an MKV or WebM track, and a subtitle
+     * "UTF-8", "UTF-16LE" or "Windows-1252". Returns null for a binary format, an MKV, WebM or MP4 track, and a subtitle
      * that no parser read. See docs/encodings.md for the order of the checks.
      */
     public function findSourceEncoding(): ?string
