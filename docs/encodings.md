@@ -17,7 +17,7 @@ StringHelpers::isValidUtf8(file_get_contents('movie.srt'));   // false for a Win
 
 ## Order of the checks
 
-`load()`, `loadAutoDetectFormat()`, the `fromString` functions and `StringHelpers::convertToUtf8()` take the first rule that applies:
+`load()`, `loadAutoDetectFormat()` and the `fromString` functions take the first rule that applies:
 
 | Step | Content | Read as |
 |:--- |:--- |:--- |
@@ -48,6 +48,7 @@ StringHelpers::isValidUtf8(file_get_contents('movie.srt'));   // false for a Win
 
 - **Output of invalid UTF-8**: the JSON, TTML, iTT and SAMI formatters throw `UnwritableContentException` for text that is not valid UTF-8.
 - **JSON formats**: the JSON parsers read each invalid UTF-8 byte as U+FFFD, the replacement character. For example, the bytes `42 FF 64` in a text field give `B`, U+FFFD and `d`.
+- **`StringHelpers::convertToUtf8()`**: it takes steps 1, 3, 4 and 6 only. It does not detect UTF-16 without a BOM or a code page. For example, `convertToUtf8("Caf\xE9")` returns the bytes unchanged.
 - **Parsers called directly**: only the `Subtitle` functions convert. Before `(new SamiParser())->parse($content, new ReadOptions())`, call `StringHelpers::convertToUtf8($content, TextEncoding::Cp949)`.
 - **Source encodings**: `ReadOptions::$encoding` and `StringHelpers::convertToUtf8()` take a `TextEncoding` case or a string. The conversion uses the PHP extension iconv. A string can be any name that the iconv of the system knows, for example `CP1125`. `new ReadOptions()` throws `InvalidArgumentException` for an unknown name. A byte that is invalid in the encoding throws `ParsingException`.
 - **Stored value**: `ReadOptions::$encoding` holds the iconv name as a string. `new ReadOptions(encoding: TextEncoding::Windows1252)` stores `Windows-1252`.

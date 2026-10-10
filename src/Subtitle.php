@@ -107,7 +107,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
         [$idxPath, $subPath] = $isIdx ? [$path, $other] : [$other, $path];
 
         $vobSubOptions = OptionsCopy::with($options, ["format" => OptionsCopy::with($options->format ?? new VobSubReadOptions(), [
-            "idx" => StringHelpers::convertToUtf8(self::readFile($idxPath), $options->encoding),
+            "idx" => StringHelpers::decode(self::readFile($idxPath), $options->encoding)->content,
         ])]);
 
         return self::parseUtf8(self::readFile($subPath), Format::VobSub, $vobSubOptions);
