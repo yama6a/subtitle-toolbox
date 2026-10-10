@@ -209,12 +209,13 @@ class EncodingTest extends TestCase
             "SAMI" => ["one-bad-byte.smi", Format::Sami],
             "TTML" => ["one-bad-byte.ttml", Format::Ttml],
             "iTT"  => ["one-bad-byte.ttml", Format::Itt],
+            "YouTube transcript XML" => ["one-bad-byte.srv1", Format::YouTubeTimedText],
         ];
     }
 
 
     #[DataProvider("xmlFilesWithOneBadByte")]
-    public function testSamiAndTtmlReadAnInvalidByteAsReplacementCharacterInLenientMode(string $file, Format $format): void
+    public function testXmlParsersReadAnInvalidByteAsReplacementCharacterInLenientMode(string $file, Format $format): void
     {
         $path     = self::DIR . "invalid-utf-8/$file";
         $offset   = strpos(file_get_contents($path), "f\xE9 noir") + 1;
@@ -231,7 +232,7 @@ class EncodingTest extends TestCase
 
 
     #[DataProvider("xmlFilesWithOneBadByte")]
-    public function testSamiAndTtmlThrowForAnInvalidByteInStrictMode(string $file, Format $format): void
+    public function testXmlParsersThrowForAnInvalidByteInStrictMode(string $file, Format $format): void
     {
         $path   = self::DIR . "invalid-utf-8/$file";
         $offset = strpos(file_get_contents($path), "f\xE9 noir") + 1;
@@ -239,6 +240,25 @@ class EncodingTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The content is not valid UTF-8. The first bad byte is at offset $offset. Pass --encoding.");
         Subtitle::load($path, $format);
+    }
+
+
+    public function testYouTubeJsonReadsAnInvalidByteAsReplacementCharacterInBothModes(): void
+    {
+        $path    = self::DIR . "invalid-utf-8/one-bad-byte.json3";
+        $offset  = strpos(file_get_contents($path), "f\xE9 noir") + 1;
+        $strict  = Subtitle::load($path, Format::YouTubeTimedText);
+        $lenient = Subtitle::load($path, Format::YouTubeTimedText, new ReadOptions(lenient: true));
+
+        foreach ([$strict, $lenient] as $subtitle) {
+            $this->assertSame(["Le café ouvre à midi.", "Caf\u{FFFD} noir, s'il vous plaît."],
+                              array_map(fn (SubtitleCue $cue) => $cue->getText(), $subtitle->getCues()));
+        }
+        $this->assertSame([], $strict->getParseWarnings());
+        $this->assertSame(
+            [["The content is not valid UTF-8. The first bad byte is at offset $offset. Pass --encoding.", ParseWarningAction::Repaired]],
+            array_map(fn (ParseWarning $warning) => [$warning->message, $warning->action], $lenient->getParseWarnings())
+        );
     }
 
 

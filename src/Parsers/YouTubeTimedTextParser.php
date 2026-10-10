@@ -29,7 +29,7 @@ final class YouTubeTimedTextParser extends SubtitleParser
      */
     protected function read(string $content): Subtitle
     {
-        [$fileData, $captions] = str_starts_with(ltrim($content), "{") ? $this->readJson($content) : $this->readXml($content);
+        [$fileData, $captions] = self::isJson($content) ? $this->readJson($content) : $this->readXml($content);
 
         $subtitle   = new Subtitle();
         $parsedCues = [];
@@ -47,6 +47,21 @@ final class YouTubeTimedTextParser extends SubtitleParser
         }
 
         return $subtitle->addCues($parsedCues);
+    }
+
+
+    /**
+     * The XML formats handle invalid UTF-8 like TTML. json3 reads it as U+FFFD in strict mode too, like the other JSON parsers.
+     */
+    protected function replacesInvalidUtf8(string $content): bool
+    {
+        return !self::isJson(StringHelpers::removeUtf8Bom($content));
+    }
+
+
+    private static function isJson(string $content): bool
+    {
+        return str_starts_with(ltrim($content), "{");
     }
 
 
