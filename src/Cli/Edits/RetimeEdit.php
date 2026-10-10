@@ -22,6 +22,7 @@ final class RetimeEdit extends Edit
     private function __construct(
         private readonly ?float $shift,
         private readonly ?float $shiftAfter,
+        private readonly ?float $shiftBefore,
         private readonly ?float $scale,
         private readonly ?float $fromFps,
         private readonly ?float $toFps,
@@ -47,6 +48,7 @@ final class RetimeEdit extends Edit
         return [
             Option::value("shift", "SECONDS", "Time to add to every time, for example 2.5 or 00:00:02.500, or -2.5 to show the cues earlier."),
             Option::value("shift-after", "SECONDS", "Shift only the cues that start at this time or later."),
+            Option::value("shift-before", "SECONDS", "Shift only the cues that start before this time."),
             Option::value("scale", "FACTOR", "Multiply every time by this factor. Must be greater than 0."),
             Option::repeatable("sync", "OLD=NEW", "Move the time OLD to NEW and correct the times between. OLD is a time, first, last or #N, the start of cue N. Repeatable."),
             Option::value("from-fps", "RATE", "Frame rate of the video that the subtitle fits now. Needs --to-fps."),
@@ -57,18 +59,22 @@ final class RetimeEdit extends Edit
 
     public static function fromArguments(Arguments $arguments): ?static
     {
-        self::needs($arguments, "shift", ["shift-after"]);
+        self::needs($arguments, "shift", ["shift-after", "shift-before"]);
         if ($arguments->has("sync") && ($arguments->has("shift") || $arguments->has("scale"))) {
             Command::fail("Pass --sync without --shift and --scale.");
         }
         $edit = new self(
             $arguments->seconds("shift"),
             $arguments->seconds("shift-after"),
+            $arguments->seconds("shift-before"),
             $arguments->positiveFloat("scale"),
             $arguments->positiveFloat("from-fps"),
             $arguments->positiveFloat("to-fps"),
             self::syncPoints($arguments->values("sync")),
         );
+        if ($edit->shiftAfter !== null && $edit->shiftBefore !== null && !($edit->shiftBefore > $edit->shiftAfter)) {
+            Command::fail("The option --shift-before must be after --shift-after.");
+        }
         if (($edit->fromFps === null) !== ($edit->toFps === null)) {
             Command::fail("Pass --from-fps and --to-fps together.");
         }
@@ -137,7 +143,7 @@ final class RetimeEdit extends Edit
             $subtitle->syncByPoints($this->resolveSync($subtitle));
         }
         if ($this->shift !== null) {
-            $subtitle->shift($this->shift, $this->shiftAfter);
+            $subtitle->shift($this->shift, $this->shiftAfter, $this->shiftBefore);
         }
         if ($this->scale !== null) {
             $subtitle->scale($this->scale);

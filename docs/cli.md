@@ -126,7 +126,7 @@ php subtitle-toolbox.phar --version
 - **Formats**: `--from` and `--to` always name formats. `retime` changes the frame rate with `--from-fps` and `--to-fps`.
 
 ## Times
-The options `--shift`, `--shift-after`, `--timing-min-duration`, `--timing-min-gap` and `--sync` take a time in one of these shapes:
+The options `--shift`, `--shift-after`, `--shift-before`, `--timing-min-duration`, `--timing-min-gap` and `--sync` take a time in one of these shapes:
 
 | Shape | Example | Seconds |
 |:--- |:--- |:--- |
@@ -185,12 +185,14 @@ vendor/bin/subtitle-toolbox retime movie.srt --sync first=00:00:12.5 --sync '#12
 | Option | Calls |
 |:--- |:--- |
 | `--shift SECONDS` | [`shift()`](editing.md#retiming) with the [time](#times) to add to every time. A negative value shows the cues earlier |
-| `--shift-after SECONDS` | `shift()` with the [time](#times) `$fromTime`, so only the cues from this time move. Needs `--shift` |
+| `--shift-after SECONDS` | `shift()` with the [time](#times) `$fromTime`, so only the cues that start at this time or later move. Needs `--shift` |
+| `--shift-before SECONDS` | `shift()` with the [time](#times) `$toTime`, so only the cues that start before this time move. It must be after `--shift-after`. Needs `--shift` |
 | `--scale FACTOR` | `scale()`. `--scale 1.001` fixes a subtitle that drifts 3.6 s per hour |
 | `--sync OLD=NEW` | `syncByPoints()` with a point that moves `OLD` to the [time](#times) `NEW`. Repeatable |
 | `--from-fps RATE`, `--to-fps RATE` | `convertFrameRate()`. `--from-fps 25 --to-fps 23.976` fits a subtitle for a 25 fps release to a 23.976 fps video |
 
 - **Negative times**: a time that becomes negative becomes 0.
+- **Shift range**: the start time of a cue decides if it moves. `--shift 2 --shift-after 10:00 --shift-before 15:00` moves a cue from 14:59 to 15:03 as a whole.
 - **Sync points**: `OLD` is a [time](#times), `first` or `last` for the start of the first or last cue, or `#N` for the start of cue N, counted from 1. 1 point shifts all cues. 2 points give the result of `syncByTwoPoints()`.
 - **Sync errors**: `--sync` with `--shift` or `--scale` is a usage error, exit code 2. So are points whose old or new times do not increase in the order of the options. A point that does not fit a file, such as `#120` in a file with 80 cues, fails that file with exit code 3.
 
@@ -284,7 +286,7 @@ ffmpeg -i movie.mp4 -af "$(cat mute.txt)" -c:v copy clean.mp4
 - **Limits without their fix**: `--structure-max-cpl`, `--structure-max-lines` and `--timing-min-gap` alone are a usage error, exit code 2. The message names the fix options that use them.
 
 ### Timing
-`--shift`, `--shift-after`, `--scale`, `--sync`, `--from-fps` and `--to-fps` work as in [Retime](#retime).
+`--shift`, `--shift-after`, `--shift-before`, `--scale`, `--sync`, `--from-fps` and `--to-fps` work as in [Retime](#retime).
 
 | Option | Calls |
 |:--- |:--- |

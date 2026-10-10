@@ -143,6 +143,24 @@ class BinaryTimingTest extends BinaryTestCase
     }
 
 
+    public function testRetimeShiftBefore(): void
+    {
+        copy(self::FILES . "editing/own_ferry_drift.vtt", "$this->dir/ferry.vtt");
+        $expected = (string)file_get_contents(self::FILES . "editing/own_ferry_drift_shifted.vtt");
+
+        $this->assertSame([0, $expected, ""], $this->runBinary(["retime", "ferry.vtt", "--shift", "2", "--shift-after", "6", "--shift-before", "00:10:00"]));
+        $this->assertSame([0, $expected, ""], $this->runBinary(["convert", "ferry.vtt", "--to", "vtt", "--shift", "2", "--shift-after", "6", "--shift-before", "600"]));
+        $this->assertSame(
+            [2, "", "Error: The option --shift-before must be after --shift-after.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            $this->runBinary(["retime", "ferry.vtt", "--shift", "2", "--shift-after", "600", "--shift-before", "600"])
+        );
+        $this->assertSame(
+            [2, "", "Error: Pass --shift with --shift-before.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            $this->runBinary(["retime", "ferry.vtt", "--scale", "2", "--shift-before", "600"])
+        );
+    }
+
+
     public function testRetimeScale(): void
     {
         [$code, $stdout] = $this->runBinary(["retime", "shop.vtt", "--scale", "2"]);
