@@ -39,12 +39,13 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 - **Empty line inside a cue**: SubRip and SBV add a block without a timing line to the cue before it, in strict mode too. Lenient mode warns. The block stays apart and the parser skips it when it follows no cue, starts with a time, or starts with a number in SubRip.
 - **Empty line inside a WebVTT cue**: only lenient mode adds the block to the cue before it, because the spec ends a cue at an empty line. Strict mode throws for the block. A `NOTE`, `STYLE` or `REGION` block stays apart.
 - **Loose times**: a time whose last field has 1 digit and no fraction, such as `00:00:0`, stays an error. It is a time that the end of the file cut off.
+- **Minutes or seconds of 60 or more**: a time such as `00:75:02,000` or `00:00:75,000` is a bad timestamp in lenient mode too. A carried-over value can put a cue far from its place. The hours field can have more than 2 digits.
 - **Cue without text**: a timing line without text lines gives a cue with no lines, in strict and lenient mode. WebVTT allows an empty cue. To drop these cues, call `$subtitle->removeCuesWhere(fn (SubtitleCue $cue): bool => $cue->getLines() === [])`.
 
 ## Other formats
 | Parser | Skipped with a warning | `blockIndex` counts |
 |:--- |:--- |:--- |
-| ASS, SSA | a `Dialogue:` or `Comment:` line with too few fields or a bad time. A file without a `Format:` line is not an error. The parser then uses the default fields. A time without a fraction, with 4 fraction digits, or with `,` or `:` before the fraction gets a `repaired` warning, for example `0:00:01`, `0:00:01.5000` or `0:00:01,50`. The parser rounds it to milliseconds | events |
+| ASS, SSA | a `Dialogue:` or `Comment:` line with too few fields or a bad time. A file without a `Format:` line is not an error. The parser then uses the default fields. A time without a fraction, with 4 fraction digits, or with `,` or `:` before the fraction gets a `repaired` warning, for example `0:00:01`, `0:00:01.5000` or `0:00:01,50`. The parser rounds it to milliseconds. Such a time with minutes or seconds of 60 or more is a bad time | events |
 | MicroDVD | a line without `{start}{end}` frames, also before the `{1}{1}<fps>` line. A file without a frame rate gets a `repaired` warning with `lineNumber` and `blockIndex` null, and the parser uses 23.976 fps | non-empty lines |
 | MPL2 | a line without `[start][end]` | non-empty lines |
 | TMPlayer | a line without a time | non-empty lines |

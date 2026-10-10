@@ -127,6 +127,55 @@ class LooseTimestampsTest extends TestCase
     }
 
 
+    /**
+     * @return array<string, array{Format, string}>
+     */
+    public static function timesWithMinutesOrSecondsOfSixtyOrMore(): array
+    {
+        return [
+            "SubRip minutes"          => [Format::SubRip, "1\n00:00:01,000 --> 00:75:02,000\nThe ferry leaves.\n\n2\n02:00:00,000 --> 02:00:02,000\nIt is late.\n"],
+            "SubRip seconds"          => [Format::SubRip, "1\n00:00:01,000 --> 00:00:75,000\nThe ferry leaves.\n\n2\n02:00:00,000 --> 02:00:02,000\nIt is late.\n"],
+            "SubRip without hours"    => [Format::SubRip, "1\n00:01,000 --> 00:60,000\nThe ferry leaves.\n\n2\n02:00:00,000 --> 02:00:02,000\nIt is late.\n"],
+            "WebVTT seconds"          => [Format::WebVtt, "WEBVTT\n\n00:01.000 --> 00:75.000\nThe ferry leaves.\n\n02:00:00.000 --> 02:00:02.000\nIt is late.\n"],
+            "WebVTT minutes"          => [Format::WebVtt, "WEBVTT\n\n00:00:01.000 --> 00:60:02,000\nThe ferry leaves.\n\n02:00:00.000 --> 02:00:02.000\nIt is late.\n"],
+            "ASS minutes"             => [Format::Ass, "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:01.00,0:75:02,Default,,0,0,0,,The ferry leaves.\nDialogue: 0,2:00:00.00,2:00:02.00,Default,,0,0,0,,It is late.\n"],
+            "ASS seconds"             => [Format::Ass, "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:01.00,0:00:99,Default,,0,0,0,,The ferry leaves.\nDialogue: 0,2:00:00.00,2:00:02.00,Default,,0,0,0,,It is late.\n"],
+        ];
+    }
+
+
+    #[DataProvider("timesWithMinutesOrSecondsOfSixtyOrMore")]
+    public function testLenientModeSkipsACueWithMinutesOrSecondsOfSixtyOrMore(Format $format, string $content): void
+    {
+        $subtitle = Subtitle::fromString($content, $format, new ReadOptions(lenient: true));
+
+        $this->assertSame([[7200.0, 7202.0]], array_map(fn ($cue) => [$cue->getStart(), $cue->getEnd()], $subtitle->getCues()));
+        $this->assertSame([ParseWarningAction::Skipped], array_map(fn ($warning) => $warning->action, $subtitle->getParseWarnings()));
+    }
+
+
+    /**
+     * @return array<string, array{Format, string}>
+     */
+    public static function exceededMinutesFixtures(): array
+    {
+        return [
+            "SubRip" => [Format::SubRip, "srt/exceeded_minutes.srt"],
+            "WebVTT" => [Format::WebVtt, "vtt/exceeded_minutes.vtt"],
+        ];
+    }
+
+
+    #[DataProvider("exceededMinutesFixtures")]
+    public function testLenientModeSkipsTheCueOfTheExceededMinutesFixture(Format $format, string $file): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/" . $file), $format, new ReadOptions(lenient: true));
+
+        $this->assertSame([], $subtitle->getCues());
+        $this->assertSame([ParseWarningAction::Skipped], array_map(fn ($warning) => $warning->action, $subtitle->getParseWarnings()));
+    }
+
+
     private function content(Format $format, string $start, string $end): string
     {
         return $format === Format::SubRip

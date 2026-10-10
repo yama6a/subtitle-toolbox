@@ -7,7 +7,7 @@ namespace SubtitleToolbox\Parsers;
 use SubtitleToolbox\Timecode;
 
 /**
- * Reads the h:mm:ss.fff variants that lenient mode repairs: 1 or 2 digit minutes and seconds,
+ * Reads the h:mm:ss.fff variants that lenient mode repairs: 1 or 2 digit minutes and seconds below 60,
  * no fraction, or a fraction of up to 4 digits that the parser rounds to milliseconds.
  *
  * @internal
@@ -23,7 +23,7 @@ final class LooseTime
     {
         $separators = preg_quote($fractionSeparators, '/');
         $hours      = $hoursOptional ? '(?:(0*\d{1,5}):)?' : '(0*\d{1,5}):';
-        if (!preg_match('/^' . $hours . '(\d{1,2}):(\d{1,2})(?:[' . $separators . '](\d{1,4}))?$/', $time, $matches)) {
+        if (!preg_match('/^' . $hours . '([0-5]?\d):([0-5]?\d)(?:[' . $separators . '](\d{1,4}))?$/', $time, $matches)) {
             return null;
         }
 
