@@ -331,6 +331,10 @@ final class Mp4Reader implements ContainerReader
         if (isset($tables["stsz"])) {
             ["size" => $size, "count" => $count] = unpack("Nsize/Ncount", $this->read($tables["stsz"], 4, 8));
             if ($size !== 0) {
+                if ($count * $size > $this->fileSize) {
+                    throw new ParsingException("The stsz box of track $trackNumber holds $count samples of $size bytes, which do not fit into the file.");
+                }
+
                 return [$count, fn (): int => $size];
             }
             $sizes = array_column($this->table($trackNumber, $tables, "stsz", 4, "Nsize", 8), "size");
@@ -384,11 +388,11 @@ final class Mp4Reader implements ContainerReader
      */
     private function sampleText(int $trackNumber, int $offset, int $size): string
     {
-        if ($size < self::TEXT_LENGTH_SIZE) {
-            return "";
-        }
         if ($offset + $size > $this->fileSize) {
             throw new ParsingException("A sample of track $trackNumber at byte $offset lies outside the file.");
+        }
+        if ($size < self::TEXT_LENGTH_SIZE) {
+            return "";
         }
 
         fseek($this->stream, $offset);

@@ -317,6 +317,8 @@ class ThrowSitesTest extends TestCase
             "Container/Mp4/Mp4Reader.php: no sample sizes" => [fn () => self::mp4(["boxes" => ["stsz" => ""]])->extract(1), ...$parsing],
             "Container/Mp4/Mp4Reader.php: invalid stz2" => [fn () => self::mp4(["boxes" => [
                                                                 "stsz" => Mp4FixtureWriter::fullBox("stz2", 0, 0, "\0\0\0\x03" . pack("N", 1) . "\0")]])->extract(1), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: sample count too large" => [fn () => self::mp4(["boxes" => [
+                                                                "stsz" => Mp4FixtureWriter::fullBox("stsz", 0, 0, pack("NN", 1, 1 << 20))]])->extract(1), ...$parsing],
             "Container/Mp4/Mp4Reader.php: missing table" => [fn () => self::mp4(["boxes" => ["stco" => ""]])->extract(1), ...$parsing],
             "Container/Mp4/Mp4Reader.php: table count" => [fn () => self::mp4(["boxes" => [
                                                                 "stco" => Mp4FixtureWriter::fullBox("stco", 0, 0, pack("N", 5))]])->extract(1), ...$parsing],
