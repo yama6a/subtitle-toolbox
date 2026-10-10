@@ -47,6 +47,26 @@ class ParseSpeedTest extends TestCase
     }
 
 
+    // TTML reads about 3 times slower than SubRip. Quadratic work per paragraph makes it 40 times slower.
+    public function testParsesTtmlAtMostTenTimesSlowerThanSubRip(): void
+    {
+        $subtitle = $this->repeatFixture(self::CUE_COUNT);
+        $subRip   = $this->parseSeconds($subtitle->toString(Format::SubRip), Format::SubRip);
+        $ttml     = $this->parseSeconds($subtitle->toString(Format::Ttml), Format::Ttml);
+
+        $this->assertLessThan(10 * $subRip, $ttml, sprintf("TTML took %.2f s, SubRip %.2f s.", $ttml, $subRip));
+    }
+
+
+    private function parseSeconds(string $content, Format $format): float
+    {
+        $start = microtime(true);
+        Subtitle::fromString($content, $format);
+
+        return microtime(true) - $start;
+    }
+
+
     private function repeatFixture(int $cueCount): Subtitle
     {
         $cues     = Subtitle::fromString(file_get_contents(__DIR__ . "/../files/srt/real/own_escaping.srt"), Format::SubRip)->getCues();

@@ -298,7 +298,8 @@ final class TtmlParser extends SubtitleParser
     private function guessFrameRate(): float
     {
         $highest = null;
-        foreach ((new DOMXPath($this->root->ownerDocument))->query("//@begin | //@end | //@dur") as $attribute) {
+        // libxml merges the node sets of a union query such as "//@begin | //@end" in quadratic time.
+        foreach ((new DOMXPath($this->root->ownerDocument))->query("//@*[namespace-uri() = '' and (local-name() = 'begin' or local-name() = 'end' or local-name() = 'dur')]") as $attribute) {
             if (preg_match("/^\d{2,}:\d{2}:\d{2}:(\d{2})(?:\.\d+)?$/", trim($attribute->value), $matches)
                 && (int) $matches[1] >= 30 && (int) $matches[1] > (int) ($highest[1] ?? 0)) {
                 $highest = [$attribute, (int) $matches[1]];
