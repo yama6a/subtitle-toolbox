@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox\Parsers;
 
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatDataSchema;
@@ -279,30 +280,28 @@ final class CsvParser extends SubtitleParser
 
 
     /**
-     * Reads seconds, hh:mm:ss.mmm, hh:mm:ss,mmm or hh:mm:ss:ff. Frames need a frame rate.
+     * Reads seconds, h:mm:ss.mmm, m:ss.mmm or hh:mm:ss:ff. The last seconds field can have 1 digit. Frames need a frame rate.
      */
     private static function parseTime(string $time, ?FrameRate $frameRate, int $lineNumber): float
     {
         if (preg_match('/^\d+(?:\.\d+)?$/', $time)) {
             return self::boundedTime((float) $time, $time, $lineNumber);
         }
-        if (preg_match('/^(\d+):([0-5]\d):([0-5]\d)(?:([.,:])(\d+))?$/', $time, $matches)) {
-            [$hours, $minutes, $seconds] = [(int) $matches[1], (int) $matches[2], (int) $matches[3]];
-            $fraction                    = $matches[5] ?? "";
-            if (($matches[4] ?? "") !== ":") {
-                return self::boundedTime(Timecode::toSeconds($hours, $minutes, $seconds, $fraction), $time, $lineNumber);
-            }
+        $problem = "is not seconds, h:mm:ss.mmm, m:ss.mmm, hh:mm:ss,mmm or hh:mm:ss:ff.";
+        if (preg_match('/^(\d+):([0-5]\d):([0-5]\d):(\d+)$/', $time, $matches)) {
             if ($frameRate !== null) {
-                return self::boundedTime(Timecode::toSecondsFromFrames($hours, $minutes, $seconds, (int) $fraction, $frameRate), $time, $lineNumber);
+                return self::boundedTime(Timecode::toSecondsFromFrames((int) $matches[1], (int) $matches[2], (int) $matches[3], (int) $matches[4], $frameRate), $time, $lineNumber);
+            }
+            $problem = "counts frames. Set CsvReadOptions::\$frameRate.";
+        } else {
+            try {
+                return Timecode::parse((string) preg_replace('/:(\d)(?=$|[.,])/', ':0$1', $time));
+            } catch (InvalidArgumentException $e) {
+                $problem = str_contains($e->getMessage(), " is not below ") ? ltrim(substr($e->getMessage(), (int) strpos($e->getMessage(), " is not below "))) : $problem;
             }
         }
 
-        throw new ParsingException(
-            substr_count($time, ":") === 3
-                ? "The time \"$time\" counts frames. Set CsvReadOptions::\$frameRate."
-                : "The time \"$time\" is not seconds, hh:mm:ss.mmm, hh:mm:ss,mmm or hh:mm:ss:ff.",
-            $lineNumber
-        );
+        throw new ParsingException("The time \"$time\" $problem", $lineNumber);
     }
 
 

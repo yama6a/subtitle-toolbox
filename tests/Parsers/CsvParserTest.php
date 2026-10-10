@@ -92,6 +92,11 @@ class CsvParserTest extends TestCase
             "comma"             => ["\"00:01:02,500\"", 62.5],
             "one hour digit"    => ["1:00:00.25", 3600.25],
             "frames at 25 fps"  => ["00:01:02:12", 62.48],
+            "minutes and seconds"        => ["0:06", 6.0],
+            "one second digit"           => ["00:00:1", 1.0],
+            "minutes seconds fraction"   => ["01:02.500", 62.5],
+            "minutes seconds comma"      => ["\"01:02,500\"", 62.5],
+            "full time with fraction"    => ["00:00:01.500", 1.5],
         ];
     }
 
@@ -119,6 +124,14 @@ class CsvParserTest extends TestCase
         $this->expectExceptionMessage("The time \"00:00:01:12\" counts frames. Set CsvReadOptions::\$frameRate. (line 2)");
 
         (new CsvParser())->parse("start,end,text\n00:00:01:12,00:00:02:00,a\n", new ReadOptions());
+    }
+
+
+    public function testTimeFormatOfTheNewShapesIsDot(): void
+    {
+        $subtitle = (new CsvParser())->parse("start,text\n0:06,a\n", new ReadOptions());
+
+        $this->assertSame("hh:mm:ss.mmm", $subtitle->findFormatData("csv")["timeFormat"]);
     }
 
 
