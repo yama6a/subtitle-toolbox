@@ -83,6 +83,7 @@ class OptionChecksTest extends TestCase
             "Subtitle::addLeadInOut() leadIn"          => fn (float $value) => (new Subtitle())->addLeadInOut($value, 0),
             "Subtitle::addLeadInOut() leadOut"         => fn (float $value) => (new Subtitle())->addLeadInOut(0, $value),
             "Subtitle::addLeadInOut() minGap"          => fn (float $value) => (new Subtitle())->addLeadInOut(0, 0, $value),
+            "Subtitle::limitLongCues() maxDuration"    => fn (float $value) => (new Subtitle())->limitLongCues($value),
             "SpeechReference mediaDuration"            => fn (float $value) => SpeechReference::fromFfmpegSilencedetect("", $value),
         ];
 

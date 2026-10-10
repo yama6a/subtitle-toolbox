@@ -32,7 +32,7 @@ $subtitle->syncByPoints([                            // 10 s becomes 12 s, 600 s
 - **Point order**: the old and new times must both increase from point to point. Else `syncByPoints()` throws `InvalidArgumentException`. `syncByTwoPoints()` takes its 2 points in either order.
 - **Cue across a point**: each start, end and word timestamp moves by the segment that holds it. So a cue across a point keeps its times in step with the speech.
 - **Word timestamps**: these 5 methods also move the word timestamps in the cue text, such as `<00:00:02.000>`. `merge()` with an offset and `withSlice()` with `$moveToZero` move them too. A word timestamp that becomes negative becomes 0.
-- **Cue boundaries**: some methods move a start or end time without moving the speech. So the word timestamps keep their times. These are `fixOverlaps()`, `extendShortCues()`, `addLeadInOut()`, the [shot change timing](#shot-changes-and-gaps) and the snap of `DualSubtitle`.
+- **Cue boundaries**: some methods move a start or end time without moving the speech. So the word timestamps keep their times. These are `fixOverlaps()`, `extendShortCues()`, `addLeadInOut()`, `limitLongCues()`, the [shot change timing](#shot-changes-and-gaps) and the snap of `DualSubtitle`.
 - **Speech-to-text format data**: the format data of Whisper, Deepgram, AssemblyAI, AWS Transcribe and Google input is a copy of the source file. It keeps the times of the source file. Read the word times from the word timestamps in the cue text.
 - **Other ways to sync**: [sync.md](sync.md) finds the offset and scale from a reference subtitle or the speech in the audio.
 
@@ -65,15 +65,17 @@ $gap = (new FrameRate(24))->framesToSeconds(2);   // about 0.083 s
 $subtitle->fixOverlaps($gap);                     // end each cue at least $gap before the next cue starts
 $subtitle->extendShortCues(0.833, $gap);          // show each cue for at least 0.833 s where the next cue allows it
 $subtitle->addLeadInOut(0.2, 0.3, $gap);         // start each cue 0.2 s earlier and end it 0.3 s later where the neighbours allow it
+$subtitle->limitLongCues(7);                      // end each cue at most 7 s after its start
 $subtitle->wrapLines(42);                         // at most 42 characters per line, at most 2 lines
 $subtitle->unwrapLines();                         // join the lines of each dialogue turn with a space
 ```
 
-- **Start times**: `fixOverlaps()` and `extendShortCues()` move only end times. `fixOverlaps()` ends a cue at its own start when the gap does not fit. Cues with the same start, such as a sign and a line of dialogue, end before the next cue with a later start. `extendShortCues()` never creates an overlap and never makes a cue shorter.
+- **Start times**: `fixOverlaps()`, `extendShortCues()` and `limitLongCues()` move only end times. `fixOverlaps()` ends a cue at its own start when the gap does not fit. Cues with the same start, such as a sign and a line of dialogue, end before the next cue with a later start. `extendShortCues()` never creates an overlap and never makes a cue shorter.
 - **Lead-in and lead-out**: speech-to-text cues start and end exactly on the speech, so they flash on and off. `addLeadInOut()` moves each start back by the lead-in and each end on by the lead-out. A start never goes below 0. A cue stops at least `minGap` seconds before or after a cue it did not overlap.
   - **Priority**: the lead-out comes first. So in a short gap the end of the earlier cue takes the space, and the next cue gets the lead-in that is left. For example, with `A` 1.0 to 2.0 and `B` 2.2 to 3.0, `addLeadInOut(0.3, 0.3)` gives `A` 0.7 to 2.2 and `B` 2.2 to 3.3. The end is the part of a cue that a reader most often misses.
   - **Overlaps**: a start or end inside another cue stays where it is. So `A` 1.0 to 3.0 and `B` 2.0 to 4.0 become `A` 0.8 to 3.0 and `B` 2.0 to 4.2 with 0.2 s each.
   - **Limits**: a negative, NAN or INF value throws `InvalidArgumentException`. The method never makes a cue shorter.
+- **Long cues**: `limitLongCues(7)` ends a `Hi.` from 1.0 to 26.0 at 8.0. It never makes a cue longer. After it, the `MaxDuration` [validation rule](validation.md) with the same limit finds no cue. A maximum of 0 or less, NAN or INF throws `InvalidArgumentException`.
 - **Line breaks**: `wrapLines()` changes only cues with a longer line or with more lines than allowed. It uses the fewest lines that fit and makes them about equal in length. When the text does not fit, the lines get longer than the limit.
 - **Dialogue**: each dialogue turn keeps lines of its own. A turn starts at a line with a dialogue dash, such as `- Yes.`. It also starts at a dash after a sentence end within a line, so `- Are you coming? - Yes.` becomes 2 lines. A sentence end is `.`, `?`, `!` or an ellipsis character. A dash before a digit, as in `-20 degrees`, starts no turn. A long turn wraps within itself, with up to the maximum lines per turn. So a cue with 2 or more turns can have more lines than the maximum.
 - **Unwrapping**: `unwrapLines()` joins the lines of each turn with a space. A turn starts at the first line and at each line with a dialogue dash. For example, the lines `- Are you coming?`, `- Yes, in a minute,` and `I promise you.` become 2 lines: `- Are you coming?` and `- Yes, in a minute, I promise you.` A cue without dash lines becomes 1 line. A dash after a sentence end within a line stays on that line.

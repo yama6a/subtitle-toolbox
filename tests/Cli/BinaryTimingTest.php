@@ -94,6 +94,26 @@ class BinaryTimingTest extends BinaryTestCase
     }
 
 
+    public function testTimingMaxDuration(): void
+    {
+        copy(self::FILES . "fixes/own_long_cues.srt", "$this->dir/long.srt");
+        copy(self::FILES . "fixes/own_asr_tight_timing.srt", "$this->dir/asr.srt");
+        $expected = Subtitle::fromString($this->file("asr.srt"), Format::SubRip)->extendShortCues(3)->addLeadInOut(0, 1)->limitLongCues(2.5);
+
+        $this->assertSame([0, (string)file_get_contents(self::FILES . "fixes/own_long_cues_limited.srt"), ""],
+                          $this->runBinary(["convert", "long.srt", "--to", "srt", "--timing-max-duration", "7"]));
+        $this->assertSame([0, (string)file_get_contents(self::FILES . "fixes/own_long_cues_limited.srt"), ""],
+                          $this->runBinary(["convert", "long.srt", "--to", "srt", "--timing-max-duration", "00:00:07,000"]));
+        $this->assertSame([0, $expected->toString(Format::SubRip), ""], $this->runBinary([
+            "convert", "asr.srt", "--to", "srt", "--timing-max-duration", "2.5", "--timing-lead-out", "1", "--timing-min-duration", "3",
+        ]));
+        $this->assertSame(
+            [2, "", "Error: The option --timing-max-duration must be greater than 0.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            $this->runBinary(["convert", "long.srt", "--to", "srt", "--timing-max-duration", "0"])
+        );
+    }
+
+
     public function testRetimeSyncFirstAndLastEqualsSyncByTwoPoints(): void
     {
         copy(self::FILES . "editing/own_ferry_drift.vtt", "$this->dir/ferry.vtt");

@@ -7,7 +7,9 @@ namespace SubtitleToolbox;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use SubtitleToolbox\Tests\Support\TestSubtitles;
+use SubtitleToolbox\Validation\ValidationRule;
 use SubtitleToolbox\Validation\ValidationRules;
+use SubtitleToolbox\Validation\ValidationViolation;
 
 class FixesTest extends \PHPUnit\Framework\TestCase
 {
@@ -276,6 +278,73 @@ class FixesTest extends \PHPUnit\Framework\TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage($message);
         TestSubtitles::fromTimes([[1, 2]])->addLeadInOut($leadIn, $leadOut, $minGap);
+    }
+
+
+    public function testLimitLongCuesRemovesEachMaxDurationViolation(): void
+    {
+        $subtitle = Subtitle::fromString((string)file_get_contents(__DIR__ . "/files/fixes/own_long_cues.srt"), Format::SubRip);
+        $tooLong  = fn (): array => array_values(array_filter($subtitle->validate(ValidationRules::netflixEnglish(24)),
+                                                              fn (ValidationViolation $violation): bool => $violation->rule === ValidationRule::MaxDuration));
+        $this->assertCount(2, $tooLong());
+
+        $this->assertSame($subtitle, $subtitle->limitLongCues(7));
+
+        $this->assertSame(file_get_contents(__DIR__ . "/files/fixes/own_long_cues_limited.srt"), $subtitle->toString(Format::SubRip));
+        $this->assertSame([], $tooLong());
+    }
+
+
+    /**
+     * @return array<string, array{list<array{float, float}>, float, list<array{float, float}>}>
+     */
+    public static function longCueCases(): array
+    {
+        return [
+            "too long"          => [[[1, 26]], 7, [[1.0, 8.0]]],
+            "short"             => [[[1, 3]], 7, [[1.0, 3.0]]],
+            "exactly the limit" => [[[1, 8]], 7, [[1.0, 8.0]]],
+            "below 1 ms"        => [[[1.001, 9]], 7.0004, [[1.001, 8.001]]],
+            "overlapping cues"  => [[[1, 10], [2, 4]], 2.5, [[1.0, 3.5], [2.0, 4.0]]],
+        ];
+    }
+
+
+    /**
+     * @param list<array{float, float}> $times
+     * @param list<array{float, float}> $expected
+     */
+    #[DataProvider("longCueCases")]
+    public function testLimitLongCues(array $times, float $maxDuration, array $expected): void
+    {
+        $subtitle = TestSubtitles::fromTimes($times);
+
+        $subtitle->limitLongCues($maxDuration);
+
+        $this->assertSame($expected, TestSubtitles::times($subtitle));
+    }
+
+
+    /**
+     * @return array<string, array{float, string}>
+     */
+    public static function invalidMaxDuration(): array
+    {
+        return [
+            "zero"     => [0, "The maximum duration must be greater than 0, got 0."],
+            "negative" => [-7, "The maximum duration must be greater than 0, got -7."],
+            "NAN"      => [NAN, "The maximum duration must be greater than 0, got NAN."],
+            "INF"      => [INF, "The maximum duration must be greater than 0, got INF."],
+        ];
+    }
+
+
+    #[DataProvider("invalidMaxDuration")]
+    public function testLimitLongCuesWithInvalidMaximumThrowsException(float $maxDuration, string $message): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage($message);
+        TestSubtitles::fromTimes([[1, 2]])->limitLongCues($maxDuration);
     }
 
 

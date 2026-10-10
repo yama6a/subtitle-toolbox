@@ -10,3 +10,5 @@
 | `own_dialogue_turns_unwrapped.srt` | Written for this repository. Expected `SubRipFormatter` output for `own_dialogue_turns_wrapped.srt` after `unwrapLines()`, without BOM. | MIT |
 | `own_asr_tight_timing.srt` | Written for this repository in the shape of a SubRip file from speech-to-text: LF, cues that start and end on the speech, a 0.1 s gap, touching cues and a sound cue that overlaps dialogue. | MIT |
 | `own_asr_tight_timing_lead.srt` | Written for this repository. Expected `SubRipFormatter` output for `own_asr_tight_timing.srt` after `addLeadInOut(0.2, 0.3, 0.083)`, with the BOM that the formatter writes. | MIT |
+| `own_long_cues.srt` | Written for this repository in the shape of a SubRip file from speech-to-text: LF, a 25 s greeting, a 12.45 s cue that runs through silence and a cue of exactly 7 s. | MIT |
+| `own_long_cues_limited.srt` | Written for this repository. Expected `SubRipFormatter` output for `own_long_cues.srt` after `limitLongCues(7)`, with the BOM that the formatter writes. | MIT |

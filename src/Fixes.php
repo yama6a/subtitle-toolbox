@@ -85,6 +85,24 @@ trait Fixes
 
 
     /**
+     * Ends each cue that lasts longer than $maxDuration seconds at $maxDuration seconds after its start.
+     */
+    public function limitLongCues(float $maxDuration): self
+    {
+        OptionChecks::positiveFinite($maxDuration, "The maximum duration must be greater than 0, got %s.");
+
+        foreach ($this->cues as $cue) {
+            $end = Timecode::roundToMilliseconds($cue->getStart() + $maxDuration);
+            if ($end < $cue->getEnd()) {
+                $cue->setEnd($end);
+            }
+        }
+
+        return $this;
+    }
+
+
+    /**
      * Breaks the lines of each cue that has a line longer than $maxCharactersPerLine or more than $maxLinesPerCue lines.
      * Each dialogue turn keeps lines of its own.
      */
