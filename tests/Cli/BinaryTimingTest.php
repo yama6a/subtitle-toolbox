@@ -74,6 +74,26 @@ class BinaryTimingTest extends BinaryTestCase
     }
 
 
+    public function testTimingLeadInAndLeadOut(): void
+    {
+        copy(self::FILES . "fixes/own_asr_tight_timing.srt", "$this->dir/asr.srt");
+        $asr = Subtitle::fromString($this->file("asr.srt"), Format::SubRip);
+
+        $this->assertSame([0, (string)file_get_contents(self::FILES . "fixes/own_asr_tight_timing_lead.srt"), ""], $this->runBinary([
+            "convert", "asr.srt", "--to", "srt", "--timing-lead-in", "0.2", "--timing-lead-out", "00:00:00.300", "--timing-min-gap", "0.083",
+        ]));
+        $this->assertSame([0, (clone $asr)->addLeadInOut(0, 0.5)->toString(Format::SubRip), ""],
+                          $this->runBinary(["convert", "asr.srt", "--to", "srt", "--timing-lead-out", "0.5"]));
+        $this->assertSame([0, (clone $asr)->addLeadInOut(0.5, 0, 0.1)->toString(Format::SubRip), ""],
+                          $this->runBinary(["convert", "asr.srt", "--to", "srt", "--timing-lead-in", "0.5", "--timing-min-gap", "0.1"]));
+        $this->assertSame(
+            [2, "", "Error: The option --timing-lead-in must not be negative.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+            $this->runBinary(["convert", "asr.srt", "--to", "srt", "--timing-lead-in=-0.2"])
+        );
+        $this->assertSame(2, $this->runBinary(["convert", "asr.srt", "--to", "srt", "--timing-lead-out", "soon"])[0]);
+    }
+
+
     public function testRetimeSyncFirstAndLastEqualsSyncByTwoPoints(): void
     {
         copy(self::FILES . "editing/own_ferry_drift.vtt", "$this->dir/ferry.vtt");

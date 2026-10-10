@@ -298,7 +298,7 @@ class BinaryEditTest extends BinaryTestCase
                                       "Pass --structure-wrap, --structure-resegment, --structure-merge-short or --structure-split-long with --structure-max-cpl."],
             "max lines"           => [["--structure-max-lines", "1", "--timing-fix-overlaps"],
                                       "Pass --structure-wrap, --structure-resegment, --structure-merge-short or --structure-split-long with --structure-max-lines."],
-            "min gap"             => [["--timing-min-gap", "0.1", "--structure-wrap"], "Pass --timing-fix-overlaps or --timing-min-duration with --timing-min-gap."],
+            "min gap"             => [["--timing-min-gap", "0.1", "--structure-wrap"], "Pass --timing-fix-overlaps, --timing-min-duration, --timing-lead-in or --timing-lead-out with --timing-min-gap."],
         ];
     }
 

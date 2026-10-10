@@ -80,6 +80,9 @@ class OptionChecksTest extends TestCase
             "Subtitle::extendShortCues() minDuration"  => fn (float $value) => (new Subtitle())->extendShortCues($value),
             "Subtitle::removeDuplicateCues() maxGap"   => fn (float $value) => (new Subtitle())->removeDuplicateCues($value),
             "Subtitle::fixOverlaps() minGap"           => fn (float $value) => (new Subtitle())->fixOverlaps($value),
+            "Subtitle::addLeadInOut() leadIn"          => fn (float $value) => (new Subtitle())->addLeadInOut($value, 0),
+            "Subtitle::addLeadInOut() leadOut"         => fn (float $value) => (new Subtitle())->addLeadInOut(0, $value),
+            "Subtitle::addLeadInOut() minGap"          => fn (float $value) => (new Subtitle())->addLeadInOut(0, 0, $value),
             "SpeechReference mediaDuration"            => fn (float $value) => SpeechReference::fromFfmpegSilencedetect("", $value),
         ];
 
