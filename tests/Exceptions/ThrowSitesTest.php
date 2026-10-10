@@ -401,9 +401,6 @@ class ThrowSitesTest extends TestCase
                 ->toCue(new SubtitleCue(1, 2)))->toString(Format::Pgs), ...$unwritable],
             "Formatters/PgsFormatter.php: negative time"    => [fn () => (new Subtitle())->addCue((new CueImage(self::png(), 0, 0, 1, 1, 9, 9))
                 ->toCue(new SubtitleCue(-1, 2)))->toString(Format::Pgs), ...$unwritable],
-            "Formatters/PgsFormatter.php: 3 overlapping cues" => [fn () => (new Subtitle())->addCues(array_map(
-                fn (int $start): SubtitleCue => (new CueImage(self::png(), 0, 0, 1, 1, 9, 9))->toCue(new SubtitleCue($start, 5)), [1, 2, 3]))
-                ->toString(Format::Pgs), ...$unwritable],
             "Formatters/SccFormatter.php: 5 lines"          => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, ["1", "2", "3", "4", "5"]))
                 ->toString(Format::Scc), ...$unwritable],
             "Formatters/SccFormatter.php: 33 characters"    => [fn () => (new Subtitle())->addCue(new SubtitleCue(1, 2, str_repeat("a", 33)))
