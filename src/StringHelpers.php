@@ -12,6 +12,13 @@ final class StringHelpers
 {
     private const UTF8_BOM = "\xEF\xBB\xBF";
 
+    private const UTF8_SEQUENCE = '(?:[\xC2-\xDF][\x80-\xBF]|\xE0[\xA0-\xBF][\x80-\xBF]|[\xE1-\xEC\xEE\xEF][\x80-\xBF]{2}|' .
+                                  '\xED[\x80-\x9F][\x80-\xBF]|\xF0[\x90-\xBF][\x80-\xBF]{2}|[\xF1-\xF3][\x80-\xBF]{3}|' .
+                                  '\xF4[\x80-\x8F][\x80-\xBF]{2})';
+
+    // Skips each valid UTF-8 sequence and matches each other byte from 0x80.
+    private const INVALID_UTF8 = '/' . self::UTF8_SEQUENCE . '(*SKIP)(*FAIL)|[\x80-\xFF]/';
+
     // UTF-32 LE comes before UTF-16 LE because their BOMs share the first two bytes.
     private const UNICODE_BOMS = [
         "\x00\x00\xFE\xFF" => "UTF-32BE",
@@ -102,7 +109,9 @@ final class StringHelpers
         }
 
         if ($sourceEncoding === null) {
-            return !$guess || self::isValidUtf8($str) || str_contains($str, "\0") ? new DecodedText($str, "UTF-8") : self::detectCodePage($str);
+            return !$guess || self::isValidUtf8($str) || str_contains($str, "\0") || self::isMostlyUtf8($str)
+                ? new DecodedText($str, "UTF-8")
+                : self::detectCodePage($str);
         }
 
         if (in_array(strtoupper($sourceEncoding), ["UTF-8", "UTF8"], true)) {
@@ -117,6 +126,16 @@ final class StringHelpers
         }
 
         return new DecodedText(self::iconvToUtf8($str, $sourceEncoding), $sourceEncoding);
+    }
+
+
+    /**
+     * Returns true when $str holds more valid UTF-8 sequences of 2 or more bytes than invalid bytes, as UTF-8 with a few
+     * broken bytes does. Legacy text rarely forms valid UTF-8 sequences.
+     */
+    private static function isMostlyUtf8(string $str): bool
+    {
+        return preg_match_all('/' . self::UTF8_SEQUENCE . '/', $str) > preg_match_all(self::INVALID_UTF8, $str);
     }
 
 

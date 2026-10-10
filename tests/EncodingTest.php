@@ -160,6 +160,15 @@ class EncodingTest extends TestCase
     }
 
 
+    public function testUtf8WithABrokenByteIsNotDetected(): void
+    {
+        $subtitle = Subtitle::fromString("1\n00:00:01,000 --> 00:00:02,000\nCafé crème, caf\xE9 noir\n", Format::SubRip);
+
+        $this->assertSame("Café crème, caf\xE9 noir", $subtitle->getCues()[0]->getText());
+        $this->assertSame("UTF-8", $subtitle->findSourceEncoding());
+    }
+
+
     public function testTextInAnotherEncodingFamilyKeepsItsBytes(): void
     {
         $raw = file_get_contents(self::DIR . "japanese-shift_jis.srt");
