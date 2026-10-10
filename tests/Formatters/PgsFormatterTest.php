@@ -8,7 +8,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Cli\Application;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
-use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatRegistry;
 use SubtitleToolbox\Image\CueImage;
@@ -264,18 +263,23 @@ class PgsFormatterTest extends TestCase
     }
 
 
-    public function testRejectsMoreThanTwoOverlappingCues(): void
+    public function testAThirdOverlappingCueReplacesTheCueThatStartedFirst(): void
     {
-        $subtitle = (new Subtitle())
-            ->addCue(self::imageCue(1.0, 3.0, 1, 1, [0xFFFFFFFF]))
-            ->addCue(self::imageCue(1.5, 2.0, 1, 1, [0xFFFFFFFF]))
-            ->addCue(self::imageCue(2.0, 4.0, 1, 1, [0xFFFFFFFF]))
-            ->addCue(self::imageCue(2.5, 4.0, 1, 1, [0xFFFFFFFF]));
+        $subtitle = Subtitle::load(self::FILES . "pgs/shapes_576p.sup", Format::Pgs);
+        [$first, $second] = $subtitle->getCues();
+        $third            = (clone $second)->setStart(2.5)->setEnd(10);
+        $second->setStart(2);
+        $subtitle->addCue($third);
 
-        $this->expectException(UnwritableContentException::class);
-        $this->expectExceptionMessage("Cannot write the cues 1 to 3, 2 to 4, 2.5 to 4 as PGS: they overlap, and PGS shows at most 2 images at one time.");
+        $presentations = array_values(array_filter(self::segments($subtitle->toString(Format::Pgs)),
+                                                   fn (array $segment): bool => in_array($segment[2], [0x16, 0x17], true)));
 
-        $subtitle->toString(Format::Pgs);
+        $this->assertSame([[45000, 1], [180000, 2], [225000, 2], [810000, 1], [900000, 0]],
+                          array_map(fn (array $segment): array => [$segment[0], ord($segment[3][10])],
+                                    array_values(array_filter($presentations, fn (array $segment): bool => $segment[2] === 0x16))));
+        foreach ([3, 5] as $window) {
+            $this->assertSame(pack("C", 1) . pack("Cnnnn", 0, 160, 480, 400, 60), $presentations[$window][3]);
+        }
     }
 
 

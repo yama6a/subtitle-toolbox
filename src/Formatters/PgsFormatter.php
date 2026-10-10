@@ -61,6 +61,7 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
     // Clamped colors such as BT.601 yellow need a step of 2 to find the code that the parser decodes to the same RGB.
     private const SEARCH_STEPS = [0, -1, 1, -2, 2];
 
+    // PGS shows at most 2 objects at one time. A third cue replaces the cue that started first.
     private const MAX_SHOWN = 2;
 
     public function format(Subtitle $subtitle, ?WriteOptions $options = null): string
@@ -82,9 +83,7 @@ final class PgsFormatter extends SubtitleFormatter implements ImageFormatter
             $output .= $this->endShownCues($context, $shown, $start);
             $shown[] = ["cue" => $cue, "image" => CueImage::fromCue($cue), "end" => $this->pts($cue, $cue->getEnd())];
             if (count($shown) > self::MAX_SHOWN) {
-                throw new UnwritableContentException("Cannot write the cues " . implode(", ", array_map(
-                    fn (array $entry): string => "{$entry["cue"]->getStart()} to {$entry["cue"]->getEnd()}", $shown))
-                    . " as PGS: they overlap, and PGS shows at most " . self::MAX_SHOWN . " images at one time.");
+                array_shift($shown);
             }
 
             // A later cue with the same start joins this display set, so the screen does not change twice at one time.
