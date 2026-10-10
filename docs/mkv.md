@@ -1,4 +1,4 @@
-# MKV and WebM subtitle tracks
+# MKV, WebM and MP4 subtitle tracks
 
 Media servers and subtitle managers get MKV files with embedded subtitles. The library reads the subtitle tracks of MKV and WebM files in PHP, without `ffmpeg` or `mkvextract`. It reads only. In the command line tool, `info movie.mkv` lists the tracks and `convert movie.mkv --to srt -o out.srt --track 3` reads one. See [cli](cli.md).
 
@@ -50,3 +50,30 @@ Subtitle::loadAutoDetectFormat('/media/one-track.webm');       // reads the only
   - Laced subtitle blocks.
   - A file that is not Matroska or WebM.
 - **Spec**: [Matroska elements](https://www.matroska.org/technical/elements.html), [Matroska subtitles](https://www.matroska.org/technical/subtitles.html).
+
+## MP4
+
+`ffmpeg -c:s mov_text`, HandBrake and phones store text subtitles in MP4 and MOV files as 3GPP timed text (`tx3g`). The same calls read them: `Subtitle::tracks()`, `loadTrack()` and `loadAutoDetectFormat()`. `Mp4Reader` in the namespace `SubtitleToolbox\Container\Mp4` has the methods of `MatroskaReader`.
+
+```php
+Subtitle::loadTrack('/media/phone-video.mp4', 2)->save('phone-video.srt');
+```
+
+| Property | MP4 value |
+|:--- |:--- |
+| `container` | `ContainerFormat::Mp4` |
+| `number` | the track ID of `tkhd` |
+| `codecId` | the sample entry type, for example `tx3g` or `c608` |
+| `format` | `Format::SubRip` for `tx3g`, null for other codecs and encrypted tracks |
+| `language` | the `elng` box, else the `mdhd` language, for example `eng` |
+| `name` | the `udta/name` box |
+| `default` | the track enabled flag of `tkhd` |
+| `forced` | the `tx3g` display flag "all samples are forced" |
+
+- **Tracks**: `tracks()` lists tracks with the handler `text`, `sbtl`, `subt` or `clcp` (closed captions).
+- **Cues**: each `tx3g` sample with text becomes a cue with the sample times. An empty sample is a gap. The text is UTF-8, or UTF-16 after a byte order mark. The reader ignores style boxes such as `styl`, so the cues have no tags.
+- **Format**: `getFormat()` is `Format::SubRip`. The cues hold plain text, as from an `S_TEXT/UTF8` track of an MKV file.
+- **Detection**: `loadAutoDetectFormat()` and `fromStringAutoDetectFormat()` know an MP4 file by the `ftyp` box at byte 4.
+- **Memory**: the reader reads the sample tables of the wanted track and its samples only. It skips the media data with `fseek()`.
+- **Errors**: `extract()` throws `ParsingException` for a `c608` track, another codec and an encrypted track (`enct` or a `sinf` box).
+- **Spec**: ISO/IEC 14496-12 for the boxes, 3GPP TS 26.245 for timed text.

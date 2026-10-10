@@ -6,7 +6,7 @@ The [main README](../README.md#supported-formats) lists every format with its ex
 - Speech-to-text JSON, YouTube timed text, podcast transcripts and plain text: [transcripts.md](transcripts.md)
 - Chapter lists: [chapters.md](chapters.md)
 - The JSON of this library: [json.md](json.md)
-- Subtitle tracks in MKV and WebM files: [mkv.md](mkv.md)
+- Subtitle tracks in MKV, WebM and MP4 files: [mkv.md](mkv.md)
 
 ## The Format enum
 The enum `Format` names each format. Its value is the format name of the command line tool.
@@ -56,8 +56,8 @@ $subtitle->save('movie.txt', Format::WebVtt);         // the format argument win
 - **`loadAutoDetectFormat()`**: tries only formats whose `isAutoDetected()` is true. It reads the format that [detection](detection.md) finds in the content. An iTT file with the `.itt` extension reads as iTT, not TTML.
 - **Extension fallback**: when detection finds nothing, `loadAutoDetectFormat()` takes the format of the extension, for example `.tsv`. It skips an extension that a format without detection also uses, such as `.json` and `.txt`. Then it throws `UnknownFormatException`.
 - **Chapters and cloud speech-to-text JSON**: they load only with `load()` and their format.
-- **MKV and WebM**: `load()` throws for them. `loadAutoDetectFormat()` reads a file with exactly 1 subtitle track and throws with the track list for other files.
-- **`getFormat()`**: null for a subtitle from `new Subtitle()` or `fromArray()`. For an MKV track, it is the format of the codec, for example `Format::SubRip`.
+- **MKV, WebM and MP4**: `load()` throws for them. `loadAutoDetectFormat()` reads a file with exactly 1 subtitle track and throws with the track list for other files.
+- **`getFormat()`**: null for a subtitle from `new Subtitle()` or `fromArray()`. For an MKV or MP4 track, it is the format of the codec, for example `Format::SubRip`.
 - **`save()`**: writes the format argument. Without it, `save()` writes the format of the extension. It throws `InvalidFormatterException` for an unknown extension.
 - **Frame rate**: MicroDVD output takes the frame rate from `MicroDvdWriteOptions::$frameRate`. Without it, the frame rate comes from a MicroDVD input. iTT output takes it from `IttWriteOptions::$frameRate`. Without it, the frame rate comes from an iTT input. Without either, `toString()` and `save()` throw `InvalidArgumentException`.
 - **CSV and TSV**: TSV output has tabs. CSV output from a TSV input has commas. A `CsvWriteOptions::$delimiter` wins.

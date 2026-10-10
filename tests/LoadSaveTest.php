@@ -7,6 +7,7 @@ namespace SubtitleToolbox;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
+use SubtitleToolbox\Container\Mp4\Mp4Reader;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
@@ -156,6 +157,43 @@ class LoadSaveTest extends TestCase
         $this->assertSame(Format::WebVtt, $subtitle->getFormat());
         $this->assertSame(MatroskaReader::open(self::FILES . "mkv/seek_head.mkv")->extract(2)->toArray(), $subtitle->toArray());
         $this->assertSame($subtitle->toArray(), Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "mkv/seek_head.mkv"))->toArray());
+    }
+
+
+    public function testMp4Tracks(): void
+    {
+        $mp4 = self::FILES . "mp4/text_tracks.mp4";
+
+        $this->assertSame([2, 3, 4, 5], array_map(fn (SubtitleTrack $track): int => $track->number, Subtitle::tracks($mp4)));
+        $this->assertSame(Mp4Reader::open($mp4)->extract(3)->toArray(), Subtitle::loadTrack($mp4, 3)->toArray());
+
+        try {
+            Subtitle::loadAutoDetectFormat($mp4);
+            $this->fail("4 tracks must throw.");
+        } catch (InvalidParserException $exception) {
+            $this->assertStringStartsWith("InvalidParserException (Error #102): The MP4 file has 4 subtitle tracks. Call loadTrack() with one of them:\n" .
+                                          "  2: tx3g, eng, \"English\", default\n", $exception->getMessage());
+        }
+        try {
+            Subtitle::fromString(file_get_contents($mp4), Format::SubRip);
+            $this->fail("MP4 content must throw.");
+        } catch (InvalidParserException $exception) {
+            $this->assertStringEndsWith("The content is an MP4 file. Call loadTrack() with a track number.", $exception->getMessage());
+        }
+
+        $this->expectException(InvalidParserException::class);
+        $this->expectExceptionMessage("$mp4 is an MP4 file. Call loadTrack() with a track number.");
+        Subtitle::load($mp4, Format::SubRip);
+    }
+
+
+    public function testLoadAutoDetectFormatReadsTheOnlyTrackOfAnMp4File(): void
+    {
+        $subtitle = Subtitle::loadAutoDetectFormat(self::FILES . "mp4/one_track.mp4");
+
+        $this->assertSame(Format::SubRip, $subtitle->getFormat());
+        $this->assertSame(["The museum opens at ten.", "Entry is free on Sundays."], array_map(fn ($cue): string => $cue->getText(), $subtitle->getCues()));
+        $this->assertSame($subtitle->toArray(), Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "mp4/one_track.mp4"))->toArray());
     }
 
 

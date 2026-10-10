@@ -12,6 +12,8 @@ use SubtitleToolbox\Cli\Command;
 use SubtitleToolbox\Cli\FileFailure;
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\Matroska\MkvFixtureWriter;
+use SubtitleToolbox\Container\Mp4\Mp4FixtureWriter;
+use SubtitleToolbox\Container\Mp4\Mp4Reader;
 use SubtitleToolbox\CueLimits;
 use SubtitleToolbox\Dependency;
 use SubtitleToolbox\Diff\SubtitleDiffOptions;
@@ -112,6 +114,7 @@ use SubtitleToolbox\Validation\ValidationRules;
 use SubtitleToolbox\WriteOptions;
 
 require_once __DIR__ . "/../files/mkv/generator/MkvFixtureWriter.php";
+require_once __DIR__ . "/../files/mp4/generator/Mp4FixtureWriter.php";
 require_once __DIR__ . "/../Http/FakeHttpClient.php";
 require_once __DIR__ . "/../Http/WithoutCurl.php";
 
@@ -213,6 +216,18 @@ class ThrowSitesTest extends TestCase
 
 
     /**
+     * Opens an MP4 file with one tx3g track 1 that holds $sample, with the given track fields.
+     */
+    private static function mp4(array $track = [], ?string $sample = null): Mp4Reader
+    {
+        return Mp4Reader::open(self::stream(Mp4FixtureWriter::file([$track + [
+            "id" => 1, "handler" => "sbtl", "entry" => Mp4FixtureWriter::tx3gEntry(), "perChunk" => 1,
+            "samples" => [[1000, $sample ?? Mp4FixtureWriter::textSample("The shop is closed.")]],
+        ]], true)));
+    }
+
+
+    /**
      * Opens an MKV file with one S_TEXT/UTF8 track 2, the given track fields and the given segment data after the Tracks element.
      */
     private static function mkv(string $clusters, array $track = [], string $cut = ""): MatroskaReader
@@ -290,6 +305,30 @@ class ThrowSitesTest extends TestCase
             "Container/Matroska/MatroskaReader.php: stream not seekable" => [fn () => MatroskaReader::open(fopen("php://output", "wb")), ...$invalid],
             "Container/Matroska/MatroskaReader.php: unknown track" => [fn () => self::mkv("")->extract(9), ...$invalid],
             "Container/Matroska/MatroskaReader.php: unsupported codec" => [fn () => self::mkv("", ["codecId" => "S_DVBSUB"])->extract(2), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: stream not seekable" => [fn () => Mp4Reader::open(fopen("php://output", "wb")), ...$invalid],
+            "Container/Mp4/Mp4Reader.php: encrypted track" => [fn () => Mp4Reader::open(self::FILES . "mp4/text_tracks.mp4")->extract(5), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: unsupported codec" => [fn () => Mp4Reader::open(self::FILES . "mp4/text_tracks.mp4")->extract(4), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: unknown track" => [fn () => self::mp4()->extract(9), ...$invalid],
+            "Container/Mp4/Mp4Reader.php: not MP4" => [fn () => Mp4Reader::open(self::stream(str_repeat("\0", 16))), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: no moov" => [fn () => Mp4Reader::open(self::stream(Mp4FixtureWriter::ftyp())), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: timescale 0" => [fn () => self::mp4(["timescale" => 0]), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: stts too short" => [fn () => self::mp4(["boxes" => [
+                                                                "stts" => Mp4FixtureWriter::fullBox("stts", 0, 0, pack("N", 0))]])->extract(1), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: no sample sizes" => [fn () => self::mp4(["boxes" => ["stsz" => ""]])->extract(1), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: invalid stz2" => [fn () => self::mp4(["boxes" => [
+                                                                "stsz" => Mp4FixtureWriter::fullBox("stz2", 0, 0, "\0\0\0\x03" . pack("N", 1) . "\0")]])->extract(1), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: missing table" => [fn () => self::mp4(["boxes" => ["stco" => ""]])->extract(1), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: table count" => [fn () => self::mp4(["boxes" => [
+                                                                "stco" => Mp4FixtureWriter::fullBox("stco", 0, 0, pack("N", 5))]])->extract(1), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: sample outside the file" => [fn () => self::mp4(["boxes" => [
+                                                                "stco" => Mp4FixtureWriter::fullBox("stco", 0, 0, pack("NN", 1, 1 << 30))]])->extract(1), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: text longer than sample" => [fn () => self::mp4([], pack("n", 50) . "abc")->extract(1), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: invalid UTF-8" => [fn () => self::mp4([], Mp4FixtureWriter::textSample("\xC3\x28"))->extract(1), ...$parsing],
+            "Container/Mp4/Mp4Reader.php: box too large" => [fn () => Mp4Reader::open(self::stream(Mp4FixtureWriter::ftyp() . pack("N", 4096) . "moov")),
+                                                                ...$parsing],
+            "Container/Mp4/Mp4Reader.php: box too short" => [fn () => Mp4Reader::open(self::stream(Mp4FixtureWriter::ftyp() . Mp4FixtureWriter::box("moov",
+                                                                Mp4FixtureWriter::box("trak", Mp4FixtureWriter::fullBox("tkhd", 0, 0, "") . Mp4FixtureWriter::box("mdia",
+                                                                Mp4FixtureWriter::box("mdhd", "") . Mp4FixtureWriter::box("hdlr", "ab")))))), ...$parsing],
             "Container/Matroska/MatroskaReader.php: not Matroska" => [fn () => MatroskaReader::open(self::stream(MkvFixtureWriter::ebmlHeader("avi"))),
                                                                 ...$parsing],
             "Container/Matroska/MatroskaReader.php: no Tracks" => [fn () => MatroskaReader::open(self::stream(MkvFixtureWriter::ebmlHeader() .
