@@ -9,10 +9,12 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Image\CueImage;
+use SubtitleToolbox\Image\PngEncoder;
 use SubtitleToolbox\Ocr\FakeOcrEngine;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Tests\Support\RealFiles;
 
 require_once __DIR__ . "/../files/pgs/generator/PgsFixtures.php";
@@ -151,6 +153,21 @@ class PgsParserTest extends TestCase
         $this->assertSame(self::TRANSPARENT, $this->pixelAt($image, 300, 500));
         $this->assertSame(self::BLACK, $this->pixelAt($image, 10, 900));
         $this->assertSame(self::YELLOW_BT709, $this->pixelAt($image, 300, 930));
+    }
+
+
+    public function testDrawsALaterObjectOverAnEarlierObjectThatItOverlaps(): void
+    {
+        $black    = (new CueImage(PngEncoder::encode(3, 1, [0x000000FF, 0x000000FF, 0x000000FF]), 10, 20, 3, 1, 720, 576))
+            ->toCue(new SubtitleCue(1, 3));
+        $white    = (new CueImage(PngEncoder::encode(3, 1, [0x00000000, 0xFFFFFF80, 0xFFFFFFFF]), 11, 20, 3, 1, 720, 576))
+            ->toCue(new SubtitleCue(1, 3));
+        $subtitle = Subtitle::fromString((new Subtitle())->addCues([$black, $white])->toString(Format::Pgs), Format::Pgs);
+
+        $image = CueImage::fromCue($subtitle->getCues()[0]);
+        $this->assertSame([10, 20, 4, 1], [$image->x, $image->y, $image->width, $image->height]);
+        $this->assertSame([0x000000FF, 0x000000FF, 0x808080FF, 0xFFFFFFFF],
+                          array_map(fn (int $x): int => $this->pixelAt($image, $x, 0), [0, 1, 2, 3]));
     }
 
 
