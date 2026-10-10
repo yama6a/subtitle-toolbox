@@ -11,6 +11,7 @@ use SubtitleToolbox\Container\Mp4\Mp4Reader;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
+use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Exceptions\UnknownFormatException;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
@@ -157,6 +158,54 @@ class LoadSaveTest extends TestCase
         $this->assertSame(Format::WebVtt, $subtitle->getFormat());
         $this->assertSame(MatroskaReader::open(self::FILES . "mkv/seek_head.mkv")->extract(2)->toArray(), $subtitle->toArray());
         $this->assertSame($subtitle->toArray(), Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "mkv/seek_head.mkv"))->toArray());
+    }
+
+
+    /**
+     * @return array<string, array{string, string, ?Format}>
+     */
+    public static function emptyFiles(): array
+    {
+        return [
+            "0 bytes, .vtt"                => ["empty.vtt", "", Format::WebVtt],
+            "BOM and whitespace, .srt"     => ["blank.srt", "\xEF\xBB\xBF \r\n\t\n", Format::SubRip],
+            "UTF-16 BOM and spaces, .ass"  => ["blank.ass", "\xFF\xFE \0 \0", Format::Ass],
+            "0 bytes, unknown extension"   => ["empty.xyz", "", null],
+            "0 bytes, write-only format"   => ["empty.txt", "", null],
+            "0 bytes, shared extension"    => ["empty.json", "", null],
+        ];
+    }
+
+
+    #[DataProvider("emptyFiles")]
+    public function testLoadAutoDetectFormatReadsAnEmptyFileInTheFormatOfItsExtension(string $name, string $content, ?Format $format): void
+    {
+        file_put_contents("$this->dir/$name", $content);
+        if ($format === null) {
+            $this->expectException(UnknownFormatException::class);
+        }
+
+        $subtitle = Subtitle::loadAutoDetectFormat("$this->dir/$name");
+
+        $this->assertSame([$format, []], [$subtitle->getFormat(), $subtitle->getCues()]);
+    }
+
+
+    public function testAnEmptyFileWithAFormatAndEmptyContentWithoutAPathKeepTheirResult(): void
+    {
+        file_put_contents("$this->dir/empty.srt", "");
+        file_put_contents("$this->dir/empty.sub", "");
+
+        $this->assertSame([], Subtitle::load("$this->dir/empty.srt", Format::SubRip)->getCues());
+        try {
+            Subtitle::load("$this->dir/empty.sub", Format::MicroDvd);
+            $this->fail("MicroDVD without a frame rate must throw.");
+        } catch (ParsingException $exception) {
+            $this->assertStringContainsString("The frame rate is unknown.", $exception->getMessage());
+        }
+
+        $this->expectException(UnknownFormatException::class);
+        Subtitle::fromStringAutoDetectFormat("");
     }
 
 

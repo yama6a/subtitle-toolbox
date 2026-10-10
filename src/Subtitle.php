@@ -115,6 +115,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     /**
      * Reads the file at $path in the format that its content shows, else in the format of its extension.
      * It tries only formats whose isAutoDetected() is true. An MKV, WebM or MP4 file must hold exactly 1 subtitle track.
+     * An empty or whitespace-only file gives an empty subtitle in the format of its extension.
      *
      * @throws UnknownFormatException when no such format matches.
      */
@@ -126,7 +127,10 @@ final class Subtitle implements \IteratorAggregate, \Countable
         }
 
         $decoded = StringHelpers::decode(self::readFile($path), $options->encoding);
-        $format  = self::detectFormat($decoded->content, $path) ?? throw new UnknownFormatException(self::unknownFormatMessage("load()"));
+        if (trim(StringHelpers::removeUtf8Bom($decoded->content)) === "" && ($byPath = self::formatOfExtension($path)) !== null) {
+            return (new self())->setFormat($byPath);
+        }
+        $format = self::detectFormat($decoded->content, $path) ?? throw new UnknownFormatException(self::unknownFormatMessage("load()"));
 
         return $format === Format::VobSub ? self::load($path, $format, $options) : self::parseDecoded($decoded, $format, $options);
     }
@@ -275,10 +279,16 @@ final class Subtitle implements \IteratorAggregate, \Countable
             return Format::Itt;
         }
 
+        return $format ?? ($path === null ? null : self::formatOfExtension($path));
+    }
+
+
+    private static function formatOfExtension(string $path): ?Format
+    {
+        $byExtension = Format::fromPath($path);
+
         // An extension that a format without detection also uses, such as .json for Deepgram, says nothing.
-        return $format ?? ($byExtension !== null && self::extensionOnlyOfAutoDetectedFormats($path) && $byExtension->canRead()
-            ? $byExtension
-            : null);
+        return $byExtension !== null && self::extensionOnlyOfAutoDetectedFormats($path) && $byExtension->canRead() ? $byExtension : null;
     }
 
 
