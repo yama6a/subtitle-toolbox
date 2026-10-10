@@ -30,7 +30,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | empty line inside the cue text, or between the timing line and the text | repaired | repaired | repaired |
 | no empty line after the `WEBVTT` header | not an error | repaired | not an error |
 | no `WEBVTT` line, a damaged one, or text before it | not an error | repaired | not an error |
-| C0 control character or DEL, see [formats.md](formats.md#load-and-save) | repaired | repaired, NUL not an error | repaired |
+| C0 control character or DEL, see [formats.md](formats.md#load-and-save) | repaired. NUL throws in strict mode | repaired. NUL becomes U+FFFD in both modes | repaired. NUL throws in strict mode |
 | text before the first cue | skipped | skipped | skipped |
 | truncated last cue | skipped | skipped | skipped |
 

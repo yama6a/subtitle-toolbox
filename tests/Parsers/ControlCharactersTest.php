@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Parsers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\ParseWarning;
 use SubtitleToolbox\ParseWarningAction;
@@ -53,12 +54,32 @@ class ControlCharactersTest extends TestCase
 
 
     #[DataProvider("controlCharacters")]
-    public function testStrictModeRemovesControlCharactersWithoutWarning(Format $format, string $file, string $byte): void
+    public function testStrictModeRemovesControlCharactersWithoutWarningAndThrowsForNul(Format $format, string $file, string $byte): void
     {
+        if ($byte === "\0") {
+            $this->expectException(ParsingException::class);
+            $this->expectExceptionMessage("Line 4 has a NUL character. Check the encoding of the file. (line 4)");
+        }
+
         $subtitle = Subtitle::fromString(sprintf($file, "The fer{$byte}ry leaves."), $format);
 
         $this->assertSame("The ferry leaves.", $subtitle->getCues()[0]->getText());
         $this->assertSame([], $subtitle->getParseWarnings());
+    }
+
+
+    public function testStrictStreamReaderThrowsForANul(): void
+    {
+        $stream = fopen("php://memory", "w+b");
+        fwrite($stream, sprintf(self::formats()["SubRip"][1], "The fer\0ry leaves."));
+        rewind($stream);
+
+        try {
+            iterator_to_array((new SubRipStreamReader())->read($stream));
+            $this->fail("No exception");
+        } catch (ParsingException $exception) {
+            $this->assertSame(4, $exception->getLineNumber());
+        }
     }
 
 

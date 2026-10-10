@@ -66,6 +66,7 @@ abstract class SubtitleParser
     /**
      * Reads $content, which must be UTF-8 for a text format.
      * In a text format, it drops Ctrl-Z characters at the end and removes the other C0 control characters and DEL.
+     * A NUL throws in strict mode.
      * Text content without anything but white space and a BOM gives an empty Subtitle.
      * In lenient mode, Subtitle::getParseWarnings() returns what the parser skipped or repaired.
      */
@@ -191,6 +192,10 @@ abstract class SubtitleParser
     private function removeControlCharacters(string $content): string
     {
         $content = $this->replaceNul(preg_replace(self::END_OF_FILE_REGEX, "", $content));
+        $nul     = strpos($content, "\0");
+        if ($nul !== false) {
+            $this->rejectNul(count($this->lines(substr($content, 0, $nul))));
+        }
         if (preg_match(self::CONTROL_CHARACTER_REGEX, $content, $matches, PREG_OFFSET_CAPTURE) !== 1) {
             return $content;
         }
@@ -203,13 +208,25 @@ abstract class SubtitleParser
 
     private function removeLineControlCharacters(string $line, int $lineNumber): string
     {
-        $line    = $this->replaceNul($line);
+        $line = $this->replaceNul($line);
+        if (str_contains($line, "\0")) {
+            $this->rejectNul($lineNumber);
+        }
         $cleaned = preg_replace(self::CONTROL_CHARACTER_REGEX, "", $line);
         if ($cleaned !== $line && !$this->removedControlCharacters) {
             $this->warnControlCharacters($lineNumber);
         }
 
         return $cleaned;
+    }
+
+
+    // A NUL is never text. It marks UTF-16 or UTF-32 content read with the wrong encoding.
+    private function rejectNul(int $lineNumber): void
+    {
+        if (!$this->options->lenient) {
+            throw new ParsingException("Line $lineNumber has a NUL character. Check the encoding of the file.", $lineNumber);
+        }
     }
 
 
