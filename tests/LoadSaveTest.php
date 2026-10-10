@@ -11,7 +11,6 @@ use SubtitleToolbox\Container\Mp4\Mp4Reader;
 use SubtitleToolbox\Container\SubtitleTrack;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\InvalidParserException;
-use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Exceptions\UnknownFormatException;
 use SubtitleToolbox\Formatters\Options\CsvWriteOptions;
 use SubtitleToolbox\Formatters\Options\MicroDvdWriteOptions;
@@ -191,18 +190,13 @@ class LoadSaveTest extends TestCase
     }
 
 
-    public function testAnEmptyFileWithAFormatAndEmptyContentWithoutAPathKeepTheirResult(): void
+    public function testAnEmptyFileWithAFormatGivesNoCuesAndEmptyContentWithoutAPathThrows(): void
     {
         file_put_contents("$this->dir/empty.srt", "");
         file_put_contents("$this->dir/empty.sub", "");
 
         $this->assertSame([], Subtitle::load("$this->dir/empty.srt", Format::SubRip)->getCues());
-        try {
-            Subtitle::load("$this->dir/empty.sub", Format::MicroDvd);
-            $this->fail("MicroDVD without a frame rate must throw.");
-        } catch (ParsingException $exception) {
-            $this->assertStringContainsString("The frame rate is unknown.", $exception->getMessage());
-        }
+        $this->assertSame([], Subtitle::load("$this->dir/empty.sub", Format::MicroDvd)->getCues());
 
         $this->expectException(UnknownFormatException::class);
         Subtitle::fromStringAutoDetectFormat("");
