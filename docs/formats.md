@@ -194,7 +194,7 @@ $csv = $english->toString(Format::Csv, new WriteOptions(format: new CsvWriteOpti
 | any other column | `findFormatData('csv')['columns']` of the cue, by header name | the same cell |
 
 - **Column mapping**: `CsvColumns` maps each role to a header name or to a 0-based column index. Header names match without case. A role without a mapping uses the header with its own name, such as `start`, when the table has one.
-- **Header synonyms**: without `CsvColumns`, a role whose name no header has takes the first header synonym that the table has. The match ignores case, spaces, underscores and hyphens. A `ParseWarning` with action `repaired` names the chosen columns, also in strict mode. With `CsvColumns`, the parser uses no synonyms.
+- **Header synonyms**: without `CsvColumns`, a table that lacks a `start` or a `text` header uses header synonyms. Then a role whose name no header has takes the first header synonym that the table has. The match ignores case, spaces, underscores and hyphens. A `ParseWarning` with action `repaired` names the chosen columns, also in strict mode. A table with both `start` and `text` headers uses no synonyms for any role. So in `start,end,text,name`, the `name` column stays an extra column and gives no speaker. With `CsvColumns`, the parser uses no synonyms.
 
   | Role | Synonyms, in order |
   |:--- |:--- |

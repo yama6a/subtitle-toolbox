@@ -23,7 +23,7 @@ final class CsvParser extends SubtitleParser
     protected const FORMAT_OPTIONS = CsvReadOptions::class;
     public const FORMAT_DATA_KEY = Format::Csv->value;
 
-    /** Header names, without case, spaces, underscores and hyphens, that stand for a role when no header has the role name. */
+    /** Header names, without case, spaces, underscores and hyphens, that stand for a role when no header has the role name. They apply only to a table without a "start" or a "text" header. */
     private const SYNONYMS = [
         "start"    => ["begin", "in", "starttime", "starttc", "timecode", "tcin"],
         "end"      => ["out", "stop", "endtime", "endtc", "tcout"],
@@ -377,8 +377,9 @@ final class CsvParser extends SubtitleParser
      */
     private function resolveRoles(?array $header): array
     {
-        $names = array_map(fn (string $name): string => strtolower(trim($name)), $header ?? []);
-        $roles = [];
+        $names    = array_map(fn (string $name): string => strtolower(trim($name)), $header ?? []);
+        $roles    = [];
+        $synonyms = $this->formatOptions()->columns === null && (!in_array("start", $names, true) || !in_array("text", $names, true));
         foreach (CsvColumns::ROLES as $role) {
             $column = $this->columns->$role;
             $index  = match (true) {
@@ -386,7 +387,7 @@ final class CsvParser extends SubtitleParser
                 is_string($column) => array_search(strtolower(trim($column)), $names, true),
                 default            => array_search($role, $names, true),
             };
-            if ($index === false && $this->formatOptions()->columns === null) {
+            if ($index === false && $synonyms) {
                 $index = self::findSynonymColumn($role, $header ?? []);
             }
             if ($index !== false && ($header === null || $index < count($header))) {

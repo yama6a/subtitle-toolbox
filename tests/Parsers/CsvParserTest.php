@@ -8,12 +8,15 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
 use SubtitleToolbox\Exceptions\ParsingException;
+use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\Parsers\Options\CsvColumns;
 use SubtitleToolbox\Parsers\Options\CsvReadOptions;
 use SubtitleToolbox\ParseWarningAction;
 use SubtitleToolbox\ReadOptions;
+use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
+use SubtitleToolbox\WriteOptions;
 
 class CsvParserTest extends TestCase
 {
@@ -273,6 +276,37 @@ class CsvParserTest extends TestCase
         $subtitle = (new CsvParser())->parse("Begin,Start,Text\n9,1,a\n", new ReadOptions());
 
         $this->assertSame(1.0, $subtitle->getCues()[0]->getStart());
+        $this->assertSame([], $subtitle->getParseWarnings());
+    }
+
+
+    public function testAStartAndTextTableKeepsAnOutColumnAsData(): void
+    {
+        $subtitle = (new CsvParser())->parse(file_get_contents(__DIR__ . "/../files/csv/own_role_names_out_column.csv"), new ReadOptions());
+        $cues     = array_values($subtitle->getCues());
+
+        $this->assertSame([[1.0, 3.0, ["Hello"]], [3.0, 8.0, ["World"]]], array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd(), $cue->getLines()], $cues));
+        $this->assertSame([["out" => "yes"], ["out" => "no"]], array_map(fn (SubtitleCue $cue): array => $cue->findFormatData("csv")["columns"], $cues));
+        $this->assertSame([], $subtitle->getParseWarnings());
+    }
+
+
+    public function testAStartAndTextTableReadsNoSpeakerFromANameColumn(): void
+    {
+        $subtitle = (new CsvParser())->parse(file_get_contents(__DIR__ . "/../files/csv/own_role_names_name_column.csv"), new ReadOptions());
+
+        $this->assertSame(["Hello"], $subtitle->getCues()[0]->getLines());
+        $this->assertSame(["start" => 0, "end" => 1, "text" => 2], $subtitle->findFormatData("csv")["roles"]);
+        $this->assertSame([], $subtitle->getParseWarnings());
+    }
+
+
+    public function testAStartAndTextTableKeepsALengthColumnInARoundTrip(): void
+    {
+        $content  = file_get_contents(__DIR__ . "/../files/csv/own_role_names_length_column.csv");
+        $subtitle = Subtitle::fromString($content, Format::Csv);
+
+        $this->assertSame($content, $subtitle->toString(Format::Csv, new WriteOptions(bom: false)));
         $this->assertSame([], $subtitle->getParseWarnings());
     }
 
