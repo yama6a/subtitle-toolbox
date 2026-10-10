@@ -181,10 +181,6 @@ final class TtmlParser extends SubtitleParser
 
     private function loadDocument(string $xml): DOMDocument
     {
-        if (trim($xml) === "") {
-            throw new ParsingException("The file is empty.");
-        }
-
         $repaired = XmlLoader::skipLeadingText($xml, self::ROOT_PATTERN, $skipped);
         if ($skipped !== "") {
             $this->skipTextBeforeXml($xml, $skipped);

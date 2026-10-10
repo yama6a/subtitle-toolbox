@@ -37,7 +37,7 @@ final class SubRipStreamReader implements CueStreamReader
     {
         $this->parser->useOptions($this->options);
         $index = 0;
-        foreach ($this->parser->splitIntoBlocks(Streams::lines($stream)) as $lineNumber => $rawLines) {
+        foreach ($this->parser->splitIntoBlocks($this->parser->withoutControlCharacters(Streams::lines($stream))) as $lineNumber => $rawLines) {
             foreach ($this->parser->parseBlock($rawLines, $index++, $lineNumber) as $cue) {
                 yield $cue;
             }

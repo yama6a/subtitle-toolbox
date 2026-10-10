@@ -155,10 +155,6 @@ final class SccParser extends SubtitleParser
             $codeLines[] = [$start, $words];
         }
 
-        if ($header === null) {
-            throw new ParsingException("An SCC file must start with the line \"" . self::HEADER . "\".");
-        }
-
         // Some writers emit lines out of time order, see https://github.com/pbs/pycaption/issues/352.
         // A decoder plays them in time order.
         usort($codeLines, fn (array $a, array $b): int => $a[0] <=> $b[0]);
