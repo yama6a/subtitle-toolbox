@@ -83,9 +83,12 @@ final class AssParser extends SubtitleParser
             };
         }
 
-        if (!in_array("events", array_map("strtolower", $data["sectionOrder"]), true)) {
+        // An editor can save an empty project without [Events], so [Script Info] alone gives an empty subtitle.
+        $sections = array_map("strtolower", $data["sectionOrder"]);
+        if (!in_array("events", $sections, true) && !in_array("script info", $sections, true)) {
             throw new ParsingException("The subtitle has no [Events] section.");
         }
+        $data["eventFormat"] ??= $this->isSsa($data) ? AssFormatLines::SSA_EVENT_FORMAT : AssFormatLines::ASS_EVENT_FORMAT;
 
         // The events are read last because a [V4+ Styles] section after [Events] still sets their styles.
         foreach ($this->events as $eventIndex => $event) {

@@ -338,7 +338,7 @@ class AssParserTest extends TestCase
     public static function invalidFiles(): array
     {
         return [
-            "no events section"  => ["[Script Info]\nTitle: x\n"],
+            "no events section"  => ["[V4+ Styles]\nFormat: Name\n"],
             "too few fields"     => [self::EVENTS_HEADER . "Dialogue: 0,0:00:01.00,0:00:02.00\n"],
             "invalid time"       => [self::EVENTS_HEADER . "Dialogue: 0,1.00,0:00:02.00,Default,,0,0,0,,a\n"],
             "no text column"     => ["[Events]\nFormat: Start, End\nDialogue: 0:00:01.00,0:00:02.00\n"],
@@ -352,6 +352,33 @@ class AssParserTest extends TestCase
         $this->expectException(ParsingException::class);
 
         $this->parseEvents($content);
+    }
+
+
+    public function testScriptInfoWithoutEventsGivesAnEmptySubtitleInBothModes(): void
+    {
+        $content = file_get_contents(__DIR__ . "/../files/ass/real/own_script_info_only.ass");
+
+        foreach ([false, true] as $lenient) {
+            $subtitle = Subtitle::fromString($content, Format::Ass, new ReadOptions(lenient: $lenient));
+            $data     = $subtitle->findFormatData("ass");
+
+            $this->assertSame([], $subtitle->getCues());
+            $this->assertSame([], $subtitle->getParseWarnings());
+            $this->assertSame("New subtitles", $subtitle->findMetadata(Subtitle::METADATA_TITLE));
+            $this->assertSame("1920", $data["scriptInfo"]["PlayResX"]);
+            $this->assertSame(["Script Info", "V4+ Styles"], $data["sectionOrder"]);
+            $this->assertSame(["Default"], array_column($data["styles"], "Name"));
+        }
+        $this->assertStringContainsString("Style: Default,Arial,48,", $subtitle->toString(Format::Ass));
+    }
+
+
+    public function testContentWithoutScriptInfoAndEventsStillThrows(): void
+    {
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The subtitle has no [Events] section.");
+        (new AssParser())->parse("[V4+ Styles]\nFormat: Name, Fontname\nStyle: Default,Arial\n", new ReadOptions(lenient: true));
     }
 
 
