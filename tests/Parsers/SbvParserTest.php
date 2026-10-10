@@ -90,7 +90,7 @@ class SbvParserTest extends TestCase
 
     public function testLatin1TextKeepsItsBytes(): void
     {
-        $subtitle = Subtitle::fromString("0:00:01.000,0:00:02.000\ncaf\xE9 & bread\n", Format::Sbv);
+        $subtitle = Subtitle::fromString("0:00:01.000,0:00:02.000\ncaf\xE9 & bread\n", Format::Sbv, new ReadOptions(encoding: "UTF-8"));
 
         $this->assertSame(["caf\xE9 &amp; bread"], $subtitle->getCues()[0]->getLines());
     }

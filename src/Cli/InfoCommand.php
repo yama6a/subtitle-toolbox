@@ -99,6 +99,7 @@ final class InfoCommand extends ReportCommand
         $this->emit($console, ($this->succeeded > 0 ? "\n" : "") . $text, [
             "file"       => $input,
             "format"     => $format->value,
+            "encoding"   => $subtitle->findSourceEncoding(),
             "metadata"   => (object)$subtitle->getAllMetadata(),
             "statistics" => $statistics->toArray(),
             "imageCues"  => $images,
@@ -120,10 +121,11 @@ final class InfoCommand extends ReportCommand
             $words[] = "$word ($count)";
         }
 
-        $rows = [
-            "Format" => $format->value,
-            "Cues"   => (string)$statistics->cueCount,
-        ];
+        $rows = ["Format" => $format->value];
+        if ($subtitle->findSourceEncoding() !== null) {
+            $rows["Encoding"] = $subtitle->findSourceEncoding();
+        }
+        $rows["Cues"] = (string)$statistics->cueCount;
         if ($this->parseWarnings !== []) {
             $rows["Warnings"] = (string)count($this->parseWarnings);
         }

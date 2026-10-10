@@ -303,11 +303,11 @@ class AssParserTest extends TestCase
     }
 
 
-    public function testWindows1252FileWithoutEncodingKeepsItsLinesAndSpeaker(): void
+    public function testWindows1252FileReadAsUtf8KeepsItsLinesAndSpeaker(): void
     {
         $lines = array_map(
             fn (SubtitleCue $cue): array => array_map(fn (string $line): string => iconv("Windows-1252", "UTF-8", $line), $cue->getLines()),
-            Subtitle::fromString(file_get_contents(__DIR__ . "/../files/ass/own_windows_1252.ass"), Format::Ass)->getCues()
+            Subtitle::fromString(file_get_contents(__DIR__ . "/../files/ass/own_windows_1252.ass"), Format::Ass, new ReadOptions(encoding: "UTF-8"))->getCues()
         );
 
         $this->assertSame([

@@ -14,3 +14,8 @@ All files are written for this repository. Each one started as a UTF-8 file with
 | `utf-8-declared-utf-16.ttml` | Written for this repository. UTF-8, LF, no BOM, with `encoding="utf-16"` in the XML declaration, as some tools write it | MIT |
 | `utf-16le-bom.ttml` | Written for this repository. The same file as `utf-8-declared-utf-16.ttml`, saved as UTF-16 LE with the BOM `FF FE` | MIT |
 | `youtube-utf-16le-bom.srv1` | Written for this repository in the shape of a YouTube srv1 transcript. UTF-16 LE with the BOM `FF FE` and `encoding="utf-16"` | MIT |
+| `czech-windows-1250.srt` | Written for this repository. Windows-1250, CR LF, no BOM | MIT |
+| `polish-iso-8859-2.srt` | Written for this repository. ISO-8859-2, CR LF, no BOM | MIT |
+| `greek-windows-1253.srt` | Written for this repository. Windows-1253, CR LF, no BOM | MIT |
+| `turkish-windows-1254.srt` | Written for this repository. Windows-1254, CR LF, no BOM | MIT |
+| `russian-koi8-r.srt` | Written for this repository. KOI8-R, CR LF, no BOM | MIT |

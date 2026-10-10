@@ -397,7 +397,8 @@ final class Mp4Reader implements ContainerReader
             throw new ParsingException("The text of the sample of track $trackNumber at byte $offset is longer than the sample.");
         }
 
-        $text = $length === 0 ? "" : StringHelpers::removeUtf8Bom(StringHelpers::convertToUtf8((string) fread($this->stream, $length)));
+        // 3GPP TS 26.245 allows only UTF-8 and UTF-16 with a BOM, so the text needs no code page detection.
+        $text = $length === 0 ? "" : StringHelpers::removeUtf8Bom(StringHelpers::decode((string) fread($this->stream, $length), guess: false)->content);
         if (!StringHelpers::isValidUtf8($text)) {
             throw new ParsingException("The text of the sample of track $trackNumber at byte $offset is not valid UTF-8.");
         }

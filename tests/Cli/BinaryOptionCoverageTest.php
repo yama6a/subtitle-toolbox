@@ -309,6 +309,9 @@ class BinaryOptionCoverageTest extends BinaryTestCase
         } elseif (!in_array($options[0], ["--word-timestamps", "--scc-roll-up"], true)) {
             $this->assertSame(3, $this->runBinary(self::call($command, $variantInput, $extension))[0]);
         }
+        if ($options[0] === "--encoding") {
+            $actual[1] = str_replace("Encoding:              UTF-32LE", "Encoding:              UTF-8", $actual[1]);
+        }
         $this->takeDirectory("hls");
         $this->assertSame($expected, $actual);
     }

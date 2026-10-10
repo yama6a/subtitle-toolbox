@@ -365,7 +365,7 @@ class LyricsParserTest extends TestCase
 
     public function testTextThatIsNotUtf8KeepsItsBytes(): void
     {
-        $subtitle = Subtitle::fromString("[00:01.00]caf\xE9 & tea\n", Format::Lyrics);
+        $subtitle = Subtitle::fromString("[00:01.00]caf\xE9 & tea\n", Format::Lyrics, new ReadOptions(encoding: "UTF-8"));
 
         $this->assertSame("caf\xE9 &amp; tea", $subtitle->getCues()[0]->getText());
         $this->assertSame("\u{feff}[00:01.00] caf\xE9 & tea\n", $subtitle->toString(Format::Lyrics));

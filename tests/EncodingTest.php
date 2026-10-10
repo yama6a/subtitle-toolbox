@@ -93,11 +93,88 @@ class EncodingTest extends TestCase
     }
 
 
-    public function testWithoutSourceEncodingInvalidUtf8BytesStayAsTheyAre(): void
+    public static function codePageFiles(): array
     {
-        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "french-windows-1252.srt"), Format::SubRip);
+        return [
+            "Windows-1250" => ["czech-windows-1250.srt", "Windows-1250", "Děkuji, už musím jít domů."],
+            "Windows-1251" => ["russian-windows-1251.srt", "Windows-1251", "Ёлка стоит в углу."],
+            "Windows-1252" => ["french-windows-1252.srt", "Windows-1252", "<i>Où êtes-vous, Noël ?</i>"],
+            "Windows-1253" => ["greek-windows-1253.srt", "Windows-1253", "Ευχαριστώ, πρέπει να φύγω."],
+            "Windows-1254" => ["turkish-windows-1254.srt", "Windows-1254", "Teşekkürler, şimdi eve gitmeliyim."],
+            "Windows-1256" => ["arabic-windows-1256.srt", "Windows-1256", "شكرا جزيلا."],
+            "ISO-8859-2"   => ["polish-iso-8859-2.srt", "ISO-8859-2", "Dziękuję, muszę już iść."],
+            "KOI8-R"       => ["russian-koi8-r.srt", "KOI8-R", "Спасибо, мне пора домой."],
+        ];
+    }
 
-        $this->assertSame("Le caf\xE9 est ferm\xE9 \xE0 midi.", $subtitle->getCues()[0]->getText());
+
+    #[DataProvider("codePageFiles")]
+    public function testCodePageIsDetectedWithoutSourceEncoding(string $file, string $encoding, string $lastText): void
+    {
+        $raw     = file_get_contents(self::DIR . $file);
+        $strict  = Subtitle::fromString($raw, Format::SubRip);
+        $lenient = Subtitle::loadAutoDetectFormat(self::DIR . $file, new ReadOptions(lenient: true));
+
+        $this->assertSame($lastText, $strict->getCues()[2]->getText());
+        $this->assertSame($encoding, $strict->findSourceEncoding());
+        $this->assertSame([], $strict->getParseWarnings());
+        $this->assertEquals($strict->getCues(), $lenient->getCues());
+        $this->assertSame($encoding, $lenient->findSourceEncoding());
+        $this->assertSame(
+            [["The content is not UTF-8. Detection picked $encoding. Pass --encoding if that is wrong.", null, ParseWarningAction::Repaired]],
+            array_map(fn (ParseWarning $warning) => [$warning->message, $warning->lineNumber, $warning->action], $lenient->getParseWarnings())
+        );
+        $this->assertEquals($strict, Subtitle::fromString($raw, Format::SubRip, new ReadOptions(encoding: $encoding)));
+    }
+
+
+    public function testCodePageIsDetectedInAss(): void
+    {
+        $subtitle = Subtitle::load(__DIR__ . "/files/ass/own_windows_1252.ass", Format::Ass);
+
+        $this->assertSame(["<v Hélène>Le café ouvre à sept heures."], $subtitle->getCues()[0]->getLines());
+        $this->assertSame("Windows-1252", $subtitle->findSourceEncoding());
+    }
+
+
+    public function testSourceEncodingWinsOverDetection(): void
+    {
+        $raw      = file_get_contents(self::DIR . "french-windows-1252.srt");
+        $subtitle = Subtitle::fromString($raw, Format::SubRip, new ReadOptions(encoding: TextEncoding::Windows1250, lenient: true));
+
+        $this->assertSame("<i>Oů ętes-vous, Noël ?</i>", $subtitle->getCues()[2]->getText());
+        $this->assertSame("Windows-1250", $subtitle->findSourceEncoding());
+        $this->assertSame([], $subtitle->getParseWarnings());
+    }
+
+
+    public function testUtf8AndBomInputIsNotDetected(): void
+    {
+        $utf8 = Subtitle::load(self::DIR . "arabic-utf-8.srt", Format::SubRip, new ReadOptions(lenient: true));
+        $bom  = Subtitle::load(self::DIR . "notepad-utf-16le.vtt", Format::WebVtt, new ReadOptions(lenient: true));
+
+        $this->assertSame(["UTF-8", []], [$utf8->findSourceEncoding(), $utf8->getParseWarnings()]);
+        $this->assertSame(["UTF-16LE", []], [$bom->findSourceEncoding(), $bom->getParseWarnings()]);
+        $this->assertSame("Ã©", Subtitle::fromString("1\n00:00:01,000 --> 00:00:02,000\nÃ©\n", Format::SubRip)->getCues()[0]->getText());
+        $this->assertNull((new Subtitle())->findSourceEncoding());
+    }
+
+
+    public function testUtf8WithABrokenByteIsNotDetected(): void
+    {
+        $subtitle = Subtitle::fromString("1\n00:00:01,000 --> 00:00:02,000\nCafé crème, caf\xE9 noir\n", Format::SubRip);
+
+        $this->assertSame("Café crème, caf\xE9 noir", $subtitle->getCues()[0]->getText());
+        $this->assertSame("UTF-8", $subtitle->findSourceEncoding());
+    }
+
+
+    public function testTextInAnotherEncodingFamilyKeepsItsBytes(): void
+    {
+        $raw = file_get_contents(self::DIR . "japanese-shift_jis.srt");
+
+        $this->assertSame(Subtitle::fromString($raw, Format::SubRip)->getCues()[0]->getText(), explode("\r\n", $raw)[2]);
+        $this->assertSame("UTF-8", Subtitle::fromString($raw, Format::SubRip)->findSourceEncoding());
     }
 
 
