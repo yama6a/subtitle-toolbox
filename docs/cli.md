@@ -57,7 +57,7 @@ php subtitle-toolbox.phar --version
 |:--- |:--- |:--- |
 | 0 | every file succeeded, and `validate` and `diff` found nothing | `validate movie.srt --preset bbc` with no broken rule |
 | 1 | a result: `validate` found a broken rule, or `diff` found a difference | `diff old.srt new.srt` for 2 files that differ |
-| 2 | a usage error, before the tool reads a file | an unknown option, a directory without subtitle files, an output that exists, a number too large for a float such as `--shift 1e999`, `--ass-karaoke-tag` with `--to srt`, `validate --video-fps` without `--preset netflix-en`. `--ocr` without an installed OCR engine or without the data of the `--ocr-language`, see [OCR](#ocr). `translate` without `ext-curl` or without an API key, see [Translate](#translate) |
+| 2 | a usage error, before the tool reads a file | an unknown option, a directory without subtitle files, an output that exists, a number too large for a float such as `--shift 1e999`, `--ass-karaoke-tag` with `--to srt`, an unknown `--ass-style` field, `validate --video-fps` without `--preset netflix-en`. `--ocr` without an installed OCR engine or without the data of the `--ocr-language`, see [OCR](#ocr). `translate` without `ext-curl` or without an API key, see [Translate](#translate) |
 | 3 | a file could not be read or written | a missing input, a file that does not parse, an output that cannot be created, content that the output format cannot hold such as 5 lines in SCC, a side file that is missing or does not parse, a translation service that answers with an error |
 
 - **Failures**: a failed file prints `FILE: MESSAGE` to standard error. The message of a library exception starts with its class, for example `ParsingException (Error #100):`. Any other PHP error prints its class and message, for example `movie.json: TypeError: ...`, and fails that file with exit code 3. An error outside a file, such as an output that cannot be created, prints `Error: MESSAGE` and exits with code 3. A PHP error outside a file also prints its class.
@@ -213,7 +213,7 @@ vendor/bin/subtitle-toolbox convert season1/*.srt --to srt --output-dir fixed/ -
 | 6. Timing | `retime`, `snap`, `timing` | `--shift`, `--scale`, `--from-fps` and `--to-fps`, `--snap-shot-changes`, `--timing-fix-overlaps`, `--timing-min-duration` | splits in step 5 create new cues |
 | 7. Masking | `masking` | `--mask-words` | the mute ranges of `--mute-edl` and `--mute-filter` need the final times |
 | 8. Karaoke | `karaoke` | `--karaoke` | it multiplies the cues |
-| 9. Write | `ass` | output options, `--ass-karaoke-tag` | |
+| 9. Write | `ass` | output options, `--ass-karaoke-tag`, `--ass-style` | |
 
 ### OCR and forced cues
 | Option | Effect |
@@ -308,6 +308,7 @@ vendor/bin/subtitle-toolbox convert movie.srt --to srt -o movie.timed.srt --vide
 | `--karaoke` | writes one cue per word with the active word styled, with [`WordHighlight::apply()`](text.md#word-highlight-and-karaoke) |
 | `--karaoke-style TAG` | `b`, `i`, `u`, `s` or `'font color="#ffff00"'` |
 | `--ass-karaoke-tag TAG` | `k`, `kf` or `ko`, the ASS tag for word timestamps, see [formats.md](formats.md#ass-and-ssa). Needs ASS output. Pass only one of `--karaoke` and `--ass-karaoke-tag` |
+| `--ass-style STYLE` | changes the `Default` style, for example `'Fontname=Roboto,Fontsize=48,Outline=2'`, see [formats.md](formats.md#ass-and-ssa). Needs ASS output |
 
 - **Library only**: the cumulative mode and the word limit of `WordHighlightOptions` have no option. Call `WordHighlight::apply()` for them.
 

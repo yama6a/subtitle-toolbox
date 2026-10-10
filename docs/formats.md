@@ -86,7 +86,7 @@ $subtitle->toString(Format::MicroDvd, new WriteOptions(format: new MicroDvdWrite
 
 | Options class | Format | Fields |
 |:--- |:--- |:--- |
-| `AssWriteOptions` | ASS | `karaokeTag` |
+| `AssWriteOptions` | ASS | `karaokeTag`, `style` |
 | `CsvWriteOptions` | CSV, TSV | `delimiter`, `timeFormat`, `frameRate`, `secondText`, `secondTextHeader`, `escapeFormulas` |
 | `EbuStlWriteOptions` | EBU STL | `frameRate` |
 | `HtmlTranscriptWriteOptions` | HTML transcript | `paragraphGap` |
@@ -124,6 +124,7 @@ $subtitle->findFormatData('ass')['scriptInfo']['PlayResX'];     // '1920'
 $subtitle->getCues()[0]->findFormatData('ass')['fields'];       // ['Layer' => '0', 'Style' => 'Default', ...]
 $subtitle->toString(Format::Ass);
 $subtitle->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(karaokeTag: AssKaraokeTag::Fill)));   // \kf
+$subtitle->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(style: 'Fontname=Roboto,Fontsize=48')));
 ```
 
 | Input | Parser result | Formatter output |
@@ -143,6 +144,7 @@ $subtitle->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(ka
 - **Styles**: the `Bold`, `Italic`, `Underline` and `StrikeOut` fields of the event's style become `<b>`, `<i>`, `<u>` and `<s>` around the text, for the values `-1` and `1`. A style `Alignment` other than 2 becomes the cue alignment when the text has no `\an` or `\a` tag. Inline tags such as `{\i0}` override the style for their span. `\r` goes back to the event's style, and `\rName` switches to the style `Name`. An unknown style name falls back to `Default`, as in libass. Colors and fonts of a style do not change the core markup.
 - **Changed cues**: the formatter writes the text from the [core markup](markup.md). Other override tags are lost.
 - **Karaoke tags**: `AssKaraokeTag::Instant` writes `\k`, the default. `AssKaraokeTag::Fill` writes `\kf`, `AssKaraokeTag::Outline` writes `\ko`. `\kf` fills each syllable from left to right in Aegisub and libass. `\ko` hides the outline of a syllable until its time starts. The option applies only to cues that the formatter writes from the core markup.
+- **Default style**: `AssWriteOptions::$style` changes fields of the `Default` style for burn-in. It takes comma-separated `Field=Value` pairs with the field names of the `[V4+ Styles]` `Format:` line, in any case, as FFmpeg `force_style` does. For example, `'Fontname=Roboto,Fontsize=48,Outline=2'` gives `Style: Default,Roboto,48,` and keeps the other fields. Other styles stay the same. A file without a `Default` style gets one. The new values set the look of every cue without its own tag. For example, with `Italic=-1` a SubRip cue without `<i>` comes out italic, with no `{\i0}`. The formatter writes the cue tags against the `Default` style as it was before the option. An unknown field or a pair without `=` throws `InvalidArgumentException`. A field that the `Format:` line of the file lacks throws `UnwritableContentException`, for example `Underline` in SSA.
 - **Limits**: other override tags, `{...}` notes and `\p1` drawings are not cue text. An event that holds only a drawing becomes a cue without lines. Events come out in time order.
 - **Output**: times in centiseconds. A cue from another format gets style `Default`. A subtitle from another format gets the minimal header that FFmpeg writes.
 

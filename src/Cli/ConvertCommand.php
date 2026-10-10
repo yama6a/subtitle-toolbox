@@ -148,7 +148,7 @@ final class ConvertCommand extends WriteCommand
         $this->edits     = EditPipeline::fromArguments($arguments);
         $this->assOutput = AssOutput::fromArguments($arguments);
         if ($this->assOutput !== null && $this->toFormat !== Format::Ass) {
-            self::fail("Pass --to ass with --ass-karaoke-tag.");
+            self::fail("Pass --to ass with " . $this->assOutput->optionNames() . ".");
         }
     }
 

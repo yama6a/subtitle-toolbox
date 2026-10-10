@@ -19,6 +19,7 @@ use SubtitleToolbox\Dual\DualSubtitleOptions;
 use SubtitleToolbox\Encoding\Cea608;
 use SubtitleToolbox\Fixing\OcrReplaceList;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\AssWriteOptions;
 use SubtitleToolbox\Formatters\Options\CsvTimeFormat;
 use SubtitleToolbox\Formatters\IttFormatter;
 use SubtitleToolbox\Formatters\MicroDvdFormatter;
@@ -328,6 +329,12 @@ class ThrowSitesTest extends TestCase
             "FormatDataSchema.php: field type"              => [fn () => (new Subtitle())->setFormatData("scc", ["dropFrame" => "x"]), ...$invalid],
             "Formatters/JsonOutput.php: invalid UTF-8" => [fn () => Subtitle::load(self::FILES . "cli/latin1.srt", Format::SubRip)->toString(Format::Json),
                 ...$unwritable],
+            "Formatters/AssStyleOverride.php: no equals sign" => [fn () => new AssWriteOptions(style: "Fontsize"), ...$invalid],
+            "Formatters/AssStyleOverride.php: unknown field" => [fn () => new AssWriteOptions(style: "Bogus=1"), ...$invalid],
+            "Formatters/AssStyleOverride.php: field not in the SSA styles" => [fn () => Subtitle::fromString(
+                "[V4 Styles]\nFormat: Name, Fontname\n\n[Events]\nDialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hi\n",
+                Format::Ass
+            )->toString(Format::Ass, new WriteOptions(format: new AssWriteOptions(style: "Underline=1"))), ...$unwritable],
             "Formatters/CsvFormatter.php: frames without rate" => [fn () => self::subtitle()->toString(Format::Csv,
                 new WriteOptions(format: new CsvWriteOptions(timeFormat: CsvTimeFormat::Frames))), ...$invalid],
             "Formatters/EbuStlFormatter.php: code table 09" => [fn () => self::subtitle()->setFormatData(EbuStlParser::FORMAT_DATA_KEY,

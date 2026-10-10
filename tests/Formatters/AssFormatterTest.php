@@ -6,7 +6,10 @@ namespace SubtitleToolbox\Formatters;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
+use SubtitleToolbox\Formatters\Options\AssWriteOptions;
 use SubtitleToolbox\StringHelpers;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
@@ -128,6 +131,98 @@ class AssFormatterTest extends TestCase
             "Dialogue: 0,0:00:03.00,0:00:05.00,Default,,0,0,0,,{\\an8}Top\n",
             $subtitle->toString(Format::Ass)
         );
+    }
+
+
+    public function testStyleOptionChangesTheFieldsOfTheDefaultStyle(): void
+    {
+        $subtitle = (new Subtitle())->addCue(new SubtitleCue(1, 2.5, "Hello"));
+
+        $this->assertSame(
+            str_replace(",Arial,16,", ",Roboto,48,", str_replace(",1,1,0,2,", ",1,2,0,2,", self::DEFAULT_HEADER)) .
+            "Dialogue: 0,0:00:01.00,0:00:02.50,Default,,0,0,0,,Hello\n",
+            $subtitle->toString(Format::Ass, self::styleOptions("Fontname=Roboto, fontsize = 48,Outline=2"))
+        );
+    }
+
+
+    public function testStyleOptionSetsTheLookOfCuesWithoutWritingResetTags(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue(new SubtitleCue(1, 2, "Hello"))
+            ->addCue(new SubtitleCue(3, 4, "<i>Hello</i> world"));
+
+        $formatted = $subtitle->toString(Format::Ass, self::styleOptions("Italic=-1,Alignment=8"));
+
+        $this->assertStringContainsString("Style: Default,Arial,16,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,-1,0,0,100,100,0,0,1,1,0,8,", $formatted);
+        $this->assertStringContainsString("Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello\n", $formatted);
+        $this->assertStringContainsString("Dialogue: 0,0:00:03.00,0:00:04.00,Default,,0,0,0,,{\\i1}Hello{\\i0} world\n", $formatted);
+    }
+
+
+    public function testStyleOptionChangesOnlyTheDefaultStyleOfAnAssFile(): void
+    {
+        $subtitle = $this->parseFile("own_aegisub.ass");
+        $original = $subtitle->toString(Format::Ass);
+
+        $formatted = $subtitle->toString(Format::Ass, self::styleOptions("Fontsize=60,MarginV=80"));
+
+        $this->assertSame(
+            str_replace("Style: Default,Arial,72,", "Style: Default,Arial,60,", str_replace(",1,3.5,1.5,2,60,60,50,1", ",1,3.5,1.5,2,60,60,80,1", $original)),
+            $formatted
+        );
+    }
+
+
+    public function testStyleOptionAddsADefaultStyleWhenTheFileHasNone(): void
+    {
+        $subtitle = Subtitle::fromString(
+            "[V4+ Styles]\nFormat: Name, Fontname, Italic\nStyle: Sign,Arial,0\n\n[Events]\n" .
+            "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n" .
+            "Dialogue: 0,0:00:01.00,0:00:02.00,Sign,,0,0,0,,Hello\n",
+            Format::Ass
+        );
+
+        $this->assertStringContainsString(
+            "Format: Name, Fontname, Italic\nStyle: Default,Arial,-1\nStyle: Sign,Arial,0\n",
+            $subtitle->toString(Format::Ass, self::styleOptions("Italic=-1"))
+        );
+    }
+
+
+    public function testStyleOptionAddsAStylesSectionWhenTheFileHasNone(): void
+    {
+        $subtitle = Subtitle::fromString("[Events]\nDialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello\n", Format::Ass);
+
+        $this->assertStringContainsString(
+            "[V4+ Styles]\nFormat: Name, Fontname, Fontsize,",
+            $subtitle->toString(Format::Ass, self::styleOptions("Fontsize=30"))
+        );
+        $this->assertStringContainsString("Style: Default,Arial,30,", $subtitle->toString(Format::Ass, self::styleOptions("Fontsize=30")));
+    }
+
+
+    public function testStyleOptionRejectsAnUnknownField(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("The ASS style field \"Bogus\" does not exist. Use one of: Fontname, Fontsize, PrimaryColour,");
+
+        self::styleOptions("Fontsize=48,Bogus=1");
+    }
+
+
+    public function testStyleOptionThrowsForAFieldThatTheSsaStylesDoNotHave(): void
+    {
+        $this->expectException(UnwritableContentException::class);
+        $this->expectExceptionMessage("The Format line of the styles has no field Underline.");
+
+        $this->parseFile("own_ssa_v4.ssa")->toString(Format::Ass, self::styleOptions("Underline=-1"));
+    }
+
+
+    private static function styleOptions(string $style): WriteOptions
+    {
+        return new WriteOptions(format: new AssWriteOptions(style: $style));
     }
 
 

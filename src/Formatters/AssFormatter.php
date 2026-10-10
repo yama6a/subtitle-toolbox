@@ -44,6 +44,11 @@ final class AssFormatter extends SubtitleFormatter
             $data["styles"] ?? [],
             strcasecmp($data["stylesSection"] ?? "", "V4 Styles") === 0,
         );
+        // The cue tags follow the styles before the style option, so that the option changes the look of every cue without its own tag.
+        $style = $this->formatOptions($options)->style;
+        if ($style !== null) {
+            $data = $this->withDefaultStyle($data, $style);
+        }
 
         $order = $data["sectionOrder"];
         if (!in_array("script info", array_map("strtolower", $order), true)) {
@@ -84,6 +89,27 @@ final class AssFormatter extends SubtitleFormatter
             "commentEvents"      => [],
             "sections"           => [],
         ];
+    }
+
+
+    private function withDefaultStyle(array $data, string $style): array
+    {
+        if ($data["stylesSection"] === null) {
+            $isSsa                 = $this->isSsa($data);
+            $data["stylesSection"] = $isSsa ? "V4 Styles" : "V4+ Styles";
+            $data["styleFormat"]   = $isSsa ? AssFormatLines::SSA_STYLE_FORMAT : AssFormatLines::ASS_STYLE_FORMAT;
+            $events                = array_search("events", array_map("strtolower", $data["sectionOrder"]), true);
+            array_splice($data["sectionOrder"], $events === false ? count($data["sectionOrder"]) : $events, 0, [$data["stylesSection"]]);
+        }
+        $data["styleFormat"] ??= AssFormatLines::ASS_STYLE_FORMAT;
+        $data["styles"]        = AssStyleOverride::apply(
+            $style,
+            $data["styleFormat"],
+            $data["styles"],
+            array_combine(AssFormatLines::ASS_STYLE_FORMAT, self::DEFAULT_STYLE)
+        );
+
+        return $data;
     }
 
 

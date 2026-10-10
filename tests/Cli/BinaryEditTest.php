@@ -260,6 +260,10 @@ class BinaryEditTest extends BinaryTestCase
         $this->assertSame([2, "", "Error: Pass --to ass with --ass-karaoke-tag.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
                           $this->runBinary(["convert", "song.json", "--to", "srt", "--ass-karaoke-tag", "kf", "--output-dir", "out"]));
         $this->assertSame(2, $this->runBinary(["convert", "song.json", "-o", "song.srt", "--ass-karaoke-tag", "kf"])[0]);
+        $this->assertStringContainsString("\nStyle: Default,Roboto,48,",
+                                          $this->runBinary(["convert", "song.json", "--to", "ass", "-o", "-", "--ass-style", "Fontname=Roboto,Fontsize=48"])[1]);
+        $this->assertSame([2, "", "Error: Pass --to ass with --ass-karaoke-tag and --ass-style.\nRun \"subtitle-toolbox help convert\" for the usage.\n"],
+                          $this->runBinary(["convert", "song.json", "--to", "srt", "-o", "-", "--ass-karaoke-tag", "kf", "--ass-style", "Fontsize=48"]));
         $this->assertDirectoryDoesNotExist("$this->dir/out");
         $this->assertFileDoesNotExist("$this->dir/song.srt");
         foreach ([["--ass-karaoke-tag", "x"], ["--karaoke", "--ass-karaoke-tag", "k"], ["--karaoke-style", "b"], ["--karaoke", "--karaoke-style", "em"],

@@ -271,6 +271,10 @@ class BinaryGeneralTest extends BinaryTestCase
             "case"                => [[...$convert, "--case", "title"], "convert", "The option --case must be upper, lower or sentence, got \"title\"."],
             "mask"                => [[...$convert, "--mask-words", "notes.txt", "--mask", "bleep"], "convert", "The option --mask must be stars, first-letter, remove or none, got \"bleep\"."],
             "ass tag"             => [["convert", "trip.srt", "--to", "ass", "-o", "-", "--ass-karaoke-tag", "kx"], "convert", "The option --ass-karaoke-tag must be k, kf or ko, got \"kx\"."],
+            "ass style"           => [["convert", "trip.srt", "--to", "ass", "-o", "-", "--ass-style", "Bogus=1"], "convert", "The option --ass-style is not valid. " .
+                                      "The ASS style field \"Bogus\" does not exist. Use one of: Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, " .
+                                      "BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, " .
+                                      "MarginL, MarginR, MarginV, Encoding."],
             "preset"              => [["validate", "trip.srt", "--preset", "nope"], "validate", "The option --preset must be netflix-en or bbc, got \"nope\"."],
         ];
     }
