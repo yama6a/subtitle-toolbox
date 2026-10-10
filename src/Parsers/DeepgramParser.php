@@ -8,6 +8,7 @@ use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\Options\TranscriptReadOptions;
 use SubtitleToolbox\Subtitle;
+use SubtitleToolbox\SubtitleCue;
 
 final class DeepgramParser extends SubtitleParser
 {
