@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox\Cli;
 
 use SubtitleToolbox\Container\Containers;
+use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Exceptions\SubtitleToolboxException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatRegistry;
@@ -28,6 +29,11 @@ use SubtitleToolbox\Subtitle;
 abstract class FileCommand extends Command
 {
     public const DASH = "-";
+
+    public const LENIENT_HINT = "Pass --lenient to skip or repair broken cues.";
+
+    private const IGNORE_LENIENT = [Format::Scc, Format::Pgs, Format::VobSub, Format::FfMetadataChapters, Format::OgmChapters,
+                                    Format::PodcastChapters, Format::YouTubeChapters];
 
     protected ?Format $fromFormat = null;
 
@@ -56,6 +62,8 @@ abstract class FileCommand extends Command
 
     // The second file of diff and dual while it loads. A failure then names it instead of the input.
     private ?string $failureLabel = null;
+
+    private bool $lenientHint = false;
 
 
     /**
@@ -269,6 +277,7 @@ abstract class FileCommand extends Command
 
         foreach ($inputs as $input) {
             $this->failureLabel = null;
+            $this->lenientHint  = false;
             try {
                 $read = $this->read($input, $arguments, $console);
                 if ($read !== null) {
@@ -281,6 +290,9 @@ abstract class FileCommand extends Command
                 $this->failed++;
                 $names = $this->fileOptionNames();
                 $console->err(($this->failureLabel ?? self::label($input)) . ": " . CliMessages::reword(self::throwableMessage($exception), "--$names[track]", "--$names[from]") . "\n");
+                if ($this->lenientHint) {
+                    $console->err(self::LENIENT_HINT . "\n");
+                }
                 if (!$arguments->has("keep-going")) {
                     break;
                 }
@@ -340,10 +352,11 @@ abstract class FileCommand extends Command
      */
     protected function loadSideSubtitle(string $path, Console $console): Subtitle
     {
+        $this->lenientHint = false;
         try {
             return $this->loadOtherFile($path, $console);
         } catch (\Throwable $exception) {
-            return self::failSideFile($path, self::throwableMessage($exception));
+            return self::failSideFile($path, self::throwableMessage($exception) . ($this->lenientHint ? "\n" . self::LENIENT_HINT : ""));
         }
     }
 
@@ -415,19 +428,42 @@ abstract class FileCommand extends Command
             return Subtitle::loadTrack($path, $track, $this->readOptions);
         }
         if ($format !== null) {
-            return Subtitle::load($path, $format, $this->readOptionsFor($format));
+            return $this->parse(fn (): Subtitle => Subtitle::load($path, $format, $this->readOptionsFor($format)), fn (): Format => $format);
         }
-        if (!$this->hasFormatOptions() || Containers::detectFile($path) !== null) {
+        if (Containers::detectFile($path) !== null) {
             return Subtitle::loadAutoDetectFormat($path, $this->readOptions);
+        }
+        $detectFromFile = fn (): ?Format => $this->detectFormat((string) @file_get_contents($path), $path);
+        if (!$this->hasFormatOptions()) {
+            return $this->parse(fn (): Subtitle => Subtitle::loadAutoDetectFormat($path, $this->readOptions), $detectFromFile);
         }
 
         $content = @file_get_contents($path);
         $format  = $content === false ? null : $this->detectFormat($content, $path);
         if ($format === null || $format === Format::VobSub) {
-            return Subtitle::loadAutoDetectFormat($path, $this->readOptions);
+            return $this->parse(fn (): Subtitle => Subtitle::loadAutoDetectFormat($path, $this->readOptions), $detectFromFile);
         }
 
-        return Subtitle::fromString($content, $format, $this->readOptionsFor($format));
+        return $this->parse(fn (): Subtitle => Subtitle::fromString($content, $format, $this->readOptionsFor($format)), fn (): Format => $format);
+    }
+
+
+    /**
+     * Runs $read. After a ParsingException, it calls $format for the format of the input and sets the --lenient hint.
+     *
+     * @param callable(): Subtitle $read
+     * @param callable(): ?Format  $format
+     */
+    private function parse(callable $read, callable $format): Subtitle
+    {
+        try {
+            return $read();
+        } catch (ParsingException $exception) {
+            $detected          = $this->readOptions->lenient ? null : $format();
+            $this->lenientHint = $detected !== null && !in_array($detected, self::IGNORE_LENIENT, true);
+
+            throw $exception;
+        }
     }
 
 
@@ -511,7 +547,7 @@ abstract class FileCommand extends Command
         $format = $this->fromFormat ?? $this->stdinFormatWithOptions($content);
 
         return $format === null
-            ? Subtitle::fromStringAutoDetectFormat($content, $this->readOptions)
-            : Subtitle::fromString($content, $format, $this->readOptionsFor($format));
+            ? $this->parse(fn (): Subtitle => Subtitle::fromStringAutoDetectFormat($content, $this->readOptions), fn (): ?Format => $this->detectFormat($content, null))
+            : $this->parse(fn (): Subtitle => Subtitle::fromString($content, $format, $this->readOptionsFor($format)), fn (): Format => $format);
     }
 }

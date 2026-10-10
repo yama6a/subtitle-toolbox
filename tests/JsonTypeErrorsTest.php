@@ -256,7 +256,7 @@ class JsonTypeErrorsTest extends TestCase
 
         [$code, $error] = self::runWith([new Cli\ConvertCommand()], ["convert", $path, "--to", "scc"]);
 
-        $this->assertSame([3, "$path: ParsingException (Error #100): The field formatData.scc.dropFrame must be a boolean.\n"], [$code, $error]);
+        $this->assertSame([3, "$path: ParsingException (Error #100): The field formatData.scc.dropFrame must be a boolean.\n" . Cli\FileCommand::LENIENT_HINT . "\n"], [$code, $error]);
     }
 
 
