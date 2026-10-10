@@ -8,7 +8,7 @@ Rules for adding a port are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - Project: <https://github.com/mantas-done/subtitles>
 - Licence: MIT
-- Checked at: `959d1705b1ed12cbb9ddba517f8bcb814e1919a8 (`vtt/real/mantas_styles.vtt` from e41f318224dc9c38339c2bfcb0199e5bb788abce, same licence text)`
+- Checked at: `959d1705b1ed12cbb9ddba517f8bcb814e1919a8`, and `vtt/real/mantas_styles.vtt` from `e41f318224dc9c38339c2bfcb0199e5bb788abce` with the same licence text
 - Files copied from it:
   - `tests/files/ttml/real/mantas_dfxp_br.dfxp`
   - `tests/files/ttml/real/mantas_duplicated_ids.ttml`
@@ -26,7 +26,7 @@ Rules for adding a port are in [CONTRIBUTING.md](CONTRIBUTING.md).
   - `tests/files/sami/real/mantas_smi_formatted.smi`
   - `tests/files/subviewer/real/mantas_headers_shape.sub`
   - `tests/files/subviewer/real/mantas_plain_shape.sub`
-  - `tests/files/ttml/real/mantas_multiple_divs.ttml`
+  - `tests/files/lenient/mantas_multiple_divs.ttml`
   - `tests/files/ttml/real/mantas_netflix_ticks.dfxp`
 
 ```text

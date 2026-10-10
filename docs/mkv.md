@@ -1,6 +1,6 @@
 # MKV, WebM and MP4 subtitle tracks
 
-Media servers and subtitle managers get MKV files with embedded subtitles. The library reads the subtitle tracks of MKV and WebM files in PHP, without `ffmpeg` or `mkvextract`. It reads only. In the command line tool, `info movie.mkv` lists the tracks and `convert movie.mkv --to srt -o out.srt --track 3` reads one. See [cli](cli.md).
+Media servers and subtitle managers get MKV files with embedded subtitles. The library reads the subtitle tracks of MKV, WebM and MP4 files in PHP, without `ffmpeg` or `mkvextract`. This page covers MKV and WebM first. The [MP4](#mp4) section covers MP4 and MOV. It reads only. In the command line tool, `info movie.mkv` lists the tracks and `convert movie.mkv --to srt -o out.srt --track 3` reads one. See [cli](cli.md).
 
 ```php
 use SubtitleToolbox\Subtitle;
@@ -22,7 +22,7 @@ Subtitle::loadAutoDetectFormat('/media/one-track.webm');       // reads the only
 | `S_HDMV/PGS` | image cues from `PgsParser`, see [ocr.md](ocr.md#pgs) |
 | `S_VOBSUB` | image cues from `VobSubParser`, as the `.idx` and `.sub` pair gives them. `CodecPrivate` holds the `.idx` header |
 
-- **Tracks**: `Subtitle::tracks()` lists only tracks of type subtitle. It returns `SubtitleTrack` objects from the namespace `SubtitleToolbox\Container`. It reads MKV and WebM files.
+- **Tracks**: `Subtitle::tracks()` lists only tracks of type subtitle. It returns `SubtitleTrack` objects from the namespace `SubtitleToolbox\Container`. It reads MKV, WebM, MP4 and MOV files.
 
 | Property | Type | MKV value |
 |:--- |:--- |:--- |
