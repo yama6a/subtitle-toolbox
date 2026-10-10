@@ -35,7 +35,7 @@ class BinaryDiffDualHlsTest extends BinaryTestCase
 
         $options  = new SubtitleDiffOptions(timeTolerance: 0.5, ignoreFormatting: true, textOnly: true);
         $expected = SubtitleDiff::compare(Subtitle::fromStringAutoDetectFormat($this->file("v1.srt")), Subtitle::fromStringAutoDetectFormat($this->file("v2.srt")), $options);
-        [$code, $stdout, $stderr] = $this->runBinary(["diff", "v1.srt", "v2.srt", "--json", "--time-tolerance", "0.5", "--ignore-formatting", "--text-only"]);
+        [$code, $stdout, $stderr] = $this->runBinary(["diff", "v1.srt", "v2.srt", "--json", "--time-tolerance", "00:00:00.5", "--ignore-formatting", "--text-only"]);
         $this->assertSame([1, ""], [$code, $stderr]);
         $this->assertCount(1, json_decode($stdout, true));
         $json = json_decode($stdout, true)[0];
@@ -171,7 +171,7 @@ class BinaryDiffDualHlsTest extends BinaryTestCase
         $merged = DualSubtitle::fromPair(Subtitle::fromStringAutoDetectFormat($this->file("en.srt")), Subtitle::fromStringAutoDetectFormat($this->file("de.srt")),
                                       new DualSubtitleOptions(mode: DualSubtitleMode::TopBottom, snapTolerance: 0.5, secondaryAlignment: 7));
         $this->assertSame([0, $merged->toString(Format::SubRip), ""], $this->runBinary([
-            "dual", "--primary", "en.srt", "--secondary", "de.srt", "--mode", "top-bottom", "--snap-tolerance", "0.5", "--secondary-alignment", "7",
+            "dual", "--primary", "en.srt", "--secondary", "de.srt", "--mode", "top-bottom", "--snap-tolerance", "00:00.5", "--secondary-alignment", "7",
         ]));
 
         foreach ([[], ["--mode", "side"], ["--secondary-alignment", "0"], ["--secondary-style", "em"], ["--snap-tolerance", "-1"]] as $options) {
@@ -189,8 +189,8 @@ class BinaryDiffDualHlsTest extends BinaryTestCase
         );
 
         $this->assertSame([0, "talk.vtt -> out/index.m3u8, 15 segments\n", ""], $this->runBinary([
-            "hls", "talk.vtt", "--output-dir", "out", "--segment", "10", "--mpegts", "126000", "--pattern", "part%03d.vtt",
-            "--media-duration", "150", "--playlist", "index.m3u8",
+            "hls", "talk.vtt", "--output-dir", "out", "--segment", "00:10", "--mpegts", "126000", "--pattern", "part%03d.vtt",
+            "--media-duration", "00:02:30", "--playlist", "index.m3u8",
         ]));
         $this->assertSame($expected->getPlaylist(), $this->file("out/index.m3u8"));
         foreach ($expected->getSegments() as $name => $content) {
@@ -226,6 +226,8 @@ class BinaryDiffDualHlsTest extends BinaryTestCase
                                                                         => ["talk.vtt", "--output-dir", "new", "--segment", "1e999"],
             "Error: The option --local needs a finite number, got \"1e999\".$usage"
                                                                         => ["talk.vtt", "--output-dir", "new", "--local", "1e999"],
+            "Error: The option --local needs seconds or a timecode such as 00:01:02.500, got \"1:2:3:4:5\".$usage"
+                                                                        => ["talk.vtt", "--output-dir", "new", "--local", "1:2:3:4:5"],
         ] as $error => $arguments) {
             $this->assertSame([2, "", $error], $this->runBinary(["hls", ...$arguments]), $error);
             $this->assertSame($before, $this->snapshot(), $error);

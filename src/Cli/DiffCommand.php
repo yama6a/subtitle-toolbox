@@ -102,7 +102,7 @@ final class DiffCommand extends ReportCommand
 
         $this->different   = false;
         $this->diffOptions = new SubtitleDiffOptions(...self::given([
-            "timeTolerance"    => $arguments->nonNegativeFloat("time-tolerance"),
+            "timeTolerance"    => $arguments->nonNegativeSeconds("time-tolerance"),
             "ignoreFormatting" => $arguments->has("ignore-formatting"),
             "ignoreWhitespace" => $arguments->has("ignore-whitespace"),
             "textOnly"         => $arguments->has("text-only"),

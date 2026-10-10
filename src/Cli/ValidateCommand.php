@@ -167,13 +167,13 @@ final class ValidateCommand extends ReportCommand
             "maxCharactersPerSecond" => $arguments->positiveFloat("max-cps"),
             "maxCharactersPerLine"   => $arguments->positiveInt("max-cpl"),
             "maxLinesPerCue"         => $arguments->positiveInt("max-lines"),
-            "minDuration"            => $arguments->positiveFloat("min-duration"),
-            "maxDuration"            => $arguments->positiveFloat("max-duration"),
-            "minGap"                 => $arguments->positiveFloat("min-gap"),
+            "minDuration"            => $arguments->positiveSeconds("min-duration"),
+            "maxDuration"            => $arguments->positiveSeconds("max-duration"),
+            "minGap"                 => $arguments->positiveSeconds("min-gap"),
             "dialogueDashStyle"      => self::dialogueDashStyle($arguments->value("dialogue-dash")),
             "maxSpeakersPerCue"      => $arguments->positiveInt("max-speakers"),
             "maxWordsPerMinute"      => $arguments->positiveFloat("max-wpm"),
-            "minSecondsPerWord"      => $arguments->positiveFloat("min-seconds-per-word"),
+            "minSecondsPerWord"      => $arguments->positiveSeconds("min-seconds-per-word"),
             "allowedCharacters"      => $arguments->value("allowed-characters"),
         ];
         foreach (self::FLAGS as $option => $field) {

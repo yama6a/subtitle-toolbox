@@ -79,7 +79,7 @@ final class StructureEdit extends Edit
         self::needs($arguments, "structure-resegment", ["structure-max-word-gap"]);
         self::needsOneOf($arguments, self::LIMITED_EDITS, "structure-max-cpl");
         self::needsOneOf($arguments, self::LIMITED_EDITS, "structure-max-lines");
-        $wordGap = $arguments->positiveFloat("structure-max-word-gap");
+        $wordGap = $arguments->positiveSeconds("structure-max-word-gap");
         $limits  = new CueLimits(...Command::given([
             "maxCharactersPerLine" => $arguments->positiveInt("structure-max-cpl"),
             "maxLinesPerCue"       => $arguments->positiveInt("structure-max-lines"),

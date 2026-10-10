@@ -208,7 +208,7 @@ class BinaryTimingTest extends BinaryTestCase
         $this->assertSame([0, "de.srt: scale 1.04271, offset -2.3 s, score 0.89\n"], [$code, $stderr]);
         $this->assertStringEqualsFile(self::FILES . "sync/own_target_de_synced.srt", $stdout);
 
-        [$code, $stdout, $stderr] = $this->runBinary(["sync", "de.srt", "--reference", "tv.srt", "--min-offset", "-180", "--max-offset", "180",
+        [$code, $stdout, $stderr] = $this->runBinary(["sync", "de.srt", "--reference", "tv.srt", "--min-offset", "-00:03:00", "--max-offset", "03:00",
                                                       "--max-splits", "2", "-o", "synced.srt"]);
         $this->assertSame([0, "de.srt -> synced.srt\n"], [$code, $stdout]);
         $this->assertSame("de.srt: scale 1.04271, offset -2.31 s, score 0.89\nde.srt: from 0 s: offset -2.31 s\n" .
@@ -234,7 +234,7 @@ class BinaryTimingTest extends BinaryTestCase
         $expected = Subtitle::fromStringAutoDetectFormat($this->file("de.srt"));
         ReferenceSync::apply($expected, new ReferenceSyncOptions(SpeechReference::fromFfmpegSilencedetect($this->file("silence.log"), 840)));
 
-        [$code, $stdout, $stderr] = $this->runBinary(["sync", "de.srt", "--silence-log", "silence.log", "--media-duration", "840"]);
+        [$code, $stdout, $stderr] = $this->runBinary(["sync", "de.srt", "--silence-log", "silence.log", "--media-duration", "00:14:00"]);
         $this->assertSame([0, $expected->toString(Format::SubRip), "de.srt: scale 1.04271, offset -2.3 s, score 0.78\n"],
                           [$code, $stdout, $stderr]);
 
