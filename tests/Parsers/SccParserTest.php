@@ -471,7 +471,6 @@ class SccParserTest extends TestCase
     {
         return [
             "no header"         => ["\n00:00:01:00\t942c 942c\n", 2],
-            "only a NUL byte"   => ["\0", null],
             "other header"      => ["Scenarist_SCC V2.0\n\n00:00:01:00\t942c 942c\n", 1],
             "no time code"      => ["Scenarist_SCC V1.0\n\n942c 942c\n", 3],
             "short byte pair"   => ["Scenarist_SCC V1.0\n\n00:00:01:00\t942c 94c\n", 3],

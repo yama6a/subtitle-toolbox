@@ -39,8 +39,13 @@ abstract class SubtitleParser
     // In lenient mode, parse() replaces invalid UTF-8 with U+FFFD for a parser that cannot read it. Strict mode throws.
     protected const REPLACES_INVALID_UTF8 = false;
 
-    // NUL is no white space here, so a file of NUL bytes is not empty.
-    private const WHITE_SPACE = " \t\n\r\x0B\f";
+    private const WHITE_SPACE = " \t\n\r";
+
+    // DOS editors end a file with one or more Ctrl-Z characters.
+    private const END_OF_FILE_REGEX = '/\x1A+(?=[ \t\r\n]*$)/D';
+
+    // C0 control characters except tab, LF and CR, and DEL. U+200E, U+200F and other format characters stay.
+    private const CONTROL_CHARACTER_REGEX = '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/';
 
     // Formatters split cue times into integer milliseconds, which overflow far above this bound.
     protected const MAX_HOURS = 100000;
@@ -55,9 +60,12 @@ abstract class SubtitleParser
     /** @var list<ParseWarning> */
     protected array $warnings = [];
 
+    private bool $removedControlCharacters = false;
+
 
     /**
      * Reads $content, which must be UTF-8 for a text format.
+     * In a text format, it drops Ctrl-Z characters at the end and removes the other C0 control characters and DEL.
      * Text content without anything but white space and a BOM gives an empty Subtitle.
      * In lenient mode, Subtitle::getParseWarnings() returns what the parser skipped or repaired.
      */
@@ -66,9 +74,11 @@ abstract class SubtitleParser
         $options ??= new ReadOptions();
         $this->useOptions($options);
 
-        $content = static::BINARY ? $content : StringHelpers::removeUtf8Bom($this->checkUtf8($content));
-        if (!static::BINARY && trim($content, self::WHITE_SPACE) === "") {
-            return new Subtitle();
+        if (!static::BINARY) {
+            $content = $this->removeControlCharacters(StringHelpers::removeUtf8Bom($this->checkUtf8($content)));
+            if (trim($content, self::WHITE_SPACE) === "") {
+                return new Subtitle();
+            }
         }
 
         $subtitle = $this->read($content);
@@ -128,6 +138,97 @@ abstract class SubtitleParser
 
 
     /**
+     * Yields $lines like parse() cleans the content: without Ctrl-Z at the end and without the other C0 control characters and DEL.
+     *
+     * @param iterable<int, string> $lines keyed by the 0-based line number
+     *
+     * @return Generator<int, string>
+     *
+     * @internal
+     */
+    public function withoutControlCharacters(iterable $lines): Generator
+    {
+        $held      = null;
+        $heldKey   = 0;
+        $heldBlank = [];
+        foreach ($lines as $key => $line) {
+            if ($held !== null && trim($line, self::WHITE_SPACE) === "") {
+                $heldBlank[$key] = $line;
+                continue;
+            }
+            if ($held !== null) {
+                yield $heldKey => $this->removeLineControlCharacters($held, $heldKey + 1);
+                foreach ($heldBlank as $blankKey => $blank) {
+                    yield $blankKey => $blank;
+                }
+                [$held, $heldBlank] = [null, []];
+            }
+            if (preg_match(self::END_OF_FILE_REGEX, $line) === 1) {
+                [$held, $heldKey] = [$line, $key];
+                continue;
+            }
+            yield $key => $this->removeLineControlCharacters($line, $key + 1);
+        }
+
+        if ($held !== null) {
+            yield $heldKey => $this->removeLineControlCharacters(preg_replace(self::END_OF_FILE_REGEX, "", $held), $heldKey + 1);
+            foreach ($heldBlank as $blankKey => $blank) {
+                yield $blankKey => $blank;
+            }
+        }
+    }
+
+
+    /**
+     * Returns $content before the control characters go. WebVttParser replaces NUL as the WebVTT spec says.
+     */
+    protected function replaceNul(string $content): string
+    {
+        return $content;
+    }
+
+
+    private function removeControlCharacters(string $content): string
+    {
+        $content = $this->replaceNul(preg_replace(self::END_OF_FILE_REGEX, "", $content));
+        if (preg_match(self::CONTROL_CHARACTER_REGEX, $content, $matches, PREG_OFFSET_CAPTURE) !== 1) {
+            return $content;
+        }
+
+        $this->warnControlCharacters(count($this->lines(substr($content, 0, $matches[0][1]))));
+
+        return preg_replace(self::CONTROL_CHARACTER_REGEX, "", $content);
+    }
+
+
+    private function removeLineControlCharacters(string $line, int $lineNumber): string
+    {
+        $line    = $this->replaceNul($line);
+        $cleaned = preg_replace(self::CONTROL_CHARACTER_REGEX, "", $line);
+        if ($cleaned !== $line && !$this->removedControlCharacters) {
+            $this->warnControlCharacters($lineNumber);
+        }
+
+        return $cleaned;
+    }
+
+
+    private function warnControlCharacters(int $lineNumber): void
+    {
+        $this->removedControlCharacters = true;
+        if ($this->options->lenient) {
+            $this->warn(
+                "The file has control characters, the first on line $lineNumber. The parser removed them.",
+                $lineNumber,
+                null,
+                [],
+                ParseWarningAction::Repaired
+            );
+        }
+    }
+
+
+    /**
      * Returns the first line of text that the parser read neither as a cue nor as a header, or null.
      * parse() calls it for content that gave no cues and no skipped blocks. Only parsers that skip such text without an error override it.
      */
@@ -163,9 +264,10 @@ abstract class SubtitleParser
                 : "$parser takes " . $this->shortName($class) . ", got $given.");
         }
 
-        $this->options       = $options;
-        $this->formatOptions = $options->format ?? ($class === null ? null : new $class());
-        $this->warnings      = [];
+        $this->options                  = $options;
+        $this->formatOptions            = $options->format ?? ($class === null ? null : new $class());
+        $this->warnings                 = [];
+        $this->removedControlCharacters = false;
 
         return $this;
     }

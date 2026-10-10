@@ -307,6 +307,9 @@ class BinaryOptionCoverageTest extends BinaryTestCase
         }
         if ($options[0] === "--from") {
             $this->assertSame(3, $this->runBinary([...self::call($command, $input), "--from", "microdvd"])[0]);
+        } elseif ($options[0] === "--encoding") {
+            // Without the option, the parser reads the UTF-32 bytes as UTF-8 and removes the NUL bytes.
+            $this->assertStringContainsString("control characters", $this->runBinary([...self::call($command, $variantInput, $extension), "--lenient"])[2]);
         } elseif (!in_array($options[0], ["--word-timestamps", "--scc-roll-up"], true)) {
             $this->assertSame(3, $this->runBinary(self::call($command, $variantInput, $extension))[0]);
         }

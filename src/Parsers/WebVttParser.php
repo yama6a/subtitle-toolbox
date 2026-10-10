@@ -32,6 +32,12 @@ final class WebVttParser extends SubtitleParser
     private const ENTITIES = ["&nbsp;" => "\u{00A0}", "&lrm;" => "\u{200E}", "&rlm;" => "\u{200F}"];
 
 
+    protected function replaceNul(string $content): string
+    {
+        return str_replace("\0", "\u{FFFD}", $content);
+    }
+
+
     protected function read(string $content): Subtitle
     {
         $content      = StringHelpers::normalizeEOLs($content);
