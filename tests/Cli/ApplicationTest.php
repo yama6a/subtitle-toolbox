@@ -83,7 +83,7 @@ class ApplicationTest extends TestCase
     public function testUsageErrorsExitWith2(): void
     {
         $this->assertSame(
-            [2, "", "Error: Pass --shift SECONDS, --scale FACTOR, or --from-fps RATE and --to-fps RATE.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
+            [2, "", "Error: Pass --shift SECONDS, --scale FACTOR, --sync OLD=NEW, or --from-fps RATE and --to-fps RATE.\nRun \"subtitle-toolbox help retime\" for the usage.\n"],
             self::runApplication(["retime", "-"])
         );
         $this->assertSame(
@@ -190,15 +190,16 @@ class ApplicationTest extends TestCase
         $this->assertSame([0, ""], [$code, $stderr]);
         $this->assertStringStartsWith(
             "Usage: subtitle-toolbox retime <input>... [--shift SECONDS] [--scale FACTOR]\n" .
-            "                               [--from-fps RATE --to-fps RATE] [options]\n\n" .
+            "                               [--sync OLD=NEW] [--from-fps RATE --to-fps RATE]\n" .
+            "                               [options]\n\n" .
             "Shift and scale all cue times, or fit them to a video with another frame rate.\n\n" .
-            "Pass one or more edits. retime applies them in this order: --shift, --scale,\n--from-fps and --to-fps.",
+            "Pass one or more edits. retime applies them in this order: --sync, --shift,\n--scale, --from-fps and --to-fps.",
             $stdout
         );
         $stdout = BinaryTestCase::unwrapHelp($stdout);
         preg_match_all('/^  (?:-\w, )?--([\w-]+)/m', $stdout, $matches);
         $this->assertSame([
-            "shift", "shift-after", "scale", "from-fps", "to-fps", "to", "output", "output-dir", "output-fps",
+            "shift", "shift-after", "scale", "sync", "from-fps", "to-fps", "to", "output", "output-dir", "output-fps",
             "line-ending", "bom", "no-bom", "skip-image-cues", "scc-fit", "from", "encoding", "lenient", "input-fps", "fps", "word-timestamps", "scc-roll-up",
             "track", "keep-going", "help",
         ], $matches[1]);
