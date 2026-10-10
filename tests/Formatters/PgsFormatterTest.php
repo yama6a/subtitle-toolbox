@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Cli\Application;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Exceptions\UnwritableContentException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\FormatRegistry;
 use SubtitleToolbox\Image\CueImage;
@@ -183,18 +184,98 @@ class PgsFormatterTest extends TestCase
     }
 
 
-    public function testACueThatStartsAtOrBeforeTheEndOfThePreviousCueReplacesIt(): void
+    public function testACueThatStartsAtTheEndOfThePreviousCueReplacesIt(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue(self::imageCue(1.0, 2.0, 1, 1, [0xFFFFFFFF]))
+            ->addCue(self::imageCue(2.0, 3.0, 1, 1, [0x000000FF]));
+
+        $this->assertSame([[1.0, 2.0], [2.0, 3.0]],
+                          array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], self::pgsRoundTrip($subtitle)->getCues()));
+        $this->assertCount(2 * 5 + 3, self::segments($subtitle->toString(Format::Pgs)));
+    }
+
+
+    /**
+     * @return array{SubtitleCue, SubtitleCue} the bottom cue from 1.0 to 3.5 s and the top cue, moved to 2.0 to 4.0 s
+     */
+    private static function overlappingFixtureCues(): array
+    {
+        $cues = Subtitle::load(self::FILES . "pgs/shapes_1080p.sup", Format::Pgs)->getCues();
+        $cues[2]->setStart(2.0)->setEnd(4.0);
+
+        return [$cues[0], $cues[2]];
+    }
+
+
+    /**
+     * @return list<int> the pixels of $image inside the area of $part
+     */
+    private static function area(CueImage $image, CueImage $part): array
+    {
+        $pixels = PngDecoder::decode($image->png)["pixels"];
+        $area   = [];
+        for ($row = 0; $row < $part->height; $row++) {
+            $offset = ($part->y - $image->y + $row) * $image->width + $part->x - $image->x;
+            array_push($area, ...array_slice($pixels, $offset, $part->width));
+        }
+
+        return $area;
+    }
+
+
+    public function testOverlappingCuesShareTheDisplaySetsAndKeepBothImages(): void
+    {
+        [$bottom, $top] = self::overlappingFixtureCues();
+        $subtitle       = (new Subtitle())->addCues([$bottom, $top]);
+
+        $cues   = self::pgsRoundTrip($subtitle)->getCues();
+        $images = array_map(fn (SubtitleCue $cue): CueImage => CueImage::fromCue($cue), $cues);
+
+        $this->assertSame([[1.0, 2.0], [2.0, 3.5], [3.5, 4.0]],
+                          array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $cues));
+        $this->assertSame(CueImage::fromCue($bottom)->png, $images[0]->png);
+        $this->assertSame(CueImage::fromCue($top)->png, $images[2]->png);
+        foreach ([$bottom, $top] as $cue) {
+            $image = CueImage::fromCue($cue);
+            $this->assertSame(PngDecoder::decode($image->png)["pixels"], self::area($images[1], $image));
+        }
+
+        $sets = array_values(array_filter(self::segments($subtitle->toString(Format::Pgs)),
+                                          fn (array $segment): bool => $segment[0] === 180000 && in_array($segment[2], [0x16, 0x17], true)));
+        $this->assertSame(pack("nnCnCCCC", 1920, 1080, 0x10, 1, 0x80, 0, 0, 2)
+                          . pack("nCCnn", 0, 0, 0, 640, 940) . pack("nCCnn", 1, 1, 0x40, 560, 50), $sets[0][3]);
+        $this->assertSame(pack("C", 2) . pack("Cnnnn", 0, 640, 940, 640, 90) . pack("Cnnnn", 1, 560, 50, 800, 100), $sets[1][3]);
+    }
+
+
+    public function testOverlappingImagesOnTheScreenShareOneWindow(): void
+    {
+        $subtitle = (new Subtitle())
+            ->addCue((new CueImage(PngEncoder::encode(2, 1, [0xFFFFFFFF, 0x00000000]), 10, 20, 2, 1, 720, 576))->toCue(new SubtitleCue(1, 3)))
+            ->addCue((new CueImage(PngEncoder::encode(1, 2, [0x000000FF, 0x000000FF]), 11, 20, 1, 2, 720, 576))->toCue(new SubtitleCue(1, 3)));
+
+        $segments = self::segments($subtitle->toString(Format::Pgs));
+
+        $this->assertSame([0x16, 0x17, 0x14, 0x15, 0x15, 0x80, 0x16, 0x17, 0x80], array_column($segments, 2));
+        $this->assertSame(pack("nCCnn", 0, 0, 0, 10, 20) . pack("nCCnn", 1, 0, 0, 11, 20), substr($segments[0][3], 11));
+        $this->assertSame(pack("C", 1) . pack("Cnnnn", 0, 10, 20, 2, 2), $segments[1][3]);
+        $this->assertSame($segments[1][3], $segments[7][3]);
+    }
+
+
+    public function testRejectsMoreThanTwoOverlappingCues(): void
     {
         $subtitle = (new Subtitle())
             ->addCue(self::imageCue(1.0, 3.0, 1, 1, [0xFFFFFFFF]))
-            ->addCue(self::imageCue(2.0, 4.0, 1, 1, [0x000000FF]))
-            ->addCue(self::imageCue(4.0, 5.0, 1, 1, [0xFFFFFFFF]));
+            ->addCue(self::imageCue(1.5, 2.0, 1, 1, [0xFFFFFFFF]))
+            ->addCue(self::imageCue(2.0, 4.0, 1, 1, [0xFFFFFFFF]))
+            ->addCue(self::imageCue(2.5, 4.0, 1, 1, [0xFFFFFFFF]));
 
-        $written = self::pgsRoundTrip($subtitle);
+        $this->expectException(UnwritableContentException::class);
+        $this->expectExceptionMessage("Cannot write the cues 1 to 3, 2 to 4, 2.5 to 4 as PGS: they overlap, and PGS shows at most 2 images at one time.");
 
-        $this->assertSame([[1.0, 2.0], [2.0, 4.0], [4.0, 5.0]],
-                          array_map(fn (SubtitleCue $cue): array => [$cue->getStart(), $cue->getEnd()], $written->getCues()));
-        $this->assertCount(3 * 5 + 3, self::segments($subtitle->toString(Format::Pgs)));
+        $subtitle->toString(Format::Pgs);
     }
 
 
