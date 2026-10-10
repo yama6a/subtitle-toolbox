@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use SubtitleToolbox\Exceptions\ParsingException;
 use SubtitleToolbox\Format;
 use SubtitleToolbox\Formatters\Options\MpSubWriteOptions;
+use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Subtitle;
 use SubtitleToolbox\SubtitleCue;
 use SubtitleToolbox\Validation\ValidationRules;
@@ -187,7 +188,7 @@ class MpSubParserTest extends TestCase
 
     public function testLatin1TextKeepsItsBytes(): void
     {
-        $subtitle = Subtitle::fromString("FORMAT=TIME\n\n1 1\ncaf\xE9 & tea\n", Format::MpSub);
+        $subtitle = Subtitle::fromString("FORMAT=TIME\n\n1 1\ncaf\xE9 & tea\n", Format::MpSub, new ReadOptions(encoding: "UTF-8"));
 
         $this->assertSame(["caf\xE9 &amp; tea"], $subtitle->getCues()[0]->getLines());
     }

@@ -279,7 +279,7 @@ class SamiParserTest extends TestCase
         $this->expectException(ParsingException::class);
         $this->expectExceptionMessage("The SAMI file is not valid UTF-8. Convert it to UTF-8 before parsing.");
 
-        $this->parseBody("<SYNC Start=0><P Class=KRCC>\xbf\xc0\xb4\xc3\n");
+        (new SamiParser())->parse("<SAMI>\n<BODY>\n<SYNC Start=0><P Class=KRCC>\xbf\xc0\xb4\xc3\n</BODY>\n</SAMI>\n", new ReadOptions());
     }
 
 
