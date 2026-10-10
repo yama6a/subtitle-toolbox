@@ -38,7 +38,14 @@ StringHelpers::isValidUtf8(file_get_contents('movie.srt'));   // false for a Win
 - **Binary formats**: EBU STL, PGS and VobSub skip steps 2 and 5.
 - **XML declaration**: the TTML, iTT and YouTube parsers ignore `encoding="utf-16"` or `"utf-32"` in the XML declaration of UTF-8 content. This covers converted UTF-16 files and UTF-8 files that declare UTF-16.
 - **Legacy text that looks like UTF-8**: a few legacy files are valid UTF-8 by chance. For example, the Windows-1252 text `Ã©` is the bytes `C3 A9`, which are `é` in UTF-8. The library reads such a file as UTF-8.
-- **Invalid UTF-8**: after step 6, the parsers read the bytes as UTF-8 and keep invalid bytes. SAMI throws `ParsingException` for text that is not UTF-8. The JSON, TTML, iTT and SAMI formatters throw `UnwritableContentException` for such text.
+- **Invalid UTF-8**: after step 6, a parser that gets content with a byte that is not valid UTF-8 acts as below. In lenient mode, a `ParseWarning` with the action `Repaired` names the first bad byte, for example "The content is not valid UTF-8. The first bad byte is at offset 42. Pass --encoding."
+
+| Format | Strict mode | Lenient mode |
+|:--- |:--- |:--- |
+| SubRip, WebVTT, SBV, ASS, SubViewer, CSV and the other text formats | keeps the bytes in the text | keeps the bytes and warns |
+| SAMI, TTML and iTT | throws `ParsingException` with the message of the warning | reads each bad byte as U+FFFD and warns |
+
+- **Output of invalid UTF-8**: the JSON, TTML, iTT and SAMI formatters throw `UnwritableContentException` for text that is not valid UTF-8.
 - **JSON formats**: the JSON parsers read each invalid UTF-8 byte as U+FFFD, the replacement character. For example, the bytes `42 FF 64` in a text field give `B`, U+FFFD and `d`.
 - **Parsers called directly**: only the `Subtitle` functions convert. Before `(new SamiParser())->parse($content, new ReadOptions())`, call `StringHelpers::convertToUtf8($content, TextEncoding::Cp949)`.
 - **Source encodings**: `ReadOptions::$encoding` and `StringHelpers::convertToUtf8()` take a `TextEncoding` case or a string. The conversion uses the PHP extension iconv. A string can be any name that the iconv of the system knows, for example `CP1125`. `new ReadOptions()` throws `InvalidArgumentException` for an unknown name. A byte that is invalid in the encoding throws `ParsingException`.

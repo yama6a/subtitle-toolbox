@@ -276,10 +276,11 @@ class SamiParserTest extends TestCase
 
     public function testInputThatIsNotUtf8Throws(): void
     {
-        $this->expectException(ParsingException::class);
-        $this->expectExceptionMessage("The SAMI file is not valid UTF-8. Convert it to UTF-8 before parsing.");
+        $content = "<SAMI>\n<BODY>\n<SYNC Start=0><P Class=KRCC>\xbf\xc0\xb4\xc3\n</BODY>\n</SAMI>\n";
 
-        (new SamiParser())->parse("<SAMI>\n<BODY>\n<SYNC Start=0><P Class=KRCC>\xbf\xc0\xb4\xc3\n</BODY>\n</SAMI>\n", new ReadOptions());
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The content is not valid UTF-8. The first bad byte is at offset 42. Pass --encoding.");
+        (new SamiParser())->parse($content, new ReadOptions());
     }
 
 

@@ -36,6 +36,9 @@ abstract class SubtitleParser
     // parse() strips the UTF-8 BOM of a text format only.
     protected const BINARY = false;
 
+    // In lenient mode, parse() replaces invalid UTF-8 with U+FFFD for a parser that cannot read it. Strict mode throws.
+    protected const REPLACES_INVALID_UTF8 = false;
+
     // Formatters split cue times into integer milliseconds, which overflow far above this bound.
     protected const MAX_HOURS = 100000;
 
@@ -56,13 +59,42 @@ abstract class SubtitleParser
         $options ??= new ReadOptions();
         $this->useOptions($options);
 
-        $content = static::BINARY ? $content : StringHelpers::removeUtf8Bom($content);
+        $content = static::BINARY ? $content : StringHelpers::removeUtf8Bom($this->checkUtf8($content));
 
         return $this->read($content)->setParseWarnings($this->warnings);
     }
 
 
     abstract protected function read(string $content): Subtitle;
+
+
+    /**
+     * Warns in lenient mode about content that is not valid UTF-8. A parser with REPLACES_INVALID_UTF8 throws in
+     * strict mode, and reads the bad bytes as U+FFFD in lenient mode.
+     */
+    private function checkUtf8(string $content): string
+    {
+        $offset = StringHelpers::findInvalidUtf8Offset($content);
+        if ($offset === null) {
+            return $content;
+        }
+
+        $message = "The content is not valid UTF-8. The first bad byte is at offset $offset. Pass --encoding.";
+        if (!static::REPLACES_INVALID_UTF8) {
+            if ($this->options->lenient) {
+                $this->warn($message, null, null, [], ParseWarningAction::Repaired);
+            }
+
+            return $content;
+        }
+        if (!$this->options->lenient) {
+            throw new ParsingException($message);
+        }
+
+        $this->warn("$message The parser read the bad bytes as U+FFFD.", null, null, [], ParseWarningAction::Repaired);
+
+        return StringHelpers::replaceInvalidUtf8($content);
+    }
 
 
     /**
