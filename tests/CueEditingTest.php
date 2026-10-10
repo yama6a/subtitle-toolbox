@@ -421,6 +421,15 @@ class CueEditingTest extends TestCase
     }
 
 
+    public function testRemoveDuplicateCuesKeepsTheEarliestStartOfACueMovedAfterAddCue(): void
+    {
+        $subtitle = TestSubtitles::fromCues([[1, 3, "Hello"], [2, 4, "Hello"]]);
+        $subtitle->getCues()[1]->setStart(0.5);
+
+        $this->assertSame([[0.5, 4.0, "Hello"]], TestSubtitles::describe($subtitle->removeDuplicateCues()));
+    }
+
+
     public function testRemoveDuplicateCuesRejectsANegativeMaxGap(): void
     {
         foreach ([-0.1, NAN, INF] as $maxGap) {
