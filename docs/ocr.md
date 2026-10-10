@@ -78,6 +78,7 @@ $subtitle->findMetadata(Subtitle::METADATA_LANGUAGE);  // "de", from the id line
 - **Cues**: the image has the size and the position of the display area, on a screen of the `.idx` size. A subpicture with the forced start command sets `forced`.
 - **Times**: a cue starts at its `timestamp`, plus the `delay` lines of its track. It ends at the stop command of the subpicture. A subpicture without a stop command ends at the next one, at most [`ReadOptions::$lastCueDuration`](read-options.md) later.
 - **Colors**: the `.idx` palette and a `custom colors: ON` line apply.
+- **MKV**: `Subtitle::loadTrack()` reads an `S_VOBSUB` track of an MKV file the same way, see [mkv.md](mkv.md).
 - **Limits**: the parser reads one image per subpicture. Color and contrast changes after the start command do not apply. The parser ignores the `org`, `scale`, `align`, `fadein/out` and `time offset` player settings.
 - **No formatter**: convert VobSub to PGS with `PgsFormatter`, or to text after OCR.
 

@@ -167,11 +167,11 @@ movie.mkv
 - **Detection**: the tool knows an MKV or WebM file by its first 4 bytes, not by its extension. Standard input works too.
 - **Memory**: the tool reads an MKV or WebM file the same way as `MatroskaReader`, see [mkv.md](mkv.md). Standard input is different. The tool reads the whole input into memory first.
 - **Track**: a file with one subtitle track needs no `--track`. For a file with more, the tool fails and lists the tracks.
-- **Format**: an `S_TEXT/UTF8` track is SubRip, ASS and SSA tracks are ASS, `S_TEXT/WEBVTT` is WebVTT and `S_HDMV/PGS` is PGS. Without `--to`, `retime` and `sync` keep this format. `convert movie.mkv --to srt --track 3 --output-dir out` writes `out/movie.srt`.
+- **Format**: an `S_TEXT/UTF8` track is SubRip, ASS and SSA tracks are ASS, `S_TEXT/WEBVTT` is WebVTT, `S_HDMV/PGS` is PGS and `S_VOBSUB` is VobSub. Without `--to`, `retime` and `sync` keep this format. `convert movie.mkv --to srt --track 3 --output-dir out` writes `out/movie.srt`.
 - **Second file**: `diff` reads the track of the new file with `--track2`, for example `diff old.mkv new.mkv --track 3 --track2 8`. `dual` takes `--primary-track` and `--secondary-track`.
 - **Info**: without `--track`, `info` lists the tracks of a file whose extension names no subtitle format, such as `.mkv` and `.webm`. The JSON object has `file`, `container` and `tracks`. Each track has `number`, `codecId`, `language`, `name`, `default` and `forced`. With `--track`, `info` prints the statistics of the track.
 - **Directories**: a directory argument skips MKV and WebM files. Pass them by name or with a glob.
-- **Errors**: `S_VOBSUB` tracks, encrypted tracks and tracks with bzlib or LZO compression fail, see [mkv.md](mkv.md).
+- **Errors**: `S_DVBSUB` tracks, encrypted tracks and tracks with bzlib or LZO compression fail, see [mkv.md](mkv.md).
 
 ## Retime
 `retime` changes the cue times with one or more edits. It applies them in this order: `--sync`, `--shift`, `--scale`, then `--from-fps` and `--to-fps`. The word timestamps in the cue text move with the cues.

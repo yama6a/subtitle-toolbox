@@ -289,7 +289,7 @@ class ThrowSitesTest extends TestCase
             "Container/Matroska/EbmlReader.php: cut off element data" => [fn () => self::mkv("", ["codecPrivate" => "abc"], "c"), ...$parsing],
             "Container/Matroska/MatroskaReader.php: stream not seekable" => [fn () => MatroskaReader::open(fopen("php://output", "wb")), ...$invalid],
             "Container/Matroska/MatroskaReader.php: unknown track" => [fn () => self::mkv("")->extract(9), ...$invalid],
-            "Container/Matroska/MatroskaReader.php: unsupported codec" => [fn () => self::mkv("", ["codecId" => "S_VOBSUB"])->extract(2), ...$parsing],
+            "Container/Matroska/MatroskaReader.php: unsupported codec" => [fn () => self::mkv("", ["codecId" => "S_DVBSUB"])->extract(2), ...$parsing],
             "Container/Matroska/MatroskaReader.php: not Matroska" => [fn () => MatroskaReader::open(self::stream(MkvFixtureWriter::ebmlHeader("avi"))),
                                                                 ...$parsing],
             "Container/Matroska/MatroskaReader.php: no Tracks" => [fn () => MatroskaReader::open(self::stream(MkvFixtureWriter::ebmlHeader() .

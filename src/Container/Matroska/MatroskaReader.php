@@ -14,6 +14,7 @@ use SubtitleToolbox\Format;
 use SubtitleToolbox\Parsers\AssParser;
 use SubtitleToolbox\Parsers\PgsParser;
 use SubtitleToolbox\Parsers\SubRipParser;
+use SubtitleToolbox\Parsers\VobSubParser;
 use SubtitleToolbox\Parsers\WebVttParser;
 use SubtitleToolbox\ReadOptions;
 use SubtitleToolbox\Streaming\Streams;
@@ -34,8 +35,9 @@ final class MatroskaReader
     public const CODEC_SSA    = "S_TEXT/SSA";
     public const CODEC_WEBVTT = "S_TEXT/WEBVTT";
     public const CODEC_PGS    = "S_HDMV/PGS";
+    public const CODEC_VOBSUB = "S_VOBSUB";
 
-    public const CODECS = [self::CODEC_SUBRIP, self::CODEC_ASS, self::CODEC_SSA, self::CODEC_WEBVTT, self::CODEC_PGS];
+    public const CODECS = [self::CODEC_SUBRIP, self::CODEC_ASS, self::CODEC_SSA, self::CODEC_WEBVTT, self::CODEC_PGS, self::CODEC_VOBSUB];
 
     /** The first 4 bytes of every Matroska and WebM file. */
     public const EBML_MAGIC = "\x1A\x45\xDF\xA3";
@@ -46,6 +48,7 @@ final class MatroskaReader
         self::CODEC_SSA    => Format::Ass,
         self::CODEC_WEBVTT => Format::WebVtt,
         self::CODEC_PGS    => Format::Pgs,
+        self::CODEC_VOBSUB => Format::VobSub,
     ];
 
     private const ID_EBML             = 0x1A45DFA3;
@@ -210,6 +213,10 @@ final class MatroskaReader
             Format::WebVtt => (new WebVttParser())->parse(TrackFileBuilder::webVttFile($codecPrivate, $blocks), $options),
             Format::SubRip => (new SubRipParser())->parse(TrackFileBuilder::subRipFile($blocks), $options),
             Format::Ass    => (new AssParser())->parse(TrackFileBuilder::assFile($track, $codecPrivate, $blocks), $options),
+            Format::VobSub => (new VobSubParser())->parseBlocks($codecPrivate, array_map(
+                fn (array $block): array => ["start" => $block["start"] / 1000, "end" => $block["end"] / 1000, "data" => $block["data"]],
+                $blocks,
+            ), $options),
         };
 
         $subtitle->setFormat($format);

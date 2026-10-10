@@ -20,6 +20,7 @@ Subtitle::loadAutoDetectFormat('/media/one-track.webm');       // reads the only
 | `S_TEXT/ASS`, `S_TEXT/SSA` | an ASS or SSA subtitle, as `mkvextract` writes it |
 | `S_TEXT/WEBVTT` | a WebVTT subtitle with its header, cue settings, identifiers and comments |
 | `S_HDMV/PGS` | image cues from `PgsParser`, see [ocr.md](ocr.md#pgs) |
+| `S_VOBSUB` | image cues from `VobSubParser`, as the `.idx` and `.sub` pair gives them. `CodecPrivate` holds the `.idx` header |
 
 - **Tracks**: `Subtitle::tracks()` lists only tracks of type subtitle. It returns `SubtitleTrack` objects from the namespace `SubtitleToolbox\Container`. It reads MKV and WebM files.
 
@@ -38,13 +39,14 @@ Subtitle::loadAutoDetectFormat('/media/one-track.webm');       // reads the only
 - **Detection**: `loadAutoDetectFormat()` and `fromStringAutoDetectFormat()` know an MKV or WebM file by its first 4 bytes, not by its extension.
 - **Language**: the reader takes `LanguageBCP47`. Without it, the reader takes `Language`. Without either, the language is `eng`, as the spec defines. `loadTrack()` puts it into the `language` metadata.
 - **Forced**: on a track with the forced flag, `loadTrack()` sets the forced flag of every cue. PGS cues also keep the forced flag of their objects.
-- **End times**: a text block without a duration ends at the start of the next block of the track. The last such block lasts [`ReadOptions::$lastCueDuration`](read-options.md).
+- **End times**: a text block without a duration ends at the start of the next block of the track. The last such block lasts [`ReadOptions::$lastCueDuration`](read-options.md). A VobSub unit ends at its stop command. Without one, it ends at the end of its block, by the same rules.
 - **Compression**: the reader reads zlib compression and header stripping. It throws `ParsingException` for bzlib compression, LZO compression and encrypted tracks.
 - **Live recordings**: the reader accepts a file with elements of unknown size, as live recordings write them.
 - **Memory**: the reader skips video and audio data, so memory grows with the subtitle track, not with the file. In the tests, a 64 MB file with 64 cues needs less than 4 MB.
 - **Speed**: the reader walks the whole file for each `loadTrack()` call. A 2-hour, 4 GB file takes about 3 s of CPU time. On a network volume it takes 30 to 45 s.
-- **Errors**: `loadTrack()`, `MatroskaReader::extract()` and `MatroskaReader::trackFormat()` throw `InvalidArgumentException` for a number that is not a subtitle track. `trackFormat()` returns null for a codec that the reader does not extract, such as `S_VOBSUB`. `loadTrack()` and `extract()` throw `ParsingException` in these cases:
-  - Another codec, such as `S_VOBSUB`.
+- **Errors**: `loadTrack()`, `MatroskaReader::extract()` and `MatroskaReader::trackFormat()` throw `InvalidArgumentException` for a number that is not a subtitle track. `trackFormat()` returns null for a codec that the reader does not extract, such as `S_DVBSUB`. `loadTrack()` and `extract()` throw `ParsingException` in these cases:
+  - Another codec, such as `S_DVBSUB`.
+  - A `S_VOBSUB` track without a `size` or `palette` line in `CodecPrivate`.
   - Laced subtitle blocks.
   - A file that is not Matroska or WebM.
 - **Spec**: [Matroska elements](https://www.matroska.org/technical/elements.html), [Matroska subtitles](https://www.matroska.org/technical/subtitles.html).

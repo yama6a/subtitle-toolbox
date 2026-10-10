@@ -20,6 +20,7 @@ final class MkvFixtures
         "unknown_sizes.mkv" => "unknownSizes",
         "seek_head.mkv"     => "seekHead",
         "pgs.mkv"           => "pgs",
+        "vobsub.mkv"        => "vobSub",
     ];
 
     public const ASS_HEADER = "[Script Info]\n" .
@@ -65,8 +66,8 @@ final class MkvFixtures
              "name" => "Français", "default" => false, "codecPrivate" => self::VTT_HEADER],
             ["number" => 6, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "S_TEXT/SSA", "language" => "spa",
              "default" => false, "codecPrivate" => self::SSA_HEADER],
-            ["number" => 7, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "S_VOBSUB", "language" => "ita",
-             "default" => false, "codecPrivate" => "size: 720x576\n"],
+            ["number" => 7, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "S_DVBSUB", "language" => "ita",
+             "default" => false, "codecPrivate" => "\x00\x01\x00\x01"],
             ["number" => 8, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "S_TEXT/UTF8", "default" => false],
         ];
 
@@ -85,7 +86,7 @@ final class MkvFixtures
             [5, 12000, 2000, "Demain, il fera beau.", null],
             [6, 3000, 2000, "0,,Default,,0000,0000,0000,,El tren sale a las ocho."],
             [6, 13000, 2500, "1,,Default,,0000,0000,0000,,La panadería abre a las seis."],
-            [7, 3000, 2000, "\x00\x00\x01\xBA"],
+            [7, 3000, 2000, "\x20\x00\x0F"],
         ];
         foreach ($text as $cue) {
             $blocks[] = [$cue[1], $cue[0], fn (int $time): string => MkvFixtureWriter::blockGroup($cue[0], $time, $cue[3], $cue[2], $cue[4] ?? null)];
@@ -220,6 +221,69 @@ final class MkvFixtures
         }
 
         return self::file(MkvFixtureWriter::info() . self::tracks($tracks) . self::clusters($blocks, [0, 10000]));
+    }
+
+
+    /**
+     * Both tracks hold the "en" units of ../vobsub/two-tracks-pal. Track 3 has the whole .idx header in CodecPrivate and
+     * SimpleBlocks. Track 4 has only the size and palette lines, zlib compression and BlockGroups of 1500 ms.
+     */
+    public static function vobSub(): string
+    {
+        $idx    = file_get_contents(__DIR__ . "/../../vobsub/two-tracks-pal.idx");
+        $header = substr($idx, 0, strpos($idx, "# English"));
+        preg_match_all('/^(?:size|palette):.*$/m', $header, $lines);
+        $tracks = [
+            ["number" => 1, "type" => MkvFixtureWriter::TRACK_VIDEO, "codecId" => "V_UNCOMPRESSED"],
+            ["number" => 3, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "S_VOBSUB", "language" => "eng",
+             "codecPrivate" => $header],
+            ["number" => 4, "type" => MkvFixtureWriter::TRACK_SUBTITLE, "codecId" => "S_VOBSUB", "language" => "eng",
+             "codecPrivate" => implode("\n", array_map("trim", $lines[0])) . "\n",
+             "encodings" => MkvFixtureWriter::compression(0, 0)],
+        ];
+
+        $blocks = self::mediaBlocks(22000, false);
+        foreach (self::vobSubUnits($idx, file_get_contents(__DIR__ . "/../../vobsub/two-tracks-pal.sub"), "en") as [$start, $unit]) {
+            $compressed = gzcompress($unit, 9);
+            $blocks[]   = [$start, 3, fn (int $time): string => MkvFixtureWriter::simpleBlock(3, $time, $unit)];
+            $blocks[]   = [$start, 4, fn (int $time): string => MkvFixtureWriter::blockGroup(4, $time, $compressed, 1500)];
+        }
+
+        return self::file(MkvFixtureWriter::info() . self::tracks($tracks) . self::clusters($blocks, [0, 10000]));
+    }
+
+
+    /**
+     * Joins the private stream 1 payloads of the track from each timestamp line until they hold one whole unit.
+     *
+     * @return list<array{int, string}> start in milliseconds and the subpicture unit
+     */
+    private static function vobSubUnits(string $idx, string $sub, string $language): array
+    {
+        preg_match('/^id: ' . $language . ', index: (\d+)\r?\n(.*?)(?:^id:|\z)/ms', $idx, $track);
+        preg_match_all('/^timestamp: (\d+):(\d+):(\d+):(\d+), filepos: ([0-9a-f]+)/m', $track[2], $entries, PREG_SET_ORDER);
+
+        $units = [];
+        foreach ($entries as [, $hours, $minutes, $seconds, $milliseconds, $filepos]) {
+            $unit     = "";
+            $position = (int) hexdec($filepos);
+            while (strlen($unit) < 2 || strlen($unit) < unpack("n", $unit)[1]) {
+                $code = ord($sub[$position + 3]);
+                if ($code === 0xBA) {
+                    $position += 14;
+                    continue;
+                }
+                $end   = $position + 6 + unpack("n", $sub, $position + 4)[1];
+                $start = $position + 9 + ord($sub[$position + 8]);
+                if ($code === 0xBD && ord($sub[$start]) === 0x20 + (int) $track[1]) {
+                    $unit .= substr($sub, $start + 1, $end - $start - 1);
+                }
+                $position = $end;
+            }
+            $units[] = [(($hours * 60 + $minutes) * 60 + $seconds) * 1000 + $milliseconds, substr($unit, 0, unpack("n", $unit)[1])];
+        }
+
+        return $units;
     }
 
 
