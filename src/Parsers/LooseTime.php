@@ -17,11 +17,13 @@ final class LooseTime
     /**
      * Returns the seconds of a time such as "0:0:1", "0:00:01,5000" or "0:00:01:50", rounded to milliseconds, or null for another string.
      * $fractionSeparators lists the characters that can come before the fraction, for example ".,:".
+     * With $hoursOptional, it also reads a time without hours, such as "07:03,920".
      */
-    public static function toSeconds(string $time, string $fractionSeparators): ?float
+    public static function toSeconds(string $time, string $fractionSeparators, bool $hoursOptional = false): ?float
     {
         $separators = preg_quote($fractionSeparators, '/');
-        if (!preg_match('/^(0*\d{1,5}):(\d{1,2}):(\d{1,2})(?:[' . $separators . '](\d{1,4}))?$/', $time, $matches)) {
+        $hours      = $hoursOptional ? '(?:(0*\d{1,5}):)?' : '(0*\d{1,5}):';
+        if (!preg_match('/^' . $hours . '(\d{1,2}):(\d{1,2})(?:[' . $separators . '](\d{1,4}))?$/', $time, $matches)) {
             return null;
         }
 

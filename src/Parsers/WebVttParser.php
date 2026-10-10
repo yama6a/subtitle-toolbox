@@ -375,20 +375,34 @@ final class WebVttParser extends SubtitleParser
         $times = explode("-->", $rawLines[0], 2);
         $end   = trim($times[1]);
         // Settings may follow the end time without white space, as in "00:01.000line:40%". A fourth fraction digit is no setting.
-        if (!preg_match("/^(" . self::TIMESTAMP_PATTERN . ")((?!\d)[ \t]*(.*))?$/", $end, $matches)) {
+        if (preg_match("/^(" . self::TIMESTAMP_PATTERN . ")((?!\d)[ \t]*(.*))?$/", $end, $matches)) {
+            [$endTime, $settingsText] = [$matches[1], $matches[7] ?? ""];
+        } elseif ($this->options->lenient) {
+            [$endTime, $settingsText] = array_pad(preg_split("/[ \t]+/", $end, 2), 2, "");
+        } else {
             throw new ParsingException("The time \"$end\" is not valid.", $lineNumber);
         }
 
-        $lines = str_replace(array_keys(self::ENTITIES), array_values(self::ENTITIES), array_slice($rawLines, 1));
+        $lines      = str_replace(array_keys(self::ENTITIES), array_values(self::ENTITIES), array_slice($rawLines, 1));
+        $looseTimes = [];
         self::checkWordTimestamps($lines, $lineNumber);
-        $cue   = new SubtitleCue(
-            $this->secondsFromString($times[0], $lineNumber),
-            $this->secondsFromString($matches[1], $lineNumber),
+        $cue = new SubtitleCue(
+            $this->secondsFromString($times[0], $lineNumber, $looseTimes),
+            $this->secondsFromString($endTime, $lineNumber, $looseTimes),
             $lines
         );
         $cue->setIdentifier($identifier ?? null);
+        foreach ($looseTimes as $time => $seconds) {
+            $this->warn(
+                "Block #$index has the time \"$time\", which is not in the form hh:mm:ss.mmm. The parser read it as $seconds s.",
+                $lineNumber,
+                $index,
+                $rawLines,
+                ParseWarningAction::Repaired
+            );
+        }
 
-        $settings = $this->parseSettings($matches[7] ?? "", self::CUE_SETTINGS);
+        $settings = $this->parseSettings($settingsText, self::CUE_SETTINGS);
         $cue->setFormatData(self::FORMAT_DATA_KEY, $settings);
         $cue->setAlignment($this->settingsToAlignment($settings));
 
@@ -396,14 +410,26 @@ final class WebVttParser extends SubtitleParser
     }
 
 
-    private function secondsFromString(string $timeString, ?int $lineNumber): float
+    /**
+     * In lenient mode, it also reads the LooseTime variants with "." or "," before the fraction, and adds them to $looseTimes.
+     *
+     * @param array<string, float> $looseTimes
+     */
+    private function secondsFromString(string $timeString, ?int $lineNumber, array &$looseTimes): float
     {
         $timeString = trim($timeString);
-        if (!preg_match("/^" . self::TIMESTAMP_PATTERN . "$/", $timeString, $matches)) {
-            throw new ParsingException("The time \"$timeString\" is not valid.", $lineNumber);
+        if (preg_match("/^" . self::TIMESTAMP_PATTERN . "$/", $timeString, $matches)) {
+            return self::boundedTime(Timecode::toSeconds((int) $matches[2], (int) $matches[3], (int) $matches[4], $matches[5]), $timeString, $lineNumber);
         }
 
-        return self::boundedTime(Timecode::toSeconds((int) $matches[2], (int) $matches[3], (int) $matches[4], $matches[5]), $timeString, $lineNumber);
+        // A last field of 1 digit without a fraction is a time that the end of the file cut off.
+        $seconds = $this->options->lenient && preg_match('/:\d$/', $timeString) !== 1 ? LooseTime::toSeconds($timeString, ".,", true) : null;
+        if ($seconds === null) {
+            throw new ParsingException("The time \"$timeString\" is not valid.", $lineNumber);
+        }
+        $looseTimes[$timeString] = $seconds;
+
+        return $seconds;
     }
 
 

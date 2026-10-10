@@ -13,8 +13,9 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `text_before_first_cue.srt` | a download site banner before cue 1, CR LF | MIT |
 | `truncated_last_cue.srt` | the file ends inside the time line of cue 3, LF | MIT |
 | `empty_line_in_cue.srt` | an empty line inside the text of cue 1, an empty line between the timing line and the text of cue 2, LF | MIT |
+| `mantas_utf16.srt` | UTF-16 LE with a BOM, a start time with 1 seconds digit, CR LF. Copied from https://github.com/mantas-done/subtitles/blob/959d1705b1ed12cbb9ddba517f8bcb814e1919a8/tests/files/utf16.srt | mantas-done/subtitles, MIT |
 | `mixed_line_endings.srt` | CR LF, LF and CR CR LF in one file | MIT |
-| `bad_timestamp.vtt` | a comma in an end time, CR LF | MIT |
+| `bad_timestamp.vtt` | a comma before the fraction of an end time, CR LF | MIT |
 | `missing_empty_line.vtt` | no empty line after the header lines, nor between two cue pairs, LF | MIT |
 | `text_before_first_cue.vtt` | a download site banner after the header, UTF-8 BOM, CR LF | MIT |
 | `missing_signature.vtt` | no `WEBVTT` line, cues with identifiers, LF | MIT |

@@ -439,6 +439,8 @@ $report->changes[0]->message;                                                   
 | Input | Parser result | Formatter output |
 |:--- |:--- |:--- |
 | `0:00:01.5` | 1.5 s. Accepts a dot, one to three hour digits and one to three millisecond digits. | `00:00:01,500` |
+| `00:00:01:105` | 1.105 s. A `:` before exactly 3 fraction digits is valid in strict mode. | `00:00:01,105` |
+| `0:0:1,500`, `07:03,920`, `0000:00:01,000`, `00:28:41,1000` | 1.5 s, 423.92 s, 1 s and 1721.1 s in lenient mode, with a warning per time. Lenient mode reads 1 or 2 digit minutes and seconds, no hours, up to 5 hour digits and up to 4 fraction digits, rounded to milliseconds. | `00:00:01,500` |
 | `00：00：01，000` | 1 s in lenient mode, with a warning. Lenient mode reads the full-width `：`, `，`, `．` and `。` in a timing line as `:`, `,` and `.`. Cue text keeps them. | `00:00:01,000` |
 | `00:00:01,000-->00:00:02,000` | 1 s to 2 s. Accepts any spaces or tabs around `-->`, or none. Lenient mode also reads an arrow with 1 or more dashes, such as `->`, and warns. | `00:00:01,000 --> 00:00:02,000` |
 | `X1:100 X2:600 Y1:40 Y2:80` after the end time | `findFormatData('srt')['coordinates']` | the same coordinates |

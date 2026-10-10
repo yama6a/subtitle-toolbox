@@ -20,6 +20,8 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 |:--- |:--- |:--- |:--- |
 | cue without a cue number | repaired | not an error | not an error |
 | bad timestamp | skipped | skipped | skipped |
+| time with 1-digit fields, no hours, 4 hour digits or 4 fraction digits, as in `0:0:1,500` | repaired | repaired | does not apply |
+| WebVTT time with 1 or 2 fraction digits, or `,` before the fraction, as in `00:01,5` | not an error | repaired | does not apply |
 | `->` or `--->` arrow | repaired | skipped | no arrow in the format |
 | full-width `：`, `，`, `．` or `。` in a timing line | repaired | skipped | skipped |
 | SBV timing line with `.` between the times, `,` or `:` before the fraction, or 1, 2 or 4 fraction digits | does not apply | does not apply | repaired |
@@ -35,6 +37,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 - **No `WEBVTT` line**: in lenient mode, the WebVTT parser skips the lines before the first line that starts with `WEBVTT`. Without such a line before the first cue, it skips the lines before the first cue. The skipped lines go into the `block` of the warning. A damaged `WEBVTT` line also loses the header text and `STYLE` and `REGION` blocks before the first cue.
 - **Empty line inside a cue**: SubRip and SBV add a block without a timing line to the cue before it, in strict mode too. Lenient mode warns. The block stays apart and the parser skips it when it follows no cue, starts with a time, or starts with a number in SubRip.
 - **Empty line inside a WebVTT cue**: only lenient mode adds the block to the cue before it, because the spec ends a cue at an empty line. Strict mode throws for the block. A `NOTE`, `STYLE` or `REGION` block stays apart.
+- **Loose times**: a time whose last field has 1 digit and no fraction, such as `00:00:0`, stays an error. It is a time that the end of the file cut off.
 - **Cue without text**: a timing line without text lines gives a cue with no lines, in strict and lenient mode. WebVTT allows an empty cue. To drop these cues, call `$subtitle->removeCuesWhere(fn (SubtitleCue $cue): bool => $cue->getLines() === [])`.
 
 ## Other formats
