@@ -39,6 +39,9 @@ abstract class SubtitleParser
     // In lenient mode, parse() replaces invalid UTF-8 with U+FFFD for a parser that cannot read it. Strict mode throws.
     protected const REPLACES_INVALID_UTF8 = false;
 
+    // NUL is no white space here, so a file of NUL bytes is not empty.
+    private const WHITE_SPACE = " \t\n\r\x0B\f";
+
     // Formatters split cue times into integer milliseconds, which overflow far above this bound.
     protected const MAX_HOURS = 100000;
 
@@ -55,6 +58,7 @@ abstract class SubtitleParser
 
     /**
      * Reads $content, which must be UTF-8 for a text format.
+     * Text content without anything but white space and a BOM gives an empty Subtitle.
      * In lenient mode, Subtitle::getParseWarnings() returns what the parser skipped or repaired.
      */
     final public function parse(string $content, ?ReadOptions $options = null): Subtitle
@@ -63,8 +67,20 @@ abstract class SubtitleParser
         $this->useOptions($options);
 
         $content = static::BINARY ? $content : StringHelpers::removeUtf8Bom($this->checkUtf8($content));
+        if (!static::BINARY && trim($content, self::WHITE_SPACE) === "") {
+            return new Subtitle();
+        }
 
-        return $this->read($content)->setParseWarnings($this->warnings);
+        $subtitle = $this->read($content);
+        $skipped  = array_filter($this->warnings, fn (ParseWarning $warning): bool => $warning->action === ParseWarningAction::Skipped);
+        if ($subtitle->getCues() === [] && $skipped === []) {
+            $lineNumber = $this->findTextLineWithoutCues($content);
+            if ($lineNumber !== null) {
+                $this->fail(new ParsingException("The file has text but no cues.", $lineNumber), $lineNumber, null, []);
+            }
+        }
+
+        return $subtitle->setParseWarnings($this->warnings);
     }
 
 
@@ -108,6 +124,16 @@ abstract class SubtitleParser
     final public static function readsBinary(): bool
     {
         return static::BINARY;
+    }
+
+
+    /**
+     * Returns the first line of text that the parser read neither as a cue nor as a header, or null.
+     * parse() calls it for content that gave no cues and no skipped blocks. Only parsers that skip such text without an error override it.
+     */
+    protected function findTextLineWithoutCues(string $content): ?int
+    {
+        return null;
     }
 
 

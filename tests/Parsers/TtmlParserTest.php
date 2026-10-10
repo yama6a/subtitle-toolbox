@@ -347,7 +347,7 @@ class TtmlParserTest extends TestCase
     public static function invalidFileProvider(): array
     {
         return [
-            "empty"            => [""],
+            "only a NUL byte"  => ["\0"],
             "not well-formed"  => ["<tt xmlns=\"http://www.w3.org/ns/ttml\"><body>"],
             "other root"       => ["<html><body/></html>"],
             "other namespace"  => ["<tt xmlns=\"urn:example\"/>"],

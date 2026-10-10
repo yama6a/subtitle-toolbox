@@ -40,6 +40,20 @@ class BinaryInfoValidateTest extends BinaryTestCase
     }
 
 
+    public function testTextWithoutCuesFailsTheFileAndWarnsInLenientMode(): void
+    {
+        $lyrics = "[ti:Harbour walk]\nThe ferry leaves at nine.\n";
+
+        [$code, , $stderr] = $this->runBinary(["info", "-", "--from", "lrc"], $lyrics);
+        $this->assertSame(3, $code);
+        $this->assertStringContainsString("The file has text but no cues. (line 2)", $stderr);
+
+        [$code, , $stderr] = $this->runBinary(["info", "-", "--from", "lrc", "--lenient"], $lyrics);
+        $this->assertSame(0, $code);
+        $this->assertStringContainsString("line 2: The file has text but no cues. (skipped)", $stderr);
+    }
+
+
     public function testInfoAsJson(): void
     {
         [$code, $stdout] = $this->runBinary(["info", "trip.srt", "--json"]);

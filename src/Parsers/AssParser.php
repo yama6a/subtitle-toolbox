@@ -44,12 +44,16 @@ final class AssParser extends SubtitleParser
     /** @var list<string> the repaired times of the event that the parser reads */
     private array $repairedTimes = [];
 
+    // The first line in [Events] without a "Type:" descriptor, which the parser skips.
+    private ?int $eventTextLine = null;
+
 
     protected function read(string $content): Subtitle
     {
-        $this->cues     = [];
-        $this->comments = [];
-        $this->events   = [];
+        $this->cues          = [];
+        $this->comments      = [];
+        $this->events        = [];
+        $this->eventTextLine = null;
 
         $subtitle = new Subtitle();
         $data     = self::EMPTY_FORMAT_DATA;
@@ -149,6 +153,9 @@ final class AssParser extends SubtitleParser
 
     private function readEventLine(array &$data, string $line, int $lineNumber): void
     {
+        if (!str_contains($line, ":") && !str_starts_with($line, ";")) {
+            $this->eventTextLine ??= $lineNumber;
+        }
         [$type, $value] = $this->splitDescriptor($line);
         if (strcasecmp($type, "Format") === 0) {
             $data["eventFormat"] = array_map("trim", explode(",", $value));
@@ -162,6 +169,12 @@ final class AssParser extends SubtitleParser
         }
 
         $this->events[] = ["format" => $data["eventFormat"], "line" => $line, "lineNumber" => $lineNumber, "value" => $value, "isComment" => $isComment];
+    }
+
+
+    protected function findTextLineWithoutCues(string $content): ?int
+    {
+        return $this->eventTextLine;
     }
 
 

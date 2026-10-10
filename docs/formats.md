@@ -56,6 +56,8 @@ $subtitle->save('movie.txt', Format::WebVtt);         // the format argument win
 - **`loadAutoDetectFormat()`**: tries only formats whose `isAutoDetected()` is true. It reads the format that [detection](detection.md) finds in the content. An iTT file with the `.itt` extension reads as iTT, not TTML.
 - **Extension fallback**: when detection finds nothing, `loadAutoDetectFormat()` takes the format of the extension, for example `.tsv`. It skips an extension that a format without detection also uses, such as `.json` and `.txt`. Then it throws `UnknownFormatException`.
 - **Empty files**: `loadAutoDetectFormat()` reads a file that is empty, or holds only a BOM and whitespace, as an empty subtitle in the format of its extension. The extension fallback rules apply. `fromStringAutoDetectFormat()` has no extension, so it throws `UnknownFormatException` for empty content.
+- **Empty file in every format**: a text file with only white space or a BOM gives an empty subtitle in every format and mode, also WebVTT without `WEBVTT`.
+- **No cues**: a header without cues is valid, such as `WEBVTT` alone or LRC ID tags alone. Text that gives no cue throws `ParsingException` with its line, such as LRC lines without time tags. Lenient mode returns an empty subtitle with 1 warning.
 - **Chapters and cloud speech-to-text JSON**: they load only with `load()` and their format.
 - **MKV, WebM and MP4**: `load()` throws for them. `loadAutoDetectFormat()` reads a file with exactly 1 subtitle track and throws with the track list for other files.
 - **`getFormat()`**: null for a subtitle from `new Subtitle()` or `fromArray()`. For an MKV or MP4 track, it is the format of the codec, for example `Format::SubRip`.
@@ -382,7 +384,7 @@ $subtitle->findFormatData('sami');                                              
 ## SBV
 SBV is the YouTube caption format `0:00:01.500,0:00:04.000`.
 
-- **Parser**: accepts any number of hour digits below the [time limit](#the-format-enum). A file that holds only whitespace or a BOM gives 0 cues. A timing line without text gives a cue with no lines. A timing line starts a new cue, also without an empty line before it. Text after an empty line stays in the cue before it, as long as no timing line follows, see [lenient-parsing.md](lenient-parsing.md).
+- **Parser**: accepts any number of hour digits below the [time limit](#the-format-enum). A timing line without text gives a cue with no lines. A timing line starts a new cue, also without an empty line before it. Text after an empty line stays in the cue before it, as long as no timing line follows, see [lenient-parsing.md](lenient-parsing.md).
 - **Lenient mode**: also reads `0:00:07.980.0:00:11.300`, `0:00:07,980,0:00:11,300` and `0:00:07.98,0:00:11.3`, and warns. A time has 1 or 2 minute and second digits, `.`, `,` or `:` before the fraction, and 1 to 4 fraction digits.
 - **Formatter**: writes one hour digit below 10 hours, and no UTF-8 BOM. It strips all tags and decodes HTML entities. Text with `<`, `>` and `&` round-trips. It skips a cue with no lines.
 
@@ -449,7 +451,6 @@ $report->changes[0]->message;                                                   
 | `{\an8}` anywhere in the cue | alignment 8. The first tag wins. SSA `{\a6}` also becomes 8. | `{\an8}` at the start of the first line, nothing for 2 or `null` |
 | `{\b1}`, `{\i1}`, `{\u1}`, `{\s1}` and their `0` forms | `<b>`, `<i>`, `<u>`, `<s>` and their closing tags. An open tag closes at the end of the cue. | the HTML-like tags |
 
-- A file that holds only whitespace or a BOM gives 0 cues.
 - A timing line without text gives a cue with no lines. The formatter writes such a cue as its number and its timing line.
 - A cue number and a timing line start a new cue, also without an empty line before them.
 - Text after an empty line stays in the cue before it, when no timing line follows and its first line is no number. See [lenient-parsing.md](lenient-parsing.md).
