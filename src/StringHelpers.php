@@ -35,10 +35,18 @@ final class StringHelpers
     }
 
 
-    /** @internal */
+    /**
+     * Removes every UTF-8 BOM at the start. Joined files can start with 2 or more.
+     *
+     * @internal
+     */
     public static function removeUtf8Bom(string $str): string
     {
-        return self::hasUtf8Bom($str) ? substr($str, strlen(self::UTF8_BOM)) : $str;
+        while (self::hasUtf8Bom($str)) {
+            $str = substr($str, strlen(self::UTF8_BOM));
+        }
+
+        return $str;
     }
 
 

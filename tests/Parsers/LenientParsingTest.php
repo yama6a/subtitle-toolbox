@@ -198,14 +198,12 @@ class LenientParsingTest extends TestCase
             "WebVTT after two BOMs" => [
                 "two_boms.vtt",
                 WebVttParser::class,
-                "The file does not start with WEBVTT.",
+                2,
                 [
                     [1, 3, "The bus is late again."],
                     [4, 6, "We can walk instead."],
                 ],
-                [
-                    [1, 0, self::REPAIRED, "The file does not start with WEBVTT. The parser skipped the lines before line 3."],
-                ],
+                [],
             ],
             "WebVTT with text before the WEBVTT line" => [
                 "text_before_signature.vtt",

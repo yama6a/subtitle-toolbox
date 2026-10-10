@@ -17,3 +17,4 @@
 | `own_vtt_cue_settings.srt` | Written for this repository in the shape that `yt-dlp --convert-subs srt` writes for YouTube automatic captions. Cues 1 to 3 have WebVTT cue settings after the end time. Cue 4 has coordinates. | MIT |
 | `own_font_colors.srt` | Written for this repository. `<font color>` as hex, short hex and a name, a color without a WebVTT class and a `<font>` without a color | MIT |
 | `own_color_classes_from_vtt.srt` | Generated for this repository. Expected `SubRipFormatter` output for `vtt/real/own_color_classes.vtt`. | MIT |
+| `swift_subtitle_kit_embedded_bom.srt` | https://github.com/dioKaratzas/swift-subtitle-kit/blob/728d62dac9fbda7fabd299eed3673ce36c85c267/Tests/SubtitleKitTests/Fixtures/embedded-bom-srt-fixture.srt. Two joined files: LF, then a UTF-8 BOM before cue 1 of the second file and CR LF | swift-subtitle-kit, MIT |

@@ -28,6 +28,7 @@ StringHelpers::isValidUtf8(file_get_contents('movie.srt'));   // false for a Win
 | 5 | A code page fits | The code page that detection picks, for example `Windows-1252` |
 | 6 | Anything else | UTF-8. The parsers keep the invalid bytes |
 
+- **Repeated BOMs**: joined files can start with 2 or more UTF-8 BOMs. Detection and the parsers drop all of them. The SubRip, WebVTT and SBV parsers and the stream readers also drop a UTF-8 BOM at the start of a line, where a joined file starts.
 - **Mixed folders**: valid UTF-8 wins over `ReadOptions::$encoding`. So `subtitle-toolbox convert season1/ --encoding Windows-1256` reads both the UTF-8 and the Windows-1256 files of the folder correctly.
 - **UTF-16 without a BOM**: in ASCII text, every second byte is zero. The check reads the first 1024 bytes. At least 40 % of the byte pairs must have a zero byte on one side, and at most 5 % on the other side. A UTF-8 or Windows-1252 file with a stray zero byte does not pass.
 - **UTF-32 without a BOM**: such content holds zero bytes on both sides of each byte pair. It is converted only from `ReadOptions::$encoding`, for example `UTF-32LE`.
