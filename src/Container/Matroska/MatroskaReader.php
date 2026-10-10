@@ -323,8 +323,8 @@ final class MatroskaReader implements ContainerReader
             $position = null;
             foreach ($this->children($seek) as $child) {
                 match ($child["id"]) {
-                    self::ID_SEEK_ID       => $id = $this->ebml->readUnsigned($child["size"]),
-                    self::ID_SEEK_POSITION => $position = $this->ebml->readUnsigned($child["size"]),
+                    self::ID_SEEK_ID       => $id = $this->ebml->readUnsigned($child),
+                    self::ID_SEEK_POSITION => $position = $this->ebml->readUnsigned($child),
                     default                => null,
                 };
             }
@@ -353,7 +353,7 @@ final class MatroskaReader implements ContainerReader
     {
         foreach ($this->children($info) as $child) {
             if ($child["id"] === self::ID_TIMESTAMP_SCALE) {
-                $this->timestampScale = $this->ebml->readUnsigned($child["size"]);
+                $this->timestampScale = $this->ebml->readUnsigned($child);
             }
         }
     }
@@ -370,16 +370,16 @@ final class MatroskaReader implements ContainerReader
             foreach ($this->children($entry) as $child) {
                 $size = $child["size"];
                 match ($child["id"]) {
-                    self::ID_TRACK_NUMBER     => $fields["number"] = $this->ebml->readUnsigned($size),
-                    self::ID_TRACK_TYPE       => $fields["type"] = $this->ebml->readUnsigned($size),
+                    self::ID_TRACK_NUMBER     => $fields["number"] = $this->ebml->readUnsigned($child),
+                    self::ID_TRACK_TYPE       => $fields["type"] = $this->ebml->readUnsigned($child),
                     self::ID_CODEC_ID         => $fields["codecId"] = $this->ebml->readString($size),
                     self::ID_CODEC_PRIVATE    => $fields["codecPrivate"] = $this->ebml->readBytes($size),
                     self::ID_LANGUAGE         => $fields["language"] = $this->ebml->readString($size),
                     self::ID_LANGUAGE_BCP47   => $fields["bcp47"] = $this->ebml->readString($size),
                     self::ID_NAME             => $fields["name"] = $this->ebml->readString($size),
-                    self::ID_FLAG_DEFAULT     => $fields["default"] = $this->ebml->readUnsigned($size) !== 0,
-                    self::ID_FLAG_FORCED      => $fields["forced"] = $this->ebml->readUnsigned($size) !== 0,
-                    self::ID_DEFAULT_DURATION => $fields["defaultDuration"] = $this->ebml->readUnsigned($size),
+                    self::ID_FLAG_DEFAULT     => $fields["default"] = $this->ebml->readUnsigned($child) !== 0,
+                    self::ID_FLAG_FORCED      => $fields["forced"] = $this->ebml->readUnsigned($child) !== 0,
+                    self::ID_DEFAULT_DURATION => $fields["defaultDuration"] = $this->ebml->readUnsigned($child),
                     self::ID_ENCODINGS        => $fields["encodings"] = $this->readEncodings($child),
                     default                   => null,
                 };
@@ -424,9 +424,9 @@ final class MatroskaReader implements ContainerReader
             $fields = ["order" => 0, "scope" => self::SCOPE_FRAMES, "type" => 0, "algo" => self::ALGO_ZLIB, "settings" => ""];
             foreach ($this->children($encoding) as $child) {
                 match ($child["id"]) {
-                    self::ID_ENCODING_ORDER => $fields["order"] = $this->ebml->readUnsigned($child["size"]),
-                    self::ID_ENCODING_SCOPE => $fields["scope"] = $this->ebml->readUnsigned($child["size"]),
-                    self::ID_ENCODING_TYPE  => $fields["type"] = $this->ebml->readUnsigned($child["size"]),
+                    self::ID_ENCODING_ORDER => $fields["order"] = $this->ebml->readUnsigned($child),
+                    self::ID_ENCODING_SCOPE => $fields["scope"] = $this->ebml->readUnsigned($child),
+                    self::ID_ENCODING_TYPE  => $fields["type"] = $this->ebml->readUnsigned($child),
                     self::ID_COMPRESSION    => $fields = $this->readCompression($child) + $fields,
                     default                 => null,
                 };
@@ -447,7 +447,7 @@ final class MatroskaReader implements ContainerReader
         $fields = [];
         foreach ($this->children($compression) as $child) {
             match ($child["id"]) {
-                self::ID_COMP_ALGO     => $fields["algo"] = $this->ebml->readUnsigned($child["size"]),
+                self::ID_COMP_ALGO     => $fields["algo"] = $this->ebml->readUnsigned($child),
                 self::ID_COMP_SETTINGS => $fields["settings"] = $this->ebml->readBytes($child["size"]),
                 default                => null,
             };
@@ -471,7 +471,7 @@ final class MatroskaReader implements ContainerReader
             $block = null;
             match ($element["id"]) {
                 self::ID_CLUSTER      => $clusterTime = 0,
-                self::ID_TIMESTAMP    => $clusterTime = $this->ebml->readUnsigned($element["size"]),
+                self::ID_TIMESTAMP    => $clusterTime = $this->ebml->readUnsigned($element),
                 self::ID_SIMPLE_BLOCK => $block = $this->readBlock($element, $trackNumber),
                 self::ID_BLOCK_GROUP  => $block = $this->readBlockGroup($element, $trackNumber),
                 default               => null,
@@ -507,7 +507,7 @@ final class MatroskaReader implements ContainerReader
                     return null;
                 }
             } elseif ($child["id"] === self::ID_BLOCK_DURATION) {
-                $duration = $this->ebml->readUnsigned($child["size"]);
+                $duration = $this->ebml->readUnsigned($child);
             } elseif ($child["id"] === self::ID_BLOCK_ADDITIONS) {
                 $additional = $this->readBlockAdditions($child);
             }
@@ -528,7 +528,7 @@ final class MatroskaReader implements ContainerReader
             $data = null;
             foreach ($this->children($more) as $child) {
                 match ($child["id"]) {
-                    self::ID_BLOCK_ADD_ID     => $id = $this->ebml->readUnsigned($child["size"]),
+                    self::ID_BLOCK_ADD_ID     => $id = $this->ebml->readUnsigned($child),
                     self::ID_BLOCK_ADDITIONAL => $data = $this->ebml->readBytes($child["size"]),
                     default                   => null,
                 };

@@ -89,10 +89,21 @@ final class EbmlReader
     }
 
 
-    public function readUnsigned(int $length): int
+    /**
+     * Reads the data of $element as an unsigned integer. RFC 8794 allows 8 bytes, and PHP holds values below 2^63.
+     *
+     * @param array{id: int, size: int, offset: int} $element
+     */
+    public function readUnsigned(array $element): int
     {
+        $bytes = $this->readBytes($element["size"]);
+        if (strlen($bytes) > 8 || (strlen($bytes) === 8 && ord($bytes[0]) >= 0x80)) {
+            throw new ParsingException(sprintf("The unsigned integer of the element 0x%X at byte %d is longer than 8 bytes or not below 2^63.",
+                                               $element["id"], $element["offset"]));
+        }
+
         $value = 0;
-        foreach (str_split($this->readBytes($length)) as $byte) {
+        foreach (str_split($bytes) as $byte) {
             $value = ($value << 8) | ord($byte);
         }
 

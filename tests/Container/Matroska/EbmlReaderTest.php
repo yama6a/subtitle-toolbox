@@ -6,6 +6,7 @@ namespace SubtitleToolbox\Container\Matroska;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use SubtitleToolbox\Exceptions\ParsingException;
 
 require_once __DIR__ . "/../../files/mkv/generator/MkvFixtureWriter.php";
 
@@ -41,12 +42,47 @@ class EbmlReaderTest extends TestCase
         $reader = new EbmlReader($stream);
 
         $this->assertSame(["id" => 0x2AD7B1, "size" => 3, "offset" => 4], $reader->readElementHeader());
-        $this->assertSame(100000, $reader->readUnsigned(3));
+        $this->assertSame(100000, $reader->readUnsigned(["id" => 0x2AD7B1, "size" => 3, "offset" => 4]));
         $this->assertSame(0x4282, $reader->readElementHeader()["id"]);
         $this->assertSame("webm", $reader->readString(6));
         $this->assertSame(8, $reader->readElementHeader()["size"]);
         $this->assertSame(pack("E", 7200000.5), $reader->readBytes(8));
         $this->assertSame(EbmlReader::UNKNOWN_SIZE, $reader->readElementHeader()["size"]);
         $this->assertNull($reader->readElementHeader());
+    }
+
+
+    public static function unsignedOutOfRange(): array
+    {
+        return [
+            "2^63"    => ["\x80" . str_repeat("\0", 7)],
+            "9 bytes" => [str_repeat("\0", 8) . "\x01"],
+        ];
+    }
+
+
+    #[DataProvider("unsignedOutOfRange")]
+    public function testThrowsForAnUnsignedIntegerThatPhpCannotHold(string $data): void
+    {
+        $stream = fopen("php://memory", "w+b");
+        fwrite($stream, MkvFixtureWriter::element(0xE7, $data));
+        rewind($stream);
+        $reader = new EbmlReader($stream);
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The unsigned integer of the element 0xE7 at byte 2 is longer than 8 bytes or not below 2^63.");
+
+        $reader->readUnsigned($reader->readElementHeader());
+    }
+
+
+    public function testReadsTheLargestUnsignedIntegerBelow2To63(): void
+    {
+        $stream = fopen("php://memory", "w+b");
+        fwrite($stream, MkvFixtureWriter::element(0xE7, "\x7F" . str_repeat("\xFF", 7)));
+        rewind($stream);
+        $reader = new EbmlReader($stream);
+
+        $this->assertSame(PHP_INT_MAX, $reader->readUnsigned($reader->readElementHeader()));
     }
 }

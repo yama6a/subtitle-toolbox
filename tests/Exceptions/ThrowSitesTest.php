@@ -302,6 +302,8 @@ class ThrowSitesTest extends TestCase
             "Cli/Command.php: file failure"                 => [fn () => Command::failFile("Cannot read x."), \RuntimeException::class, FileFailure::class],
             "Container/Matroska/EbmlReader.php: invalid element header" => [fn () => MatroskaReader::open(self::stream("\0\0\0\0")), ...$parsing],
             "Container/Matroska/EbmlReader.php: cut off element data" => [fn () => self::mkv("", ["codecPrivate" => "abc"], "c"), ...$parsing],
+            "Container/Matroska/EbmlReader.php: unsigned integer of 2^63" => [fn () => self::mkv(MkvFixtureWriter::cluster(0, [
+                                                                MkvFixtureWriter::blockGroup(2, 0, "x", PHP_INT_MIN)]))->extract(2), ...$parsing],
             "Container/Matroska/MatroskaReader.php: stream not seekable" => [fn () => MatroskaReader::open(fopen("php://output", "wb")), ...$invalid],
             "Container/Matroska/MatroskaReader.php: unknown track" => [fn () => self::mkv("")->extract(9), ...$invalid],
             "Container/Matroska/MatroskaReader.php: unsupported codec" => [fn () => self::mkv("", ["codecId" => "S_DVBSUB"])->extract(2), ...$parsing],
