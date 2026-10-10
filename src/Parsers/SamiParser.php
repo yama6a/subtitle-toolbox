@@ -21,6 +21,8 @@ use SubtitleToolbox\XmlLoader;
 final class SamiParser extends SubtitleParser
 {
     protected const FORMAT_OPTIONS = SamiReadOptions::class;
+    protected const REPLACES_INVALID_UTF8 = true;
+
     public const FORMAT_DATA_KEY = Format::Sami->value;
 
     private const STYLE_TAGS = ["b" => "b", "i" => "i", "u" => "u", "s" => "s", "strike" => "s"];
@@ -31,9 +33,6 @@ final class SamiParser extends SubtitleParser
     protected function read(string $content): Subtitle
     {
         $content = StringHelpers::normalizeEOLs($content);
-        if (!preg_match('//u', $content)) {
-            throw new ParsingException("The SAMI file is not valid UTF-8. Convert it to UTF-8 before parsing.");
-        }
 
         $subtitle               = new Subtitle();
         [$formatData, $classes] = $this->readHead($content, $subtitle);

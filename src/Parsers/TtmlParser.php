@@ -21,6 +21,8 @@ use SubtitleToolbox\XmlLoader;
 
 final class TtmlParser extends SubtitleParser
 {
+    protected const REPLACES_INVALID_UTF8 = true;
+
     public const FORMAT_DATA_KEY = Format::Ttml->value;
 
     private const TIMING_ATTRIBUTES = ["begin", "end", "dur"];

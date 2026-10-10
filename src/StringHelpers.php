@@ -56,6 +56,33 @@ final class StringHelpers
 
 
     /**
+     * Returns the byte offset of the first byte in $str that is not part of a valid UTF-8 sequence, or null.
+     *
+     * @internal
+     */
+    public static function findInvalidUtf8Offset(string $str): ?int
+    {
+        if (self::isValidUtf8($str)) {
+            return null;
+        }
+        preg_match(self::INVALID_UTF8, $str, $match, PREG_OFFSET_CAPTURE);
+
+        return $match[0][1];
+    }
+
+
+    /**
+     * Replaces each byte of $str that is not part of a valid UTF-8 sequence with U+FFFD. It does not need ext-mbstring.
+     *
+     * @internal
+     */
+    public static function replaceInvalidUtf8(string $str): string
+    {
+        return self::isValidUtf8($str) ? $str : preg_replace(self::INVALID_UTF8, "\u{FFFD}", $str);
+    }
+
+
+    /**
      * Returns true when ext-mbstring is loaded and $str is valid UTF-8. mbstring is not part of a default PHP build.
      *
      * @internal

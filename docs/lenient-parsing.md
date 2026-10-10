@@ -70,8 +70,8 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 - **Whole-file errors**: lenient mode still throws for a problem outside one cue. Examples:
   - Invalid XML in TTML, or invalid JSON.
   - A Whisper `segments` or YouTube `events` field that is an object, not a list.
-  - A SAMI file that is not UTF-8.
   - An ASS file without `[Events]`.
+- **Invalid UTF-8**: lenient mode adds one `repaired` warning with the offset of the first bad byte. SAMI, TTML and iTT read each bad byte as U+FFFD, and the other formats keep it. See [encodings.md](encodings.md).
 - **Text before the XML**: the TTML, iTT and YouTube XML parsers skip white space before the XML in both modes. Other text before the XML declaration or the root element throws in strict mode. Lenient mode skips it with a `repaired` warning that has `blockIndex` null, for example for a `Subtitles by ...` line.
 - **HTML entities in TTML**: XML defines only `&amp;`, `&lt;`, `&gt;`, `&quot;` and `&apos;`. Strict mode throws for an HTML entity such as `&eacute;` or `&nbsp;`. Lenient mode reads each HTML5 named entity as its character and adds one `repaired` warning. The parser never loads a DTD or an external entity.
 - **Malformed XML in TTML**: strict mode throws. Lenient mode keeps a bare `&` and an unknown entity such as `&foo;` as text, and reads `<br>` as `<br/>`. libxml then repairs the rest, for example a missing end tag. The parser adds one `repaired` warning with the first libxml error and its line. A file that gives no `<tt>` root still throws.

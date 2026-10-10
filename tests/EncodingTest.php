@@ -169,6 +169,79 @@ class EncodingTest extends TestCase
     }
 
 
+    public static function filesWithOneBadByte(): array
+    {
+        return [
+            "SubRip"    => ["one-bad-byte.srt", Format::SubRip],
+            "WebVTT"    => ["one-bad-byte.vtt", Format::WebVtt],
+            "SBV"       => ["one-bad-byte.sbv", Format::Sbv],
+            "ASS"       => ["one-bad-byte.ass", Format::Ass],
+            "SubViewer" => ["one-bad-byte.sub", Format::SubViewer],
+            "CSV"       => ["one-bad-byte.csv", Format::Csv],
+        ];
+    }
+
+
+    #[DataProvider("filesWithOneBadByte")]
+    public function testTextFormatKeepsAnInvalidByteAndWarnsInLenientMode(string $file, Format $format): void
+    {
+        $path    = self::DIR . "invalid-utf-8/$file";
+        $offset  = strpos(file_get_contents($path), "f\xE9 noir") + 1;
+        $strict  = Subtitle::load($path, $format);
+        $lenient = Subtitle::load($path, $format, new ReadOptions(lenient: true));
+
+        foreach ([$strict, $lenient] as $subtitle) {
+            $this->assertSame(["Le café ouvre à midi.", "Caf\xE9 noir, s'il vous plaît."],
+                              array_map(fn (SubtitleCue $cue) => $cue->getText(), $subtitle->getCues()));
+            $this->assertSame("UTF-8", $subtitle->findSourceEncoding());
+        }
+        $this->assertSame([], $strict->getParseWarnings());
+        $this->assertSame(
+            [["The content is not valid UTF-8. The first bad byte is at offset $offset. Pass --encoding.", ParseWarningAction::Repaired]],
+            array_map(fn (ParseWarning $warning) => [$warning->message, $warning->action], $lenient->getParseWarnings())
+        );
+    }
+
+
+    public static function xmlFilesWithOneBadByte(): array
+    {
+        return [
+            "SAMI" => ["one-bad-byte.smi", Format::Sami],
+            "TTML" => ["one-bad-byte.ttml", Format::Ttml],
+            "iTT"  => ["one-bad-byte.ttml", Format::Itt],
+        ];
+    }
+
+
+    #[DataProvider("xmlFilesWithOneBadByte")]
+    public function testSamiAndTtmlReadAnInvalidByteAsReplacementCharacterInLenientMode(string $file, Format $format): void
+    {
+        $path     = self::DIR . "invalid-utf-8/$file";
+        $offset   = strpos(file_get_contents($path), "f\xE9 noir") + 1;
+        $subtitle = Subtitle::load($path, $format, new ReadOptions(lenient: true));
+
+        $this->assertSame(["Le café ouvre à midi.", "Caf\u{FFFD} noir, s'il vous plaît."],
+                          array_map(fn (SubtitleCue $cue) => $cue->getText(), $subtitle->getCues()));
+        $this->assertSame(
+            [["The content is not valid UTF-8. The first bad byte is at offset $offset. Pass --encoding. The parser read the bad bytes as U+FFFD.",
+              ParseWarningAction::Repaired]],
+            array_map(fn (ParseWarning $warning) => [$warning->message, $warning->action], $subtitle->getParseWarnings())
+        );
+    }
+
+
+    #[DataProvider("xmlFilesWithOneBadByte")]
+    public function testSamiAndTtmlThrowForAnInvalidByteInStrictMode(string $file, Format $format): void
+    {
+        $path   = self::DIR . "invalid-utf-8/$file";
+        $offset = strpos(file_get_contents($path), "f\xE9 noir") + 1;
+
+        $this->expectException(ParsingException::class);
+        $this->expectExceptionMessage("The content is not valid UTF-8. The first bad byte is at offset $offset. Pass --encoding.");
+        Subtitle::load($path, $format);
+    }
+
+
     public function testTextInAnotherEncodingFamilyKeepsItsBytes(): void
     {
         $raw = file_get_contents(self::DIR . "japanese-shift_jis.srt");

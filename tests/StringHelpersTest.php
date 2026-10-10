@@ -114,6 +114,18 @@ class StringHelpersTest extends TestCase
     }
 
 
+    public function testInvalidUtf8BytesAreFoundAndReplaced(): void
+    {
+        $this->assertNull(StringHelpers::findInvalidUtf8Offset("Café \u{1F600}"));
+        $this->assertSame(3, StringHelpers::findInvalidUtf8Offset("Caf\xE9 \xC3\xA9"));
+        $this->assertSame(1, StringHelpers::findInvalidUtf8Offset("a\xC0\xAFb"));
+        $this->assertSame(1, StringHelpers::findInvalidUtf8Offset("a\xED\xA0\x80b"));
+        $this->assertSame("Caf\u{FFFD} é", StringHelpers::replaceInvalidUtf8("Caf\xE9 \xC3\xA9"));
+        $this->assertSame("a\u{FFFD}\u{FFFD}b", StringHelpers::replaceInvalidUtf8("a\xE2\x82b"));
+        $this->assertSame("Café", StringHelpers::replaceInvalidUtf8("Café"));
+    }
+
+
     public function testPrimaryLanguageReturnsTheLowercaseFirstSubtag(): void
     {
         $this->assertSame("pt", StringHelpers::primaryLanguage("pt_BR"));
