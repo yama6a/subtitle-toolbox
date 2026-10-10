@@ -48,6 +48,7 @@ Subtitle::loadAutoDetectFormat('/media/one-track.webm');       // reads the only
   - Another codec, such as `S_DVBSUB`.
   - A `S_VOBSUB` track without a `size` or `palette` line in `CodecPrivate`.
   - Laced subtitle blocks.
+  - A block that starts or ends at 100,000 hours or more, the [time limit](formats.md) of the parsers.
   - A file that is not Matroska or WebM.
 - **Spec**: [Matroska elements](https://www.matroska.org/technical/elements.html), [Matroska subtitles](https://www.matroska.org/technical/subtitles.html).
 
