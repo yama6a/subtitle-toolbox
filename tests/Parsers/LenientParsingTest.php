@@ -254,6 +254,20 @@ class LenientParsingTest extends TestCase
                     [9, 3, self::SKIPPED, "The time \"00:00:0\" is not valid."],
                 ],
             ],
+            "WebVTT with empty lines between the timing line and the text" => [
+                "mantas_multiple_new_lines.vtt",
+                WebVttParser::class,
+                "Block #2 is not a WebVTT cue, comment, style or region.",
+                [
+                    [0, 1, "one\ntwo"],
+                    [2, 3, "three"],
+                ],
+                [
+                    [6, 1, self::REPAIRED, "Block #1 has an empty line before line 6 inside the cue. The parser kept the text after it in the cue."],
+                    [8, 1, self::REPAIRED, "Block #1 has an empty line before line 8 inside the cue. The parser kept the text after it in the cue."],
+                    [13, 2, self::REPAIRED, "Block #2 has an empty line before line 13 inside the cue. The parser kept the text after it in the cue."],
+                ],
+            ],
             "WebVTT with mixed line endings" => [
                 "mixed_line_endings.vtt",
                 WebVttParser::class,
@@ -917,6 +931,17 @@ class LenientParsingTest extends TestCase
         $subtitle = (new WebVttParser())->parse("\n\nWEBVTT\n\nbroken\n\n00:00:01.000 --> 00:00:02.000\ntext\n", new ReadOptions(lenient: true));
 
         $this->assertSame(5, $subtitle->getParseWarnings()[0]->lineNumber);
+    }
+
+
+    public function testWebVttKeepsANoteAfterAnEmptyLineApartFromTheCue(): void
+    {
+        $content  = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n\nThe ferry leaves.\n\nNOTE checked\n\nSTYLE\n::cue { color: red }\n";
+        $subtitle = (new WebVttParser())->parse($content, new ReadOptions(lenient: true));
+
+        $this->assertEquals([[1, 2, "The ferry leaves."]], $this->cueRows($subtitle->getCues()));
+        $this->assertSame("checked", $subtitle->getComments()[0]->text);
+        $this->assertCount(1, $subtitle->getParseWarnings());
     }
 
 

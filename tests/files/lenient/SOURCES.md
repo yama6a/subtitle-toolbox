@@ -22,6 +22,7 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `text_before_signature.vtt` | converter text before the `WEBVTT` line, LF | MIT |
 | `damaged_signature.vtt` | `WEBVTS` as the first line, a header line, cue settings, a NOTE block, LF | MIT |
 | `truncated_last_cue.vtt` | the file ends inside the time line of the last cue, LF | MIT |
+| `mantas_multiple_new_lines.vtt` | empty lines between the timing line and the text, and inside the text. Copied from https://github.com/mantas-done/subtitles/blob/959d1705b1ed12cbb9ddba517f8bcb814e1919a8/tests/files/vtt_with_multiple_new_lines.vtt, LF | mantas-done/subtitles, MIT |
 | `mixed_line_endings.vtt` | CR LF, LF and CR CR LF in one file | MIT |
 | `bad_timestamp.sbv` | a letter in an end time, LF | MIT |
 | `loose_timing.sbv` | a dot between the start and end time, commas before the fractions, fractions with 1 and 2 digits, LF | MIT |

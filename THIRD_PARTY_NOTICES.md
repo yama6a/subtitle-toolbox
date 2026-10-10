@@ -14,6 +14,7 @@ Rules for adding a port are in [CONTRIBUTING.md](CONTRIBUTING.md).
   - `tests/files/ttml/real/mantas_duplicated_ids.ttml`
   - `tests/files/ttml/real/mantas_fps_multiplier.ttml`
   - `tests/files/ttml/real/mantas_ttml2.ttml`
+  - `tests/files/lenient/mantas_multiple_new_lines.vtt`
   - `tests/files/vtt/real/mantas_styles.vtt`
 - Files written for this repository in the shape of its fixtures:
   - `tests/files/csv/real/mantas_done_shape.csv`

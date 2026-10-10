@@ -198,7 +198,8 @@ final class WebVttParser extends SubtitleParser
 
     /**
      * Yields the blocks of splitIntoBlocks(), keyed by the 1-based number of their first line.
-     * In lenient mode, it splits the cues off a header block that has no empty line after it, and warns.
+     * In lenient mode, it splits the cues off a header block that has no empty line after it,
+     * joins cue text after an empty line to its cue as joinCueTextBlocks() does, and warns.
      *
      * @param iterable<int, string> $lines keyed by the 0-based line number
      *
@@ -207,6 +208,20 @@ final class WebVttParser extends SubtitleParser
      * @internal
      */
     public function numberedBlocks(iterable $lines): Generator
+    {
+        $blocks = $this->splitHeader($lines);
+
+        // The spec ends a cue at an empty line, so strict mode keeps the text block apart.
+        return $this->options->lenient
+            ? $this->joinCueTextBlocks($blocks, fn (string $line): bool => str_contains($line, "-->"), false, $this->isOtherBlock(...))
+            : $blocks;
+    }
+
+
+    /**
+     * @return Generator<int, list<string>>
+     */
+    private function splitHeader(iterable $lines): Generator
     {
         $isHeader = true;
         foreach ($this->collectBlocks($lines, false) as [$lineNumber, $block]) {
@@ -235,6 +250,15 @@ final class WebVttParser extends SubtitleParser
                 yield $restLineNumber => $restBlock;
             }
         }
+    }
+
+
+    /**
+     * @param list<string> $block
+     */
+    private function isOtherBlock(array $block): bool
+    {
+        return preg_match("/^(NOTE|STYLE|REGION)/i", trim($block[0])) === 1;
     }
 
 

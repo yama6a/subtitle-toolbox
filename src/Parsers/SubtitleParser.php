@@ -323,18 +323,21 @@ abstract class SubtitleParser
      * Yields the blocks of splitAtEmptyLines() and joins a block of cue text to the block before it, when that block has a timing line.
      * So an empty line inside the cue text, or between the timing line and the text, does not end the cue.
      * A block of cue text has no timing line, and no cue number or time on its first line. In lenient mode, it warns for each join.
+     * $isOtherBlock returns true for a block that is no cue text, such as a WebVTT NOTE block.
      *
      * @param iterable<int, list<string>> $blocks
+     * @param (callable(list<string>): bool)|null $isOtherBlock
      *
      * @return Generator<int, list<string>>
      */
-    protected function joinCueTextBlocks(iterable $blocks, callable $isTimingLine, bool $withCueNumbers): Generator
+    protected function joinCueTextBlocks(iterable $blocks, callable $isTimingLine, bool $withCueNumbers, ?callable $isOtherBlock = null): Generator
     {
         $pending     = null;
         $pendingLine = 0;
         $blockIndex  = 0;
         foreach ($blocks as $lineNumber => $block) {
             if ($pending !== null && $this->isCueTextBlock($block, $isTimingLine, $withCueNumbers)
+                && ($isOtherBlock === null || !$isOtherBlock($block))
                 && array_filter($pending, $isTimingLine) !== []) {
                 if ($this->options->lenient) {
                     $this->warn(
