@@ -342,7 +342,7 @@ class BinaryGeneralTest extends BinaryTestCase
         $tracks = "InvalidParserException (Error #102): The MKV or WebM file has 6 subtitle tracks. %s\n" .
                   "  3: S_TEXT/UTF8, de, \"Deutsch (Forced)\", forced\n";
         $format = "UnknownFormatException (Error #106): Format detection found no subtitle format. %s\n";
-        $frames = "The frame rate is unknown. Pass --fps or --input-fps, or start the file with {1}{1}<fps>.\n";
+        $frames = "The frame rate is unknown. Pass --fps or --input-fps, start the file with {1}{1}<fps>, or pass --lenient for 23.976 fps.\n";
 
         return [
             "track"            => [["convert", "movie.mkv", "--to", "srt", "-o", "-"], "",

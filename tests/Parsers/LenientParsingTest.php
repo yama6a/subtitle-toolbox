@@ -358,7 +358,7 @@ class LenientParsingTest extends TestCase
             "MicroDVD with a release name and a line without frames" => [
                 "release_name.sub",
                 MicroDvdParser::class,
-                "The frame rate is unknown. Set MicroDvdReadOptions::\$frameRate or start the file with {1}{1}<fps>.",
+                "The frame rate is unknown. Set MicroDvdReadOptions::\$frameRate, start the file with {1}{1}<fps>, or read the file in lenient mode for 23.976 fps.",
                 [
                     [1, 3, "The ferry leaves at noon."],
                     [5, 7, "<i>Tickets are sold on board.</i>"],
