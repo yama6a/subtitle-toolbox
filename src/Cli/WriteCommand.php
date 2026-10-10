@@ -255,7 +255,7 @@ abstract class WriteCommand extends FileCommand
                 return $this->fromFormat;
             }
 
-            return Subtitle::detectFormat(StringHelpers::convertToUtf8((string)file_get_contents($input), $this->readOptions->encoding), $input);
+            return Subtitle::detectFormat(StringHelpers::decode((string)file_get_contents($input), $this->readOptions->encoding)->content, $input);
         } catch (SubtitleToolboxException) {
             return null;
         }

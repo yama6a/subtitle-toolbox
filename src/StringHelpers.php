@@ -104,22 +104,21 @@ final class StringHelpers
     /**
      * Converts $str to UTF-8 from the encoding that its BOM names, or else from $sourceEncoding when it is not null.
      * Without a BOM, $str stays unchanged when it is valid UTF-8 and holds no zero bytes.
-     * Without a BOM, content with a zero byte in most even or most odd positions is read as UTF-16, unless
-     * $sourceEncoding names UTF-16 or UTF-32.
-     * Without a BOM and $sourceEncoding, other content that is not UTF-8 is read in the code page that detection picks,
-     * for example Windows-1252. It stays unchanged when it holds a zero byte or when no code page fits.
      *
      * @param TextEncoding|string|null $sourceEncoding A TextEncoding case, or any other name that iconv accepts, for example "CP1125".
      */
     public static function convertToUtf8(string $str, TextEncoding|string|null $sourceEncoding = null): string
     {
-        return self::decode($str, $sourceEncoding)->content;
+        return self::decode($str, $sourceEncoding, false)->content;
     }
 
 
     /**
      * Converts $str to UTF-8 as convertToUtf8() does, and returns the encoding that it read.
-     * With $guess false, it reads neither UTF-16 without a BOM nor a code page by detection.
+     * With $guess true and no BOM, content with a zero byte in most even or most odd positions is read as UTF-16,
+     * unless $sourceEncoding names UTF-16 or UTF-32.
+     * With $guess true and no BOM and no $sourceEncoding, other content that is not UTF-8 is read in the code page that
+     * detection picks, for example Windows-1252. It stays unchanged when it holds a zero byte or when no code page fits.
      *
      * @internal
      */

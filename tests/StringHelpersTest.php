@@ -73,28 +73,38 @@ class StringHelpersTest extends TestCase
     }
 
 
-    public function testConvertToUtf8ReadsUtf16WithoutBom(): void
+    public function testConvertToUtf8KeepsItsDocumentedBehaviourWithoutDetection(): void
+    {
+        $this->assertSame("Caf\xE9 cr\xE8me", StringHelpers::convertToUtf8("Caf\xE9 cr\xE8me"));
+        $this->assertSame("H\0i\0 \0t\0h\0e\0r\0e\0", StringHelpers::convertToUtf8("H\0i\0 \0t\0h\0e\0r\0e\0", "Windows-1252"));
+        $this->assertSame("H\0i\0", StringHelpers::convertToUtf8("H\0i\0"));
+        $this->assertSame("G\0r\0\xC3\xBC\0\xC3\x9F\0e\0", StringHelpers::convertToUtf8(iconv("UTF-8", "UTF-16LE", "Grüße"), "Windows-1252"));
+        $this->assertSame("Caf\xE9", StringHelpers::convertToUtf8("Caf\xE9", "utf-8"));
+    }
+
+
+    public function testDecodeReadsUtf16WithoutBom(): void
     {
         foreach (["UTF-16LE", "UTF-16BE"] as $encoding) {
-            $this->assertSame("Grüße", StringHelpers::convertToUtf8(iconv("UTF-8", $encoding, "Grüße")), $encoding);
-            $this->assertSame("Grüße", StringHelpers::convertToUtf8(iconv("UTF-8", $encoding, "Grüße"), "Windows-1252"), $encoding);
+            $this->assertSame("Grüße", StringHelpers::decode(iconv("UTF-8", $encoding, "Grüße"))->content, $encoding);
+            $this->assertSame("Grüße", StringHelpers::decode(iconv("UTF-8", $encoding, "Grüße"), "Windows-1252")->content, $encoding);
         }
     }
 
 
-    public function testConvertToUtf8DoesNotTakeAStrayZeroByteForUtf16(): void
+    public function testDecodeDoesNotTakeAStrayZeroByteForUtf16(): void
     {
-        $this->assertSame("Caf\xE9\x00 au lait", StringHelpers::convertToUtf8("Caf\xE9\x00 au lait"));
-        $this->assertSame("Café\x00 ok", StringHelpers::convertToUtf8("Café\x00 ok"));
-        $this->assertSame("A\x00\x00\x00B\x00\x00\x00", StringHelpers::convertToUtf8("A\x00\x00\x00B\x00\x00\x00"));
+        $this->assertSame("Caf\xE9\x00 au lait", StringHelpers::decode("Caf\xE9\x00 au lait")->content);
+        $this->assertSame("Café\x00 ok", StringHelpers::decode("Café\x00 ok")->content);
+        $this->assertSame("A\x00\x00\x00B\x00\x00\x00", StringHelpers::decode("A\x00\x00\x00B\x00\x00\x00")->content);
     }
 
 
-    public function testConvertToUtf8DetectsTheCodePageWithoutBomAndSourceEncoding(): void
+    public function testDecodeDetectsTheCodePageWithoutBomAndSourceEncoding(): void
     {
-        $this->assertSame("Café", StringHelpers::convertToUtf8("Caf\xE9"));
-        $this->assertSame("Caf\xE9", StringHelpers::convertToUtf8("Caf\xE9", "utf-8"));
-        $this->assertSame("Caf\xE9\x00", StringHelpers::convertToUtf8("Caf\xE9\x00"));
+        $this->assertSame("Café", StringHelpers::decode("Caf\xE9")->content);
+        $this->assertSame("Caf\xE9", StringHelpers::decode("Caf\xE9", "utf-8")->content);
+        $this->assertSame("Caf\xE9\x00", StringHelpers::decode("Caf\xE9\x00")->content);
     }
 
 

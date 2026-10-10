@@ -476,7 +476,7 @@ abstract class FileCommand extends Command
     private function detectFormat(string $content, ?string $path): ?Format
     {
         try {
-            return Subtitle::detectFormat(StringHelpers::convertToUtf8($content, $this->readOptions->encoding), $path);
+            return Subtitle::detectFormat(StringHelpers::decode($content, $this->readOptions->encoding)->content, $path);
         } catch (SubtitleToolboxException) {
             return null;
         }
