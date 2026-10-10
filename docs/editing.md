@@ -55,6 +55,7 @@ $subtitle->mergeSameTimeCues();                 // joins cues with the same star
   - The joined cue keeps the start, identifier and format data of the first cue. It runs to the latest end of the run.
   - The lines keep the input order. A cue text that is already in the joined cue is not added again.
   - Cues with another alignment or forced flag stay apart, so a sign at the top keeps its place. Other format data, such as the ASS style, does not stop a join.
+  - Image cues, such as PGS or VobSub cues, never join. A joined cue can hold only one image.
   - The method adds no dialogue dash. `CommonErrorFixer` can add them.
   - A negative, NAN or INF `tolerance` throws `InvalidArgumentException`.
 

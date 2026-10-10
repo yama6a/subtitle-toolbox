@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SubtitleToolbox;
 
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
+use SubtitleToolbox\Image\CueImage;
 
 /**
  * @internal
@@ -233,8 +234,8 @@ trait CueEditing
 
     /**
      * Joins each run of adjacent cues whose start and end both differ by at most $tolerance seconds from the first
-     * cue of the run. The cues must also have the same alignment and forced flag. The joined cue holds the lines of
-     * the run in input order, without a repeated cue text, and runs to the latest end of the run.
+     * cue of the run. The cues must also have the same alignment and forced flag. Image cues never join. The joined cue
+     * holds the lines of the run in input order, without a repeated cue text, and runs to the latest end of the run.
      *
      * @throws InvalidArgumentException when $tolerance is negative, NAN or INF.
      */
@@ -247,7 +248,8 @@ trait CueEditing
         foreach ($this->cues as $cue) {
             $last  = array_key_last($groups);
             $first = $last === null ? null : $groups[$last][0];
-            if ($first !== null && $first->isForced() === $cue->isForced()
+            if ($first !== null && !CueImage::isImageCue($first) && !CueImage::isImageCue($cue)
+                && $first->isForced() === $cue->isForced()
                 && ($first->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT) === ($cue->getAlignment() ?? SubtitleCue::DEFAULT_ALIGNMENT)
                 && abs(Timecode::roundToMilliseconds($cue->getStart() - $first->getStart())) <= $tolerance
                 && abs(Timecode::roundToMilliseconds($cue->getEnd() - $first->getEnd())) <= $tolerance) {
