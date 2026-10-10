@@ -51,7 +51,7 @@ file_put_contents('movie.synced.sup', $subtitle->toString(Format::Pgs));
 - **Alignment**: an image whose center is in the top third of the screen gets alignment 8.
 - **Errors**: the parser skips segments of unknown types. It throws `ParsingException` for a segment without the `PG` bytes, a cut-off segment, and a bitmap with too few pixels.
 - **Formatter**: `PgsFormatter` writes image cues back to a `.sup` file. So you can retime, cut or filter a PGS file without OCR. It also converts VobSub to PGS. It does not render text, and throws `UnwritableContentException` for a cue without an image.
-- **Overlaps**: the formatter writes the cues in start order. A cue that starts before the previous cue ends replaces it on screen.
+- **Overlaps**: while 2 image cues overlap, the formatter shows both images in the same display sets, as 2 objects. PGS shows at most 2 objects at one time, so more than 2 overlapping cues throw `UnwritableContentException`. A cue that starts at the end of the previous cue replaces it. `PgsParser` reads the overlap back as one cue with one image of both objects.
 - **Colors**: the formatter reduces an image with more than 255 colors. A color channel can change by 1.
 - **Round trip**: a PGS file that `PgsParser` reads and `PgsFormatter` writes gives the same pixels, positions and times to 1 ms. Two cues with the same image, where the second starts at the end of the first, come back as one cue.
 - **Speed**: parsing or writing a 1,500-cue file takes about 20 s on PHP 8.5. The PNG compression takes most of this time.

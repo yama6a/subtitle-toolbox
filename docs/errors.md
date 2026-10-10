@@ -49,6 +49,7 @@ try {
 
 - More than 4 lines or 32 characters per line in SCC.
 - A cue without an image in PGS.
+- More than 2 image cues that overlap in PGS.
 - A subtitle number over 65535 in EBU STL.
 - Text that is not UTF-8 in a JSON format.
 - Text that is not UTF-8 in TTML, iTT or SAMI output.
