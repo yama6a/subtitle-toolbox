@@ -114,7 +114,9 @@ final class SubViewerParser extends SubtitleParser
         /** @var list<SubtitleCue> $cues */
         $cues       = [];
         $hasEndLine = [];
+        $timeLines  = [];
         $afterTime  = null;
+        $timeLine   = null;
         foreach ($scriptLines as $lineIndex => $line) {
             if ($afterTime !== null) {
                 $time      = $afterTime;
@@ -122,6 +124,7 @@ final class SubViewerParser extends SubtitleParser
                 if ($line !== "" && !preg_match(self::VERSION_1_TIME_REGEX, $line)) {
                     $cues[]       = new SubtitleCue($time, $time, array_map(Markup::escapeText(...), explode("|", $line)));
                     $hasEndLine[] = false;
+                    $timeLines[]  = $timeLine;
                     continue;
                 }
 
@@ -130,6 +133,7 @@ final class SubViewerParser extends SubtitleParser
 
             if (preg_match(self::VERSION_1_TIME_REGEX, $line, $matches)) {
                 try {
+                    $timeLine  = [$lineIndex + 1, $line];
                     $afterTime = self::boundedTime(Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3]) + $delay, $delay === 0 ? $line : "$line with DELAY $delay", $lineIndex + 1);
                 } catch (ParsingException $exception) {
                     $this->fail($exception, $lineIndex + 1, count($cues), [$line]);
@@ -141,13 +145,22 @@ final class SubViewerParser extends SubtitleParser
             self::endLastCue($cues, $hasEndLine, $afterTime);
         }
 
+        $checked = [];
         foreach ($cues as $index => $cue) {
             if (!$hasEndLine[$index]) {
                 $cue->setEnd(isset($cues[$index + 1]) ? $cues[$index + 1]->getStart() : $cue->getStart() + $this->options->lastCueDuration);
+                $checked[] = $cue;
+                continue;
+            }
+            try {
+                [$start, $end] = $this->orderedTimes($cue->getStart(), $cue->getEnd(), $timeLines[$index][0], $index, [$timeLines[$index][1]]);
+                $checked[]     = $cue->setStart($start)->setEnd($end);
+            } catch (ParsingException $exception) {
+                $this->fail($exception, $timeLines[$index][0], $index, [$timeLines[$index][1]]);
             }
         }
 
-        return $cues;
+        return $checked;
     }
 
 
@@ -192,7 +205,18 @@ final class SubViewerParser extends SubtitleParser
                 $this->addCueWithText($parsedCues, $cue);
                 $this->warnSkipped($skipped);
                 $cue     = $badTime ? null : $looseCue ?? self::version2Cue($matches);
-                $skipped = $badTime ? [$lineNumber, $cueIndex, [$line]] : null;
+                $skipped = $badTime ? [$lineNumber, $cueIndex, [$line], "The timing line \"$line\" has a time that is not valid."] : null;
+                if ($cue !== null) {
+                    try {
+                        [$start, $end] = $this->orderedTimes($cue->getStart(), $cue->getEnd(), $lineNumber, $cueIndex, [$line]);
+                        $cue->setStart($start)->setEnd($end);
+                    } catch (ParsingException $exception) {
+                        if (!$this->options->lenient) {
+                            throw $exception;
+                        }
+                        [$cue, $skipped] = [null, [$lineNumber, $cueIndex, [$line], $exception->getRawMessage()]];
+                    }
+                }
                 $cueIndex++;
                 continue;
             }
@@ -354,8 +378,8 @@ final class SubViewerParser extends SubtitleParser
     private function warnSkipped(?array $skipped): void
     {
         if ($skipped !== null) {
-            [$lineNumber, $cueIndex, $block] = $skipped;
-            $this->warn("The timing line \"$block[0]\" has a time that is not valid.", $lineNumber, $cueIndex, $block, ParseWarningAction::Skipped);
+            [$lineNumber, $cueIndex, $block, $message] = $skipped;
+            $this->warn($message, $lineNumber, $cueIndex, $block, ParseWarningAction::Skipped);
         }
     }
 

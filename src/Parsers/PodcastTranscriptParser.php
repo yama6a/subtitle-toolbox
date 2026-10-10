@@ -70,7 +70,7 @@ final class PodcastTranscriptParser extends SubtitleParser
         $result = [];
         foreach ($segments as $index => $segment) {
             try {
-                $result[] = $this->readSegment($segment, "segments[$index]");
+                $result[] = $this->readSegment($segment, "segments[$index]", $index);
             } catch (ParsingException $exception) {
                 $this->fail($exception, null, $index, [RawJson::encode($segment)]);
             }
@@ -88,7 +88,7 @@ final class PodcastTranscriptParser extends SubtitleParser
     /**
      * @return array{start: float, end: ?float, speaker: string, body: string, other: array}
      */
-    private function readSegment(mixed $segment, string $path): array
+    private function readSegment(mixed $segment, string $path, int $index): array
     {
         if (!is_array($segment) || ($segment !== [] && array_is_list($segment))) {
             throw new ParsingException("The field $path must be an object.");
@@ -102,11 +102,16 @@ final class PodcastTranscriptParser extends SubtitleParser
             }
         }
 
-        $end = $segment["endTime"] ?? null;
+        $start = self::boundedField(Timecode::roundToMilliseconds($segment["startTime"]), "$path.startTime");
+        $end   = $segment["endTime"] ?? null;
+        $end   = $end === null ? null : self::boundedField(Timecode::roundToMilliseconds($end), "$path.endTime");
+        if ($end !== null) {
+            [$start, $end] = $this->orderedTimes($start, $end, null, $index, [RawJson::encode($segment)]);
+        }
 
         return [
-            "start"   => self::boundedField(Timecode::roundToMilliseconds($segment["startTime"]), "$path.startTime"),
-            "end"     => $end === null ? null : self::boundedField(Timecode::roundToMilliseconds($end), "$path.endTime"),
+            "start"   => $start,
+            "end"     => $end,
             "speaker" => trim($segment["speaker"] ?? ""),
             "body"    => trim(preg_replace('/[ \t\n\r]+/', " ", $segment["body"] ?? "") ?? ""),
             "other"   => array_diff_key($segment, array_flip(self::SEGMENT_FIELDS)),

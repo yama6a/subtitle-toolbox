@@ -320,9 +320,9 @@ class AssParserTest extends TestCase
 
     public function testTimesAcceptOneToThreeFractionDigits(): void
     {
-        $cue = $this->parseEvents(self::EVENTS_HEADER . "Dialogue: 0,10:00:01.5,0:00:02.125,Default,,0,0,0,,a\n")->getCues()[0];
+        $cue = $this->parseEvents(self::EVENTS_HEADER . "Dialogue: 0,10:00:01.5,10:00:02.125,Default,,0,0,0,,a\n")->getCues()[0];
 
-        $this->assertSame([36001.5, 2.125], [$cue->getStart(), $cue->getEnd()]);
+        $this->assertSame([36001.5, 36002.125], [$cue->getStart(), $cue->getEnd()]);
     }
 
 

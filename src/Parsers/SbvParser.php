@@ -39,11 +39,14 @@ final class SbvParser extends SubtitleParser
     {
         if ($this->options->lenient && !$this->isStrictTimingLine($rawLines[0])
             && preg_match(self::LOOSE_TIMING_LINE, $rawLines[0], $matches)) {
-            $cue = new SubtitleCue(
+            [$start, $end] = $this->orderedTimes(
                 $this->looseSeconds(array_slice($matches, 1, 4), $lineNumber),
                 $this->looseSeconds(array_slice($matches, 5, 4), $lineNumber),
-                array_map(Markup::escapeText(...), array_slice($rawLines, 1))
+                $lineNumber,
+                $index,
+                $rawLines
             );
+            $cue = new SubtitleCue($start, $end, array_map(Markup::escapeText(...), array_slice($rawLines, 1)));
             $this->warn(
                 "Block #$index has a timing line with other separators or fraction digits than SBV uses. The parser read it.",
                 $lineNumber,
@@ -61,11 +64,15 @@ final class SbvParser extends SubtitleParser
 
         $times = explode(",", $rawLines[0]);
 
-        return new SubtitleCue(
+        [$start, $end] = $this->orderedTimes(
             $this->secondsFromString($times[0], $lineNumber),
             $this->secondsFromString($times[1], $lineNumber),
-            array_map(Markup::escapeText(...), array_slice($rawLines, 1))
+            $lineNumber,
+            $index,
+            $rawLines
         );
+
+        return new SubtitleCue($start, $end, array_map(Markup::escapeText(...), array_slice($rawLines, 1)));
     }
 
 

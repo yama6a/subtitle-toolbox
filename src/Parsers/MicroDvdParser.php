@@ -54,6 +54,7 @@ final class MicroDvdParser extends SubtitleParser
                 }
                 $start = self::boundedTime($frames->framesToSeconds((int) $matches[1]), "{{$matches[1]}}", $lineNumber);
                 $end   = self::boundedTime($frames->framesToSeconds((int) $matches[2]), "{{$matches[2]}}", $lineNumber);
+                [$start, $end] = $this->orderedTimes($start, $end, $lineNumber, $blockIndexes[$lineIndex], [$rawLine]);
             } catch (ParsingException $exception) {
                 $this->fail($exception, $lineNumber, $blockIndexes[$lineIndex], [$rawLine]);
                 continue;

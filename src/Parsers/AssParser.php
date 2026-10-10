@@ -87,7 +87,7 @@ final class AssParser extends SubtitleParser
         foreach ($this->events as $eventIndex => $event) {
             $this->repairedTimes = [];
             try {
-                $this->readEvent($data, $event["format"], $event["line"], $event["lineNumber"], $event["value"], $event["isComment"]);
+                $this->readEvent($data, $event["format"], $event["line"], $event["lineNumber"], $event["value"], $event["isComment"], $eventIndex);
                 foreach ($this->repairedTimes as $message) {
                     $this->warn($message, $event["lineNumber"], $eventIndex, [$event["line"]], ParseWarningAction::Repaired);
                 }
@@ -165,7 +165,7 @@ final class AssParser extends SubtitleParser
     }
 
 
-    private function readEvent(array &$data, array $format, string $line, int $lineNumber, string $value, bool $isComment): void
+    private function readEvent(array &$data, array $format, string $line, int $lineNumber, string $value, bool $isComment, int $eventIndex): void
     {
         $fields = $this->combine($format, $this->options->lenient ? $this->joinCommaFractions($format, $value) : $value, false);
         if ($fields === null) {
@@ -200,7 +200,8 @@ final class AssParser extends SubtitleParser
         $name  = $this->findField($fields, "Name");
         $lines = Markup::addSpeaker($lines, $name === null ? "" : $fields[$name]);
 
-        $cue = new SubtitleCue($startTime, $this->secondsFromString($fields[$end], $lineNumber), $lines);
+        [$startTime, $endTime] = $this->orderedTimes($startTime, $this->secondsFromString($fields[$end], $lineNumber), $lineNumber, $eventIndex, [$line]);
+        $cue = new SubtitleCue($startTime, $endTime, $lines);
         $cue->setAlignment($alignment);
         $cue->setFormatData(self::FORMAT_DATA_KEY, [
             "fields"    => array_diff_key($fields, array_flip([$start, $end, $text])),

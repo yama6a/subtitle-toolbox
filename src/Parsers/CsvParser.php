@@ -62,6 +62,8 @@ final class CsvParser extends SubtitleParser
             $cell = fn (string $role): string => isset($roles[$role]) ? trim($cells[$roles[$role]] ?? "") : "";
             try {
                 [$start, $end] = self::readTimes($cell, $frameRate, $lineNumber);
+                // A cut-off row or a time with a comma that split the cells gives the wrong end, so lenient mode drops the row.
+                $end = $end === null ? null : $this->orderedTimes($start, $end, $lineNumber, $rowIndex, [implode($delimiter, $cells)], false)[1];
             } catch (ParsingException $exception) {
                 $this->fail($exception, $lineNumber, $rowIndex, [implode($delimiter, $cells)]);
                 continue;
