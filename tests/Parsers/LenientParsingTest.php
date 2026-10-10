@@ -155,16 +155,17 @@ class LenientParsingTest extends TestCase
                 ],
                 [],
             ],
-            "WebVTT with a bad timestamp" => [
+            "WebVTT with a comma in a timestamp" => [
                 "bad_timestamp.vtt",
                 WebVttParser::class,
                 "The time \"00:00:06,000\" is not valid.",
                 [
                     [1, 3, "Good morning."],
+                    [4, 6, "The bakery opens at seven."],
                     [7, 9, "See you tomorrow."],
                 ],
                 [
-                    [7, 2, self::SKIPPED, "The time \"00:00:06,000\" is not valid."],
+                    [7, 2, self::REPAIRED, "Block #2 has the time \"00:00:06,000\", which is not in the form hh:mm:ss.mmm. The parser read it as 6 s."],
                 ],
             ],
             "WebVTT without empty lines after the header and between cues" => [

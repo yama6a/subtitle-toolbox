@@ -97,7 +97,9 @@ final class SubRipParser extends SubtitleParser
 
     private function isTimingLine(string $line): bool
     {
-        return preg_match("/^\d+:\d\d:\d\d\S*?\s*" . $this->arrowRegex() . "/", $this->replaceFullWidthDelimiters($line)) === 1;
+        $start = $this->options->lenient ? "\d+:\d{1,2}" : "\d+:\d\d:\d\d";
+
+        return preg_match("/^$start\S*?\s*" . $this->arrowRegex() . "/", $this->replaceFullWidthDelimiters($line)) === 1;
     }
 
 
@@ -132,9 +134,10 @@ final class SubRipParser extends SubtitleParser
 
         [, $startTime, $arrow, $endPart] = $times;
         [$endTime, $rest] = array_pad(preg_split('/\s+/', $endPart, 2), 2, "");
+        $looseTimes = [];
         $cue = new SubtitleCue(
-            $this->secondsFromString($startTime, $lineNumber),
-            $this->secondsFromString($endTime, $lineNumber),
+            $this->secondsFromString($startTime, $lineNumber, $looseTimes),
+            $this->secondsFromString($endTime, $lineNumber, $looseTimes),
             array_map($this->escapeText(...), array_slice($rawLines, 2))
         );
         $this->convertOverrideTags($cue);
@@ -158,6 +161,15 @@ final class SubRipParser extends SubtitleParser
                     ParseWarningAction::Repaired
                 );
             }
+        }
+        foreach ($looseTimes as $time => $seconds) {
+            $this->warn(
+                "Block #$index has the time \"$time\", which is not in the form hh:mm:ss,mmm. The parser read it as $seconds s.",
+                $lineNumber,
+                $index,
+                $rawLines,
+                ParseWarningAction::Repaired
+            );
         }
         if ($timingLine !== $rawLines[1]) {
             $this->warn(
@@ -204,14 +216,26 @@ final class SubRipParser extends SubtitleParser
     }
 
 
-    private function secondsFromString(string $timeString, ?int $lineNumber): float
+    /**
+     * In lenient mode, it also reads the LooseTime variants and a time without hours, and adds them to $looseTimes.
+     *
+     * @param array<string, float> $looseTimes
+     */
+    private function secondsFromString(string $timeString, ?int $lineNumber, array &$looseTimes): float
     {
         $timeString = trim($timeString);
-        if (!preg_match("/^(\d{1,3}):([0-5]\d):([0-5]\d)(?:[,.](\d{1,3}))?$/", $timeString, $matches)) {
-            throw new ParsingException("The time \"$timeString\" is not valid.", $lineNumber);
+        if (preg_match("/^(\d{1,3}):([0-5]\d):([0-5]\d)(?:[,.](\d{1,3})|:(\d{3}))?$/", $timeString, $matches)) {
+            return Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], ($matches[4] ?? "") . ($matches[5] ?? ""));
         }
 
-        return Timecode::toSeconds((int) $matches[1], (int) $matches[2], (int) $matches[3], $matches[4] ?? "");
+        // A last field of 1 digit without a fraction is a time that the end of the file cut off.
+        $seconds = $this->options->lenient && preg_match('/:\d$/', $timeString) !== 1 ? LooseTime::toSeconds($timeString, ",.:", true) : null;
+        if ($seconds === null) {
+            throw new ParsingException("The time \"$timeString\" is not valid.", $lineNumber);
+        }
+        $looseTimes[$timeString] = $seconds;
+
+        return $seconds;
     }
 
 
