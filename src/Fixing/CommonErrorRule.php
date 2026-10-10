@@ -18,6 +18,7 @@ enum CommonErrorRule: string
     case OcrLowercaseL                = "ocrLowercaseL";
     case LoneLowercaseI               = "loneLowercaseI";
     case Ellipsis                     = "ellipsis";
+    case UnneededPeriods              = "unneededPeriods";
     case DoubleSpaces                 = "doubleSpaces";
     case SpaceBeforePunctuation       = "spaceBeforePunctuation";
     case MissingSpaceAfterPunctuation = "missingSpaceAfterPunctuation";

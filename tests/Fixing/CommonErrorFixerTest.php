@@ -142,6 +142,11 @@ class CommonErrorFixerTest extends TestCase
             "double U+2019"                      => ["doubleApostrophes", "en", ["\u{2019}\u{2019}Go\u{2019}\u{2019}"], ["\"Go\""]],
             "single apostrophes"                 => ["doubleApostrophes", "en", ["rock 'n' roll 'til dawn"], ["rock 'n' roll 'til dawn"]],
             "apostrophes in a tag attribute"     => ["doubleApostrophes", "en", ["<font face=''>Hi</font>"], ["<font face=''>Hi</font>"]],
+            "period after a question"            => ["unneededPeriods", "en", ["Really?."], ["Really?"]],
+            "period after a bang in a tag"       => ["unneededPeriods", "en", ["<i>Stop!.</i>"], ["<i>Stop!</i>"]],
+            "period inside a line"               => ["unneededPeriods", "en", ["What?. Why?"], ["What? Why?"]],
+            "ellipsis after a question"          => ["unneededPeriods", "en", ["What?...", "Wait!..", "Really?\u{2026}"],
+                                                     ["What?...", "Wait!..", "Really?\u{2026}"]],
             "text without case"                  => ["sentenceStartCase", "ja", ["\u{3053}\u{3093}\u{306B}\u{3061}\u{306F}\u{3002}"],
                                                      ["\u{3053}\u{3093}\u{306B}\u{3061}\u{306F}\u{3002}"]],
         ];
@@ -213,7 +218,7 @@ class CommonErrorFixerTest extends TestCase
 
         CommonErrorFixer::apply($subtitle, $options);
 
-        $this->assertSame(["doubleApostrophes", "loneLowercaseI", "dialogueOnOneLine", "musicNotes", "sentenceStartCase"], array_values($optional));
+        $this->assertSame(["doubleApostrophes", "loneLowercaseI", "unneededPeriods", "dialogueOnOneLine", "musicNotes", "sentenceStartCase"], array_values($optional));
         $this->assertStringEqualsFile(self::FILES . "fixing/optional-rules.fixed.srt", $subtitle->toString(Format::SubRip));
         $this->assertSame([], CommonErrorFixer::apply(Subtitle::fromStringAutoDetectFormat(file_get_contents(self::FILES . "fixing/optional-rules.fixed.srt")),
                                                       $options)->fixes);
@@ -354,6 +359,12 @@ class CommonErrorFixerTest extends TestCase
     public function testDoubleApostrophesIsOffByDefault(): void
     {
         $this->assertSame(["''Hi''"], self::fixLines(["''Hi''"], new CommonErrorOptions(language: "en"))[0]);
+    }
+
+
+    public function testUnneededPeriodsIsOffByDefault(): void
+    {
+        $this->assertSame(["Really?."], self::fixLines(["Really?."], new CommonErrorOptions(language: "en"))[0]);
     }
 
 

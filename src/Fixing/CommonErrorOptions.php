@@ -30,6 +30,7 @@ final class CommonErrorOptions
      * @param bool              $sentenceStartCase            start a cue or line after a sentence end with a capital letter. Off by default
      * @param bool              $musicNotes                   write a "#" or "*" at the start or end of a line as U+266A, as in "# la la #". Off by default
      * @param bool              $doubleApostrophes            write 2 apostrophes as a double quote, as in "''Hi''". Off by default
+     * @param bool              $unneededPeriods              remove a period after "?" or "!", as in "Really?.". Off by default
      */
     public function __construct(
         public readonly ?string $language = null,
@@ -51,6 +52,7 @@ final class CommonErrorOptions
         public readonly bool $sentenceStartCase = false,
         public readonly bool $musicNotes = false,
         public readonly bool $doubleApostrophes = false,
+        public readonly bool $unneededPeriods = false,
     ) {
     }
 }
