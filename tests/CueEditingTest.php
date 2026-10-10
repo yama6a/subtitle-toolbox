@@ -435,4 +435,86 @@ class CueEditingTest extends TestCase
             $this->assertCount(2, $subtitle->getCues());
         }
     }
+
+
+    /**
+     * @return array<string, array{list<array{float|int, float|int, string}>, float, list<array{float, float, string}>}>
+     */
+    public static function sameTimeCues(): array
+    {
+        return [
+            "same times"        => [[[1, 3, "- Where are you going?"], [1, 3, "- Home."]], 0.0,
+                                    [[1.0, 3.0, "- Where are you going?\n- Home."]]],
+            "within tolerance"  => [[[1.0, 3.0, "A"], [1.02, 2.99, "B"]], 0.05, [[1.0, 3.0, "A\nB"]]],
+            "outside tolerance" => [[[1.0, 3.0, "A"], [1.02, 2.99, "B"]], 0.0, [[1.0, 3.0, "A"], [1.02, 2.99, "B"]]],
+            "other end"         => [[[1, 3, "A"], [1, 4, "B"]], 0.0, [[1.0, 3.0, "A"], [1.0, 4.0, "B"]]],
+            "same text"         => [[[1, 3, "A"], [1, 3, "A"]], 0.0, [[1.0, 3.0, "A"]]],
+            "three cues"        => [[[1, 3, "A"], [1, 3, "B"], [1, 3, "A"], [4, 5, "C"]], 0.0, [[1.0, 3.0, "A\nB"], [4.0, 5.0, "C"]]],
+            "multi-line cues"   => [[[1, 3, "A\nB"], [1, 3, "C\nD"]], 0.0, [[1.0, 3.0, "A\nB\nC\nD"]]],
+        ];
+    }
+
+
+    /**
+     * @param list<array{float|int, float|int, string}> $cues
+     * @param list<array{float, float, string}>         $expected
+     */
+    #[DataProvider("sameTimeCues")]
+    public function testMergeSameTimeCuesJoinsCuesWithTheSameTimes(array $cues, float $tolerance, array $expected): void
+    {
+        $this->assertSame($expected, TestSubtitles::describe(TestSubtitles::fromCues($cues)->mergeSameTimeCues($tolerance)));
+    }
+
+
+    public function testMergeSameTimeCuesMovesCommentsToTheJoinedCue(): void
+    {
+        $subtitle = TestSubtitles::fromCues([[1, 3, "A"], [1, 3, "B"], [4, 5, "C"]])
+            ->addComment("first", 0)
+            ->addComment("second", 1)
+            ->addComment("third", 2);
+
+        $this->assertSame($subtitle, $subtitle->mergeSameTimeCues());
+        $this->assertSame([[1.0, 3.0, "A\nB"], [4.0, 5.0, "C"]], TestSubtitles::describe($subtitle));
+        $this->assertSame(
+            [["first", "A\nB"], ["second", "A\nB"], ["third", "C"]],
+            $this->getCommentsByCueText($subtitle)
+        );
+    }
+
+
+    public function testMergeSameTimeCuesKeepsCuesWithAnotherAlignmentOrForcedFlag(): void
+    {
+        foreach ([(new SubtitleCue(1, 3, "B"))->setAlignment(8), (new SubtitleCue(1, 3, "B"))->setForced(true)] as $other) {
+            $subtitle = TestSubtitles::fromCues([new SubtitleCue(1, 3, "A"), $other]);
+
+            $this->assertCount(2, $subtitle->mergeSameTimeCues()->getCues());
+        }
+    }
+
+
+    public function testMergeSameTimeCuesRealAssFile(): void
+    {
+        $subtitle = Subtitle::fromString(file_get_contents(self::DIR . "own_same_time_speakers.ass"), Format::Ass);
+
+        $this->assertSame(
+            file_get_contents(self::DIR . "own_same_time_speakers_merged.srt"),
+            $subtitle->mergeSameTimeCues()->toString(Format::SubRip, new WriteOptions(bom: false))
+        );
+    }
+
+
+    public function testMergeSameTimeCuesRejectsANegativeTolerance(): void
+    {
+        foreach ([-0.1, NAN, INF] as $tolerance) {
+            $subtitle = TestSubtitles::fromCues([[1, 3, "A"], [1, 3, "B"]]);
+            try {
+                $subtitle->mergeSameTimeCues($tolerance);
+                $this->fail("mergeSameTimeCues() accepted the tolerance $tolerance.");
+            } catch (InvalidArgumentException $exception) {
+                $this->assertSame("The tolerance must be a finite number of 0 or more seconds, got " . OptionChecks::text($tolerance) . ".",
+                                  $exception->getMessage());
+            }
+            $this->assertCount(2, $subtitle->getCues());
+        }
+    }
 }
