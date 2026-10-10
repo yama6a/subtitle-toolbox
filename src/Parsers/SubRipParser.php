@@ -139,11 +139,14 @@ final class SubRipParser extends SubtitleParser
         [, $startTime, $arrow, $endPart] = $times;
         [$endTime, $rest] = array_pad(preg_split('/\s+/', $endPart, 2), 2, "");
         $looseTimes = [];
-        $cue = new SubtitleCue(
+        [$start, $end] = $this->orderedTimes(
             $this->secondsFromString($startTime, $lineNumber, $looseTimes),
             $this->secondsFromString($endTime, $lineNumber, $looseTimes),
-            array_map($this->escapeText(...), array_slice($rawLines, 2))
+            $lineNumber,
+            $index,
+            $rawLines
         );
+        $cue = new SubtitleCue($start, $end, array_map($this->escapeText(...), array_slice($rawLines, 2)));
         $this->convertOverrideTags($cue);
         $coordinates = $this->coordinates($rest);
         if ($coordinates !== null) {

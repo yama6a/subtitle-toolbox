@@ -389,11 +389,14 @@ final class WebVttParser extends SubtitleParser
         foreach ($lines as $offset => $line) {
             self::checkWordTimestamps([$line], $lineNumber === null ? null : $lineNumber + 1 + $offset);
         }
-        $cue = new SubtitleCue(
+        [$start, $end] = $this->orderedTimes(
             $this->secondsFromString($times[0], $lineNumber, $looseTimes),
             $this->secondsFromString($endTime, $lineNumber, $looseTimes),
-            $lines
+            $lineNumber,
+            $index,
+            $rawLines
         );
+        $cue = new SubtitleCue($start, $end, $lines);
         $cue->setIdentifier($identifier ?? null);
         foreach ($looseTimes as $time => $seconds) {
             $this->warn(

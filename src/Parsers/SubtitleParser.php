@@ -42,6 +42,9 @@ abstract class SubtitleParser
     // Formatters split cue times into integer milliseconds, which overflow far above this bound.
     protected const MAX_HOURS = 100000;
 
+    // Lenient mode swaps the times of a cue that ends before it starts only up to this duration in seconds, as a typo.
+    private const MAX_SWAPPED_DURATION = 30;
+
     protected ReadOptions $options;
 
     private ?FormatReadOptions $formatOptions = null;
@@ -201,6 +204,31 @@ abstract class SubtitleParser
         }
 
         $this->warn("$message The parser skipped it.", $lineNumber, null, $lines, ParseWarningAction::Repaired);
+    }
+
+
+    /**
+     * Returns [$start, $end] when the cue does not end before it starts. Otherwise strict mode throws.
+     * Lenient mode swaps the times and warns when $canSwap is true and the cue then lasts MAX_SWAPPED_DURATION or less. Otherwise it throws too.
+     *
+     * @param list<string> $block
+     *
+     * @return array{float, float}
+     */
+    protected function orderedTimes(float $start, float $end, ?int $lineNumber, ?int $blockIndex, array $block, bool $canSwap = true): array
+    {
+        if ($end >= $start) {
+            return [$start, $end];
+        }
+
+        $message = "The cue ends at $end s, before it starts at $start s.";
+        if (!$this->options->lenient || !$canSwap || $start - $end > self::MAX_SWAPPED_DURATION) {
+            throw new ParsingException($message, $lineNumber);
+        }
+
+        $this->warn("$message The parser swapped the times.", $lineNumber, $blockIndex, $block, ParseWarningAction::Repaired);
+
+        return [$end, $start];
     }
 
 

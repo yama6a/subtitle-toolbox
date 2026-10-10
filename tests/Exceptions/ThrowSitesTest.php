@@ -564,6 +564,7 @@ class ThrowSitesTest extends TestCase
                                                                 ...$invalid],
             "Parsers/SubtitleParser.php: JSON field of 100000 hours" => [fn () => (new JsonParser())->parse('{"version": 1, "cues": [{"start": 360000000, "end": 360000001, "lines": []}]}', new ReadOptions()),
                                                                 ...$parsing],
+            "Parsers/SubtitleParser.php: end before start" => [fn () => (new SubRipParser())->parse("1\n00:00:05,000 --> 00:00:02,000\ntext\n", new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: text before XML"  => [fn () => (new TtmlParser())->parse("x\n" . sprintf(self::TTML, ""), new ReadOptions()), ...$parsing],
             "Parsers/SubtitleParser.php: 100000 hours"      => [fn () => (new WebVttParser())->parse("WEBVTT\n\n100000:00:00.000 --> 100000:00:01.000\ntext\n", new ReadOptions()),
                                                                 ...$parsing],

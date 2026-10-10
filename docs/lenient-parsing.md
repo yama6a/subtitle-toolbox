@@ -79,6 +79,16 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 - **Stream readers**: `SubRipStreamReader` and `WebVttStreamReader` take `ReadOptions(lenient: true)` in the constructor and have `getWarnings()`. They give the same cues and warnings as a lenient `Subtitle::fromString()`.
 - **Command line tool**: `--lenient` turns on lenient mode and prints each warning to standard error.
 
+## Cue that ends before it starts
+`00:00:05,000 --> 00:00:02,000` throws `ParsingException` in strict mode, with the line of the times. A cue that ends when it starts stays valid.
+
+| Parser | Lenient mode |
+|:--- |:--- |
+| SubRip, WebVTT, SBV, ASS and SSA, SubViewer, MPL2, MicroDVD, Podcasting 2.0 transcript JSON | swaps the start and the end with a `repaired` warning when the cue then lasts 30 s or less. A longer cue is skipped |
+| CSV, TSV | skips the row. A row that a comma in a time split, or a cut-off last row, gives such an end, and a swap would give wrong times |
+
+- **Why 30 s**: a swapped typo gives a normal cue length. A cue of more than 30 s comes from a broken time, so a swap would invent a cue.
+
 ## ParseWarning fields
 | Field | Content |
 |:--- |:--- |
