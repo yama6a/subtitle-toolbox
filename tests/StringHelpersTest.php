@@ -73,6 +73,23 @@ class StringHelpersTest extends TestCase
     }
 
 
+    public function testConvertToUtf8ReadsUtf16WithoutBom(): void
+    {
+        foreach (["UTF-16LE", "UTF-16BE"] as $encoding) {
+            $this->assertSame("Grüße", StringHelpers::convertToUtf8(iconv("UTF-8", $encoding, "Grüße")), $encoding);
+            $this->assertSame("Grüße", StringHelpers::convertToUtf8(iconv("UTF-8", $encoding, "Grüße"), "Windows-1252"), $encoding);
+        }
+    }
+
+
+    public function testConvertToUtf8DoesNotTakeAStrayZeroByteForUtf16(): void
+    {
+        $this->assertSame("Caf\xE9\x00 au lait", StringHelpers::convertToUtf8("Caf\xE9\x00 au lait"));
+        $this->assertSame("Café\x00 ok", StringHelpers::convertToUtf8("Café\x00 ok"));
+        $this->assertSame("A\x00\x00\x00B\x00\x00\x00", StringHelpers::convertToUtf8("A\x00\x00\x00B\x00\x00\x00"));
+    }
+
+
     public function testConvertToUtf8KeepsTheBytesWithoutBomAndSourceEncoding(): void
     {
         $this->assertSame("Caf\xE9", StringHelpers::convertToUtf8("Caf\xE9"));

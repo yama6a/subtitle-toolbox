@@ -17,7 +17,9 @@ StringHelpers::isValidUtf8(file_get_contents('movie.srt'));   // false for a Win
 
 - **BOM**: the library converts UTF-16 and UTF-32 with a BOM to UTF-8 without being asked. A BOM wins over `ReadOptions::$encoding`.
 - **Valid UTF-8**: content without a BOM that is valid UTF-8 and holds no zero byte stays as it is. `ReadOptions::$encoding` applies only to other content. So `subtitle-toolbox convert season1/ --encoding Windows-1256` reads both the UTF-8 and the Windows-1256 files of the folder correctly.
-- **Zero bytes**: UTF-16 or UTF-32 without a BOM holds zero bytes, also when its text is plain ASCII. Such content is converted from `ReadOptions::$encoding`, for example `UTF-16LE`.
+- **UTF-16 without a BOM**: the library finds UTF-16LE and UTF-16BE without a BOM by their zero bytes. In ASCII text, every second byte is zero. The check reads the first 1024 bytes. At least 40 % of the byte pairs must have a zero byte on one side, and at most 5 % on the other side. A UTF-8 or Windows-1252 file with a stray zero byte stays as it is.
+- **UTF-16 and `ReadOptions::$encoding`**: the UTF-16 check wins over a code page such as `Windows-1252`. A UTF-16 or UTF-32 name, such as `UTF-16LE`, wins over the check. In lenient mode, a `ParseWarning` with the action `Repaired` says "The content is UTF-16LE without a BOM."
+- **UTF-32 without a BOM**: such content holds zero bytes on both sides of each byte pair. It is converted only from `ReadOptions::$encoding`, for example `UTF-32LE`.
 - **XML declaration**: the TTML, iTT and YouTube parsers ignore `encoding="utf-16"` or `"utf-32"` in the XML declaration of UTF-8 content. This covers converted UTF-16 files and UTF-8 files that declare UTF-16.
 - **Legacy text that looks like UTF-8**: a few legacy files are valid UTF-8 by chance. For example, the Windows-1252 text `Ã©` is the bytes `C3 A9`, which are `é` in UTF-8. The library reads such a file as UTF-8.
 - **No BOM, no encoding**: the parsers read the bytes as UTF-8 and keep invalid bytes. SAMI throws `ParsingException` for text that is not UTF-8. The JSON, TTML, iTT and SAMI formatters throw `UnwritableContentException` for such text.

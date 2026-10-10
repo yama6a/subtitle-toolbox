@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SubtitleToolbox;
 
+use SubtitleToolbox\Encoding\DecodedText;
 use SubtitleToolbox\Exceptions\ParsingException;
 
 final class StringHelpers
@@ -60,35 +61,81 @@ final class StringHelpers
     /**
      * Converts $str to UTF-8 from the encoding that its BOM names, or else from $sourceEncoding when it is not null.
      * Without a BOM, $str stays unchanged when it is valid UTF-8 and holds no zero bytes.
+     * Without a BOM, content with a zero byte in most even or most odd positions is read as UTF-16, unless
+     * $sourceEncoding names UTF-16 or UTF-32.
      *
      * @param TextEncoding|string|null $sourceEncoding A TextEncoding case, or any other name that iconv accepts, for example "CP1125".
      */
     public static function convertToUtf8(string $str, TextEncoding|string|null $sourceEncoding = null): string
     {
+        return self::decode($str, $sourceEncoding)->content;
+    }
+
+
+    /**
+     * Converts $str to UTF-8 as convertToUtf8() does, and returns the encoding that it read.
+     *
+     * @internal
+     */
+    public static function decode(string $str, TextEncoding|string|null $sourceEncoding = null): DecodedText
+    {
         $sourceEncoding = $sourceEncoding instanceof TextEncoding ? $sourceEncoding->value : $sourceEncoding;
 
         if (self::hasUtf8Bom($str)) {
-            return $str;
+            return new DecodedText($str, "UTF-8");
         }
 
         foreach (self::UNICODE_BOMS as $bom => $encoding) {
             if (str_starts_with($str, $bom)) {
-                return self::iconvToUtf8(substr($str, strlen($bom)), $encoding);
+                return new DecodedText(self::iconvToUtf8(substr($str, strlen($bom)), $encoding), $encoding);
             }
         }
 
+        $isWide = $sourceEncoding !== null && preg_match('/\A(?:UTF-?(?:16|32)|UCS-?[24])/i', $sourceEncoding) === 1;
+        $utf16  = $isWide ? null : self::detectUtf16($str);
+        if ($utf16 !== null) {
+            return new DecodedText(self::iconvToUtf8($str, $utf16), $utf16, "The content is $utf16 without a BOM.");
+        }
+
         if ($sourceEncoding === null || in_array(strtoupper($sourceEncoding), ["UTF-8", "UTF8"], true)) {
-            return $str;
+            return new DecodedText($str, "UTF-8");
         }
 
         // Zero bytes mark UTF-16 or UTF-32 without a BOM, whose ASCII text is also valid UTF-8.
         if (self::isValidUtf8($str) && !str_contains($str, "\0")) {
             self::iconvToUtf8("", $sourceEncoding);
 
-            return $str;
+            return new DecodedText($str, "UTF-8");
         }
 
-        return self::iconvToUtf8($str, $sourceEncoding);
+        return new DecodedText(self::iconvToUtf8($str, $sourceEncoding), $sourceEncoding);
+    }
+
+
+    /**
+     * Returns UTF-16LE or UTF-16BE when at least 40 % of the first 512 byte pairs have a zero byte on one side and
+     * at most 5 % on the other. ASCII text in UTF-16 has a zero byte in each pair. UTF-32 has zero bytes on both sides.
+     */
+    private static function detectUtf16(string $str): ?string
+    {
+        $sample = substr($str, 0, 1024);
+        $pairs  = intdiv(strlen($sample), 2);
+        if ($pairs === 0 || strlen($str) % 2 !== 0) {
+            return null;
+        }
+
+        $zeros = [0, 0];
+        for ($i = 0; $i < $pairs * 2; $i++) {
+            if ($sample[$i] === "\0") {
+                $zeros[$i % 2]++;
+            }
+        }
+
+        return match (true) {
+            $zeros[1] >= 0.4 * $pairs && $zeros[0] <= 0.05 * $pairs => "UTF-16LE",
+            $zeros[0] >= 0.4 * $pairs && $zeros[1] <= 0.05 * $pairs => "UTF-16BE",
+            default                                                  => null,
+        };
     }
 
 

@@ -6,6 +6,7 @@ namespace SubtitleToolbox;
 
 use SubtitleToolbox\Container\Matroska\MatroskaReader;
 use SubtitleToolbox\Container\SubtitleTrack;
+use SubtitleToolbox\Encoding\DecodedText;
 use SubtitleToolbox\Exceptions\CueNotFoundException;
 use SubtitleToolbox\Exceptions\ImageCueWithoutTextException;
 use SubtitleToolbox\Exceptions\InvalidArgumentException;
@@ -122,10 +123,10 @@ final class Subtitle implements \IteratorAggregate, \Countable
             return self::readOnlyTrack(MatroskaReader::open($path), $options);
         }
 
-        $content = StringHelpers::convertToUtf8(self::readFile($path), $options->encoding);
-        $format  = self::detectFormat($content, $path) ?? throw new UnknownFormatException(self::unknownFormatMessage("load()"));
+        $decoded = StringHelpers::decode(self::readFile($path), $options->encoding);
+        $format  = self::detectFormat($decoded->content, $path) ?? throw new UnknownFormatException(self::unknownFormatMessage("load()"));
 
-        return $format === Format::VobSub ? self::load($path, $format, $options) : self::parseUtf8($content, $format, $options);
+        return $format === Format::VobSub ? self::load($path, $format, $options) : self::parseDecoded($decoded, $format, $options);
     }
 
 
@@ -153,7 +154,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
     /**
      * Reads $content in $format. MKV and WebM content throws, see loadTrack().
      * A UTF-16 or UTF-32 BOM, or else ReadOptions::$encoding such as "Windows-1252", sets the encoding to convert from.
-     * Valid UTF-8 content without zero bytes stays as is.
+     * Valid UTF-8 content without zero bytes stays as is. See docs/encodings.md for UTF-16 without a BOM.
      */
     public static function fromString(string $content, Format $format, ?ReadOptions $options = null): self
     {
@@ -162,7 +163,7 @@ final class Subtitle implements \IteratorAggregate, \Countable
         }
         $options ??= new ReadOptions();
 
-        return self::parseUtf8(StringHelpers::convertToUtf8($content, $options->encoding), $format, $options);
+        return self::parseDecoded(StringHelpers::decode($content, $options->encoding), $format, $options);
     }
 
 
@@ -183,10 +184,10 @@ final class Subtitle implements \IteratorAggregate, \Countable
             return self::readOnlyTrack(MatroskaReader::open($stream), $options);
         }
 
-        $content = StringHelpers::convertToUtf8($content, $options->encoding);
-        $format  = self::detectFormat($content) ?? throw new UnknownFormatException(self::unknownFormatMessage("fromString()"));
+        $decoded = StringHelpers::decode($content, $options->encoding);
+        $format  = self::detectFormat($decoded->content) ?? throw new UnknownFormatException(self::unknownFormatMessage("fromString()"));
 
-        return self::parseUtf8($content, $format, $options);
+        return self::parseDecoded($decoded, $format, $options);
     }
 
 
@@ -210,6 +211,18 @@ final class Subtitle implements \IteratorAggregate, \Countable
         $this->format = $format;
 
         return $this;
+    }
+
+
+    private static function parseDecoded(DecodedText $decoded, Format $format, ReadOptions $options): self
+    {
+        $subtitle = self::parseUtf8($decoded->content, $format, $options);
+        if ($options->lenient && $decoded->warning !== null) {
+            $warning = new ParseWarning($decoded->warning, null, null, [], ParseWarningAction::Repaired);
+            $subtitle->setParseWarnings([$warning, ...$subtitle->getParseWarnings()]);
+        }
+
+        return $subtitle;
     }
 
 
