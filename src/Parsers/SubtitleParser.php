@@ -320,6 +320,62 @@ abstract class SubtitleParser
 
 
     /**
+     * Yields the blocks of splitAtEmptyLines() and joins a block of cue text to the block before it, when that block has a timing line.
+     * So an empty line inside the cue text, or between the timing line and the text, does not end the cue.
+     * A block of cue text has no timing line, and no cue number or time on its first line. In lenient mode, it warns for each join.
+     *
+     * @param iterable<int, list<string>> $blocks
+     *
+     * @return Generator<int, list<string>>
+     */
+    protected function joinCueTextBlocks(iterable $blocks, callable $isTimingLine, bool $withCueNumbers): Generator
+    {
+        $pending     = null;
+        $pendingLine = 0;
+        $blockIndex  = 0;
+        foreach ($blocks as $lineNumber => $block) {
+            if ($pending !== null && $this->isCueTextBlock($block, $isTimingLine, $withCueNumbers)
+                && array_filter($pending, $isTimingLine) !== []) {
+                if ($this->options->lenient) {
+                    $this->warn(
+                        "Block #$blockIndex has an empty line before line $lineNumber inside the cue. The parser kept the text after it in the cue.",
+                        $lineNumber,
+                        $blockIndex,
+                        $block,
+                        ParseWarningAction::Repaired
+                    );
+                }
+                $pending = array_merge($pending, $block);
+                continue;
+            }
+            if ($pending !== null) {
+                yield $pendingLine => $pending;
+                $blockIndex++;
+            }
+            $pending     = $block;
+            $pendingLine = $lineNumber;
+        }
+
+        if ($pending !== null) {
+            yield $pendingLine => $pending;
+        }
+    }
+
+
+    /**
+     * A first line that looks like a broken time keeps the block apart, so the parser still skips it with a warning.
+     *
+     * @param list<string> $block
+     */
+    private function isCueTextBlock(array $block, callable $isTimingLine, bool $withCueNumbers): bool
+    {
+        return array_filter($block, $isTimingLine) === []
+            && !($withCueNumbers && is_numeric($block[0]))
+            && preg_match('/^\d+\s*[:：]\d|-+>/u', $block[0]) !== 1;
+    }
+
+
+    /**
      * Returns the parts of a block that splitAtTimingLines() returns. In lenient mode, it warns for each split.
      *
      * @param list<string> $block

@@ -102,7 +102,7 @@ class StreamReaderEdgeCasesTest extends TestCase
 
     public function testReaderYieldsCuesBeforeABrokenBlock(): void
     {
-        $content = "1\n00:00:01,000 --> 00:00:02,000\nGood\n\nbroken\n";
+        $content = "1\n00:00:01,000 --> 00:00:02,000\nGood\n\n2\nbroken\n";
         $texts   = [];
 
         try {

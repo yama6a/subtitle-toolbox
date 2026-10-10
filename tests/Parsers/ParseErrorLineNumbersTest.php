@@ -31,7 +31,7 @@ class ParseErrorLineNumbersTest extends TestCase
         return [
             "SubRip without cue number" => [Format::SubRip, self::SRT_NO_NUMBER, 5, "Block #1 has no cue number on its first line."],
             "SubRip with a bad time"    => [Format::SubRip, self::SRT_BAD_TIME, 5, "The time \"00:00:0x,000\" is not valid."],
-            "SBV without timing line"   => [Format::Sbv, "0:00:01.000,0:00:02.000\nThe ferry leaves.\n\nIt is late.\n", 4,
+            "SBV without timing line"   => [Format::Sbv, "0:00:01.000,0:00:02.000\nThe ferry leaves.\n\n0:00:03.000\nIt is late.\n", 4,
                                             "Block #1 has no timing line on its first line."],
             "SBV with a bad time"       => [Format::Sbv, "0:00:01.000,0:00:02.000\nThe ferry leaves.\n\n0:00:0x.000,0:00:04.000\nIt is late.\n", 4,
                                             "The time \"0:00:0x.000\" is not valid."],

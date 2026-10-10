@@ -42,7 +42,7 @@ final class SubRipParser extends SubtitleParser
 
 
     /**
-     * @see SubtitleParser::splitAtEmptyLines()
+     * @see SubtitleParser::joinCueTextBlocks()
      *
      * @param iterable<int, string> $lines
      *
@@ -52,7 +52,7 @@ final class SubRipParser extends SubtitleParser
      */
     public function splitIntoBlocks(iterable $lines): Generator
     {
-        return $this->splitAtEmptyLines($lines);
+        return $this->joinCueTextBlocks($this->splitAtEmptyLines($lines), $this->isTimingLine(...), true);
     }
 
 

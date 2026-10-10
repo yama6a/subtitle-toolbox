@@ -17,7 +17,8 @@ final class SbvParser extends SubtitleParser
         $subtitle   = new Subtitle();
         $parsedCues = [];
         $index      = 0;
-        foreach ($this->splitAtEmptyLines($this->lines($content)) as $lineNumber => $rawLines) {
+        $blocks     = $this->joinCueTextBlocks($this->splitAtEmptyLines($this->lines($content)), $this->isTimingLine(...), false);
+        foreach ($blocks as $lineNumber => $rawLines) {
             $cues = $this->parseRepairedBlock($rawLines, $lineNumber, $index, $this->isTimingLine(...), false,
                                               fn (array $part, int $partLine): SubtitleCue => $this->parseCueBlock($part, $index, $partLine));
             array_push($parsedCues, ...$cues);

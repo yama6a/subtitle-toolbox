@@ -380,7 +380,7 @@ $subtitle->findFormatData('sami');                                              
 ## SBV
 SBV is the YouTube caption format `0:00:01.500,0:00:04.000`.
 
-- **Parser**: accepts any number of hour digits below the [time limit](#the-format-enum). A file that holds only whitespace or a BOM gives 0 cues. A timing line without text gives a cue with no lines. A timing line starts a new cue, also without an empty line before it.
+- **Parser**: accepts any number of hour digits below the [time limit](#the-format-enum). A file that holds only whitespace or a BOM gives 0 cues. A timing line without text gives a cue with no lines. A timing line starts a new cue, also without an empty line before it. Text after an empty line stays in the cue before it, as long as no timing line follows, see [lenient-parsing.md](lenient-parsing.md).
 - **Formatter**: writes one hour digit below 10 hours, and no UTF-8 BOM. It strips all tags and decodes HTML entities. Text with `<`, `>` and `&` round-trips. It skips a cue with no lines.
 
 ## SCC
@@ -447,6 +447,7 @@ $report->changes[0]->message;                                                   
 - A file that holds only whitespace or a BOM gives 0 cues.
 - A timing line without text gives a cue with no lines. The formatter writes such a cue as its number and its timing line.
 - A cue number and a timing line start a new cue, also without an empty line before them.
+- Text after an empty line stays in the cue before it, when no timing line follows and its first line is no number. See [lenient-parsing.md](lenient-parsing.md).
 - Other override tags such as `{\pos(10,20)}` stay in the cue text.
 - A tag is `<b>`, `<i>`, `<u>`, `<s>`, `<font>` or `<v>`, or a name with only `name=value` attributes, such as `<foo>` or `<span class="x">`. Other text in angle brackets, such as `<a sentence in brackets>`, is cue text.
 - The formatter keeps `<b>`, `<i>`, `<u>`, `<s>` and `<font>`, and strips all other tags.

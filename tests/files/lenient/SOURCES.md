@@ -11,6 +11,7 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `missing_empty_line.srt` | no empty line before cue 2 and before cue 3, cue 3 without a number, LF | MIT |
 | `text_before_first_cue.srt` | a download site banner before cue 1, CR LF | MIT |
 | `truncated_last_cue.srt` | the file ends inside the time line of cue 3, LF | MIT |
+| `empty_line_in_cue.srt` | an empty line inside the text of cue 1, an empty line between the timing line and the text of cue 2, LF | MIT |
 | `mixed_line_endings.srt` | CR LF, LF and CR CR LF in one file | MIT |
 | `bad_timestamp.vtt` | a comma in an end time, CR LF | MIT |
 | `missing_empty_line.vtt` | no empty line after the header lines, nor between two cue pairs, LF | MIT |
@@ -25,6 +26,7 @@ Every file is written for this repository in the shape of broken subtitle downlo
 | `missing_empty_line.sbv` | no empty line between cue 1 and cue 2, LF | MIT |
 | `text_before_first_cue.sbv` | a note line before cue 1, LF | MIT |
 | `truncated_last_cue.sbv` | the file ends inside the time line of cue 3, LF | MIT |
+| `empty_line_in_cue.sbv` | an empty line inside the text of cue 1, an empty line between the timing line and the text of cue 2, LF | MIT |
 | `mixed_line_endings.sbv` | CR LF, LF and CR CR LF in one file | MIT |
 | `release_name.sub` | a release name before the `{1}{1}25` frame rate line, a cue with a letter as start frame, CR LF | MIT |
 | `broken_events.ass` | no `Format:` line in `[Events]`, an event with 4 fields, a letter in an end time, UTF-8 BOM, CR LF | MIT |

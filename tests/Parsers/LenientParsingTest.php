@@ -130,6 +130,20 @@ class LenientParsingTest extends TestCase
                     [9, 2, self::SKIPPED, "The time \"00:00:0\" is not valid."],
                 ],
             ],
+            "SubRip with empty lines inside cues" => [
+                "empty_line_in_cue.srt",
+                SubRipParser::class,
+                3,
+                [
+                    [1, 3.5, "The museum opens at ten.\nTickets are sold at the door."],
+                    [4, 6, "Guided tours start at noon."],
+                    [7, 9, "Bags stay in the lockers."],
+                ],
+                [
+                    [5, 0, self::REPAIRED, "Block #0 has an empty line before line 5 inside the cue. The parser kept the text after it in the cue."],
+                    [10, 1, self::REPAIRED, "Block #1 has an empty line before line 10 inside the cue. The parser kept the text after it in the cue."],
+                ],
+            ],
             "SubRip with mixed line endings" => [
                 "mixed_line_endings.srt",
                 SubRipParser::class,
@@ -250,6 +264,20 @@ class LenientParsingTest extends TestCase
                     [7, 9, "The shop is open."],
                 ],
                 [],
+            ],
+            "SBV with empty lines inside cues" => [
+                "empty_line_in_cue.sbv",
+                SbvParser::class,
+                3,
+                [
+                    [1, 3.5, "The museum opens at ten.\nTickets are sold at the door."],
+                    [4, 6, "Guided tours start at noon."],
+                    [7, 9, "Bags stay in the lockers."],
+                ],
+                [
+                    [4, 0, self::REPAIRED, "Block #0 has an empty line before line 4 inside the cue. The parser kept the text after it in the cue."],
+                    [8, 1, self::REPAIRED, "Block #1 has an empty line before line 8 inside the cue. The parser kept the text after it in the cue."],
+                ],
             ],
             "SBV with a bad timestamp" => [
                 "bad_timestamp.sbv",

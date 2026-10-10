@@ -24,6 +24,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 | full-width `：`, `，`, `．` or `。` in a timing line | repaired | skipped | skipped |
 | unknown text after the end time | repaired | dropped as the spec says, no warning | skipped |
 | no empty line between two cues | repaired | split as the spec says, no warning | repaired |
+| empty line inside the cue text, or between the timing line and the text | repaired | skipped | repaired |
 | no empty line after the `WEBVTT` header | not an error | repaired | not an error |
 | no `WEBVTT` line, a damaged one, or text before it | not an error | repaired | not an error |
 | text before the first cue | skipped | skipped | skipped |
@@ -31,6 +32,7 @@ foreach ($subtitle->getParseWarnings() as $warning) {
 
 - **No empty line between two cues**: SubRip and SBV split the block before each timing line in strict mode too, without a warning. A SubRip cue without a cue number still throws in strict mode.
 - **No `WEBVTT` line**: in lenient mode, the WebVTT parser skips the lines before the first line that starts with `WEBVTT`. Without such a line before the first cue, it skips the lines before the first cue. The skipped lines go into the `block` of the warning. A damaged `WEBVTT` line also loses the header text and `STYLE` and `REGION` blocks before the first cue.
+- **Empty line inside a cue**: SubRip and SBV add a block without a timing line to the cue before it, in strict mode too. Lenient mode warns. The block stays apart and the parser skips it when it follows no cue, starts with a time, or starts with a number in SubRip.
 - **Cue without text**: a timing line without text lines gives a cue with no lines, in strict and lenient mode. WebVTT allows an empty cue. To drop these cues, call `$subtitle->removeCuesWhere(fn (SubtitleCue $cue): bool => $cue->getLines() === [])`.
 
 ## Other formats
